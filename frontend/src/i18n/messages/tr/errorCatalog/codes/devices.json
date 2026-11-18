@@ -1,4 +1,5 @@
 {
   "tag_scan_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "tag_scan_already_resolved": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "tag_scan_already_resolved": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "device_in_active_session": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

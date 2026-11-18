@@ -333,6 +333,8 @@ export const ERROR_CATALOG = {
         "Diese Umfrage ist schon veröffentlicht. Sie lässt sich nicht mehr ändern.",
       "communication.survey_not_open":
         "Diese Umfrage nimmt keine Antworten mehr an.",
+      "devices.device_in_active_session":
+        "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen.",
       "devices.tag_scan_already_resolved":
         "Dieser Scan ist schon erledigt. Bitte lade die Seite neu.",
       "devices.tag_scan_not_found":

@@ -1,6 +1,12 @@
 {
   "codes": [
     {
+      "code": "devices.device_in_active_session",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "devices.device_in_active_session"
+    },
+    {
       "code": "devices.tag_scan_already_resolved",
       "class": "business_rejection",
       "parameters": [],

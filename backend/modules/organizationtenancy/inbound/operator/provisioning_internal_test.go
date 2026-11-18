@@ -2706,6 +2706,35 @@ func TestProvisioningResource_DeleteDevice(t *testing.T) {
 		resource.DeleteDevice(rr, req)
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
+
+	t.Run("names the session that blocks the removal", func(t *testing.T) {
+		activity, room := "Fußball-AG", "Turnhalle"
+		startedAt := time.Date(2026, time.September, 9, 13, 5, 0, 0, time.UTC)
+		resource := NewProvisioningResource(ProvisioningConfig{Service: &mockProvisioningService{
+			deleteDeviceFn: func(context.Context, int64, int64, net.IP) error {
+				return &organizationtenancy.DeviceRemovalBlockedError{DeviceID: 55, SessionID: 300, StartedAt: startedAt, ActivityName: &activity, RoomName: &room}
+			},
+		}})
+
+		req := httptest.NewRequest(http.MethodDelete, "/operator/devices/55", nil)
+		req = withOperatorClaims(req, 42)
+		routeCtx := chi.NewRouteContext()
+		routeCtx.URLParams.Add("id", "55")
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+		rr := httptest.NewRecorder()
+
+		resource.DeleteDevice(rr, req)
+		require.Equal(t, http.StatusConflict, rr.Code)
+		var body struct {
+			Code    string            `json:"code"`
+			Details map[string]string `json:"details"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+		assert.Equal(t, common.CodeProvisioningDeviceActiveSession, body.Code)
+		assert.Equal(t, map[string]string{
+			"session_id": "300", "started_at": "2026-09-09T13:05:00Z", "activity_name": activity, "room_name": room,
+		}, body.Details)
+	})
 }
 
 func TestProvisioningResource_GetSchoolAccountCaregiverCapability(t *testing.T) {

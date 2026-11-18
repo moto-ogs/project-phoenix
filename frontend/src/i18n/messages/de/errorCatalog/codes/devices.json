@@ -1,4 +1,5 @@
 {
   "tag_scan_not_found": "Diesen Scan gibt es nicht mehr. Bitte lade die Seite neu.",
-  "tag_scan_already_resolved": "Dieser Scan ist schon erledigt. Bitte lade die Seite neu."
+  "tag_scan_already_resolved": "Dieser Scan ist schon erledigt. Bitte lade die Seite neu.",
+  "device_in_active_session": "Auf diesem Gerät läuft gerade eine Sitzung. Beende sie zuerst am Gerät, dann kannst du es entfernen."
 }

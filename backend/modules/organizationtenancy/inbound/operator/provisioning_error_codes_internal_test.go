@@ -46,6 +46,7 @@ func TestProvisioningErrorRendererAnswersWithCodes(t *testing.T) {
 		{"device transfer protected", &organizationtenancy.DeviceTransferProtectedError{}, http.StatusForbidden, common.CodeProvisioningDeviceTransferProtected},
 		{"device online", &organizationtenancy.DeviceTransferBlockedError{Reason: organizationtenancy.DeviceTransferBlockedOnline}, http.StatusConflict, common.CodeProvisioningDeviceOnline},
 		{"device session", &organizationtenancy.DeviceTransferBlockedError{Reason: organizationtenancy.DeviceTransferBlockedActiveSession}, http.StatusConflict, common.CodeProvisioningDeviceActiveSession},
+		{"device removal session", &organizationtenancy.DeviceRemovalBlockedError{DeviceID: 7, SessionID: 9}, http.StatusConflict, common.CodeProvisioningDeviceActiveSession},
 		{"device other organization", &organizationtenancy.DeviceTransferOrganizationMismatchError{}, http.StatusForbidden, common.CodeProvisioningDeviceOtherOrganization},
 		{"device same school", &organizationtenancy.DeviceTransferSameSchoolError{}, http.StatusConflict, common.CodeProvisioningDeviceSameSchool},
 		{"person missing", &organizationtenancy.PersonNotFoundError{}, http.StatusNotFound, common.CodeProvisioningPersonNotFound},

@@ -203,26 +203,55 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	rs.runtime.Success(w, r, http.StatusOK, newDeviceResponse(r.Context(), rs.IoTService, updatedDevice), "Device updated successfully")
 }
 
-// deleteDevice handles deleting a device
+// deleteDevice removes a device from the fleet (#2319): the row stays as
+// archived history, access ends and its Geräteplatz is released. An open
+// kiosk session blocks the removal and stays untouched.
 func (rs *Resource) deleteDevice(w http.ResponseWriter, r *http.Request) {
-	// Parse ID from URL
 	id, err := rs.runtime.ParseID(r, "id")
 	if err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgInvalidDeviceID), "")
 		return
 	}
-
-	// Delete device
-	if err := rs.IoTService.DeleteDevice(r.Context(), id); err != nil {
-		if rs.runtime.ConstraintViolation(err) {
-			rs.runtime.Failure(w, r, http.StatusConflict, errors.New("gerät kann nicht gelöscht werden: Gerät wird aktuell von einer aktiven Gruppe verwendet"), "")
-			return
-		}
+	device, session, err := rs.removalPreflight(r, id)
+	if err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
+	if session != nil {
+		rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeActiveSession, SessionID: &session.ID})
+		rs.runtime.ConflictWithDetails(w, r, errors.New("device has an active session and cannot be removed"), codeDeviceInActiveSession, map[string]any{
+			"session_id": strconv.FormatInt(session.ID, 10),
+			"room_id":    strconv.FormatInt(session.RoomID, 10),
+			"started_at": session.StartedAt.Format(time.RFC3339),
+		})
+		return
+	}
+	if err := rs.IoTService.DeleteDevice(r.Context(), id); err != nil {
+		rs.renderError(w, r, err)
+		return
+	}
+	rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeRemoved})
+	rs.runtime.Success(w, r, http.StatusOK, nil, "Device removed successfully")
+}
 
-	rs.runtime.Success(w, r, http.StatusOK, nil, "Device deleted successfully")
+// removalPreflight locks the live device row and reads its open kiosk
+// session. The lock comes first: a kiosk that opens a session meanwhile
+// references the row and waits until this removal commits or rolls back.
+// An already removed device is not found, so a repeated removal changes
+// nothing and releases no second Geräteplatz.
+func (rs *Resource) removalPreflight(r *http.Request, id int64) (devicefleet.Device, *RemovalSession, error) {
+	device, err := rs.IoTService.Fleet().FindDeviceForUpdate(r.Context(), id)
+	if errors.Is(err, devicefleet.ErrDeviceNotFound) {
+		return devicefleet.Device{}, nil, &devicefleet.AdministrationError{Op: "DeleteDevice", Err: devicefleet.ErrAdministrationDeviceNotFound}
+	}
+	if err != nil {
+		return devicefleet.Device{}, nil, err
+	}
+	if device.DeviceID == devicefleet.WebManualDeviceID {
+		return devicefleet.Device{}, nil, &devicefleet.AdministrationError{Op: "DeleteDevice", Err: devicefleet.ErrAdministrationDeviceProtected}
+	}
+	session, err := rs.runtime.ActiveSession(r.Context(), device.ID)
+	return device, session, err
 }
 
 // updateDeviceStatus handles updating the status of a device

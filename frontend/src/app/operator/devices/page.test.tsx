@@ -516,17 +516,19 @@ describe("OperatorDevicesPage", () => {
 
   // --- Delete ---
 
-  it("opens the delete device confirmation dialog", async () => {
+  it("opens the device removal confirmation dialog", async () => {
     withDefaultSWR({ allDevices: [mockDevice] });
 
     render(<OperatorDevicesPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /Aktionen für/ }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Löschen" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Gerät löschen")).toBeInTheDocument();
-      expect(screen.getByText(/wirklich löschen\?/)).toBeInTheDocument();
+      expect(screen.getByText("Gerät entfernen")).toBeInTheDocument();
+      expect(
+        screen.getByText("Das passiert beim Entfernen"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -579,7 +581,7 @@ describe("OperatorDevicesPage", () => {
       screen.getByRole("menuitem", { name: "API-Key ändern" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: "Löschen" }),
+      screen.getByRole("menuitem", { name: "Entfernen" }),
     ).toBeInTheDocument();
   });
 

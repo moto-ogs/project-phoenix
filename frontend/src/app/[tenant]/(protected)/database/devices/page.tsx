@@ -28,6 +28,10 @@ import { createCrudService } from "@/lib/database/service-factory";
 import { devicesConfig } from "@/components/database/configs/devices.config";
 import { getDeviceTypeDisplayName, type Device } from "@/lib/iot-helpers";
 import { DevicesMasterDetail } from "@/components/devices/devices-master-detail";
+import {
+  DeviceRemovalSummary,
+  isDeviceAlreadyRemoved,
+} from "~/components/devices/device-removal-summary";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -295,31 +299,38 @@ function DevicesPageContent() {
 
   const handleDeleteDevice = useCallback(async () => {
     if (!selectedDevice) return;
+    const title = selectedDevice.name ?? selectedDevice.device_id;
     setDeletePending(true);
     deleteErrors.clear();
     try {
-      const deleted = await service.remove(selectedDevice.id);
-      if (!deleted) return;
+      const removed = await service.remove(selectedDevice.id);
+      if (!removed) return;
       toastSuccess(
-        `Das Gerät „${selectedDevice.name ?? selectedDevice.device_id}“ ist gelöscht.`,
+        `Das Gerät „${title}“ ist entfernt. Sein Platz ist wieder frei.`,
       );
-      handleDeleteCancel();
-      setCreatedDevice(null);
-      handleSelectDevice(null);
-      await tenantMutate(tenantAdminKeys.devices());
     } catch (err) {
-      logger.warn("device_delete_failed", {
+      logger.warn("device_remove_failed", {
         device_id: selectedDevice.id,
         error: err instanceof Error ? err.message : String(err),
       });
-      // Der Bestätigungsdialog bleibt offen und nennt den Grund.
-      void deleteErrors.show(err, {
-        object: "das Löschen des Geräts",
-        retry: () => latestDeleteRef.current(),
-      });
+      if (!isDeviceAlreadyRemoved(err)) {
+        // Der Bestätigungsdialog bleibt offen und nennt den Grund, etwa
+        // eine laufende Sitzung am Gerät.
+        void deleteErrors.show(err, {
+          object: "das Entfernen des Geräts",
+          retry: () => latestDeleteRef.current(),
+        });
+        return;
+      }
+      // Jemand hat das Gerät eben schon entfernt: dasselbe Ergebnis.
+      toastSuccess(`Das Gerät „${title}“ ist schon entfernt.`);
     } finally {
       setDeletePending(false);
     }
+    handleDeleteCancel();
+    setCreatedDevice(null);
+    handleSelectDevice(null);
+    await tenantMutate(tenantAdminKeys.devices());
   }, [
     selectedDevice,
     service,
@@ -378,18 +389,19 @@ function DevicesPageContent() {
               isOpen={showDeleteConfirmModal}
               onClose={handleDeleteCancel}
               onConfirm={() => void handleDeleteDevice()}
-              title="Gerät löschen?"
+              title="Gerät entfernen?"
               description={
-                <>
-                  Möchtest du das Gerät{" "}
-                  <span className="font-medium">
-                    {selectedDevice.name ?? selectedDevice.device_id}
-                  </span>{" "}
-                  wirklich löschen? Diese Aktion kann nicht rückgängig gemacht
-                  werden.
-                </>
+                <DeviceRemovalSummary
+                  title={selectedDevice.name ?? selectedDevice.device_id}
+                  deviceId={selectedDevice.device_id}
+                  context={selectedDevice.room_name}
+                  footnote="Läuft am Gerät gerade eine Sitzung, beende sie zuerst."
+                />
               }
-              gate={{ mode: "twoStep" }}
+              gate={{ mode: "twoStep", firstStepLabel: "Ja, entfernen" }}
+              confirmLabel="Gerät entfernen"
+              confirmTooltip="Entfernt das Gerät sofort. Bisherige Anwesenheiten bleiben."
+              loadingLabel="Wird entfernt…"
               loading={deletePending}
               error={deleteErrors.error}
             />
