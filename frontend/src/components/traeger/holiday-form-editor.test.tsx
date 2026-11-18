@@ -112,8 +112,8 @@ describe("HolidayFormEditor (#5198)", () => {
 
   it("builds the editor like the OGS form editor: one card, one icon per add button (#7412)", () => {
     renderEditor();
-    // Health and address are sections of the one editor card, no cards
-    // inside it.
+    // Health and address are sections of the one editor card, not cards
+    // of their own inside it.
     for (const name of ["Gesundheit", "Anschrift"]) {
       const region = screen.getByRole("region", { name });
       expect(region).not.toHaveClass("moto-content-surface");

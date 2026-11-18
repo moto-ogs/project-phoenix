@@ -461,6 +461,14 @@
   );
 }
 
+/* A split preview column clips like the base class, but without becoming a
+   scroll container: `overflow: hidden` would turn the column into the
+   scrolling ancestor of a `sticky` preview inside it, and the preview would
+   no longer stay in view while the editor beside it scrolls (#7412). */
+.moto-dotted-background--split {
+  overflow: clip;
+}
+
 .moto-dotted-background--split::before {
   mask-image: linear-gradient(
     to right,

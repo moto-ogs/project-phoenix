@@ -9,7 +9,7 @@
 // und Medikamente zur Pflicht (#6686). Speichern legt eine neue Version an.
 
 import { Info, Plus } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import {
   FieldEditorRow,
   FieldErrorContext,
@@ -111,6 +111,8 @@ export function HolidayFormEditor({
   onSaved: (form: HolidayForm) => void;
 }>) {
   const formRef = useRef<HTMLDivElement>(null);
+  const healthHeadingId = useId();
+  const addressHeadingId = useId();
   const errorPath = useApiFormError(formRef);
   const { success } = useToast();
   const [fields, setFields] = useState<HolidayFormField[]>(() => [
@@ -423,13 +425,11 @@ export function HolidayFormEditor({
               </div>
 
               <section
-                aria-labelledby="holiday-form-health"
+                aria-labelledby={healthHeadingId}
                 className="space-y-3 border-t border-gray-100 pt-5"
               >
                 <div>
-                  <SectionLabel id="holiday-form-health">
-                    Gesundheit
-                  </SectionLabel>
+                  <SectionLabel id={healthHeadingId}>Gesundheit</SectionLabel>
                   <p className="mt-1 max-w-2xl text-sm text-gray-600">
                     {health === "required"
                       ? "Eltern beantworten für jedes Kind Allergien und Medikamente. Hat das Kind keine, wählen sie „Nein, keine“. Weitere Hinweise bleiben freiwillig."
@@ -459,13 +459,11 @@ export function HolidayFormEditor({
               </section>
 
               <section
-                aria-labelledby="holiday-form-address"
+                aria-labelledby={addressHeadingId}
                 className="space-y-3 border-t border-gray-100 pt-5"
               >
                 <div>
-                  <SectionLabel id="holiday-form-address">
-                    Anschrift
-                  </SectionLabel>
+                  <SectionLabel id={addressHeadingId}>Anschrift</SectionLabel>
                   <p className="mt-1 max-w-2xl text-sm text-gray-600">
                     Eltern geben Straße, PLZ und Ort an. Rechnung und
                     Bestätigungsschreiben übernehmen die Anschrift.
