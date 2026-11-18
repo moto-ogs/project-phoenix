@@ -137,11 +137,15 @@ not establish which state the browser shows.
      n=$(basename "$f")
      b="shots/before-marked/$n"; [ -f "$b" ] || b="$f"
      a="shots/after-marked/$n"; [ -f "$a" ] || a="shots/after/$n"
-     magick "$b" -resize 50% -bordercolor gray -border 1 "shots/b-$n"
-     magick "$a" -resize 50% -bordercolor gray -border 1 "shots/a-$n"
-     magick "shots/b-$n" "shots/a-$n" +append "shots/pair-$n"
+     case "$n" in mobile-*) s=100% ;; *) s=50% ;; esac
+     magick "$b" -resize "$s" -bordercolor gray -border 1 "shots/b-$n"
+     magick "$a" -resize "$s" -bordercolor gray -border 1 "shots/a-$n"
+     magick "shots/b-$n" "shots/a-$n" -background white -gravity north \
+       +append "shots/pair-$n"
    done
    ```
+   Phone shots keep their size: halved, a 390 px shot is unreadable. The
+   two sides of a pair may differ in height (`--full`); they align at the top.
 5. **Restore even after failure.** Remove only task-created verification markers
    and restore all switched paths to the original branch commit. Run the same
    source-state gate one last time and verify the original UI is rendered and
