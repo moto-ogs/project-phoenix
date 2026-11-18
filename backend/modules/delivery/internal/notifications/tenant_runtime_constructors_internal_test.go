@@ -70,7 +70,7 @@ func TestTenantConstructorsBindTheRuntimeAtConstruction(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, preferences.(*preferenceService).tenantRuntime)
 
-	subscriptions, err := NewTenantPushSubscriptionService(runtime, db, stubPushSubscriptions{}, stubGuardianSchool{}, VAPIDConfig{}, nil)
+	subscriptions, err := NewTenantPushSubscriptionService(runtime, db, stubPushSubscriptions{}, VAPIDConfig{}, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, subscriptions.(*pushSubscriptionService).tenantRuntime)
 }
@@ -98,7 +98,7 @@ func TestTenantConstructorsRejectAMissingDependency(t *testing.T) {
 			return err
 		},
 		"push subscriptions": func(runtime tenant.UnitOfWork) error {
-			_, err := NewTenantPushSubscriptionService(runtime, db, stubPushSubscriptions{}, stubGuardianSchool{}, VAPIDConfig{}, nil)
+			_, err := NewTenantPushSubscriptionService(runtime, db, stubPushSubscriptions{}, VAPIDConfig{}, nil)
 			return err
 		},
 	} {
@@ -123,9 +123,8 @@ func TestTenantConstructorsRejectAMissingDependency(t *testing.T) {
 	_, missing["preferences schools"] = NewTenantPreferenceService(runtime, stubConsent{}, stubPrefSettings{}, db, nil, permits)
 	_, missing["preferences account permissions"] = NewTenantPreferenceService(runtime, stubConsent{}, stubPrefSettings{}, db, stubGuardianSchoolOnly{}, permits)
 	_, missing["preferences permissions"] = NewTenantPreferenceService(runtime, stubConsent{}, stubPrefSettings{}, db, stubGuardianSchool{}, nil)
-	_, missing["push subscriptions database"] = NewTenantPushSubscriptionService(runtime, nil, stubPushSubscriptions{}, stubGuardianSchool{}, VAPIDConfig{}, nil)
-	_, missing["push subscriptions repository"] = NewTenantPushSubscriptionService(runtime, db, nil, stubGuardianSchool{}, VAPIDConfig{}, nil)
-	_, missing["push subscriptions schools"] = NewTenantPushSubscriptionService(runtime, db, stubPushSubscriptions{}, nil, VAPIDConfig{}, nil)
+	_, missing["push subscriptions database"] = NewTenantPushSubscriptionService(runtime, nil, stubPushSubscriptions{}, VAPIDConfig{}, nil)
+	_, missing["push subscriptions repository"] = NewTenantPushSubscriptionService(runtime, db, nil, VAPIDConfig{}, nil)
 	for name, err := range missing {
 		assert.Error(t, err, name)
 	}

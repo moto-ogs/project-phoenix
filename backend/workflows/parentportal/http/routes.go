@@ -7,11 +7,7 @@ import (
 )
 
 func (rs *Resource) mountAccountRoutes(r chi.Router, authRateLimiter func(http.Handler) http.Handler) {
-	// Cross-tenant children list — every student the parent is
-	// linked to, across every active tenant mapping. Account id
-	// is read from claims, never from URL or body.
-	// Push subscription management for the parent's own devices
-	// (#2003). Registers across every active tenant mapping.
+	// Push registration belongs to the authenticated account, not a school.
 	r.Route("/me/push", func(r chi.Router) {
 		r.Get("/public-key", rs.getPushPublicKey)
 		r.Post("/subscriptions", rs.subscribePush)
@@ -23,8 +19,7 @@ func (rs *Resource) mountAccountRoutes(r chi.Router, authRateLimiter func(http.H
 	r.Post("/me/pwa-usage", rs.reportPWAUsage)
 
 	// Which notifications this guardian agreed to. Applied to every
-	// school the family belongs to, the same fan-out the push
-	// registration above uses.
+	// school where the account has active guardian access.
 	r.Route("/me/notification-preferences", func(r chi.Router) {
 		r.Get("/", rs.listNotificationPreferences)
 		r.Delete("/", rs.deleteAllNotificationPreferences)

@@ -185,3 +185,21 @@ freiwillig ein, nach dem Muster des Caterers (ADR 0077, Nachtrag #4497).
 6. **Sprache.** Code-Mail und Hinweis auf ein gemerktes Gerät gehen in der
    Sprache, die Eltern im Portal gewählt haben.
 
+
+## Nachtrag 2026-11-18: Geräte gehören zum Elternkonto
+
+Ein angemeldetes Elternkonto kann Benachrichtigungen auf einem Gerät
+einschalten, auch ohne aktive Schulzuordnung. Die Registrierung bindet das
+Gerät an das Konto und die Sitzung, nicht an eine Schule. Auf einem gemeinsam
+genutzten Gerät ersetzt die Registrierung die vorherige Elternbindung.
+
+Das ändert nicht den Empfängerkreis. Bei Schulnachrichten prüft Delivery
+weiter die aktive Schulzuordnung, die Rolle und bei kindbezogenen Nachrichten
+die Berechtigung für das Kind. Ein Konto ohne Schule erhält keine
+Schulnachrichten. Der bisherige Versand für Ferienanmeldungen bleibt
+unverändert.
+
+Meldet der Push-Dienst ein Gerät als abgelaufen, entfernen beide
+Versandwege dieselbe unveränderte Gerätebindung. Dieser eine administrative
+Schreibvorgang ist nötig, weil keine sendende Schule das Gerät besitzt.
+Der Versand und seine Zugriffsprüfung bleiben im Schulkontext.

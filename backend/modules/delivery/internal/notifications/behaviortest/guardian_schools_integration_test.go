@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -12,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPushSubscriptionServiceParentFiltersNonGuardianMappings(t *testing.T) {
+func TestParentDeviceDeliveryFollowsCurrentGuardianSchools(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	account := testpkg.CreateTestAccount(t, db, "push-parent-mixed-roles")
@@ -46,13 +47,35 @@ func TestPushSubscriptionServiceParentFiltersNonGuardianMappings(t *testing.T) {
 	service, err := api.NewPushSubscriptionTestService(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db),
 		notifications.VAPIDConfig{PublicKey: "pub", PrivateKey: "priv", Subscriber: "mailto:test@example.org"})
 	require.NoError(t, err)
-	require.NoError(t, service.SubscribeParent(context.Background(), account.ID, notifications.PushSubscriptionInput{Endpoint: "https://fcm.googleapis.com/fcm/send/device", P256dh: "p256dh-key", Auth: "auth-key"}))
-	var subscribed []int64
-	require.NoError(t, db.NewRaw(`SELECT tenant_id FROM iot.push_subscriptions WHERE account_id = ? AND portal = 'parent'`, account.ID).Scan(context.Background(), &subscribed))
-	assert.Equal(t, []int64{guardianTenantID}, subscribed)
+	const endpoint = "https://fcm.googleapis.com/fcm/send/guardian-school-change"
+	require.NoError(t, service.SubscribeParent(context.Background(), account.ID, notifications.PushSubscriptionInput{Endpoint: endpoint, P256dh: "p256dh-key", Auth: "auth-key"}))
+	t.Cleanup(func() { assert.NoError(t, service.UnsubscribeParent(context.Background(), account.ID, endpoint)) })
+	repo := compose.NewPushSubscriptionRepository(db)
+	eligibleAt := func(schoolID int64) []int64 {
+		subs, err := testpkg.TenantQuery2(t, testpkg.TenantContext(schoolID), db, repo.FindForGuardians, []int64{account.ID}, nil)
+		require.NoError(t, err)
+		var ids []int64
+		for _, sub := range subs {
+			require.Equal(t, schoolID, sub.TenantID)
+			ids = append(ids, sub.ID)
+		}
+		return ids
+	}
 
-	require.NoError(t, service.UnsubscribeParent(context.Background(), account.ID, notifications.PushSubscriptionInput{Endpoint: "https://fcm.googleapis.com/fcm/send/device", P256dh: "p256dh-key", Auth: "auth-key"}.Endpoint))
-	count, err := db.NewSelect().TableExpr("iot.push_subscriptions").Where("account_id = ?", account.ID).Count(context.Background())
+	guardianDevices := eligibleAt(guardianTenantID)
+	require.Len(t, guardianDevices, 1)
+	assert.Empty(t, eligibleAt(staffTenantID), "a staff mapping is not a guardian authorization")
+
+	_, err = db.ExecContext(context.Background(), `
+		INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)`,
+		account.ID, guardianRoleID, staffTenantID)
 	require.NoError(t, err)
-	assert.Zero(t, count)
+	assert.Equal(t, guardianDevices, eligibleAt(staffTenantID), "a new guardian role uses the same device without another registration")
+
+	_, err = db.ExecContext(context.Background(), `
+		UPDATE auth.account_tenants SET status = 'inactive' WHERE account_id = ? AND tenant_id = ?`,
+		account.ID, guardianTenantID)
+	require.NoError(t, err)
+	assert.Empty(t, eligibleAt(guardianTenantID), "an inactive mapping immediately stops delivery")
+	assert.Equal(t, guardianDevices, eligibleAt(staffTenantID))
 }
