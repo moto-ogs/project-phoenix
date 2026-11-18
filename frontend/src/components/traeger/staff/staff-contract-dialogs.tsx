@@ -411,6 +411,7 @@ export function CreateContractDialog({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
             id="contract-starts-on"
+            monthYearNavigation
             label="Erster Tag"
             error={errors.fieldError("starts_on")}
             value={startsOn}
@@ -419,6 +420,7 @@ export function CreateContractDialog({
           />
           <ISODatePicker
             id="contract-ends-on"
+            monthYearNavigation
             label="Letzter Tag"
             hint="Leer lassen, wenn der Vertrag unbefristet ist."
             error={errors.fieldError("ends_on")}
@@ -540,6 +542,7 @@ export function ChangeSollDialog({
       <div className="space-y-5">
         <ISODatePicker
           id="contract-soll-valid-from"
+          monthYearNavigation
           label="Gilt ab"
           hint={
             earliest
@@ -666,6 +669,7 @@ export function HolidayWeeksDialog({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
             id="holiday-week-from"
+            monthYearNavigation
             label="Erste Woche"
             hint="Ein Tag reicht, es zählt die ganze Woche."
             error={errors.fieldError("from_week")}
@@ -676,6 +680,7 @@ export function HolidayWeeksDialog({
           />
           <ISODatePicker
             id="holiday-week-to"
+            monthYearNavigation
             label="Letzte Woche"
             hint="Leer lassen für eine Woche."
             error={errors.fieldError("to_week")}
@@ -771,6 +776,7 @@ export function ContractTermsDialog({
         <KindChoice value={kind} onChange={setKind} />
         <ISODatePicker
           id="contract-terms-ends-on"
+          monthYearNavigation
           label="Letzter Tag"
           hint={`Leer lassen, wenn der Vertrag unbefristet ist.${
             earliest
