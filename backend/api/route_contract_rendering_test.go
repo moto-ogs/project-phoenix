@@ -138,8 +138,14 @@ func fillRendered(v reflect.Value, own, shape renderShape, format string, depth 
 		}
 	case reflect.Struct:
 		for i := range v.NumField() {
-			if field := v.Field(i); field.CanSet() {
-				fillRendered(field, shape, shape, v.Type().Field(i).Tag.Get("contract"), depth+1)
+			field, own := v.Field(i), shape
+			if v.Type().Field(i).Anonymous {
+				// The contract flattens an embedded row into its holder: a
+				// handler never renders the holder without it.
+				own = shapeFilled
+			}
+			if field.CanSet() {
+				fillRendered(field, own, shape, v.Type().Field(i).Tag.Get("contract"), depth+1)
 			}
 		}
 	case reflect.String:

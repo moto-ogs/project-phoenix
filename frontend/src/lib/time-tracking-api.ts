@@ -278,11 +278,27 @@ class TimeTrackingService {
     id: string,
     updates: UpdateSessionRequest,
   ): Promise<WorkSession> {
+    // The backend's own field names: the proxy forwards the body as it is.
     const result = await this.request<WorkSession>(
       `/${id}`,
       "PUT",
       "Failed to update session",
-      updates,
+      {
+        date: updates.date,
+        check_in_time: updates.checkInTime,
+        check_out_time: updates.checkOutTime,
+        break_minutes: updates.breakMinutes,
+        status: updates.status,
+        notes: updates.notes,
+        ...(updates.breaks && updates.breaks.length > 0
+          ? {
+              breaks: updates.breaks.map((b) => ({
+                id: b.id,
+                duration_minutes: b.durationMinutes,
+              })),
+            }
+          : {}),
+      },
     );
     return mapWorkSessionResponse(result.data as never);
   }

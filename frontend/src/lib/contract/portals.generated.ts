@@ -15,6 +15,7 @@ import { routes as schoolStaffMessages } from "./school-staff-messages.generated
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
 import { routes as students } from "./students.generated";
+import { routes as timeTracking } from "./time-tracking.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
 import { routes as traegerDocuments } from "./traeger-documents.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
@@ -196,6 +197,29 @@ export const portalRoutes = {
     students["GET /api/students/{id}"],
     students["POST /api/students/"],
     students["PUT /api/students/{id}"],
+    timeTracking["DELETE /api/time-tracking/absences/{id}"],
+    timeTracking["GET /api/time-tracking/absence-allowances"],
+    timeTracking["GET /api/time-tracking/absences"],
+    timeTracking["GET /api/time-tracking/absences/mails"],
+    timeTracking["GET /api/time-tracking/assignments"],
+    timeTracking["GET /api/time-tracking/breaks/{sessionId}"],
+    timeTracking["GET /api/time-tracking/closing-days"],
+    timeTracking["GET /api/time-tracking/config"],
+    timeTracking["GET /api/time-tracking/current"],
+    timeTracking["GET /api/time-tracking/history"],
+    timeTracking["GET /api/time-tracking/holidays"],
+    timeTracking["GET /api/time-tracking/month-summary"],
+    timeTracking["GET /api/time-tracking/schedule-targets"],
+    timeTracking["GET /api/time-tracking/shifts"],
+    timeTracking["GET /api/time-tracking/vacation/quota"],
+    timeTracking["GET /api/time-tracking/{id}/edits"],
+    timeTracking["POST /api/time-tracking/absences"],
+    timeTracking["POST /api/time-tracking/break/end"],
+    timeTracking["POST /api/time-tracking/break/start"],
+    timeTracking["POST /api/time-tracking/check-in"],
+    timeTracking["POST /api/time-tracking/vacation/request"],
+    timeTracking["PUT /api/time-tracking/absences/{id}"],
+    timeTracking["PUT /api/time-tracking/{id}"],
     workTimeModels["DELETE /api/work-time-models/{id}"],
     workTimeModels["GET /api/work-time-models/"],
     workTimeModels["GET /api/work-time-models/staff-facts"],
