@@ -24,11 +24,13 @@ func (s *Backend) TenantObjects(ctx context.Context, kind, layout string, tenant
 	return s.removeObjects(ctx, list)
 }
 
+var errS3Inventory = errors.New("storage: S3 inventory failed")
+
 func countObjects(list iter.Seq[minio.ObjectInfo]) (int64, error) {
 	var count int64
 	for object := range list {
 		if object.Err != nil {
-			return count, errors.New("storage: S3 inventory failed")
+			return count, errS3Inventory
 		}
 		count++
 	}
@@ -36,7 +38,19 @@ func countObjects(list iter.Seq[minio.ObjectInfo]) (int64, error) {
 }
 
 func (s *Backend) removeObjects(ctx context.Context, list iter.Seq[minio.ObjectInfo]) (int64, error) {
-	results, err := s.client.RemoveObjectsWithIter(ctx, s.bucket, list, minio.RemoveObjectsOptions{})
+	var listingErr error
+	objects := func(yield func(minio.ObjectInfo) bool) {
+		for object := range list {
+			if object.Err != nil {
+				listingErr = errS3Inventory
+				return
+			}
+			if !yield(object) {
+				return
+			}
+		}
+	}
+	results, err := s.client.RemoveObjectsWithIter(ctx, s.bucket, objects, minio.RemoveObjectsOptions{})
 	if err != nil {
 		return 0, errors.New("storage: S3 removal failed")
 	}
@@ -49,5 +63,5 @@ func (s *Backend) removeObjects(ctx context.Context, list iter.Seq[minio.ObjectI
 			count++
 		}
 	}
-	return count, failure
+	return count, errors.Join(failure, listingErr, ctx.Err())
 }

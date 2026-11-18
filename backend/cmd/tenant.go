@@ -106,11 +106,7 @@ func tenantErasureFiles(ctx context.Context, root string) (objects.TenantObjectS
 	if err != nil {
 		return nil, err
 	}
-	files := objects.TenantObjectSources{backend}
-	if !config.IsLocal() && root != "" {
-		files = append(files, objects.NewLocal(root))
-	}
-	return files, nil
+	return objects.ErasureSources(backend, root), nil
 }
 
 func newErasureLedgerInitCommand() *cobra.Command {

@@ -103,6 +103,10 @@ func (s *Backend) put(ctx context.Context, key string, content []byte, etag stri
 	}
 	_, err := s.client.PutObject(ctx, s.bucket, key, bytes.NewReader(content), int64(len(content)), opts)
 	if etag != "" && minio.ToErrorResponse(err).StatusCode == 412 {
+		// Some providers return 412 for a condition on a deleted key.
+		if _, statErr := s.stat(ctx, key); statErr != nil {
+			return statErr
+		}
 		return contract.ErrObjectChanged
 	}
 	return objectError(ctx, "write", err)

@@ -73,14 +73,6 @@
       "target_owner": "delivery-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.UploadBackend.TenantObjects",
-      "binding_digest": "2520797cda913eaa266c04fa6a94f736",
-      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ErasureFiles.TenantObjects",
-      "source_owner": "organization-tenancy",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.UploadBackend.TenantObjects",
-      "target_owner": "delivery-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.TenantObjectSources.TenantObjects",
       "binding_digest": "4fa982bc457e3abe2dd7f635bbf24b46",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ErasureFiles.TenantObjects",

@@ -152,6 +152,15 @@ func visitTenantEntry(ctx context.Context, root *os.Root, name, prefix string, r
 // in the same erasure as the live bucket during cutover.
 type TenantObjectSources []UploadBackend
 
+// ErasureSources includes the former uploads directory when a bucket is live.
+func ErasureSources(backend UploadBackend, retainedLocalRoot string) TenantObjectSources {
+	sources := TenantObjectSources{backend}
+	if _, local := backend.(*Local); !local && retainedLocalRoot != "" {
+		sources = append(sources, NewLocal(retainedLocalRoot))
+	}
+	return sources
+}
+
 func (s TenantObjectSources) TenantObjects(ctx context.Context, kind, layout string, tenantID int64, remove bool) (int64, error) {
 	var total int64
 	for _, source := range s {

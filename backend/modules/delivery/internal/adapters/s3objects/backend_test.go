@@ -2,12 +2,11 @@ package s3objects_test
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/xml"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,7 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/adapters/s3objects"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
-	securityCompose "github.com/moto-ogs/project-phoenix/modules/securityruntime/compose"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,12 +56,18 @@ func TestSealedObjectsStayOpaqueAndBoundToTheirKey(t *testing.T) {
 		case http.MethodPut:
 			assert.Equal(t, "/"+fixtureBucket+"/"+kind+"/18/"+name, r.URL.Path)
 			assert.Empty(t, r.Header.Get("X-Amz-Acl"))
-			var body io.Reader = r.Body
-			if r.Header.Get("Content-Encoding") == "aws-chunked" {
-				body = httputil.NewChunkedReader(body)
-			}
-			data, err := io.ReadAll(body)
+			data, err := io.ReadAll(r.Body)
 			assert.NoError(t, err)
+			if r.Header.Get("Content-Encoding") == "aws-chunked" {
+				// The tiny fixture is sent as one signed data chunk.
+				size, err := strconv.Atoi(r.Header.Get("X-Amz-Decoded-Content-Length"))
+				_, chunk, framed := bytes.Cut(data, []byte("\r\n"))
+				if !assert.True(t, err == nil && framed && size > 0 && size <= len(chunk)) {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				data = chunk[:size]
+			}
 			stored = data
 			w.Header().Set("ETag", `"fixture"`)
 		case http.MethodGet, http.MethodHead:
@@ -79,9 +84,7 @@ func TestSealedObjectsStayOpaqueAndBoundToTheirKey(t *testing.T) {
 	require.NoError(t, err)
 	reader, err := newFixtureBackend(t, endpoint)
 	require.NoError(t, err)
-	keys, err := securityCompose.NewFieldCipher("fixture:" + base64.StdEncoding.EncodeToString(make([]byte, 32)))
-	require.NoError(t, err)
-	fileKeys := objects.FileKeys{Health: keys}
+	fileKeys := objects.FileKeys{Health: testpkg.TestHealthDataCipher}
 	const plaintext = "synthetic personnel file"
 	size, err := objects.NewPrivateUploads(writer, fileKeys).SaveSealed(t.Context(), kind, 18, name, strings.NewReader(plaintext), objects.FileRingHealth)
 	require.NoError(t, err)
@@ -138,7 +141,7 @@ func TestReplacementDoesNotRecreateAnObjectDeletedAfterStat(t *testing.T) {
 	})
 	store, err := newFixtureBackend(t, endpoint)
 	require.NoError(t, err)
-	require.ErrorIs(t, store.ReplaceObject(t.Context(), key, []byte("replacement")), contract.ErrObjectChanged)
+	require.ErrorIs(t, store.ReplaceObject(t.Context(), key, []byte("replacement")), contract.ErrNotFound)
 
 	_, err = store.OpenObject(t.Context(), key)
 	require.ErrorIs(t, err, contract.ErrNotFound)
@@ -192,12 +195,17 @@ func TestTenantErasureUsesExactPrefixesAndRechecksBucketVersioning(t *testing.T)
 			})
 			store, err := newFixtureBackend(t, endpoint)
 			require.NoError(t, err)
+			localRoot := t.TempDir()
+			local := objects.NewLocal(localRoot)
+			_, err = local.WriteObject(t.Context(), tc.key, strings.NewReader("migrated original"), objects.SaveOptions{Private: true})
+			require.NoError(t, err)
+			sources := objects.ErasureSources(store, localRoot)
 			for _, remove := range []bool{false, true} {
-				count, err := store.TenantObjects(t.Context(), tc.kind, tc.layout, school, remove)
+				count, err := sources.TenantObjects(t.Context(), tc.kind, tc.layout, school, remove)
 				require.NoError(t, err)
-				require.EqualValues(t, 1, count)
+				require.EqualValues(t, 2, count)
 			}
-			count, err := store.TenantObjects(t.Context(), tc.kind, tc.layout, school, false)
+			count, err := sources.TenantObjects(t.Context(), tc.kind, tc.layout, school, false)
 			require.NoError(t, err)
 			require.Zero(t, count)
 
@@ -208,4 +216,39 @@ func TestTenantErasureUsesExactPrefixesAndRechecksBucketVersioning(t *testing.T)
 			require.ErrorContains(t, err, "never been versioned")
 		})
 	}
+}
+
+func TestTenantErasureReturnsFailureFromNextListingPage(t *testing.T) {
+	t.Parallel()
+	const key = "staff-documents/18/report.pdf"
+	var deleted atomic.Int32
+	endpoint := fixtureServer(t, func() string { return "" }, func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			if r.URL.Query().Get("continuation-token") == "next" {
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = io.WriteString(w, "<Error><Code>AccessDenied</Code></Error>")
+				return
+			}
+			_, _ = io.WriteString(w, "<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>next</NextContinuationToken>"+
+				"<Contents><Key>"+key+"</Key><Size>7</Size></Contents></ListBucketResult>")
+		case http.MethodPost:
+			var request struct {
+				Keys []string `xml:"Object>Key"`
+			}
+			assert.NoError(t, xml.NewDecoder(r.Body).Decode(&request))
+			assert.Equal(t, []string{key}, request.Keys)
+			deleted.Add(1)
+			_, _ = io.WriteString(w, "<DeleteResult><Deleted><Key>"+key+"</Key></Deleted></DeleteResult>")
+		default:
+			t.Errorf("unexpected S3 method %s", r.Method)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	})
+	store, err := newFixtureBackend(t, endpoint)
+	require.NoError(t, err)
+	count, err := store.TenantObjects(t.Context(), "staff-documents", "tenantDir", 18, true)
+	require.ErrorContains(t, err, "S3 inventory failed")
+	require.EqualValues(t, 1, count)
+	require.EqualValues(t, 1, deleted.Load())
 }

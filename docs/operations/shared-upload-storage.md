@@ -119,6 +119,8 @@ Einstellung in beiden Next.js-Prozessen.
 - Für [Mandantenlöschung](tenant-erasure.md) dieselbe Backend-Konfiguration
   wie in der App verwenden. Falls die alte lokale Ablage noch vorhanden ist,
   `tenant erase` im S3-Modus zusätzlich mit `--uploads-root` aufrufen und die
-  korrekte alte Ablage einhängen. So prüft und löscht der Befehl beide Quellen.
+  korrekte alte Ablage einhängen. So prüft und löscht der Befehl beide Quellen. Der Demo-Prozess verwendet im
+  S3-Modus den Bucket und das eingebundene alte Upload-Volume für die
+  Dateiphase ausgemusterter Schulen.
   Nach dem Wechsel alte Upload-Volumes und Backups gemäß dem bestehenden
   Lösch- und Aufbewahrungsverfahren behandeln.
