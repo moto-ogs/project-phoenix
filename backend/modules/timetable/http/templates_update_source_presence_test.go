@@ -145,7 +145,7 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("explicit null clears sources and drags the omitted filter along", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: nullableInt64Slice{Set: true, Value: nil},
+			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: nil},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
 		assert.Nil(t, req.SourceCareOfferingIDs.Value)
@@ -156,8 +156,8 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("provided values win over the stored ones", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: nullableInt64Slice{Set: true, Value: []int64{44}},
-			SourceGradeLevels:     nullableIntSlice{Set: true, Value: []int{4}},
+			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []int64{44}},
+			SourceGradeLevels:     NullableIntSlice{Set: true, Value: []int{4}},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
 		assert.Equal(t, []int64{44}, req.SourceCareOfferingIDs.Value)
@@ -167,7 +167,7 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("omitted filter follows a provided source", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: nullableInt64Slice{Set: true, Value: []int64{44}},
+			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []int64{44}},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
 		assert.Equal(t, []int{1, 2}, req.SourceGradeLevels.Value)
@@ -214,7 +214,7 @@ func TestApplyOfferingSourcePresenceClassFilter(t *testing.T) {
 	t.Run("submitted class filter drops the stored grade filter", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:     timetableModule.TargetGroupTypeOffering,
-			SourceSchoolClasses: nullableStringSlice{Set: true, Value: []string{"1b"}},
+			SourceSchoolClasses: NullableStringSlice{Set: true, Value: []string{"1b"}},
 		}
 		applyOfferingSourcePresence(req, stored)
 		assert.Equal(t, []string{"1b"}, req.SourceSchoolClasses.Value)
@@ -225,7 +225,7 @@ func TestApplyOfferingSourcePresenceClassFilter(t *testing.T) {
 	t.Run("submitted grade filter drops the stored class filter", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:   timetableModule.TargetGroupTypeOffering,
-			SourceGradeLevels: nullableIntSlice{Set: true, Value: []int{2}},
+			SourceGradeLevels: NullableIntSlice{Set: true, Value: []int{2}},
 		}
 		applyOfferingSourcePresence(req, storedClasses)
 		assert.Equal(t, []int{2}, req.SourceGradeLevels.Value)
@@ -235,7 +235,7 @@ func TestApplyOfferingSourcePresenceClassFilter(t *testing.T) {
 	t.Run("clearing the source clears both filters", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: nullableInt64Slice{Set: true, Value: nil},
+			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: nil},
 		}
 		applyOfferingSourcePresence(req, storedClasses)
 		assert.Empty(t, req.SourceSchoolClasses.Value)
@@ -245,7 +245,7 @@ func TestApplyOfferingSourcePresenceClassFilter(t *testing.T) {
 	t.Run("submitted class filter without a source remains for validation", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:     timetableModule.TargetGroupTypeOffering,
-			SourceSchoolClasses: nullableStringSlice{Set: true, Value: []string{"1b"}},
+			SourceSchoolClasses: NullableStringSlice{Set: true, Value: []string{"1b"}},
 		}
 		applyOfferingSourcePresence(req, templateResponse{TargetGroupType: timetableModule.TargetGroupTypeOffering})
 		assert.Equal(t, []string{"1b"}, req.SourceSchoolClasses.Value,

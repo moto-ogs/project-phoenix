@@ -34,9 +34,8 @@ type PushSubscriptionInput struct {
 }
 
 // PushSubscriptionService manages Web Push device registrations. Staff and
-// school methods open a transaction for the current tenant. Parent operations
-// span every active tenant mapping in one admin transaction so mapping reads
-// and device-row changes share the same RLS context and commit atomically.
+// school methods use the current tenant. Parent devices belong to the
+// authenticated account and are managed in an administrative transaction.
 type PushSubscriptionService interface {
 	StaffDevices() devices.StaffPushSubscriptions
 	ParentDevices() devices.PushSubscriptions
@@ -55,22 +54,19 @@ type PushSubscriptionService interface {
 	// UnsubscribeSchool removes only a school-portal device registration for
 	// the current tenant.
 	UnsubscribeSchool(ctx context.Context, accountID int64, endpoint string) error
-	// SubscribeParent registers a guardian device for every school the account
-	// is actively linked to. Pending-enrollment-only schools are excluded until
-	// the account has an active guardian mapping there. Rebinding replaces every
-	// previous parent-account owner of the browser endpoint across tenants.
+	// SubscribeParent registers one device for the account, even without a school.
+	// Rebinding replaces the previous parent account on the same browser.
 	SubscribeParent(ctx context.Context, accountID int64, input PushSubscriptionInput) error
-	// UnsubscribeParent removes a guardian device across all linked schools.
+	// UnsubscribeParent removes the caller’s device, including any legacy school bindings.
 	UnsubscribeParent(ctx context.Context, accountID int64, endpoint string) error
 }
 
 type pushSubscriptionService struct {
-	db             *bun.DB
-	repo           deliveryPorts.PushSubscriptionRepository
-	accountTenants GuardianSchools
-	vapid          VAPIDConfig
-	logger         *slog.Logger
-	tenantRuntime  *tenant.UnitOfWork
+	db            *bun.DB
+	repo          deliveryPorts.PushSubscriptionRepository
+	vapid         VAPIDConfig
+	logger        *slog.Logger
+	tenantRuntime *tenant.UnitOfWork
 }
 
 func (s *pushSubscriptionService) withTenantRuntime(ctx context.Context) context.Context {
@@ -84,11 +80,10 @@ func (s *pushSubscriptionService) withTenantRuntime(ctx context.Context) context
 func NewPushSubscriptionService(
 	db *bun.DB,
 	repo deliveryPorts.PushSubscriptionRepository,
-	accountTenants GuardianSchools,
 	vapid VAPIDConfig,
 	logger *slog.Logger,
 ) PushSubscriptionService {
-	return &pushSubscriptionService{db: db, repo: repo, accountTenants: accountTenants, vapid: vapid, logger: logger}
+	return &pushSubscriptionService{db: db, repo: repo, vapid: vapid, logger: logger}
 }
 
 func (s *pushSubscriptionService) PublicKey() (string, error) {
@@ -178,54 +173,28 @@ func (s *pushSubscriptionService) SubscribeParent(ctx context.Context, accountID
 	if !s.vapid.Configured() {
 		return ErrWebPushNotConfigured
 	}
-	prototype, err := s.buildSubscription(accountID, deliveryModels.PushPortalParent, input)
+	sub, err := s.buildSubscription(accountID, deliveryModels.PushPortalParent, input)
 	if err != nil {
 		return err
 	}
-	// One admin transaction keeps all tenant rows atomic. The account ID comes
-	// from the authenticated parent token and mappings limit writes to active
-	// schools. This deliberately excludes pending-enrollment-only schools from
-	// Web Push until guardian access is active there.
 	return tenant.WithAdminTx(ctx, s.db, func(txCtx context.Context, _ bun.Tx) error {
-		mappings, err := s.accountTenants.ListGuardianSchoolIDs(txCtx, accountID)
-		if err != nil {
-			return fmt.Errorf("resolving guardian tenant mappings: %w", err)
-		}
-		if len(mappings) == 0 {
-			return errors.New("account has no active school mapping")
-		}
-
-		// A browser endpoint belongs to exactly one authenticated parent account.
-		// Clear bindings left by another guardian on a shared device before
-		// writing the current account's complete tenant set.
-		if err := s.repo.DeleteParentByEndpoint(txCtx, prototype.Endpoint); err != nil {
+		// Rebind atomically, including bindings left by a previous account on
+		// this browser. The repository serializes replacements of the endpoint.
+		if err := s.repo.DeleteParentByEndpoint(txCtx, sub.Endpoint); err != nil {
 			return fmt.Errorf("clearing previous parent push subscription bindings: %w", err)
 		}
-
-		for _, mapping := range mappings {
-			sub := *prototype
-			sub.TenantID = mapping
-			if err := s.repo.RegisterSubscription(txCtx, &sub); err != nil {
-				return fmt.Errorf("registering push subscription for tenant %d: %w", mapping, err)
-			}
-		}
-		return nil
+		return s.repo.RegisterSubscription(txCtx, sub)
 	})
 }
 
 func (s *pushSubscriptionService) UnsubscribeParent(ctx context.Context, accountID int64, endpoint string) error {
 	ctx = s.withTenantRuntime(ctx)
 	return tenant.WithAdminTx(ctx, s.db, func(txCtx context.Context, _ bun.Tx) error {
-		mappings, err := s.accountTenants.ListGuardianSchoolIDs(txCtx, accountID)
-		if err != nil {
-			return fmt.Errorf("resolving guardian tenant mappings: %w", err)
+		// Wait for a concurrent replacement before looking up this account's
+		// row, so the delete sees the committed registration, not its old row.
+		if err := s.repo.LockParentEndpoint(txCtx, endpoint); err != nil {
+			return err
 		}
-		for _, mapping := range mappings {
-			tenantCtx := tenant.WithTenantID(txCtx, mapping)
-			if err := s.repo.DeleteParentByAccountEndpoint(tenantCtx, accountID, endpoint); err != nil {
-				return fmt.Errorf("removing push subscription for tenant %d: %w", mapping, err)
-			}
-		}
-		return nil
+		return s.repo.DeleteParentByAccountEndpoint(txCtx, accountID, endpoint)
 	})
 }

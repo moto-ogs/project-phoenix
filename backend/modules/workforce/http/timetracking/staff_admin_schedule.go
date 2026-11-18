@@ -83,7 +83,7 @@ func (rs *StaffAdminResource) updateSchedule(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var req scheduleUpdateRequest
+	var req ScheduleUpdateRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

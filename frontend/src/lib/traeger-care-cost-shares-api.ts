@@ -65,10 +65,10 @@ export interface CareCostShareSet {
 export type CareCostShareExportFormat = "pdf" | "xlsx" | "csv";
 
 interface BackendShare {
-  id: number;
-  contract_id: number;
+  id: number | string;
+  contract_id: number | string;
   kind: CareCostShareKind;
-  cost_bearer_id: number;
+  cost_bearer_id: number | string;
   cost_bearer_name: string;
   share_basis_points: number | null;
   share_cents: number | null;
@@ -83,15 +83,15 @@ interface BackendShare {
 interface BackendSet {
   contracts:
     | {
-        contract_id: number;
-        school_id: number;
+        contract_id: number | string;
+        school_id: number | string;
         school_name: string;
         child_first_name: string;
         child_last_name: string;
         shares: BackendShare[] | null;
       }[]
     | null;
-  cost_bearers: { id: number; name: string; active: boolean }[] | null;
+  cost_bearers: { id: number | string; name: string; active: boolean }[] | null;
   expiring: number;
   warning_days: number;
 }

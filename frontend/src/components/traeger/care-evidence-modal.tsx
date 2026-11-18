@@ -186,7 +186,7 @@ export function CareEvidenceModal({
           />
         ) : null}
         <Input
-          controlSize="touch"
+          controlSize="compact"
           id="care-evidence-proof"
           name="evidence"
           label="Geprüfter Nachweis"

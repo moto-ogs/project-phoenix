@@ -42,7 +42,7 @@ type ScheduleResponse struct {
 	KeptByTraeger bool `json:"kept_by_traeger"`
 }
 
-// scheduleUpdateRequest is the union body for PUT /api/staff/{id}/schedule.
+// ScheduleUpdateRequest is the union body for PUT /api/staff/{id}/schedule.
 //
 // Mode "template": only ModelID is required. Existing custom entries are
 // archived and the staff is bound to the template.
@@ -51,7 +51,7 @@ type ScheduleResponse struct {
 //	Entries that exceed the rotation are rejected.
 //	SaveAsTemplateName is optional; when set we additionally
 //	create a tenant template from the same payload and bind it.
-type scheduleUpdateRequest struct {
+type ScheduleUpdateRequest struct {
 	Mode               string                 `json:"mode"`
 	ModelID            *int64                 `json:"model_id,omitempty"`
 	RotationLength     int                    `json:"rotation_length,omitempty"`
@@ -66,7 +66,7 @@ type scheduleUpdateRequest struct {
 
 // toServiceInput maps the api request DTO to the service-layer input struct,
 // keeping api types out of services/active.
-func (req scheduleUpdateRequest) toServiceInput() workforce.ScheduleUpdateInput {
+func (req ScheduleUpdateRequest) toServiceInput() workforce.ScheduleUpdateInput {
 	entries := make([]workforce.ScheduleEntry, 0, len(req.Entries))
 	for _, e := range req.Entries {
 		entries = append(entries, workforce.ScheduleEntry{

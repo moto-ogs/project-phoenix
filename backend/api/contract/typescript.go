@@ -265,7 +265,10 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	if object.Request {
 		return
 	}
-	fmt.Fprintf(out, "\nexport const %sSchema: z.ZodType<%s, unknown> = z.object({\n", object.Name, object.Name)
+	// The interface above and this shape come from one model; `object` hands
+	// the checker the interface instead of letting it derive the shape's type.
+	w.helpers["object"] = true
+	fmt.Fprintf(out, "\nexport const %sSchema: z.ZodType<%s, unknown> = object<%s>({\n", object.Name, object.Name, object.Name)
 	for _, field := range object.Fields {
 		decoder := w.zod(field.Schema)
 		if field.Optional {
@@ -411,6 +414,8 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 		t = elem + "[]"
 	case KindMap:
 		t = "Record<string, " + w.tsType(*s.Elem, request) + ">"
+	case KindJSON:
+		t = "unknown"
 	case KindRef:
 		t = s.Ref
 	}
@@ -451,6 +456,8 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.array(" + w.zod(*s.Elem) + ")"
 	case KindMap:
 		z = "z.record(z.string(), " + w.zod(*s.Elem) + ")"
+	case KindJSON:
+		z = "z.unknown()"
 	case KindRef:
 		z = s.Ref + "Schema"
 	}

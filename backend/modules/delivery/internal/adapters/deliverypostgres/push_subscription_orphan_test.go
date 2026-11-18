@@ -26,11 +26,19 @@ func TestDeleteSessionLinksDeletesOnlyNamedUnchangedLinks(t *testing.T) {
 	}
 	names := []string{"named", "unnamed", "rebound"}
 	for _, name := range names {
+		sub := &deliveryModels.PushSubscription{
+			AccountID: account.ID, Portal: deliveryModels.PushPortalStaff, Endpoint: endpoint(name),
+			P256dh: "key", Auth: "auth", TokenFamilyID: "family-" + name,
+		}
+		if name == "named" {
+			sub.Portal = deliveryModels.PushPortalParent
+			require.NoError(t, testpkg.WithAdminTx(t, testpkg.Ctx(t), db, func(ctx context.Context, _ bun.Tx) error {
+				return repo.RegisterSubscription(ctx, sub)
+			}))
+			continue
+		}
 		require.NoError(t, testpkg.WithTenantTx(t, testpkg.Ctx(t), db, tenantID, func(ctx context.Context, _ bun.Tx) error {
-			return repo.RegisterSubscription(ctx, &deliveryModels.PushSubscription{
-				AccountID: account.ID, Portal: deliveryModels.PushPortalStaff, Endpoint: endpoint(name),
-				P256dh: "key", Auth: "auth", TokenFamilyID: "family-" + name,
-			})
+			return repo.RegisterSubscription(ctx, sub)
 		}))
 	}
 
@@ -49,8 +57,13 @@ func TestDeleteSessionLinksDeletesOnlyNamedUnchangedLinks(t *testing.T) {
 			if link.AccountID != account.ID {
 				continue
 			}
-			require.Equal(t, tenantID, link.TenantID)
-			require.Equal(t, deliveryModels.PushPortalStaff, link.Portal)
+			if link.TokenFamilyID == "family-named" {
+				require.Zero(t, link.TenantID)
+				require.Equal(t, deliveryModels.PushPortalParent, link.Portal)
+			} else {
+				require.Equal(t, tenantID, link.TenantID)
+				require.Equal(t, deliveryModels.PushPortalStaff, link.Portal)
+			}
 			ids[link.TokenFamilyID] = link.SubscriptionID
 			if link.TokenFamilyID != "family-unnamed" {
 				named = append(named, link)

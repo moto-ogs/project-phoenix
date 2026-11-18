@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Hinweis "nicht durch den Dienstplan abgedeckt" über der Störungsliste des
+ * Hinweis "nicht durch den Dienstplan abgedeckt" unter der Störungsliste des
  * Vertretungsbereichs.
  *
  * Warum hier und nicht als Störung: die Störungsdefinition
@@ -9,7 +9,8 @@
  * abgesagt, Abwesenheit. Eine fehlende Schicht ist keine davon: die Person
  * fällt nicht aus, Betreuungsplan und Dienstplan widersprechen sich nur. Der
  * Hinweis zählt daher NICHT in die Zähler "Offen"/"Quittiert" und nicht in die
- * Tageschips, sondern steht als eigene Zeile darüber und verlinkt in den
+ * Tageschips, sondern steht als eigene Zeile nach der Liste (#7493: erst die
+ * Lücken, dann der Hinweis auf einen anderen Plan) und verlinkt in den
  * Dienstplan, wo die Schicht nachgetragen wird.
  *
  * Absichtlich nur die Anzahl: welche Person in welchem Zeitfenster fehlt, sagt
@@ -25,9 +26,8 @@
  * Komponente rendert nur.
  */
 
-import Link from "~/components/ui/navigation-link";
-
 import { Alert } from "~/components/ui/alert";
+import { ButtonLink } from "~/components/ui/button";
 
 export interface VertretungCoverageNoticeProps {
   /**
@@ -42,9 +42,11 @@ export interface VertretungCoverageNoticeProps {
 
 /** Exportiert, weil die Pluralisierung direkt getestet wird. */
 export function buildCoverageNoticeMessage(count: number): string {
+  // Sagt, was fehlt (die Schicht, nicht die Person), damit der Hinweis
+  // nicht wie eine weitere offene Lücke liest (#7493).
   return count === 1
-    ? "1 Einsatz ist nicht durch den Dienstplan abgedeckt."
-    : `${count} Einsätze sind nicht durch den Dienstplan abgedeckt.`;
+    ? "Bei 1 Einsatz fehlt die passende Schicht im Dienstplan."
+    : `Bei ${count} Einsätzen fehlt die passende Schicht im Dienstplan.`;
 }
 
 export function VertretungCoverageNotice({
@@ -64,13 +66,18 @@ export function VertretungCoverageNotice({
         // Screenreader nicht unterbrechen.
         announce="polite"
         message={buildCoverageNoticeMessage(count)}
+        // Der Hinweis nennt einen anderen Ort, also führt seine Aktion
+        // dorthin, als Kit-Knopf (#7054).
+        actionLayout="responsive"
         action={
-          <Link
+          <ButtonLink
             href={dienstplanHref}
-            className="font-medium whitespace-nowrap underline underline-offset-2 hover:no-underline"
+            variant="surface"
+            size="compact"
+            tooltip="Öffnet den Dienstplan für diesen Zeitraum."
           >
             Dienstplan öffnen
-          </Link>
+          </ButtonLink>
         }
       />
     </div>

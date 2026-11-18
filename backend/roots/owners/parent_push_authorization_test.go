@@ -93,7 +93,7 @@ func newBillingPushFixture(t *testing.T) (*billingPushFixture, testpkg.ParentCha
 func (f *billingPushFixture) fanout(t *testing.T, chain testpkg.ParentChain, n int) []int64 {
 	t.Helper()
 	for i := 0; i < n; i++ {
-		_, err := f.db.ExecContext(f.ctx, `INSERT INTO iot.push_subscriptions (tenant_id,account_id,portal,endpoint,p256dh,auth) VALUES (?,?,'parent',?,'p256dh-key','auth-key')`, chain.TenantID, chain.AccountID, fmt.Sprintf("https://fcm.googleapis.com/fcm/send/test-%d-%d", chain.AccountID, i))
+		_, err := f.db.ExecContext(f.ctx, `INSERT INTO iot.push_subscriptions (account_id,portal,endpoint,p256dh,auth) VALUES (?,'parent',?,'p256dh-key','auth-key')`, chain.AccountID, fmt.Sprintf("https://fcm.googleapis.com/fcm/send/test-%d-%d", chain.AccountID, i))
 		require.NoError(t, err)
 	}
 	channel, err := deliverycompose.NewTenantDurableWebPushChannel(testpkg.TenantRuntime(t, f.db), f.db, deliverycompose.NewPushSubscriptionRepository(f.db), deliverycompose.VAPIDConfig{PublicKey: "pub", PrivateKey: "priv", Subscriber: "mailto:test@example.org"}, deliverycompose.NewDurablePushOutbox(f.runtime.Module), slog.Default())

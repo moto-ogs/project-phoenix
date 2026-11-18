@@ -288,7 +288,7 @@ interface SchoolCheckinResponse {
 }
 
 interface BackendSchoolCheckinResponse {
-  student_id: number;
+  student_id: number | string;
   status: SchoolCheckinResponse["status"];
   check_in_time?: string;
   check_out_time?: string;

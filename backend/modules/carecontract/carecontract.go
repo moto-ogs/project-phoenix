@@ -145,8 +145,8 @@ type TemplateInput struct {
 	ContractPartner        string `json:"contract_partner"`
 }
 
-// Template is the contract template of one offering.
-type Template struct {
+// ContractTemplate is the contract template of one offering.
+type ContractTemplate struct {
 	ID int64 `json:"id"`
 	TemplateInput
 	UpdatedAt time.Time `json:"updated_at"`
@@ -155,14 +155,14 @@ type Template struct {
 // OfferingTemplate is one care offering of a school with its template, or
 // none yet.
 type OfferingTemplate struct {
-	SchoolID     int64     `json:"school_id"`
-	SchoolName   string    `json:"school_name"`
-	OfferingID   int64     `json:"offering_id"`
-	OfferingName string    `json:"offering_name"`
-	PhaseName    string    `json:"phase_name"`
-	PriceCents   *int      `json:"price_cents"`
-	Active       bool      `json:"active"`
-	Template     *Template `json:"template"`
+	SchoolID     int64             `json:"school_id"`
+	SchoolName   string            `json:"school_name"`
+	OfferingID   int64             `json:"offering_id"`
+	OfferingName string            `json:"offering_name"`
+	PhaseName    string            `json:"phase_name"`
+	PriceCents   *int              `json:"price_cents"`
+	Active       bool              `json:"active"`
+	Template     *ContractTemplate `json:"template"`
 	// AcceptanceText is the complete saved conditions text for the enrollment
 	// form. It is empty without a template or an explicit contract partner.
 	AcceptanceText string `json:"acceptance_text"`

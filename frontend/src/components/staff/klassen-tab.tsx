@@ -44,7 +44,7 @@ interface ProxyResponse<T> {
 }
 
 interface SchoolClassesPayload {
-  staff_id: number;
+  staff_id: number | string;
   school_classes: string[];
 }
 

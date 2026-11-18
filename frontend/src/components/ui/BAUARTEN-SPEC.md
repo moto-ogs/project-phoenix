@@ -51,7 +51,8 @@ Aktivitäten, Gruppen, Rollen, Geräte, Dateien, Nachrichten, Anfragen.
 
    **Wann ein Pane neben der Liste zulässig ist (#3115):** nur, wenn es die
    einzige Objektansicht des Typs im Portal ist (Gruppe, Gerät, Rolle,
-   Aktivität, Berechtigung, die Kataloge der Datenverwaltung). Dann steht
+   Aktivität, Berechtigung, die Kataloge der Datenverwaltung, die
+   Vertragsbedingungen eines Angebots im Träger-Portal seit #7409). Dann steht
    die Auswahl in der Adresse (`?group=`), damit ein Eintrag verlinkbar
    bleibt; `useUpdateUrlParams` schreibt sie per `router.replace`, ein
    Zurück im Browser springt also zur vorigen Seite, nicht zum vorigen
@@ -246,8 +247,8 @@ bekommt eine shrink-only Baseline analog zum bestehenden
    Objekttyp. **Umgesetzt** (`scripts/oxlint-plugin-bauart.mjs`, hard-zero,
    #3115): `MasterDetailLayout` darf nur von den Typen importiert werden,
    deren Pane die einzige Objektansicht ist (feste Liste im Plugin: Gruppe,
-   Gerät, Rolle, Aktivität, Berechtigung, Kataloge); `DetailPanel` und
-   `DatabaseDetailHeader` in einem Overlay sowie `InfoSection`/`DataGrid`
+   Gerät, Rolle, Aktivität, Berechtigung, Kataloge, Vertragsbedingungen);
+   `DetailPanel` und `DatabaseDetailHeader` in einem Overlay sowie `InfoSection`/`DataGrid`
    in einem `SlideOver`/`Drawer` fallen durch. Zentrierte Modale bleiben
    außen vor, weil ein `FormModal` ein Feld zur Einordnung zeigen darf;
    dasselbe gilt ortsgebunden für ein Formular im Slide-over (Übergabe einer

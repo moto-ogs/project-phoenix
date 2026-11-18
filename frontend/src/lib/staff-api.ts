@@ -677,7 +677,11 @@ class StaffService {
       data: Omit<
         Pick<Staff, "id" | "name" | "firstName" | "lastName">,
         "id"
-      > & { id: number; started_on?: string; ended_on?: string | null };
+      > & {
+        id: number | string;
+        started_on?: string;
+        ended_on?: string | null;
+      };
     };
     return {
       ...json.data,
@@ -772,7 +776,7 @@ interface BackendScheduleEntry {
 }
 
 interface BackendScheduleModel {
-  id: number;
+  id: number | string;
   name: string;
   rotation_length: number;
   rotation_anchor_date: string;
@@ -2274,7 +2278,7 @@ class StaffMonthCloseService {
       );
     }
     const json = (await response.json()) as {
-      data: { staff_ids: number[] | null } | null;
+      data: { staff_ids: (number | string)[] | null } | null;
     };
     return (json.data?.staff_ids ?? []).map(String);
   }
@@ -2447,7 +2451,7 @@ export interface StaffFinancialPlain {
 }
 
 interface BackendStammdaten {
-  staff_id: number;
+  staff_id: number | string;
   person: {
     first_name: string;
     last_name: string;

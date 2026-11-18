@@ -25575,7 +25575,7 @@
           "name": "tenant_id",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "account_id",

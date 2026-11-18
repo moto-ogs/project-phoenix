@@ -13,7 +13,7 @@ function school(
   name: string,
   values: ComparedSchool["values"],
 ): ComparedSchool {
-  return { id, name, slug: id, subdomain: id, city: "", values, keyDate: null };
+  return { id, name, slug: id, subdomain: id, city: "", values };
 }
 
 const bach = school("1", "OGS Am Bach", { places_rate: 0.92, booked: 40 });

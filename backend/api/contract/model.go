@@ -20,6 +20,7 @@ const (
 	KindArray    = contractmodel.KindArray
 	KindMap      = contractmodel.KindMap
 	KindRef      = contractmodel.KindRef
+	KindJSON     = contractmodel.KindJSON
 )
 
 // The model lives in contractmodel so that the request runtime's test build

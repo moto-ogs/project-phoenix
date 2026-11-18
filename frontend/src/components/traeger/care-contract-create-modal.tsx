@@ -10,7 +10,7 @@
 import { SectionLabel } from "~/components/ui/section-label";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
-import { Button, ButtonLink } from "~/components/ui/button";
+import { ButtonLink } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -108,13 +108,11 @@ export function CareContractCreateModal({
   candidates,
   onClose,
   onCreated,
-  onOpenConditions,
 }: Readonly<{
   isOpen: boolean;
   candidates: readonly ContractCandidate[];
   onClose: () => void;
   onCreated: (result: CreateResult) => void;
-  onOpenConditions: () => void;
 }>) {
   const ready = useMemo(
     () => candidates.filter((candidate) => candidate.templateIssue === null),
@@ -233,14 +231,14 @@ export function CareContractCreateModal({
               candidate.templateIssue === "acceptance_changed",
           );
           const settingsLink = (
-            // Under the message on a phone: -ml-2.5 takes back the
-            // padding, so the label starts with the text.
+            // Out of the dialog into a new tab: the chosen children stay
+            // ticked here (#7054, #7409).
             <ButtonLink
               href={traegerPath("/traeger/einstellungen?bereich=enrollment")}
-              variant="ghost_tone"
+              variant="surface"
               size="compact"
-              tooltip="Schließt das Fenster und öffnet die Einstellungen zur Anmeldung."
-              className="max-sm:-ml-2.5"
+              newTab
+              tooltip="Öffnet die Einstellungen zur Anmeldung in einem neuen Tab."
             >
               Einstellung öffnen
             </ButtonLink>
@@ -277,16 +275,15 @@ export function CareContractCreateModal({
             message={conditionsMessage(missing, differing)}
             actionLayout="responsive"
             action={
-              <Button
-                type="button"
-                variant="ghost_tone"
+              <ButtonLink
+                href={traegerPath("/traeger/vertraege/bedingungen")}
+                variant="surface"
                 size="compact"
-                tooltip="Schließt das Fenster und öffnet die Vertragsbedingungen der Module."
-                className="max-sm:-ml-2.5"
-                onClick={onOpenConditions}
+                newTab
+                tooltip="Öffnet die Vertragsbedingungen der Module in einem neuen Tab."
               >
                 Bedingungen festlegen
-              </Button>
+              </ButtonLink>
             }
           />
         ) : null}

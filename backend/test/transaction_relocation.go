@@ -20,6 +20,7 @@ func transactionScopeSubset(current, previous map[string]string, moves map[strin
 	current = withoutReviewedTransactionFrameBundles(current)
 	current = withoutReviewedBelegRetentionTransactions(current)
 	current = withoutReviewedGuardianFeedTransactions(current)
+	current = withoutReviewedParentDeviceExpiryTransaction(current)
 	current = withoutReviewedTraegerFeedTransactions(current)
 	current = withoutReviewedCatererFeedTransactions(current)
 	current = withoutReviewedTraegerStaffTransactions(current)

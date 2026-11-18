@@ -20,22 +20,23 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// nullableInt distinguishes an omitted JSON field (Set=false) from an explicit
+// NullableInt distinguishes an omitted JSON field (Set=false) from an explicit
 // null (Set=true, Value=nil) or a concrete value (Set=true, Value=&n). The
 // stdlib `*int` collapses "omitted" and "null" to the same nil, which makes it
 // impossible to tell "leave as-is/inherit" from "clear this override" — the
 // split flow needs both (#1839).
-type nullableInt struct {
+type NullableInt struct {
 	Set   bool
 	Value *int
 }
 
-type nullableInt64 struct {
+// NullableInt64 is the int64 member of the tri-state family.
+type NullableInt64 struct {
 	Set   bool
 	Value *int64
 }
 
-func (n *nullableInt64) UnmarshalJSON(b []byte) error {
+func (n *NullableInt64) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
@@ -44,7 +45,7 @@ func (n *nullableInt64) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &n.Value)
 }
 
-func (n *nullableInt) UnmarshalJSON(b []byte) error {
+func (n *NullableInt) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
@@ -53,16 +54,16 @@ func (n *nullableInt) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &n.Value)
 }
 
-// nullableIntSlice is the []int member of the tri-state family: it tells an
+// NullableIntSlice is the []int member of the tri-state family: it tells an
 // omitted source_grade_levels ("keep the stored Jahrgangsfilter") apart from
 // an explicit null or empty list ("clear the filter") on the template PUT
 // (#2147 review round 12).
-type nullableIntSlice struct {
+type NullableIntSlice struct {
 	Set   bool
 	Value []int
 }
 
-func (n *nullableIntSlice) UnmarshalJSON(b []byte) error {
+func (n *NullableIntSlice) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
@@ -71,16 +72,16 @@ func (n *nullableIntSlice) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &n.Value)
 }
 
-// nullableInt64Slice is the []int64 member of the tri-state family: it tells
+// NullableInt64Slice is the []int64 member of the tri-state family: it tells
 // an omitted source_care_offering_ids ("keep the stored Quelle") apart from
 // an explicit null or empty list ("clear the source") on the template PUT
 // and the split body (multi-source follow-up to #2147 round 12).
-type nullableInt64Slice struct {
+type NullableInt64Slice struct {
 	Set   bool
 	Value []int64
 }
 
-func (n *nullableInt64Slice) UnmarshalJSON(b []byte) error {
+func (n *NullableInt64Slice) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
@@ -89,16 +90,16 @@ func (n *nullableInt64Slice) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &n.Value)
 }
 
-// nullableStringSlice is the []string member of the tri-state family: it
+// NullableStringSlice is the []string member of the tri-state family: it
 // tells an omitted source_school_classes ("keep the stored Klassenfilter")
 // apart from an explicit null or empty list ("clear the filter") on the
 // template PUT and the split body (#2482).
-type nullableStringSlice struct {
+type NullableStringSlice struct {
 	Set   bool
 	Value []string
 }
 
-func (n *nullableStringSlice) UnmarshalJSON(b []byte) error {
+func (n *NullableStringSlice) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
@@ -107,17 +108,17 @@ func (n *nullableStringSlice) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &n.Value)
 }
 
-// nullableStr is the string analogue of nullableInt: it tells an omitted note
+// NullableStr is the string analogue of NullableInt: it tells an omitted note
 // ("inherit the source Wochennotiz") apart from an explicit null ("clear the
-// series note") for the split flow (#1837 follow-up). (Named nullableStr to
+// series note") for the split flow (#1837 follow-up). (Named NullableStr to
 // avoid colliding with the RawMessage-based nullableString in
 // instance_students.go, which is a different tri-state mechanism.)
-type nullableStr struct {
+type NullableStr struct {
 	Set   bool
 	Value *string
 }
 
-func (n *nullableStr) UnmarshalJSON(b []byte) error {
+func (n *NullableStr) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
@@ -136,17 +137,17 @@ func (n *nullableStr) UnmarshalJSON(b []byte) error {
 // omitted-vs-null distinction the presence-aware type provides.
 type splitTemplateRequest struct {
 	updateTemplateRequest
-	RequiredStaff nullableInt `json:"required_staff"`
+	RequiredStaff NullableInt `json:"required_staff"`
 	// Notes shadows updateTemplateRequest's `*string` for the same reason as
 	// RequiredStaff: the split must tell "inherit the source note" (omitted)
 	// from "clear the series note" (null).
-	Notes nullableStr `json:"notes"`
+	Notes NullableStr `json:"notes"`
 	// ListKind shadows updateTemplateRequest's `*string` (#1565): omitted
 	// inherits the source template's Listenart, null/empty clears it. Without
 	// the tri-state a plain "this and following" edit would wipe the
 	// classification and the successor's instances would vanish from their
 	// automatic daily list.
-	ListKind        nullableStr `json:"list_kind"`
+	ListKind        NullableStr `json:"list_kind"`
 	EffectiveDate   string      `json:"effective_date"`
 	MaterializeFrom *string     `json:"materialize_from,omitempty"` // YYYY-MM-DD
 	MaterializeTo   *string     `json:"materialize_to,omitempty"`   // YYYY-MM-DD
@@ -175,13 +176,13 @@ func (req *splitTemplateRequest) Bind(r *http.Request) error {
 	if req.EndDate.Set {
 		return errors.New("end_date is not supported on a split")
 	}
-	// req.Notes (nullableStr) shadows the embedded updateTemplateRequest.Notes,
+	// req.Notes (NullableStr) shadows the embedded updateTemplateRequest.Notes,
 	// so the create/update length guard in the embedded Bind never sees the
 	// split note. Enforce the same 2000-char limit here (#1837 follow-up).
 	if req.Notes.Set && req.Notes.Value != nil && len(*req.Notes.Value) > 2000 {
 		return invalidField(common.CodeTimetableTemplateInvalid, "notes", "notes cannot exceed 2000 characters")
 	}
-	// req.ListKind (nullableStr) shadows the embedded field the same way, so
+	// req.ListKind (NullableStr) shadows the embedded field the same way, so
 	// the create/update normalization never sees the split value. Apply the
 	// identical trim + validity check here (#1565).
 	if req.ListKind.Set {

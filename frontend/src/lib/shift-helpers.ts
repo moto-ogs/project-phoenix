@@ -4,12 +4,12 @@
 
 export interface BackendStaffShift {
   id: string;
-  staff_id: number;
+  staff_id: number | string;
   date: string;
   start_time: string;
   end_time: string;
   break_minutes: number;
-  shift_type_id?: number | null;
+  shift_type_id?: number | string | null;
   /** Resolved Schichtart, embedded so staff (who cannot read /shift-types) still
    *  see the label and color (#1844). Present only when the shift has a type. */
   shift_type_name?: string | null;
@@ -82,7 +82,7 @@ interface UncoveredInterval {
 }
 
 interface BackendStaffScheduleStaff {
-  id: number;
+  id: number | string;
   first_name: string;
   last_name: string;
 }
@@ -94,13 +94,13 @@ export interface StaffScheduleStaff {
 }
 
 interface BackendStaffScheduleAssignment {
-  instance_id: number;
-  staff_id: number;
+  instance_id: number | string;
+  staff_id: number | string;
   date: string;
   start_time: string;
   end_time: string;
   activity_title: string;
-  room_id: number;
+  room_id: number | string;
   room_name: string;
   status: string;
   is_absent: boolean;
@@ -140,7 +140,7 @@ interface BackendShiftTypeMinutes {
 }
 
 interface BackendStaffWeeklySummary {
-  staff_id: number;
+  staff_id: number | string;
   week_start: string;
   planned_minutes: number;
   target_minutes: number | null;

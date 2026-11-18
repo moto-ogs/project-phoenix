@@ -23,7 +23,7 @@ export function traegerOccupancyTopic(): HelpTopic {
       "Du siehst für jede Schule, wie viele Kinder in welcher Gruppe sind und welches Betreuungsangebot sie heute gebucht haben. Du siehst auch, wo noch Plätze frei sind.",
     notes: [
       "Suche oben nach einer Schule oder einem Ort. Die Summe zählt dann nur diese Schulen.",
-      "Es zählen dieselben Kinder wie bei der Stichtagszahl, aber von heute.",
+      "Es zählen die Kinder, die die Schule heute aktiv führt. Im Bericht zählt moto dieselben Kinder an einem Stichtag, den du wählst.",
       "Eine Betreuungsform ist ein Betreuungsangebot, das als Betreuung zählt, zum Beispiel „OGS bis 16 Uhr“. Mittagessen zählt nicht.",
       "Unter `Betreuungsformen` steht jedes Angebot, das heute läuft. Auch eins, das noch niemand gebucht hat. Es hat dann 0 Kinder und alle Plätze frei.",
       "Unter `Betreuungsformen` stehen Angebote mit gleichem Namen an mehreren Schulen auch zusammengezählt.",
@@ -35,6 +35,6 @@ export function traegerOccupancyTopic(): HelpTopic {
       "Steht bei einem Angebot `Voll` oder `Überbelegt`, sind alle Plätze vergeben. Die Plätze legt die Schule fest.",
       "Steht bei einer Schule `Ohne Betreuungsform`, haben diese Kinder heute kein Betreuungsangebot gebucht. Das ist bei Schulen mit Wochenplan üblich.",
     ],
-    related: [HELP_TOPICS.traegerDashboard, HELP_TOPICS.traegerKeyDateCounts],
+    related: [HELP_TOPICS.traegerDashboard, HELP_TOPICS.traegerReports],
   };
 }

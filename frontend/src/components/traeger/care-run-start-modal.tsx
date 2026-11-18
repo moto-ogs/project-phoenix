@@ -269,7 +269,7 @@ export function CareRunStartModal({
                     }
                     onClick={() => setSelected(allSelected ? [] : free)}
                   >
-                    {allSelected ? "Keine wählen" : "Alle wählen"}
+                    {allSelected ? "Auswahl aufheben" : "Alle auswählen"}
                   </Button>
                 ) : null}
                 <div className="grid gap-2 sm:grid-cols-2">

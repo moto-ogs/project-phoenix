@@ -3,7 +3,7 @@ name: ui-before-after
 description: Use when a UI change needs before/after screenshot pairs for a PR or review, with the changed regions outlined and numbered. Triggers on "vorher/nachher", "before/after screenshots", "circle what changed", visual comparison of a frontend refactor, or verifying that a migration did not change the look.
 metadata:
   author: moto-ogs
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Before/After UI Screenshot Pairs
@@ -58,6 +58,8 @@ not establish which state the browser shows.
        rm -rf -- frontend/.next &&
        scripts/dev-native.sh up frontend  # use `up` if both apps were selected
      ```
+     `up` stays in the foreground: run the chain as a background job, then
+     wait for the frontend to answer before step 2.
    - For a task-owned foreground frontend launched through
      `scripts/dev-native.sh frontend <command...>`, stop that command gracefully
      (including its children), clear the same `.next` directory while stopped,
@@ -135,11 +137,15 @@ not establish which state the browser shows.
      n=$(basename "$f")
      b="shots/before-marked/$n"; [ -f "$b" ] || b="$f"
      a="shots/after-marked/$n"; [ -f "$a" ] || a="shots/after/$n"
-     magick "$b" -resize 50% -bordercolor gray -border 1 "shots/b-$n"
-     magick "$a" -resize 50% -bordercolor gray -border 1 "shots/a-$n"
-     magick "shots/b-$n" "shots/a-$n" +append "shots/pair-$n"
+     case "$n" in mobile-*) s=100% ;; *) s=50% ;; esac
+     magick "$b" -resize "$s" -bordercolor gray -border 1 "shots/b-$n"
+     magick "$a" -resize "$s" -bordercolor gray -border 1 "shots/a-$n"
+     magick "shots/b-$n" "shots/a-$n" -background white -gravity north \
+       +append "shots/pair-$n"
    done
    ```
+   Phone shots keep their size: halved, a 390 px shot is unreadable. The
+   two sides of a pair may differ in height (`--full`); they align at the top.
 5. **Restore even after failure.** Remove only task-created verification markers
    and restore all switched paths to the original branch commit. Run the same
    source-state gate one last time and verify the original UI is rendered and
@@ -173,13 +179,21 @@ unmarked.
   } | agent-browser --session s eval --stdin
   agent-browser --session s screenshot shots/after-marked/<viewport>-<nn>-<name>.png
   ```
-  Each entry is `[number, CSS selector]`; the first match is outlined. Scroll a
-  region inside an inner scroll area into view first. An evaluation error
-  (selector matches nothing, element invisible) blocks the marked shot like a
-  failed rendered assertion.
+  Each entry is `[number, CSS selector]`; the first match is outlined. A region
+  made of neighbours without a parent of their own (two counters in a row)
+  takes a list, `[1, ["#open", "#done"]]`, and gets one outline around all of
+  them. An evaluation error (selector matches nothing, element invisible)
+  blocks the marked shot like a failed rendered assertion.
+- **Keep the region in the shot.** The call answers „N change marks drawn“,
+  followed by the numbers that lie outside the window. Bring those into view
+  first (`scrollIntoView` on the element, also inside a strip that scrolls
+  sideways) or take the marked twin with `screenshot --full`. A panel that
+  scrolls inside itself (slide-over, modal) needs the region scrolled into
+  view; `--full` does not reach it.
 - **Inspect the twin.** Every outline surrounds its region, and outline and
   number cover no changed content; choose a wider or narrower selector until
-  both hold.
+  both hold. A fixed bar (phone navigation, sticky footer) can still cover a
+  region inside the window: scroll it clear.
 - **Clear before going on.** The marks exist only in the open page. Navigation
   removes them; to keep interacting on the same page, call `markChanges([])`.
 

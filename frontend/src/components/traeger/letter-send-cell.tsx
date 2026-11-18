@@ -10,7 +10,8 @@ export function LetterSendCell({
   letter,
   printInstruction,
 }: Readonly<{
-  letter: LetterMailState & { readonly inInbox: boolean };
+  /** Without `inInbox` the letter goes by mail only and names no inbox. */
+  letter: LetterMailState & { readonly inInbox?: boolean };
   printInstruction: string;
 }>) {
   const detail = mailStatusDetail(letter);
@@ -21,7 +22,7 @@ export function LetterSendCell({
       {!letter.recipientEmail.trim() ? (
         <p className="text-sm text-gray-600">{printInstruction}</p>
       ) : null}
-      {!letter.inInbox ? (
+      {letter.inInbox === false ? (
         <p className="text-sm text-gray-600">
           Nicht in der Eltern-App: Das Kind hat noch keinen Schülerdatensatz.
         </p>

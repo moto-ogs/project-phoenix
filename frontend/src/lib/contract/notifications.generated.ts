@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   noData,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -19,7 +20,7 @@ export interface emailSubscriptionResponse {
   enabled: boolean;
 }
 
-export const emailSubscriptionResponseSchema: z.ZodType<emailSubscriptionResponse, unknown> = z.object({
+export const emailSubscriptionResponseSchema: z.ZodType<emailSubscriptionResponse, unknown> = object<emailSubscriptionResponse>({
   enabled: z.boolean(),
 });
 

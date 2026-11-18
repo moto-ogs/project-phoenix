@@ -73,7 +73,6 @@ describe("TraegerSidebar", () => {
     for (const [group, name] of [
       ["Übersicht", "Dashboard"],
       ["Übersicht", "Schulen"],
-      ["Übersicht", "Stichtagszahlen"],
       ["Betreuung", "Ferienbetreuung"],
       ["Finanzen", "Abrechnungsläufe"],
       ["Finanzen", "Familien und Zahlung"],
@@ -88,7 +87,6 @@ describe("TraegerSidebar", () => {
     expect(linkNames(mainNav())).toEqual([
       "Dashboard",
       "Schulen",
-      "Stichtagszahlen",
       "Belegung",
       "Ferienbetreuung",
       // Anmeldephasen für mehrere Schulen, mit demselben Recht (#4704).
@@ -99,9 +97,10 @@ describe("TraegerSidebar", () => {
       "Familien und Zahlung",
       "Preise und Ermäßigungen",
     ]);
+    // #7301: moto's billing figures stay in the operator portal.
     expect(
-      mainNav().getByRole("link", { name: "Stichtagszahlen" }),
-    ).toHaveAttribute("href", "/stichtagszahlen");
+      mainNav().queryByRole("link", { name: "Stichtagszahlen" }),
+    ).toBeNull();
     expect(mainNav().getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "href",
       "/uebersicht",
@@ -142,7 +141,6 @@ describe("TraegerSidebar", () => {
     expect(linkNames(mainNav())).toEqual([
       "Dashboard",
       "Schulen",
-      "Stichtagszahlen",
       "Belegung",
       "Schließtage",
       "Dokumente",
@@ -152,7 +150,7 @@ describe("TraegerSidebar", () => {
     expect(mainNav().queryByText("Finanzen")).toBeNull();
   });
 
-  it("shows the Dashboard and the Stichtagszahlen only with their right (#4674, #4673)", () => {
+  it("shows the Dashboard only with its right (#4674)", () => {
     sessionUser.permissions = [];
     render(<TraegerSidebar />);
 

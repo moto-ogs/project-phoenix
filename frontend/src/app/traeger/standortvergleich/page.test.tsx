@@ -101,12 +101,10 @@ const COMPARISON: TraegerComparison = {
         present: 30,
         active_students: 41,
       },
-      keyDate: "2026-09-08",
     },
     {
       ...SCHOOLS[1]!,
       values: { places: 20, places_rate: 0.55, free_places: 9, booked: 11 },
-      keyDate: null,
     },
   ],
   average: {
@@ -178,7 +176,14 @@ describe("TraegerComparisonPage", () => {
     expect(
       within(bach).getByText("20 Punkte über Schnitt"),
     ).toBeInTheDocument();
-    expect(within(bach).getByText("am 08.09.2026")).toBeInTheDocument();
+    // #7301: the live roster of the window's last day, no moto billing date.
+    expect(
+      within(table).getByRole("columnheader", {
+        name: /Aktive Kinder am letzten Tag/,
+      }),
+    ).toBeInTheDocument();
+    expect(within(bach).getByText("41")).toBeInTheDocument();
+    expect(within(table).queryByText(/Stichtag/)).not.toBeInTheDocument();
     const linden = within(table)
       .getByRole("link", { name: "OGS Lindenweg" })
       .closest("tr") as HTMLElement;

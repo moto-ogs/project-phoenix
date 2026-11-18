@@ -88,8 +88,8 @@ interface BackendCreditor {
 }
 
 interface BackendMandate {
-  id: number;
-  contract_id: number;
+  id: number | string;
+  contract_id: number | string;
   family_email: string;
   party_first_name: string;
   party_last_name: string;
@@ -110,11 +110,11 @@ interface BackendMandate {
 }
 
 interface BackendEvent {
-  id: number;
+  id: number | string;
   action: MandateAction;
   source: MandateSource | "run";
   fields: string[] | null;
-  account_id: number | null;
+  account_id: number | string | null;
   occurred_at: string;
   import_file?: string;
   import_line?: number;

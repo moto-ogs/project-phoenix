@@ -7,9 +7,14 @@
 // (#4680) zeigt, wann und wie er zustande kam; erneut senden lässt er sich mit demselben PDF.
 
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
-import { ChevronDown, Download, RotateCw, Send, Trash2 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Download, RotateCw, Send, Trash2 } from "lucide-react";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   CONTRACT_STATUS_LABELS,
   contractStatusTone,
@@ -23,20 +28,30 @@ import {
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
 import {
+  CONTRACT_DELIVERY_SECTION_ID,
+  CONTRACT_DETAIL_TABS,
+  CONTRACT_VERSIONS_SECTION_ID,
+  ContractDetailTabsProvider,
+  ContractSectionJump,
+  type ContractDetailTab,
+  parseContractDetailTab,
+} from "~/components/traeger/care-contract-detail-tabs";
+import {
   CareContractNoticeCard,
   NoticeCardJump,
 } from "~/components/traeger/care-contract-notice-card";
 import {
-  CONTRACT_VERSIONS_SECTION_ID,
   CareContractVersions,
   plannedVersion,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
-import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
+import {
+  useFreshTraegerResource,
+  useTraegerResource,
+} from "~/components/traeger/use-traeger-resource";
 import { EmailText } from "~/components/traeger/email-text";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { JumpButton } from "~/components/ui/jump-button";
 import {
   OverflowMenu,
   type OverflowMenuItem,
@@ -56,6 +71,7 @@ import {
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { fetchContractChanges } from "~/lib/care-contract-changes-api";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -92,9 +108,58 @@ const logger = createLogger({ component: "TraegerVertragPage" });
 const LIST_HREF = traegerPath("/traeger/vertraege");
 
 export default function TraegerVertragPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze.
+  return (
+    <Suspense
+      fallback={
+        <TenantPage
+          title="Vertrag"
+          back
+          backHref={LIST_HREF}
+          backLabel="Zurück zu den Verträgen"
+          loading
+        />
+      }
+    >
+      <TraegerVertragView />
+    </Suspense>
+  );
+}
+
+function TraegerVertragView() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // The tab stands in the address, so a bookmark opens it again (#7408). A
+  // click shows it at once; the address follows. Until it does, the click
+  // holds; an address that changes otherwise (back, a link) wins.
+  const addressedTab = parseContractDetailTab(searchParams?.get("tab"));
+  const [clicked, setClicked] = useState<{
+    contractId: string;
+    tab: ContractDetailTab;
+    from: ContractDetailTab;
+  } | null>(null);
+  const activeTab =
+    clicked && clicked.contractId === id && clicked.from === addressedTab
+      ? clicked.tab
+      : addressedTab;
+  useEffect(() => {
+    // The optimistic tab only bridges the router update. Once the address or
+    // contract changes, it must not override a later browser navigation.
+    setClicked(null);
+  }, [addressedTab, id]);
+  const openTab = (next: ContractDetailTab) => {
+    setClicked({ contractId: id, tab: next, from: addressedTab });
+    const query = new URLSearchParams(searchParams?.toString());
+    if (next === "vertrag") query.delete("tab");
+    else query.set("tab", next);
+    const queryString = query.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  };
   const {
     data: contract,
     loading,
@@ -315,9 +380,18 @@ export default function TraegerVertragPage() {
   const sendInHead = canSend && !resendInCard;
   const refreshInCard = !!contract && !isDraft && contract.mailings.length > 0;
 
+  // A change the parents asked for waits for a decision in the tab
+  // „Unterschrift und Versand“; its tab counts it, so it is not overlooked.
+  const { data: changes } = useTraegerResource(
+    contract?.status === "aktiv" ? traegerContractKeys.changes(id) : null,
+    () => fetchContractChanges(id),
+    "der Änderungswunsch",
+  );
+  const pendingChanges = changes?.pending.length ?? 0;
+
   const headMenu: OverflowMenuItem[] = [];
   // The mail actions of the card „Versand“ are also one tap away from the
-  // head: on a phone that card sits several cards down the page.
+  // head: that card sits in its own tab.
   if (refreshInCard) {
     headMenu.push({
       label: "Versand aktualisieren",
@@ -397,6 +471,8 @@ export default function TraegerVertragPage() {
                   variant={isDraft ? "success" : "outline"}
                   size="md"
                   disabled={sendBlocked}
+                  isLoading={sending}
+                  loadingText="Wird gesendet …"
                   tooltip={
                     isDraft
                       ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
@@ -406,11 +482,7 @@ export default function TraegerVertragPage() {
                   onClick={() => setConfirmingSend(true)}
                 >
                   <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-                  {sending
-                    ? "Wird gesendet …"
-                    : isDraft
-                      ? "Vertrag senden"
-                      : "Erneut senden"}
+                  {isDraft ? "Vertrag senden" : "Erneut senden"}
                 </Button>
               ) : (
                 <Button
@@ -425,31 +497,30 @@ export default function TraegerVertragPage() {
                 </Button>
               )}
               {/* One visible action; the rest waits in the menu (TENANT-PAGE-SPEC
-                rule 4). An entry that cannot run right now stays out. For an
-                active contract the menu holds only the mail actions, so it
-                is named „Versand“ instead of a bare ⋮. */}
+                rule 4). An entry that cannot run right now stays out. */}
               {headMenu.length > 0 ? (
-                resendInCard && !isDraft ? (
-                  <OverflowMenu
-                    items={headMenu}
-                    ariaLabel="Versand"
-                    triggerButton={{ variant: "outline", size: "md" }}
-                    // The arrow says that a menu opens, as on the download menus.
-                    triggerClassName="gap-2 whitespace-nowrap"
-                    triggerContent={
-                      <>
-                        Versand
-                        <ChevronDown className="h-4 w-4" aria-hidden />
-                      </>
-                    }
-                  />
-                ) : (
-                  <OverflowMenu items={headMenu} ariaLabel="Weitere Aktionen" />
-                )
+                <OverflowMenu items={headMenu} ariaLabel="Weitere Aktionen" />
               ) : null}
             </>
           ) : null}
         </>
+      }
+      tabs={
+        contract
+          ? {
+              value: activeTab,
+              onChange: (next) => openTab(parseContractDetailTab(next)),
+              inUrl: true,
+              label: "Bereiche des Vertrags",
+              items: CONTRACT_DETAIL_TABS.map((tab) => ({
+                ...tab,
+                badge:
+                  tab.value === "versand" && pendingChanges > 0
+                    ? pendingChanges
+                    : undefined,
+              })),
+            }
+          : undefined
       }
       error={
         refused
@@ -501,31 +572,26 @@ export default function TraegerVertragPage() {
       }
     >
       {contract ? (
-        <>
-          <LoadErrorAlert error={afterSend.error} className="mb-4" />
+        <ContractDetailTabsProvider openTab={openTab}>
+          <LoadErrorAlert error={afterSend.error} />
           <StatusNotice contract={contract} />
           {planned ? (
             <Alert
               type="info"
-              message={`Ab ${formatDate(planned.effectiveFrom)} gilt Version ${planned.number}. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unten unter „Versionen“.`}
+              message={`Ab ${formatDate(planned.effectiveFrom)} gilt Version ${planned.number}. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unter „Versionen“.`}
               action={
-                <JumpButton
+                <ContractSectionJump
                   targetId={CONTRACT_VERSIONS_SECTION_ID}
                   tooltip="Springt zu den Versionen und zeigt, was sich ändert."
                 >
                   Zu den Versionen
-                </JumpButton>
+                </ContractSectionJump>
               }
             />
           ) : null}
-          <CareContractSignatureCard
-            contract={contract}
-            onChanged={afterCardWrite}
-          />
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="flex flex-col gap-6 lg:col-span-2">
+          {activeTab === "vertrag" ? (
+            <>
               <SectionCard
-                concept={careContractsConcept}
                 title="Vertragsangaben"
                 description={
                   contract.concluded
@@ -565,7 +631,7 @@ export default function TraegerVertragPage() {
                 </DataGrid>
               </SectionCard>
               <SectionCard
-                leading={<ConceptIconTile concept={careTimesConcept} />}
+                concept={careTimesConcept}
                 title="Gebuchte Betreuung"
                 description={
                   contract.versions.length > 1
@@ -591,39 +657,9 @@ export default function TraegerVertragPage() {
                   ))}
                 </DataGrid>
               </SectionCard>
-              <SectionCard title="Kündigung und Satzung">
-                <DataGrid>
-                  <DataField label="Kündigung">{contract.noticeText}</DataField>
-                  <DataField label="Vertragspartner">
-                    {contract.version.terms.contractPartner ||
-                      "Der Träger selbst"}
-                  </DataField>
-                  <DataField label="Sonderkündigung" fullWidth>
-                    {contract.version.terms.specialTermination ? (
-                      <>
-                        Zum Halbjahr: 31. Januar oder 31. Juli
-                        <span className="block text-sm font-normal text-gray-500">
-                          {contract.version.terms.specialTerminationNote}
-                        </span>
-                      </>
-                    ) : (
-                      "Nicht vorgesehen"
-                    )}
-                  </DataField>
-                  <DataField label="Satzung" fullWidth>
-                    {contract.version.terms.statuteRequired ? (
-                      <StatuteValue contract={contract} />
-                    ) : (
-                      "Keine Satzungsbestätigung"
-                    )}
-                  </DataField>
-                </DataGrid>
-              </SectionCard>
-            </div>
-            <div className="flex flex-col gap-6">
               <SectionCard concept={parentsConcept} title="Eltern">
                 {party ? (
-                  <DataGrid columns={1}>
+                  <DataGrid>
                     {/* „Vertragspartner“ names the Träger's side on this
                         page; the family's side is named by what it is. */}
                     <DataField label="Vertrag mit">
@@ -649,18 +685,27 @@ export default function TraegerVertragPage() {
               {party?.email ? (
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}
+            </>
+          ) : null}
+          {activeTab === "versand" ? (
+            <>
+              <CareContractSignatureCard
+                contract={contract}
+                onChanged={afterCardWrite}
+              />
               <SectionCard
-                id={DELIVERY_SECTION_ID}
+                id={CONTRACT_DELIVERY_SECTION_ID}
                 title="Versand"
                 actions={
                   resendInCard || refreshInCard ? (
-                    <div className="flex flex-wrap gap-2">
+                    <>
                       {refreshInCard ? (
                         <Button
                           type="button"
-                          variant="surface"
-                          size="compact"
-                          disabled={refreshing}
+                          variant="outline"
+                          size="md"
+                          isLoading={refreshing}
+                          loadingText="Wird aktualisiert …"
                           tooltip="Holt den neuesten Stand der Mails an die Eltern."
                           onClick={() => void refreshDelivery()}
                         >
@@ -668,26 +713,26 @@ export default function TraegerVertragPage() {
                             className="mr-1.5 h-4 w-4"
                             aria-hidden="true"
                           />
-                          {refreshing
-                            ? "Wird aktualisiert …"
-                            : "Versand aktualisieren"}
+                          Versand aktualisieren
                         </Button>
                       ) : null}
                       {resendInCard ? (
                         <Button
                           type="button"
-                          variant="surface"
-                          size="compact"
+                          variant="outline"
+                          size="md"
                           disabled={sendBlocked}
+                          isLoading={sending}
+                          loadingText="Wird gesendet …"
                           tooltip="moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
                           disabledReason={sendBlockedReason}
                           onClick={() => setConfirmingSend(true)}
                         >
                           <Send className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                          {sending ? "Wird gesendet …" : "Erneut senden"}
+                          Erneut senden
                         </Button>
                       ) : null}
-                    </div>
+                    </>
                   ) : undefined
                 }
                 description={
@@ -741,7 +786,7 @@ export default function TraegerVertragPage() {
                       Versanddaten bleiben erhalten.
                     </p>
                     <Input
-                      controlSize="touch"
+                      controlSize="compact"
                       name="recipient_email"
                       type="email"
                       label="Neue Versandadresse"
@@ -757,10 +802,13 @@ export default function TraegerVertragPage() {
                     <Button
                       type="submit"
                       variant="primary"
-                      disabled={sending || refreshing}
+                      size="md"
+                      disabled={refreshing}
+                      isLoading={sending}
+                      loadingText="Wird gesendet …"
                       tooltip="Schickt den Vertrag sofort an die neue Adresse."
                     >
-                      {sending ? "Wird gesendet …" : "An diese Adresse senden"}
+                      An diese Adresse senden
                     </Button>
                   </form>
                 ) : null}
@@ -771,6 +819,38 @@ export default function TraegerVertragPage() {
                   onDecided={() => void afterCardWrite()}
                 />
               ) : null}
+            </>
+          ) : null}
+          {activeTab === "kuendigung" ? (
+            <>
+              <SectionCard title="Kündigung und Satzung">
+                <DataGrid>
+                  <DataField label="Kündigung">{contract.noticeText}</DataField>
+                  <DataField label="Vertragspartner">
+                    {contract.version.terms.contractPartner ||
+                      "Der Träger selbst"}
+                  </DataField>
+                  <DataField label="Sonderkündigung" fullWidth>
+                    {contract.version.terms.specialTermination ? (
+                      <>
+                        Zum Halbjahr: 31. Januar oder 31. Juli
+                        <span className="block text-sm font-normal text-gray-500">
+                          {contract.version.terms.specialTerminationNote}
+                        </span>
+                      </>
+                    ) : (
+                      "Nicht vorgesehen"
+                    )}
+                  </DataField>
+                  <DataField label="Satzung" fullWidth>
+                    {contract.version.terms.statuteRequired ? (
+                      <StatuteValue contract={contract} />
+                    ) : (
+                      "Keine Satzungsbestätigung"
+                    )}
+                  </DataField>
+                </DataGrid>
+              </SectionCard>
               {contract.concluded ? (
                 <CareContractNoticeCard
                   contractId={contract.id}
@@ -779,33 +859,39 @@ export default function TraegerVertragPage() {
                   onChanged={() => void afterCardWrite()}
                 />
               ) : null}
-            </div>
-          </div>
-          {showVersions ? (
-            <CareContractVersions
-              contractId={contract.id}
-              versions={contract.versions}
-              end={{
-                withdrawn: contract.status === "widerrufen",
-                endsOn:
-                  contract.status === "gekuendigt" ? contract.endsOn : null,
-              }}
-            />
+            </>
           ) : null}
-          <SectionCard
-            title={contract.documentFrozen ? "PDF für die Eltern" : "Vorschau"}
-            description={
-              contract.documentFrozen
-                ? "Dieses PDF gehört zum Versand. Es ändert sich nicht mehr."
-                : "So sieht der Vertrag mit deinem Briefkopf aus."
-            }
-          >
-            <PdfPreview
-              url={pdfUrl}
-              title={`Vertrag von ${childName(contract)}`}
-            />
-          </SectionCard>
-        </>
+          {activeTab === "versionen" ? (
+            <>
+              {showVersions ? (
+                <CareContractVersions
+                  contractId={contract.id}
+                  versions={contract.versions}
+                  end={{
+                    withdrawn: contract.status === "widerrufen",
+                    endsOn:
+                      contract.status === "gekuendigt" ? contract.endsOn : null,
+                  }}
+                />
+              ) : null}
+              <SectionCard
+                title={
+                  contract.documentFrozen ? "PDF für die Eltern" : "Vorschau"
+                }
+                description={
+                  contract.documentFrozen
+                    ? "Dieses PDF gehört zum Versand. Es ändert sich nicht mehr."
+                    : "So sieht der Vertrag mit deinem Briefkopf aus."
+                }
+              >
+                <PdfPreview
+                  url={pdfUrl}
+                  title={`Vertrag von ${childName(contract)}`}
+                />
+              </SectionCard>
+            </>
+          ) : null}
+        </ContractDetailTabsProvider>
       ) : null}
     </TenantPage>
   );
@@ -894,17 +980,15 @@ function contractHoldNotice(mailing: ContractMailing): string | null {
   }
 }
 
-/** The card „Versand“, where notices about the mail lead (#7054). */
-const DELIVERY_SECTION_ID = "vertrag-versand";
-
+/** Leads a notice about the mail to the card „Versand“ (#7054). */
 function DeliveryJump() {
   return (
-    <JumpButton
-      targetId={DELIVERY_SECTION_ID}
+    <ContractSectionJump
+      targetId={CONTRACT_DELIVERY_SECTION_ID}
       tooltip="Springt zu den Mails an die Eltern."
     >
       Zum Versand
-    </JumpButton>
+    </ContractSectionJump>
   );
 }
 

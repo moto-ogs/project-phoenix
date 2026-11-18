@@ -31,13 +31,12 @@ import {
   WorkTimeCoverageNote,
   type WorkTimeCoverageState,
 } from "./work-time-coverage-note";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 // Auf dem Handy links: rechts unten sitzt dort der grüne „+“-Knopf der
 // Datenseiten (DatabaseCreateAction), über der unteren Navigation.
-const BEACON_POSITION =
-  "fixed bottom-20 left-4 z-40 sm:left-auto sm:right-6 sm:bottom-6";
-const PANEL_POSITION =
-  "fixed right-4 bottom-20 left-4 z-40 sm:left-auto sm:right-6 sm:bottom-6";
+const BEACON_POSITION = `fixed bottom-20 left-4 z-40 sm:left-auto sm:right-6 sm:bottom-6 ${FIXED_LAYER_SHIFT}`;
+const PANEL_POSITION = `fixed right-4 bottom-20 left-4 z-40 sm:left-auto sm:right-6 sm:bottom-6 ${FIXED_LAYER_SHIFT}`;
 
 interface BeaconProps {
   readonly open: number;

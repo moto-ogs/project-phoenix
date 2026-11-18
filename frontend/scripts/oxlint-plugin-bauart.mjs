@@ -1435,7 +1435,8 @@ const noManageSurfaceInOverlay = {
 // ---------------------------------------------------------------------------
 const MASTER_DETAIL_LAYOUT_SOURCE_RE = /(?:^|\/)master-detail-layout$/;
 // Typen, deren Pane die einzige Objektansicht ist: Gruppe, Gerät, Rolle,
-// Aktivität, Berechtigung und die Kataloge der Datenverwaltung (#3114).
+// Aktivität, Berechtigung, die Kataloge der Datenverwaltung (#3114) und
+// die Vertragsbedingungen je Angebot im Träger-Portal (#7409).
 const MASTER_DETAIL_ALLOWED_FILES = new Set([
   "src/components/database/master-detail-layout.tsx",
   "src/components/database/master-detail-skeleton.tsx",
@@ -1445,6 +1446,8 @@ const MASTER_DETAIL_ALLOWED_FILES = new Set([
   "src/components/groups/groups-master-detail.tsx",
   "src/components/permissions/permissions-master-detail.tsx",
   "src/components/roles/roles-master-detail.tsx",
+  // Vertragsbedingungen je Angebot: kleine Einträge ohne eigene Route (#7409).
+  "src/components/traeger/care-contract-conditions.tsx",
 ]);
 const PANE_ELEMENTS = new Set(["DetailPanel", "DatabaseDetailHeader"]);
 const DETAIL_VIEW_ELEMENTS = new Set(["InfoSection", "DataGrid"]);

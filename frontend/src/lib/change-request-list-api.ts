@@ -484,11 +484,14 @@ export async function bulkApproveParentRequests(
   requests: readonly BulkApproveRequestRef[],
   reason: string,
 ): Promise<number> {
-  const response = await transportFetch("/api/students/change-requests", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ requests, reason }),
-  });
+  const response = await transportFetch(
+    "/api/students/change-requests/bulk-approve",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requests, reason }),
+    },
+  );
   if (!response.ok) {
     await throwWriteError(response, "change request bulk approval failed");
   }

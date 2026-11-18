@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   calendarDate,
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -15,7 +16,7 @@ export interface billingKeyDayResponse {
   updated_at: string;
 }
 
-export const billingKeyDayResponseSchema: z.ZodType<billingKeyDayResponse, unknown> = z.object({
+export const billingKeyDayResponseSchema: z.ZodType<billingKeyDayResponse, unknown> = object<billingKeyDayResponse>({
   key_day: safeInt,
   next_key_date: calendarDate,
   updated_at: instant,

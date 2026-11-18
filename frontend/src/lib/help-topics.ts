@@ -276,7 +276,6 @@ export const HELP_TOPICS = {
   traegerSchoolSwitch: "in-eine-schule-wechseln",
   traegerSchoolView: "zahlen-und-stammdaten-einer-schule-ansehen",
   traegerDashboard: "alle-schulen-auf-einen-blick",
-  traegerKeyDateCounts: "stichtagszahlen-der-schulen-ansehen",
   traegerOccupancy: "belegung-der-schulen-ansehen",
   traegerUtilization: "auslastung-ueber-die-zeit-ansehen",
   traegerSchoolComparison: "schulen-miteinander-vergleichen",

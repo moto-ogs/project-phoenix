@@ -366,9 +366,7 @@ export function CareAmendmentHistoryCard({
       title="Verlauf der Änderungen"
       titleBadge={
         entries.length > 0 ? (
-          <span className="text-sm font-normal text-gray-600 tabular-nums">
-            {entries.length}
-          </span>
+          <StatusBadge tone="gray" label={String(entries.length)} />
         ) : undefined
       }
       description="Jede Änderung bleibt hier stehen, mit Grund und Zeit. Zurücknehmen legt einen neuen Eintrag an."

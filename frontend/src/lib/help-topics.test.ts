@@ -749,7 +749,6 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerProfile,
       HELP_TOPICS.traegerDashboard,
       HELP_TOPICS.traegerNotificationFeed,
-      HELP_TOPICS.traegerKeyDateCounts,
       HELP_TOPICS.traegerOccupancy,
       HELP_TOPICS.traegerUtilization,
       HELP_TOPICS.traegerSchoolComparison,
