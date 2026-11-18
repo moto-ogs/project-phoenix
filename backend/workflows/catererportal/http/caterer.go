@@ -47,10 +47,10 @@ type OrderChildResponse struct {
 
 // ChangeResponse is a numbered change after the deadline.
 type ChangeResponse struct {
-	Sequence   int           `json:"sequence"`
+	Sequence   int                `json:"sequence"`
 	Child      OrderChildResponse `json:"child"`
-	Delta      int           `json:"delta"`
-	DetectedAt time.Time     `json:"detected_at"`
+	Delta      int                `json:"delta"`
+	DetectedAt time.Time          `json:"detected_at"`
 }
 
 // ClassCountResponse is the number of meals of a class.
@@ -69,7 +69,7 @@ type DayResponse struct {
 	ConfirmedAt *time.Time           `json:"confirmed_at,omitempty"`
 	Total       int                  `json:"total"`
 	Classes     []ClassCountResponse `json:"classes"`
-	Children    []OrderChildResponse      `json:"children"`
+	Children    []OrderChildResponse `json:"children"`
 	Changes     []ChangeResponse     `json:"changes"`
 }
 

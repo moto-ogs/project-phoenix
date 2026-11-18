@@ -129,12 +129,12 @@ type GroupChildResponse struct {
 }
 
 type GroupThreadDetailResponse struct {
-	Thread      GroupThreadResponse    `json:"thread"`
+	Thread      GroupThreadResponse         `json:"thread"`
 	Messages    []StaffGroupMessageResponse `json:"messages"`
-	Children    []GroupChildResponse   `json:"children"`
-	FamilyCount int                    `json:"family_count"`
-	ReadCount   int                    `json:"read_count"`
-	Readers     GroupReadersResponse   `json:"readers"`
+	Children    []GroupChildResponse        `json:"children"`
+	FamilyCount int                         `json:"family_count"`
+	ReadCount   int                         `json:"read_count"`
+	Readers     GroupReadersResponse        `json:"readers"`
 }
 
 func (rs *Resource) listGroupThreads(w http.ResponseWriter, r *http.Request) {

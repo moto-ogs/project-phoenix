@@ -49,7 +49,7 @@ func setupSettingsModuleWithHook(t *testing.T, hook *settingsValueSetHook) *sett
 		RequestActor: func(context.Context) (int64, int64, []string) {
 			return testpkg.Tenant(t), 1, []string{"config:read", "config:update", "config:manage"}
 		},
-		Editable: func(context.Context) bool { return true },
+		Editable:  func(context.Context) bool { return true },
 		Success:   testutil.RespondSuccess,
 		NoContent: testutil.RespondNoContent,
 		Failure:   testutil.RespondError,

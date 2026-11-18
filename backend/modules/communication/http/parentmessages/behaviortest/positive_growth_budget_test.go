@@ -107,7 +107,9 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 			t.Logf("MEASURE parent_messages %s N%d=%d", entry.name, n, counter.Total())
 			switch entry.name {
 			case "guardians":
-				var out struct{ Data []messaging.MessageableGuardianResponse }
+				var out struct {
+					Data []messaging.MessageableGuardianResponse
+				}
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n)
 				for _, row := range out.Data {

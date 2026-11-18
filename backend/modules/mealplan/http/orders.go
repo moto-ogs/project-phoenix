@@ -28,15 +28,15 @@ type OrderClassCountResponse struct {
 
 // OrderDayResponse is one weekday of the orders.
 type OrderDayResponse struct {
-	Date        string                `json:"date" contract:"date"`
-	Closed      bool                  `json:"closed"`
-	Deadline    time.Time             `json:"deadline"`
-	Status      string                `json:"status"`
-	OrderID     string                `json:"order_id,omitempty"`
-	ConfirmedAt *time.Time            `json:"confirmed_at,omitempty"`
-	Total       int                   `json:"total"`
-	Classes     []OrderClassCountResponse  `json:"classes"`
-	Changes     []OrderChangeResponse `json:"changes"`
+	Date        string                    `json:"date" contract:"date"`
+	Closed      bool                      `json:"closed"`
+	Deadline    time.Time                 `json:"deadline"`
+	Status      string                    `json:"status"`
+	OrderID     string                    `json:"order_id,omitempty"`
+	ConfirmedAt *time.Time                `json:"confirmed_at,omitempty"`
+	Total       int                       `json:"total"`
+	Classes     []OrderClassCountResponse `json:"classes"`
+	Changes     []OrderChangeResponse     `json:"changes"`
 }
 
 // OrdersResponse is the school's orders of a window (#3873).

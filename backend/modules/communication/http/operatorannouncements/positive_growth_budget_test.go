@@ -178,7 +178,9 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 	require.Equal(t, 200, rec.Code, rec.Body.String())
 	rec = send("GET", "/announcements/unread")
 	require.Equal(t, 200, rec.Code, rec.Body.String())
-	var unread struct{ Data []platformHTTP.PlatformAnnouncementResponse }
+	var unread struct {
+		Data []platformHTTP.PlatformAnnouncementResponse
+	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &unread))
 	require.Len(t, unread.Data, len(expectedTitles)-1)
 	for _, row := range unread.Data {

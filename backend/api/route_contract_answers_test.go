@@ -19,11 +19,7 @@ import (
 // within the contract (TestRegisteredResponseTypesRenderWithinTheContract).
 //
 // Shrink only: give the route a test through its router and delete the line.
-var routesNoRouterTestAnswers = map[string]string{
-	"GET /operator/billing/key-day":     "handler test without a router",
-	"PUT /operator/billing/key-day":     "handler test without a router",
-	"GET /parent/me/enrollable-schools": "no test answers the route",
-}
+var routesNoRouterTestAnswers = map[string]string{}
 
 // The answer check writes the key of every registered route a test identified
 // unambiguously and answered to the file CONTRACT_ANSWERS_FILE names. After a
