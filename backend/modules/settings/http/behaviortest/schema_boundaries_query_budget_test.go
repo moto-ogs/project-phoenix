@@ -79,7 +79,8 @@ func TestSettingsGETPortalAndPermissionBoundaries(t *testing.T) {
 	t.Parallel()
 	f := newSettingsBudgetFixture(t, testpkg.SetupIsolatedTestDB(t))
 	paths := []string{"/api/settings/schema", "/api/settings/home-layout", "/api/settings/payroll-status",
-		fmt.Sprintf("/operator/schools/%d/settings/schema", testpkg.Tenant(t)), "/traeger/settings/schema"}
+		fmt.Sprintf("/operator/schools/%d/settings/schema", testpkg.Tenant(t)), "/traeger/settings/schema",
+		"/api/settings/device-pin-status"}
 	for _, path := range paths {
 		for _, scope := range []string{"school", "parent", "caterer"} {
 			claims := f.admin
@@ -105,12 +106,14 @@ func TestSettingsGETPortalAndPermissionBoundaries(t *testing.T) {
 	reader := f.admin
 	reader.IsAdmin = false
 	reader.Permissions = []string{"config:read"}
-	rec := f.get(t, "/api/settings/payroll-status", testutil.MintTestJWT(t, reader))
-	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-	assertSettingsProblem(t, rec.Body.Bytes(), http.StatusForbidden, "general.permission")
-	require.Empty(t, f.counter.Queries())
+	for _, manageOnly := range []string{"/api/settings/payroll-status", "/api/settings/device-pin-status"} {
+		rec := f.get(t, manageOnly, testutil.MintTestJWT(t, reader))
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		assertSettingsProblem(t, rec.Body.Bytes(), http.StatusForbidden, "general.permission")
+		require.Empty(t, f.counter.Queries())
+	}
 	reader.Permissions = nil
-	rec = f.get(t, "/api/settings/schema", testutil.MintTestJWT(t, reader))
+	rec := f.get(t, "/api/settings/schema", testutil.MintTestJWT(t, reader))
 	require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	assertSettingsProblem(t, rec.Body.Bytes(), http.StatusForbidden, "general.permission")
 	require.Empty(t, f.counter.Queries())

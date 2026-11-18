@@ -298,7 +298,7 @@ func mountSchoolRoutes(
 	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
-	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools).SettingsRouter())
+	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, requireDevicePINOperations(settings), owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools).SettingsRouter())
 	// Class-list-only entries (#2382).
 	tenant.Mount("/class-list-entries", newClassListEntriesResource(
 		classListEntriesWhileChildrenKept{ClassListEntries: classListEntries, settings: settings, lock: classListConversionLockOf(settings)},
@@ -330,6 +330,16 @@ func mountCalendarRoutes(root, tenant chi.Router, logger *slog.Logger, calendarA
 	root.Handle("/.well-known/caldav", calDAVHandler)
 	root.Handle("/api/caldav", calDAVHandler)
 	root.Handle("/api/caldav/*", calDAVHandler)
+}
+
+// requireDevicePINOperations takes the device PIN status (#7175) from the
+// settings platform like the home layout operations.
+func requireDevicePINOperations(settings any) settingsHTTP.DevicePINOperations {
+	devicePIN, ok := settings.(settingsHTTP.DevicePINOperations)
+	if !ok {
+		panic("settings platform does not provide the device PIN status")
+	}
+	return devicePIN
 }
 
 func requireHomeLayoutOperations(settings any) settingsHTTP.HomeLayoutOperations {

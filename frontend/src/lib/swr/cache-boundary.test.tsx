@@ -140,6 +140,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     "catererKeys",
     "dashboardKeys",
     "databaseKeys",
+    "devicePinKeys",
     "displayKeys",
     "fileKeys",
     "holidayKeys",

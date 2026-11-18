@@ -1308,6 +1308,8 @@ export const ERROR_CATALOG = {
         "Das Team kann die Anwesenheit höchstens {retention_days} Tage zurück sehen. So lange bewahrt moto sie auf.",
       "settings.booking_authority_blocked":
         "Der Buchungsmodus wurde nicht aktiviert: Für mindestens ein betreutes Kind ist kein Betreuungstag gebucht. Bitte prüfen Sie die Auswirkungen erneut.",
+      "settings.device_pin_too_simple":
+        "Diese PIN ist zu leicht zu erraten. Bitte nehmen Sie keine gleichen Ziffern (1111), keine Reihen (1234, 4321) und keine Paare (1212).",
       "settings.enrollment_privacy_notice_missing":
         "Die Online-Anmeldung braucht eine Datenschutzinformation. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Danach können Sie die Online-Anmeldung einschalten.",
       "settings.invalid_value":
@@ -2770,6 +2772,8 @@ export const ERROR_CATALOG = {
         "You can book, change or cancel up to 24 hours before the meeting. After that, please contact the teacher directly.",
       "school.parent_conference_slot_taken":
         "Someone has just booked this time. Please choose another time.",
+      "settings.device_pin_too_simple":
+        "This PIN is too easy to guess. Please do not use the same digit (1111), a run (1234, 4321) or a repeated pair (1212).",
       "staff.exit_already_due":
         "The last working day is over. The exit is already running and can no longer be changed.",
       "staff.exit_day_in_past":

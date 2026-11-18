@@ -9,5 +9,6 @@
   "attendance_retention_below_visible": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "module_requires": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "module_required_by": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "device_pin_too_simple": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "enrollment_privacy_notice_missing": "Не вдалося зберегти: {object}. Перевірте введені дані."
 }

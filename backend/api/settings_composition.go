@@ -20,7 +20,7 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 )
 
-func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, references func(context.Context, string, string) (bool, error), now func() time.Time, schools owners.SchoolFinder) *settingsHTTP.SettingsResource {
+func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, devicePIN settingsHTTP.DevicePINOperations, references func(context.Context, string, string) (bool, error), now func() time.Time, schools owners.SchoolFinder) *settingsHTTP.SettingsResource {
 	settingsRuntime := settingsHTTP.NewRuntime(settingsHTTP.RuntimeDependencies{
 		DocumentCleanup: fileStorageCompose.NewUploadCleanup(db.Pool(), "enrollment-legal-documents", now).Queue,
 		Protected: func(r chi.Router, fn func(chi.Router, settingsHTTP.Middleware)) {
@@ -79,13 +79,17 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 			return referenced, nil
 		},
 	})
-	return settingsHTTP.NewSettingsResource(operations, homeLayouts, settingsRuntime, owners.SchoolContactDirectory{Schools: schools}.ContactEmail)
+	return settingsHTTP.NewSettingsResource(operations, homeLayouts, devicePIN, settingsRuntime, owners.SchoolContactDirectory{Schools: schools}.ContactEmail)
 }
 
 // settingsInputError renders a rejected setting value. A visible attendance
 // window longer than its retention names the window that blocks it (#3957),
-// so the person reads which value is allowed.
+// so the person reads which value is allowed. A device PIN that is easy to
+// guess gets its own code, so the person reads why (#7175).
 func settingsInputError(err error) render.Renderer {
+	if _, ok := errors.AsType[*settingsModule.DevicePINTooSimpleError](err); ok {
+		return apiCommon.ErrorInvalidRequestWithCode(err, apiCommon.CodeSettingsDevicePinTooSimple)
+	}
 	if _, ok := errors.AsType[*settingsModule.EnrollmentPrivacyNoticeError](err); ok {
 		// #7176: names the missing privacy notice instead of a bare invalid value.
 		return apiCommon.ErrorInvalidRequestWithCode(err, apiCommon.CodeSettingsEnrollmentPrivacyNoticeMissing)
