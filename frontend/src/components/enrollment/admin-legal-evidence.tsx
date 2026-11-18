@@ -200,7 +200,7 @@ function LegalEvidenceEntry({
         <Alert
           type="warning"
           announce="off"
-          message="Die angezeigte Fassung fehlt oder weicht ab. Sie sehen die beim Eingang gespeicherten Texte und Antworten."
+          message="Die angezeigte Fassung fehlt oder weicht ab. Hier stehen die Texte und Antworten vom Eingang."
         />
       ) : usesStandardTexts ? (
         <p className="text-gray-600">
