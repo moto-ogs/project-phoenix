@@ -7,20 +7,20 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
-	"sync"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
-	"golang.org/x/time/rate"
 )
 
 // MaxErrorReportBytes is the largest envelope one request may carry.
 const MaxErrorReportBytes = 1 << 20
 
-// errorReportsPerMinute is the per-device quota of the relay. The burst is
+// ErrorReportsPerMinute is the per-device quota of the relay. The burst is
 // the same size, so a kiosk that comes back online can send its offline
 // queue at once.
-const errorReportsPerMinute = 60
+const ErrorReportsPerMinute = 60
+
+// ErrorReportQuota spends one token for the authenticated device.
+type ErrorReportQuota func(context.Context, int64) (bool, error)
 
 // Error texts of POST /api/iot/error-reports beyond the device-key ones. They
 // are part of the IoT contract with PyrePortal (docs/agents/contracts.md).
@@ -73,17 +73,16 @@ type ErrorReports struct {
 	runtime ErrorReportsRuntime
 	logger  *slog.Logger
 
-	mu       sync.Mutex
-	limiters map[int64]*rate.Limiter
+	allow ErrorReportQuota
 }
 
 // NewErrorReports builds the relay endpoint. A nil relay answers 503: the
 // backend runs without Sentry, which only local development does.
-func NewErrorReports(relay ErrorReportRelay, runtime ErrorReportsRuntime, logger *slog.Logger) *ErrorReports {
+func NewErrorReports(relay ErrorReportRelay, runtime ErrorReportsRuntime, allow ErrorReportQuota, logger *slog.Logger) *ErrorReports {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &ErrorReports{relay: relay, runtime: runtime, logger: logger, limiters: map[int64]*rate.Limiter{}}
+	return &ErrorReports{relay: relay, runtime: runtime, logger: logger, allow: allow}
 }
 
 // Post handles POST /api/iot/error-reports.
@@ -97,7 +96,13 @@ func (rs *ErrorReports) Post(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, http.StatusServiceUnavailable, ErrErrorReportsUnconfigured)
 		return
 	}
-	if !rs.allow(id) {
+	allowed, err := rs.allow(r.Context(), id)
+	if err != nil {
+		rs.logger.WarnContext(r.Context(), "check device error report quota", "error", err.Error())
+		rs.runtime.Failure(w, r, http.StatusServiceUnavailable, ErrErrorReportsUnconfigured)
+		return
+	}
+	if !allowed {
 		w.Header().Set("Retry-After", "60")
 		rs.runtime.Failure(w, r, http.StatusTooManyRequests, ErrErrorReportRateLimited)
 		return
@@ -145,22 +150,4 @@ func readErrorReport(w http.ResponseWriter, r *http.Request) ([]byte, int, error
 		return nil, http.StatusBadRequest, ErrErrorReportInvalid
 	}
 	return envelope, 0, nil
-}
-
-// allow takes one envelope from the device's quota. The limiters live as
-// long as the process; there is one per device that ever reported.
-func (rs *ErrorReports) allow(id int64) bool {
-	return rs.allowAt(id, time.Now())
-}
-
-// allowAt keeps the burst boundary testable independently of HTTP latency.
-func (rs *ErrorReports) allowAt(id int64, now time.Time) bool {
-	rs.mu.Lock()
-	limiter, ok := rs.limiters[id]
-	if !ok {
-		limiter = rate.NewLimiter(rate.Limit(float64(errorReportsPerMinute)/60), errorReportsPerMinute)
-		rs.limiters[id] = limiter
-	}
-	rs.mu.Unlock()
-	return limiter.AllowN(now, 1)
 }

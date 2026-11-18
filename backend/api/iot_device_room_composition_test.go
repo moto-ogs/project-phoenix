@@ -29,7 +29,7 @@ func TestAvailableRoomsUsesDeviceTenantComposition(t *testing.T) {
 	schools, err := NewDeviceSchools(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
 	deviceAuth := testutil.NewDeviceAuthenticators(devices.IoT.Fleet(), schools, auth)
-	resource := iotcompose.NewResource(iotcompose.ServiceDependencies{Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil),
+	resource := iotcompose.NewResource(iotcompose.ServiceDependencies{Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil, nil),
 		Administration:           NewIoTAdministration(devicefleet.NewAdministration(devices.IoT.Fleet(), time.Now), time.Now),
 		Configuration:            data.Configuration,
 		Rooms:                    data.RoomAvailability,

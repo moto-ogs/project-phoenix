@@ -53,31 +53,44 @@ export class TenantResolveStatusError extends Error {
   }
 }
 
+const TENANT_CACHE_SECONDS = 60;
+
+interface TenantCacheEntry {
+  data: TenantResolveResponse;
+  expiresAt: number;
+}
+
+async function loadTenant(
+  slug: string,
+  forwardHeaders: Record<string, string>,
+): Promise<TenantCacheEntry> {
+  const expiresAt = Date.now() + TENANT_CACHE_SECONDS * 1_000;
+  const { getServerApiUrl } = await import("~/lib/server-api-url");
+  const res = await fetch(
+    `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
+    { headers: forwardHeaders, cache: "no-store" },
+  );
+  if (!res.ok) throw new TenantResolveStatusError(res.status);
+  const { data } = (await res.json()) as { data: TenantResolveResponse };
+  return { data, expiresAt };
+}
+
 /**
- * The lookup is cached per slug for all visitors and invalidated by
- * revalidateTag(`tenant-${slug}`). Its key holds the slug only, so the
- * client headers travel in the closure, not in the key: a miss asks the
- * backend under the IP of the visitor who caused it, a hit asks nobody.
- * fetch() itself cannot do this, because Next keys its data cache by the
- * request headers, which would split the cache per client IP. Only a 200 is
- * stored; any other status throws and stays uncached.
+ * Each replica caches successful lookups by school slug. The client headers
+ * travel in the closure, so a miss uses that visitor's IP without splitting
+ * the cache by address. Settings writes invalidate the receiving replica.
  */
-export function resolveTenantCached(
+export async function resolveTenantCached(
   slug: string,
   forwardHeaders: Record<string, string>,
 ): Promise<TenantResolveResponse> {
-  return unstable_cache(
-    async () => {
-      const { getServerApiUrl } = await import("~/lib/server-api-url");
-      const res = await fetch(
-        `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
-        { headers: forwardHeaders, cache: "no-store" },
-      );
-      if (!res.ok) throw new TenantResolveStatusError(res.status);
-      const json = (await res.json()) as { data: TenantResolveResponse };
-      return json.data;
-    },
-    ["tenant-resolve", slug],
-    { revalidate: 300, tags: [`tenant-${slug}`] },
-  )();
+  let pending: Promise<TenantCacheEntry> | undefined;
+  const load = async () => (pending ??= loadTenant(slug, forwardHeaders));
+  const entry = await unstable_cache(load, ["tenant-resolve", slug], {
+    revalidate: TENANT_CACHE_SECONDS,
+    tags: [`tenant-${slug}`],
+  })();
+  // Next can return the old entry while its refresh runs. After expiry,
+  // await that same fetch so even the first request sees current settings.
+  return (entry.expiresAt > Date.now() ? entry : await load()).data;
 }

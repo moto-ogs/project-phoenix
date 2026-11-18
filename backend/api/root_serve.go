@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/analytics"
+	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	appointmentsModule "github.com/moto-ogs/project-phoenix/modules/appointments"
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -47,6 +48,7 @@ import (
 	filestorageCompose "github.com/moto-ogs/project-phoenix/modules/filestorage/compose"
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	identityCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
@@ -515,12 +517,16 @@ func composeServeRoot(
 	}
 	registerRuntimeStatsProviders(hub, deliveryDevices.PWAUsage)
 	router := chi.NewRouter()
-	sessionAuth, err := mountServeMiddleware(router, unit, env.Logger, config, tracer, metrics, tracker, settings.Service, analyticsCollectionPolicy(IsDemoEnvironment(env.Config.AppEnv), settings.Service, identity, organizations), identity, identity, identity, env.Config.RateLimitEnabled)
+	securityLimits := identityCompose.NewRequestRateLimits(db.Pool(), requestRateLimitFingerprint(env.Config.JWTSecret), requestRateLimitReservation, env.Now, env.Logger)
+	newSecurityLimiter := func(limit, burst int) *customMiddleware.RateLimiter {
+		return customMiddleware.NewSharedRateLimiter(securityLimits, limit, burst)
+	}
+	sessionAuth, err := mountServeMiddleware(router, unit, env.Logger, config, tracer, metrics, tracker, settings.Service, analyticsCollectionPolicy(IsDemoEnvironment(env.Config.AppEnv), settings.Service, identity, organizations), identity, identity, identity, env.Config.RateLimitEnabled, newSecurityLimiter)
 	if err != nil {
 		return nil, nil, err
 	}
-	logger, limiters, tenant, deviceAuth, studentPresence := newServeRouteRuntime(db, env.Logger, iot, organizations, settings.Service, env.Config.RateLimitEnabled, env.Now)
-	mountPublic(router, metricsToken, db, delivery.Runtime.EmailWebhooks, env.Config.RateLimitEnabled)
+	logger, limiters, tenant, deviceAuth, studentPresence := newServeRouteRuntime(db, env.Logger, iot, organizations, settings.Service, env.Config.RateLimitEnabled, newSecurityLimiter, env.Now)
+	mountPublic(router, metricsToken, db, delivery.Runtime.EmailWebhooks, env.Config.RateLimitEnabled, newSecurityLimiter)
 	careOfferings, studentAnswers := requests.CareOfferings, newStudentAnswers()
 	err = owners.RunRootSteps(
 		func() error {
@@ -537,7 +543,7 @@ func composeServeRoot(
 				groupLive, enrollmentCompose.PublicDecisions(decisions), active, owners.NewCareResumption(carePlanRows.LifecycleOwners.Students, carePlan, carePlanRows.LifecycleOwners.ChangeTrail, env.Today, logger.With("service", "care_lifecycle")).Resume, persons.StudentNoteTeam, newStudentNoteTeamReach(people.Staff, notifications), timetableRows.CohortRosters, studentAnswers, owners.UploadFileKeys(env), env.Now)
 		},
 		func() error {
-			return mountPresenceRoutes(tenant, db, logger, config.SentryPyrePortalDSN, deviceAuth, studentPresence, active, facilities,
+			return mountPresenceRoutes(tenant, db, logger, config.SentryPyrePortalDSN, securityLimits, deviceAuth, studentPresence, active, facilities,
 				timetableOwner, timetableRepos, days, persons, services.Users, caller, settings.Service, hub, emitter, groupLive,
 				dashboard, yard, iot, activities, structureViews.Education, schedules.Pickups, workforce.TimeTracking, facilitiesRooms,
 				feedback, organizations, identity, env.Now)
@@ -612,8 +618,8 @@ func developmentWeekProtocolEvenings(
 // its route mounting steps begin.
 func newServeRouteRuntime(
 	db transactionruntime.Database, logger *slog.Logger, iot devicefleetCompose.IoTService,
-	organizations organizationtenancy.Query, settings settingsCompose.SettingsService, rateLimitEnabled bool, now func() time.Time,
+	organizations organizationtenancy.Query, settings settingsCompose.SettingsService, rateLimitEnabled bool, newLimiter rateLimiterFactory, now func() time.Time,
 ) (*slog.Logger, authRateLimiters, chi.Router, *deviceauth.Authenticators, studentpresence.Owner) {
-	return logger, authRateLimitersFromEnv(rateLimitEnabled), chi.NewRouter(),
+	return logger, authRateLimitersFromEnv(rateLimitEnabled, newLimiter), chi.NewRouter(),
 		newDeviceAuthentication(iot, organizations, settings, logger, now), owners.NewLoggedStudentPresence(db, logger, now)
 }

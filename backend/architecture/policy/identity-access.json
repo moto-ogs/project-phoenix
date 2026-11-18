@@ -254,6 +254,10 @@
       "write_owner": "identity-access"
     },
     {
+      "name": "auth.request_rate_limits",
+      "write_owner": "identity-access"
+    },
+    {
       "name": "auth.password_reset_tokens",
       "write_owner": "identity-access"
     },

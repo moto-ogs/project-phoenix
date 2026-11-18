@@ -276,13 +276,30 @@ describe("TenantLayout", () => {
       "http://server:8080/auth/tenant/resolve?slug=school-a",
       { headers: {}, cache: "no-store" },
     );
-    // The lookup stays cached for five minutes under the slug and its
+    // The lookup stays cached for one minute under the slug and its
     // revalidation tag, which the settings routes purge.
     expect(unstableCacheMock).toHaveBeenCalledWith(
       expect.any(Function),
       ["tenant-resolve", "school-a"],
-      { revalidate: 300, tags: ["tenant-school-a"] },
+      { revalidate: 60, tags: ["tenant-school-a"] },
     );
+  });
+
+  it("refreshes expired tenant settings even when Next returns a stale entry", async () => {
+    const { resolveTenantCached } = await import("~/lib/tenant-resolve.server");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(tenantResponse())
+      .mockResolvedValueOnce(
+        Response.json({ data: { name: "Updated school" } }),
+      );
+
+    expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
+    setTestClock(new Date(new Date(TEST_CLOCK_INSTANT).getTime() + 60_000));
+    expect((await resolveTenantCached("school-a", {})).name).toBe(
+      "Updated school",
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   // #4803: the switch hides the single class list entry and the OGS areas
