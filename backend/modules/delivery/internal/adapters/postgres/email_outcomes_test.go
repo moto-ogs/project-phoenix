@@ -352,12 +352,24 @@ func TestAnOverdueLetterMailCanBeSentAgain(t *testing.T) {
 func TestADelayedMailBecomesOverdue(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store, ctx := testStore(t, db)
+	providerAt := testpkg.DatabaseNow(t, db)
+	now := providerAt.AddDate(0, 1, 0)
+	store, ctx := testStoreOnClock(t, db, func() time.Time { return now })
 	school := testpkg.Tenant(t)
 	address := "overdue@example.com"
 	mail := relatedMail(t, db, store, ctx, school, "overdue", address, 91)
-	_, err := store.RecordEmailDeliveryEvent(ctx, eventAt(eventMailToken(t, db, mail), "slow", domain.EmailDeliveryDelayed, time.Now().Add(-deliveryContract.EmailDelayLimit-time.Hour)))
+	_, err := store.RecordEmailDeliveryEvent(ctx, eventAt(eventMailToken(t, db, mail), "slow", domain.EmailDeliveryDelayed, providerAt))
 	require.NoError(t, err)
+
+	inSchool(t, ctx, db, school, func(txCtx context.Context) error {
+		latest, err := store.LatestEmailOutcomes(txCtx, school, []string{"guardian_invitation"}, []string{address})
+		require.NoError(t, err)
+		assert.Equal(t, deliveryContract.EmailDelayed, latest[address].Outcome)
+		require.NotNil(t, latest[address].OutcomeAt)
+		assert.WithinDuration(t, providerAt, *latest[address].OutcomeAt, time.Microsecond)
+		return nil
+	})
+	now = now.Add(deliveryContract.EmailDelayLimit + time.Hour)
 	inSchool(t, ctx, db, school, func(txCtx context.Context) error {
 		latest, err := store.LatestEmailOutcomes(txCtx, school, []string{"guardian_invitation"}, []string{address})
 		require.NoError(t, err)

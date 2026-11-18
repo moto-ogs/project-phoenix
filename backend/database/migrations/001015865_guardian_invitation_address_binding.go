@@ -50,19 +50,20 @@ UPDATE auth.guardian_invitations AS invitation
 
 // guardianInvitationAddressBindingDownSQL ends what the binding had already
 // ended before the column goes: without it a link follows the profile again,
-// so an open link whose address the profile no longer has would come back
-// to life for the new address. A second Down finds the column gone.
+// so a link whose recorded address differs from the profile could follow its
+// new address. A rolled-back server may judge expiry on its own clock. End
+// every mismatched redeemable link at a fixed past instant, independent of
+// either clock. A second Down finds the column gone.
 const guardianInvitationAddressBindingDownSQL = `
 DO $down$
 BEGIN
 	IF EXISTS (SELECT 1 FROM information_schema.columns
 		WHERE table_schema = 'auth' AND table_name = 'guardian_invitations' AND column_name = 'email') THEN
 		UPDATE auth.guardian_invitations AS invitation
-			SET expires_at = statement_timestamp()
+			SET expires_at = LEAST(invitation.expires_at, TIMESTAMPTZ 'epoch')
 			FROM users.guardian_profiles AS profile
 			WHERE profile.id = invitation.guardian_profile_id
 				AND invitation.accepted_at IS NULL
-				AND invitation.expires_at > statement_timestamp()
 				AND invitation.approval_status IN ('not_required', 'approved')
 				AND invitation.email IS DISTINCT FROM LOWER(BTRIM(profile.email, E' \t\r\n'));
 	END IF;

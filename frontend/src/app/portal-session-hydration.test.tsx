@@ -69,7 +69,7 @@ vi.mock("~/components/analytics/traeger-analytics-session", () => ({
 vi.mock("~/components/auth/sentry-session-context", () => ({
   SentrySessionContext: () => null,
 }));
-vi.mock("~/components/notifications/service-worker-registrar", () => ({
+vi.mock("~/components/notifications/push-subscription-sync", () => ({
   PushSubscriptionSync: () => null,
 }));
 vi.mock("~/lib/module-portal-context", () => ({

@@ -36,7 +36,8 @@ const emailDeliveryStatusesSQL = `
 				ELSE 'pending'
 			END AS email_status,
 			outbox.last_error, outbox.sent_at, COALESCE(outbox.attempts, 0) AS attempts,
-			outbox.status AS outbox_status, outbox.delivery_state, outbox.delivery_state_at,
+			outbox.status AS outbox_status, outbox.delivery_state,
+			COALESCE(outbox.delivery_state_recorded_at, outbox.delivery_state_at) AS state_age_from,
 			suppression.reason AS address_mark, contact.emails_stopped_at IS NOT NULL AS stopped,
 			EXISTS (SELECT 1 FROM platform.delivery_guardian_contacts AS holder
 				WHERE holder.tenant_id = delivery.tenant_id AND holder.address = ` + letterCurrentAddressSQL + `)
@@ -78,7 +79,7 @@ type emailDeliveryStatusRow struct {
 	Attempts          int        `bun:"attempts"`
 	OutboxStatus      *string    `bun:"outbox_status"`
 	DeliveryState     *string    `bun:"delivery_state"`
-	DeliveryStateAt   *time.Time `bun:"delivery_state_at"`
+	StateAgeFrom      *time.Time `bun:"state_age_from"`
 	AddressMark       *string    `bun:"address_mark"`
 	Stopped           bool       `bun:"stopped"`
 	Departed          bool       `bun:"departed"`
@@ -109,7 +110,7 @@ func (s *Store) ClaimFailedEmailDelivery(ctx context.Context, tenantID, delivery
 				OR `+heldMailSQL+`
 				OR (outbox.status = 'sent' AND outbox.delivery_state IN ('failed', 'suppressed'))
 				OR `+refusedElsewhereSQL+`
-				OR (outbox.status = 'sent' AND outbox.delivery_state = 'delayed' AND outbox.delivery_state_at < ?))`,
+				OR (outbox.status = 'sent' AND outbox.delivery_state = 'delayed' AND COALESCE(outbox.delivery_state_recorded_at, outbox.delivery_state_at) < ?))`,
 		now, tenantID, deliveryID, deliveryContract.MailHeldByList, deliveryContract.MailHeldByStop, deliveryContract.MailHeldByDeparture,
 		now.Add(-deliveryContract.EmailDelayLimit)).Exec(ctx)
 	if err != nil {
@@ -146,7 +147,7 @@ func (s *Store) EmailDeliveryStatuses(ctx context.Context, tenantID int64, relat
 			status.AddressMark = deliveryContract.EmailAddressMark(*row.AddressMark)
 		}
 		if row.OutboxStatus != nil {
-			status.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(*row.OutboxStatus, row.DeliveryState, row.LastError, status.AddressMark), row.DeliveryStateAt, s.now())
+			status.Outcome = deliveryContract.EmailOutcomeAt(deliveryContract.EmailOutcomeOf(*row.OutboxStatus, row.DeliveryState, row.LastError, status.AddressMark), row.StateAgeFrom, s.now())
 			// The wait has ended: the status says a new mail can go out (#5934).
 			if status.Outcome == deliveryContract.EmailOverdue {
 				status.EmailStatus = "failed"
