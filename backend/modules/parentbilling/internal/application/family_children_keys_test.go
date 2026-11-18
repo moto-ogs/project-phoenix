@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,60 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
+
+func TestCarriedFamilyCountKeepsTheLatestParentStatement(t *testing.T) {
+	t.Parallel()
+	today, from := calendar.NewDate(2027, 1, 10), calendar.NewDate(2027, 1, 1)
+	confirmedAt := from.BerlinMidnight()
+	statedAt := confirmedAt.Add(24 * time.Hour)
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 1, ContractID: 1, FamilyEmail: "contract:1", ConfirmedChildren: ptr(3), ValidFrom: &from, ConfirmedAt: &confirmedAt},
+		{ID: 2, ContractID: 2, FamilyEmail: "family@example.org", StatedChildren: ptr(4), StatedAt: &statedAt},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}, 2: {Email: "family@example.org"}}
+	for _, ordered := range [][]parentbilling.FamilyChildCount{counts, {counts[1], counts[0]}} {
+		families := groupFamilies(nil, recipients, ordered, today)
+		require.Len(t, families, 1)
+		assert.Equal(t, parentbilling.FamilyChildrenChanged, families[0].Status)
+		require.NotNil(t, families[0].Count)
+		assert.Equal(t, ptr(3), families[0].Count.ConfirmedChildren)
+		assert.Equal(t, ptr(4), families[0].Count.StatedChildren)
+		assert.Equal(t, &statedAt, families[0].Count.StatedAt)
+	}
+	assert.Nil(t, counts[0].StatedChildren, "combining the response does not mutate a stored source")
+	newer := statedAt.Add(time.Hour)
+	counts[0].StatedChildren, counts[0].StatedAt = ptr(5), &newer
+	families := groupFamilies(nil, recipients, counts, today)
+	assert.Equal(t, ptr(5), families[0].Count.StatedChildren, "the newest statement wins across every source")
+}
+
+func TestEqualCarriedFamilyCountsShowTheCurrentValidity(t *testing.T) {
+	t.Parallel()
+	today, from, until, future := calendar.NewDate(2027, 1, 10), calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 6, 30), calendar.NewDate(2028, 1, 1)
+	counts := []parentbilling.FamilyChildCount{
+		{ID: 1, ContractID: 1, FamilyEmail: "contract:1", ConfirmedChildren: ptr(3), ValidFrom: &from, ValidUntil: &until},
+		{ID: 2, ContractID: 2, FamilyEmail: "contract:2", ConfirmedChildren: ptr(3), ValidFrom: &future},
+	}
+	recipients := map[int64]parentbilling.CareRecipient{1: {Email: "family@example.org"}, 2: {Email: "family@example.org"}}
+	for _, ordered := range [][]parentbilling.FamilyChildCount{counts, {counts[1], counts[0]}} {
+		families := groupFamilies(nil, recipients, ordered, today)
+		require.Len(t, families, 1)
+		assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+		require.NotNil(t, families[0].Count)
+		assert.Equal(t, &from, families[0].Count.ValidFrom)
+		assert.Equal(t, &until, families[0].Count.ValidUntil)
+		families = groupFamilies(nil, recipients, ordered, until.AddDays(-10))
+		assert.Equal(t, parentbilling.FamilyChildrenExpiring, families[0].Status)
+		families = groupFamilies(nil, recipients, ordered, until.AddDays(1))
+		assert.Equal(t, parentbilling.FamilyChildrenExpired, families[0].Status, "a distant future confirmation does not cover the gap")
+		families = groupFamilies(nil, recipients, ordered, future)
+		assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status)
+	}
+	counts[1].ValidFrom = ptr(until.AddDays(1))
+	families := groupFamilies(nil, recipients, counts, until.AddDays(-10))
+	assert.Equal(t, parentbilling.FamilyChildrenConfirmed, families[0].Status, "an adjacent equal confirmation extends coverage")
+	assert.Nil(t, families[0].Count.ValidUntil)
+}
 
 func TestBroughtFamilyNumbersKeepTheLongestConfirmation(t *testing.T) {
 	t.Parallel()

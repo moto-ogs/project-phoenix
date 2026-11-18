@@ -425,6 +425,9 @@ type ImportedFamilyChildren struct {
 	ContractID  int64
 	Children    int
 	ValidFrom   calendar.Date
+	// Witness names a repeated row: it can contradict a family's number,
+	// but never contributes a contract or a number to store.
+	Witness bool
 }
 
 // ImportedFamilyChildrenDecision is what the Elternabrechnung does with the

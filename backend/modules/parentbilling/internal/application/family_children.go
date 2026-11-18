@@ -110,7 +110,7 @@ func (f *FamilyNumbers) FamilyChildren(ctx context.Context, reviewer parentbilli
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
 	families := groupFamilies(versions, recipients, counts, today)
-	if err := f.recordFamilyReads(ctx, reviewer, families); err != nil {
+	if err := f.recordFamilyReads(ctx, reviewer, counts); err != nil {
 		return parentbilling.FamilyChildrenSet{}, err
 	}
 	counting, err := f.rulesCountingFamily(ctx, reviewer.OrganizationID)
@@ -145,7 +145,7 @@ func groupFamilies(versions []parentbilling.CareContractVersion, recipients map[
 ) []parentbilling.FamilyChildren {
 	grouped := familyGroups{recipients: recipients, byKey: map[string]*parentbilling.FamilyChildren{}}
 	grouped.addContracts(versions)
-	grouped.addNumbers(counts)
+	grouped.addNumbers(counts, today)
 	families := make([]parentbilling.FamilyChildren, 0, len(grouped.order))
 	for _, key := range grouped.order {
 		found := grouped.byKey[key]
@@ -208,10 +208,10 @@ func (g *familyGroups) addContracts(versions []parentbilling.CareContractVersion
 // number without a contract in force, for example stated on a sent
 // contract, shows its family with the recipient of that contract and no
 // child with a contract yet.
-func (g *familyGroups) addNumbers(counts []parentbilling.FamilyChildCount) {
+func (g *familyGroups) addNumbers(counts []parentbilling.FamilyChildCount, today calendar.Date) {
 	numbers, order := numbersByFamily(counts, g.recipients)
 	for _, key := range order {
-		count, differing := numbers[key].count()
+		count, differing := numbers[key].countOn(today)
 		if count == nil && !differing {
 			continue
 		}
@@ -293,14 +293,12 @@ func firstGap(count *parentbilling.FamilyChildCount, day calendar.Date) (calenda
 	return day, true
 }
 
-// recordFamilyReads records the read of every number shown, on the contract
-// it hangs on.
-func (f *FamilyNumbers) recordFamilyReads(ctx context.Context, reviewer parentbilling.HolidayReviewer, families []parentbilling.FamilyChildren) error {
+// recordFamilyReads records every source shown in the family list, including
+// a statement combined with another contract's confirmation.
+func (f *FamilyNumbers) recordFamilyReads(ctx context.Context, reviewer parentbilling.HolidayReviewer, counts []parentbilling.FamilyChildCount) error {
 	var targets []parentbilling.FamilyChildTarget
-	for _, family := range families {
-		if family.Count != nil {
-			targets = append(targets, parentbilling.FamilyChildTarget{ContractID: family.Count.ContractID, CountID: &family.Count.ID})
-		}
+	for _, count := range counts {
+		targets = append(targets, parentbilling.FamilyChildTarget{ContractID: count.ContractID, CountID: &count.ID})
 	}
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice,
 		AccountID: reviewer.AccountID}

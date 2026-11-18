@@ -314,21 +314,7 @@ func (i *ContractImports) decideFamilies(ctx context.Context, reviewer carecontr
 	if !index.has(carecontract.ContractImportFieldFamilyChildren) {
 		return nil
 	}
-	wanted := carecontract.ContractImportReady
-	if save {
-		wanted = carecontract.ContractImportImported
-	}
-	var numbers []carecontract.ImportedFamilyChildren
-	at := map[int]int{}
-	for n, candidate := range candidates {
-		row := candidate.row
-		if row.Status != wanted || row.FamilyChildren == nil {
-			continue
-		}
-		at[row.Line] = n
-		numbers = append(numbers, carecontract.ImportedFamilyChildren{Line: row.Line, FamilyEmail: row.PartyEmail,
-			ContractID: row.ContractID, Children: *row.FamilyChildren, ValidFrom: *row.EffectiveFrom})
-	}
+	numbers, at := contractFamilyImportRows(candidates, save)
 	if len(numbers) == 0 {
 		return nil
 	}
@@ -351,6 +337,35 @@ func (i *ContractImports) decideFamilies(ctx context.Context, reviewer carecontr
 		row.FamilyChildrenStatus = decision.Status
 	}
 	return nil
+}
+
+// contractFamilyImportRows includes repeated rows only as witnesses. Without
+// an address they refer to the original child's family, before and after save.
+func contractFamilyImportRows(candidates []importCandidate, save bool) ([]carecontract.ImportedFamilyChildren, map[int]int) {
+	wanted := carecontract.ContractImportReady
+	if save {
+		wanted = carecontract.ContractImportImported
+	}
+	var numbers []carecontract.ImportedFamilyChildren
+	at := map[int]int{}
+	for n, candidate := range candidates {
+		row := candidate.row
+		witness := row.Status == carecontract.ContractImportConflict && row.RepeatsLine > 0
+		if (row.Status != wanted && !witness) || row.FamilyChildren == nil {
+			continue
+		}
+		at[row.Line] = n
+		number := carecontract.ImportedFamilyChildren{Line: row.Line, FamilyEmail: row.PartyEmail,
+			ContractID: row.ContractID, Children: *row.FamilyChildren, ValidFrom: *row.EffectiveFrom, Witness: witness}
+		if witness && row.PartyEmail == "" {
+			if original, ok := at[row.RepeatsLine]; ok {
+				first := candidates[original].row
+				number.Line, number.ContractID, number.FamilyEmail = first.Line, first.ContractID, first.PartyEmail
+			}
+		}
+		numbers = append(numbers, number)
+	}
+	return numbers, at
 }
 
 func countContractImportRow(counts *carecontract.ContractImportCounts, row carecontract.ContractImportRow) {

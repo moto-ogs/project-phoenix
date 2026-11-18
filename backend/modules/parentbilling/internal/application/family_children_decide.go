@@ -184,7 +184,7 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 	}
 	rows := make([]importedChildren, len(numbers))
 	for i, number := range numbers {
-		rows[i] = importedChildren{number: number, family: importedChildrenFamily(number)}
+		rows[i] = importedChildren{number: number, family: importedChildrenFamily(number), witness: number.Witness}
 		if validChildren(number.Children) != nil {
 			rows[i].status = parentbilling.ImportedChildrenInvalid
 		}
@@ -206,9 +206,17 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 			return nil, err
 		}
 	}
-	decisions := make([]parentbilling.ImportedFamilyChildrenDecision, len(rows))
-	for i, row := range rows {
-		decisions[i] = parentbilling.ImportedFamilyChildrenDecision{Line: row.number.Line, Status: row.status}
+	return familyImportDecisions(rows), nil
+}
+
+// Witnesses affect conflicts but receive no import decision themselves.
+func familyImportDecisions(rows []importedChildren) []parentbilling.ImportedFamilyChildrenDecision {
+	decisions := make([]parentbilling.ImportedFamilyChildrenDecision, 0, len(rows))
+	for _, row := range rows {
+		if row.witness {
+			continue
+		}
+		decisions = append(decisions, parentbilling.ImportedFamilyChildrenDecision{Line: row.number.Line, Status: row.status})
 	}
-	return decisions, nil
+	return decisions
 }

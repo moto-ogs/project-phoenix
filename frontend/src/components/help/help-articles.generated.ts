@@ -12419,7 +12419,7 @@ export const traegerCareReductionsTopic =
         "Eine Angabe der Eltern, die Sie noch nicht bestätigt haben, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
         "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
         "Aus einer Datei kommt die Zahl ab dem ersten Tag des Vertrags, frühestens ab drei Monaten zurück. Einen anderen Beginn wählen Sie über `Kinderzahl ändern`.",
-        "Steht bei einer Familie `Verschiedene Angaben`? Ihre Verträge nennen verschiedene Zahlen. Bestätigen Sie eine Zahl für die Familie. Bis dahin zählen nur die Kinder mit Vertrag.",
+        "Steht bei einer Familie `Verschiedene Angaben`? Ihre Verträge nennen verschiedene Zahlen. Bestätigen Sie eine Zahl für die Familie. Oder wählen Sie im Menü `Kinderzahl entfernen`. moto fragt vorher nach. Bis dahin zählen nur die Kinder mit Vertrag.",
         "Eine Rechnung, die schon ausgestellt ist, bleibt, wie sie ist. Eine geänderte Regel gilt ab dem nächsten Monatslauf.",
       ],
       notes: [

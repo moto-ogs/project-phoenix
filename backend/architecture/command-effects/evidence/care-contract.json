@@ -26,7 +26,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractFamilyNumbers.DecideImportedFamilyChildren",
-      "binding_digest": "dc48a0cfe5c92a2ce9e059bf8beffe86",
+      "binding_digest": "1d47c62810e965a04753748f28816652",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractFamilyChildren.DecideImportedFamilyChildren",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractFamilyChildren.DecideImportedFamilyChildren",

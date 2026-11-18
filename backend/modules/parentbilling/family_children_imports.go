@@ -188,6 +188,8 @@ type ImportedFamilyChildren struct {
 	ContractID  int64
 	Children    int
 	ValidFrom   calendar.Date
+	// Witness contributes only to detecting contradictory file rows.
+	Witness bool
 }
 
 // What an import of contracts does with the number of a row.

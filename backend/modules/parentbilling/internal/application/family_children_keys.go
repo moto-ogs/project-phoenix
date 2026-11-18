@@ -135,6 +135,90 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 	return first, false
 }
 
+// countOn combines the current confirmation with the latest parental
+// statement for the office. Import decisions keep count's longest validity
+// so that they also protect confirmations scheduled for a later day.
+func (n *familyNumbers) countOn(day calendar.Date) (*parentbilling.FamilyChildCount, bool) {
+	count, differing := n.count()
+	if !n.decided() && !differing {
+		if current := n.broughtCoverageOn(day); current != nil {
+			count = current
+		}
+	}
+	return n.withStatement(count), differing
+}
+
+// broughtCoverageOn joins equal confirmations only across adjacent days.
+// A gap must remain visible even if an open confirmation follows later.
+func (n *familyNumbers) broughtCoverageOn(day calendar.Date) *parentbilling.FamilyChildCount {
+	count := n.broughtOn(day)
+	if count == nil || (count.ValidUntil != nil && count.ValidUntil.Before(day)) {
+		return count
+	}
+	for count.ValidUntil != nil {
+		next := n.broughtOn(count.ValidUntil.AddDays(1))
+		if next == nil || !sameConfirmation(count, next) ||
+			(next.ValidUntil != nil && !next.ValidUntil.After(*count.ValidUntil)) {
+			break
+		}
+		count.ValidUntil = next.ValidUntil
+	}
+	return count
+}
+
+// broughtOn chooses a confirmation valid today, else the last expired one.
+// It includes retained confirmations of sources with a future change.
+func (n *familyNumbers) broughtOn(day calendar.Date) *parentbilling.FamilyChildCount {
+	var current *parentbilling.FamilyChildCount
+	for _, source := range n.brought {
+		confirmation, started := source.InForceOn(day)
+		if !started {
+			continue
+		}
+		copy := *source
+		copy.ConfirmedChildren, copy.ValidFrom, copy.ValidUntil = confirmation.Children, confirmation.ValidFrom, confirmation.ValidUntil
+		if preferFamilyCount(current, &copy, day) {
+			current = &copy
+		}
+	}
+	return current
+}
+
+func preferFamilyCount(current, candidate *parentbilling.FamilyChildCount, day calendar.Date) bool {
+	if current == nil {
+		return true
+	}
+	currentValid := current.ValidUntil == nil || !current.ValidUntil.Before(day)
+	candidateValid := candidate.ValidUntil == nil || !candidate.ValidUntil.Before(day)
+	if currentValid != candidateValid {
+		return candidateValid
+	}
+	return current.ValidUntil != nil && (candidate.ValidUntil == nil || candidate.ValidUntil.After(*current.ValidUntil))
+}
+
+// withStatement keeps the latest statement across all sources without
+// mutating the stored confirmation or inventing one for a differing family.
+func (n *familyNumbers) withStatement(count *parentbilling.FamilyChildCount) *parentbilling.FamilyChildCount {
+	var latest *parentbilling.FamilyChildCount
+	for _, source := range n.all() {
+		if source.StatedChildren != nil && source.StatedAt != nil &&
+			(latest == nil || source.StatedAt.After(*latest.StatedAt)) {
+			latest = source
+		}
+	}
+	if latest == nil {
+		return count
+	}
+	var combined parentbilling.FamilyChildCount
+	if count != nil {
+		combined = *count
+	} else {
+		combined.ID, combined.ContractID = latest.ID, latest.ContractID
+	}
+	combined.StatedChildren, combined.StatedAt = latest.StatedChildren, latest.StatedAt
+	return &combined
+}
+
 // sameConfirmation tells whether two contracts brought the same number.
 // The run compares the numbers valid in its month (confirmedIn), so the
 // list compares the numbers too, not their days.

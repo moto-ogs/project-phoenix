@@ -178,7 +178,7 @@ export default function TraegerKinderzahlPage() {
   const { success } = useToast();
 
   const remove = async () => {
-    const contract = removing?.count?.contractId;
+    const contract = removing?.contractId;
     if (!removing || !contract) return;
     setBusy(true);
     removeErrors.clear();
@@ -283,7 +283,7 @@ export default function TraegerKinderzahlPage() {
                 "Öffnet ein Fenster, um die Kinderzahl zu bestätigen oder zu ändern",
               onClick: () => setChecking(family),
             },
-            ...(family.count
+            ...(family.count || family.status === "differing"
               ? [
                   {
                     label: "Kinderzahl entfernen",

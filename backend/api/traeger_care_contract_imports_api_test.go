@@ -401,8 +401,8 @@ func TestCareContractImportKeepsTheChildrenOfTheFamily(t *testing.T) {
 		} `json:"mapping"`
 		Fingerprint string `json:"fingerprint"`
 		Counts      struct {
-			Ready, Invalid, Imported int
-			FamilyChildren           int `json:"family_children"`
+			Ready, Invalid, Imported, Conflict int
+			FamilyChildren                     int `json:"family_children"`
 		} `json:"counts"`
 		Rows []struct {
 			Status               string `json:"status"`
@@ -472,4 +472,37 @@ func TestCareContractImportKeepsTheChildrenOfTheFamily(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM parent_billing.family_child_count_events
 		WHERE organization_id = ? AND action = 'confirm' AND actor = 'office' AND actor_account_id = ?`, f.office.organization, account.ID).Scan(ctx, &trail))
 	assert.Equal(t, 2, trail, "each number stands in the trail of its contract")
+
+	// Repeated rows still witness contradictory family numbers, but take
+	// over neither a contract nor a number of their own.
+	conflicting := []byte(strings.ReplaceAll(strings.Join([]string{lines[0],
+		"Ria;Widerspruch;{school};Offene Ganztagsschule;01.08.2027;Eva Widerspruch;widerspruch@example.org;2",
+		"Noah;Widerspruch;{school};Offene Ganztagsschule;01.08.2027;Eva Widerspruch;widerspruch@example.org;2",
+		"Ria;Widerspruch;{school};Offene Ganztagsschule;01.08.2027;Eva Widerspruch;widerspruch@example.org;3",
+		"Nele;OhneAdresse;{school};Offene Ganztagsschule;01.08.2027;;;2",
+		"Nele;OhneAdresse;{school};Offene Ganztagsschule;01.08.2027;;;3"}, "\n"), "{school}", school))
+	rec = importForm(t, f.traeger, token, contractImportPreviewPath, "widerspruch.csv", conflicting, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	preview = decodeSchoolPortalData[body](t, rec.Body.Bytes())
+	assert.Equal(t, 3, preview.Counts.Ready)
+	assert.Equal(t, 2, preview.Counts.Conflict)
+	assert.Zero(t, preview.Counts.FamilyChildren)
+	assert.Equal(t, "rows_differ", preview.Rows[0].FamilyChildrenStatus)
+	assert.Equal(t, "rows_differ", preview.Rows[1].FamilyChildrenStatus)
+	assert.Equal(t, "rows_differ", preview.Rows[3].FamilyChildrenStatus)
+	rec = importForm(t, f.traeger, token, contractImportPath, "widerspruch.csv", conflicting, map[string]string{"fingerprint": preview.Fingerprint})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	applied = decodeSchoolPortalData[body](t, rec.Body.Bytes())
+	assert.Equal(t, 3, applied.Counts.Imported)
+	assert.Equal(t, 2, applied.Counts.Conflict)
+	assert.Zero(t, applied.Counts.FamilyChildren)
+	assert.Zero(t, applied.Rows[2].ContractID)
+	assert.Zero(t, applied.Rows[4].ContractID)
+	var conflictingCounts int
+	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM parent_billing.family_child_counts
+		WHERE organization_id = ? AND family_email = ?`, f.office.organization, "widerspruch@example.org").Scan(ctx, &conflictingCounts))
+	assert.Zero(t, conflictingCounts, "the contradictory file confirms no family number")
+	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM parent_billing.family_child_counts
+		WHERE organization_id = ?`, f.office.organization).Scan(ctx, &conflictingCounts))
+	assert.Equal(t, len(stored), conflictingCounts, "a repeated child without a mail address is also a conflict witness")
 }

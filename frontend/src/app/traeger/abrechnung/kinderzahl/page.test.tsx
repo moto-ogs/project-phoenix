@@ -10,14 +10,16 @@ import TraegerKinderzahlPage from "./page";
 
 vi.unmock("swr");
 
-const { fetchFamilyChildren, confirmFamilyChildren } = vi.hoisted(() => ({
-  fetchFamilyChildren: vi.fn(),
-  confirmFamilyChildren: vi.fn(),
-}));
+const { fetchFamilyChildren, confirmFamilyChildren, removeFamilyChildren } =
+  vi.hoisted(() => ({
+    fetchFamilyChildren: vi.fn(),
+    confirmFamilyChildren: vi.fn(),
+    removeFamilyChildren: vi.fn(),
+  }));
 vi.mock("~/lib/traeger-family-children-api", () => ({
   fetchFamilyChildren,
   confirmFamilyChildren,
-  removeFamilyChildren: vi.fn(),
+  removeFamilyChildren,
 }));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
@@ -193,6 +195,52 @@ describe("TraegerKinderzahlPage", () => {
     expect(
       within(checks).getByText("Verschiedene Angaben"),
     ).toBeInTheDocument();
+    removeFamilyChildren.mockResolvedValue({ ...data, families: [] });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Kinderzahl: Eva Beispiel" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Kinderzahl entfernen/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Ja, entfernen" }),
+    );
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Entfernen" }),
+    );
+    await vi.waitFor(() =>
+      expect(removeFamilyChildren).toHaveBeenCalledWith(stated.contractId),
+    );
+  });
+
+  it("shows a parental correction alongside the carried confirmation in the modal", async () => {
+    renderPage({
+      ...data,
+      families: [
+        {
+          ...stated,
+          status: "changed",
+          count: {
+            ...stated.count!,
+            confirmedChildren: 2,
+            confirmedAt: "2026-09-01T08:00:00Z",
+            validFrom: "2026-09-01",
+          },
+        },
+      ],
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Kinderzahl von Eva Beispiel prüfen",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Bisher bestätigt")).toBeInTheDocument();
+    expect(within(dialog).getByText("2 Kinder")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Kinder in der Familie/)).toHaveValue(
+      "3",
+    );
   });
 
   it("says when no sibling rule counts the number yet", async () => {

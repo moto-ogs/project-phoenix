@@ -83,7 +83,7 @@ func (n CareContractFamilyNumbers) DecideImportedFamilyChildren(ctx context.Cont
 	rows := make([]parentbilling.ImportedFamilyChildren, len(numbers))
 	for i, number := range numbers {
 		rows[i] = parentbilling.ImportedFamilyChildren{Line: number.Line, FamilyEmail: number.FamilyEmail, ContractID: number.ContractID,
-			Children: number.Children, ValidFrom: number.ValidFrom}
+			Children: number.Children, ValidFrom: number.ValidFrom, Witness: number.Witness}
 	}
 	decided, err := n.Numbers.DecideImportedFamilyChildren(ctx,
 		parentbilling.HolidayReviewer{OrganizationID: reviewer.OrganizationID, AccountID: reviewer.AccountID}, rows, save)
