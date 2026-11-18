@@ -81,6 +81,9 @@ type instanceStudentSummary struct {
 // "activity" | "care" | "external". Spontaneous instances without a template
 // fall back to "activity" so the frontend has a deterministic colour key.
 type enrichedInstance struct {
+	// EnrichWarning is set only when a committed create could not be re-read
+	// with its enrichment; the enriched fields are empty then.
+	EnrichWarning          string  `json:"enrich_warning,omitempty"`
 	ID                     int64   `json:"id"`
 	Date                   string  `json:"date"`
 	StartTime              string  `json:"start_time"`

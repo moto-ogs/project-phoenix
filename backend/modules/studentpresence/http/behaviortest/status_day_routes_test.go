@@ -67,6 +67,38 @@ func TestStudentStatusDayHandlers_CreateGetDelete(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, deleteAgainRR.Code)
 }
 
+// A class trip entered for several children at once lands on every child and
+// every day of the range, and the answer counts both.
+func TestStudentStatusDayHandlers_BulkCreatesEveryChildAndDay(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	resource := newStatusDayTestResource(db)
+	first := testpkg.CreateTestStudent(t, db, "StatusBulk", "Eins", "SB1")
+	second := testpkg.CreateTestStudent(t, db, "StatusBulk", "Zwei", "SB1")
+	router := chi.NewRouter()
+	router.Mount("/api/students", statusDayTestRouter(resource))
+
+	req := testutil.NewAuthenticatedRequest(t, "POST", "/api/students/status-days/bulk", map[string]any{
+		"student_ids": []int64{first.ID, second.ID},
+		"status":      absencerecords.StudentStatusDayClassTrip,
+		"from":        "2026-05-25",
+		"to":          "2026-05-27",
+	})
+	rr := executeStatusDayHandler(t, router, req, testutil.AdminTestClaims(statusDayAdmin(t, db)), []string{"admin:*"})
+	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+	assert.JSONEq(t, `{"student_count":2,"date_count":3}`, string(mustData(t, rr)))
+
+	for _, student := range []int64{first.ID, second.ID} {
+		rows, err := resource.StudentStatusDayService.FindActiveByStudentAndDateRange(testpkg.Ctx(t), student, calendar.NewDate(2026, 5, 25), calendar.NewDate(2026, 5, 27))
+		require.NoError(t, err)
+		require.Len(t, rows, 3)
+		for _, row := range rows {
+			assert.Equal(t, absencerecords.StudentStatusDayClassTrip, row.Status)
+		}
+	}
+}
+
 func TestStudentStatusDayHandlers_TodayUpdatesLiveStatusAndClearsOpposite(t *testing.T) {
 	t.Parallel()
 

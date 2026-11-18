@@ -245,7 +245,7 @@ export interface WeeklyInstancesResponse {
  * WeeklyInstancesResponse.
  */
 interface BackendInstanceStaffSummary {
-  staff_id: number;
+  staff_id: number | string;
   is_primary: boolean;
   is_absent: boolean;
   is_substitute: boolean;
@@ -254,7 +254,7 @@ interface BackendInstanceStaffSummary {
 }
 
 interface BackendInstanceStudentSummary {
-  student_id: number;
+  student_id: number | string;
   status: InstanceAttendanceStatus;
   substatus?: InstanceAttendanceSubstatus | null;
   note?: string | null;
@@ -264,7 +264,7 @@ interface BackendInstanceStudentSummary {
 }
 
 export interface BackendEnrichedInstance {
-  id: number;
+  id: number | string;
   date: string;
   start_time: string;
   end_time: string;
@@ -275,19 +275,19 @@ export interface BackendEnrichedInstance {
   status: InstanceStatus;
   is_spontaneous: boolean;
   is_live: boolean;
-  activity_group_id?: number;
-  calendar_period_id?: number;
-  planning_track_id?: number;
+  activity_group_id?: number | string;
+  calendar_period_id?: number | string;
+  planning_track_id?: number | string;
   planning_track_name?: string;
   planning_track_color?: string;
   planning_track_sort_order?: number;
   list_kind?: TimetableListKind;
   activity_type: ActivityType;
-  room_id: number;
+  room_id: number | string;
   room_name: string;
   group_name?: string;
   staff: BackendInstanceStaffSummary[];
-  student_ids?: number[];
+  student_ids?: (number | string)[];
   students?: BackendInstanceStudentSummary[];
   staff_count: number;
   absent_staff_count: number;
@@ -312,11 +312,11 @@ export interface BackendEnrichedInstance {
   required_staff_override?: number | null;
   conflict_warnings?: Array<{
     kind: ConflictKind;
-    resource_id: number;
+    resource_id: number | string;
     message: string;
     can_override: boolean;
     fingerprint?: string;
-    conflicting_instance_id?: number;
+    conflicting_instance_id?: number | string;
     conflicting_title?: string;
     overlap_start?: string;
     overlap_end?: string;
@@ -359,12 +359,12 @@ export interface GapsResponse {
 }
 
 export interface BackendGapInstance {
-  instance_id: number;
+  instance_id: number | string;
   date: string;
   title: string;
   start_time: string;
   end_time: string;
-  room_id: number;
+  room_id: number | string;
   status: InstanceStatus;
   assigned_staff_count: number;
   absent_staff_count: number;
@@ -426,17 +426,17 @@ export interface DeviationHistoryResponse {
 }
 
 interface BackendDeviationHistoryEvent {
-  id: number;
-  activity_group_id?: number;
+  id: number | string;
+  activity_group_id?: number | string;
   occurrence_date: string;
   start_time: string;
-  instance_id?: number;
+  instance_id?: number | string;
   event_type: string;
-  subject_staff_id?: number;
+  subject_staff_id?: number | string;
   subject_staff_name?: string;
-  related_staff_id?: number;
+  related_staff_id?: number | string;
   related_staff_name?: string;
-  actor_account_id?: number;
+  actor_account_id?: number | string;
   actor_name?: string;
   // json.RawMessage im Backend (beliebiges JSON oder fehlend, omitempty).
   old_value?: unknown;
@@ -601,30 +601,30 @@ export interface TemplatesResponse {
 }
 
 interface BackendTemplateSchedule {
-  id: number;
+  id: number | string;
   weekday: number;
   start_time: string;
   end_time: string;
   week_pattern: number;
-  calendar_period_id?: number;
+  calendar_period_id?: number | string;
   valid_from?: string;
   valid_until?: string;
 }
 
 export interface BackendTimetableTemplate {
-  id: number;
+  id: number | string;
   name: string;
   type: ActivityType;
   list_kind?: TimetableListKind;
-  category_id: number;
+  category_id: number | string;
   category_name: string;
-  planning_track_id?: number;
+  planning_track_id?: number | string;
   planning_track_name?: string;
   planning_track_color?: string;
   planning_track_sort_order?: number;
-  room_id?: number;
+  room_id?: number | string;
   room_name?: string;
-  education_group_id?: number;
+  education_group_id?: number | string;
   education_group_name?: string;
   is_open: boolean;
   max_participants: number | null;
@@ -633,7 +633,7 @@ export interface BackendTimetableTemplate {
   end_date?: string | null;
   shift_type_name?: string;
   shift_type_color?: string;
-  calendar_period_id?: number;
+  calendar_period_id?: number | string;
   target_group_type: TargetGroupType;
   target_grade_level?: number;
   target_school_class?: string;
@@ -641,10 +641,10 @@ export interface BackendTimetableTemplate {
     type: "jahrgang" | "klasse" | "gruppe";
     grade_level?: number;
     school_class?: string;
-    education_group_id?: number;
+    education_group_id?: number | string;
     education_group_name?: string;
   }>;
-  source_care_offering_ids?: number[];
+  source_care_offering_ids?: (number | string)[];
   source_grade_levels?: number[];
   source_school_classes?: string[];
   enrollment_count: number;
@@ -652,14 +652,14 @@ export interface BackendTimetableTemplate {
   required_staff_count: number;
   assigned_staff_count: number;
   required_staff_override?: number | null;
-  student_ids?: number[];
-  staff_ids?: number[];
-  primary_staff_id?: number;
+  student_ids?: (number | string)[];
+  staff_ids?: (number | string)[];
+  primary_staff_id?: number | string;
   schedules: BackendTemplateSchedule[];
   weekday_assignments?: BackendTemplateWeekdayAssignment[] | null;
   protected_student_assignments?:
     BackendTemplateProtectedStudentAssignment[] | null;
-  resolved_from_template_id?: number | null;
+  resolved_from_template_id?: number | string | null;
   roster_maintenance?: BackendTemplateRosterMaintenance | null;
   /** „Liste so lassen“ for the whole series (#5103). */
   manual_roster_confirmed?: boolean;
@@ -667,14 +667,14 @@ export interface BackendTimetableTemplate {
 
 interface BackendTemplateWeekdayAssignment {
   weekday: number;
-  staff_ids?: number[];
-  student_ids?: number[];
-  primary_staff_id?: number;
+  staff_ids?: (number | string)[];
+  student_ids?: (number | string)[];
+  primary_staff_id?: number | string;
 }
 
 interface BackendTemplateProtectedStudentAssignment {
   weekday: number;
-  student_ids?: number[];
+  student_ids?: (number | string)[];
 }
 
 export interface BackendTemplatesResponse {
@@ -804,7 +804,7 @@ export interface EditedInWindowResult {
 export interface BackendEditedInWindowResult {
   count: number;
   occurrences: {
-    instance_id: number;
+    instance_id: number | string;
     date: string;
     start_time: string;
     title: string;
@@ -855,7 +855,7 @@ export interface GuardianNoticeReach {
 }
 
 export interface BackendGuardianNoticeResult {
-  announcement_id: number;
+  announcement_id: number | string;
   child_count: number;
   family_count: number;
 }
@@ -866,20 +866,20 @@ export interface BackendGuardianNoticeReach {
 }
 
 export interface BackendStartInstanceResult {
-  instance_id: number;
+  instance_id: number | string;
   status: InstanceStatus;
-  active_group_id: number;
+  active_group_id: number | string;
   started_at: string;
   warnings: Array<{
     kind: ConflictKind;
-    resource_id: number;
+    resource_id: number | string;
     message: string;
     can_override: boolean;
   }>;
 }
 
 export interface BackendInstanceStatusResult {
-  instance_id: number;
+  instance_id: number | string;
   status: InstanceStatus;
   completed_at?: string;
   reopen_until?: string;
@@ -903,9 +903,9 @@ export interface AttendanceResponse {
 }
 
 export interface BackendAttendanceResponse {
-  id: number;
-  instance_id: number;
-  student_id: number;
+  id: number | string;
+  instance_id: number | string;
+  student_id: number | string;
   status: InstanceAttendanceStatus;
   substatus?: InstanceAttendanceSubstatus | null;
   note?: string | null;
@@ -941,9 +941,9 @@ interface SubstituteAffectedInstance {
 }
 
 interface BackendSubstituteTimeConflict {
-  instance_id: number;
+  instance_id: number | string;
   kind?: string;
-  other_instance_id?: number;
+  other_instance_id?: number | string;
   message?: string;
   title?: string;
   date?: string;
@@ -952,7 +952,7 @@ interface BackendSubstituteTimeConflict {
 }
 
 interface BackendSubstituteAffectedInstance {
-  instance_id: number;
+  instance_id: number | string;
   title: string;
   start_time: string;
   action: SubstituteAction;
@@ -996,7 +996,7 @@ export interface ApplyDeviationsResponse {
 }
 
 export interface BackendApplyDeviationsResponse {
-  instance_id: number;
+  instance_id: number | string;
   cancelled: boolean;
   understaffed_ack: boolean;
   affected_instances: BackendSubstituteAffectedInstance[];
@@ -1082,14 +1082,14 @@ export interface StaffPoolResponse {
 }
 
 export interface BackendStaffPoolResponse {
-  instance_id: number;
+  instance_id: number | string;
   title: string;
   date: string;
   start_time: string;
   end_time: string;
   dienstplan_in_use: boolean;
   entries: Array<{
-    staff_id: number;
+    staff_id: number | string;
     display_name: string;
     category: StaffPoolCategory;
     on_shift: boolean;
@@ -1097,7 +1097,7 @@ export interface BackendStaffPoolResponse {
     shift_windows: string[] | null;
     absence_reason?: string | null;
     assignments: Array<{
-      instance_id: number;
+      instance_id: number | string;
       title: string;
       start_time: string;
       end_time: string;
@@ -1124,12 +1124,12 @@ export interface MoveStaffResponse {
 }
 
 export interface BackendMoveStaffResponse {
-  target_instance_id: number;
-  source_instance_id?: number | null;
+  target_instance_id: number | string;
+  source_instance_id?: number | string | null;
   action: "moved" | "assigned" | "already_applied";
   time_conflicts: BackendSubstituteTimeConflict[] | null;
   coverage_warnings: Array<{
-    staff_id: number;
+    staff_id: number | string;
     staff_name: string;
     date: string;
     start_time: string;
@@ -1325,20 +1325,20 @@ interface OfferingSourcedTemplate {
 }
 
 interface BackendOfferingSourceOption {
-  id: number;
+  id: number | string;
   name: string;
-  phase_id: number;
+  phase_id: number | string;
   phase_name: string;
   phase_service_start?: string;
   total_count: number;
   grade_counts: Record<string, number>;
   sourced_templates: {
-    id: number;
+    id: number | string;
     name: string;
     grade_levels?: number[];
     school_classes?: string[];
   }[];
-  legacy_linked_template_id?: number;
+  legacy_linked_template_id?: number | string;
 }
 
 export interface BackendOfferingSourcesResponse {
@@ -1370,7 +1370,7 @@ export interface BackendCombinedOfferingCountsResponse {
   total_count: number;
   grade_counts: Record<string, number>;
   students?: {
-    student_id: number;
+    student_id: number | string;
     school_class?: string;
   }[];
 }
@@ -1385,9 +1385,9 @@ export interface CreateTemplateResult {
 }
 
 export interface BackendCreateTemplateResult {
-  template_id: number;
-  timeframe_id: number;
-  schedule_ids: number[];
+  template_id: number | string;
+  timeframe_id: number | string;
+  schedule_ids: (number | string)[];
   instances_created?: number;
   materialized_from?: string;
   materialized_to?: string;
@@ -1411,10 +1411,10 @@ export interface ConvertInstanceToSeriesResult {
 }
 
 export interface BackendConvertInstanceToSeriesResult {
-  template_id: number;
-  timeframe_id: number;
-  schedule_ids: number[];
-  linked_instance_id: number;
+  template_id: number | string;
+  timeframe_id: number | string;
+  schedule_ids: (number | string)[];
+  linked_instance_id: number | string;
 }
 
 /**
@@ -1440,9 +1440,9 @@ export interface SplitTemplateResult {
 }
 
 export interface BackendSplitTemplateResult {
-  old_template_id: number;
-  new_template_id: number;
-  schedule_ids: number[];
+  old_template_id: number | string;
+  new_template_id: number | string;
+  schedule_ids: (number | string)[];
   deleted_instances: number;
   instances_created: number;
 }
@@ -1458,13 +1458,13 @@ export interface EndTemplateResult {
 }
 
 export interface BackendEndTemplateResult {
-  template_id: number;
+  template_id: number | string;
   effective_date: string;
   deleted_instances: number;
 }
 
 /**
- * Params for GET /api/timetable/conflict-check. Optional resource params
+ * Params for GET /api/timetable/conflicts. Optional resource params
  * are omitted from the query string when empty — the backend treats a
  * missing param as "do not check this resource kind".
  */
@@ -1540,7 +1540,7 @@ export interface ShiftCoverageCheckResult {
 export interface BackendShiftCoverageCheckResult {
   coverage_warning_count?: number;
   coverage_warnings?: Array<{
-    staff_id: number;
+    staff_id: number | string;
     staff_name: string;
     date: string;
     start_time: string;
@@ -1557,9 +1557,9 @@ export interface BackendConflictCheckResult {
   end_time: string;
   warnings?: Array<{
     kind: ConflictKind;
-    resource_id: number;
+    resource_id: number | string;
     message: string;
-    conflicting_instance_id: number;
+    conflicting_instance_id: number | string;
     conflicting_title: string;
   }>;
 }

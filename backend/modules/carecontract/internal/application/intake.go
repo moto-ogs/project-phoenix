@@ -376,14 +376,14 @@ func (in *Intake) Templates(ctx context.Context, reviewer carecontract.Reviewer)
 	if err != nil {
 		return nil, fmt.Errorf("care contract: read templates: %w", err)
 	}
-	byOffering := map[[2]int64]carecontract.Template{}
+	byOffering := map[[2]int64]carecontract.ContractTemplate{}
 	for _, row := range rows {
 		byOffering[[2]int64{row.SchoolID, row.OfferingID}] = row.Template
 	}
 	result := []carecontract.OfferingTemplate{}
 	for _, school := range schools {
 		for _, offering := range offerings[school.ID] {
-			var found *carecontract.Template
+			var found *carecontract.ContractTemplate
 			if template, ok := byOffering[[2]int64{school.ID, offering.ID}]; ok {
 				found = &template
 			}
@@ -456,7 +456,7 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 	if err != nil {
 		return carecontract.OfferingTemplate{}, err
 	}
-	var saved carecontract.Template
+	var saved carecontract.ContractTemplate
 	var head carecontract.Letterhead
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
 		var err error
@@ -601,7 +601,7 @@ func (in *Intake) templateIndex(ctx context.Context, organizationID int64) (temp
 	return index, nil
 }
 
-func offeringTemplate(school carecontract.School, offering carecontract.Offering, template *carecontract.Template, head carecontract.Letterhead) carecontract.OfferingTemplate {
+func offeringTemplate(school carecontract.School, offering carecontract.Offering, template *carecontract.ContractTemplate, head carecontract.Letterhead) carecontract.OfferingTemplate {
 	text, withdrawal, earlyStart, term, notice := "", "", "", "", ""
 	if template != nil {
 		text = acceptanceText(template.TemplateInput)

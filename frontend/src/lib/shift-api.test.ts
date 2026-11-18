@@ -226,7 +226,7 @@ describe("staffShiftService requests", () => {
       ],
     });
     expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/shifts/overview?from=2026-07-06&to=2026-07-10",
+      "/api/staff-shifts/overview?from=2026-07-06&to=2026-07-10",
     );
   });
 
@@ -246,7 +246,7 @@ describe("staffShiftService requests", () => {
     await staffShiftService.createShift(payload);
     await staffShiftService.updateShift("42", payload);
 
-    expect(mockSessionFetch).toHaveBeenNthCalledWith(1, "/api/staff/shifts", {
+    expect(mockSessionFetch).toHaveBeenNthCalledWith(1, "/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -260,7 +260,7 @@ describe("staffShiftService requests", () => {
     });
     expect(mockSessionFetch).toHaveBeenNthCalledWith(
       2,
-      "/api/staff/shifts/42",
+      "/api/staff-shifts/42",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -290,7 +290,7 @@ describe("staffShiftService requests", () => {
       shiftTypeId: "5",
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shifts", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -321,7 +321,7 @@ describe("staffShiftService requests", () => {
       originShiftId: "9223372036854775807",
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shifts", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -351,7 +351,7 @@ describe("staffShiftService requests", () => {
       shiftTypeId: "5",
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shifts/42/move", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/42/move", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -382,7 +382,7 @@ describe("staffShiftService requests", () => {
       changeReason: null,
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shifts", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -402,7 +402,7 @@ describe("staffShiftService requests", () => {
     mockSessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(staffShiftService.deleteShift("42")).resolves.toBeUndefined();
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shifts/42", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/42", {
       method: "DELETE",
     });
   });
@@ -434,7 +434,7 @@ describe("staffShiftService requests", () => {
       },
     ]);
     expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/shifts?staff_id=7&from=2026-07-06&to=2026-07-10",
+      "/api/staff-shifts?staff_id=7&from=2026-07-06&to=2026-07-10",
     );
   });
 });

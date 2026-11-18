@@ -261,16 +261,14 @@ func (rs *Resource) createdByStaffID(ctx context.Context) *int64 {
 // respondCreatedWithoutEnrichment answers a committed create whose enriched
 // re-read failed with the block's own fields and the enrichment warning.
 func respondCreatedWithoutEnrichment(w http.ResponseWriter, r *http.Request, inst *timetable.LifecycleInstance, err error) {
-	common.Respond(w, r, http.StatusCreated, map[string]any{
-		"id":             inst.ID,
-		"date":           inst.Date.Format(dateLayout),
-		"start_time":     inst.StartTime.Format("15:04"),
-		"end_time":       inst.EndTime.Format("15:04"),
-		"title":          inst.Title,
-		"status":         inst.Status,
-		"is_spontaneous": inst.IsSpontaneous,
-		"room_id":        inst.RoomID,
-		"enrich_warning": fmt.Sprintf("enrichment failed: %v", err),
+	// The registered answer type, so the contract holds on this path too: the
+	// fields below as before, every enriched field at its empty value.
+	common.Respond(w, r, http.StatusCreated, enrichedInstance{
+		ID: inst.ID, Date: inst.Date.Format(dateLayout),
+		StartTime: inst.StartTime.Format("15:04"), EndTime: inst.EndTime.Format("15:04"),
+		Title: inst.Title, Status: inst.Status, IsSpontaneous: inst.IsSpontaneous, RoomID: inst.RoomID,
+		Staff: []instanceStaffSummary{}, StudentIDs: []int64{}, Students: []instanceStudentSummary{},
+		EnrichWarning: fmt.Sprintf("enrichment failed: %v", err),
 	}, "Instance created (without enrichment)")
 }
 

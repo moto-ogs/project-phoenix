@@ -54,10 +54,17 @@ func (r *pickupAdjustmentRequest) Bind(_ *http.Request) error {
 }
 
 type pickupAdjustmentMatchResponse struct {
-	OfferingID   string                             `json:"offering_id"`
-	Name         string                             `json:"name"`
-	SelectedDays []string                           `json:"selected_days"`
-	Selections   []pickupAdjustmentSelectionRequest `json:"selections"`
+	OfferingID   string                              `json:"offering_id"`
+	Name         string                              `json:"name"`
+	SelectedDays []string                            `json:"selected_days"`
+	Selections   []pickupAdjustmentSelectionResponse `json:"selections"`
+}
+
+// pickupAdjustmentSelectionResponse is a selection the preview proposes; the
+// client sends it back as a pickupAdjustmentSelectionRequest.
+type pickupAdjustmentSelectionResponse struct {
+	OfferingID   string   `json:"offering_id"`
+	SelectedDays []string `json:"selected_days"`
 }
 
 type pickupAdjustmentCatalogItemResponse struct {
@@ -296,10 +303,10 @@ func toPickupAdjustmentPreviewResponse(preview *careplan.PickupAdjustmentPreview
 		item := pickupAdjustmentMatchResponse{
 			OfferingID: strconv.FormatInt(match.OfferingID, 10), Name: match.Name,
 			SelectedDays: match.SelectedDays,
-			Selections:   make([]pickupAdjustmentSelectionRequest, 0, len(match.Selections)),
+			Selections:   make([]pickupAdjustmentSelectionResponse, 0, len(match.Selections)),
 		}
 		for _, selection := range match.Selections {
-			item.Selections = append(item.Selections, pickupAdjustmentSelectionRequest{
+			item.Selections = append(item.Selections, pickupAdjustmentSelectionResponse{
 				OfferingID: strconv.FormatInt(selection.OfferingID, 10), SelectedDays: selection.SelectedDays,
 			})
 		}

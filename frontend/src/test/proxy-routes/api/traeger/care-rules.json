@@ -1,6 +1,0 @@
-{
-  "api/traeger/care-rules": [
-    "GET traeger /traeger/care-rules",
-    "POST traeger /traeger/care-rules"
-  ]
-}

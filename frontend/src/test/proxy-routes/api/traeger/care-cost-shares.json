@@ -1,6 +1,0 @@
-{
-  "api/traeger/care-cost-shares": [
-    "GET traeger /traeger/care-cost-shares",
-    "POST traeger /traeger/care-cost-shares"
-  ]
-}

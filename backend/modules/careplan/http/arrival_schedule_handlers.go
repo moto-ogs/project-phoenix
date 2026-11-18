@@ -73,7 +73,7 @@ func (rs *Resource) getStudentArrivalSchedules(w http.ResponseWriter, r *http.Re
 func buildArrivalDataResponse(data *careplan.StudentArrivalData) ArrivalDataResponse {
 	response := ArrivalDataResponse{
 		Schedules:  make([]ArrivalScheduleResponse, 0, len(data.Schedules)),
-		Exceptions: make([]ArrivalExceptionResponse, 0, len(data.Exceptions)),
+		Exceptions: make([]StudentArrivalExceptionResponse, 0, len(data.Exceptions)),
 		Notes:      make([]ArrivalNoteResponse, 0, len(data.Notes)),
 	}
 
@@ -183,7 +183,7 @@ func (rs *Resource) createStudentArrivalException(w http.ResponseWriter, r *http
 		return
 	}
 
-	req := &ArrivalExceptionRequest{}
+	req := &StudentArrivalExceptionRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -242,7 +242,7 @@ func (rs *Resource) updateStudentArrivalException(w http.ResponseWriter, r *http
 		return
 	}
 
-	req := &ArrivalExceptionRequest{}
+	req := &StudentArrivalExceptionRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return

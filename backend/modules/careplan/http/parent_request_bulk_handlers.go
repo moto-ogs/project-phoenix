@@ -15,12 +15,21 @@ import (
 )
 
 type bulkApproveParentRequestsBody struct {
-	Requests []struct {
-		Kind            parentrequests.Kind `json:"kind"`
-		ID              string              `json:"id"`
-		ExpectedVersion string              `json:"expected_version"`
-	} `json:"requests"`
-	Reason string `json:"reason"`
+	Requests []bulkApproveParentRequestRef `json:"requests"`
+	Reason   string                        `json:"reason"`
+}
+
+// bulkApproveParentRequestRef names one request of a bulk approval at the
+// version the reviewer saw.
+type bulkApproveParentRequestRef struct {
+	Kind            parentrequests.Kind `json:"kind"`
+	ID              string              `json:"id"`
+	ExpectedVersion string              `json:"expected_version"`
+}
+
+// parentRequestsApprovedResponse counts the requests a bulk approval decided.
+type parentRequestsApprovedResponse struct {
+	ApprovedCount int `json:"approved_count"`
 }
 
 func (rs *Resource) bulkApproveParentRequests(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +63,7 @@ func (rs *Resource) bulkApproveParentRequests(w http.ResponseWriter, r *http.Req
 		renderError(w, r, bulkParentRequestErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"approved_count": len(refs)}, "Requests approved")
+	common.Respond(w, r, http.StatusOK, parentRequestsApprovedResponse{ApprovedCount: len(refs)}, "Requests approved")
 }
 
 var bulkParentRequestErrorRenderer = common.RulesRenderer([]common.ErrorRule{

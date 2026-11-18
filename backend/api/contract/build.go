@@ -17,6 +17,7 @@ var (
 	marshalerType   = reflect.TypeFor[json.Marshaler]()
 	unmarshalerType = reflect.TypeFor[json.Unmarshaler]()
 	timeType        = reflect.TypeFor[time.Time]()
+	rawJSONType     = reflect.TypeFor[json.RawMessage]()
 	dateType        = reflect.TypeFor[calendar.Date]()
 )
 
@@ -265,17 +266,30 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 		return Schema{Kind: KindNumber}, nil
 	case reflect.Slice, reflect.Array:
 		if t.Elem().Kind() == reflect.Uint8 {
-			return Schema{}, fmt.Errorf("%s: []byte is not supported", where)
+			if t.Kind() == reflect.Array {
+				return Schema{}, fmt.Errorf("%s: a byte array is not supported", where)
+			}
+			// encoding/json writes []byte as a base64 string, nil as null.
+			return Schema{Kind: KindString, Nullable: true}, nil
 		}
 		elem, err := b.schema(t.Elem(), where, request)
 		// A nil slice renders as null.
 		return Schema{Kind: KindArray, Elem: &elem, Nullable: t.Kind() == reflect.Slice}, err
 	case reflect.Map:
-		if t.Key().Kind() != reflect.String {
+		// encoding/json writes an integer key as its decimal string.
+		switch t.Key().Kind() {
+		case reflect.String, reflect.Int, reflect.Int32, reflect.Int64:
+		default:
 			return Schema{}, fmt.Errorf("%s: map key %s is not a string", where, t.Key())
 		}
 		elem, err := b.schema(t.Elem(), where, request)
 		return Schema{Kind: KindMap, Elem: &elem, Nullable: true}, err
+	case reflect.Interface:
+		// An empty interface holds whatever JSON was stored or sent; a nil
+		// one renders as null.
+		if t.NumMethod() == 0 {
+			return Schema{Kind: KindJSON, Nullable: true}, nil
+		}
 	case reflect.Struct:
 		name, err := b.object(t, where, request)
 		return Schema{Kind: KindRef, Ref: name}, err
@@ -287,6 +301,11 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 // instants, days, identifiers and enums. It also stops at a type that writes
 // or reads itself without an entry.
 func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
+	if t == rawJSONType {
+		// A raw value is any JSON the owner stores and hands on; nil is null
+		// or, with omitempty, no key.
+		return Schema{Kind: KindJSON, Nullable: true}, true, nil
+	}
 	if t == timeType {
 		return Schema{Kind: KindInstant}, true, nil
 	}
@@ -303,6 +322,11 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	if name, ok := b.enumByType[t]; ok {
 		return Schema{Kind: KindEnum, Ref: name}, true, nil
 	}
+	if request && b.readers[t] == ReadsValue {
+		b.used["reader:"+t.String()] = true
+		s, err := b.wrapped(t, where)
+		return s, true, err
+	}
 	if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
 		return Schema{}, false, fmt.Errorf("%s: %s has its own MarshalJSON and no entry in the contract generator", where, t)
 	}
@@ -315,6 +339,21 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 		b.used["reader:"+t.String()] = true
 	}
 	return Schema{}, false, nil
+}
+
+// wrapped is the request value a ReadsValue wrapper reads into its field
+// Value. The wrapper itself tells an absent key from null.
+func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
+	sf, ok := t.FieldByName("Value")
+	if !ok || t.Kind() != reflect.Struct {
+		return Schema{}, fmt.Errorf("%s: %s reads a value but has no field Value", where, t)
+	}
+	at := where + "." + t.Name() + ".Value"
+	s, err := b.schema(sf.Type, at, true)
+	if errors.Is(err, errBareInt64) {
+		err = b.numericID(&s, t, sf.Name, false, at)
+	}
+	return s, err
 }
 
 func (b *builder) object(t reflect.Type, where string, request bool) (string, error) {

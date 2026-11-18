@@ -21,13 +21,14 @@ func checkedDocument() (Document, Route) {
 			{Name: "tags", Schema: array(Schema{Kind: KindString}, true)},
 			{Name: "children", Optional: true, Schema: array(Schema{Kind: KindRef, Ref: "Row"}, false)},
 			{Name: "by_day", Schema: Schema{Kind: KindMap, Elem: &Schema{Kind: KindBool}, Nullable: true}},
+			{Name: "old", Optional: true, Schema: Schema{Kind: KindJSON, Nullable: true}},
 		}},
 	}}
 	response := array(Schema{Kind: KindRef, Ref: "Row"}, false)
 	return doc, Route{Method: "GET", Pattern: "/api/rows/", Response: &response}
 }
 
-const checkedRow = `{"id":"7","legacy":8,"count":2,"day":"2026-09-09","at":"2026-09-09T12:00:00+02:00","pickup":"15:30","tags":["a"],"children":[],"by_day":{"mon":true},"extra":1}`
+const checkedRow = `{"id":"7","legacy":8,"count":2,"day":"2026-09-09","at":"2026-09-09T12:00:00+02:00","pickup":"15:30","tags":["a"],"children":[],"by_day":{"mon":true},"old":{"is_absent":true},"extra":1}`
 
 func TestViolationsAcceptsWhatTheDecoderReads(t *testing.T) {
 	t.Parallel()
@@ -36,6 +37,7 @@ func TestViolationsAcceptsWhatTheDecoderReads(t *testing.T) {
 		"a filled row with a key the contract does not name": `{"status":"success","data":[` + checkedRow + `],"message":"ok"}`,
 		"an empty list": `{"status":"success","data":[]}`,
 		"null where nullable, absent where optional":   `{"status":"success","data":[{"id":"7","legacy":"8","count":0,"day":null,"at":"2026-09-09T10:00:00.123456789Z","tags":null,"by_day":null}]}`,
+		"a raw value of any shape":                     `{"status":"success","data":[{"id":"7","legacy":8,"count":0,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{},"old":"text"}]}`,
 		"a legacy identifier that is already a string": `{"status":"success","data":[{"id":"-7","legacy":"9007199254740993","count":0,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{}}]}`,
 	} {
 		assert.Emptyf(t, doc.Violations(route, Answer{Status: 200, Body: []byte(body)}), name)

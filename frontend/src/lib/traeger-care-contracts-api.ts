@@ -316,7 +316,7 @@ export interface BackendTerms {
 }
 
 interface BackendTemplate extends BackendTerms {
-  id: number;
+  id: number | string;
   updated_at: string;
 }
 
@@ -326,9 +326,9 @@ interface BackendOfferingTemplate {
   early_start_text?: string;
   term_text?: string;
   notice_text?: string;
-  school_id: number;
+  school_id: number | string;
   school_name: string;
-  offering_id: number;
+  offering_id: number | string;
   offering_name: string;
   phase_name: string;
   price_cents: number | null;
@@ -338,7 +338,7 @@ interface BackendOfferingTemplate {
 
 interface BackendService {
   weekday: Weekday;
-  care_offering_id: number;
+  care_offering_id: number | string;
   module_name: string;
   ends_at: string;
   last_day?: string | null;
@@ -348,8 +348,8 @@ interface BackendCandidate {
   acceptance_issue?: AcceptanceIssue | "";
   renewal?: boolean;
   mail_block?: "stopped" | "address" | "";
-  school_id: number;
-  request_child_id: number;
+  school_id: number | string;
+  request_child_id: number | string;
   school_name: string;
   child_first_name: string;
   child_last_name: string;
@@ -363,9 +363,9 @@ interface BackendCandidate {
 }
 
 interface BackendSummary {
-  id: number;
+  id: number | string;
   status: CareContractStatus;
-  school_id: number;
+  school_id: number | string;
   school_name: string;
   child_first_name: string;
   child_last_name: string;
@@ -651,7 +651,12 @@ export async function fetchCareContracts(
 
 export async function fetchConclusionModes(): Promise<SchoolConclusionMode[]> {
   const rows = await traegerRequest<
-    { school_id: number; school_name: string; mode: ConclusionMode }[] | null
+    | {
+        school_id: number | string;
+        school_name: string;
+        mode: ConclusionMode;
+      }[]
+    | null
   >(`${CONTRACTS_PATH}/conclusion-modes`);
   return (rows ?? []).map((row) => ({
     schoolId: String(row.school_id),
@@ -738,8 +743,8 @@ async function sendCareContractBatch(
   recipientEmail?: string,
 ): Promise<SendResult> {
   const body = await traegerRequest<{
-    sent: number[] | null;
-    skipped: { id: number; reason: SendSkipReason }[] | null;
+    sent: (number | string)[] | null;
+    skipped: { id: number | string; reason: SendSkipReason }[] | null;
   }>(`${CONTRACTS_PATH}/send`, {
     method: "POST",
     body: {

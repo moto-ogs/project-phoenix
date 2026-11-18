@@ -571,7 +571,7 @@ describe("timetableService", () => {
     });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "/api/timetable/conflict-check?date=2026-05-04&start_time=12%3A00&end_time=13%3A00&room_id=3&staff_ids=11%2C12&student_ids=21&exclude_instance_id=42",
+      "/api/timetable/conflicts?date=2026-05-04&start_time=12%3A00&end_time=13%3A00&room_id=3&staff_ids=11%2C12&student_ids=21&exclude_instance_id=42",
       expect.objectContaining({ method: "GET", credentials: "include" }),
     );
 
@@ -586,7 +586,7 @@ describe("timetableService", () => {
     ).resolves.toMatchObject({ warnings: [] });
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "/api/timetable/conflict-check?date=2026-05-04&start_time=12%3A00&end_time=13%3A00",
+      "/api/timetable/conflicts?date=2026-05-04&start_time=12%3A00&end_time=13%3A00",
       expect.objectContaining({ method: "GET" }),
     );
   });

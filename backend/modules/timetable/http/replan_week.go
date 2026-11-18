@@ -45,7 +45,7 @@ type replanWeekResponse struct {
 	CandidatesSkippedExisting int    `json:"candidates_skipped_existing"`
 	InstanceStaffCreated      int    `json:"instance_staff_created"`
 	InstanceStudentsCreated   int    `json:"instance_students_created"`
-	DurationMS                int64  `json:"duration_ms"`
+	DurationMS                int    `json:"duration_ms"`
 }
 
 // replanWeek handles POST /instances/re-plan-week.
@@ -88,7 +88,7 @@ func (rs *Resource) replanWeek(w http.ResponseWriter, r *http.Request) {
 		resp.CandidatesSkippedExisting = result.Materialization.CandidatesSkippedExisting
 		resp.InstanceStaffCreated = result.Materialization.InstanceStaffCreated
 		resp.InstanceStudentsCreated = result.Materialization.InstanceStudentsCreated
-		resp.DurationMS = result.Materialization.DurationMS
+		resp.DurationMS = int(result.Materialization.DurationMS)
 	}
 	common.Respond(w, r, http.StatusOK, resp, "Week re-planned")
 }

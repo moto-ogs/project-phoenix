@@ -247,5 +247,5 @@ func (rs *Resource) deleteClassArrivalException(w http.ResponseWriter, r *http.R
 		return
 	}
 	tenant.RegisterAfterCommit(r.Context(), func() { rs.broadcastArrivalScheduleChanged(tenant.FromContext(r.Context()), 0) })
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }

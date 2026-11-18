@@ -415,6 +415,14 @@ func TestCarePriceListIsCheckedBeforeItIsSaved(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "OGS Nord", "the price list names the schools of the Träger")
 	assert.NotContains(t, rec.Body.String(), "Preise Fremd", "and no school of another Träger")
+
+	// A saved price list is deleted again.
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), `"monthly_cents":3200`)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, careTariffsPath+fmt.Sprintf("/%d/2029-09-01", school), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.NotContains(t, rec.Body.String(), `"monthly_cents":3200`, "the deleted price list is gone from the answer")
 }
 
 // The list of the monthly runs and the price list read the same statements
