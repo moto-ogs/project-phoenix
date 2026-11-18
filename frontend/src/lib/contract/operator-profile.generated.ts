@@ -4,6 +4,7 @@ import {
   int64StringOrNumber,
   object,
   requestBody,
+  str,
   success,
 } from "./runtime";
 
@@ -16,8 +17,8 @@ export interface OperatorResponse {
 
 export const OperatorResponseSchema: z.ZodType<OperatorResponse, unknown> = object<OperatorResponse>({
   id: int64StringOrNumber,
-  email: z.string(),
-  display_name: z.string(),
+  email: str,
+  display_name: str,
 });
 
 /** Go: operator.UpdateProfileRequest */

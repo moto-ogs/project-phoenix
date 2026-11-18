@@ -270,9 +270,10 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	w.helpers["object"] = true
 	fmt.Fprintf(out, "\nexport const %sSchema: z.ZodType<%s, unknown> = object<%s>({\n", object.Name, object.Name, object.Name)
 	for _, field := range object.Fields {
-		decoder := w.zod(field.Schema)
+		decoder := w.field(field.Schema)
 		if field.Optional {
-			decoder += ".optional()"
+			w.helpers["optional"] = true
+			decoder = "optional(" + decoder + ")"
 		}
 		fmt.Fprintf(out, "  %s: %s,\n", field.Name, decoder)
 	}
@@ -425,6 +426,52 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 	return t
 }
 
+// field is the decoder of a value inside a generated shape. The interface
+// next to the shape says what it yields, so every combinator is an untyped
+// helper of the runtime: the checker derives nothing per field.
+func (w *tsWriter) field(s Schema) string {
+	helper := func(name string) string {
+		w.helpers[name] = true
+		return name
+	}
+	var z string
+	switch s.Kind {
+	case KindString, KindEnum:
+		// An open enum decodes any string.
+		z = helper("str")
+	case KindBool:
+		z = helper("bool")
+	case KindInt:
+		z = helper("safeInt")
+	case KindNumber:
+		z = helper("num")
+	case KindID:
+		z = helper("int64String")
+	case KindLegacyID, KindLaxID:
+		z = helper("int64StringOrNumber")
+	case KindDate:
+		z = helper("calendarDate")
+	case KindInstant:
+		z = helper("instant")
+	case KindClock:
+		z = helper("clockTime")
+	case KindArray:
+		z = helper("arr") + "(" + w.field(*s.Elem) + ")"
+	case KindMap:
+		z = helper("rec") + "(" + w.field(*s.Elem) + ")"
+	case KindJSON:
+		z = helper("json")
+	case KindRef:
+		z = s.Ref + "Schema"
+	}
+	if s.Nullable {
+		z = helper("nullable") + "(" + z + ")"
+	}
+	return z
+}
+
+// zod is the typed decoder of a route's answer: its type is what the client
+// reads, so it is derived here and only here.
 func (w *tsWriter) zod(s Schema) string {
 	helper := func(name string) string {
 		w.helpers[name] = true

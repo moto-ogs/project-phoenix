@@ -4,9 +4,11 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  nullable,
   object,
   requestBody,
   safeInt,
+  str,
   success,
 } from "./runtime";
 import {
@@ -38,21 +40,21 @@ export interface FamilyBilling {
 
 export const FamilyBillingSchema: z.ZodType<FamilyBilling, unknown> = object<FamilyBilling>({
   id: int64StringOrNumber,
-  family_email: z.string(),
+  family_email: str,
   contract_id: int64StringOrNumber,
-  recipient_kind: z.string(),
-  second_first_name: z.string(),
-  second_last_name: z.string(),
-  payer_first_name: z.string(),
-  payer_last_name: z.string(),
-  payer_email: z.string(),
-  payer_address: PostalAddressSchema.nullable(),
-  payment_method: z.string(),
-  due_day: safeInt.nullable(),
-  debtor_number: z.string(),
-  holder_first_name: z.string(),
-  holder_last_name: z.string(),
-  last_used_on: calendarDate.nullable(),
+  recipient_kind: str,
+  second_first_name: str,
+  second_last_name: str,
+  payer_first_name: str,
+  payer_last_name: str,
+  payer_email: str,
+  payer_address: nullable(PostalAddressSchema),
+  payment_method: str,
+  due_day: nullable(safeInt),
+  debtor_number: str,
+  holder_first_name: str,
+  holder_last_name: str,
+  last_used_on: nullable(calendarDate),
   updated_at: instant,
 });
 
@@ -77,7 +79,7 @@ export interface FamilyBillingResponse {
 }
 
 export const FamilyBillingResponseSchema: z.ZodType<FamilyBillingResponse, unknown> = object<FamilyBillingResponse>({
-  family: FamilyBillingSchema.nullable(),
+  family: nullable(FamilyBillingSchema),
 });
 
 export const routes = {

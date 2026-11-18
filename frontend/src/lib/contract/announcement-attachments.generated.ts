@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   object,
+  str,
   success,
 } from "./runtime";
 
@@ -11,7 +12,7 @@ export interface AttachmentRemovedResponse {
 }
 
 export const AttachmentRemovedResponseSchema: z.ZodType<AttachmentRemovedResponse, unknown> = object<AttachmentRemovedResponse>({
-  announcement_id: z.string(),
+  announcement_id: str,
 });
 
 export const routes = {

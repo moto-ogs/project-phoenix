@@ -6,6 +6,7 @@ import {
   object,
   requestBody,
   safeInt,
+  str,
   success,
 } from "./runtime";
 
@@ -22,11 +23,11 @@ export interface billingKeyDateCountResponse {
 }
 
 export const billingKeyDateCountResponseSchema: z.ZodType<billingKeyDateCountResponse, unknown> = object<billingKeyDateCountResponse>({
-  school_id: z.string(),
-  school_name: z.string(),
-  organization_name: z.string(),
-  period: z.string(),
-  key_date: z.string(),
+  school_id: str,
+  school_name: str,
+  organization_name: str,
+  period: str,
+  key_date: str,
   active_students: safeInt,
   active_terminals: safeInt,
   recorded_at: instant,

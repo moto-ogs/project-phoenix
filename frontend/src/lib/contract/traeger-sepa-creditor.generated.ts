@@ -2,9 +2,11 @@
 import { z } from "zod";
 import {
   instant,
+  nullable,
   object,
   requestBody,
   safeInt,
+  str,
   success,
 } from "./runtime";
 
@@ -17,10 +19,10 @@ export interface SEPACreditor {
 }
 
 export const SEPACreditorSchema: z.ZodType<SEPACreditor, unknown> = object<SEPACreditor>({
-  creditor_id: z.string(),
+  creditor_id: str,
   prenotification_days: safeInt,
-  missing_mandate: z.string(),
-  updated_at: instant.nullable(),
+  missing_mandate: str,
+  updated_at: nullable(instant),
 });
 
 /** Go: parentbillinghttp.SEPACreditorRequest */

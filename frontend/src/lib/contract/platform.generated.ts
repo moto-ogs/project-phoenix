@@ -4,6 +4,8 @@ import {
   int64StringOrNumber,
   noData,
   object,
+  optional,
+  str,
   success,
 } from "./runtime";
 
@@ -20,12 +22,12 @@ export interface PlatformAnnouncementResponse {
 
 export const PlatformAnnouncementResponseSchema: z.ZodType<PlatformAnnouncementResponse, unknown> = object<PlatformAnnouncementResponse>({
   id: int64StringOrNumber,
-  title: z.string(),
-  content: z.string(),
-  type: z.string(),
-  severity: z.string(),
-  version: z.string().optional(),
-  published_at: z.string(),
+  title: str,
+  content: str,
+  type: str,
+  severity: str,
+  version: optional(str),
+  published_at: str,
 });
 
 export const routes = {

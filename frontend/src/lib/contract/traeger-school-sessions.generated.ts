@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   object,
   requestBody,
+  str,
   success,
 } from "./runtime";
 
@@ -17,7 +18,7 @@ export interface SchoolSessionResponse {
 }
 
 export const SchoolSessionResponseSchema: z.ZodType<SchoolSessionResponse, unknown> = object<SchoolSessionResponse>({
-  handoff_token: z.string(),
+  handoff_token: str,
 });
 
 export const routes = {

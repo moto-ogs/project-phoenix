@@ -4,6 +4,8 @@ import {
   instant,
   int64StringOrNumber,
   object,
+  optional,
+  str,
   success,
 } from "./runtime";
 
@@ -32,18 +34,18 @@ export const scanResponseSchema: z.ZodType<scanResponse, unknown> = object<scanR
   created_at: instant,
   updated_at: instant,
   tenant_id: int64StringOrNumber,
-  tag_uid: z.string(),
-  device_id: int64StringOrNumber.optional(),
+  tag_uid: str,
+  device_id: optional(int64StringOrNumber),
   scanned_at: instant,
-  resolved_at: instant.optional(),
-  resolved_by_operator_id: int64StringOrNumber.optional(),
-  resolution_note: z.string().optional(),
-  school_id: int64StringOrNumber.optional(),
-  school_name: z.string().optional(),
-  organization_id: int64StringOrNumber.optional(),
-  organization_name: z.string().optional(),
-  device_identifier: z.string().optional(),
-  device_name: z.string().optional(),
+  resolved_at: optional(instant),
+  resolved_by_operator_id: optional(int64StringOrNumber),
+  resolution_note: optional(str),
+  school_id: optional(int64StringOrNumber),
+  school_name: optional(str),
+  organization_id: optional(int64StringOrNumber),
+  organization_name: optional(str),
+  device_identifier: optional(str),
+  device_name: optional(str),
 });
 
 /** Query of GET /operator/unregistered-tag-scans/ */

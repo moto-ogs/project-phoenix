@@ -2,7 +2,9 @@
 import { z } from "zod";
 import {
   object,
+  optional,
   requestBody,
+  str,
   success,
 } from "./runtime";
 
@@ -24,12 +26,12 @@ export interface HandoverResult {
 }
 
 export const HandoverResultSchema: z.ZodType<HandoverResult, unknown> = object<HandoverResult>({
-  file_name: z.string(),
-  state: z.string(),
-  reason: z.string().optional(),
-  recipient_name: z.string(),
-  target_host: z.string(),
-  target_directory: z.string(),
+  file_name: str,
+  state: str,
+  reason: optional(str),
+  recipient_name: str,
+  target_host: str,
+  target_directory: str,
 });
 
 export const routes = {
