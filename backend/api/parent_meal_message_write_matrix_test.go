@@ -298,47 +298,25 @@ func (r mealWriteRig) observe(t *testing.T, run *scenarioRun, set func(*writeFau
 	rec := r.call(t, context.Background(), run.call(run.family), run.family.token)
 	events, begins := r.faults.snapshot()
 	out := writeOutcome{answer: answer(t, rec), broadcasts: r.broadcasts() - before}
-	if r.readSnapshot == nil {
-		out.rows = r.legacyMealRowOutcome(run)
-	} else {
-		out.rows = r.preparedMealRowOutcome(run)
-	}
-	if out.rows != "none" {
-		r.restore(t, run.family.TenantID, run.start)
-	}
-	return out, begins, events
-}
-
-func (r mealWriteRig) legacyMealRowOutcome(run *scenarioRun) string {
-	tenantID := run.family.TenantID
-	if rows, err := r.rowsOf(tenantID, volatileColumns); err == nil && equalRows(rows, run.startCmp) {
-		return "none"
-	}
-	if rows, err := r.rowsOf(tenantID, volatileColumns); err == nil && equalRows(rows, run.fullCmp) {
-		return "full"
-	}
-	if r.waitForRows(tenantID, run.startCmp) {
-		return "none"
-	}
-	return "other"
-}
-
-func (r mealWriteRig) preparedMealRowOutcome(run *scenarioRun) string {
 	rows, err := r.rowsOf(run.family.TenantID, volatileColumns)
 	if err != nil {
 		rows, err = r.rowsOf(run.family.TenantID, volatileColumns)
 	}
 	switch {
 	case err == nil && equalRows(rows, run.startCmp):
-		return "none"
+		out.rows = "none"
 	case err == nil && equalRows(rows, run.fullCmp):
-		return "full"
+		out.rows = "full"
 	case r.waitForRows(run.family.TenantID, run.startCmp):
 		// A dropped connection may still hold its transaction a moment.
-		return "none"
+		out.rows = "none"
 	default:
-		return "other"
+		out.rows = "other"
 	}
+	if out.rows != "none" {
+		r.restore(t, run.family.TenantID, run.start)
+	}
+	return out, begins, events
 }
 
 // stmtClass sorts a statement of the school's part by what it does.
