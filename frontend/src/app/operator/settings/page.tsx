@@ -31,7 +31,8 @@ import { PasskeySettingsSection } from "~/components/settings/passkey-settings-s
 const logger = createLogger({ component: "OperatorSettingsPage" });
 
 interface OperatorProfile {
-  id: number;
+  // The catalog proxy delivers the id as a string (#2352).
+  id: number | string;
   email: string;
   display_name: string;
 }

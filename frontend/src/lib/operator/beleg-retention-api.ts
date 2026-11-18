@@ -276,7 +276,7 @@ function mapSuspension(row: Wire): RetentionSuspension {
 }
 
 const base = (orgId: string) =>
-  `/api/operator/provisioning/organizations/${encodeURIComponent(orgId)}/beleg-retention`;
+  `/api/operator/organizations/${encodeURIComponent(orgId)}/beleg-retention`;
 
 export const belegRetentionService = {
   async getOverview(orgId: string): Promise<BelegRetentionOverview> {

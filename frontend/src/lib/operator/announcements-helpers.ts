@@ -50,14 +50,14 @@ export interface Announcement {
 }
 
 export interface AnnouncementStats {
-  announcement_id: number;
+  announcement_id: number | string;
   target_count: number;
   seen_count: number;
   dismissed_count: number;
 }
 
 export interface BackendAnnouncementViewDetail {
-  user_id: number;
+  user_id: number | string;
   user_name: string;
   seen_at: string;
   dismissed: boolean;

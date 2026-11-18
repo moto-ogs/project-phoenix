@@ -46,6 +46,41 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/operator/organizations/{id}/beleg-retention/suspensions/{suspensionId}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/organizations/{id}/erasure-order",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/organizations/{id}/staff-release",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "withdrawnReleaseResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/organizations/{id}/traeger-members/invitations/{invitationId}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/school/calendar/appointments/{appointmentId}",
       "portals": [
         "school"
@@ -686,6 +721,59 @@
     },
     {
       "method": "GET",
+      "pattern": "/operator/accounts",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OrganizationAccount"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/announcements/{id}/stats",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AnnouncementStats"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/announcements/{id}/views",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AnnouncementViewDetailResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/billing/key-date-counts",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "billingKeyDateCountResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/billing/key-day",
       "portals": [
         "platform"
@@ -693,6 +781,34 @@
       "response": {
         "kind": "ref",
         "ref": "billingKeyDayResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/caterers",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CatererSecurityResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/devices/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OperatorDevice"
+        }
       }
     },
     {
@@ -706,6 +822,308 @@
         "elem": {
           "kind": "ref",
           "ref": "deviceHistoryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/devices/{id}/transfer-status",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DeviceTransferStatus"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "Organization"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/summaries",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OrganizationSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/accounts",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OrganizationAccount"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/beleg-retention",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "BelegRetentionOverview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/devices",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OperatorDevice"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/erasure-order",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "nullable": true,
+        "ref": "TraegerErasureOrder"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/persons",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OperatorPerson"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/schools",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SchoolSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/staff-release",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerStaffReleaseState"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/traeger-members",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerMember"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/organizations/{id}/traeger-members/invitations",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerInvitation"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/profile/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/roles",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SystemRole"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "School"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/required-details",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SchoolRequiredDetails"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/summaries",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SchoolSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/{id}/accounts",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SchoolAccount"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/{id}/devices",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OperatorDevice"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/schools/{id}/settings/booking-authority-impact",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "BookingAuthorityImpact"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/stats",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ProvisioningStats"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/unregistered-tag-scans/",
+      "portals": [
+        "platform"
+      ],
+      "query": [
+        {
+          "name": "organization_id",
+          "kind": "id"
+        },
+        {
+          "name": "resolved",
+          "kind": "string"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "scanResponse"
         }
       }
     },
@@ -1568,6 +1986,29 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/announcements/{id}/publish",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/devices/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createDeviceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorDevice"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/devices/{id}/block",
       "portals": [
         "platform"
@@ -1576,7 +2017,255 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/devices/{id}/set-api-key",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setDeviceAPIKeyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorDevice"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/devices/{id}/transfer",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "transferDeviceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorDevice"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/devices/{id}/unblock",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createOrganizationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "Organization"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/test-traeger",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createTestTraegerRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TestTraeger"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/beleg-retention/clarification-reviews",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "clarificationReviewRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "BelegClarificationReview"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/beleg-retention/instructions",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "instructionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RetentionInstruction"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/beleg-retention/suspensions",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "suspensionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RetentionSuspension"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/erasure-order",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "recordTraegerErasureOrderRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerErasureOrder"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/restore",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/sample-children",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SampleChildrenResult"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/staff-release",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "grantRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerStaffRelease"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/traeger-members",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "traegerMemberRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerMember"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/traeger-members/invitations",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "traegerMemberRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerInvitation"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/organizations/{id}/traeger-members/invitations/{invitationId}/resend",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerInvitation"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/schools/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createSchoolRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "School"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/schools/{id}/create-account",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createSchoolAccountRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CreatedAccount"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/schools/{id}/invite-admin",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "inviteSchoolAdminRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "operatorInvitationResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/schools/{id}/restore",
       "portals": [
         "platform"
       ],
@@ -2094,6 +2783,36 @@
     },
     {
       "method": "PUT",
+      "pattern": "/operator/organizations/{id}/erasure-order/records",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "recordTraegerErasureOrderRecordsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerErasureOrder"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/operator/profile/",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateProfileRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/school/calendar/appointments/{appointmentId}",
       "portals": [
         "school"
@@ -2601,6 +3320,66 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AnnouncementStats",
+      "go_type": "communication.AnnouncementStats",
+      "fields": [
+        {
+          "name": "announcement_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "target_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "seen_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "dismissed_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AnnouncementViewDetailResponse",
+      "go_type": "operatorannouncements.AnnouncementViewDetailResponse",
+      "fields": [
+        {
+          "name": "user_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "user_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "seen_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dismissed",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -3347,6 +4126,263 @@
       ]
     },
     {
+      "name": "BelegClarification",
+      "go_type": "parentbilling.BelegClarification",
+      "fields": [
+        {
+          "name": "beleg_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "overdue",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "listed_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "review_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "responsible",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_review",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "BelegClarificationReview"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BelegClarificationReview",
+      "go_type": "parentbilling.BelegClarificationReview",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "beleg_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "escalated",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "escalation_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reviewed_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "next_review_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BelegDeletion",
+      "go_type": "parentbilling.BelegDeletion",
+      "fields": [
+        {
+          "name": "beleg_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deleted_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BelegRetentionOverview",
+      "go_type": "parentbilling.BelegRetentionOverview",
+      "fields": [
+        {
+          "name": "instructions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RetentionInstruction"
+            }
+          }
+        },
+        {
+          "name": "suspensions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RetentionSuspension"
+            }
+          }
+        },
+        {
+          "name": "summary",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BelegRetentionSummary"
+            }
+          }
+        },
+        {
+          "name": "clarifications",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BelegClarification"
+            }
+          }
+        },
+        {
+          "name": "deletions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BelegDeletion"
+            }
+          }
+        },
+        {
+          "name": "evaluated_on",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BelegRetentionSummary",
+      "go_type": "parentbilling.BelegRetentionSummary",
+      "fields": [
+        {
+          "name": "beleg_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "scheduled",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "running",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "clarification",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "suspended",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "next_end",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
       "name": "Block",
       "go_type": "templates.Block",
       "fields": [
@@ -3382,6 +4418,78 @@
       ]
     },
     {
+      "name": "BookingAuthorityImpact",
+      "go_type": "careplan.BookingAuthorityImpact",
+      "fields": [
+        {
+          "name": "reference_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "blocking_children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BookingAuthorityImpactChild"
+            }
+          }
+        },
+        {
+          "name": "planned_completions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BookingAuthorityImpactChild"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BookingAuthorityImpactChild",
+      "go_type": "careplan.BookingAuthorityImpactChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_bookingless_day",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
       "name": "CalendarFeedResponse",
       "go_type": "staffcalendarhttp.CalendarFeedResponse",
       "fields": [
@@ -3407,6 +4515,42 @@
           "name": "status",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CatererSecurityResponse",
+      "go_type": "operator.CatererSecurityResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mfa_enabled",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -3650,6 +4794,69 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CreatedAccount",
+      "go_type": "organizationtenancy.CreatedAccount",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "avatar",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_password_otp",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "last_login",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -4161,6 +5368,77 @@
           "name": "id",
           "schema": {
             "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceTransferSession",
+      "go_type": "organizationtenancy.DeviceTransferSession",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "activity_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceTransferStatus",
+      "go_type": "organizationtenancy.DeviceTransferStatus",
+      "fields": [
+        {
+          "name": "can_transfer",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_online",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_protected",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "last_seen",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "active_session",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DeviceTransferSession"
           }
         }
       ]
@@ -6041,6 +7319,452 @@
       ]
     },
     {
+      "name": "OperatorDevice",
+      "go_type": "organizationtenancy.OperatorDevice",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "device_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "api_key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_api_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_seen",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "is_online",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperatorPerson",
+      "go_type": "organizationtenancy.OperatorPerson",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_account",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "account_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_rfid_card",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_staff",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_student",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperatorResponse",
+      "go_type": "operator.OperatorResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organization",
+      "go_type": "organizationtenancy.Organization",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "deleted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "settings",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "test_system",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OrganizationAccount",
+      "go_type": "organizationtenancy.OrganizationAccount",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pedagogic_role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_admin_role",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_user_role",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_caregiver_profile",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_active_caregiver",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OrganizationSummary",
+      "go_type": "organizationtenancy.OrganizationSummary",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deleted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "settings",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "test_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "schulen_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "konten_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "geraete_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "personen_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "ParentAnnouncementLetterSummary",
       "go_type": "communication.ParentAnnouncementLetterSummary",
       "fields": [
@@ -6575,6 +8299,36 @@
       ]
     },
     {
+      "name": "ProvisioningStats",
+      "go_type": "organizationtenancy.ProvisioningStats",
+      "fields": [
+        {
+          "name": "traeger_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "schulen_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "konten_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "geraete_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "RecipientResponse",
       "go_type": "staffmessaging.RecipientResponse",
       "fields": [
@@ -6783,6 +8537,161 @@
       ]
     },
     {
+      "name": "RetentionInstruction",
+      "go_type": "parentbilling.RetentionInstruction",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "beleg_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "trigger_event",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "period",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "basis",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "legal_basis",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "basis_justification",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instructed_by",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instructed_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "instruction_reference",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "statutes_not_applicable_confirmed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "confirmed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "recorded_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RetentionSuspension",
+      "go_type": "parentbilling.RetentionSuspension",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "beleg_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "beleg_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "scope",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "responsible",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "review_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "Row",
       "go_type": "templates.Row",
       "fields": [
@@ -6802,6 +8711,29 @@
           "name": "bold",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SampleChildrenResult",
+      "go_type": "dataimport.SampleChildrenResult",
+      "fields": [
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SampleSchoolResult"
+            }
+          }
+        },
+        {
+          "name": "created_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -6873,6 +8805,36 @@
               "kind": "ref",
               "ref": "Block"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SampleSchoolResult",
+      "go_type": "dataimport.SampleSchoolResult",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "failed_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -7057,6 +9019,214 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "School",
+      "go_type": "organizationtenancy.School",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "hidden",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "deleted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "settings",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "zip",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_quota_bundles",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "child_quota_bundle_size",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "organization",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "Organization"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolAccount",
+      "go_type": "organizationtenancy.SchoolAccount",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pedagogic_role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_admin_role",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_user_role",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_caregiver_profile",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_active_caregiver",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -7518,6 +9688,24 @@
       ]
     },
     {
+      "name": "SchoolRequiredDetails",
+      "go_type": "organizationtenancy.SchoolRequiredDetails",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reply_address_missing",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolResponse",
       "go_type": "catererportalhttp.SchoolResponse",
       "fields": [
@@ -7531,6 +9719,158 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolSummary",
+      "go_type": "organizationtenancy.SchoolSummary",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "hidden",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deleted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "address",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "zip",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "settings",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "konten_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "geraete_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "personen_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child_quota_bundles",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "child_quota_bundle_size",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child_quota_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -9366,6 +11706,30 @@
       ]
     },
     {
+      "name": "SystemRole",
+      "go_type": "organizationtenancy.SystemRole",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "TeacherHint",
       "go_type": "presenceprojectionhttp.TeacherHint",
       "fields": [
@@ -9480,6 +11844,30 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TestTraeger",
+      "go_type": "organizationtenancy.TestTraeger",
+      "fields": [
+        {
+          "name": "organization",
+          "schema": {
+            "kind": "ref",
+            "ref": "Organization"
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "School"
+            }
           }
         }
       ]
@@ -9866,6 +12254,131 @@
       ]
     },
     {
+      "name": "TraegerErasureOrder",
+      "go_type": "organizationtenancy.TraegerErasureOrder",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "order_reference",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirmed_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "erase_not_before",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "recorded_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "recorded_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "started_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "records_notice_shown_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "records_choice",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "records_handed_over_on",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "records_export_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerInvitation",
+      "go_type": "organizationtenancy.TraegerInvitation",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "expired",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "TraegerLogo",
       "go_type": "organizationtenancy.TraegerLogo",
       "fields": [
@@ -9897,6 +12410,47 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerMember",
+      "go_type": "organizationtenancy.TraegerMember",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "activated_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
           }
         }
       ]
@@ -10016,6 +12570,44 @@
       ]
     },
     {
+      "name": "TraegerStaffRelease",
+      "go_type": "workforce.TraegerStaffRelease",
+      "fields": [
+        {
+          "name": "representation",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "released_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerStaffReleaseState",
+      "go_type": "workforce.TraegerStaffReleaseState",
+      "fields": [
+        {
+          "name": "release",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "TraegerStaffRelease"
+          }
+        },
+        {
+          "name": "records",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "TraegerWithdrawalContact",
       "go_type": "organizationtenancy.TraegerWithdrawalContact",
       "fields": [
@@ -10027,6 +12619,20 @@
         },
         {
           "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UpdateProfileRequest",
+      "go_type": "operator.UpdateProfileRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "display_name",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -10661,6 +13267,60 @@
       ]
     },
     {
+      "name": "billingKeyDateCountResponse",
+      "go_type": "operator.billingKeyDateCountResponse",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "period",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "key_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active_students",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "active_terminals",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "recorded_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "billingKeyDayResponse",
       "go_type": "operator.billingKeyDayResponse",
       "fields": [
@@ -10680,6 +13340,309 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clarificationReviewRequest",
+      "go_type": "parentbillinghttp.clarificationReviewRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "beleg_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "escalated",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "escalation_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "next_review_on",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "createDeviceRequest",
+      "go_type": "operator.createDeviceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "device_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "api_key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createOrganizationRequest",
+      "go_type": "operator.createOrganizationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createSchoolAccountRequest",
+      "go_type": "operator.createSchoolAccountRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caregiver_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createSchoolRequest",
+      "go_type": "operator.createSchoolRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "zip",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "federal_state",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "hidden",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createTestTraegerRequest",
+      "go_type": "operator.createTestTraegerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "contact_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "federal_state",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -11307,6 +14270,20 @@
       ]
     },
     {
+      "name": "grantRequest",
+      "go_type": "traegerstaff.grantRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "representation",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "groupRequest",
       "go_type": "staffmessaging.groupRequest",
       "request": true,
@@ -11327,6 +14304,126 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "instructionRequest",
+      "go_type": "parentbillinghttp.instructionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "beleg_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "trigger_event",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "period",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "basis",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "legal_basis",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "basis_justification",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instructed_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instructed_on",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "instruction_reference",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "statutes_not_applicable_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inviteSchoolAdminRequest",
+      "go_type": "operator.inviteSchoolAdminRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caregiver_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -11631,6 +14728,116 @@
       ]
     },
     {
+      "name": "operatorInvitationResponse",
+      "go_type": "operator.operatorInvitationResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "role_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caregiver_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "creator",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delivery_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_sent_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_error",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_retry_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "optionResponse",
       "go_type": "announcement.optionResponse",
       "fields": [
@@ -11907,6 +15114,97 @@
       ]
     },
     {
+      "name": "recordTraegerErasureOrderRecordsRequest",
+      "go_type": "operator.recordTraegerErasureOrderRecordsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "records_notice_acknowledged",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "records_choice",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "records_handed_over_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "records_export_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "recordTraegerErasureOrderRequest",
+      "go_type": "operator.recordTraegerErasureOrderRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "order_reference",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirmed_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "erase_not_before",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "records_notice_acknowledged",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "records_choice",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "records_handed_over_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "records_export_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "remindedResponse",
       "go_type": "announcement.remindedResponse",
       "fields": [
@@ -11940,6 +15238,118 @@
           "name": "resent_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "scanResponse",
+      "go_type": "operator.scanResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tag_uid",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "scanned_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "resolved_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "resolved_by_operator_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "resolution_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_identifier",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -12037,6 +15447,20 @@
           "name": "unread_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "setDeviceAPIKeyRequest",
+      "go_type": "operator.setDeviceAPIKeyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "api_key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -12232,6 +15656,56 @@
       ]
     },
     {
+      "name": "suspensionRequest",
+      "go_type": "parentbillinghttp.suspensionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "beleg_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "beleg_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "scope",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "responsible",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "review_on",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "targetRequest",
       "go_type": "announcement.targetRequest",
       "request": true,
@@ -12288,6 +15762,45 @@
       ]
     },
     {
+      "name": "traegerMemberRequest",
+      "go_type": "operator.traegerMemberRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roles",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "transferDeviceRequest",
+      "go_type": "operator.transferDeviceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "target_school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
       "name": "unreadCountResponse",
       "go_type": "staffmessaging.unreadCountResponse",
       "fields": [
@@ -12310,6 +15823,18 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdrawnReleaseResponse",
+      "go_type": "traegerstaff.withdrawnReleaseResponse",
+      "fields": [
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
           }
         }
       ]

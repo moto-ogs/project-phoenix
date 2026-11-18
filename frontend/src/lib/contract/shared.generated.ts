@@ -148,6 +148,201 @@ export interface preferenceRequest {
   enabled?: boolean | null;
 }
 
+/** Go: organizationtenancy.OrganizationAccount */
+export interface OrganizationAccount {
+  account_id: string;
+  email: string;
+  active: boolean;
+  first_name: string;
+  last_name: string;
+  role_name: string;
+  pedagogic_role: string;
+  status: string;
+  has_admin_role: boolean;
+  has_user_role: boolean;
+  has_caregiver_profile: boolean;
+  is_active_caregiver: boolean;
+  school_id: string;
+  school_name: string;
+}
+
+export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> = z.object({
+  account_id: int64StringOrNumber,
+  email: z.string(),
+  active: z.boolean(),
+  first_name: z.string(),
+  last_name: z.string(),
+  role_name: z.string(),
+  pedagogic_role: z.string(),
+  status: z.string(),
+  has_admin_role: z.boolean(),
+  has_user_role: z.boolean(),
+  has_caregiver_profile: z.boolean(),
+  is_active_caregiver: z.boolean(),
+  school_id: int64StringOrNumber,
+  school_name: z.string(),
+});
+
+/** Go: organizationtenancy.OperatorDevice */
+export interface OperatorDevice {
+  id: string;
+  device_id: string;
+  device_type: string;
+  name?: string;
+  status: string;
+  api_key?: string;
+  masked_api_key: string;
+  last_seen?: string;
+  is_online: boolean;
+  school_id: string;
+  school_name: string;
+  organization_id: string;
+  organization_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = z.object({
+  id: int64StringOrNumber,
+  device_id: z.string(),
+  device_type: z.string(),
+  name: z.string().optional(),
+  status: z.string(),
+  api_key: z.string().optional(),
+  masked_api_key: z.string(),
+  last_seen: instant.optional(),
+  is_online: z.boolean(),
+  school_id: int64StringOrNumber,
+  school_name: z.string(),
+  organization_id: int64StringOrNumber,
+  organization_name: z.string(),
+  created_at: instant,
+  updated_at: instant,
+});
+
+/** Go: organizationtenancy.Organization */
+export interface Organization {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  deleted_at?: string;
+  settings?: string;
+  test_system: boolean;
+}
+
+export const OrganizationSchema: z.ZodType<Organization, unknown> = z.object({
+  id: int64StringOrNumber,
+  created_at: instant,
+  updated_at: instant,
+  name: z.string(),
+  slug: z.string(),
+  active: z.boolean(),
+  deleted_at: instant.optional(),
+  settings: z.string().optional(),
+  test_system: z.boolean(),
+});
+
+/** Go: organizationtenancy.SchoolSummary */
+export interface SchoolSummary {
+  id: string;
+  organization_id: string;
+  organization_name: string;
+  name: string;
+  slug: string;
+  subdomain: string;
+  active: boolean;
+  hidden: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  address?: string;
+  city?: string;
+  zip?: string;
+  phone?: string;
+  email?: string;
+  settings?: string;
+  konten_count: number;
+  geraete_count: number;
+  personen_count: number;
+  child_quota_bundles: number | null;
+  child_quota_bundle_size: number;
+  child_quota_count: number;
+}
+
+export const SchoolSummarySchema: z.ZodType<SchoolSummary, unknown> = z.object({
+  id: int64StringOrNumber,
+  organization_id: int64StringOrNumber,
+  organization_name: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  subdomain: z.string(),
+  active: z.boolean(),
+  hidden: z.boolean(),
+  created_at: instant,
+  updated_at: instant,
+  deleted_at: instant.optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  zip: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  settings: z.string().optional(),
+  konten_count: safeInt,
+  geraete_count: safeInt,
+  personen_count: safeInt,
+  child_quota_bundles: safeInt.nullable(),
+  child_quota_bundle_size: safeInt,
+  child_quota_count: safeInt,
+});
+
+/** Go: organizationtenancy.School */
+export interface School {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  organization_id: string;
+  name: string;
+  slug: string;
+  subdomain: string;
+  active: boolean;
+  hidden: boolean;
+  deleted_at?: string;
+  settings?: string;
+  address?: string;
+  city?: string;
+  zip?: string;
+  phone?: string;
+  email?: string;
+  child_quota_bundles: number | null;
+  child_quota_bundle_size: number;
+  organization?: Organization;
+}
+
+export const SchoolSchema: z.ZodType<School, unknown> = z.object({
+  id: int64StringOrNumber,
+  created_at: instant,
+  updated_at: instant,
+  organization_id: int64StringOrNumber,
+  name: z.string(),
+  slug: z.string(),
+  subdomain: z.string(),
+  active: z.boolean(),
+  hidden: z.boolean(),
+  deleted_at: instant.optional(),
+  settings: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  zip: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  child_quota_bundles: safeInt.nullable(),
+  child_quota_bundle_size: safeInt,
+  organization: OrganizationSchema.optional(),
+});
+
 /** Go: announcement.deletedResponse */
 export interface deletedResponse {
   deleted: boolean;

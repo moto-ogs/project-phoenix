@@ -10,9 +10,13 @@ import (
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
+	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	tagScanOperatorAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/inbound/operator"
+	identityOperatorAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
@@ -28,10 +32,7 @@ import (
 // contractRegistrations lists every typed registration under its mount and
 // refuses one the route catalog does not know.
 func contractRegistrations() ([]contract.Registration, error) {
-	mounts := []struct {
-		prefix string
-		routes []common.RouteContract
-	}{
+	mounts := []contractMount{
 		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
 		// The projection renders the answer of Care Plan's student writes
 		// (studentHTTPResources binds it), so its type is named here.
@@ -48,8 +49,6 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
 		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
-		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
-		{"/operator/devices", provisioningOperatorAPI.DeviceRouteContracts()},
 		{"/traeger/master-data", organizationTenancyTraeger.MasterDataRouteContracts()},
 		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
 		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
@@ -59,6 +58,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}
+	mounts = append(mounts, operatorContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -78,6 +78,34 @@ func contractRegistrations() ([]contract.Registration, error) {
 		}
 	}
 	return registrations, nil
+}
+
+// contractMount is a group of registered routes under the prefix they are
+// mounted at.
+type contractMount struct {
+	prefix string
+	routes []common.RouteContract
+}
+
+// operatorContractMounts are the registered routes of the operator portal
+// (#2352), under their /operator mounts.
+func operatorContractMounts() []contractMount {
+	return []contractMount{
+		{"/operator", provisioningOperatorAPI.ProvisioningRouteContracts()},
+		{"/operator", identityOperatorAPI.RouteContracts()},
+		{"/operator/announcements", operatorAnnouncementsHTTP.RouteContracts()},
+		{"/operator/unregistered-tag-scans", unregisteredTagScanRouteContracts()},
+		// Data Import fills a test Träger; its http role names no contract types.
+		{"/operator/organizations", []common.RouteContract{{
+			Method: "POST", Pattern: "/{id}/sample-children", Portals: []common.PortalScope{common.PortalOperator},
+			Response: importModels.SampleChildrenResult{},
+		}}},
+		{"/operator/schools/{id}/settings", careStudentsHTTP.BookingAuthorityImpactRouteContracts()},
+		{"/operator/organizations/{id}/beleg-retention", parentBillingHTTP.BelegRetentionRouteContracts()},
+		{"/operator/organizations/{id}/staff-release", workforceTraegerStaff.ReleaseRouteContracts()},
+		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
+		{"/operator/devices", provisioningOperatorAPI.DeviceRouteContracts()},
+	}
 }
 
 // ContractDocument builds the model of the frontend/backend contract from
@@ -134,6 +162,21 @@ func notificationRouteContracts(portal common.PortalScope) []common.RouteContrac
 		common.RouteContract{Method: "GET", Pattern: "/email-subscriptions/{type}", Portals: portals, Response: types.EmailSubscription},
 		common.RouteContract{Method: "PUT", Pattern: "/email-subscriptions/{type}", Portals: portals, Request: types.PreferenceRequest, NoData: true},
 	)
+}
+
+// unregisteredTagScanRouteContracts registers the operator's review of
+// unregistered RFID scans (#2352), relative to its mount. Device Fleet's
+// operator package may not import the contract types, so it hands over the
+// answer type only.
+func unregisteredTagScanRouteContracts() []common.RouteContract {
+	return []common.RouteContract{{
+		Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalOperator},
+		Query: []common.QueryParam{
+			{Name: "school_id", Kind: common.QueryID}, {Name: "organization_id", Kind: common.QueryID},
+			{Name: "resolved", Kind: common.QueryString},
+		},
+		Response: tagScanOperatorAPI.ListResponse(),
+	}}
 }
 
 // schoolFeedRouteContracts registers the bell of a portal across schools,
