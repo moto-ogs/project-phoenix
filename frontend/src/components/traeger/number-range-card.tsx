@@ -3,15 +3,20 @@
 // Rechnungsnummern der Ferienbetreuung (#4668) und der Monatsbeiträge
 // (#4684): das Muster, aus dem die Freigabe eines Laufs die Nummern
 // vergibt, lückenlos und in Reihenfolge. Jede Leistung hat ihren eigenen
-// Nummernkreis.
+// Nummernkreis. Die nächste Nummer lässt sich nach oben setzen, damit ein
+// Träger die Nummern seines bisherigen Programms fortführt (#7358); jede
+// Änderung steht im Verlauf.
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { byLabel, exportedAtLabel } from "./finance-export-format";
+import { NumberRangeStartModal } from "./number-range-start-modal";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -20,7 +25,9 @@ import { createLogger } from "~/lib/logger";
 import {
   type NumberRange,
   saveCareNumberRange,
+  saveCareNumberRangeStart,
   saveHolidayNumberRange,
+  saveHolidayNumberRangeStart,
 } from "~/lib/traeger-billing-api";
 
 const logger = createLogger({ component: "NumberRangeCard" });
@@ -33,6 +40,7 @@ const SERVICES = {
       "Bei der Freigabe bekommt jede Rechnung die nächste Nummer. Es entsteht keine Lücke.",
     defaultPattern: "FE-{JJJJ}-{NNNN}",
     save: saveHolidayNumberRange,
+    saveStart: saveHolidayNumberRangeStart,
   },
   care: {
     title: "Rechnungsnummern der Monatsbeiträge",
@@ -40,6 +48,7 @@ const SERVICES = {
       "Eigener Nummernkreis für die Monatsbeiträge. Nimm ein anderes Kürzel als bei den Ferien.",
     defaultPattern: "MB-{JJJJ}-{NNNN}",
     save: saveCareNumberRange,
+    saveStart: saveCareNumberRangeStart,
   },
 } as const;
 
@@ -54,6 +63,8 @@ export function NumberRangeCard({
 }>) {
   const copy = SERVICES[service];
   const [open, setOpen] = useState(false);
+  const [startOpen, setStartOpen] = useState(false);
+  const [history, setHistory] = useState(false);
   const [pattern, setPattern] = useState("");
   const save = useFormModalPending(open);
   const saving = save.pending;
@@ -100,32 +111,111 @@ export function NumberRangeCard({
   };
 
   const set = Boolean(numberRange.pattern);
+  const { starts, lastNumber, year } = numberRange;
+  // A pattern with a year starts again each year; the label names the year.
+  const nextLabel = `${lastNumber > 0 ? "Nächste Nummer" : "Erste Nummer"}${year > 0 ? ` ${year}` : ""}`;
   return (
     <SectionCard
       title={copy.title}
       description={copy.description}
       actions={
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          tooltip="Öffnet ein Fenster für das Muster der Rechnungsnummern."
-          onClick={() => setOpen(true)}
-        >
-          {set ? "Muster ändern" : "Muster festlegen"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {set ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              tooltip="Öffnet ein Fenster für die Nummer der nächsten Rechnung."
+              onClick={() => setStartOpen(true)}
+            >
+              Nächste Nummer ändern
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            tooltip="Öffnet ein Fenster für das Muster der Rechnungsnummern."
+            onClick={() => setOpen(true)}
+          >
+            {set ? "Muster ändern" : "Muster festlegen"}
+          </Button>
+        </div>
       }
     >
       <LoadErrorAlert error={afterSave.error} className="mb-4" />
       {set ? (
-        <DataGrid columns={2}>
-          <DataField label="Muster">
-            <span className="font-mono">{numberRange.pattern}</span>
-          </DataField>
-          <DataField label="Erste Nummer in diesem Jahr">
-            <span className="font-mono">{numberRange.example}</span>
-          </DataField>
-        </DataGrid>
+        <>
+          <DataGrid columns={4}>
+            <DataField label="Muster">
+              <span className="font-mono">{numberRange.pattern}</span>
+            </DataField>
+            <DataField label={nextLabel}>
+              <span className="font-mono">{numberRange.example}</span>
+            </DataField>
+            <DataField label="Letzte laufende Nummer">
+              {lastNumber > 0 ? (
+                <span className="font-mono">{lastNumber}</span>
+              ) : (
+                <span className="font-normal text-gray-600">
+                  Noch keine Rechnung
+                </span>
+              )}
+            </DataField>
+          </DataGrid>
+          {starts.length > 0 ? (
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="link"
+                size="compact"
+                aria-expanded={history}
+                tooltip={
+                  history
+                    ? "Blendet die Änderungen der nächsten Nummer wieder aus."
+                    : "Zeigt, wer die nächste Nummer wann geändert hat."
+                }
+                onClick={() => setHistory((shown) => !shown)}
+              >
+                {history
+                  ? "Verlauf ausblenden"
+                  : `Verlauf ansehen (${starts.length})`}
+              </Button>
+              {history ? (
+                <InsetPanel padding="sm" className="mt-2 min-w-0">
+                  <ol
+                    className="divide-y divide-gray-100"
+                    aria-label={`Verlauf der nächsten Nummer: ${copy.title}`}
+                  >
+                    {starts.map((start) => (
+                      <li
+                        key={`${start.setAt}-${start.nextNumber}`}
+                        className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2 text-sm"
+                      >
+                        <span className="text-gray-600 tabular-nums">
+                          {exportedAtLabel(start.setAt)}
+                        </span>
+                        <span className="text-gray-900">
+                          Nächste Nummer:{" "}
+                          <span className="font-mono break-all">
+                            {start.example}
+                          </span>
+                        </span>
+                        <span className="text-gray-600">
+                          {byLabel(
+                            start.setByYou,
+                            start.setByAccount,
+                            start.setByName,
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </InsetPanel>
+              ) : null}
+            </div>
+          ) : null}
+        </>
       ) : (
         <p className="text-sm text-gray-700">
           Noch kein Muster. Ohne Muster kannst du keinen Lauf freigeben.
@@ -185,6 +275,13 @@ export function NumberRangeCard({
           </p>
         </form>
       </FormModal>
+      <NumberRangeStartModal
+        open={startOpen}
+        onClose={() => setStartOpen(false)}
+        numberRange={numberRange}
+        save={copy.saveStart}
+        onSaved={afterSave.refresh}
+      />
     </SectionCard>
   );
 }

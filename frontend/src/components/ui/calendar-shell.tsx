@@ -125,9 +125,10 @@ function buildMonthLabels(locale: Locale): string[] {
 }
 
 // Year span offered by the dropdowns when the caller sets no bounds. Back far
-// enough for any birthday, forward far enough for a planning horizon.
+// enough for any birthday, forward far enough for the longest proof validity
+// a Träger can set (240 months, #7380).
 const DEFAULT_YEARS_BACK = 100;
-const DEFAULT_YEARS_AHEAD = 5;
+const DEFAULT_YEARS_AHEAD = 20;
 
 // One above the calendar's own portal (`Z_LAYER.popover`), so the month/year
 // menu opens on top of the calendar surface instead of behind it.

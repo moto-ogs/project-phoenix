@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   Suspense,
   useCallback,
@@ -104,8 +105,7 @@ function RolesPageContent() {
     mutate: mutateRoles,
   } = useSWRAuth(tenantAdminKeys.roles(), readRoles);
   const accessRefused =
-    rolesError instanceof ApiError &&
-    (rolesError.status === 401 || rolesError.status === 403);
+    rolesError instanceof ApiError && isAccessRefusal(rolesError);
   // Eltern vergibt die Einladung zur Eltern-App, nicht diese Seite (#4574).
   const roles = useMemo(
     () =>

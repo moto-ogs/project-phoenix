@@ -168,6 +168,7 @@ export function StaffProofModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <ISODatePicker
               id="presented_on"
+              monthYearNavigation
               name="presented_on"
               label={police ? "Eingesehen am" : "Vorgelegt am"}
               required
@@ -179,6 +180,7 @@ export function StaffProofModal({
             {police ? (
               <ISODatePicker
                 id="issued_on"
+                monthYearNavigation
                 name="issued_on"
                 label="Ausgestellt am"
                 required
@@ -191,6 +193,7 @@ export function StaffProofModal({
             ) : null}
             <ISODatePicker
               id="expires_on"
+              monthYearNavigation
               name="expires_on"
               label="Gültig bis"
               value={draft.expiresOn}

@@ -4,6 +4,7 @@
 // lagen Liste und Formular in einem Slide-over, das der Dienstplan öffnete.
 // Der Dienstplan verlinkt jetzt hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   Suspense,
   useCallback,
@@ -153,8 +154,7 @@ function ShiftTypesPageContent() {
     shiftTypeService.getShiftTypes({ withUsage: true }),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;

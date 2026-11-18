@@ -12,7 +12,7 @@ import {
   DownloadSimpleIcon,
   LockKeyIcon,
 } from "@phosphor-icons/react";
-import { useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 import { StaffImportLogCard } from "~/components/traeger/staff/staff-import-log-card";
 import { StaffImportMappingCard } from "~/components/traeger/staff/staff-import-mapping-card";
 import {
@@ -22,6 +22,10 @@ import {
   staffImportDoneTitle,
 } from "~/components/traeger/staff/staff-import-format";
 import { StaffImportPreviewCard } from "~/components/traeger/staff/staff-import-preview-card";
+import {
+  staffOverviewHref,
+  useStaffOverviewReturn,
+} from "~/components/traeger/staff/staff-overview-tab";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -45,7 +49,6 @@ import {
   type StaffImportMapping,
   type StaffImportResult,
 } from "~/lib/traeger-staff-import-api";
-import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerStaffImportPage" });
 
@@ -53,8 +56,6 @@ const STEPS = ["Datei wählen", "Spalten zuordnen", "Prüfen und übernehmen"];
 
 const INFO =
   "Hier übernimmst du dein Personal aus dem Lohnprogramm oder einer Liste. moto erkennt jede Person an der Personalnummer. Eine neue Nummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende Bank- und Steuerdaten ein. So entstehen keine doppelten Akten, auch wenn du die Datei noch einmal lädst. Die Datei bewahrt moto nicht auf.";
-
-const PERSONAL = "/traeger/personal";
 
 const FORMAT_LABELS: Record<string, string> = {
   ";": "Semikolon",
@@ -76,6 +77,16 @@ function isCode(err: unknown, code: string): boolean {
 }
 
 export default function TraegerStaffImportPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze.
+  return (
+    <Suspense fallback={<TenantPage title="Personal importieren" loading />}>
+      <StaffImportContent />
+    </Suspense>
+  );
+}
+
+function StaffImportContent() {
+  const { from, backHref } = useStaffOverviewReturn();
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<StaffImportResult | null>(null);
   const [verified, setVerified] = useState(false);
@@ -196,7 +207,7 @@ export default function TraegerStaffImportPage() {
       title="Personal importieren"
       info={INFO}
       back
-      backHref={traegerPath(PERSONAL)}
+      backHref={backHref}
       backLabel="Zurück zu den Personalakten"
       error={log ? null : error}
       loading={loading}
@@ -236,10 +247,10 @@ export default function TraegerStaffImportPage() {
                 action={
                   <div className="flex flex-wrap justify-center gap-3">
                     <ButtonLink
-                      href={traegerPath(PERSONAL)}
+                      href={staffOverviewHref(from)}
                       variant="primary"
                       size="md"
-                      tooltip="Öffnet die Personalakten mit den Vorschlägen zum Verknüpfen."
+                      tooltip="Öffnet die Personalakten."
                     >
                       Zu den Personalakten
                     </ButtonLink>

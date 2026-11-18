@@ -6,6 +6,7 @@
  * unlike CalendarPeriodModal there is no type, cycle, or link section.
  */
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   type ReactNode,
   useEffect,
@@ -349,7 +350,7 @@ async function offerCancel(
       error: err instanceof Error ? err.message : String(err),
     });
     // Bewusst still ohne Recht zum Absagen: der Dialog könnte nichts tun.
-    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+    if (err instanceof ApiError && isAccessRefusal(err)) {
       return;
     }
     // Sonst ist offen, ob noch Termine im Zeitraum liegen. Der Dialog

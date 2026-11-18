@@ -1118,6 +1118,10 @@ export const ERROR_CATALOG = {
         "Bitte prüfe das Muster. Es braucht genau eine laufende Nummer und darf nur Buchstaben, Ziffern und . / _ - enthalten.",
       "parent_billing.number_range_missing":
         "Es fehlt das Muster der Rechnungsnummern. Bitte lege es unter „Abrechnungsvorgaben“ fest.",
+      "parent_billing.number_range_start_invalid":
+        "Bitte gib eine ganze Zahl von 1 bis 99999999 ein.",
+      "parent_billing.number_range_start_taken":
+        "Diese Nummer ist zu klein. Die letzte laufende Nummer ist {last_sequence}. Bitte gib eine größere Nummer ein.",
       "parent_billing.online_mandate_disabled":
         "Dein Träger nimmt das Lastschrift-Mandat gerade nicht in der App an.",
       "parent_billing.parent_document_not_found":

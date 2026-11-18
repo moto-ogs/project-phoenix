@@ -53,8 +53,10 @@ const { billingApi, termsApi, masterApi, session, api } = vi.hoisted(() => ({
   billingApi: {
     fetchHolidayNumberRange: vi.fn(),
     saveHolidayNumberRange: vi.fn(),
+    saveHolidayNumberRangeStart: vi.fn(),
     fetchCareNumberRange: vi.fn(),
     saveCareNumberRange: vi.fn(),
+    saveCareNumberRangeStart: vi.fn(),
   },
   masterApi: {
     fetchTraegerMasterData: vi.fn(),
@@ -188,11 +190,19 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       service: "holiday",
       pattern: "FE-{JJJJ}-{NNNN}",
       example: "FE-2026-0001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     billingApi.fetchCareNumberRange.mockResolvedValue({
       service: "care",
       pattern: "",
       example: "",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     masterApi.fetchTraegerMasterData.mockResolvedValue(MASTER_DATA);
     masterApi.fetchTraegerSettingsSchema.mockResolvedValue({ tabs: [] });
@@ -523,6 +533,10 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
         service: "holiday",
         pattern: "FE-{JJJJ}-{NNNN}",
         example: "FE-2026-0001",
+        nextNumber: 1,
+        lastNumber: 0,
+        year: 0,
+        starts: [],
       });
       await Promise.all([rules.promise, bearers.promise, numberRange.promise]);
     });
@@ -629,16 +643,28 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       service: "holiday",
       pattern: "OLD-{NNN}",
       example: "OLD-001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     billingApi.saveHolidayNumberRange.mockResolvedValue({
       service: "holiday",
       pattern: "NEW-{NNN}",
       example: "NEW-001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     billingApi.saveCareNumberRange.mockResolvedValue({
       service: "care",
       pattern: "MB-{NNNN}",
       example: "MB-0001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     renderPage();
     await screen.findByText("OLD-{NNN}");
@@ -660,6 +686,10 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       service: "holiday",
       pattern: "NEW-{NNN}",
       example: "NEW-001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     await savePattern("Rechnungsnummern der Monatsbeiträge");
     expect(await screen.findByText("NEW-{NNN}")).toBeVisible();
@@ -672,16 +702,28 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       service: "holiday",
       pattern: "",
       example: "",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     billingApi.saveHolidayNumberRange.mockResolvedValue({
       service: "holiday",
       pattern: "R-{NNN}",
       example: "R-001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     billingApi.fetchCareNumberRange.mockResolvedValue({
       service: "care",
       pattern: "MB-{NNNN}",
       example: "MB-0001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     renderPage();
     fireEvent.click(
@@ -713,17 +755,29 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       service: "holiday",
       pattern: "",
       example: "",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     billingApi.saveHolidayNumberRange.mockResolvedValue({
       service: "holiday",
       pattern: "R-{NNN}",
       example: "R-001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     // The monthly care has its pattern, so only the holiday card asks.
     billingApi.fetchCareNumberRange.mockResolvedValue({
       service: "care",
       pattern: "MB-{NNNN}",
       example: "MB-0001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     renderPage();
 
@@ -750,6 +804,10 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       service: "care",
       pattern: "MB-{JJJJ}-{NNNN}",
       example: "MB-2026-0001",
+      nextNumber: 1,
+      lastNumber: 0,
+      year: 0,
+      starts: [],
     });
     renderPage();
 

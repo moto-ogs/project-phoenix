@@ -1,5 +1,6 @@
 "use client";
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { CheckCircleIcon } from "@phosphor-icons/react";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -28,8 +29,7 @@ export interface WorkTimeCoverageState {
 function mayStayHidden(error: unknown): boolean {
   return (
     notBookedModuleOf(error) !== null ||
-    (error instanceof ApiError &&
-      (error.status === 401 || error.status === 403))
+    (error instanceof ApiError && isAccessRefusal(error))
   );
 }
 

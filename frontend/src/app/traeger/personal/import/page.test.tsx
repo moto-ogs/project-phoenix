@@ -21,15 +21,24 @@ vi.mock("~/lib/traeger-staff-import-api", async (original) => ({
   ...api,
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
+const address = vi.hoisted(() => ({ search: "" }));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(address.search),
+}));
 vi.mock("~/components/ui/tenant-page", () => ({
   TenantPage: ({
     children,
     actions,
+    backHref,
+    backLabel,
   }: {
     children: ReactNode;
     actions?: ReactNode;
+    backHref?: string;
+    backLabel?: string;
   }) => (
     <>
+      <a href={backHref}>{backLabel}</a>
       {actions}
       {children}
     </>
@@ -127,6 +136,7 @@ async function choose() {
 describe("TraegerStaffImportPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    address.search = "";
     api.fetchStaffImportLog.mockResolvedValue([]);
   });
 
@@ -168,6 +178,41 @@ describe("TraegerStaffImportPage", () => {
     expect(
       screen.getByRole("link", { name: "Zu den Personalakten" }),
     ).toHaveAttribute("href", "/traeger/personal");
+  });
+
+  it("returns to the originating tab after importing", async () => {
+    address.search = "from=akten";
+    await choose();
+    api.applyStaffImport.mockResolvedValueOnce({
+      ...preview,
+      applied: true,
+      counts: { ...preview.counts, new: 0, complete: 0, imported: 2 },
+      rows: preview.rows.map((entry) =>
+        entry.status === "conflict" ? entry : { ...entry, status: "imported" },
+      ),
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "2 Zeilen übernehmen" }),
+    );
+
+    await screen.findByText("Übernommen: 1 neue Akte, 1 ergänzt");
+    expect(
+      screen.getByRole("link", { name: "Zu den Personalakten" }),
+    ).toHaveAttribute("href", "/traeger/personal?tab=akten");
+  });
+
+  // #7377: Zurück führt auf den Reiter der Personalakten, von dem man kam.
+  it("leads back to the tab of the Personalakten it came from", () => {
+    address.search = "from=akten";
+    render(
+      <TraegerResourceTestProvider>
+        <TraegerStaffImportPage />
+      </TraegerResourceTestProvider>,
+    );
+    expect(
+      screen.getByRole("link", { name: "Zurück zu den Personalakten" }),
+    ).toHaveAttribute("href", "/traeger/personal?tab=akten");
   });
 
   it("reads the file again when the records changed since the preview", async () => {

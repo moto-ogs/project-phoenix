@@ -9,7 +9,7 @@
 import { EyeIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   STAFF_FIELD_LABELS,
   schoolCount,
@@ -17,6 +17,7 @@ import {
 } from "~/components/traeger/staff/staff-record-format";
 import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
 import { StaffAbsenceAccountsCard } from "~/components/traeger/staff/staff-absence-accounts-card";
+import { useStaffOverviewReturn } from "~/components/traeger/staff/staff-overview-tab";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -53,7 +54,6 @@ import {
   type StaffFinancial,
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerStaffRecordPage" });
 
@@ -349,6 +349,16 @@ function FinancialCard({
 }
 
 export default function TraegerStaffRecordPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze.
+  return (
+    <Suspense fallback={<TenantPage title="Personalakte" loading />}>
+      <StaffRecordContent />
+    </Suspense>
+  );
+}
+
+function StaffRecordContent() {
+  const { backHref } = useStaffOverviewReturn();
   const params = useParams<{ id: string }>();
   const recordId = params?.id ?? "";
   const router = useRouter();
@@ -385,7 +395,7 @@ export default function TraegerStaffRecordPage() {
       await dissolveStaffRecord(record.id);
       refreshOverview();
       success(`Die Akte von ${staffName(record)} ist aufgelöst.`);
-      router.push(traegerPath("/traeger/personal"));
+      router.push(backHref);
     } catch (err) {
       logger.error("traeger_staff_record_dissolve_failed", {
         error: errorMessage(err),
@@ -404,7 +414,7 @@ export default function TraegerStaffRecordPage() {
       title={record ? staffName(record) : "Personalakte"}
       leading={<ConceptIconTile concept={staffConcept} size="page" />}
       back
-      backHref={traegerPath("/traeger/personal")}
+      backHref={backHref}
       backLabel="Zurück zu den Personalakten"
       stats={
         record ? (

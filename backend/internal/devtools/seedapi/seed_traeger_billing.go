@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -11,6 +12,14 @@ import (
 // seedBillingNumberPattern is the number range of the holiday invoices the
 // Abrechnung keeps (#4668): the year and a running number of four digits.
 const seedBillingNumberPattern = "FE-{JJJJ}-{NNNN}"
+
+// seedBillingNumberStart is the number of the first seeded holiday invoice
+// (#7358); seedNumberRangeStartTakenCode refuses it once later numbers are
+// issued.
+const (
+	seedBillingNumberStart        = 240
+	seedNumberRangeStartTakenCode = "parent_billing.number_range_start_taken"
+)
 
 // seedBillingRunDetail is what the seed reads of a run: the sums of the
 // preview and the first child of the first invoice.
@@ -36,6 +45,14 @@ type seedBillingRunDetail struct {
 func seedHolidayBillingRun(client *Client, auth AuthRef, periodID, costBearerID int64) (int64, error) {
 	if _, err := client.PutWithAuth(auth, "/traeger/number-ranges/holiday", map[string]any{"pattern": seedBillingNumberPattern}); err != nil {
 		return 0, fmt.Errorf("keep the number range: %w", err)
+	}
+	// The Träger continues the numbers of the program it used before
+	// (#7358). A seed on a database with invoices past the start value keeps
+	// its counter: numbers never go back.
+	_, err := client.PutWithAuth(auth, "/traeger/number-ranges/holiday/start", map[string]any{"next_number": seedBillingNumberStart})
+	var refused *APIError
+	if err != nil && (!errors.As(err, &refused) || refused.Code != seedNumberRangeStartTakenCode) {
+		return 0, fmt.Errorf("set the start of the number range: %w", err)
 	}
 	// The Abrechnung chooses the kind of document of the holiday care
 	// (#4688): the confirmation letter as invoice, as the demo letters show.

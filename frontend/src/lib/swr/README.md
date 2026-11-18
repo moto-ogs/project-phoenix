@@ -140,6 +140,14 @@ call site; a page shows the error because its data is gone. A 404, or a
 refusal that has to remove other keys too (a child a guardian lost), stays
 with `useConfirmedSWR`, `useTraegerResource` or `useDiscardRefusedEntity`.
 
+`~/lib/access-refusal` is the one module for this: the predicates
+(`isRefusal` for 401/403/404, `isAccessRefusal` for 401/403, `isReadRefusal`
+for 401/403 as a decision about the right to read), the refusals in force per
+key, and the count of refused shown data that `useRefreshAfterWrite` compares
+around its reload. Use a predicate from there instead of comparing status
+numbers. The count rises only when a read is refused while its key holds
+data, not when another view writes a key that is already refused.
+
 ## List-to-detail previews
 
 `studentKeys`, `roomKeys` and `staffKeys` own `previewSources` and `preview`.

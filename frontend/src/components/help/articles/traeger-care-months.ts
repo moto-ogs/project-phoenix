@@ -46,6 +46,17 @@ export function traegerCareMonthsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Nummern aus dem bisherigen Programm fortführen",
+        description:
+          "Nur nötig, wenn deine Rechnungen nicht bei 1 beginnen sollen.",
+        steps: [
+          "Wähle bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Nächste Nummer ändern`.",
+          "Trage die Nummer nach der letzten Rechnung deines bisherigen Programms ein.",
+          "Wähle `Speichern`.",
+          "Mit `Verlauf ansehen` siehst du, wer die Nummer wann geändert hat.",
+        ],
+      },
+      {
         title: "Monatslauf starten und prüfen",
         steps: [
           "Wähle `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",

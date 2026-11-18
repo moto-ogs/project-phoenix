@@ -98,7 +98,7 @@ describe("Träger cards reload after a confirmed write", () => {
     const onChanged = failingReload();
     render(
       <NumberRangeCard
-        numberRange={{ pattern: "", example: "" } as never}
+        numberRange={{ pattern: "", example: "", starts: [] } as never}
         onChanged={onChanged}
       />,
       { wrapper: ToastProvider },

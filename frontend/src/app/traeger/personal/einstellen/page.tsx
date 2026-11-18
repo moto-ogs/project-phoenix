@@ -6,21 +6,32 @@
 // an jedem Einsatzort die Person mit ihrer Beschäftigung.
 
 import { BuildingsIcon, LockKeyIcon } from "@phosphor-icons/react";
+import { Suspense } from "react";
 import { StaffHireWizard } from "~/components/traeger/staff/staff-hire-wizard";
+import { useStaffOverviewReturn } from "~/components/traeger/staff/staff-overview-tab";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import { fetchStaffOverview } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 const INFO =
   "Hier stellst du eine Person ein, die noch an keiner deiner Schulen arbeitet. moto legt die Personalakte und den Arbeitsvertrag an. An jeder gewählten Schule entsteht die Person. Zugang, Transponder und Rolle richtet danach die Schule ein. Arbeitet die Person schon an einer Schule? Dann legst du ihre Akte bei den Personalakten unter „Ohne Akte“ an.";
 
 export default function TraegerStaffHirePage() {
+  // `useSearchParams` braucht eine Suspense-Grenze.
+  return (
+    <Suspense fallback={<TenantPage title="Person einstellen" loading />}>
+      <StaffHireContent />
+    </Suspense>
+  );
+}
+
+function StaffHireContent() {
   const today = useBerlinToday();
+  const { from, backHref } = useStaffOverviewReturn();
   const {
     data: overview,
     loading,
@@ -36,7 +47,7 @@ export default function TraegerStaffHirePage() {
       title="Person einstellen"
       info={INFO}
       back
-      backHref={traegerPath("/traeger/personal")}
+      backHref={backHref}
       backLabel="Zurück zu den Personalakten"
       error={error}
       loading={loading}
@@ -60,7 +71,7 @@ export default function TraegerStaffHirePage() {
         </SectionCard>
       ) : null}
       {overview?.release && overview.schools.length > 0 ? (
-        <StaffHireWizard schools={overview.schools} today={today} />
+        <StaffHireWizard schools={overview.schools} today={today} from={from} />
       ) : null}
     </TenantPage>
   );

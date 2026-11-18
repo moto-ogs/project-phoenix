@@ -11198,6 +11198,9 @@ export const traegerBillingRunTopic =
       group: "anmeldeverwaltung",
       audience: "traeger",
       icon: "FileText",
+      image: "/help/screens/traeger-naechste-rechnungsnummer.webp",
+      imageAlt:
+        "Die Karte Rechnungsnummern der Ferien: Muster, nächste Nummer und letzte laufende Nummer, darunter der Verlauf mit Zeitpunkt und Person.",
       requirements: [
         "Deine Rolle im Träger-Büro ist Abrechnung. Nur diese Rolle sieht in der Navigation die Bereiche unter `Finanzen`.",
         "Der Ferienzeitraum ist veröffentlicht, und die Anmeldungen sind bestätigt.",
@@ -11213,6 +11216,18 @@ export const traegerBillingRunTopic =
             "Wähle bei `Rechnungsnummern der Ferien` den Knopf `Muster festlegen`.",
             "Trage das Muster ein, zum Beispiel FE-{JJJJ}-{NNNN}. {NNNN} ist die laufende Nummer, {JJJJ} das Jahr.",
             "Wähle `Speichern`.",
+          ],
+        },
+        {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn deine Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wähle bei `Rechnungsnummern der Ferien` den Knopf `Nächste Nummer ändern`.",
+            "Trage die Nummer nach der letzten Rechnung deines bisherigen Programms ein, zum Beispiel 7100.",
+            "Prüfe darunter, welche Nummer die nächste Rechnung bekommt.",
+            "Wähle `Speichern`.",
+            "Mit `Verlauf ansehen` siehst du, wer die Nummer wann geändert hat.",
           ],
         },
         {
@@ -12034,6 +12049,17 @@ export const traegerCareMonthsTopic =
             "Wähle bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Muster festlegen`.",
             "Trage ein Muster ein, zum Beispiel MB-{JJJJ}-{NNNN}. Nimm ein anderes Kürzel als bei den Ferien.",
             "Wähle `Speichern`.",
+          ],
+        },
+        {
+          title: "Nummern aus dem bisherigen Programm fortführen",
+          description:
+            "Nur nötig, wenn deine Rechnungen nicht bei 1 beginnen sollen.",
+          steps: [
+            "Wähle bei `Rechnungsnummern der Monatsbeiträge` den Knopf `Nächste Nummer ändern`.",
+            "Trage die Nummer nach der letzten Rechnung deines bisherigen Programms ein.",
+            "Wähle `Speichern`.",
+            "Mit `Verlauf ansehen` siehst du, wer die Nummer wann geändert hat.",
           ],
         },
         {

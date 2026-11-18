@@ -6,6 +6,7 @@
 // über sich selbst öffnete; die Fläche ist jetzt eine Sammlung wie Räume und
 // Gruppen, und das Termin-Formular verlinkt nur noch hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -156,8 +157,7 @@ function CategoriesPageContent() {
     categoryService.getManagedCategories(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;
