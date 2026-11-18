@@ -16,11 +16,11 @@ export function ownGroupsTopic(
       audience: ["caregiver", "lead"],
       icon: "UsersThree",
       steps: [
-        "Öffnen Sie `Alle Kinder`.",
-        "Nutzen Sie die Suche oder die Filter für die benötigten Kinder.",
+        "Öffne `Alle Kinder`.",
+        "Nutze die Suche oder die Filter für die benötigten Kinder.",
       ],
       result:
-        "Sie sehen die Kinder der OGS gemeinsam. Der Bereich `Gruppen` wird nicht angezeigt.",
+        "Du siehst die Kinder der OGS gemeinsam. Der Bereich `Gruppen` wird nicht angezeigt.",
       related: [HELP_TOPICS.studentSearch, HELP_TOPICS.webAttendance],
     };
   }
@@ -30,17 +30,17 @@ export function ownGroupsTopic(
       title: "Gruppen ansehen",
       question: "Wie sehe ich meine Gruppen an?",
       summary:
-        "Ob Sie eigene Gruppen sehen, hängt von der Arbeitsweise Ihrer OGS ab.",
+        "Ob du eigene Gruppen siehst, hängt von der Arbeitsweise deiner OGS ab.",
       group: "gruppen",
       audience: ["caregiver", "lead"],
       icon: "UsersThree",
       steps: [
-        "Prüfen Sie, ob `Gruppen` in der Seitenleiste steht.",
-        "Ist der Bereich vorhanden? Wählen Sie dort die gewünschte Gruppe.",
-        "Fehlt der Bereich? Öffnen Sie `Alle Kinder` und nutzen Sie Suche und Filter.",
+        "Prüfe, ob `Gruppen` in der Seitenleiste steht.",
+        "Ist der Bereich vorhanden? Wähle dort die gewünschte Gruppe.",
+        "Fehlt der Bereich? Öffne `Alle Kinder` und nutze Suche und Filter.",
       ],
       result:
-        "Sie sehen die Kinder entweder in festen eigenen Gruppen oder in einer gemeinsamen Kinderliste.",
+        "Du siehst die Kinder entweder in festen eigenen Gruppen oder in einer gemeinsamen Kinderliste.",
       related: [HELP_TOPICS.studentSearch, HELP_TOPICS.missingChildOrGroup],
     };
   }
@@ -54,34 +54,34 @@ export function ownGroupsTopic(
     id: HELP_TOPICS.ownGroups,
     title: "Gruppen ansehen",
     question: "Wie sehe ich meine Gruppen an?",
-    summary: "Wählen Sie eine Gruppe und sehen Sie ihre Kinder.",
+    summary: "Wähle eine Gruppe und siehst du ihre Kinder.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "UsersThree",
     steps: [
-      "Öffnen Sie `Gruppen` in der Seitenleiste.",
-      "Wählen Sie die gewünschte Gruppe. Ihre eigene Gruppe ist mit `Meine Gruppe` markiert.",
-      "Prüfen Sie die Zahlen für `krank` und `entschuldigt`.",
-      "Suchen Sie bei Bedarf über `Name suchen...` nach einem Kind.",
+      "Öffne `Gruppen` in der Seitenleiste.",
+      "Wähle die gewünschte Gruppe. Deine eigene Gruppe ist mit `Meine Gruppe` markiert.",
+      "Prüfe die Zahlen für `krank` und `entschuldigt`.",
+      "Suche bei Bedarf über `Name suchen...` nach einem Kind.",
       // Live geprueft: die Seite hat keinen Knopf `Filter`, sondern einen
       // Umschalter fuer die Reihenfolge und eine Auswahl fuer den Ort.
-      "Ordnen Sie die Liste nach `Alphabetisch`, `Nächste Ankunft` oder `Nächste Abholung`.",
-      "Grenzen Sie über `Alle Orte` auf einen Aufenthaltsort ein.",
-      "Wählen Sie die Karte eines Kindes, um seine Angaben zu öffnen.",
+      "Ordne die Liste nach `Alphabetisch`, `Nächste Ankunft` oder `Nächste Abholung`.",
+      "Grenze über `Alle Orte` auf einen Aufenthaltsort ein.",
+      "Wähle die Karte eines Kindes, um seine Angaben zu öffnen.",
     ],
     result: statusResult,
     differences: [
-      "Sehen Sie nur eine Gruppe? Dann öffnet moto sie direkt, ohne Auswahl.",
+      "Siehst du nur eine Gruppe? Dann öffnet moto sie direkt, ohne Auswahl.",
       "Ist für eine Gruppe keine Gruppenleitung eingetragen, fehlt diese Zeile auf ihrer Karte.",
       "Eine vorübergehend übernommene Gruppe ist mit `Vertretung` markiert.",
-      "In der Seitenleiste stehen unter `Gruppen` Ihre eigenen Gruppen. Dahinter steht, wie viele Kinder gerade da sind. Haben Sie eine andere Gruppe geöffnet, steht sie markiert darunter.",
-      "Fehlt eine Gruppe? Bitten Sie Ihre Leitung, Ihre Gruppenzuordnung zu prüfen.",
+      "In der Seitenleiste stehen unter `Gruppen` deine eigenen Gruppen. Dahinter steht, wie viele Kinder gerade da sind. Hast du eine andere Gruppe geöffnet, steht sie markiert darunter.",
+      "Fehlt eine Gruppe? Frag deine Leitung, ob sie deine Gruppenzuordnung prüft.",
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
-      "Fehlt `Gruppen` in der Navigation? Öffnen Sie `Alle Kinder` und wählen Sie oben `Meine Gruppe`. Die Gruppenseite öffnen Sie im Menü mit den drei Punkten unter `Zur Gruppenseite`.",
+      "Fehlt `Gruppen` in der Navigation? Öffne `Alle Kinder` und wähle oben `Meine Gruppe`. Die Gruppenseite öffnest du im Menü mit den drei Punkten unter `Zur Gruppenseite`.",
     ],
     // Einstellung „Angebote auf der Kinderkarte“ (#6487), standardmäßig aus.
     notes: [
-      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Ihre Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.",
+      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.",
     ],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [

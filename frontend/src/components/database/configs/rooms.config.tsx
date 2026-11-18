@@ -62,7 +62,7 @@ export const roomsConfig = defineEntityConfig<Room>({
             placeholder: "z.B. 0, 1, 2",
             validation: (value) => {
               if (value && Number.isNaN(Number.parseInt(value as string, 10))) {
-                return "Bitte geben Sie eine gültige Etage ein";
+                return "Bitte gib eine gültige Etage ein";
               }
               return null;
             },
@@ -235,7 +235,6 @@ export const roomsConfig = defineEntityConfig<Room>({
     createButton: "Neuen Raum erstellen",
     createModalTitle: "Neuer Raum",
     detailModalTitle: "Raumdetails",
-    deleteConfirmation:
-      "Sind Sie sicher, dass Sie diesen Raum löschen möchten?",
+    deleteConfirmation: "Bist du sicher, dass du diesen Raum löschen möchtest?",
   },
 });

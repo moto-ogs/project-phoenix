@@ -110,9 +110,9 @@ export function DecideChangeModal({
   // Vorschau lädt, bleibt der Knopf ohne Grund gesperrt.
   const reasonMissingText =
     approve && !effectiveFrom
-      ? "Wählen Sie zuerst, ab wann die Änderung gilt."
+      ? "Wähle zuerst, ab wann die Änderung gilt."
       : previewReady && needsReason && reason.trim() === ""
-        ? "Schreiben Sie zuerst eine Begründung für die Eltern."
+        ? "Schreibe zuerst eine Begründung für die Eltern."
         : undefined;
 
   const submit = async () => {
@@ -131,7 +131,7 @@ export function DecideChangeModal({
         success(
           approve
             ? `Die Änderung ist freigegeben. Sie gilt ab ${formatDate(effectiveFrom)}. Der Vertrag bekommt in wenigen Minuten eine neue Version.`
-            : "Der Änderungswunsch ist abgelehnt. Die Eltern bekommen Ihre Begründung.",
+            : "Der Änderungswunsch ist abgelehnt. Die Eltern bekommen deine Begründung.",
         );
         if (op.isCurrent()) onDecided(next);
       } catch (err) {
@@ -176,7 +176,7 @@ export function DecideChangeModal({
             tooltip={
               approve
                 ? "Ändert die Betreuung ab dem Tag und benachrichtigt die Eltern."
-                : "Lehnt den Wunsch ab und schickt den Eltern Ihre Begründung."
+                : "Lehnt den Wunsch ab und schickt den Eltern deine Begründung."
             }
             isLoading={saving}
             loadingText={approve ? "Wird freigegeben …" : "Wird abgelehnt …"}

@@ -108,7 +108,7 @@ export function MyGroupBlock() {
         <HomeCardLink
           href={href}
           label="Meine Gruppe heute: zur Gruppe"
-          tooltip="Öffnet die Seite Ihrer Gruppe."
+          tooltip="Öffnet die Seite deiner Gruppe."
         >
           Zur Gruppe
         </HomeCardLink>
@@ -128,8 +128,8 @@ export function MyGroupBlock() {
         if (!group) {
           return (
             <HomeCardEmpty
-              title="Ihnen ist heute keine Gruppe zugeteilt"
-              description="Sobald Sie eine Gruppe betreuen, steht ihr Stand hier."
+              title="Dir ist heute keine Gruppe zugeteilt"
+              description="Sobald du eine Gruppe betreust, steht ihr Stand hier."
             />
           );
         }

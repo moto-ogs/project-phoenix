@@ -41,6 +41,8 @@
   "letterhead_too_long": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "number_range_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "number_range_missing": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "number_range_start_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "number_range_start_taken": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "parent_document_not_found": "Ten dokument nie jest już dostępny. Proszę odświeżyć stronę.",
   "payment_text_debtor_number_missing": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "recipient_email_missing": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
@@ -127,5 +129,6 @@
   "export_recipient_invalid": "The recipient was not saved. Please check the marked fields.",
   "export_recipient_not_found": "This recipient no longer exists. Please reload the page.",
   "export_recipient_name_taken": "A recipient with this name already exists. Please choose another name.",
-  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again."
+  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again.",
+  "letterhead_missing": "Brakuje nadawcy w nagłówku. Bez nazwy i adresu organizatora nie powstaną faktury ani decyzje. Dodaj te dane w sekcji „Nagłówek i szablony”."
 }

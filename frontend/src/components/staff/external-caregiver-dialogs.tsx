@@ -170,7 +170,7 @@ export function ExternalInvitationModal({
     if (!target || isSaving) return;
     const hint = emailFieldHint(email);
     if (hint) {
-      formErrors.invalid("Bitte prüfen Sie die E-Mail-Adresse.", {
+      formErrors.invalid("Bitte prüfe die E-Mail-Adresse.", {
         [EXTERNAL_FIELDS.email]: hint,
       });
       return;

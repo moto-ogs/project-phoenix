@@ -70,6 +70,8 @@ type DeliveryTestModule struct {
 	GuardianFeed deliveryContract.GuardianNotificationFeed
 	// TraegerFeed reads the bell of the Träger-Portal (#7146).
 	TraegerFeed deliveryContract.TraegerNotificationFeed
+	// CatererFeed reads the bell of the caterer portal (#7147).
+	CatererFeed deliveryContract.CatererNotificationFeed
 }
 
 // NotificationPreferenceRouterForTests mounts the actual protected resources
@@ -88,6 +90,7 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	})
 	router.Mount("/parent", parents.Router(ParentSessionChain))
 	router.Mount("/traeger/notifications", NewTraegerNotificationHTTP(m.TraegerFeed).Router())
+	router.Mount("/caterer/notifications", NewCatererNotificationHTTP(m.CatererFeed).Router())
 	return router
 }
 
@@ -150,14 +153,24 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
-	guardianFeed := service.(interface {
+	return withDeliveryTestFeeds(DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
+		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub}), nil
+}
+
+// withDeliveryTestFeeds adds the bells the router serves across schools: the
+// parents portal's (#7140), the Träger-Portal's (#7146) and the caterer
+// portal's (#7147).
+func withDeliveryTestFeeds(module DeliveryTestModule) DeliveryTestModule {
+	module.GuardianFeed = module.Notifications.(interface {
 		GuardianFeed() deliveryContract.GuardianNotificationFeed
 	}).GuardianFeed()
-	traegerFeed := service.(interface {
+	module.TraegerFeed = module.Notifications.(interface {
 		TraegerFeed() deliveryContract.TraegerNotificationFeed
 	}).TraegerFeed()
-	return DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
-		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub, GuardianFeed: guardianFeed, TraegerFeed: traegerFeed}, nil
+	module.CatererFeed = module.Notifications.(interface {
+		CatererFeed() deliveryContract.CatererNotificationFeed
+	}).CatererFeed()
+	return module
 }
 
 // newDeliveryTestRouter builds the notification router over the SSE, Web Push

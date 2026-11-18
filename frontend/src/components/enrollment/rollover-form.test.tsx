@@ -306,7 +306,7 @@ describe("RolloverForm", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Bitte geben Sie Beginn und Ende des Betreuungszeitraums an.",
+          "Bitte gib Beginn und Ende des Betreuungszeitraums an.",
         ),
       ).toBeInTheDocument();
     });
@@ -331,7 +331,7 @@ describe("RolloverForm", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Bitte geben Sie eine Frist für die Eltern an."),
+        screen.getByText("Bitte gib eine Frist für die Eltern an."),
       ).toBeInTheDocument();
     });
     expect(mockCreateRollover).not.toHaveBeenCalled();

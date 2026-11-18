@@ -72,7 +72,7 @@ function blockersOf(
   if (report.noWageType) {
     blockers.push({
       key: "no-wage-type",
-      text: "Es gibt noch keine Lohnart. Tragen Sie die Nummern aus Ihrem DATEV ein.",
+      text: "Es gibt noch keine Lohnart. Trage die Nummern aus deinem DATEV ein.",
       action: openWageTypes(
         "Lohnarten öffnen, um die erste Lohnart einzutragen",
       ),
@@ -97,7 +97,7 @@ function blockersOf(
           variant="surface"
           size="compact"
           aria-label={`Personalakte von ${personName(person)} öffnen`}
-          tooltip="Öffnet die Personalakte, dort tragen Sie die Personalnummer ein."
+          tooltip="Öffnet die Personalakte, dort trägst du die Personalnummer ein."
         >
           Akte öffnen
         </ButtonLink>

@@ -60,7 +60,7 @@ export function LettersCreateCard<T = BillingLetters>({
           type="button"
           variant="primary"
           size="md"
-          tooltip="Öffnet ein Fenster, in dem Sie die Schreiben an alle Familien erstellen."
+          tooltip="Öffnet ein Fenster, in dem du die Schreiben an alle Familien erstellst."
           onClick={() => setCreating(true)}
         >
           Schreiben erstellen
@@ -174,7 +174,7 @@ const LETTER_KINDS: Readonly<
   fee_notice: {
     title: "Gebührenbescheide",
     description:
-      "Jede Familie bekommt einen Gebührenbescheid mit Ihrer Rechtsbehelfsbelehrung.",
+      "Jede Familie bekommt einen Gebührenbescheid mit deiner Rechtsbehelfsbelehrung.",
     template: "bescheid",
   },
 };
@@ -223,7 +223,7 @@ export function BillingLettersCard({
   return (
     <SectionCard
       title={kind.title}
-      description="Die Schreiben sind erstellt und lassen sich nicht mehr ändern. Das Schreiben einer Familie laden Sie über das Menü ihrer Rechnung herunter."
+      description="Die Schreiben sind erstellt und lassen sich nicht mehr ändern. Das Schreiben einer Familie lädst du über das Menü ihrer Rechnung herunter."
     >
       <LettersFacts
         paymentDueOn={letters.paymentDueOn}

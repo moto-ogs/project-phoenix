@@ -116,11 +116,11 @@ describe("useApiFormError", () => {
       expect(field).toHaveAttribute("aria-invalid", "true");
       expect(
         document.getElementById(field.getAttribute("aria-describedby")!),
-      ).toHaveTextContent("Bitte prüfen Sie dieses Feld.");
+      ).toHaveTextContent("Bitte prüfe dieses Feld.");
     }
     expect(
       screen.getByText(
-        "Die Person konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+        "Die Person konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
       ),
     ).toBeInTheDocument();
     expect(toastAlert()).not.toBeInTheDocument();
@@ -141,7 +141,7 @@ describe("useApiFormError", () => {
 
     expect(
       await screen.findByText(
-        "Für die Person fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für die Person fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/req-403/)).not.toBeInTheDocument();
@@ -190,7 +190,7 @@ describe("useApiFormError", () => {
 
     expect(
       await screen.findByText(
-        "Diese Seite gehört zum Modul Zeiterfassung. Ihre Schule nutzt es nicht. Wenn Sie es brauchen, sprechen Sie mit Ihrer Leitung.",
+        "Diese Seite gehört zum Modul Zeiterfassung. Deine Schule nutzt es nicht. Wenn du es brauchst, sprich mit deiner Leitung.",
       ),
     ).toBeInTheDocument();
     expect(toastAlert()).not.toBeInTheDocument();
@@ -222,7 +222,7 @@ describe("useApiFormError", () => {
 
     expect(
       await screen.findByText(
-        "Die Person konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Person konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(toastAlert()).not.toBeInTheDocument();

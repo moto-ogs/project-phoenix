@@ -26,7 +26,7 @@ describe("DevicePinWarning", () => {
     expect(screen.getByText("Geräte-PIN fehlt")).toBeVisible();
     expect(
       screen.getByText(
-        /Ohne Geräte-PIN kann sich Ihr Team nicht am Tablet anmelden/,
+        /Ohne Geräte-PIN kann sich dein Team nicht am Tablet anmelden/,
       ),
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "PIN festlegen" })).toHaveAttribute(

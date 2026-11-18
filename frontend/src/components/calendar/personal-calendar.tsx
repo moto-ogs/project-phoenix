@@ -1458,14 +1458,14 @@ function CalendarEventDetail({
             <AnswerScopeChoice
               value={answerScope}
               onChange={setAnswerScope}
-              legend="Ihre Antwort gilt für"
+              legend="Deine Antwort gilt für"
               occurrenceLabel={`Nur am ${formatOccurrenceShortDay(occurrenceDate)}`}
               seriesLabel="Alle Termine"
               occurrenceHint={occurrenceScopeHint(event)}
               seriesHint={
                 seriesAnswerReplacesDates(event)
-                  ? "Ihre Antwort gilt dann für alle Termine, auch für einzeln beantwortete."
-                  : "Ihre Antwort gilt für alle Termine dieser Reihe."
+                  ? "Deine Antwort gilt dann für alle Termine, auch für einzeln beantwortete."
+                  : "Deine Antwort gilt für alle Termine dieser Reihe."
               }
             />
           ) : null}
@@ -1478,7 +1478,7 @@ function CalendarEventDetail({
                 className="gap-2"
                 disabled={responding}
                 onClick={() => answer("accepted")}
-                tooltip="Speichert sofort Ihre Zusage zu diesem Termin."
+                tooltip="Speichert sofort deine Zusage zu diesem Termin."
               >
                 <Check className="h-4 w-4" aria-hidden />
                 Zusagen
@@ -1490,7 +1490,7 @@ function CalendarEventDetail({
                 className="gap-2"
                 disabled={responding}
                 onClick={() => answer("declined")}
-                tooltip="Speichert sofort Ihre Absage zu diesem Termin."
+                tooltip="Speichert sofort deine Absage zu diesem Termin."
               >
                 <X className="h-4 w-4" aria-hidden />
                 Absagen
@@ -1498,7 +1498,7 @@ function CalendarEventDetail({
             </div>
           ) : null}
           {showIcs ? (
-            <ActionHint text="Speichert den Termin als Datei für Ihren Kalender.">
+            <ActionHint text="Speichert den Termin als Datei für deinen Kalender.">
               <a
                 href={`${icsHrefBase}/${encodeURIComponent(
                   event.appointment_id!,

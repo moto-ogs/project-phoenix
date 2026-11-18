@@ -124,8 +124,8 @@ export function DemoWeekendNotice({ inParentsApp }: { inParentsApp: boolean }) {
         <div className="flex flex-col gap-3 text-sm text-gray-700">
           <p>Die Demo zeigt trotzdem einen normalen Betreuungstag.</p>
           <p>Am Wochenende gilt in der Demo der Plan vom Freitag.</p>
-          {inParentsApp ? <p>Deshalb ist Ihr Kind heute in der OGS.</p> : null}
-          <p>An einem Werktag sehen Sie die Demo wie im echten Alltag.</p>
+          {inParentsApp ? <p>Deshalb ist dein Kind heute in der OGS.</p> : null}
+          <p>An einem Werktag siehst du die Demo wie im echten Alltag.</p>
         </div>
       </Modal>
     </>

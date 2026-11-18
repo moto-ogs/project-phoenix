@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -75,6 +76,8 @@ func releasedBillingRun(t *testing.T, f reviewFixture, billing string) billingRu
 
 // brandTraeger gives the Träger of the office its letterhead: logo, colour,
 // sender, footer, contact person and a default bank account.
+const traegerTestLetterhead = "Ganztag im Quartier e.V.\nAm Markt 4\n49143 Bissendorf"
+
 func brandTraeger(t *testing.T, f reviewFixture) {
 	t.Helper()
 	testpkg.OwnTraegerMasterData(t, f.db, f.office.organization)
@@ -97,12 +100,32 @@ func brandTraegerOffice(t *testing.T, portal *traegerPortalHandler, office traeg
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	for key, value := range map[string]string{
 		configModels.KeyBrandingPrimaryColor:   "#217A78",
-		configModels.KeyBrandingLetterheadText: "Ganztag im Quartier e.V.\nAm Markt 4\n49143 Bissendorf",
+		configModels.KeyBrandingLetterheadText: traegerTestLetterhead,
 		configModels.KeyBrandingFooterText:     "Vorstand: Anna Brandt",
 	} {
 		rec := traegerJSON(t, portal, token, http.MethodPut, "/traeger/settings/values/"+key, map[string]any{"value": value})
 		require.Equal(t, http.StatusOK, rec.Code, "%s: %s", key, rec.Body.String())
 	}
+}
+
+// requireLettersNeedTheLetterhead pins #7177: a letter names the Träger as
+// its sender from the letterhead, so a blank letterhead or one without an
+// address refuses with its own code and stores nothing. The letterhead is
+// restored afterwards.
+func requireLettersNeedTheLetterhead(t *testing.T, portal *traegerPortalHandler, administration string, create func() *httptest.ResponseRecorder) {
+	t.Helper()
+	setLetterhead := func(text string) {
+		rec := traegerJSON(t, portal, administration, http.MethodPut, "/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": text})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	}
+	for _, text := range []string{" \n ", "Träger ohne Anschrift"} {
+		setLetterhead(text)
+		rec := create()
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		code, _ := registrationRefusalOf(t, rec)
+		assert.Equal(t, "parent_billing.letterhead_missing", code)
+	}
+	setLetterhead(traegerTestLetterhead)
 }
 
 func TestBillingLettersConfirmEveryFamilyOnceInTheLayoutOfTheTraeger(t *testing.T) {
@@ -128,6 +151,9 @@ func TestBillingLettersConfirmEveryFamilyOnceInTheLayoutOfTheTraeger(t *testing.
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.bank_account_missing", code)
 	brandTraeger(t, f)
+	requireLettersNeedTheLetterhead(t, f.traeger, f.office.token, func() *httptest.ResponseRecorder {
+		return traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	})
 
 	for body, field := range map[string]map[string]any{
 		"payment_due_on":      {"notes": "x"},

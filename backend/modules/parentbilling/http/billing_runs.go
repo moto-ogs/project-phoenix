@@ -25,6 +25,7 @@ import (
 // so do the Storno and the Gutschrift of an issued invoice (#4690).
 type BillingRunResource struct {
 	runs           capability.BillingRuns
+	starts         capability.NumberRangeStarts
 	discard        capability.HolidayRunDiscard
 	letters        capability.BillingLetterService
 	mail           capability.BillingLetterMailService
@@ -33,14 +34,14 @@ type BillingRunResource struct {
 }
 
 // NewBillingRunResource builds the resource with the discard of an empty
-// open run (#6628). requireBilling admits only a session with the Träger
-// right "Abrechnung".
-func NewBillingRunResource(runs capability.BillingRuns, discard capability.HolidayRunDiscard, letters capability.BillingLetterService,
+// open run (#6628) and the start values of the number ranges (#7358).
+// requireBilling admits only a session with the Träger right "Abrechnung".
+func NewBillingRunResource(runs capability.BillingRuns, starts capability.NumberRangeStarts, discard capability.HolidayRunDiscard, letters capability.BillingLetterService,
 	mail capability.BillingLetterMailService, requireBilling common.Middleware, lists common.ListRenderer) *BillingRunResource {
-	if runs == nil || discard == nil || letters == nil || mail == nil || requireBilling == nil || lists == nil {
-		panic("parent billing http: the billing runs, their discard, the letters, their mail, the right check and the list export are required")
+	if runs == nil || starts == nil || discard == nil || letters == nil || mail == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the billing runs, the number range starts, their discard, the letters, their mail, the right check and the list export are required")
 	}
-	return &BillingRunResource{runs: runs, discard: discard, letters: letters, mail: mail, requireBilling: requireBilling, lists: lists}
+	return &BillingRunResource{runs: runs, starts: starts, discard: discard, letters: letters, mail: mail, requireBilling: requireBilling, lists: lists}
 }
 
 // RunRouter returns the routes mounted at /traeger/billing-runs.
@@ -82,6 +83,7 @@ func (rs *BillingRunResource) NumberRangeRouter(protectedTraegerRoutes func(chi.
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.numberRanges)
 		billing.Put("/{service}", rs.setNumberRange)
+		billing.Put("/{service}/start", rs.setNumberRangeStart)
 	})
 	return r
 }
@@ -130,6 +132,16 @@ type NumberRangeRequest struct {
 
 // Bind accepts the body; the Owner validates the pattern.
 func (req *NumberRangeRequest) Bind(*http.Request) error { return nil }
+
+// NumberRangeStartRequest is the body of PUT
+// /traeger/number-ranges/{service}/start: the running number the next
+// invoice gets (#7358).
+type NumberRangeStartRequest struct {
+	NextNumber int64 `json:"next_number"`
+}
+
+// Bind accepts the body; the Owner validates the number.
+func (req *NumberRangeStartRequest) Bind(*http.Request) error { return nil }
 
 func (rs *BillingRunResource) list(w http.ResponseWriter, r *http.Request) {
 	organizationID, ok := traegerOf(w, r)
@@ -307,11 +319,11 @@ func writeExportFile(w http.ResponseWriter, r *http.Request, file capability.Exp
 }
 
 func (rs *BillingRunResource) numberRanges(w http.ResponseWriter, r *http.Request) {
-	organizationID, ok := traegerOf(w, r)
+	reviewer, ok := reviewerOf(w, r)
 	if !ok {
 		return
 	}
-	ranges, err := rs.runs.ListNumberRanges(r.Context(), organizationID)
+	ranges, err := rs.runs.ListNumberRanges(r.Context(), reviewer)
 	if err != nil {
 		renderBillingError(w, r, err)
 		return
@@ -320,7 +332,7 @@ func (rs *BillingRunResource) numberRanges(w http.ResponseWriter, r *http.Reques
 }
 
 func (rs *BillingRunResource) setNumberRange(w http.ResponseWriter, r *http.Request) {
-	organizationID, ok := traegerOf(w, r)
+	reviewer, ok := reviewerOf(w, r)
 	if !ok {
 		return
 	}
@@ -329,7 +341,7 @@ func (rs *BillingRunResource) setNumberRange(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	numberRange, err := rs.runs.SetNumberRange(r.Context(), organizationID, chi.URLParam(r, "service"), req.Pattern)
+	numberRange, err := rs.runs.SetNumberRange(r.Context(), reviewer, chi.URLParam(r, "service"), req.Pattern)
 	if err != nil {
 		renderBillingError(w, r, err)
 		return
@@ -337,12 +349,34 @@ func (rs *BillingRunResource) setNumberRange(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, http.StatusOK, numberRange, "Number range saved successfully")
 }
 
+func (rs *BillingRunResource) setNumberRangeStart(w http.ResponseWriter, r *http.Request) {
+	reviewer, ok := reviewerOf(w, r)
+	if !ok {
+		return
+	}
+	req := &NumberRangeStartRequest{}
+	if err := render.Bind(r, req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	numberRange, err := rs.starts.SetNumberRangeStart(r.Context(), reviewer, chi.URLParam(r, "service"), req.NextNumber)
+	if err != nil {
+		renderBillingError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, numberRange, "Number range start saved successfully")
+}
+
 // renderBillingError answers a refused run or number range. The period
 // refusals keep the codes of the holiday periods.
 func renderBillingError(w http.ResponseWriter, r *http.Request, err error) {
 	var fields validation.Errors
 	var missingDebtor *capability.PaymentTextDebtorNumberMissingError
+	var startTaken *capability.NumberRangeStartTakenError
 	switch {
+	case errors.As(err, &startTaken):
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingNumberRangeStartTaken,
+			map[string]any{"last_number": startTaken.LastNumber, "last_sequence": startTaken.LastSequence}))
 	case errors.As(err, &missingDebtor):
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingPaymentTextDebtorNumberMissing,
 			map[string]any{"count": len(missingDebtor.InvoiceNumbers), "invoice_numbers": missingDebtor.InvoiceNumbers}))
@@ -371,6 +405,7 @@ func invalidFieldsCode(fields validation.Errors) string {
 	for _, field := range []struct{ name, code string }{
 		{"pattern", common.CodeParentBillingNumberRangeInvalid},
 		{"service", common.CodeParentBillingNumberRangeInvalid},
+		{"next_number", common.CodeParentBillingNumberRangeStartInvalid},
 		{"payment_due_on", common.CodeParentBillingBillingLettersInvalid},
 		{"notes", common.CodeParentBillingBillingLettersInvalid},
 		{"emergency_contacts", common.CodeParentBillingBillingLettersInvalid},
@@ -399,6 +434,7 @@ func renderBillingConflict(w http.ResponseWriter, r *http.Request, err error) {
 		{capability.ErrInvoiceNumberTaken, common.CodeParentBillingInvoiceNumberTaken},
 		{capability.ErrBillingLettersExist, common.CodeParentBillingBillingLettersExist},
 		{capability.ErrBankAccountMissing, common.CodeParentBillingBankAccountMissing},
+		{capability.ErrLetterheadMissing, common.CodeParentBillingLetterheadMissing},
 		{capability.ErrLetterheadTooLong, common.CodeParentBillingLetterheadTooLong},
 		{capability.ErrBillingLettersMissing, common.CodeParentBillingBillingLettersMissing},
 		{capability.ErrLetterMailPending, common.CodeParentBillingLetterMailPending},

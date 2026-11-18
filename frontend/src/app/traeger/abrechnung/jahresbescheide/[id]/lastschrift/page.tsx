@@ -57,7 +57,7 @@ export default function TraegerNoticeDebitsPage() {
             description={
               run.status === "released"
                 ? "Dieser Jahreslauf hat keinen Bescheid. Es gibt nichts abzubuchen."
-                : "Die Datei für die Bank gibt es, sobald Sie die Bescheide auf der Seite des Jahreslaufs ausgestellt haben."
+                : "Die Datei für die Bank gibt es, sobald du die Bescheide auf der Seite des Jahreslaufs ausgestellt hast."
             }
           />
         )

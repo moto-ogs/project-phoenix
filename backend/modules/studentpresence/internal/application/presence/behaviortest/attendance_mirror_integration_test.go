@@ -249,7 +249,7 @@ func TestAttendanceSync_BulkSessionEndPersistsSlotCheckout(t *testing.T) {
 				require.NoError(t, err)
 				_, err = factoryActive.ProcessSessionTimeout(s.ctx, device.ID)
 			} else {
-				err = factoryActive.EndActivitySession(s.ctx, s.activeGroup.ID)
+				_, err = factoryActive.EndActivitySession(s.ctx, s.activeGroup.ID)
 			}
 			require.NoError(t, err)
 

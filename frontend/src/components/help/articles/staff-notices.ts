@@ -19,24 +19,24 @@ export function staffNoticesTopic(): HelpTopic {
     imageAlt:
       "Das Fenster für einen neuen Hinweis mit Titel, Hinweis, Empfängern und Wochentagen.",
     steps: [
-      "Klappen Sie in der Seitenleiste `Team` auf.",
-      "Öffnen Sie `Hinweise der Leitung`.",
-      "Wählen Sie `Neuer Hinweis`.",
-      "Tragen Sie `Titel` und `Hinweis` ein.",
-      "Wählen Sie bei `Für wen` `Alle`, `Nur Betreuung` oder `Nur Lehrkräfte`.",
-      "Wählen Sie bei `Wichtigkeit`, wie dringend der Hinweis ist.",
-      "Wählen Sie bei `Woche`, ob der Hinweis sich wiederholt.",
-      "Tragen Sie `Gilt ab` und bei Bedarf `Gilt bis (optional)` ein.",
-      "Wählen Sie unter `Wochentage` die Tage aus, an denen der Hinweis erscheint.",
-      "Wählen Sie `Speichern`.",
+      "Klappe in der Seitenleiste `Team` auf.",
+      "Öffne `Hinweise der Leitung`.",
+      "Wähle `Neuer Hinweis`.",
+      "Trage `Titel` und `Hinweis` ein.",
+      "Wähle bei `Für wen` `Alle`, `Nur Betreuung` oder `Nur Lehrkräfte`.",
+      "Wähle bei `Wichtigkeit`, wie dringend der Hinweis ist.",
+      "Wähle bei `Woche`, ob der Hinweis sich wiederholt.",
+      "Trage `Gilt ab` und bei Bedarf `Gilt bis (optional)` ein.",
+      "Wähle unter `Wochentage` die Tage aus, an denen der Hinweis erscheint.",
+      "Wähle `Speichern`.",
     ],
     result:
       "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
-      "Mit `Kenntnisnahme verlangen` sehen Sie später, wer den Hinweis bestätigt hat.",
+      "Mit `Kenntnisnahme verlangen` siehst du später, wer den Hinweis bestätigt hat.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
-      "Sie selbst bekommen zu Ihrem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
-      "Speichern Sie einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn Sie den Haken setzen.",
+      "Du selbst bekommst zu deinem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
+      "Speicherst du einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn du den Haken setzt.",
     ],
     differences: [
       "Ein wichtiger Hinweis trägt `Wichtig`, ein abgeschalteter `Abgeschaltet`.",
@@ -44,7 +44,7 @@ export function staffNoticesTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Beim Löschen gehen die bereits erfassten Kenntnisnahmen mit verloren.",
-      "Soll die Nachricht an Eltern gehen? Nutzen Sie stattdessen eine Elternmitteilung.",
+      "Soll die Nachricht an Eltern gehen? Nutze stattdessen eine Elternmitteilung.",
     ],
     related: [
       HELP_TOPICS.leadTeacherAccess,

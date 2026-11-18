@@ -11,7 +11,7 @@ export function accidentReportTopic(): HelpTopic {
     title: "Einen Unfall erfassen",
     question: "Wie erfasse ich einen Unfall und erstelle die Unfallanzeige?",
     summary:
-      "Sie tragen den Unfall am Kind ein. moto erstellt daraus die Unfallanzeige als PDF.",
+      "Du trägst den Unfall am Kind ein. moto erstellt daraus die Unfallanzeige als PDF.",
     group: "kinderdaten",
     audience: "lead",
     icon: "FirstAid",
@@ -23,39 +23,39 @@ export function accidentReportTopic(): HelpTopic {
       {
         title: "Den Unfall erfassen",
         steps: [
-          "Öffnen Sie das Kind und wählen Sie den Reiter `Dokumente`.",
-          "Wählen Sie `Unfall erfassen`.",
-          "Tragen Sie ein, wann und wo es passiert ist und was passiert ist.",
-          "Tragen Sie die Verletzung, die Erste Hilfe und die Aufsichtsperson ein.",
-          "Wählen Sie `Speichern`.",
+          "Öffne das Kind und wähle den Reiter `Dokumente`.",
+          "Wähle `Unfall erfassen`.",
+          "Trage ein, wann und wo es passiert ist und was passiert ist.",
+          "Trage die Verletzung, die Erste Hilfe und die Aufsichtsperson ein.",
+          "Wähle `Speichern`.",
         ],
       },
       {
         title: "Die Unfallanzeige unterschreiben",
         steps: [
           "Die Unfallanzeige öffnet sich nach dem Speichern.",
-          "Unterschreiben Sie im Feld `Unterschrift` und wählen Sie `Unterschrift bestätigen`.",
-          "Wählen Sie `Unterschreiben`.",
+          "Unterschreibe im Feld `Unterschrift` und wähle `Unterschrift bestätigen`.",
+          "Wähle `Unterschreiben`.",
         ],
       },
       {
         title: "Auf Papier unterschreiben",
         steps: [
-          "Wählen Sie `PDF herunterladen` und drucken Sie das PDF aus.",
-          "Lassen Sie es unterschreiben und scannen oder fotografieren Sie es.",
-          "Wählen Sie `Unterschriebenes Papierexemplar hochladen`.",
+          "Wähle `PDF herunterladen` und drucke das PDF aus.",
+          "Lass es unterschreiben und scanne oder fotografiere es.",
+          "Wähle `Unterschriebenes Papierexemplar hochladen`.",
         ],
       },
     ],
     result:
-      "Die Unfallanzeige liegt unterschrieben beim Kind unter `Dokumente`. Das PDF geben Sie selbst an die Unfallkasse weiter.",
+      "Die Unfallanzeige liegt unterschrieben beim Kind unter `Dokumente`. Das PDF gibst du selbst an die Unfallkasse weiter.",
     notes: [
-      "Felder, die moto nicht kennt, etwa die Unternehmensnummer, ergänzen Sie auf dem Ausdruck.",
+      "Felder, die moto nicht kennt, etwa die Unternehmensnummer, ergänzt du auf dem Ausdruck.",
       "Jedes Erfassen, Ändern und Unterschreiben steht im Änderungsprotokoll des Kindes. Jedes Herunterladen hält moto im Zugriffsprotokoll fest.",
     ],
     differences: [
-      "Ist die Unfallanzeige schon unterschrieben, fehlt `Ändern`. Wählen Sie `Korrektur anlegen`. Die alte Fassung bleibt erhalten, die Korrektur wird neu unterschrieben.",
-      "Fehlt `Unfall erfassen`? Dann fehlt Ihnen das Recht dafür. Fragen Sie die Leitung.",
+      "Ist die Unfallanzeige schon unterschrieben, fehlt `Ändern`. Wähle `Korrektur anlegen`. Die alte Fassung bleibt erhalten, die Korrektur wird neu unterschrieben.",
+      "Fehlt `Unfall erfassen`? Dann fehlt dir das Recht dafür. Frage die Leitung.",
     ],
     related: [HELP_TOPICS.leadManageStudent],
   };

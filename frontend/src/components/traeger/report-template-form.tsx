@@ -72,7 +72,7 @@ export function validateTemplateInput(
 ): FieldErrors {
   const errors: FieldErrors = {};
   const name = input.name.trim();
-  if (!name) errors.name = "Bitte geben Sie einen Namen ein.";
+  if (!name) errors.name = "Bitte gib einen Namen ein.";
   else if (name.length > NAME_MAX) {
     errors.name = `Der Name darf höchstens ${NAME_MAX} Zeichen haben.`;
   } else if (
@@ -81,7 +81,7 @@ export function validateTemplateInput(
     errors.name = "Eine Vorlage mit diesem Namen gibt es schon.";
   }
   if (input.sections.length === 0) {
-    errors.sections = "Bitte wählen Sie mindestens einen Abschnitt.";
+    errors.sections = "Bitte wähle mindestens einen Abschnitt.";
   }
   if (input.keyDateDay > daysInMonth(input.keyDateMonth)) {
     errors.key_date_day = "Diesen Tag gibt es im gewählten Monat nicht.";
@@ -164,7 +164,7 @@ export function ReportTemplateForm({
     formErrors.clear();
     const found = validateTemplateInput(draft, takenNames);
     if (Object.keys(found).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", found);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", found);
       return;
     }
     setSaving(true);
@@ -183,7 +183,7 @@ export function ReportTemplateForm({
   return (
     <SectionCard
       title="Vorlage"
-      description="Die Vorlage legt fest, was der Bericht zeigt. Den Stichtag können Sie beim Bericht noch ändern."
+      description="Die Vorlage legt fest, was der Bericht zeigt. Den Stichtag kannst du beim Bericht noch ändern."
       footer={
         <EditActions
           onCancel={onCancel}
@@ -270,13 +270,13 @@ export function ReportTemplateForm({
           legend="Sozialräume (freiwillig)"
           hint={
             mapped === 0
-              ? "Tragen Sie bei jeder Schule ihren Sozialraum ein. Dann zählt der Bericht auch je Sozialraum. Leer heißt: ohne Sozialraum."
+              ? "Trage bei jeder Schule ihren Sozialraum ein. Dann zählt der Bericht auch je Sozialraum. Leer heißt: ohne Sozialraum."
               : `${mapped} von ${schools.length} Schulen haben einen Sozialraum. Schulen ohne Eintrag zählen unter „Ohne Sozialraum“.`
           }
         >
           {schools.length === 0 ? (
             <p className="text-sm text-gray-500">
-              Ihr Träger hat noch keine Schulen.
+              Dein Träger hat noch keine Schulen.
             </p>
           ) : (
             <FramedList maxHeight="lg">

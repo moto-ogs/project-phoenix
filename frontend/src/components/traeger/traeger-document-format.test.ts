@@ -51,7 +51,7 @@ describe("releaseAudienceLabel", () => {
 describe("schoolReleaseAudienceLabel", () => {
   it("speaks from the school's view", () => {
     expect(schoolReleaseAudienceLabel(release({ schoolId: "7" }))).toBe(
-      "Eltern Ihrer Schule",
+      "Eltern deiner Schule",
     );
     expect(schoolReleaseAudienceLabel(release({ audience: "schools" }))).toBe(
       "Alle Schulen des Trägers",

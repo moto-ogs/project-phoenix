@@ -57,7 +57,7 @@ const logger = createLogger({ component: "TraegerSepaImportPage" });
 const STEPS = ["Datei wählen", "Spalten zuordnen", "Prüfen und übernehmen"];
 
 const INFO =
-  "Hier übernehmen Sie Mandate, die Sie schon in einem anderen Programm haben. Referenz und Datum der Unterschrift bleiben gleich. Die Datei bewahrt moto nicht auf.";
+  "Hier übernimmst du Mandate, die du schon in einem anderen Programm hast. Referenz und Datum der Unterschrift bleiben gleich. Die Datei bewahrt moto nicht auf.";
 
 const LASTSCHRIFT = "/traeger/abrechnung/lastschrift";
 
@@ -143,7 +143,7 @@ export default function TraegerSepaImportPage() {
 
   const choose = (chosen: File) => {
     if (!/\.(csv|txt)$/i.test(chosen.name)) {
-      showMessage("Bitte wählen Sie eine CSV-Datei.");
+      showMessage("Bitte wähle eine CSV-Datei.");
       return;
     }
     if (chosen.size > MAX_IMPORT_FILE_BYTES) {
@@ -252,7 +252,7 @@ export default function TraegerSepaImportPage() {
                 icon={<CheckCircle aria-hidden className="size-6" />}
                 titleAs="h2"
                 title={`${importChangesLabel(done.counts.imported, done.counts.debtorNumbers)} übernommen`}
-                description={`Mandate: ${done.counts.duplicate} schon vorhanden, ${done.counts.clarify + done.counts.conflict + done.counts.invalid} nicht übernommen. Sie finden Mandate unter Lastschrift und Debitorennummern bei der Familie.`}
+                description={`Mandate: ${done.counts.duplicate} schon vorhanden, ${done.counts.clarify + done.counts.conflict + done.counts.invalid} nicht übernommen. Du findest Mandate unter Lastschrift und Debitorennummern bei der Familie.`}
                 action={
                   <div className="flex flex-wrap justify-center gap-3">
                     <ButtonLink
@@ -287,7 +287,7 @@ export default function TraegerSepaImportPage() {
               <Alert
                 type="warning"
                 title="Zuerst die Gläubiger-ID eintragen"
-                message="Ein Mandat gilt immer für eine Gläubiger-ID. Tragen Sie Ihre unter Einstellungen → Abrechnung ein."
+                message="Ein Mandat gilt immer für eine Gläubiger-ID. Trage deine unter Einstellungen → Abrechnung ein."
                 action={
                   <ButtonLink
                     href={traegerPath("/traeger/einstellungen/abrechnung")}
@@ -364,7 +364,7 @@ export default function TraegerSepaImportPage() {
                 message={
                   reading
                     ? "Die Datei wird geprüft …"
-                    : "Die Datei ist noch nicht geprüft. Bitte prüfen Sie erneut."
+                    : "Die Datei ist noch nicht geprüft. Bitte prüfe erneut."
                 }
                 action={
                   !reading ? (
@@ -401,8 +401,8 @@ export default function TraegerSepaImportPage() {
                 message={
                   result.unmapped.includes("creditor_id") &&
                   result.unmapped.length === 1
-                    ? "Bestätigen Sie die Gläubiger-ID. Dann zeigt moto die Zeilen."
-                    : "Ordnen Sie alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
+                    ? "Bestätige die Gläubiger-ID. Dann zeigt moto die Zeilen."
+                    : "Ordne alle Pflichtfelder zu. Dann zeigt moto die Zeilen."
                 }
               />
             ) : null}

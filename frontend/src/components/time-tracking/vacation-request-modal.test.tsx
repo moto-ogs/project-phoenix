@@ -226,7 +226,7 @@ describe("VacationRequestModal questioned absences", () => {
 
     expect(
       screen.getByText(
-        "Das sind 2 Tage mehr, als Sie noch haben. Bitte sprechen Sie mit der OGS-Leitung.",
+        "Das sind 2 Tage mehr, als du noch hast. Bitte sprich mit der OGS-Leitung.",
       ),
     ).toBeInTheDocument();
     const send = screen.getByRole("button", { name: "Antrag senden" });

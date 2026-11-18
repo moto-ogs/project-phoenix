@@ -87,7 +87,7 @@ export function CareMealPriceModal({
     formErrors.clear();
     const cents = euroInputToCents(amount.trim());
     if (cents === null) {
-      formErrors.invalid("Bitte prüfen Sie den Betrag.", {
+      formErrors.invalid("Bitte prüfe den Betrag.", {
         amount_cents: "Bitte einen Betrag wie 4,80 eingeben.",
       });
       return;

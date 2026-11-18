@@ -72,7 +72,7 @@ describe("GuardianDeleteModal", () => {
     it("keeps the deletion blocked until a scope is chosen", () => {
       renderModal({ canFullDelete: true, scope: null });
 
-      expect(screen.getByText("Was möchten Sie tun?")).toBeInTheDocument();
+      expect(screen.getByText("Was möchtest du tun?")).toBeInTheDocument();
       expect(
         screen.getByRole("radio", { name: /Nur von diesem Kind entfernen/ }),
       ).toBeInTheDocument();
@@ -133,9 +133,7 @@ describe("GuardianDeleteModal", () => {
       const confirm = screen.getByRole("button", { name: "Endgültig löschen" });
       expect(confirm).toBeDisabled();
 
-      const input = screen.getByLabelText(
-        "Geben Sie zur Bestätigung den Namen ein:",
-      );
+      const input = screen.getByLabelText("Gib zur Bestätigung den Namen ein:");
       fireEvent.change(input, { target: { value: "John Do" } });
       expect(confirm).toBeDisabled();
       fireEvent.change(input, { target: { value: "John Doe" } });

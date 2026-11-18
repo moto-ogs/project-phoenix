@@ -183,7 +183,7 @@ describe("HandOverSupervisionModal", () => {
       "aria-disabled",
       "true",
     );
-    fireEvent.change(screen.getByLabelText("An wen übergeben Sie?"), {
+    fireEvent.change(screen.getByLabelText("An wen übergibst du?"), {
       target: { value: "73" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
@@ -202,7 +202,7 @@ describe("HandOverSupervisionModal", () => {
   it("releases the supervision while another supervisor stays", async () => {
     const { onDone, onClose } = renderModal();
 
-    await screen.findByLabelText("An wen übergeben Sie?");
+    await screen.findByLabelText("An wen übergibst du?");
     chooseRelease();
     expect(
       screen.getByText(/Weiter in der Aufsicht:/).closest("p"),
@@ -214,7 +214,7 @@ describe("HandOverSupervisionModal", () => {
     expect(handOverSupervision).not.toHaveBeenCalled();
     expect(onDone).toHaveBeenCalledOnce();
     expect(showSuccess).toHaveBeenCalledWith(
-      "Sie sind nicht mehr als Aufsicht eingetragen.",
+      "Du bist nicht mehr als Aufsicht eingetragen.",
     );
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -222,7 +222,7 @@ describe("HandOverSupervisionModal", () => {
   it("reloads the running supervision after releasing it", async () => {
     renderModal();
 
-    await screen.findByLabelText("An wen übergeben Sie?");
+    await screen.findByLabelText("An wen übergibst du?");
     expect(fetchRunningSupervision).toHaveBeenCalledTimes(1);
     chooseRelease();
     fireEvent.click(screen.getByRole("button", { name: "Abgeben" }));
@@ -239,12 +239,12 @@ describe("HandOverSupervisionModal", () => {
     });
     renderModal();
 
-    await screen.findByLabelText("An wen übergeben Sie?");
+    await screen.findByLabelText("An wen übergibst du?");
     chooseRelease();
 
     expect(
       screen.getByText(
-        "Sie sind die einzige Aufsicht. Übergeben Sie die Aufsicht an eine Person oder beenden Sie die Aktivität.",
+        "Du bist die einzige Aufsicht. Übergib die Aufsicht an eine Person oder beende die Aktivität.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Abgeben" })).toHaveAttribute(
@@ -262,7 +262,7 @@ describe("HandOverSupervisionModal", () => {
 
     expect(
       await screen.findByText(
-        "Sie beaufsichtigen diese Aktivität nicht mehr. Deshalb können Sie die Aufsicht nicht übergeben.",
+        "Du beaufsichtigst diese Aktivität nicht mehr. Deshalb kannst du die Aufsicht nicht übergeben.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Übergeben" })).toHaveAttribute(
@@ -270,7 +270,7 @@ describe("HandOverSupervisionModal", () => {
       "true",
     );
     expect(
-      screen.queryByLabelText("An wen übergeben Sie?"),
+      screen.queryByLabelText("An wen übergibst du?"),
     ).not.toBeInTheDocument();
   });
 
@@ -282,7 +282,7 @@ describe("HandOverSupervisionModal", () => {
     );
     const { onDone, onClose } = renderModal();
 
-    await screen.findByLabelText("An wen übergeben Sie?");
+    await screen.findByLabelText("An wen übergibst du?");
     chooseRelease();
     fireEvent.click(screen.getByRole("button", { name: "Abgeben" }));
 
@@ -318,7 +318,7 @@ describe("HandOverSupervisionModal", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(
-      await screen.findByLabelText("An wen übergeben Sie?"),
+      await screen.findByLabelText("An wen übergibst du?"),
     ).toBeInTheDocument();
   });
 });

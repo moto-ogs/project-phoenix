@@ -154,9 +154,9 @@ export function offeringDraftFromForm(form: OfferingFormDraft): {
 } {
   const errors: Record<string, string> = {};
   const { fields } = form;
-  if (!fields.name.trim()) errors.name = "Bitte geben Sie einen Namen ein.";
+  if (!fields.name.trim()) errors.name = "Bitte gib einen Namen ein.";
   if (fields.availableDays.length === 0) {
-    errors.available_days = "Bitte wählen Sie mindestens einen Wochentag.";
+    errors.available_days = "Bitte wähle mindestens einen Wochentag.";
   }
   let capacity: number | null = null;
   if (form.capacity.trim()) {
@@ -307,7 +307,7 @@ export function CatalogOfferingForm({
     formErrors.clear();
     const { draft, errors } = offeringDraftFromForm(form);
     if (!draft) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", errors);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     setSaving(true);

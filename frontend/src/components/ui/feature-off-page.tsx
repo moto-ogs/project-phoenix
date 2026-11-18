@@ -21,7 +21,7 @@ interface FeatureOffPageProps {
  *
  * Vorher riefen die Wächter `notFound()`, und Next.js zeigte daraufhin die
  * 404-Seite des Mandanten: „Schule nicht gefunden — Die angegebene Schule
- * existiert nicht oder ist nicht aktiv. Bitte überprüfen Sie die Subdomain."
+ * existiert nicht oder ist nicht aktiv. Bitte überprüfe die Subdomain."
  * Für jemanden, der angemeldet in seiner eigenen Schule steht, ist jedes Wort
  * davon falsch, und der Rat führt in die Irre.
  *
@@ -31,7 +31,7 @@ interface FeatureOffPageProps {
 export function FeatureOffPage({
   title,
   description,
-  whoCanEnable = "Wenden Sie sich an moto, wenn Sie diese Funktion nutzen möchten.",
+  whoCanEnable = "Wende dich an moto, wenn du diese Funktion nutzen möchtest.",
 }: FeatureOffPageProps) {
   const icon = <PlugsIcon className="h-12 w-12" aria-hidden="true" />;
   const body = `${description} ${whoCanEnable}`;

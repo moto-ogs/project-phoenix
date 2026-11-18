@@ -329,7 +329,7 @@ export function PresentChildrenPicker({
             disabled={isAdding || selectedIds.length === 0}
             disabledReason={
               load.kind === "loaded" && !isAdding
-                ? "Wählen Sie zuerst mindestens ein Kind aus."
+                ? "Wähle zuerst mindestens ein Kind aus."
                 : undefined
             }
             tooltip="Trägt die gewählten Kinder sofort als anwesend in diese Aktivität ein."
@@ -432,7 +432,7 @@ function PresentChildrenList({
       <EmptyState
         variant="compact"
         title="Die Kinder konnten nicht geladen werden."
-        description="Bitte schließen Sie den Dialog und öffnen Sie ihn noch einmal."
+        description="Bitte schließe den Dialog und öffne ihn noch einmal."
       />
     );
   }
@@ -503,13 +503,13 @@ function emptyText(
   if (scope === "stays") {
     return {
       title: "Kein weiteres Kind bleibt noch länger.",
-      description: "Unter „Alle anwesenden“ sehen Sie alle Kinder in der OGS.",
+      description: "Unter „Alle anwesenden“ siehst du alle Kinder in der OGS.",
     };
   }
   if (scope === "offering") {
     return {
       title: "Kein weiteres anwesendes Kind hat dieses Angebot heute gebucht.",
-      description: "Unter „Alle anwesenden“ sehen Sie alle Kinder in der OGS.",
+      description: "Unter „Alle anwesenden“ siehst du alle Kinder in der OGS.",
     };
   }
   return { title: "Gerade ist kein weiteres Kind in der OGS." };

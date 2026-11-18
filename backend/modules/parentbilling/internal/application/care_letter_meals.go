@@ -30,10 +30,10 @@ func mealPositionLabel(position parentbilling.CareMealPosition) string {
 // the OGS released when it bills Mensa months.
 func careBasisText(invoice parentbilling.CareInvoice) string {
 	if len(invoice.MealPositions) == 0 {
-		return "Abgerechnet wird nach Ihrem Vertrag, nicht nach Anwesenheit."
+		return "Abgerechnet wird nach eurem Vertrag, nicht nach Anwesenheit."
 	}
 	if len(invoice.Positions) == 0 {
 		return "Abgerechnet wird das Mittagessen, wie die OGS es für den Monat bestätigt hat."
 	}
-	return "Die Betreuung rechnen wir nach Ihrem Vertrag ab. Das Mittagessen rechnen wir so ab, wie die OGS es für den Monat bestätigt hat."
+	return "Die Betreuung rechnen wir nach eurem Vertrag ab. Das Mittagessen rechnen wir so ab, wie die OGS es für den Monat bestätigt hat."
 }

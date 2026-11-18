@@ -651,7 +651,7 @@ export function CatalogPage<T extends CatalogItem>({
                 {selectedReadOnly
                   ? (config.readOnlyHint ??
                     "Dieser Eintrag gehört zum System und lässt sich nicht ändern.")
-                  : `Sie können ${config.title} ansehen. Ändern können sie Personen mit dem passenden Recht.`}
+                  : `Du kannst ${config.title} ansehen. Ändern können sie Personen mit dem passenden Recht.`}
               </p>
             ),
         },
@@ -665,7 +665,7 @@ export function CatalogPage<T extends CatalogItem>({
       icon={<MousePointer2 className="h-10 w-10" aria-hidden="true" />}
       titleAs="h3"
       title={`${config.singular} auswählen`}
-      description={`Wählen Sie links einen Eintrag, um ihn zu ändern.`}
+      description={`Wähle links einen Eintrag, um ihn zu ändern.`}
       className="h-full justify-center px-12"
     />
   );
@@ -688,7 +688,7 @@ export function CatalogPage<T extends CatalogItem>({
                 ? "Nichts gefunden"
                 : `Noch keine ${config.title}`,
               description: isSearching
-                ? "Bitte prüfen Sie die Schreibweise oder löschen Sie die Suche."
+                ? "Bitte prüfe die Schreibweise oder lösche die Suche."
                 : config.emptyDescription,
               icon: (
                 <MotoDuotoneIcon

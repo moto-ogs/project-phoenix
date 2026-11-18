@@ -89,12 +89,12 @@ const STATE_EMPTY: Record<DayLogState, { title: string; description: string }> =
     disabled: {
       title: "Anwesenheitsprotokoll ist ausgeschaltet",
       description:
-        "Ihre Leitung kann es in den Einstellungen unter Datenschutz einschalten.",
+        "Deine Leitung kann es in den Einstellungen unter Datenschutz einschalten.",
     },
     no_groups: {
-      title: "Noch keine Gruppen für Ihr Konto",
+      title: "Noch keine Gruppen für dein Konto",
       description:
-        "Für Ihr Konto ist keine Gruppe sichtbar. Bitte wenden Sie sich an Ihre Leitung.",
+        "Für dein Konto ist keine Gruppe sichtbar. Bitte wende dich an deine Leitung.",
     },
   };
 
@@ -439,7 +439,7 @@ export default function DayLogPage() {
       label:
         exporting === `pdf-${groupId ?? "all"}` ? "Wird exportiert…" : "PDF",
       icon: <Download className="h-4 w-4" aria-hidden />,
-      description: `Speichert ${exportScope(groupId)} als PDF auf Ihrem Gerät.`,
+      description: `Speichert ${exportScope(groupId)} als PDF auf deinem Gerät.`,
       onClick: () => void downloadExport("pdf", groupId),
       disabled: !data || exporting !== null,
     },
@@ -447,7 +447,7 @@ export default function DayLogPage() {
       label:
         exporting === `docx-${groupId ?? "all"}` ? "Wird exportiert…" : "Word",
       icon: <FileText className="h-4 w-4" aria-hidden />,
-      description: `Speichert ${exportScope(groupId)} als Word-Datei auf Ihrem Gerät.`,
+      description: `Speichert ${exportScope(groupId)} als Word-Datei auf deinem Gerät.`,
       onClick: () => void downloadExport("docx", groupId),
       disabled: !data || exporting !== null,
     },
@@ -455,7 +455,7 @@ export default function DayLogPage() {
       label:
         exporting === `xlsx-${groupId ?? "all"}` ? "Wird exportiert…" : "Excel",
       icon: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
-      description: `Speichert ${exportScope(groupId)} als Excel-Datei auf Ihrem Gerät.`,
+      description: `Speichert ${exportScope(groupId)} als Excel-Datei auf deinem Gerät.`,
       onClick: () => void downloadExport("xlsx", groupId),
       disabled: !data || exporting !== null,
     },
@@ -521,7 +521,7 @@ export default function DayLogPage() {
             ? {
                 title: "Keine Gruppe für diesen Tag",
                 description:
-                  "Für den gewählten Tag ist keine Gruppe sichtbar. Legen Sie eine Gruppe an oder lassen Sie sich einer Gruppe zuordnen.",
+                  "Für den gewählten Tag ist keine Gruppe sichtbar. Lege eine Gruppe an oder lass dich einer Gruppe zuordnen.",
               }
             : null
       }

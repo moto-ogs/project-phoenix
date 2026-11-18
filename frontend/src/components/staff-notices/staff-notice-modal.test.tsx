@@ -51,15 +51,13 @@ describe("StaffNoticeModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Titel")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
-    expect(
-      screen.getByText("Bitte geben Sie einen Titel an."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte gib einen Titel an.")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 

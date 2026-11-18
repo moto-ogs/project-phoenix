@@ -158,7 +158,7 @@ describe("SchoolAbsenceListPage", () => {
       target: { value: "2026-09-30" },
     });
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("Bitte wählen Sie ein Von-Datum.");
+    expect(alert).toHaveTextContent("Bitte wähle ein Von-Datum.");
     // The stub renders the error inside the field's own wrapper.
     expect(alert.parentElement).toContainElement(screen.getByLabelText("Von"));
     expect(listKeys()).not.toContain("school-absence-list-3a--2026-09-30");
@@ -186,7 +186,7 @@ describe("SchoolAbsenceListPage", () => {
     renderPage();
 
     expect(
-      screen.getByText("Ihnen ist keine Klasse zugeordnet."),
+      screen.getByText("Dir ist keine Klasse zugeordnet."),
     ).toBeInTheDocument();
     expect(listKeys()).toEqual([]);
   });

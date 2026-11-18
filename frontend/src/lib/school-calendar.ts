@@ -108,9 +108,9 @@ export function schoolAppointmentFieldErrors(
   creating: boolean,
 ): Record<string, string> {
   const fields: Record<string, string> = {};
-  if (!draft.title.trim()) fields.title = "Bitte geben Sie einen Titel ein.";
-  if (!draft.startDate) fields.start_date = "Bitte wählen Sie den ersten Tag.";
-  if (!draft.endDate) fields.end_date = "Bitte wählen Sie den letzten Tag.";
+  if (!draft.title.trim()) fields.title = "Bitte gib einen Titel ein.";
+  if (!draft.startDate) fields.start_date = "Bitte wähle den ersten Tag.";
+  if (!draft.endDate) fields.end_date = "Bitte wähle den letzten Tag.";
   if (
     !draft.allDay &&
     draft.startDate === draft.endDate &&
@@ -121,7 +121,7 @@ export function schoolAppointmentFieldErrors(
     fields.end_time = "Das Ende muss nach dem Beginn liegen.";
   }
   if (creating && draft.parents === "classes" && draft.classes.length === 0) {
-    fields.classes = "Bitte wählen Sie mindestens eine Klasse.";
+    fields.classes = "Bitte wähle mindestens eine Klasse.";
   }
   return fields;
 }

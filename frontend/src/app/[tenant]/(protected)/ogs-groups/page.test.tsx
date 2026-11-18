@@ -1531,7 +1531,7 @@ describe("OGSGroupPage additional scenarios", () => {
     // mocked here, so the retry action is not rendered).
     expect(
       await screen.findByText(
-        catalogText("general.server", "die Liste Ihrer OGS-Gruppe"),
+        catalogText("general.server", "die Liste deiner OGS-Gruppe"),
       ),
     ).toBeInTheDocument();
   });

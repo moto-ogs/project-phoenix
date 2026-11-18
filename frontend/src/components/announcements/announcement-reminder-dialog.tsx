@@ -116,8 +116,8 @@ export function AnnouncementReminderDialog({
 
   const submit = async (remove: boolean) => {
     if (!remove && !day) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", {
-        reminder_at: "Bitte wählen Sie einen Tag für die Erinnerung.",
+      formErrors.invalid("Bitte prüfe die markierten Felder.", {
+        reminder_at: "Bitte wähle einen Tag für die Erinnerung.",
       });
       return;
     }

@@ -70,7 +70,7 @@ const STATUS_ORDER: readonly StaffProofStatus[] = [
 const NO_MAPPING = "";
 
 const INFO =
-  "Hier sehen Sie, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis tragen Sie in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legen Sie je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Jedes Anzeigen dieser Liste steht im Zugriffsprotokoll der Schulen.";
+  "Hier siehst du, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis trägst du in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legst du je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Jedes Anzeigen dieser Liste steht im Zugriffsprotokoll der Schulen.";
 
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
@@ -147,7 +147,7 @@ function useProofListView(loaded: StaffProofList | null) {
         <span className="block min-w-0">
           <ButtonLink
             href={traegerPath(`/traeger/personal/${entry.recordId}`)}
-            tooltip="Öffnet die Personalakte. Dort tragen Sie den Nachweis ein."
+            tooltip="Öffnet die Personalakte. Dort trägst du den Nachweis ein."
             variant="link"
           >
             {staffName(entry)}
@@ -297,7 +297,7 @@ function useProofListView(loaded: StaffProofList | null) {
                   <CertificateIcon className="h-12 w-12" aria-hidden="true" />
                 }
                 title="Noch keine Personalakte mit Nachweisen."
-                description="Sobald Ihr Träger Personalakten führt, steht hier für jede Person der Stand ihrer Nachweise."
+                description="Sobald dein Träger Personalakten führt, steht hier für jede Person der Stand ihrer Nachweise."
               />
             ) : status === "open" && kind === "all" && search.trim() === "" ? (
               <EmptyState
@@ -311,7 +311,7 @@ function useProofListView(loaded: StaffProofList | null) {
             ) : (
               <EmptyState
                 title="Kein Nachweis gefunden."
-                description="Ändern Sie die Suche oder die Filter."
+                description="Ändere die Suche oder die Filter."
               />
             )
           }
@@ -379,7 +379,7 @@ function ProofTypes({
   return (
     <SectionCard
       title="Nachweisarten"
-      description="Welche Nachweise Ihr Träger verlangt, wie lange sie gelten und wie früh moto vor dem Ablauf warnt. Öffnen Sie eine Art, um sie zu ändern oder zu archivieren."
+      description="Welche Nachweise dein Träger verlangt, wie lange sie gelten und wie früh moto vor dem Ablauf warnt. Öffne eine Art, um sie zu ändern oder zu archivieren."
       action={
         <Button
           type="button"
@@ -475,7 +475,7 @@ function SchoolKinds({
       title={school.schoolName}
       description={
         school.kinds.length > 0
-          ? "Ordnen Sie jede Nachweisart der Schule einer Art Ihres Trägers zu. Für Personen mit Akte erinnert dann nur noch der Nachweis des Trägers."
+          ? "Ordne jede Nachweisart der Schule einer Art deines Trägers zu. Für Personen mit Akte erinnert dann nur noch der Nachweis des Trägers."
           : undefined
       }
       footer={
@@ -521,7 +521,7 @@ function SchoolKinds({
         <EmptyState
           variant="compact"
           title="Die Schule hat noch keine Nachweisarten."
-          description="Sobald die Schule Nachweisarten anlegt, ordnen Sie sie hier zu."
+          description="Sobald die Schule Nachweisarten anlegt, ordnest du sie hier zu."
         />
       )}
     </SectionCard>
@@ -634,7 +634,7 @@ export default function TraegerStaffProofsPage() {
           </div>
         ) : (
           <SectionCard>
-            <EmptyState title="Ihr Träger hat noch keine Schule." />
+            <EmptyState title="Dein Träger hat noch keine Schule." />
           </SectionCard>
         )
       ) : null}

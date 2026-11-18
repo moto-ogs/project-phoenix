@@ -25,7 +25,7 @@ func registerRoomChangeTypes() {
 	RegisterType(TypeDefinition{
 		Key:                           TypeInstanceRoomChanged,
 		Label:                         "Raumänderung heute oder morgen",
-		Description:                   "Wenn ein Termin, für den Sie eingeplant sind, heute oder morgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer.",
+		Description:                   "Wenn ein Termin, für den du eingeplant bist, heute oder morgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer.",
 		Group:                         GroupAppointments,
 		Portal:                        PortalStaff,
 		TenantGate:                    settingInstanceRoomChangedEnabled,
@@ -39,7 +39,7 @@ func registerRoomChangeTypes() {
 	RegisterType(TypeDefinition{
 		Key:                           TypeInstanceRoomChangedLater,
 		Label:                         "Raumänderung an späteren Tagen",
-		Description:                   "Wenn ein Termin, für den Sie eingeplant sind, ab übermorgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
+		Description:                   "Wenn ein Termin, für den du eingeplant bist, ab übermorgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn du sie einschaltest, und nur für die nächsten 14 Tage.",
 		Group:                         GroupAppointments,
 		Portal:                        PortalStaff,
 		TenantGate:                    settingInstanceRoomChangedEnabled,
@@ -52,7 +52,7 @@ func registerRoomChangeTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentRoomChanged,
 		Label:       "Raumänderung heute oder morgen",
-		Description: "Wenn ein Termin Ihres Kindes heute oder morgen in einem anderen Raum stattfindet.",
+		Description: "Wenn ein Termin deines Kindes heute oder morgen in einem anderen Raum stattfindet.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
 		TenantGate:  settingInstanceRoomChangedEnabled,
@@ -63,7 +63,7 @@ func registerRoomChangeTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentRoomChangedLater,
 		Label:       "Raumänderung an späteren Tagen",
-		Description: "Wenn ein Termin Ihres Kindes ab übermorgen in einem anderen Raum stattfindet. Die Mitteilung kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
+		Description: "Wenn ein Termin deines Kindes ab übermorgen in einem anderen Raum stattfindet. Die Mitteilung kommt nur, wenn du sie einschaltest, und nur für die nächsten 14 Tage.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
 		TenantGate:  settingInstanceRoomChangedEnabled,

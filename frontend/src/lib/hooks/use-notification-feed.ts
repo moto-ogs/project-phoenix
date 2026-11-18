@@ -15,7 +15,11 @@ import type { NotificationFeedEntry } from "~/lib/notification-feed-helpers";
 import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { onSWRScopeReset, useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
-import { notificationFeedKeys, schoolPortalKeys } from "~/lib/swr/portal-keys";
+import {
+  catererKeys,
+  notificationFeedKeys,
+  schoolPortalKeys,
+} from "~/lib/swr/portal-keys";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 
 /** Woher eine Glocke ihren Feed liest: das Portal und seine Aufrufe. */
@@ -39,20 +43,39 @@ const FEED_FALLBACK_INTERVAL_MS = 60 * 1000;
 // gespeicherten Stand und fasst mehrere Ereignisse zu einem Abruf zusammen.
 const NOTIFICATION_FEED_REFRESH_DELAY_MS = 500;
 
-/** Ruft `refresh` nach dem letzten Live-Ereignis einer kurzen Folge auf. */
-function onFeedRefresh(refresh: () => void): () => void {
+// Die Glocke im Kopf und die untere Leiste lesen denselben Zähler. Jede
+// Ansicht hört auf das Ereignis, aber nur die erste je Schlüssel ruft neu ab:
+// ein Abruf je Ereignis, nicht einer je Ansicht.
+const sharedRefreshers = new Map<string, Set<() => void>>();
+
+/**
+ * Ruft `refresh` nach dem letzten Live-Ereignis einer kurzen Folge auf. Mit
+ * `sharedKey` läuft je Ereignis nur ein Abruf für alle Ansichten des
+ * Schlüssels.
+ */
+function onFeedRefresh(refresh: () => void, sharedKey?: string): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let readers: Set<() => void> | undefined;
+  if (sharedKey !== undefined) {
+    readers = sharedRefreshers.get(sharedKey) ?? new Set();
+    sharedRefreshers.set(sharedKey, readers);
+    readers.add(refresh);
+  }
   const handle = () => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       timer = null;
-      refresh();
+      const [first] = readers ?? [refresh];
+      if (first === refresh) refresh();
     }, NOTIFICATION_FEED_REFRESH_DELAY_MS);
   };
   window.addEventListener(NOTIFICATION_FEED_REFRESH_EVENT, handle);
   return () => {
     if (timer) clearTimeout(timer);
     window.removeEventListener(NOTIFICATION_FEED_REFRESH_EVENT, handle);
+    readers?.delete(refresh);
+    if (sharedKey !== undefined && readers?.size === 0)
+      sharedRefreshers.delete(sharedKey);
   };
 }
 
@@ -70,16 +93,19 @@ export function useNotificationFeedUnread(
   const portal = useNotificationFeedPortal();
   const { apiBase } = portal;
   const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
+  const key = !enabled
+    ? null
+    : source
+      ? parentKeys.notificationFeed.unreadCount()
+      : portal.keyScope === "school"
+        ? schoolPortalKeys.notificationFeedUnread()
+        : portal.keyScope === "traeger"
+          ? traegerKeys.notificationFeedUnread()
+          : portal.keyScope === "caterer"
+            ? catererKeys.notificationFeedUnread()
+            : notificationFeedKeys.unreadCount();
   const { data, mutate } = useSWRAuth<number>(
-    !enabled
-      ? null
-      : source
-        ? parentKeys.notificationFeed.unreadCount()
-        : portal.keyScope === "school"
-          ? schoolPortalKeys.notificationFeedUnread()
-          : portal.keyScope === "traeger"
-            ? traegerKeys.notificationFeedUnread()
-            : notificationFeedKeys.unreadCount(),
+    key,
     () =>
       source
         ? source.api.fetchUnreadCount()
@@ -93,8 +119,8 @@ export function useNotificationFeedUnread(
   );
 
   useEffect(
-    () => (enabled ? onFeedRefresh(() => void mutate()) : undefined),
-    [enabled, mutate],
+    () => (key === null ? undefined : onFeedRefresh(() => void mutate(), key)),
+    [key, mutate],
   );
 
   const setUnreadCount = useCallback(
@@ -171,7 +197,9 @@ export function useNotificationFeed(
         ? schoolPortalKeys.notificationFeedFirstPage()
         : portal.keyScope === "traeger"
           ? traegerKeys.notificationFeedFirstPage()
-          : notificationFeedKeys.firstPage(),
+          : portal.keyScope === "caterer"
+            ? catererKeys.notificationFeedFirstPage()
+            : notificationFeedKeys.firstPage(),
     () => (source ? source.api.fetchPage() : fetchNotificationFeed(apiBase)),
     {
       refreshInterval,

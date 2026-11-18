@@ -1429,6 +1429,9 @@ describe("Enhanced rendering: action buttons and search/filter interaction", () 
   });
 
   it("shows 'Beaufsichtigen' button when Schulhof tab selected but not supervising", async () => {
+    // Der Knopf steht auf der Raumseite des Schulhofs (#4372). Ohne Raum
+    // zeigt die Seite nur den Leertext.
+    navigationMockState.roomParam = "schulhof-r1";
     vi.mocked(useSWRAuth)
       .mockReturnValueOnce({
         data: {
@@ -1478,9 +1481,9 @@ describe("Enhanced rendering: action buttons and search/filter interaction", () 
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      // The "Beaufsichtigen" button should appear both in action area and main view
-      const claimButtons = screen.getAllByText(/Beaufsichtigen|beaufsichtigen/);
-      expect(claimButtons.length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getByRole("button", { name: "Beaufsichtigen" }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -4278,7 +4281,7 @@ describe("MeinRaumPage (Active Supervisions) (5/5)", () => {
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Sie sind aktuell in keinem Raum als Live-Aktivität registriert. Starten Sie eine Aktivität an einem Terminal, um Live-Raumdaten einzusehen.",
+          "Du bist aktuell in keinem Raum als Live-Aktivität registriert. Starte eine Aktivität an einem Terminal, um Live-Raumdaten einzusehen.",
         ),
       ).toBeInTheDocument();
     });
@@ -4299,7 +4302,7 @@ describe("MeinRaumPage (Active Supervisions) (5/5)", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Sie sind aktuell in keinem Raum als Live-Aktivität registriert. Starten Sie eine Aktivität in der Web-App, um Live-Raumdaten einzusehen.",
+          "Du bist aktuell in keinem Raum als Live-Aktivität registriert. Starte eine Aktivität in der Web-App, um Live-Raumdaten einzusehen.",
         ),
       ).toBeInTheDocument();
     });
@@ -6008,7 +6011,7 @@ describe("overview caller and foreign sessions (#5035)", () => {
     });
     expect(localStorage.getItem(memoryKey("sidebar-last-room"))).toBe("r2");
     expect(screen.getByText("Julia Klein")).toBeInTheDocument();
-    expect(screen.queryByText("Nicht Ihre Aufsicht")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nicht deine Aufsicht")).not.toBeInTheDocument();
     expect(screen.getByTestId("transit-students-section")).toBeInTheDocument();
   });
 
@@ -6018,7 +6021,7 @@ describe("overview caller and foreign sessions (#5035)", () => {
 
     render(<MeinRaumPage />);
 
-    expect(await screen.findByText("Nicht Ihre Aufsicht")).toBeInTheDocument();
+    expect(await screen.findByText("Nicht deine Aufsicht")).toBeInTheDocument();
     expect(screen.getByText("Paul Weber")).toBeInTheDocument();
     expect(localStorage.getItem(memoryKey("supervision-last-session"))).toBe(
       "foreign-1",
@@ -6061,7 +6064,7 @@ describe("overview caller and foreign sessions (#5035)", () => {
 
     render(<MeinRaumPage />);
 
-    expect(await screen.findByText("Nicht Ihre Aufsicht")).toBeInTheDocument();
+    expect(await screen.findByText("Nicht deine Aufsicht")).toBeInTheDocument();
     expect(screen.getByTestId("transit-students-section")).toBeInTheDocument();
   });
 });

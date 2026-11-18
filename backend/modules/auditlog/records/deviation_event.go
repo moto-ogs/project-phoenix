@@ -118,6 +118,8 @@ type DeviationEventRepository interface {
 	// first, optionally narrowed to one slot via activityGroupID and
 	// startTime ("HH:MM").
 	ListByRange(ctx context.Context, from, to Date, activityGroupID *int64, startTime *string) ([]*DeviationEvent, error)
+	// TimetableRetentionCutoff reads the Berlin day of the database guard.
+	TimetableRetentionCutoff(context.Context, int) (Date, error)
 	// DeleteOlderThan removes events whose occurrence_date is before the
 	// cutoff (GDPR retention, rides the timetable retention window).
 	DeleteOlderThan(ctx context.Context, cutoff Date) (int64, error)

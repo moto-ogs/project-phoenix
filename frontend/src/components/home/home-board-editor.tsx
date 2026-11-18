@@ -758,7 +758,7 @@ function BlockToolbar({
                 size="md"
                 className="gap-1"
                 onClick={() => onRemove(placement.key)}
-                tooltip="Nimmt diesen Baustein von Ihrer Startseite, sobald Sie speichern."
+                tooltip="Nimmt diesen Baustein von deiner Startseite, sobald du speicherst."
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 Entfernen
@@ -788,7 +788,7 @@ function BlockToolbar({
             size="md"
             className="gap-1"
             onClick={() => setAdding(true)}
-            tooltip="Öffnet die Liste der Bausteine, die Sie hinzufügen können."
+            tooltip="Öffnet die Liste der Bausteine, die du hinzufügen kannst."
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             Bausteine
@@ -800,7 +800,7 @@ function BlockToolbar({
             className="whitespace-nowrap"
             disabled={restoring}
             onClick={onRestoreDefault}
-            tooltip="Verwirft Ihre Anordnung sofort und zeigt die empfohlene Startseite."
+            tooltip="Verwirft deine Anordnung sofort und zeigt die empfohlene Startseite."
           >
             Standardansicht wiederherstellen
           </Button>
@@ -845,13 +845,13 @@ function AddBlockModal({
     >
       {addable.length === 0 ? (
         <EmptyState
-          title="Sie haben schon alles"
-          description="Auf Ihrer Startseite steht jeder Baustein, der für Sie verfügbar ist."
+          title="Du hast schon alles"
+          description="Auf deiner Startseite steht jeder Baustein, der für dich verfügbar ist."
         />
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
-            Der Baustein erscheint am Ende Ihrer Startseite. Von dort ziehen Sie
+            Der Baustein erscheint am Ende deiner Startseite. Von dort ziehst du
             ihn an seinen Platz.
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

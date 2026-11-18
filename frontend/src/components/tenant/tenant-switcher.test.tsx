@@ -463,7 +463,7 @@ describe("BrandTenantSwitcher", () => {
       name: "Zur Schulanmeldung",
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Für die Anmeldung bei School B brauchen Sie einen zweiten Anmeldenachweis.",
+      "Für die Anmeldung bei School B brauchst du einen zweiten Anmeldenachweis.",
     );
     expect(window.location.href).toBe("");
     expect(mockSignOut).not.toHaveBeenCalled();
@@ -500,7 +500,7 @@ describe("BrandTenantSwitcher", () => {
       name: "Mit Code neu anmelden",
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Diese Schule verlangt zum Öffnen einen Code aus Ihrer E-Mail.",
+      "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
     );
     expect(
       screen.queryByRole("button", { name: "Zur Schulanmeldung" }),

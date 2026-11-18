@@ -127,8 +127,8 @@ export function AdminEnrollmentChangeRequestDetail({
     const note = reviewNote.trim();
     // Freigeben geht ohne Begründung, Ablehnen nicht (#5024).
     if (!approved && !note) {
-      reviewErrors.invalid("Bitte begründen Sie die Ablehnung.", {
-        note: "Bitte tragen Sie eine Begründung ein.",
+      reviewErrors.invalid("Bitte begründe die Ablehnung.", {
+        note: "Bitte trage eine Begründung ein.",
       });
       return;
     }
@@ -197,7 +197,7 @@ export function AdminEnrollmentChangeRequestDetail({
     reviewBlockedReason ??
     (question.trim()
       ? undefined
-      : "Schreiben Sie zuerst eine Nachricht an die Eltern.");
+      : "Schreibe zuerst eine Nachricht an die Eltern.");
   const enrollmentHref = request
     ? tenantPath(`/admin/enrollments/${encodeURIComponent(request.id)}`)
     : tenantPath("/admin/enrollments");
@@ -255,7 +255,7 @@ export function AdminEnrollmentChangeRequestDetail({
             <p className="text-sm leading-6 text-gray-600">
               {data.origin === "admin"
                 ? "Diese Korrektur wurde direkt an der Anmeldung vorgenommen, in die verknüpften Stammdaten übernommen und protokolliert."
-                : "Vergleichen Sie die eingereichten Änderungen mit dem gespeicherten Stand. Rückfragen pausieren die Prüfung, Freigabe übernimmt die Änderung in die Anmeldung."}
+                : "Vergleiche die eingereichten Änderungen mit dem gespeicherten Stand. Rückfragen pausieren die Prüfung, Freigabe übernimmt die Änderung in die Anmeldung."}
             </p>
 
             <ChangeSummary request={data} formLabels={formLabels} />
@@ -340,7 +340,7 @@ export function AdminEnrollmentChangeRequestDetail({
                     onClick={() => void handleQuestion()}
                     disabled={!canReview || busy !== null || !question.trim()}
                     disabledReason={questionBlockedReason}
-                    tooltip="Zeigt den Eltern Ihre Rückfrage auf ihrer Statusseite."
+                    tooltip="Zeigt den Eltern deine Rückfrage auf ihrer Statusseite."
                     className="mt-3 inline-flex w-full items-center justify-center gap-2"
                   >
                     <MotoConceptIcon

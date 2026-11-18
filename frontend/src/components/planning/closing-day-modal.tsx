@@ -6,6 +6,7 @@
  * unlike CalendarPeriodModal there is no type, cycle, or link section.
  */
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   type ReactNode,
   useEffect,
@@ -101,9 +102,9 @@ export function ClosingDayModal({
   const handleSave = async () => {
     const fields = closingDayFieldErrors(reason, startDate, endDate);
     if (schools && schoolIds.length === 0)
-      fields.school_ids = "Bitte wählen Sie mindestens eine Schule.";
+      fields.school_ids = "Bitte wähle mindestens eine Schule.";
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     const body = {
@@ -349,7 +350,7 @@ async function offerCancel(
       error: err instanceof Error ? err.message : String(err),
     });
     // Bewusst still ohne Recht zum Absagen: der Dialog könnte nichts tun.
-    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+    if (err instanceof ApiError && isAccessRefusal(err)) {
       return;
     }
     // Sonst ist offen, ob noch Termine im Zeitraum liegen. Der Dialog
@@ -366,9 +367,9 @@ function closingDayFieldErrors(
   endDate: string,
 ): Record<string, string> {
   const fields: Record<string, string> = {};
-  if (!reason.trim()) fields.reason = "Bitte geben Sie einen Grund an.";
-  if (!startDate) fields.start_date = "Bitte wählen Sie den ersten Tag.";
-  if (!endDate) fields.end_date = "Bitte wählen Sie den letzten Tag.";
+  if (!reason.trim()) fields.reason = "Bitte gib einen Grund an.";
+  if (!startDate) fields.start_date = "Bitte wähle den ersten Tag.";
+  if (!endDate) fields.end_date = "Bitte wähle den letzten Tag.";
   if (startDate && endDate && endDate < startDate)
     fields.end_date = "Der letzte Tag darf nicht vor dem ersten liegen.";
   return fields;

@@ -78,8 +78,8 @@ function useCostBearerSave(
   const save = async (id: string | null, draft: CostBearerInput) => {
     formErrors.clear();
     if (!draft.name.trim()) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", {
-        name: "Bitte geben Sie den Namen ein.",
+      formErrors.invalid("Bitte prüfe deine Angaben.", {
+        name: "Bitte gib den Namen ein.",
       });
       return "failed";
     }
@@ -142,7 +142,7 @@ function CostBearerFields({
         controlSize="touch"
         id={`${idPrefix}-file-reference`}
         name="file_reference"
-        label="Ihr Aktenzeichen beim Kostenträger (freiwillig)"
+        label="Dein Aktenzeichen beim Kostenträger (freiwillig)"
         maxLength={100}
         value={draft.fileReference}
         error={formErrors.fieldError("file_reference") ?? undefined}
@@ -341,7 +341,7 @@ export function CostBearersCard({
   return (
     <SectionCard
       title="Kostenträger"
-      description="Stellen, die den Beitrag für eine Familie bezahlen, zum Beispiel das Jugendamt. Sie wählen den Kostenträger beim Bestätigen der Anmeldung. Wurde er schon gewählt, können Sie ihn nur ausschalten."
+      description="Stellen, die den Beitrag für eine Familie bezahlen, zum Beispiel das Jugendamt. Du wählst den Kostenträger beim Bestätigen der Anmeldung. Wurde er schon gewählt, kannst du ihn nur ausschalten."
       actions={
         <Button
           type="button"

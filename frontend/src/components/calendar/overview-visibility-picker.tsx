@@ -14,7 +14,7 @@ const OPTIONS: ReadonlyArray<{
   {
     value: "organizer",
     label: "Nur ich",
-    description: "Nur Sie sehen, wer zugesagt oder abgesagt hat.",
+    description: "Nur du siehst, wer zugesagt oder abgesagt hat.",
   },
   {
     value: "staff",

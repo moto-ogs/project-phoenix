@@ -163,7 +163,7 @@ function SurveysContent() {
         />
       )
     ) : toAnswer.data === undefined ? null : (
-      `${pendingCount} offen für Sie`
+      `${pendingCount} offen für dich`
     );
 
   const columns: DataTableColumn<Survey>[] = [
@@ -248,14 +248,14 @@ function SurveysContent() {
             icon: <ListChecks className="h-12 w-12" aria-hidden />,
             title: "Noch keine Umfragen",
             description:
-              "Fragen Sie Eltern oder das Team nach ihrer Meinung, auf Wunsch anonym.",
+              "Frage Eltern oder das Team nach ihrer Meinung, auf Wunsch anonym.",
           }
         : view === "fuer-sie" && openToAnswer.length === 0
           ? {
               icon: <ListChecks className="h-12 w-12" aria-hidden />,
               title: "Keine offenen Umfragen",
               description:
-                "Hier erscheinen Umfragen, die Ihre Schule an das Team stellt.",
+                "Hier erscheinen Umfragen, die deine Schule an das Team stellt.",
             }
           : null
       : null;
@@ -267,8 +267,8 @@ function SurveysContent() {
       statsLoading={loading}
       info={
         canManage
-          ? "Hier stellen Sie Eltern oder dem Team mehrere Fragen, auf Wunsch anonym. Für eine kurze Frage zu jedem Kind, zum Beispiel zum Sommerfest, nehmen Sie die Umfrage unter Eltern › Mitteilungen."
-          : "Hier beantworten Sie Umfragen Ihrer Schule an das Team."
+          ? "Hier stellst du Eltern oder dem Team mehrere Fragen, auf Wunsch anonym. Für eine kurze Frage zu jedem Kind, zum Beispiel zum Sommerfest, nimm die Umfrage unter Eltern › Mitteilungen."
+          : "Hier beantwortest du Umfragen deiner Schule an das Team."
       }
       actions={createButton}
       tabs={
@@ -282,7 +282,7 @@ function SurveysContent() {
                 { value: "alle", label: "Alle Umfragen", badge: list.length },
                 {
                   value: "fuer-sie",
-                  label: "Für Sie",
+                  label: "Für dich",
                   badge: pendingCount,
                 },
               ],

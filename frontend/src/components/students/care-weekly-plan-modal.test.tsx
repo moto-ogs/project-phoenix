@@ -288,7 +288,7 @@ describe("CareWeeklyPlanModal", () => {
     submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Die Übernahme des Wochenplans konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+      "Die Übernahme des Wochenplans konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
     );
     expect(screen.queryByText(/Backend kaputt/)).not.toBeInTheDocument();
     expect(toastError).not.toHaveBeenCalled();
@@ -348,7 +348,7 @@ describe("CareWeeklyPlanModal", () => {
 
     expect(
       screen.getByText(
-        /Die Betreuungstage kommen aus den Buchungen\. Abholzeiten können Sie nur an gebuchten Tagen eintragen\./,
+        /Die Betreuungstage kommen aus den Buchungen\. Abholzeiten kannst du nur an gebuchten Tagen eintragen\./,
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Montag" })).toBeDisabled();

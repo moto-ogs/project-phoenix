@@ -38,7 +38,7 @@ export const STAFF_IMPORT_FIELD_LABELS: Record<StaffImportField, string> = {
 
 export const STAFF_IMPORT_FIELD_HINTS: Record<StaffImportField, string> = {
   personnel_number:
-    "Die Nummer aus Ihrem Lohnprogramm. Daran erkennt moto die Person wieder.",
+    "Die Nummer aus deinem Lohnprogramm. Daran erkennt moto die Person wieder.",
   first_name: "Der Vorname der Person.",
   last_name: "Der Nachname der Person.",
   birthday: "Zum Beispiel 02.04.1990.",
@@ -110,7 +110,7 @@ export function staffImportDoneDescription(counts: StaffImportCounts): string {
       ? `${staffImportRowsLabel(counts.duplicate)} ${counts.duplicate === 1 ? "war" : "waren"} schon vorhanden.`
       : "",
     open > 0
-      ? `${staffImportRowsLabel(open)} ${open === 1 ? "blieb" : "blieben"} draußen. Korrigieren Sie sie in der Datei und laden Sie die Datei noch einmal.`
+      ? `${staffImportRowsLabel(open)} ${open === 1 ? "blieb" : "blieben"} draußen. Korrigiere sie in der Datei und lade die Datei noch einmal.`
       : "",
     "Unter „Vorschläge“ zeigt moto, welches Personal der Schulen zu den neuen Akten passt.",
   ];

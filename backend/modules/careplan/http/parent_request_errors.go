@@ -28,19 +28,19 @@ var parentRequestSharedRules = []common.ErrorRule{
 	}},
 	{Target: excusedrequests.ErrParentRequestReasonRequired, Render: func(error) render.Renderer {
 		return common.ErrorInvalidRequestMessageWithCode(
-			"Bitte tragen Sie eine Begründung ein.",
+			"Bitte trage eine Begründung ein.",
 			common.CodeStudentsReasonRequired,
 		)
 	}},
 	{Target: excusedrequests.ErrParentRequestPast, Render: func(error) render.Renderer {
 		return common.ErrorConflictMessageWithCode(
-			"Diese Anfrage betrifft nur vergangene Tage. Sie können sie nur ablehnen oder als erledigt markieren.",
+			"Diese Anfrage betrifft nur vergangene Tage. Du kannst sie nur ablehnen oder als erledigt markieren.",
 			common.CodeStudentsRequestPast,
 		)
 	}},
 	{Target: excusedrequests.ErrParentRequestNotPast, Render: func(error) render.Renderer {
 		return common.ErrorConflictMessageWithCode(
-			"Diese Anfrage betrifft noch kommende Tage. Bitte entscheiden Sie sie.",
+			"Diese Anfrage betrifft noch kommende Tage. Bitte entscheide sie.",
 			common.CodeStudentsRequestNotPast,
 		)
 	}},
@@ -59,19 +59,19 @@ var parentRequestSharedRules = []common.ErrorRule{
 	// raise the parent-request contract's reason sentinel.
 	{Target: parentrequests.ErrReasonRequired, Render: func(error) render.Renderer {
 		return common.ErrorInvalidRequestMessageWithCode(
-			"Bitte tragen Sie eine Begründung ein.",
+			"Bitte trage eine Begründung ein.",
 			common.CodeStudentsReasonRequired,
 		)
 	}},
 	{Target: parentrequests.ErrPast, Render: func(error) render.Renderer {
 		return common.ErrorConflictMessageWithCode(
-			"Diese Anfrage betrifft nur vergangene Tage. Sie können sie nur ablehnen oder als erledigt markieren.",
+			"Diese Anfrage betrifft nur vergangene Tage. Du kannst sie nur ablehnen oder als erledigt markieren.",
 			common.CodeStudentsRequestPast,
 		)
 	}},
 	{Target: parentrequests.ErrNotPast, Render: func(error) render.Renderer {
 		return common.ErrorConflictMessageWithCode(
-			"Diese Anfrage betrifft noch kommende Tage. Bitte entscheiden Sie sie.",
+			"Diese Anfrage betrifft noch kommende Tage. Bitte entscheide sie.",
 			common.CodeStudentsRequestNotPast,
 		)
 	}},
@@ -96,7 +96,7 @@ func parentRequestRules(own ...common.ErrorRule) []common.ErrorRule {
 
 func absenceReadRequiredResponse(error) render.Renderer {
 	return common.ErrorForbiddenMessageWithCode(
-		"Für Elternanfragen zu Abwesenheiten brauchen Sie zusätzlich das Recht „Kinder sehen“.",
+		"Für Elternanfragen zu Abwesenheiten brauchst du zusätzlich das Recht „Kinder sehen“.",
 		common.CodeStudentsAbsenceReadRequired,
 	)
 }

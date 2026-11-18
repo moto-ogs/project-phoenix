@@ -72,13 +72,12 @@ export function TraegerBankAccountModal({
     if (!edit) return;
     formErrors.clear();
     const fields: Record<string, string> = {};
-    if (!draft.label.trim())
-      fields.label = "Bitte geben Sie eine Bezeichnung an.";
+    if (!draft.label.trim()) fields.label = "Bitte gib eine Bezeichnung an.";
     if (!draft.accountHolder.trim())
-      fields.account_holder = "Bitte geben Sie den Kontoinhaber an.";
-    if (!draft.iban.trim()) fields.iban = "Bitte geben Sie die IBAN an.";
+      fields.account_holder = "Bitte gib den Kontoinhaber an.";
+    if (!draft.iban.trim()) fields.iban = "Bitte gib die IBAN an.";
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", fields);
+      formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return;
     }
     await save.run(async (op) => {
@@ -204,7 +203,7 @@ export function TraegerBankAccountModal({
           <p className="text-sm text-gray-600">
             {isFirst
               ? "Die erste Bankverbindung ist der Standard. Sie steht auf allen Briefen und Rechnungen."
-              : "Das ist der Standard. Wählen Sie eine andere Bankverbindung als Standard, um das zu ändern."}
+              : "Das ist der Standard. Wähle eine andere Bankverbindung als Standard, um das zu ändern."}
           </p>
         ) : (
           <label

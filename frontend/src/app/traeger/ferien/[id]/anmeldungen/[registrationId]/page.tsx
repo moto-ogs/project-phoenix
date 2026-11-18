@@ -117,7 +117,7 @@ const PDF_LABELS: AttachmentLabels = {
   openHint: "Öffnet die PDF in einem neuen Tab.",
   downloadHint: "Speichert die PDF auf diesem Gerät.",
   popupBlocked:
-    "Das PDF konnte nicht geöffnet werden. Bitte erlauben Sie neue Fenster.",
+    "Das PDF konnte nicht geöffnet werden. Bitte erlaube neue Fenster.",
   errorObject: "die PDF-Datei",
 };
 
@@ -629,7 +629,7 @@ export default function TraegerHolidayRegistrationPage() {
                 {contribution.siblingsInvoiced ? (
                   <p>
                     Für eine dieser Anmeldungen gibt es schon eine Rechnung.
-                    Geschwister können Sie jetzt nicht mehr ändern.
+                    Geschwister kannst du jetzt nicht mehr ändern.
                   </p>
                 ) : null}
               </div>

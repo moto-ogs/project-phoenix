@@ -24,6 +24,12 @@ services:
       # Preserve compiled packages across container rebuilds
       - go_build_cache:/root/.cache/go-build
     environment:
+      UPLOADS_BACKEND: ${UPLOADS_BACKEND-}
+      UPLOADS_S3_ENDPOINT: ${UPLOADS_S3_ENDPOINT-}
+      UPLOADS_S3_REGION: ${UPLOADS_S3_REGION-}
+      UPLOADS_S3_BUCKET: ${UPLOADS_S3_BUCKET-}
+      UPLOADS_S3_ACCESS_KEY: ${UPLOADS_S3_ACCESS_KEY-}
+      UPLOADS_S3_SECRET_KEY: ${UPLOADS_S3_SECRET_KEY-}
       TZ: ${TZ}
       APP_ENV: ${APP_ENV}
       LOG_LEVEL: ${LOG_LEVEL}

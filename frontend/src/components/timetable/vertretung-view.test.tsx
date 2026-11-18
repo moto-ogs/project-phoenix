@@ -898,7 +898,7 @@ describe("VertretungView", () => {
 
     await waitFor(() =>
       expect(mockToastWarning).toHaveBeenCalledWith(
-        "Bitte prüfen Sie 2 mögliche Zeitüberschneidungen.",
+        "Bitte prüfe 2 mögliche Zeitüberschneidungen.",
         { duration: 0 },
       ),
     );

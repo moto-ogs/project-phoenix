@@ -535,7 +535,7 @@ function RoomsPageContent() {
             icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
             title: "Keine Räume gefunden",
             description:
-              "Zu Suche und Filtern passt kein Raum. Setzen Sie die Filter zurück, um alle Räume zu sehen.",
+              "Zu Suche und Filtern passt kein Raum. Setze die Filter zurück, um alle Räume zu sehen.",
             action: (
               <Button
                 type="button"
@@ -551,7 +551,7 @@ function RoomsPageContent() {
             icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
             title: "Keine Räume gefunden",
             description:
-              "Für diese Schule ist noch kein Raum angelegt. Räume legen Sie in der Datenverwaltung an.",
+              "Für diese Schule ist noch kein Raum angelegt. Räume legst du in der Datenverwaltung an.",
           }
       : null;
 

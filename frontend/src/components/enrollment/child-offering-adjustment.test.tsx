@@ -397,7 +397,7 @@ describe("ChildOfferingAdjustment", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText("Bitte tragen Sie eine Begründung ein."),
+      await screen.findByText("Bitte trage eine Begründung ein."),
     ).toBeVisible();
     // Das Feld selbst ist markiert und nennt, was fehlt.
     expect(screen.getByLabelText("Begründung")).toHaveAttribute(

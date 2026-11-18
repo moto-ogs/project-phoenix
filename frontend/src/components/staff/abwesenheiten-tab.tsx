@@ -703,8 +703,8 @@ export function AbwesenheitenTab({
         </div>
         {staff && canEditQuota && customAllowances.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Regenerationstage oder Krank-Urlaubstage zählen? Legen Sie dafür
-            unter „Abwesenheitsarten verwalten“ eine Art mit Kontingent an.
+            Regenerationstage oder Krank-Urlaubstage zählen? Lege dafür unter
+            „Abwesenheitsarten verwalten“ eine Art mit Kontingent an.
           </p>
         ) : null}
       </SectionCard>
@@ -722,7 +722,7 @@ export function AbwesenheitenTab({
       <SectionCard
         title="Kommende Abwesenheiten"
         headingLevel={3}
-        description="Andere Stunden in den Ferien? Tragen Sie dafür eine Sonderarbeitszeit im Reiter Arbeitszeitmodell ein."
+        description="Andere Stunden in den Ferien? Trage dafür eine Sonderarbeitszeit im Reiter Arbeitszeitmodell ein."
       >
         {upcoming.length === 0 ? (
           <EmptyState title="Keine geplanten Abwesenheiten." />
@@ -749,7 +749,7 @@ export function AbwesenheitenTab({
         headingLevel={3}
         description={
           rebookSelection
-            ? "Kreuzen Sie die Einträge an, deren Art sich ändern soll. Krankmeldungen und Anträge lassen sich hier nicht ändern."
+            ? "Kreuze die Einträge an, deren Art sich ändern soll. Krankmeldungen und Anträge lassen sich hier nicht ändern."
             : undefined
         }
         actions={
@@ -759,7 +759,7 @@ export function AbwesenheitenTab({
               variant="outline"
               size="md"
               onClick={() => setRebookSelection(new Set())}
-              tooltip="Lässt Sie Einträge ankreuzen, um ihre Art zu ändern."
+              tooltip="Lässt dich Einträge ankreuzen, um ihre Art zu ändern."
             >
               <ArrowLeftRight className="mr-1.5 h-4 w-4" aria-hidden />
               Art ändern
@@ -793,7 +793,7 @@ export function AbwesenheitenTab({
                 variant="primary"
                 size="md"
                 disabled={selectedForRebook.length === 0}
-                disabledReason="Kreuzen Sie zuerst mindestens einen Eintrag an."
+                disabledReason="Kreuze zuerst mindestens einen Eintrag an."
                 onClick={() => setRebookOpen(true)}
                 tooltip="Öffnet die Wahl der neuen Art und zeigt die Folgen vorher."
               >
@@ -1278,16 +1278,16 @@ function VacationOpeningModal({
     formErrors.clear();
     const fields: Record<string, string> = {};
     if (!effectiveDate) {
-      fields.effective_date = "Bitte wählen Sie einen Stichtag.";
+      fields.effective_date = "Bitte wähle einen Stichtag.";
     }
     if (remaining === null || remaining < -999 || remaining > 999) {
       fields.remaining_days = REMAINING_RANGE_HINT;
     }
     if (note.trim() === "") {
-      fields.note = "Bitte geben Sie eine Begründung ein.";
+      fields.note = "Bitte gib eine Begründung ein.";
     }
     if (Object.keys(fields).length > 0 || remaining === null) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     setSubmitting(true);
@@ -1385,11 +1385,11 @@ function VacationOpeningModal({
   const submitBlockedReason = submitting
     ? undefined
     : effectiveDate === ""
-      ? "Wählen Sie zuerst einen Stichtag."
+      ? "Wähle zuerst einen Stichtag."
       : !remainingValid
-        ? "Geben Sie zuerst den Resturlaub zum Stichtag ein."
+        ? "Gib zuerst den Resturlaub zum Stichtag ein."
         : note.trim() === ""
-          ? "Geben Sie zuerst eine Begründung ein."
+          ? "Gib zuerst eine Begründung ein."
           : undefined;
 
   return (
@@ -1552,7 +1552,7 @@ function QuotaEditForm({
       fields.reason = "Bitte kurz sagen, warum sich der Anspruch ändert.";
     }
     if (Object.keys(fields).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", fields);
+      formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
     setSaving(true);

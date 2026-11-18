@@ -93,7 +93,7 @@ describe("SurveyAnswerPanel", () => {
     const question = screen.getByText("Mein Kind fühlt sich wohl.");
     expect(
       screen.getByText(
-        /Die Schule sieht nicht, wer was geantwortet hat\. Sie sieht erst nach dem Ende und ab 5 Antworten eine Auswertung\. Sie antworten einmal für Ihr Elternkonto/,
+        /Die Schule sieht nicht, wer was geantwortet hat\. Sie sieht erst nach dem Ende und ab 5 Antworten eine Auswertung\. Du antwortest einmal für dein Elternkonto/,
       ),
     ).toBeInTheDocument();
     // Der Hinweis steht im Dokument vor der ersten Frage.
@@ -118,7 +118,7 @@ describe("SurveyAnswerPanel", () => {
 
     expect(await screen.findByText("Nicht anonym")).toBeInTheDocument();
     expect(
-      screen.getByText("Die Schule sieht Ihren Namen bei Ihren Antworten."),
+      screen.getByText("Die Schule sieht deinen Namen bei deinen Antworten."),
     ).toBeInTheDocument();
   });
 
@@ -138,12 +138,10 @@ describe("SurveyAnswerPanel", () => {
     );
 
     expect(
-      await screen.findByText(
-        "Bitte beantworten Sie zuerst alle Pflichtfragen.",
-      ),
+      await screen.findByText("Bitte beantworte zuerst alle Pflichtfragen."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Bitte beantworten Sie diese Frage."),
+      screen.getByText("Bitte beantworte diese Frage."),
     ).toBeInTheDocument();
     // Der Fokus springt in die erste unbeantwortete Pflichtfrage.
     await waitFor(() =>
@@ -177,10 +175,10 @@ describe("SurveyAnswerPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Antwort absenden" }));
 
     expect(
-      await screen.findByText("Danke, Ihre Antwort ist gespeichert."),
+      await screen.findByText("Danke, deine Antwort ist gespeichert."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Ihre Antwort lässt sich nicht mehr ändern."),
+      screen.getByText("Deine Antwort lässt sich nicht mehr ändern."),
     ).toBeInTheDocument();
     expect(submit).toHaveBeenCalledWith({
       answers: [
@@ -260,7 +258,7 @@ describe("SurveyAnswerPanel", () => {
 
     // Anker: der geladene Fragebogen mit dem Teilgenommen-Zustand.
     expect(
-      await screen.findByText("Sie haben schon teilgenommen."),
+      await screen.findByText("Du hast schon teilgenommen."),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Mein Kind fühlt sich wohl."),

@@ -138,7 +138,7 @@ export function CoreFieldsSection({
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
             Fest gesetzte Felder bleiben immer Pflicht. Optionale Basisfelder
-            können Sie hier verpflichtend machen oder einschalten.
+            kannst du hier verpflichtend machen oder einschalten.
           </p>
         </div>
         <span className="w-fit">
@@ -256,7 +256,7 @@ function coreFieldHint(field: CoreField, required: boolean): string {
   if (required)
     return field.requirementHint ?? "Diese Angabe ist verpflichtend.";
   return field.requirementMode === "ask"
-    ? "Wird nicht abgefragt. Sie können die Frage einschalten."
+    ? "Wird nicht abgefragt. Du kannst die Frage einschalten."
     : "Kann verpflichtend gemacht werden.";
 }
 

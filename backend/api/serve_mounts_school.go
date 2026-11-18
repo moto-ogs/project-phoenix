@@ -79,9 +79,9 @@ func mountStaffRoutes(
 	users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin,
 	workforce owners.WorkforcePlanning, shifts *workforceCompose.ShiftPlanning, education schoolstructure.GroupManagement,
 	substitution SubstitutionOperations, persons peopledirectory.Capability, settings settingsCompose.SettingsService,
-	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, files nativeUploads.FileKeys, now func() time.Time,
+	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar, files nativeUploads.FileKeys, uploads nativeUploads.UploadFiles, now func() time.Time,
 ) error {
-	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), files, now)
+	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"), files, uploads, now)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func schoolVacationHints(
 // timetable, colleague chat, staff notice and notification resources the
 // staff reach under /api (#2207, #2527).
 func mountSchoolPortalRoutes(
-	root, tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, limiters authRateLimiters,
+	root, tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, uploads nativeUploads.UploadFiles, limiters authRateLimiters,
 	presence studentpresence.Owner, timetableOwner timetableModule.Capability, calendar schoolcalendar.Calendar,
 	materialization timetableModule.MaterializationCapability, lifecycle owners.TimetableLifecycle, planning TimetablePlanning,
 	planningTracks timetableModule.PlanningTrackAdministration, users peoplePorts.PersonDirectory, schedules owners.CarePlanSchedules,
@@ -160,7 +160,7 @@ func mountSchoolPortalRoutes(
 	// separate surface from /messages (which is parent-facing).
 	staffMessaging := staffMessagingAPI.NewResource(chat.StaffMessaging)
 	// Fotos und Dateien im Team-Chat, in beiden Portalen (#6685).
-	staffAttachments := newMessageAttachmentRoutes(chat.StaffAttachments, logger.With("handler", "staff-message-attachments"))
+	staffAttachments := newMessageAttachmentRoutes(chat.StaffAttachments, logger.With("handler", "staff-message-attachments"), uploads)
 	// Tagesinformationen (#2180) are Timetable's: the owner composes the
 	// service over its own repository, the calendar periods for the week
 	// pattern and the People Directory names of the acknowledgement list
@@ -188,18 +188,20 @@ func mountSchoolPortalRoutes(
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
-	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed)
+	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed, notifications.CatererFeed)
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
 	root.Mount("/school", school.RouterWithAuthRateLimiter(limiters.authMiddleware(), SchoolSessionChain, ProtectedSchoolRoutes))
 	return nil
 }
 
-// mountNotificationRoutes mounts the notification routes of the OGS portal
-// and the bell of the Träger-Portal (#7146), which reads the entries of every
-// school of the Träger across its schools.
-func mountNotificationRoutes(root, tenant chi.Router, staff *notificationsHTTP.Resource, traeger deliveryContract.TraegerNotificationFeed) {
+// mountNotificationRoutes mounts the notification routes of the OGS portal,
+// the bell of the Träger-Portal (#7146), which reads the entries of every
+// school of the Träger across its schools, and the bell of the caterer portal
+// (#7147), which reads the entries of every school the caterer supplies.
+func mountNotificationRoutes(root, tenant chi.Router, staff *notificationsHTTP.Resource, traeger deliveryContract.TraegerNotificationFeed, caterer deliveryContract.CatererNotificationFeed) {
 	tenant.Mount("/notifications", staff.Router())
 	root.Mount("/traeger/notifications", NewTraegerNotificationHTTP(traeger).Router())
+	root.Mount("/caterer/notifications", NewCatererNotificationHTTP(caterer).Router())
 }
 
 // newTimetableResource composes the timetable routes. Dateframes belong to
@@ -265,7 +267,7 @@ const enrollmentMount = "/enrollment"
 // enrollment, settings, info-point displays and data administration under
 // /api.
 func mountSchoolRoutes(
-	tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, facilities facilitiesModule.Capability, rooms FacilitiesRooms,
+	tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, uploads nativeUploads.UploadFiles, facilities facilitiesModule.Capability, rooms FacilitiesRooms,
 	settings settingsCompose.SettingsService, caller *owners.CallerRows, active studentpresence.Presence, users peoplePorts.PersonDirectory,
 	education schoolstructure.GroupManagement, renderer *lists.RendererService, activities activityContract.ActivityService,
 	timetableOwner timetableModule.Capability, iot devicefleetCompose.IoTService, settingsWrites SettingsWrites,
@@ -298,7 +300,7 @@ func mountSchoolRoutes(
 	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
-	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, requireDevicePINOperations(settings), owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools).SettingsRouter())
+	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, requireDevicePINOperations(settings), owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools, uploads).SettingsRouter())
 	// Class-list-only entries (#2382).
 	tenant.Mount("/class-list-entries", newClassListEntriesResource(
 		classListEntriesWhileChildrenKept{ClassListEntries: classListEntries, settings: settings, lock: classListConversionLockOf(settings)},

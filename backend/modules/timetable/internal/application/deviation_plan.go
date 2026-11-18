@@ -438,7 +438,7 @@ func rejectOverstaffingPresences(presencePlan []deviationPresenceOp, projection 
 		rows := readSet.rowsByInstance[op.instance.ID]
 		if projection.nonAbsentCount(op.instance.ID, rows) > plannedPositions(rows) {
 			return timetable.DeviationConflict(timetable.CodePresenceWouldOverstaff,
-				"der Termin ist bereits vollständig besetzt. Entfernen Sie zuerst die nicht mehr benötigte Vertretung")
+				"der Termin ist bereits vollständig besetzt. Entferne zuerst die nicht mehr benötigte Vertretung")
 		}
 	}
 	return nil

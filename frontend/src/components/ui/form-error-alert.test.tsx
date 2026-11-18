@@ -65,7 +65,7 @@ describe("FormErrorAlert", () => {
 
     render(
       <form>
-        <FormErrorAlert message="Bitte prüfen Sie die markierten Felder." />
+        <FormErrorAlert message="Bitte prüfe die markierten Felder." />
         <input aria-label="Vorname" />
         <button type="button" data-form-invalid="true">
           Einwilligung
@@ -141,7 +141,7 @@ describe("FormErrorAlert", () => {
   it("leaves the focus to a marked field", () => {
     render(
       <form>
-        <FormErrorAlert message="Bitte prüfen Sie die markierten Felder." />
+        <FormErrorAlert message="Bitte prüfe die markierten Felder." />
         <input aria-label="Telefon" aria-invalid="true" />
       </form>,
     );
@@ -195,7 +195,7 @@ describe("FormErrorAlert", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Diese Seite gehört zum Modul Zeiterfassung. Ihre Schule nutzt es nicht. Wenn Sie es brauchen, sprechen Sie mit Ihrer Leitung.",
+      "Diese Seite gehört zum Modul Zeiterfassung. Deine Schule nutzt es nicht. Wenn du es brauchst, sprich mit deiner Leitung.",
     );
   });
 
@@ -215,7 +215,7 @@ describe("FormErrorAlert", () => {
     );
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Diese Seite gehört zum Modul Zeiterfassung. Ihre Schule hat es nicht gebucht. Für eine Buchung wenden Sie sich an das moto-Team.",
+      "Diese Seite gehört zum Modul Zeiterfassung. Deine Schule hat es nicht gebucht. Für eine Buchung wende dich an das moto-Team.",
     );
   });
 

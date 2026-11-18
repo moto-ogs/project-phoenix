@@ -399,7 +399,7 @@ describe("QuickCreateActivityModal", () => {
         loadError: null,
         handleInputChange: vi.fn(),
         validateForm: vi.fn(() => ({
-          message: "Bitte wählen Sie eine Kategorie.",
+          message: "Bitte wähle eine Kategorie.",
           field: "category_id" as const,
         })),
         loadCategories: vi.fn(),
@@ -415,7 +415,7 @@ describe("QuickCreateActivityModal", () => {
       fireEvent.click(submitButton);
 
       expect(
-        await screen.findByText("Bitte wählen Sie eine Kategorie."),
+        await screen.findByText("Bitte wähle eine Kategorie."),
       ).toBeInTheDocument();
       expect(global.fetch).not.toHaveBeenCalled();
 
@@ -552,7 +552,7 @@ describe("QuickCreateActivityModal", () => {
         loadError: null,
         handleInputChange: vi.fn(),
         validateForm: vi.fn(() => ({
-          message: "Bitte geben Sie einen Namen für die Aktivität ein.",
+          message: "Bitte gib einen Namen für die Aktivität ein.",
           field: "name" as const,
         })),
         loadCategories: vi.fn(),

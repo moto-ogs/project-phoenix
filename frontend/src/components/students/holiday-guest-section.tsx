@@ -86,13 +86,13 @@ export function HolidayGuestSection({
   );
 
   const description =
-    "Dieses Kind kommt als Feriengast. Hier stehen die Angaben, die der Träger aus der Anmeldung an Sie weitergibt.";
+    "Dieses Kind kommt als Feriengast. Hier stehen die Angaben, die der Träger aus der Anmeldung an dich weitergibt.";
   if (!canRead) {
     return (
       <SectionCard title="Feriengast" description={description}>
         <InfoText>
           Notfall, Abholung und Gesundheit sieht, wer die Angaben der Kinder
-          lesen darf. Bitte fragen Sie Ihre Leitung.
+          lesen darf. Bitte frage deine Leitung.
         </InfoText>
       </SectionCard>
     );

@@ -127,13 +127,13 @@ func parentAnnouncementCopyUK(kind string) (string, string) {
 func parentAnnouncementCopyDE(kind string) (string, string) {
 	switch kind {
 	case ParentPollPublished:
-		return "Neue Umfrage", "Eine Schule bittet um Ihre Rückmeldung im Elternportal."
+		return "Neue Umfrage", "Eine Schule bittet um deine Rückmeldung im Elternportal."
 	case ParentPollReminder:
-		return "Erinnerung: Umfrage offen", "Für Ihr Kind fehlt noch eine Rückmeldung im Elternportal."
+		return "Erinnerung: Umfrage offen", "Für dein Kind fehlt noch eine Rückmeldung im Elternportal."
 	case ParentAnnouncementReminder:
-		return "Erinnerung: Elternmitteilung", "Ihre OGS erinnert Sie an eine Mitteilung im Elternportal."
+		return "Erinnerung: Elternmitteilung", "Deine OGS erinnert dich an eine Mitteilung im Elternportal."
 	case ParentCareCancelled:
-		return "Betreuung fällt aus", "Die OGS hat einen Betreuungstermin Ihres Kindes abgesagt."
+		return "Betreuung fällt aus", "Die OGS hat einen Betreuungstermin deines Kindes abgesagt."
 	default:
 		return "Neue Elternmitteilung", "Eine neue Mitteilung ist im Elternportal verfügbar."
 	}
@@ -155,7 +155,7 @@ func ParentMessageCopy(locale string) (string, string) {
 	case "uk":
 		return "Нове повідомлення від OGS", "У вас нове повідомлення в батьківському порталі."
 	default:
-		return "Neue Nachricht der OGS", "Sie haben eine neue Nachricht im Elternportal."
+		return "Neue Nachricht der OGS", "Du hast eine neue Nachricht im Elternportal."
 	}
 }
 
@@ -177,7 +177,7 @@ func ParentBillingDocumentCopy(locale string) (string, string) {
 	case "uk":
 		return "Новий документ від організації", "У вас новий документ у батьківському порталі."
 	default:
-		return "Neues Dokument vom Träger", "Sie haben ein neues Dokument im Elternportal."
+		return "Neues Dokument vom Träger", "Du hast ein neues Dokument im Elternportal."
 	}
 }
 
@@ -199,7 +199,7 @@ func ParentMealPlanChangedCopy(locale string) (string, string) {
 	case "uk":
 		return "Меню змінено", "Меню змінилося. Будь ласка, перевірте замовлення харчування в батьківському порталі."
 	default:
-		return "Speiseplan geändert", "Der Speiseplan hat sich geändert. Bitte prüfen Sie die Essensbuchung im Elternportal."
+		return "Speiseplan geändert", "Der Speiseplan hat sich geändert. Bitte prüfe die Essensbuchung im Elternportal."
 	}
 }
 
@@ -229,6 +229,6 @@ func ParentMealPlanChangedFeedCopy(locale string, monday calendar.Date) (string,
 			"Меню на тиждень з %s до %s змінилося. Будь ласка, перевірте, чи замовлення харчування вашої дитини ще актуальне.", from, until)
 	default:
 		return "Speiseplan geändert", fmt.Sprintf(
-			"Der Speiseplan für die Woche vom %s bis %s hat sich geändert. Bitte prüfen Sie, ob die Essensbuchung Ihres Kindes noch passt.", from, until)
+			"Der Speiseplan für die Woche vom %s bis %s hat sich geändert. Bitte prüfe, ob die Essensbuchung deines Kindes noch passt.", from, until)
 	}
 }

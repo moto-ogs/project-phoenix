@@ -39,7 +39,7 @@ const logger = createLogger({ component: "MessagesInboxPage" });
 const MARK_ALL_READ_LABEL = "Alle als gelesen markieren";
 const COUNT_SETTING_LABEL = "Zahl bei Nachrichten einstellen";
 const MARK_ALL_READ_SUCCESS =
-  "Alle Nachrichten sind für Sie als gelesen markiert.";
+  "Alle Nachrichten sind für dich als gelesen markiert.";
 // Shown when team-marked conversations (#3654) keep the badge above zero, so
 // the remaining number does not read as a failed click.
 const MARK_ALL_READ_TEAM_MARKED =
@@ -183,7 +183,7 @@ function MessagesInboxContent() {
       variant="primary"
       size="md"
       onClick={() => setComposeOpen(true)}
-      tooltip="Öffnet ein Fenster, in dem Sie Kind und Eltern wählen."
+      tooltip="Öffnet ein Fenster, in dem du Kind und Eltern wählst."
     >
       Neue Nachricht
     </Button>
@@ -216,7 +216,7 @@ function MessagesInboxContent() {
           ? [
               {
                 label: MARK_ALL_READ_LABEL,
-                description: "Gilt nur für Sie, nicht für Ihr Team",
+                description: "Gilt nur für dich, nicht für dein Team",
                 onClick: () => void handleMarkAllRead(),
                 disabled: markingAllRead,
               },
@@ -226,7 +226,7 @@ function MessagesInboxContent() {
           ? [
               {
                 label: COUNT_SETTING_LABEL,
-                description: "Öffnet Ihr Profil, dort legen Sie die Zahl fest",
+                description: "Öffnet dein Profil, dort legst du die Zahl fest",
                 onClick: () => router.push("/profile"),
               },
             ]
@@ -264,9 +264,9 @@ function MessagesInboxContent() {
                 ? "Keine passenden Nachrichten"
                 : "Noch keine Nachrichten",
               description: filtersActive
-                ? "Ändern Sie die Suche oder den Filter."
+                ? "Ändere die Suche oder den Filter."
                 : messagingEnabled
-                  ? "Hier erscheinen Unterhaltungen mit den Eltern. Über „Neue Nachricht“ können Sie selbst eine beginnen."
+                  ? "Hier erscheinen Unterhaltungen mit den Eltern. Über „Neue Nachricht“ kannst du selbst eine beginnen."
                   : "Der Nachrichtenaustausch mit den Eltern ist für diese Schule ausgeschaltet.",
             }
           : null
@@ -326,7 +326,7 @@ function MessagesInboxContent() {
                   {thread.last_message_body && (
                     <p className="mt-1 truncate text-sm text-gray-600">
                       {thread.last_sender_kind === "staff" && (
-                        <span className="text-gray-500">Sie: </span>
+                        <span className="text-gray-500">Du: </span>
                       )}
                       {thread.last_message_body}
                     </p>

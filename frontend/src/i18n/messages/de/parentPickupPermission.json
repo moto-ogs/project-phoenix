@@ -3,7 +3,7 @@
     "label": "An welchen Tagen?",
     "all": "An allen Tagen",
     "some": "Nur an bestimmten Tagen",
-    "pickOne": "Bitte wählen Sie mindestens einen Tag."
+    "pickOne": "Bitte wähle mindestens einen Tag."
   },
   "weekday": {
     "1": "Mo",
@@ -20,22 +20,22 @@
     "5": "Freitag"
   },
   "signature": {
-    "title": "Ihre Erlaubnis",
-    "procedure": "Sie unterschreiben als einfache elektronische Signatur mit gezeichneter Unterschrift.",
-    "missing": "Bitte unterschreiben Sie und tippen Sie auf „Unterschrift bestätigen“."
+    "title": "Deine Erlaubnis",
+    "procedure": "Du unterschreibst als einfache elektronische Signatur mit gezeichneter Unterschrift.",
+    "missing": "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“."
   },
   "waitsForOgs": "Die {careTerm} bestätigt die Erlaubnis. Bis dahin gilt sie noch nicht.",
   "pendingBadge": "Wartet auf die {careTerm}",
   "pending": "Wartet auf die {careTerm}: {days}",
   "onlyDays": "Nur {days}",
-  "requestSent": "Ihre Anfrage ist bei der {careTerm}. Sie sehen hier, wenn sie bestätigt ist.",
+  "requestSent": "Deine Anfrage ist bei der {careTerm}. Du siehst hier, wenn sie bestätigt ist.",
   "proofPdf": "Nachweis (PDF)",
   "errorObjectProof": "Der Nachweis",
   "errorObjectRequest": "Die Abholerlaubnis",
   "pickupPerson": {
     "label": "Wer holt ab?",
     "none": "Wie immer",
-    "hint": "Nur Personen, die Sie bei den Kontakten eingetragen haben.",
+    "hint": "Nur Personen, die du bei den Kontakten eingetragen hast.",
     "manageLink": "Neue Person bei den Kontakten eintragen"
   },
   "proofPdfTooltip": "Speichert den Nachweis als PDF auf diesem Gerät."

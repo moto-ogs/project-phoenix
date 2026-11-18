@@ -24,7 +24,7 @@ describe("AbsenceDecisionMail", () => {
     expect(screen.getByText("Nicht zustellbar")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Die Mail kam nicht an. Sagen Sie der Person direkt Bescheid.",
+        "Die Mail kam nicht an. Sage der Person direkt Bescheid.",
       ),
     ).toBeInTheDocument();
   });
@@ -53,7 +53,7 @@ describe("AbsenceRequestMails", () => {
     expect(screen.getByText("2 zugestellt")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Eine Mail kam nicht an. Sagen Sie der Leitung direkt Bescheid.",
+        "Eine Mail kam nicht an. Sage der Leitung direkt Bescheid.",
       ),
     ).toBeInTheDocument();
   });

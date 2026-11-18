@@ -528,6 +528,10 @@ export const catererKeys = {
     }
   },
   schools: () => "caterer-schools",
+  // Die Glocke des Caterer-Portals (#7147): Zähler und erste Seite der
+  // Hinweise aller belieferten Schulen.
+  notificationFeedFirstPage: () => "caterer-notification-feed-first-page",
+  notificationFeedUnread: () => "caterer-notification-feed-unread",
   orders: (schoolIds: readonly string[], from: string, to: string) =>
     resourceKey(catererOrdersFamily, {
       schoolIds: [...schoolIds].sort(),

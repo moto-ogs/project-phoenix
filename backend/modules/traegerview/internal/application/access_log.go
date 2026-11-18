@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"math"
 	"slices"
 	"time"
 
@@ -65,6 +66,9 @@ func (o *Overview) AccessLog(ctx context.Context, viewer traegerview.Viewer, fil
 	}
 	if page < 1 {
 		return traegerview.AccessLogPage{}, fmt.Errorf("%w: the page starts at 1", traegerview.ErrInvalidAccessLogFilter)
+	}
+	if page > (math.MaxInt-1)/traegerview.AccessLogPageSize {
+		return traegerview.AccessLogPage{}, fmt.Errorf("%w: the page is too large", traegerview.ErrInvalidAccessLogFilter)
 	}
 	result := traegerview.AccessLogPage{Entries: []traegerview.AccessLogEntry{}, AsOf: filter.AsOf}
 	// The pages of one list end at the same instant, so the reads this list
@@ -208,25 +212,11 @@ func distinctPeople(actors []traegerview.AccessTrailActor, names actorIndex) ([]
 	return people, shown
 }
 
-// entries reads the trail of the filter at the Träger's schools and the
-// Träger's holiday trail, merges them, and names their schools and people.
-// A school outside the Träger reads nothing. It returns the instant the
-// list ends at: span.asOf, or the database time of the school trail's read,
-// which also ends the holiday entries read before it.
+// entries reads both trails and names the schools and people on the page.
 func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, schools []int64, filter traegerview.AccessLogFilter, span window, limit, offset int) ([]traegerview.AccessLogEntry, time.Time, error) {
-	holiday, err := o.holidayTrail(adminCtx, viewer, filter, span, offset+limit)
+	rows, asOf, err := o.readTrails(adminCtx, viewer, schools, filter, span, limit, offset)
 	if err != nil {
 		return nil, time.Time{}, err
-	}
-	rows, asOf, err := o.schoolTrail(adminCtx, schools, filter, span, limit, offset, len(holiday) > 0)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	if span.asOf.IsZero() && !asOf.IsZero() {
-		holiday = slices.DeleteFunc(holiday, func(row traegerview.AccessTrailEntry) bool { return !row.OccurredAt.Before(asOf) })
-	}
-	if len(holiday) > 0 {
-		rows = mergedPage(rows, holiday, limit, offset)
 	}
 	if len(rows) == 0 {
 		return []traegerview.AccessLogEntry{}, asOf, nil
@@ -252,6 +242,38 @@ func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, 
 		})
 	}
 	return entries, asOf, nil
+}
+
+// readTrails applies the same database instant to both query limits. When a
+// continuation already has that instant, the holiday read can run first.
+// If it finds no rows, the school query can apply OFFSET in the database.
+func (o *Overview) readTrails(adminCtx context.Context, viewer traegerview.Viewer, schools []int64, filter traegerview.AccessLogFilter, span window, limit, offset int) ([]traegerview.AccessTrailEntry, time.Time, error) {
+	if filter.SchoolID != 0 {
+		return o.schoolTrail(adminCtx, schools, filter, span, limit, offset, false)
+	}
+	if !span.asOf.IsZero() {
+		holiday, err := o.holidayTrail(adminCtx, viewer, filter, span, offset+limit)
+		if err != nil {
+			return nil, time.Time{}, err
+		}
+		rows, asOf, err := o.schoolTrail(adminCtx, schools, filter, span, limit, offset, len(holiday) > 0)
+		if err != nil || len(holiday) == 0 {
+			return rows, asOf, err
+		}
+		return mergedPage(rows, holiday, limit, offset), asOf, nil
+	}
+	rows, asOf, err := o.schoolTrail(adminCtx, schools, filter, span, limit, offset, true)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	if !asOf.IsZero() && asOf.Before(span.to) {
+		span.to = asOf
+	}
+	holiday, err := o.holidayTrail(adminCtx, viewer, filter, span, offset+limit)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	return mergedPage(rows, holiday, limit, offset), asOf, nil
 }
 
 // schoolTrail reads the trail of the filter at the Träger's schools. A

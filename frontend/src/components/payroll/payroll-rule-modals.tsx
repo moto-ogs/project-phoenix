@@ -145,7 +145,7 @@ export function CreateWageTypeModal({
           saving={saving}
           disabledReason={
             name.trim() === ""
-              ? "Geben Sie zuerst eine Bezeichnung ein."
+              ? "Gib zuerst eine Bezeichnung ein."
               : numberValid
                 ? null
                 : "Die Lohnartnummer braucht 1 bis 4 Ziffern."
@@ -194,7 +194,7 @@ export function CreateWageTypeModal({
             fullWidth
           />
           <p className="text-sm text-gray-600">
-            So erwartet Ihr Lohnbüro die Lohnart. Zuschläge in Prozent brauchen
+            So erwartet dein Lohnbüro die Lohnart. Zuschläge in Prozent brauchen
             Stunden, Zuschläge in Euro einen Betrag.
           </p>
         </div>
@@ -287,11 +287,11 @@ export function CreateSurchargeRuleModal({
           saving={saving}
           disabledReason={
             !windowValid
-              ? "Wählen Sie zwei verschiedene Uhrzeiten."
+              ? "Wähle zwei verschiedene Uhrzeiten."
               : rateValue === null
-                ? "Geben Sie zuerst eine Zahl größer als 0 ein."
+                ? "Gib zuerst eine Zahl größer als 0 ein."
                 : selectedWageType === ""
-                  ? "Wählen Sie zuerst eine Lohnart aus."
+                  ? "Wähle zuerst eine Lohnart aus."
                   : null
           }
           tooltip="Legt die Regel an, abgeschlossene Monate bleiben unverändert."
@@ -384,8 +384,8 @@ export function CreateSurchargeRuleModal({
           ) : (
             <p className="text-sm text-gray-600">
               {rateType === "prozent"
-                ? "Es gibt noch keine eigene Lohnart mit der Einheit Stunden. Bitte legen Sie zuerst eine an."
-                : "Es gibt noch keine eigene Lohnart mit der Einheit Betrag in Euro. Bitte legen Sie zuerst eine an."}
+                ? "Es gibt noch keine eigene Lohnart mit der Einheit Stunden. Bitte lege zuerst eine an."
+                : "Es gibt noch keine eigene Lohnart mit der Einheit Betrag in Euro. Bitte lege zuerst eine an."}
             </p>
           )}
         </div>

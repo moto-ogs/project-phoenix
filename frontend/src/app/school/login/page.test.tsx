@@ -133,7 +133,7 @@ describe("SchoolLoginPage error path", () => {
     submit();
 
     expect(
-      await screen.findByText(/Ihre Schule nutzt moto schule zurzeit nicht/),
+      await screen.findByText(/Deine Schule nutzt moto schule zurzeit nicht/),
     ).toBeInTheDocument();
   });
 
@@ -143,7 +143,7 @@ describe("SchoolLoginPage error path", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("alert-info")).toHaveTextContent(
-        "Ihre Sitzung ist abgelaufen",
+        "Deine Sitzung ist abgelaufen",
       ),
     );
   });

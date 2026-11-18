@@ -70,12 +70,12 @@ function seriesMessage(series: CareLetterSeries): string {
   ];
   if (series.withoutEmail > 0) {
     parts.push(
-      `${familyCount(series.withoutEmail)} ohne E-Mail-Adresse: Bitte drucken Sie deren Schreiben.`,
+      `${familyCount(series.withoutEmail)} ohne E-Mail-Adresse: Bitte drucke deren Schreiben.`,
     );
   }
   if (series.recipientChanged > 0) {
     parts.push(
-      `${series.recipientChanged === 1 ? "1 Schreiben ging" : `${series.recipientChanged} Schreiben gingen`} nicht raus: Die Person steht nicht mehr im Vertrag. Stornieren Sie diese Rechnung. Ein neuer Lauf stellt sie neu aus.`,
+      `${series.recipientChanged === 1 ? "1 Schreiben ging" : `${series.recipientChanged} Schreiben gingen`} nicht raus: Die Person steht nicht mehr im Vertrag. Storniere diese Rechnung. Ein neuer Lauf stellt sie neu aus.`,
     );
   }
   return parts.join(" ");
@@ -354,7 +354,7 @@ export default function TraegerCareRunLettersPage() {
       {run && !released ? (
         <SectionCard
           title="Noch nicht freigegeben"
-          description="Schreiben gibt es erst, wenn der Monatslauf freigegeben ist. Geben Sie ihn auf der Seite des Laufs frei."
+          description="Schreiben gibt es erst, wenn der Monatslauf freigegeben ist. Gib ihn auf der Seite des Laufs frei."
         />
       ) : null}
       {run && released ? (

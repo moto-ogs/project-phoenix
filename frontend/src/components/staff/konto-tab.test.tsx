@@ -228,7 +228,7 @@ describe("KontoTab", () => {
 
     expect(
       await screen.findByText(
-        "Das Konto konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Das Konto konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/socket hang up/)).not.toBeInTheDocument();
@@ -263,7 +263,7 @@ describe("KontoTab", () => {
     );
     expect(
       screen.getByText(
-        "Das Konto konnte nicht übernommen werden. Bitte prüfen Sie Ihre Angaben.",
+        "Das Konto konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
       ),
     ).toBeInTheDocument();
   });
@@ -309,7 +309,7 @@ describe("KontoTab", () => {
 
     expect(
       await screen.findByText(
-        "Für die Rolle fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für die Rolle fehlt dir die Berechtigung. Bitte frage die Schule.",
       ),
     ).toBeInTheDocument();
   });
@@ -351,7 +351,7 @@ describe("KontoTab", () => {
       "konto-role-hint konto-role-error",
     );
     expect(document.getElementById("konto-role-error")).toHaveTextContent(
-      "Bitte prüfen Sie dieses Feld.",
+      "Bitte prüfe dieses Feld.",
     );
   });
 
@@ -592,9 +592,9 @@ describe("KontoTab", () => {
       .getAllByRole("listitem")
       .map((item) => item.textContent);
     expect(steps).toEqual([
-      "Öffnen Sie oben rechts das Menü mit den drei Punkten.",
-      "Wählen Sie „Löschen“.",
-      "Laden Sie die Person danach neu ein.",
+      "Öffne oben rechts das Menü mit den drei Punkten.",
+      "Wähle „Löschen“.",
+      "Lade die Person danach neu ein.",
     ]);
     expect(
       screen.queryByText(/wer Personal löschen darf/),

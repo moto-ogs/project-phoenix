@@ -36,9 +36,9 @@ function quickCreateBlockedReason(
 ): string | undefined {
   if (busy) return undefined;
   if (!hasName && !hasCategory)
-    return "Geben Sie zuerst einen Namen ein und wählen Sie eine Kategorie.";
-  if (!hasName) return "Geben Sie zuerst einen Namen ein.";
-  if (!hasCategory) return "Wählen Sie zuerst eine Kategorie.";
+    return "Gib zuerst einen Namen ein und wähle eine Kategorie.";
+  if (!hasName) return "Gib zuerst einen Namen ein.";
+  if (!hasCategory) return "Wähle zuerst eine Kategorie.";
   return undefined;
 }
 
@@ -194,7 +194,7 @@ export function QuickCreateActivityModal({
         disabled={
           isSubmitting || loading || !form.name.trim() || !form.category_id
         }
-        tooltip="Legt die Aktivität sofort an und trägt Sie als Leitung ein."
+        tooltip="Legt die Aktivität sofort an und trägt dich als Leitung ein."
         disabledReason={quickCreateBlockedReason(
           isSubmitting || loading,
           form.name.trim() !== "",

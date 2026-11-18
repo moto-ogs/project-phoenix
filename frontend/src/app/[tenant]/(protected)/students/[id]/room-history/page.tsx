@@ -61,7 +61,7 @@ const ROOM_HISTORY_DESCRIPTION =
   "Wo dieses Kind an einem Tag war und wer es ein- und ausgecheckt hat.";
 
 const FEATURE_DISABLED_DESCRIPTION =
-  "Das Anwesenheitsprotokoll ist für Ihre Schule ausgeschaltet. Bitte fragen Sie Ihre Administration.";
+  "Das Anwesenheitsprotokoll ist für deine Schule ausgeschaltet. Bitte frage deine Administration.";
 
 const LazyHistoryCharts = dynamic(() => import("./history-charts"), {
   ssr: false,

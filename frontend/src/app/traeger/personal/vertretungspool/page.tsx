@@ -42,11 +42,11 @@ const INFO = (
   <div className="space-y-2">
     <p>
       Springer sind Personen mit dem Merkmal „Vertretungspool“ im
-      Arbeitsvertrag. Jede Ihrer Schulen kann sie für einen Tag und eine Zeit
+      Arbeitsvertrag. Jede deiner Schulen kann sie für einen Tag und eine Zeit
       blocken.
     </p>
     <p>
-      Eine Person ist zu jeder Zeit nur für eine Schule geblockt. Sie sehen jede
+      Eine Person ist zu jeder Zeit nur für eine Schule geblockt. Du siehst jede
       Blockung und können sie aufheben.
     </p>
   </div>
@@ -178,7 +178,7 @@ export default function TraegerStaffPoolPage() {
           <EmptyState
             icon={<UsersThreeIcon className="h-12 w-12" aria-hidden="true" />}
             title="In dieser Woche ist niemand im Vertretungspool."
-            description="Setzen Sie im Arbeitsvertrag einer Personalakte das Merkmal „Vertretungspool“. Dann sehen alle Ihre Schulen die Person hier."
+            description="Setze im Arbeitsvertrag einer Personalakte das Merkmal „Vertretungspool“. Dann sehen alle deine Schulen die Person hier."
           />
         </SectionCard>
       ) : null}

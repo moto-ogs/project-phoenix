@@ -84,7 +84,7 @@ export function CustomAllowanceEditForm({
         ? "Bitte kurz sagen, warum sich der Anspruch ändert."
         : undefined;
     if (daysError || reasonError || parsed === null) {
-      formErrors.invalid("Bitte prüfen Sie die markierten Felder.", {
+      formErrors.invalid("Bitte prüfe die markierten Felder.", {
         ...(daysError ? { entitled_days: daysError } : {}),
         ...(reasonError ? { reason: reasonError } : {}),
       });

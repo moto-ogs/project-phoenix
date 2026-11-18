@@ -20,14 +20,14 @@ func TestCareContractNoticeTemplate_Renders(t *testing.T) {
 	tpl, err := template.ParseGlob(filepath.Join(templatesDir, "*.html"))
 	require.NoError(t, err, "parse all email templates")
 
-	for withdrawal, heading := range map[bool]string{false: "Bestätigung Ihrer Kündigung", true: "Bestätigung Ihres Widerrufs"} {
+	for withdrawal, heading := range map[bool]string{false: "Bestätigung deiner Kündigung", true: "Bestätigung deines Widerrufs"} {
 		var out bytes.Buffer
 		require.NoError(t, tpl.ExecuteTemplate(&out, "care-contract-notice.html", map[string]any{
 			"GuardianName": "Erika Muster", "SchoolName": "Ganztag im Quartier e.V.", "Withdrawal": withdrawal,
-			"Paragraphs": []string{"wir bestätigen Ihre Erklärung für Lina Muster.", "Der Vertrag endet mit Ablauf des 31.12.2026."},
+			"Paragraphs": []string{"wir bestätigen deine Erklärung für Lina Muster.", "Der Vertrag endet mit Ablauf des 31.12.2026."},
 		}))
 		body := out.String()
-		for _, want := range []string{heading, "Guten Tag Erika Muster,", "wir bestätigen Ihre Erklärung für Lina Muster.",
+		for _, want := range []string{heading, "Guten Tag Erika Muster,", "wir bestätigen deine Erklärung für Lina Muster.",
 			"Der Vertrag endet mit Ablauf des 31.12.2026.", "Ganztag im Quartier e.V."} {
 			assert.Contains(t, body, template.HTMLEscapeString(want))
 		}

@@ -27,10 +27,10 @@ import (
 // its production bootstrap. Each accepts only the module under test.
 func newStaffTestResource(module schoolmembership.Capability, svc StaffTestModule, work WorkforceTestModule, identity identityaccess.Owner, appEnv string, db transactionruntime.Database, logger *slog.Logger) *staffHTTP.Resource {
 	capabilities := owners.NewWorkforceAdminCapabilities(svc.Users, work.StaffAdmin, work.TimeTracking)
-	admin := newStaffAdminResource(capabilities, work.SickReports, nil, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), db, TestUploadFileKeys(), logger)
+	admin := newStaffAdminResource(capabilities, work.SickReports, nil, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), db, TestUploadFileKeys(), nativeUploads.UploadFiles{}, logger)
 	resource, err := newStaffResource(module, svc.PeopleDirectory, identity, appEnv, func(hooks StaffMembershipHooks) StaffMembershipRuntime {
 		return svc.NewStaffMembershipRuntime(db, logger, hooks)
-	}, admin, logger)
+	}, admin, logger, nativeUploads.UploadFiles{})
 	if err != nil {
 		panic(err)
 	}

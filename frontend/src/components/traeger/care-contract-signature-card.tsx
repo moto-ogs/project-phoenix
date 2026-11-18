@@ -214,7 +214,7 @@ function SignatureDetails({
         message={
           signature.intact
             ? "Das unterschriebene PDF passt zum gespeicherten Nachweis."
-            : "Der gespeicherte Nachweis wurde verändert. Melden Sie das dem moto-Team."
+            : "Der gespeicherte Nachweis wurde verändert. Melde das dem moto-Team."
         }
         className="[&>div]:min-w-0"
         details={
@@ -246,7 +246,7 @@ function WaitingDetails({
   if (contract.status === "entwurf") {
     return (
       <p className="text-sm text-gray-600">
-        Haben die Eltern schon auf Papier unterschrieben? Dann erfassen Sie den
+        Haben die Eltern schon auf Papier unterschrieben? Dann erfasst du den
         Vertrag mit „Papiervertrag erfassen“.
       </p>
     );
@@ -255,7 +255,7 @@ function WaitingDetails({
     <div className="space-y-3">
       <p className="text-sm text-gray-600">
         Bis zur Unterschrift bekommen die Eltern Erinnerungen per Mail. Nach wie
-        vielen Tagen, legen Sie unter „Einstellungen“ → „Allgemein“ →
+        vielen Tagen, legst du unter „Einstellungen“ → „Allgemein“ →
         „Betreuungsverträge“ fest.
       </p>
       {contract.reminders.length > 0 ? (

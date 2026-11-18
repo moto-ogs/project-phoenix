@@ -604,7 +604,7 @@ function DienstplanContent() {
                         label: "Springer des Trägers",
                         icon: <UsersRound className="h-4 w-4" aria-hidden />,
                         description:
-                          "Zeigt die Springer Ihres Trägers. Dort blocken Sie eine Person.",
+                          "Zeigt die Springer deines Trägers. Dort blockst du eine Person.",
                         href: tenantPath("/dienstplan/springer"),
                         // Nur Navigation: OverflowMenu verlangt onClick auch bei href.
                         onClick: () => undefined,

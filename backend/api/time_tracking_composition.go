@@ -2,9 +2,7 @@ package api
 
 import (
 	"context"
-	"io"
 	"log/slog"
-	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -117,12 +115,16 @@ func newTimeTrackingResource(
 // adapted capabilities; schedules is the Workforce query the schedule views
 // read from and the Sonderarbeitszeiten are written through; notifyChanged
 // invalidates the time-account views after such a write.
-func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, schedules workforceModule.Capability, notifyChanged func(context.Context), exportTransfer exportTransferModule.Capability, payroll workforceModule.PayrollDispatch, absenceMails workforceModule.AbsenceMailStatus, payrollRules workforceModule.PayrollRules, qualificationStaffRows owners.QualificationStaffRows, db transactionruntime.Database, files nativeUploads.FileKeys, logger *slog.Logger) *timeTrackingHTTP.StaffAdminResource {
+func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, schedules workforceModule.Capability, notifyChanged func(context.Context), exportTransfer exportTransferModule.Capability, payroll workforceModule.PayrollDispatch, absenceMails workforceModule.AbsenceMailStatus, payrollRules workforceModule.PayrollRules, qualificationStaffRows owners.QualificationStaffRows, db transactionruntime.Database, files nativeUploads.FileKeys, uploads nativeUploads.UploadFiles, logger *slog.Logger) *timeTrackingHTTP.StaffAdminResource {
 	cleanup, err := workforceCompose.NewDocumentCleanup(db.Pool(), nil)
 	if err != nil {
 		panic(err)
 	}
-	documentFiles, err := workforceCompose.NewStaffDocumentFileRecovery(capabilities.Documents, cleanup, nativeUploads.UploadFiles{}, logger)
+	documentObjects, err := uploads.Private(files)
+	if err != nil {
+		panic(err)
+	}
+	documentFiles, err := workforceCompose.NewStaffDocumentFileRecovery(capabilities.Documents, cleanup, documentObjects, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -131,8 +133,7 @@ func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absen
 		panic(err)
 	}
 	return timeTrackingHTTP.NewStaffAdminResource(timeTrackingHTTP.StaffAdminDependencies{
-		Uploads:            nativeUploads.UploadFiles{},
-		DocumentObjects:    sealedUploads{keys: files},
+		DocumentObjects:    documentObjects,
 		OffboardingCleanup: cleanup,
 		DocumentFiles:      documentFiles,
 		Staff:              capabilities.Staff,
@@ -168,27 +169,4 @@ func timeTrackingAllowanceResponses(accounts []workforceModule.AbsenceTypeAllowa
 
 func timeTrackingShiftResponses(shifts []workforceModule.PlannedShift) any {
 	return staffShiftsHTTP.ToShiftResponses(shifts)
-}
-
-// sealedUploads resolves the uploads backend per call, like the other
-// document flows, with the root's file rings (#3840).
-type sealedUploads struct{ keys nativeUploads.FileKeys }
-
-func (u sealedUploads) SaveSealed(ctx context.Context, kind string, tenantID int64, storedName string, source io.Reader, ring string) (int64, error) {
-	backend, err := nativeUploads.SealedPrivateUploadsBackend(u.keys)
-	if err != nil {
-		return 0, err
-	}
-	return backend.SaveSealed(ctx, kind, tenantID, storedName, source, ring)
-}
-
-func (u sealedUploads) OpenPrivate(ctx context.Context, kind string, tenantID int64, storedName string) (interface {
-	io.ReadSeekCloser
-	ModTime() time.Time
-}, error) {
-	backend, err := nativeUploads.SealedPrivateUploadsBackend(u.keys)
-	if err != nil {
-		return nil, err
-	}
-	return backend.OpenPrivate(ctx, kind, tenantID, storedName)
 }

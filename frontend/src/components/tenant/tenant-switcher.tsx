@@ -272,7 +272,7 @@ export function BrandTenantSwitcher({
         ariaLabel="Einrichtung wechseln"
         items={menuItems}
         disabled={isSwitching}
-        triggerTooltip="Zeigt Ihre Einrichtungen, ein Eintrag wechselt dorthin."
+        triggerTooltip="Zeigt deine Einrichtungen, ein Eintrag wechselt dorthin."
         onOpen={() => setSchoolPortalHint(null)}
         wrapperClassName="min-w-0 block"
         triggerClassName="-mx-1.5 max-w-[200px] min-w-0 gap-2.5 rounded-lg px-1.5 py-1 hover:bg-gray-100 disabled:opacity-50 sm:max-w-[260px] lg:max-w-[300px]"
@@ -315,7 +315,7 @@ export function BrandTenantSwitcher({
         <div className="absolute left-0 z-50 mt-1 w-72">
           <Alert
             type="info"
-            message="Dieses Konto gehört zu moto schule. Bitte melden Sie sich dort an."
+            message="Dieses Konto gehört zu moto schule. Bitte melde dich dort an."
             action={
               schoolPortalHint.url ? (
                 <a

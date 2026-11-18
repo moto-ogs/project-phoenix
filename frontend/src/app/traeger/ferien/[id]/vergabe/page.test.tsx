@@ -149,7 +149,7 @@ describe("holiday allocation page (#4700)", () => {
       within(dialog).getByRole("button", { name: "Platz geben" }),
     );
     expect(
-      await within(dialog).findByText("Bitte geben Sie eine Begründung ein."),
+      await within(dialog).findByText("Bitte gib eine Begründung ein."),
     ).toBeInTheDocument();
     expect(decide).not.toHaveBeenCalled();
 
@@ -412,7 +412,7 @@ describe("holiday allocation page (#4700)", () => {
       await screen.findByRole("button", { name: "Vorschlag übernehmen" }),
     );
     await screen.findByText(
-      "Die Liste hat sich geändert. Bitte prüfen Sie Ihre Entscheidung neu.",
+      "Die Liste hat sich geändert. Bitte prüfe deine Entscheidung neu.",
     );
     expect(decide).toHaveBeenCalledTimes(2);
     expect(decide.mock.calls[1]?.[1]).toEqual([
@@ -448,7 +448,7 @@ describe("holiday allocation page (#4700)", () => {
     await waitFor(() => expect(fetchBoard).toHaveBeenCalledTimes(2));
     expect(
       await screen.findByText(
-        "Die Liste hat sich geändert. Bitte prüfen Sie Ihre Entscheidung neu.",
+        "Die Liste hat sich geändert. Bitte prüfe deine Entscheidung neu.",
       ),
     ).toBeInTheDocument();
   });

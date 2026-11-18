@@ -27,7 +27,7 @@ func TestAppointmentNotificationTemplate_Renders(t *testing.T) {
 	err = tpl.ExecuteTemplate(&buf, "appointment-notification.html", map[string]any{
 		"Title":             "Elternabend",
 		"BrandKicker":       "Neuer Termin",
-		"IntroText":         "es gibt einen neuen Termin für Sie.",
+		"IntroText":         "es gibt einen neuen Termin für dich.",
 		"WhenText":          "02.04.2026, 18:00–19:30 Uhr",
 		"Location":          "Aula",
 		"SchoolName":        "OGS Musterschule",

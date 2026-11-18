@@ -363,7 +363,7 @@ describe("StudentFeedbackHistoryPage", () => {
     render(<StudentFeedbackHistoryPage />);
 
     expect(await screen.findByTestId("alert-error")).toHaveTextContent(
-      "Die Feedbackhistorie ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+      "Die Feedbackhistorie ist gerade nicht erreichbar. Bitte versuche es erneut.",
     );
     // #2517: keine Zählung aus einer Historie, die nie geladen wurde.
     expect(screen.getByTestId("alert-error")).toHaveTextContent(
@@ -390,7 +390,7 @@ describe("StudentFeedbackHistoryPage", () => {
 
     expect(
       await screen.findByText(
-        /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+        /Die Feedbackhistorie ist für deine Schule ausgeschaltet/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("alert-error")).not.toBeInTheDocument();
@@ -513,7 +513,7 @@ it.each([false, true])(
       fireEvent.click(screen.getByRole("button", { name: "Reload feedback" }));
       expect(
         await screen.findByText(
-          /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+          /Die Feedbackhistorie ist für deine Schule ausgeschaltet/,
         ),
       ).toBeVisible();
       expect(screen.queryByText("Feedback-Übersicht")).not.toBeInTheDocument();
@@ -531,7 +531,7 @@ it.each([false, true])(
       );
       expect(
         screen.getByText(
-          /Die Feedbackhistorie ist für Ihre Schule ausgeschaltet/,
+          /Die Feedbackhistorie ist für deine Schule ausgeschaltet/,
         ),
       ).toBeVisible();
       expect(screen.queryByText("Feedback-Übersicht")).not.toBeInTheDocument();

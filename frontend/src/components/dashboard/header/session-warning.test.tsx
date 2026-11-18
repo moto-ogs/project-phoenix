@@ -20,7 +20,7 @@ describe("SessionWarning", () => {
 
     expect(
       screen.getByText(
-        "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+        "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
       ),
     ).toBeInTheDocument();
   });
@@ -35,7 +35,7 @@ describe("SessionWarning", () => {
     expect(icon).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+        "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
       ),
     ).not.toBeInTheDocument();
   });
@@ -50,7 +50,7 @@ describe("SessionWarning", () => {
     expect(warning).toBeInTheDocument();
     expect(warning).toHaveClass("bg-moto-orange-soft");
     expect(warning).toHaveTextContent(
-      "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+      "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
     );
   });
 

@@ -21,6 +21,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -161,8 +162,11 @@ func careLettersInput() map[string]any {
 func TestCareLettersSendEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Monatsschreiben")
-	brandCareTraeger(t, f)
+	administration := brandedAdministration(t, f)
 	run, contracts := releasedCareRun(t, f, "Mia", "Noah")
+	requireLettersNeedTheLetterhead(t, f.traeger, administration.token, func() *httptest.ResponseRecorder {
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters"), careLettersInput())
+	})
 	mia, noah := invoiceOfContract(t, run, contracts["Mia"]), invoiceOfContract(t, run, contracts["Noah"])
 
 	before := careLetters(t, f, run.ID)
@@ -184,6 +188,12 @@ func TestCareLettersSendEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
 
+	// The mail names the Träger from the letterhead: without it no mail goes
+	// out with an empty name (#7177).
+	requireLettersNeedTheLetterhead(t, f.traeger, administration.token, func() *httptest.ResponseRecorder {
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters/mail"), nil)
+	})
+	assert.Empty(t, careLetterMails(t, f, run.ID), "no mail without the letterhead")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, careSeriesBody{Queued: 1, WithoutEmail: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))
@@ -201,6 +211,17 @@ func TestCareLettersSendEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, careSeriesBody{Already: 1, WithoutEmail: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()),
 		"a second series sends nothing twice")
+	// A retry that has only an existing send and an addressless letter does not
+	// need a current sender: it cannot enqueue a mail.
+	rec = traegerJSON(t, f.traeger, administration.token, http.MethodPut,
+		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": " \n "})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters/mail"), nil)
+	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
+	assert.Equal(t, careSeriesBody{Already: 1, WithoutEmail: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))
+	rec = traegerJSON(t, f.traeger, administration.token, http.MethodPut,
+		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": traegerTestLetterhead})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	oneMail := careRunPath(run.ID, fmt.Sprintf("/invoices/%d/mail", mia.ID))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, oneMail, nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, "a waiting mail is not sent again: %s", rec.Body.String())

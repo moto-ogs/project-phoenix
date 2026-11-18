@@ -530,7 +530,7 @@ describe("TeamChatThread optimistic send (#5011)", () => {
 
     expect(
       await screen.findByText(
-        "Der Team-Chat ist ausgeschaltet. Sie können hier nicht schreiben.",
+        "Der Team-Chat ist ausgeschaltet. Du kannst hier nicht schreiben.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Hallo")).toBeInTheDocument();
@@ -544,7 +544,7 @@ describe("TeamChatThread optimistic send (#5011)", () => {
       }),
     );
     const disabledNotice =
-      "Der Team-Chat ist ausgeschaltet. Sie können hier nicht schreiben.";
+      "Der Team-Chat ist ausgeschaltet. Du kannst hier nicht schreiben.";
     const view = (flagSaysEnabled: boolean) => (
       <TeamChatThread
         portal={{ ...portalFor(api), flagSaysEnabled }}

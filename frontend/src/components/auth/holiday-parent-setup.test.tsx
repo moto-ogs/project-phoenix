@@ -77,7 +77,7 @@ describe("HolidayParentSetupView (#6673)", () => {
       await screen.findByRole("heading", { name: "Elternkonto anlegen" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Ihre Ferienanmeldungen bei Träger Bissendorf/),
+      screen.getByText(/deine Ferienanmeldungen bei Träger Bissendorf/),
     ).toBeInTheDocument();
     expect(screen.getByText("eva@example.org")).toBeInTheDocument();
     expect(screen.getByText("Passwortanforderungen")).toBeInTheDocument();
@@ -99,12 +99,12 @@ describe("HolidayParentSetupView (#6673)", () => {
     );
     expect(
       await screen.findByRole("heading", {
-        name: "Ihr Elternkonto ist fertig",
+        name: "Dein Elternkonto ist fertig",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Melden Sie sich jetzt mit eva@example.org und Ihrem neuen Passwort an.",
+        "Melde dich jetzt mit eva@example.org und deinem neuen Passwort an.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anmelden" })).toHaveAttribute(
@@ -124,13 +124,13 @@ describe("HolidayParentSetupView (#6673)", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Sie haben schon ein Elternkonto",
+        name: "Du hast schon ein Elternkonto",
       }),
     ).toBeInTheDocument();
     // Anker: the existing-account state asks the parent to sign in.
     expect(
       screen.getByText(
-        /Melden Sie sich an. Dann sehen Sie auch Ihre Ferienanmeldungen/,
+        /Melde dich an. Dann siehst du auch deine Ferienanmeldungen/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -153,7 +153,7 @@ describe("HolidayParentSetupView (#6673)", () => {
 
     expect(
       await screen.findByText(
-        catalogText("identity.password_too_weak", "Ihr Elternkonto"),
+        catalogText("identity.password_too_weak", "Dein Elternkonto"),
         { exact: false },
       ),
     ).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe("HolidayParentSetupView (#6673)", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Sie haben schon ein Elternkonto",
+        name: "Du hast schon ein Elternkonto",
       }),
     ).toBeInTheDocument();
     // Anker: the existing-account state with its one action is rendered.
@@ -199,7 +199,7 @@ describe("HolidayParentSetupView (#6673)", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/bitten Sie den Träger um einen neuen Link/),
+      screen.getByText(/frag den Träger nach einem neuen Link/),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anmelden" })).toHaveAttribute(
       "href",
@@ -215,7 +215,7 @@ describe("HolidayParentSetupView (#6673)", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.unavailable", "Ihr Elternkonto"),
+        catalogText("general.unavailable", "Dein Elternkonto"),
         { exact: false },
       ),
     ).toBeInTheDocument();

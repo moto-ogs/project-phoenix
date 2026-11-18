@@ -212,10 +212,10 @@ export default function TraegerHolidayAllocationPage() {
       backLabel="Zurück zu den Ferien"
       info={
         <p>
-          moto sortiert die offenen Anmeldungen jeder Woche nach Ihren
+          moto sortiert die offenen Anmeldungen jeder Woche nach deinen
           Kriterien. Bei gleichen Kriterien zählt der Eingang. Das ist nur ein
-          Vorschlag. Ihr Büro entscheidet über jeden Platz. Weichen Sie vom
-          Vorschlag ab, schreiben Sie kurz, warum. Die Eltern bekommen nach der
+          Vorschlag. Dein Büro entscheidet über jeden Platz. Weiche vom
+          Vorschlag ab, schreibe kurz, warum. Die Eltern bekommen nach der
           Entscheidung eine E-Mail. Danach rücken Kinder von der Warteliste
           automatisch nach, wenn ein Platz frei wird.
         </p>
@@ -296,7 +296,7 @@ export default function TraegerHolidayAllocationPage() {
         <div ref={boardRef} className="flex flex-col gap-6">
           <SectionCard
             title="So sortiert moto vor"
-            description="Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Sie entscheiden."
+            description="Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Du entscheidest."
             action={
               <ButtonLink
                 href={traegerPath("/traeger/ferien/kriterien")}
@@ -342,7 +342,7 @@ export default function TraegerHolidayAllocationPage() {
                   icon={<CheckCircle2 aria-hidden="true" />}
                   titleAs="h2"
                   title="Alles entschieden"
-                  description="Es gibt keine offene Anmeldung. Neue Anmeldungen erscheinen hier, vorsortiert nach Ihren Kriterien."
+                  description="Es gibt keine offene Anmeldung. Neue Anmeldungen erscheinen hier, vorsortiert nach deinen Kriterien."
                   variant="compact"
                 />
               </SectionCard>

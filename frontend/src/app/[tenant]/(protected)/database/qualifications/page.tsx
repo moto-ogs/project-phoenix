@@ -227,7 +227,7 @@ export default function QualificationsPage() {
       title="Nachweise"
       stats={statusLine}
       statsLoading={loading}
-      info="Hier sehen Sie, wer welchen Nachweis hat und wann er abläuft. Nachweise tragen Sie im Profil der Person im Reiter Stammdaten ein."
+      info="Hier siehst du, wer welchen Nachweis hat und wann er abläuft. Nachweise trägst du im Profil der Person im Reiter Stammdaten ein."
       search={{
         value: search,
         onChange: setSearch,
@@ -261,7 +261,7 @@ export default function QualificationsPage() {
                     {
                       label: "Für Excel herunterladen",
                       description:
-                        "Speichert die gefilterte Liste als Datei auf Ihrem Gerät.",
+                        "Speichert die gefilterte Liste als Datei auf deinem Gerät.",
                       icon: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
                       onClick: () =>
                         downloadBlob(
@@ -298,8 +298,8 @@ export default function QualificationsPage() {
               }
               description={
                 rows.length === 0
-                  ? "Nachweise tragen Sie im Profil der Person im Reiter Stammdaten ein."
-                  : "Ändern Sie die Suche oder die Filter."
+                  ? "Nachweise trägst du im Profil der Person im Reiter Stammdaten ein."
+                  : "Ändere die Suche oder die Filter."
               }
             />
           }

@@ -651,7 +651,7 @@ describe("OperatorSchoolDetailPage", () => {
     fireEvent.click(await screen.findByText("Löschen"));
 
     expect(await screen.findByText("Schule löschen")).toBeInTheDocument();
-    expect(screen.getByText(/Möchten Sie die Schule/)).toBeInTheDocument();
+    expect(screen.getByText(/Möchtest du die Schule/)).toBeInTheDocument();
   });
 
   // --- Konten tab actions ---

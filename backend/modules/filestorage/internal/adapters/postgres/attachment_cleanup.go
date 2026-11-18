@@ -30,7 +30,7 @@ func (r attachmentCleanupRow) intent() domain.CleanupIntent {
 
 // AttachmentCleanupStore implements ports.CleanupStore over
 // documents.announcement_attachment_cleanup. now is the clock of the
-// eligibility (retry_after) and of the settle stamps.
+// eligibility (retry_after). The database stamps cleaned_at for retention.
 type AttachmentCleanupStore struct {
 	database Database
 	now      func() time.Time
@@ -106,13 +106,13 @@ func (s *AttachmentCleanupStore) ListQueued(ctx context.Context) ([]domain.Clean
 
 func (s *AttachmentCleanupStore) MarkComplete(ctx context.Context, intentID int64) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark attachment cleanup complete", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".id = ?`, intentID)
+		return query.Set(`cleaned_at = `+databaseClock).Where(`"intent".id = ?`, intentID)
 	})
 }
 
 func (s *AttachmentCleanupStore) MarkCompleteByFilename(ctx context.Context, storedName string) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark attachment cleanup complete by filename", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".filename_stored = ?`, storedName)
+		return query.Set(`cleaned_at = `+databaseClock).Where(`"intent".filename_stored = ?`, storedName)
 	})
 }
 

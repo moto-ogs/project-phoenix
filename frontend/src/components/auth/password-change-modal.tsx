@@ -54,19 +54,19 @@ function passwordChangeCheck(
 ): { message: string; field: string } | null {
   if (!currentPassword) {
     return {
-      message: "Bitte füllen Sie alle Felder aus.",
+      message: "Bitte fülle alle Felder aus.",
       field: "current_password",
     };
   }
   if (!newPassword) {
     return {
-      message: "Bitte füllen Sie alle Felder aus.",
+      message: "Bitte fülle alle Felder aus.",
       field: "new_password",
     };
   }
   if (!confirmPassword) {
     return {
-      message: "Bitte füllen Sie alle Felder aus.",
+      message: "Bitte fülle alle Felder aus.",
       field: "confirm_password",
     };
   }
@@ -187,7 +187,7 @@ export function PasswordChangeModal({
           icon={<CheckIcon />}
           titleAs="h3"
           title="Passwort erfolgreich geändert!"
-          description="Sie werden in Kürze weitergeleitet..."
+          description="Du wirst in Kürze weitergeleitet..."
           className="py-8"
         />
       ) : (
@@ -271,7 +271,7 @@ export function PasswordChangeModal({
               size="md"
               disabled={isLoading}
               className="flex-1"
-              tooltip="Speichert sofort Ihr neues Passwort für die Anmeldung."
+              tooltip="Speichert sofort dein neues Passwort für die Anmeldung."
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">

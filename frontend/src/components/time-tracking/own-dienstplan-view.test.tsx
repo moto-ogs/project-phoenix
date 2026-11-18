@@ -311,7 +311,7 @@ describe("OwnDienstplanView", () => {
       screen.getByText("Keine Schichten in dieser Woche"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Ihre Schichten plant die Leitung im Dienstplan/),
+      screen.getByText(/Deine Schichten plant die Leitung im Dienstplan/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Zur nächsten Schicht" }),
@@ -348,7 +348,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       screen.getByText(
-        "Ihre nächste Schicht nach dieser Woche ist am Dienstag, 29. September 2026.",
+        "Deine nächste Schicht nach dieser Woche ist am Dienstag, 29. September 2026.",
       ),
     ).toBeInTheDocument();
     fireEvent.click(
@@ -365,7 +365,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       screen.getByText(
-        /Auch in den 8 Wochen danach ist keine Schicht eingetragen\. Ihre Schichten plant die Leitung\. Fragen Sie dort nach/,
+        /Auch in den 8 Wochen danach ist keine Schicht eingetragen\. Deine Schichten plant die Leitung\. Frage dort nach/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -399,7 +399,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       await screen.findByText(
-        "Die Suche nach der nächsten Schicht ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Suche nach der nächsten Schicht ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     // Die aktuelle Woche ist bereits bestätigt leer und bleibt sichtbar.
@@ -449,7 +449,7 @@ describe("OwnDienstplanView", () => {
 
     // Anker: die Erklärung des fehlenden Zugriffs steht da.
     expect(
-      screen.getByText(/Sie haben keinen Zugriff auf einen eigenen Dienstplan/),
+      screen.getByText(/Du hast keinen Zugriff auf einen eigenen Dienstplan/),
     ).toBeInTheDocument();
     // This file renders without the tenant slug (real tenant context).
     expect(
@@ -467,7 +467,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste Ihrer Schichten ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste deiner Schichten ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("geplant")).not.toBeInTheDocument();
@@ -483,7 +483,7 @@ describe("OwnDienstplanView", () => {
 
     expect(
       await screen.findByText(
-        "Das Soll dieser Woche ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Das Soll dieser Woche ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByTestId("own-week-hours-card")).toHaveTextContent(

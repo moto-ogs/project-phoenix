@@ -8,20 +8,20 @@ export function correctWorkTimeTopic(): HelpTopic {
     title: "Eigene Arbeitszeit prüfen und korrigieren",
     question: "Wie prüfe oder korrigiere ich meine Arbeitszeit?",
     summary:
-      "Prüfen Sie Ihre erfassten Zeiten und berichtigen Sie einen vorhandenen Eintrag.",
+      "Prüfe deine erfassten Zeiten und berichtige einen vorhandenen Eintrag.",
     group: "arbeitszeit",
     audience: ["caregiver", "lead"],
     icon: "Clock3",
     steps: [
-      "Klappen Sie in der Seitenleiste `Team` auf und öffnen Sie `Zeiterfassung`.",
+      "Klappe in der Seitenleiste `Team` auf und öffne `Zeiterfassung`.",
       // Live geprueft: der Umschalter sitzt in der Kopfkarte, nicht an der
       // Tabelle. Die Tabelle heisst selbst `Zeiterfassung`.
-      "Wechseln Sie oben rechts zwischen `Woche` und `Monat`.",
-      "Suchen Sie in der Tabelle `Zeiterfassung` den betroffenen Tag.",
-      "Wählen Sie am Ende der Zeile das Stift-Symbol.",
-      "Ändern Sie Beginn, Ende oder Pause.",
-      "Tragen Sie einen Grund für die Änderung ein.",
-      "Wählen Sie `Speichern`.",
+      "Wechsle oben rechts zwischen `Woche` und `Monat`.",
+      "Suche in der Tabelle `Zeiterfassung` den betroffenen Tag.",
+      "Wähle am Ende der Zeile das Stift-Symbol.",
+      "Ändere Beginn, Ende oder Pause.",
+      "Trage einen Grund für die Änderung ein.",
+      "Wähle `Speichern`.",
     ],
     result:
       "Die korrigierte Zeit und der neue Saldo werden angezeigt. Die Änderung bleibt in der Historie nachvollziehbar.",
@@ -31,11 +31,11 @@ export function correctWorkTimeTopic(): HelpTopic {
       SIMPLE_NAV_DIFFERENCE,
     ],
     troubleshootingDetails: [
-      "Der Beginn darf nicht in der Zukunft liegen. Wählen Sie eine Uhrzeit, die schon vorbei ist.",
+      "Der Beginn darf nicht in der Zukunft liegen. Wähle eine Uhrzeit, die schon vorbei ist.",
     ],
     notes: [
-      "Klappen Sie einen geänderten Tag auf, um die Änderungshistorie zu sehen.",
-      "Öffnen Sie für Ihren Zeitnachweis oben rechts das Drei-Punkte-Menü. Wählen Sie `Exportieren`, den Zeitraum und das Format. Mit `Herunterladen` bekommen Sie die Datei.",
+      "Klappe einen geänderten Tag auf, um die Änderungshistorie zu sehen.",
+      "Öffne für deinen Zeitnachweis oben rechts das Drei-Punkte-Menü. Wähle `Exportieren`, den Zeitraum und das Format. Mit `Herunterladen` bekommst du die Datei.",
     ],
     related: [HELP_TOPICS.trackWorkTime, HELP_TOPICS.vacation],
   };

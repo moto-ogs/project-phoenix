@@ -79,8 +79,8 @@ export default function AdminEnrollmentsPage() {
     setSaving(null);
     toastSuccess(
       next
-        ? "Sie bekommen jetzt bei jeder neuen Anmeldung eine E-Mail."
-        : "Sie bekommen keine E-Mail mehr bei neuen Anmeldungen.",
+        ? "Du bekommst jetzt bei jeder neuen Anmeldung eine E-Mail."
+        : "Du bekommst keine E-Mail mehr bei neuen Anmeldungen.",
     );
   }, [emailState, emailSaving, mutateSubscription, toastSuccess, showError]);
   const handleSummaryChange = useCallback(
@@ -124,7 +124,8 @@ export default function AdminEnrollmentsPage() {
           items={[
             {
               label: "Alle als gelesen markieren",
-              description: "Markiert alle Anmeldungen nur für Sie als gelesen.",
+              description:
+                "Markiert alle Anmeldungen nur für dich als gelesen.",
               onClick: handleMarkAllRead,
             },
             ...(emailState === "unavailable"

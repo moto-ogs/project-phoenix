@@ -11,7 +11,7 @@ export function traegerDailyAttendanceTopic(): HelpTopic {
     title: "Tagesmeldung Mecklenburg-Vorpommern",
     question: "Wie melde ich die tägliche An- und Abwesenheit an das Land?",
     summary:
-      "Für Schulen in Mecklenburg-Vorpommern zeigt moto je Tag, wer da war und wer gefehlt hat. Die Datei für das Land laden Sie mit einem Klick herunter.",
+      "Für Schulen in Mecklenburg-Vorpommern zeigt moto je Tag, wer da war und wer gefehlt hat. Die Datei für das Land lädst du mit einem Klick herunter.",
     image: "/help/screens/tagesmeldung-mecklenburg-vorpommern.webp",
     imageAlt:
       "Oben die Zahlen Kinder am Tag, Verweildauer, Längster Tag und Abwesend gemeldet. Darunter die Tabelle Je Tag mit einer Zeile je Tag.",
@@ -19,19 +19,19 @@ export function traegerDailyAttendanceTopic(): HelpTopic {
     audience: "traeger",
     icon: "SealCheck",
     requirements: [
-      "Sie brauchen das Recht `Berichte lesen`. Es gehört zu den Rollen `Verwaltung`, `Abrechnung`, `Personal` und `Nur lesen`.",
-      "Mindestens eine Schule Ihres Trägers liegt in Mecklenburg-Vorpommern. Das Bundesland einer Schule stellt das moto-Team ein.",
+      "Du brauchst das Recht `Berichte lesen`. Es gehört zu den Rollen `Verwaltung`, `Abrechnung`, `Personal` und `Nur lesen`.",
+      "Mindestens eine Schule deines Trägers liegt in Mecklenburg-Vorpommern. Das Bundesland einer Schule stellt das moto-Team ein.",
     ],
     steps: [
-      "Wählen Sie in der Navigation `Tagesmeldung`.",
-      "Wählen Sie oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
-      "Lesen Sie oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
-      "Lesen Sie unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
-      "Wählen Sie oben den Filter `Schule`, um nur eine Schule zu sehen.",
-      "Wählen Sie `Herunterladen` und dann `CSV`. Diese Datei reichen Sie beim Land ein. `PDF` und `Excel` sind für Ihre eigene Ablage.",
+      "Wähle in der Navigation `Tagesmeldung`.",
+      "Wähle oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
+      "Lies oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
+      "Lies unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
+      "Wähle oben den Filter `Schule`, um nur eine Schule zu sehen.",
+      "Wähle `Herunterladen` und dann `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
     ],
     result:
-      "Sie haben die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
+      "Du hast die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
     notes: [
       "Die Pflicht steht in § 32 Absatz 1a KiföG M-V und gilt ab 2027.",
       "Das Land legt das genaue Format noch fest. Bis dahin enthält die Datei: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und die Minuten dazwischen.",
@@ -41,7 +41,7 @@ export function traegerDailyAttendanceTopic(): HelpTopic {
       "Jedes Herunterladen steht im Zugriffsprotokoll der Schule.",
     ],
     differences: [
-      "Fehlt der Eintrag in der Navigation? Dann liegt keine Schule Ihres Trägers in Mecklenburg-Vorpommern, oder Ihre Rolle hat das Recht `Berichte lesen` nicht.",
+      "Fehlt der Eintrag in der Navigation? Dann liegt keine Schule deines Trägers in Mecklenburg-Vorpommern, oder deine Rolle hat das Recht `Berichte lesen` nicht.",
       "Steht unter `Ohne Abholung` eine Zahl? So viele Kinder wurden an diesem Tag nicht ausgecheckt. Für sie gibt es keine Abholzeit und keine Verweildauer.",
       "Steht oben, dass Schulen fehlen? Diese Schulen liegen in einem anderen Bundesland und gehören nicht in die Meldung.",
       "Auf dem Telefon steht `Tagesmeldung` unter `Mehr`.",

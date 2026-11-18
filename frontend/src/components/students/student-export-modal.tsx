@@ -189,9 +189,7 @@ export function StudentExportModal({
   };
 
   const validate = () =>
-    columns.length === 0
-      ? "Bitte wählen Sie mindestens eine Spalte aus."
-      : null;
+    columns.length === 0 ? "Bitte wähle mindestens eine Spalte aus." : null;
 
   const request = (format: StudentExportFormat) => ({
     format,
@@ -324,7 +322,7 @@ export function StudentExportModal({
             <ExportToggleCheckbox
               checked={includeWithoutHealthInfo}
               label="Auch Kinder ohne Eintrag"
-              description="So sehen Sie auf einen Blick, bei wem noch nichts eingetragen ist."
+              description="So siehst du auf einen Blick, bei wem noch nichts eingetragen ist."
               onChange={() =>
                 setIncludeWithoutHealthInfo((current) => !current)
               }

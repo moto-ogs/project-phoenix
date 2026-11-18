@@ -42,14 +42,14 @@ function draftErrors(
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!draft.date || draft.date < today) {
-    errors.date = "Bitte wählen Sie einen Tag ab heute.";
+    errors.date = "Bitte wähle einen Tag ab heute.";
   } else if (!inPool(springer, draft.date)) {
     errors.date = "An diesem Tag ist die Person nicht im Vertretungspool.";
   }
   if (!TIME.test(draft.startTime))
-    errors.start_time = "Bitte geben Sie den Beginn an.";
+    errors.start_time = "Bitte gib den Beginn an.";
   if (!TIME.test(draft.endTime)) {
-    errors.end_time = "Bitte geben Sie das Ende an.";
+    errors.end_time = "Bitte gib das Ende an.";
   } else if (TIME.test(draft.startTime) && draft.endTime <= draft.startTime) {
     errors.end_time = "Das Ende muss nach dem Beginn liegen.";
   }
@@ -90,7 +90,7 @@ export function BlockSpringerModal({
   const submit = async () => {
     const invalid = draftErrors(draft, springer, todayIso);
     if (Object.keys(invalid).length > 0) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", invalid);
+      errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
     }
     await save.run(async (op) => {
@@ -98,7 +98,7 @@ export function BlockSpringerModal({
         await blockSpringer({ recordId: springer.recordId, ...draft });
         if (!op.isCurrent()) return;
         onBlocked(
-          `${name} ist am ${formatDate(draft.date)} von ${draft.startTime} bis ${draft.endTime} Uhr für Ihre Schule geblockt.`,
+          `${name} ist am ${formatDate(draft.date)} von ${draft.startTime} bis ${draft.endTime} Uhr für deine Schule geblockt.`,
         );
       } catch (err) {
         logger.error("staff_pool_block_failed", {
@@ -125,7 +125,7 @@ export function BlockSpringerModal({
           onSave={() => formRef.current?.requestSubmit()}
           saving={save.pending}
           saveLabel="Blocken"
-          saveTooltip="Hält die Person zu dieser Zeit für Ihre Schule frei."
+          saveTooltip="Hält die Person zu dieser Zeit für deine Schule frei."
         />
       }
     >
@@ -174,7 +174,7 @@ export function BlockSpringerModal({
         <Alert
           type="info"
           size="compact"
-          message="Andere Schulen sehen nur, dass Ihre Schule geblockt hat. Danach können Sie die Person in Ihrem Dienstplan einplanen. Sie meldet sich nur in den geblockten Zeiten bei Ihnen an."
+          message="Andere Schulen sehen nur, dass deine Schule geblockt hat. Danach kannst du die Person in deinem Dienstplan einplanen. Sie meldet sich nur in den geblockten Zeiten bei dir an."
         />
       </form>
     </FormModal>

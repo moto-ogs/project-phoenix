@@ -125,7 +125,7 @@ export const ConfirmationMobileSheet: StoryObj<typeof ConfirmationModal> = {
     onClose: () => undefined,
     onConfirm: () => undefined,
     title: "Wirklich abmelden?",
-    children: <p>Sie können sich jederzeit wieder anmelden.</p>,
+    children: <p>Du kannst dich jederzeit wieder anmelden.</p>,
     mobileSheet: true,
   },
 };

@@ -165,7 +165,7 @@ const INVALID_TEXT: Partial<Record<ContractImportField, string>> = {
 };
 
 const UNKNOWN_TEXT: Partial<Record<ContractImportField, string>> = {
-  school: "Diese Schule gehört nicht zu Ihrem Träger.",
+  school: "Diese Schule gehört nicht zu deinem Träger.",
   module: "Dieses Modul gibt es an der Schule nicht.",
 };
 
@@ -244,13 +244,46 @@ export function contractImportDebtorText(
     case "rows_differ":
       return "Debitorennummer: In der Datei stehen verschiedene Nummern für denselben Zahler. moto übernimmt keine.";
     case "invalid":
-      return "Debitorennummer passt nicht zu Ihrem Nummernformat.";
+      return "Debitorennummer passt nicht zu deinem Nummernformat.";
     default:
       return null;
   }
 }
 
-export type ContractImportFilter = "all" | "ready" | "problems" | "duplicate";
+export type ContractImportFilter =
+  "all" | "ready" | "no_email" | "problems" | "duplicate";
+
+/** Ob moto die Zeile übernimmt oder übernommen hat. */
+function takenOver(row: ContractImportRow): boolean {
+  return row.status === "ready" || row.status === "imported";
+}
+
+/**
+ * Ob moto die Zeile mit Eltern, aber ohne deren Mail-Adresse übernimmt oder
+ * übernommen hat. Eine solche Familie kennt moto nur über ihren Vertrag
+ * (ADR 0232 Punkt 7): keine Mail, keine Eltern-App, Geschwister getrennt.
+ * Zeilen, die draußen bleiben, bekommen keinen Vertrag und zählen nicht.
+ * Eine Zeile ganz ohne Eltern (`no_party`) hat ihren eigenen Hinweis und
+ * eine andere Folge (Punkt 9): Ihr fehlt der Rechnungsempfänger, nicht nur
+ * die Adresse.
+ */
+export function takenOverWithoutEmail(row: ContractImportRow): boolean {
+  return (
+    takenOver(row) && row.partyEmail === "" && !row.hints.includes("no_party")
+  );
+}
+
+/** Verträge, die moto ohne Mail-Adresse der Eltern übernimmt. */
+export function contractsWithoutEmail(result: ContractImportResult): number {
+  return result.rows.filter(takenOverWithoutEmail).length;
+}
+
+/** Was einer Familie ohne Mail-Adresse fehlt (Entscheidung in #7360). */
+export const WITHOUT_EMAIL_CONSEQUENCES = [
+  "Keine Mail von moto. Rechnungen gibt es nur auf Papier.",
+  "Kein Zugang zur Eltern-App.",
+  "Geschwister bleiben getrennte Familien.",
+] as const;
 
 /** Ob eine Zeile zum gewählten Filter gehört. */
 export function matchesContractImportFilter(
@@ -261,7 +294,9 @@ export function matchesContractImportFilter(
     case "all":
       return true;
     case "ready":
-      return row.status === "ready" || row.status === "imported";
+      return takenOver(row);
+    case "no_email":
+      return takenOverWithoutEmail(row);
     case "problems":
       return row.status === "conflict" || row.status === "invalid";
     default:

@@ -6,6 +6,7 @@
 // über sich selbst öffnete; die Fläche ist jetzt eine Sammlung wie Räume und
 // Gruppen, und das Termin-Formular verlinkt nur noch hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -98,7 +99,7 @@ const config: CatalogConfig<ActivityCategory> = {
     "Terminkategorien ordnen Termine und Aktivitäten ein, zum Beispiel Essen, Lernzeit oder Freispiel.",
   searchPlaceholder: "Terminkategorie suchen…",
   emptyDescription:
-    "Legen Sie eine Terminkategorie an, damit Termine und Aktivitäten sich einordnen lassen.",
+    "Lege eine Terminkategorie an, damit Termine und Aktivitäten sich einordnen lassen.",
   stats: (items) => {
     const archived = items.filter((item) => item.archivedAt).length;
     const active = items.length - archived;
@@ -121,7 +122,7 @@ const config: CatalogConfig<ActivityCategory> = {
   }),
   isReadOnly: (item) => Boolean(item.archivedAt || item.isSystem),
   readOnlyHint:
-    "Diese Kategorie können Sie nicht ändern. Archivierte Kategorien können Sie wieder anbieten.",
+    "Diese Kategorie kannst du nicht ändern. Archivierte Kategorien kannst du wieder anbieten.",
   sections,
   toFormValues: (item) => ({
     name: item.name,
@@ -164,8 +165,7 @@ function CategoriesPageContent() {
     categoryService.getManagedCategories(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;

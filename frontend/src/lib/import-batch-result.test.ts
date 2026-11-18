@@ -84,7 +84,7 @@ describe("importBatchFailureMessage", () => {
       ],
     };
     expect(importBatchFailureMessage(mixed)).toBe(
-      "100 Zeilen sind gespeichert. Zeile 152 hat den Rest angehalten. Bitte korrigieren Sie diese Zeile. Laden Sie die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.",
+      "100 Zeilen sind gespeichert. Zeile 152 hat den Rest angehalten. Bitte korrigiere diese Zeile. Lade die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.",
     );
     expect(
       importBatchFailureMessage({
@@ -107,7 +107,7 @@ describe("importBatchFailureMessage", () => {
         Errors: [],
       }),
     ).toBe(
-      "100 Zeilen sind gespeichert. Der Rest hat nicht geklappt. Laden Sie die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.",
+      "100 Zeilen sind gespeichert. Der Rest hat nicht geklappt. Lade die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.",
     );
   });
 
@@ -120,7 +120,7 @@ describe("importBatchFailureMessage", () => {
       Errors: [{ RowNumber: 5, Errors: [{ code: "creation_failed" }] }],
     };
     expect(importBatchFailureMessage(firstBatch)).toBe(
-      "Zeile 5 hat nicht geklappt. Bitte korrigieren Sie diese Zeile. Laden Sie die Datei danach erneut hoch.",
+      "Zeile 5 hat nicht geklappt. Bitte korrigiere diese Zeile. Lade die Datei danach erneut hoch.",
     );
   });
 });

@@ -79,7 +79,7 @@ export default function TraegerVorlagePage() {
       >
         <Alert
           type="info"
-          message="Diese Vorlage gibt es nicht. Wählen Sie eine aus der Liste."
+          message="Diese Vorlage gibt es nicht. Wähle eine aus der Liste."
         />
       </TenantPage>
     );
@@ -317,7 +317,7 @@ function TemplateEditorPage({
           {!canEdit ? (
             <Alert
               type="info"
-              message="Sie können die Vorlage nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
+              message="Du kannst die Vorlage nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
             />
           ) : null}
           {/* Zwei Spalten ab xl: links bearbeiten, rechts die Vorschau, die
@@ -413,7 +413,7 @@ function TemplateEditorPage({
                         id="template-legal-remedy"
                         label="Rechtsbehelfsbelehrung"
                         name="legal_remedy"
-                        hint="Steht auf jedem Gebührenbescheid nach dem Brieftext. Nennen Sie Frist, Stelle und Form des Widerspruchs."
+                        hint="Steht auf jedem Gebührenbescheid nach dem Brieftext. Nenne Frist, Stelle und Form des Widerspruchs."
                         rows={6}
                         value={draft.legalRemedy ?? ""}
                         onChange={(event) =>
@@ -492,7 +492,7 @@ function TemplateEditorPage({
                 {previewStale ? (
                   <Alert
                     type="info"
-                    message="Die Vorschau zeigt noch den Text vor Ihren Änderungen. Tippen Sie auf „Vorschau zeigen“."
+                    message="Die Vorschau zeigt noch den Text vor deinen Änderungen. Tippe auf „Vorschau zeigen“."
                   />
                 ) : null}
                 <div className={previewStale ? "mt-4" : undefined}>

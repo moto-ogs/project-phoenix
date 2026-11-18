@@ -141,7 +141,7 @@ export function DokumenteTab({ staffId }: { readonly staffId: string }) {
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
       uploadErrors.showMessage(
-        "Die Datei ist größer als 10 MB. Bitte wählen Sie eine kleinere Datei.",
+        "Die Datei ist größer als 10 MB. Bitte wähle eine kleinere Datei.",
       );
       return;
     }
@@ -257,7 +257,7 @@ export function DokumenteTab({ staffId }: { readonly staffId: string }) {
         const items: readonly OverflowMenuEntry[] = [
           {
             label: "Herunterladen",
-            description: "Speichert die Datei auf Ihrem Gerät.",
+            description: "Speichert die Datei auf deinem Gerät.",
             href: staffDocumentsService.downloadUrl(staffId, doc.id),
             external: true,
             onClick: () => undefined,

@@ -132,7 +132,7 @@ describe("RequestDecisionRow", () => {
     renderRow(item({ current_value_changed: true }));
     expect(
       screen.getByText(
-        "Die OGS hat diesen Wert nach der Anfrage geändert. Prüfen Sie, welcher Wert jetzt gelten soll.",
+        "Die OGS hat diesen Wert nach der Anfrage geändert. Prüfe, welcher Wert jetzt gelten soll.",
       ),
     ).toBeVisible();
   });
@@ -173,7 +173,7 @@ describe("RequestDecisionRow", () => {
 
     const toast = await screen.findByRole("alert", { name: /^Fehler:/ });
     expect(toast).toHaveTextContent(
-      "Die Anfrage konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+      "Die Anfrage konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
     );
     mockMarkDone.mockResolvedValueOnce(undefined);
     fireEvent.click(screen.getByRole("button", { name: /Wiederholen/ }));
@@ -206,7 +206,7 @@ describe("RequestDecisionRow", () => {
     renderRow(item(), { inConflict: true });
     expect(
       screen.getByText(
-        "Diese Anfragen widersprechen sich. Legen Sie oben ein Ergebnis fest.",
+        "Diese Anfragen widersprechen sich. Lege oben ein Ergebnis fest.",
       ),
     ).toBeVisible();
   });

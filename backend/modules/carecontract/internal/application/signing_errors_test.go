@@ -64,7 +64,7 @@ func (r signingErrorRuntime) WithinTraeger(ctx context.Context, _ int64, fn func
 type signingErrorSender struct{ failure, reachFailure error }
 
 func (s signingErrorSender) TraegerLetterhead(context.Context, int64) (string, error) {
-	return "Träger", s.failure
+	return "Träger\nMusterweg 1", s.failure
 }
 
 func (s signingErrorSender) WithdrawalReach(context.Context, int64) (carecontract.WithdrawalReach, error) {

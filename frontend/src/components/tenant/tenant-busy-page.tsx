@@ -20,7 +20,7 @@ export function TenantBusyPage() {
           titleAs="h1"
           className="mt-4"
           title="Bitte kurz warten"
-          description="Die Seite lädt gerade nicht. Das liegt nicht an Ihnen. Bitte warten Sie eine Minute. Laden Sie die Seite dann neu."
+          description="Die Seite lädt gerade nicht. Das liegt nicht an dir. Bitte warte eine Minute. Lade die Seite dann neu."
           action={
             <Button
               type="button"

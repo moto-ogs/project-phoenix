@@ -3476,7 +3476,7 @@ function SearchPageContent() {
           if (loadingStalled) {
             return {
               message:
-                "Die Kinder laden gerade sehr lange. Bitte laden Sie die Liste noch einmal.",
+                "Die Kinder laden gerade sehr lange. Bitte lade die Liste noch einmal.",
               action: reloadAction,
             };
           }
@@ -3498,7 +3498,7 @@ function SearchPageContent() {
                 ),
                 title: "Keine Kinder gefunden",
                 description:
-                  "Zu Suche und Filtern passt kein Kind. Setzen Sie die Filter zurück, um alle Kinder zu sehen.",
+                  "Zu Suche und Filtern passt kein Kind. Setze die Filter zurück, um alle Kinder zu sehen.",
                 action: (
                   <Button
                     type="button"

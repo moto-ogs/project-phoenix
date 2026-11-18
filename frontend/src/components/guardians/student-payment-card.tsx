@@ -336,7 +336,7 @@ export function StudentPaymentCard({
               draftPayer ? (
                 <p className="text-sm text-gray-600">
                   Die Bankverbindung von {getGuardianFullName(draftPayer)}{" "}
-                  können Sie nach dem Speichern eintragen oder ändern.
+                  kannst du nach dem Speichern eintragen oder ändern.
                 </p>
               ) : (
                 <p className="text-sm text-gray-600">
@@ -470,7 +470,7 @@ export function StudentPaymentCard({
             {guardians.length === 0 && (
               <p className="text-sm text-gray-600">
                 Für dieses Kind ist noch keine erziehungsberechtigte Person
-                eingetragen. Erst danach können Sie ein Zahlungskonto auswählen.
+                eingetragen. Erst danach kannst du ein Zahlungskonto auswählen.
               </p>
             )}
           </>

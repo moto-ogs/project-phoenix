@@ -125,7 +125,7 @@ export function AbsenceRequestRow<
                 size="compact"
                 onClick={() => onQuestion(row)}
                 disabled={isBusy}
-                tooltip="Öffnet ein Feld für Ihre Rückfrage an die Person."
+                tooltip="Öffnet ein Feld für deine Rückfrage an die Person."
               >
                 Rückfrage
               </Button>

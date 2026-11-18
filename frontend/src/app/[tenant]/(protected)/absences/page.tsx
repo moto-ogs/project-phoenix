@@ -332,7 +332,7 @@ export default function AbsencesPage() {
             ? {
                 title: "Keine Abwesenheit gefunden",
                 description:
-                  "Zu Suche und Filtern passt kein Eintrag. Setzen Sie die Filter zurück, um alle Einträge zu sehen.",
+                  "Zu Suche und Filtern passt kein Eintrag. Setze die Filter zurück, um alle Einträge zu sehen.",
                 action: (
                   <Button
                     type="button"
@@ -348,7 +348,7 @@ export default function AbsencesPage() {
             : {
                 title: "Keine Abwesenheit eingetragen",
                 description:
-                  "Im gewählten Zeitraum fehlt für alle Kinder ein Eintrag. Tragen Sie eine Krankmeldung beim Kind ein, oder wählen Sie oben einen anderen Zeitraum.",
+                  "Im gewählten Zeitraum fehlt für alle Kinder ein Eintrag. Trage eine Krankmeldung beim Kind ein, oder wähle oben einen anderen Zeitraum.",
               }
           : null
       }
@@ -373,7 +373,7 @@ export default function AbsencesPage() {
                 disabled={displayedPage === 1 || isValidating}
                 disabledReason={
                   displayedPage === 1
-                    ? "Sie sehen schon die erste Seite."
+                    ? "Du siehst schon die erste Seite."
                     : undefined
                 }
                 tooltip="Zeigt die vorherigen Abwesenheitstage."

@@ -561,3 +561,59 @@ func TestTraegerAbsprungHonoursASchoolWithoutRememberedDevices(t *testing.T) {
 	}
 	assert.False(t, marks[len(marks)-1], "the school session of the code-proven Träger session carries none")
 }
+
+// TestTraegerSchoolSessionNamesThePersonByTheTraegerMembership: the school
+// session greets with the name the person carries at the Träger, at the
+// hand-off and after every refresh; a person of the account at another
+// school never names it (#7305).
+func TestTraegerSchoolSessionNamesThePersonByTheTraegerMembership(t *testing.T) {
+	t.Parallel()
+	db, router, identity, unit := newTraegerSchoolSessionPortal(t)
+	password := testpkg.NewTestPassword()
+	organization := traegerOrganization(t, db, "Träger Name", true)
+	school := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Name")
+	elsewhere := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Anderswo")
+	ctx := tenant.WithUnitOfWork(context.Background(), unit)
+	// openSchool redeems a fresh hand-off and renews it once more.
+	openSchool := func(t *testing.T, traegerToken string) (redeemed, renewed map[string]any) {
+		t.Helper()
+		code, answer := startTraegerSchoolSession(t, router, traegerToken, school)
+		require.Equal(t, http.StatusCreated, code, answer.Code)
+		access, refresh, err := identity.RefreshTokenWithAudit(ctx, answer.Data.HandoffToken, "proof", "", "")
+		require.NoError(t, err)
+		access2, _, err := identity.RefreshTokenWithAudit(ctx, refresh, "proof", "", "")
+		require.NoError(t, err)
+		return traegerTokenClaims(t, access), traegerTokenClaims(t, access2)
+	}
+
+	named := traegerAccount(t, db, password)
+	testpkg.CreateTestTraegerMember(t, db, organization, named.ID, identityaccess.TraegerRoleSchoolAccess)
+	_, err := db.ExecContext(context.Background(), `UPDATE platform.organization_accounts SET display_name = ? WHERE organization_id = ? AND account_id = ?`,
+		"Petra Träger", organization, named.ID)
+	require.NoError(t, err)
+	testpkg.EnsureAccountTenant(t, db, named.ID, elsewhere)
+	accessLogPersonAt(t, db, elsewhere, named.ID, "Fremd", "Schule")
+	redeemed, renewed := openSchool(t, signInTraegerWithSecondFactor(t, router, named.Email, password).AccessToken)
+	for _, claims := range []map[string]any{redeemed, renewed} {
+		assert.Equal(t, "Petra Träger", claims["first_name"], "the name at the Träger names the session")
+		assert.NotContains(t, claims, "last_name", "the name is one text")
+	}
+
+	unnamed := traegerAccount(t, db, password)
+	testpkg.CreateTestTraegerMember(t, db, organization, unnamed.ID, identityaccess.TraegerRoleSchoolAccess)
+	testpkg.EnsureAccountTenant(t, db, unnamed.ID, elsewhere)
+	accessLogPersonAt(t, db, elsewhere, unnamed.ID, "Fremd", "Schule")
+	traeger := signInTraegerWithSecondFactor(t, router, unnamed.Email, password)
+	redeemed, renewed = openSchool(t, traeger.AccessToken)
+	for _, claims := range []map[string]any{redeemed, renewed} {
+		assert.NotContains(t, claims, "first_name", "a person at another school never names the session")
+		assert.NotContains(t, claims, "last_name")
+	}
+
+	accessLogPersonAt(t, db, school, unnamed.ID, "Eva", "Ziel")
+	redeemed, renewed = openSchool(t, traeger.AccessToken)
+	for _, claims := range []map[string]any{redeemed, renewed} {
+		assert.Equal(t, "Eva", claims["first_name"], "without a name at the Träger the person at the school names it")
+		assert.Equal(t, "Ziel", claims["last_name"])
+	}
+}

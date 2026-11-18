@@ -270,7 +270,7 @@ describe("Einverständnis in the detail view", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "Mit „Zustimmen“ erklären Sie für Mia, dass Sie einverstanden sind.",
+        "Mit „Zustimmen“ erklärst du für Mia, dass du einverstanden bist.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -286,7 +286,7 @@ describe("Einverständnis in the detail view", () => {
 
     expect(screen.getByRole("button", { name: "Zustimmen" })).toBeEnabled();
     expect(
-      screen.getByText("Sie können Ihre Zustimmung jederzeit widerrufen."),
+      screen.getByText("Du kannst deine Zustimmung jederzeit widerrufen."),
     ).toBeInTheDocument();
   });
 
@@ -308,7 +308,7 @@ describe("Einverständnis in the detail view", () => {
 
     expect(screen.getByRole("button", { name: "Ablehnen" })).toBeEnabled();
     expect(
-      screen.queryByText("Sie können Ihre Zustimmung jederzeit widerrufen."),
+      screen.queryByText("Du kannst deine Zustimmung jederzeit widerrufen."),
     ).not.toBeInTheDocument();
   });
 
@@ -332,7 +332,7 @@ describe("Einverständnis in the detail view", () => {
     expect(submit).not.toHaveBeenCalled();
 
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
     expect(within(dialog).getByText("Mia Muster")).toBeInTheDocument();
     expect(within(dialog).getAllByText("Zugestimmt").length).toBeGreaterThan(0);
@@ -364,7 +364,7 @@ describe("Einverständnis in the detail view", () => {
       }),
     );
     expect(
-      await screen.findByText("Ihre Antwort für Mia ist gespeichert."),
+      await screen.findByText("Deine Antwort für Mia ist gespeichert."),
     ).toBeInTheDocument();
     expect(onStale).toHaveBeenCalledWith("42");
   });
@@ -394,17 +394,19 @@ describe("Einverständnis in the detail view", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
 
     // Without a password nothing is sent.
     fireEvent.click(within(dialog).getByRole("button", { name: "Ablehnen" }));
     expect(
-      await within(dialog).findByText("Bitte geben Sie Ihr Passwort ein."),
+      await within(dialog).findByText("Bitte gib dein Passwort ein."),
     ).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
 
-    const field = within(dialog).getByLabelText("Passwort Ihres Eltern-Kontos");
+    const field = within(dialog).getByLabelText(
+      "Passwort deines Eltern-Kontos",
+    );
     expect(field).toHaveAttribute("type", "password");
     fireEvent.change(field, { target: { value: "falsch" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Ablehnen" }));
@@ -418,7 +420,7 @@ describe("Einverständnis in the detail view", () => {
     expect(within(dialog).queryByText("wrong")).not.toBeInTheDocument();
     // The wrong password is cleared for the next try.
     expect(
-      within(dialog).getByLabelText("Passwort Ihres Eltern-Kontos"),
+      within(dialog).getByLabelText("Passwort deines Eltern-Kontos"),
     ).toHaveValue("");
     expect(submit).toHaveBeenCalledWith("42", {
       studentId: "5",
@@ -430,14 +432,14 @@ describe("Einverständnis in the detail view", () => {
     expect(assign).not.toHaveBeenCalled();
 
     fireEvent.change(
-      within(dialog).getByLabelText("Passwort Ihres Eltern-Kontos"),
+      within(dialog).getByLabelText("Passwort deines Eltern-Kontos"),
       { target: { value: "richtig" } },
     );
     fireEvent.click(within(dialog).getByRole("button", { name: "Ablehnen" }));
     await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Ihre Antwort prüfen" }),
+        screen.queryByRole("dialog", { name: "Deine Antwort prüfen" }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -463,7 +465,7 @@ describe("Einverständnis in the detail view", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));
 
@@ -485,7 +487,7 @@ describe("Einverständnis in the detail view", () => {
       />,
     );
     const field = await within(dialog).findByLabelText(
-      "Passwort Ihres Eltern-Kontos",
+      "Passwort deines Eltern-Kontos",
     );
     fireEvent.change(field, { target: { value: "richtig" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));
@@ -518,7 +520,7 @@ describe("Einverständnis in the detail view", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));
 
@@ -530,7 +532,7 @@ describe("Einverständnis in the detail view", () => {
     expect(onStale).toHaveBeenCalledWith("42");
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Ihre Antwort prüfen" }),
+        screen.queryByRole("dialog", { name: "Deine Antwort prüfen" }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -564,7 +566,7 @@ describe("Einverständnis in the detail view", () => {
     expect(screen.getByRole("button", { name: "Zustimmen" })).toBeEnabled();
     expect(
       screen.getByText(
-        /Sie haben Fassung 1 am 01\.09\.2026, 10:30 Uhr zugestimmt\./,
+        /Du hast Fassung 1 am 01\.09\.2026, 10:30 Uhr zugestimmt\./,
       ),
     ).toBeInTheDocument();
     expect(
@@ -641,7 +643,7 @@ describe("Einverständnis in the detail view", () => {
       screen.getAllByRole("button", { name: "Zustimmung widerrufen" }),
     ).toHaveLength(1);
     expect(
-      screen.getByText("Damit endet auch Ihre Zustimmung zu Fassung 1."),
+      screen.getByText("Damit endet auch deine Zustimmung zu Fassung 1."),
     ).toBeInTheDocument();
   });
 
@@ -671,7 +673,7 @@ describe("Einverständnis in the detail view", () => {
     );
 
     expect(
-      screen.getByText("Ihre Antwort: Zugestimmt am 09.09.2026, 10:30 Uhr"),
+      screen.getByText("Deine Antwort: Zugestimmt am 09.09.2026, 10:30 Uhr"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Nachweis ansehen" }),
@@ -687,7 +689,7 @@ describe("Einverständnis in the detail view", () => {
       name: "Zustimmung widerrufen",
     });
     expect(
-      within(dialog).getByText("Sie nehmen Ihre Zustimmung für Mia zurück."),
+      within(dialog).getByText("Du nimmst deine Zustimmung für Mia zurück."),
     ).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
 
@@ -759,7 +761,7 @@ describe("Einverständnis in the detail view", () => {
 
     expect(
       screen.getByText(
-        "Für Mia können Sie hier nicht antworten. Das machen die sorgeberechtigten Personen.",
+        "Für Mia kannst du hier nicht antworten. Das machen die sorgeberechtigten Personen.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -786,7 +788,7 @@ describe("Einverständnis in the detail view", () => {
     expect(screen.getAllByText("Frist abgelaufen").length).toBeGreaterThan(0);
     expect(
       screen.getByText(
-        "Die Frist ist abgelaufen. Sie können nicht mehr antworten.",
+        "Die Frist ist abgelaufen. Du kannst nicht mehr antworten.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -855,7 +857,7 @@ describe("Einverständnis already settled by another guardian (#3430)", () => {
       screen.getByText("Sabine Muster hat zugestimmt. Eine Antwort genügt."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Sie können trotzdem selbst antworten."),
+      screen.getByText("Du kannst trotzdem selbst antworten."),
     ).toBeInTheDocument();
     for (const name of ["Zustimmen", "Ablehnen"]) {
       const button = screen.getByRole("button", { name });
@@ -924,7 +926,7 @@ describe("unclear submit result (#3430)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));
 
@@ -934,7 +936,7 @@ describe("unclear submit result (#3430)", () => {
     expect(onStale).toHaveBeenCalledWith("42");
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Ihre Antwort prüfen" }),
+        screen.queryByRole("dialog", { name: "Deine Antwort prüfen" }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -956,7 +958,7 @@ describe("unclear submit result (#3430)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Zustimmen" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Ihre Antwort prüfen",
+      name: "Deine Antwort prüfen",
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Zustimmen" }));
 
@@ -1013,7 +1015,7 @@ describe("an Einverständnis the school ended (#6290)", () => {
 
     expect(
       screen.getByText(
-        "Die Schule fragt hier nicht mehr nach. Sie können nicht mehr neu antworten.",
+        "Die Schule fragt hier nicht mehr nach. Du kannst nicht mehr neu antworten.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -1025,7 +1027,7 @@ describe("an Einverständnis the school ended (#6290)", () => {
     // Nobody signs a new consent here, so the signing note would only confuse.
     expect(
       screen.queryByText(
-        "Zum Zustimmen unterschreiben Sie mit dem Finger oder der Maus.",
+        "Zum Zustimmen unterschreibst du mit dem Finger oder der Maus.",
       ),
     ).not.toBeInTheDocument();
     // The backend no longer serves the message as live: no read mark and no
@@ -1073,10 +1075,10 @@ describe("a guardian who may no longer declare (#6290)", () => {
     );
 
     expect(
-      screen.getByText("Für Mia können Sie nicht mehr neu antworten."),
+      screen.getByText("Für Mia kannst du nicht mehr neu antworten."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Ihre Antwort: Zugestimmt am 09.09.2026, 10:30 Uhr"),
+      screen.getByText("Deine Antwort: Zugestimmt am 09.09.2026, 10:30 Uhr"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Zustimmung widerrufen" }),

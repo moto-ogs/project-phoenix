@@ -354,7 +354,7 @@ describe("ToastContext", () => {
         "de",
         "Vorgangskennung kopieren",
         "Kopiert.",
-        "Kopiert die Kennung, damit Sie sie dem Support nennen können.",
+        "Kopiert die Kennung, damit du sie dem Support nennen kannst.",
       ],
       ["en", "Copy request ID", "Copied.", "Copy request ID"],
       [

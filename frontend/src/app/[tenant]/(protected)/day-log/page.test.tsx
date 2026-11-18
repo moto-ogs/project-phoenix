@@ -76,7 +76,7 @@ beforeEach(() => {
 describe("DayLogPage access refusal", () => {
   it.each([
     ["students.day_log_disabled", "Anwesenheitsprotokoll ist ausgeschaltet"],
-    ["students.day_log_no_groups", "Noch keine Gruppen für Ihr Konto"],
+    ["students.day_log_no_groups", "Noch keine Gruppen für dein Konto"],
   ])("withdraws the cached report on %s", async (code, title) => {
     fetchDayLog.mockResolvedValue(report);
     let reload!: () => Promise<unknown>;

@@ -72,9 +72,9 @@ export function fileFieldDraftProblem(
   if (field.type !== "file") return null;
   if ((field.file_options?.allowed_types ?? []).length === 0) {
     return {
-      message: `Bitte wählen Sie für Frage ${index + 1} mindestens eine Dateiart.`,
+      message: `Bitte wähle für Frage ${index + 1} mindestens eine Dateiart.`,
       field: `fields.${index}.file_options`,
-      hint: "Bitte wählen Sie mindestens eine Dateiart.",
+      hint: "Bitte wähle mindestens eine Dateiart.",
     };
   }
   return null;
@@ -243,7 +243,7 @@ export function createIncomeDeclarationFields(sortOrder: number): FormField[] {
       type: "file",
       required: true,
       help_text:
-        "Bitte laden Sie den aktuellen Einkommensnachweis hoch, zum Beispiel den Steuerbescheid.",
+        "Bitte lade den aktuellen Einkommensnachweis hoch, zum Beispiel den Steuerbescheid.",
       file_options: {
         allowed_types: ["pdf", "jpg", "png"],
         max_size_mb: MAX_UPLOAD_MB,

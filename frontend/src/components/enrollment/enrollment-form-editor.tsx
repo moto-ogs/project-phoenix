@@ -111,7 +111,7 @@ const NO_PHASES: Phase[] = [];
 
 const NEW_SCHEMA_VALUE = "__new__";
 const LEGAL_DOCUMENT_UPLOAD_PENDING_MESSAGE =
-  "Bitte warten Sie, bis die PDF-Datei hochgeladen ist.";
+  "Bitte warte, bis die PDF-Datei hochgeladen ist.";
 
 type EditorMode = "overview" | "builder" | "detail";
 
@@ -832,9 +832,9 @@ export function EnrollmentFormEditor({
                         Was Eltern zusätzlich beantworten sollen
                       </h2>
                       <p className="mt-1 max-w-2xl text-sm text-gray-600">
-                        Wählen Sie feste Vorschläge, wenn die Antwort später in
-                        den Stammdaten stehen soll. Freie Zusatzfragen bleiben
-                        nur bei der Anmeldung.
+                        Wähle feste Vorschläge, wenn die Antwort später in den
+                        Stammdaten stehen soll. Freie Zusatzfragen bleiben nur
+                        bei der Anmeldung.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">

@@ -436,7 +436,7 @@ describe("PwaInstallHint", () => {
     dispatchInstallPrompt();
     render(<PwaInstallHint />);
     expect(
-      screen.getByText("Installieren Sie moto direkt aus dieser Ansicht.", {
+      screen.getByText("Installiere moto direkt aus dieser Ansicht.", {
         exact: false,
       }),
     ).toBeInTheDocument();

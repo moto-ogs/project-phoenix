@@ -108,7 +108,7 @@ export function SettingsTimeField({
         onClick={handleStartEditing}
         disabled={disabled}
         className="gap-1.5"
-        tooltip="Öffnet das Feld, damit Sie eine Uhrzeit eintragen."
+        tooltip="Öffnet das Feld, damit du eine Uhrzeit einträgst."
       >
         {emptyLabel}
         {!disabled && <Pencil className="h-3.5 w-3.5" aria-hidden="true" />}

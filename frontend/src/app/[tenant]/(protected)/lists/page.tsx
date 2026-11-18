@@ -89,15 +89,15 @@ const logger = createLogger({ component: "SlotListsPage" });
 // an, weil sich die Liste geändert hat oder der Browser das Druckfenster
 // blockiert. Eigene kurze Sätze statt des Server-Satzes.
 const PRINT_WINDOW_BLOCKED_MESSAGE =
-  "Das Druckfenster konnte nicht geöffnet werden. Bitte laden Sie die Liste als PDF herunter.";
+  "Das Druckfenster konnte nicht geöffnet werden. Bitte lade die Liste als PDF herunter.";
 const SELECTION_CHANGED_MESSAGE =
-  "Die Auswahl hat sich geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
+  "Die Auswahl hat sich geändert. Bitte prüfe die Liste und exportiere erneut.";
 const SLOTS_CHANGED_MESSAGE =
-  "Die Angebote für diesen Tag haben sich geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
+  "Die Angebote für diesen Tag haben sich geändert. Bitte prüfe die Liste und exportiere erneut.";
 const PICKUP_TIMES_CHANGED_MESSAGE =
-  "Die Abholzeiten für diesen Tag haben sich geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
+  "Die Abholzeiten für diesen Tag haben sich geändert. Bitte prüfe die Liste und exportiere erneut.";
 const LIST_CHANGED_MESSAGE =
-  "Die Liste hat sich seit dem Laden geändert. Bitte prüfen Sie die Liste und exportieren Sie erneut.";
+  "Die Liste hat sich seit dem Laden geändert. Bitte prüfe die Liste und exportiere erneut.";
 // Bleibt bis zum Schließen stehen: der Export ist ausgeblieben, die Person
 // muss wissen, warum, auch wenn sie erst später auf den Bildschirm schaut.
 const DRIFT_NOTICE_DURATION_MS = 0;
@@ -1819,7 +1819,7 @@ export default function SlotListsPage() {
     },
     {
       label: "PDF herunterladen",
-      description: "Speichert die angezeigte Liste als PDF auf Ihrem Gerät.",
+      description: "Speichert die angezeigte Liste als PDF auf deinem Gerät.",
       icon: <Download className="h-4 w-4" aria-hidden />,
       onClick: () => void handleExport("pdf", "download"),
       disabled: exportBlocked,
@@ -1827,7 +1827,7 @@ export default function SlotListsPage() {
     {
       label: "Excel herunterladen",
       description:
-        "Speichert die angezeigte Liste als Excel-Datei auf Ihrem Gerät.",
+        "Speichert die angezeigte Liste als Excel-Datei auf deinem Gerät.",
       icon: <FileSpreadsheet className="h-4 w-4" aria-hidden />,
       onClick: () => void handleExport("xlsx", "download"),
       disabled: exportBlocked,
@@ -2242,7 +2242,7 @@ export default function SlotListsPage() {
                       ? "Keine Kinder mit passender Abholzeit an diesem Tag."
                       : listKind
                         ? `Keine Kinder für „${selectedListLabel}“ an diesem Tag.`
-                        : `Keine Kinder für „${selectedListLabel}“ an diesem Tag. Wählen Sie oben ein oder mehrere Angebote.`
+                        : `Keine Kinder für „${selectedListLabel}“ an diesem Tag. Wähle oben ein oder mehrere Angebote.`
                   }
                 />
               }

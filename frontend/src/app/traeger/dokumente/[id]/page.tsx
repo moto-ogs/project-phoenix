@@ -188,7 +188,7 @@ export default function TraegerDocumentPage() {
           ? {
               title: "Dieses Dokument gibt es nicht.",
               description:
-                "Vielleicht gehört es zu einem anderen Träger. Gehen Sie zurück zu den Dokumenten.",
+                "Vielleicht gehört es zu einem anderen Träger. Gehe zurück zu den Dokumenten.",
             }
           : null
       }
@@ -200,7 +200,7 @@ export default function TraegerDocumentPage() {
               variant="outline"
               size="md"
               className="gap-2"
-              tooltip="Speichert das Dokument als Datei auf Ihrem Gerät."
+              tooltip="Speichert das Dokument als Datei auf deinem Gerät."
               onClick={() => void download()}
               isLoading={downloading}
               loadingText="Wird geladen …"
@@ -284,7 +284,7 @@ export default function TraegerDocumentPage() {
                       )
                     : ""}{" "}
                   Das Dokument selbst bleibt hier gespeichert. Ganz löschen
-                  können Sie es über das Menü oben.
+                  kannst du es über das Menü oben.
                 </>
               }
               confirmLabel="Zurücknehmen"
@@ -359,7 +359,7 @@ export default function TraegerDocumentPage() {
                 mode: "textConfirm",
                 expected: "LÖSCHEN",
                 inputId: "confirm-delete-traeger-document",
-                label: "Tippen Sie zur Bestätigung LÖSCHEN ein:",
+                label: "Tippe zur Bestätigung LÖSCHEN ein:",
                 placeholder: "LÖSCHEN",
               }}
               confirmLabel="Endgültig löschen"
@@ -388,7 +388,7 @@ export default function TraegerDocumentPage() {
               title="Noch nicht freigegeben."
               description={
                 canManage
-                  ? "Noch sieht niemand dieses Dokument. Geben Sie es oben frei: für Eltern oder für Schulen."
+                  ? "Noch sieht niemand dieses Dokument. Gib es oben frei: für Eltern oder für Schulen."
                   : "Noch sieht niemand dieses Dokument. Freigeben kann, wer die Rolle „Dokumente“ hat."
               }
             />

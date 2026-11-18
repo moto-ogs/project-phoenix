@@ -261,7 +261,7 @@ export function CalendarPeriodsEditor({
       <EmptyState
         icon={<ConceptIconTile concept={calendarPeriodsConcept} size="page" />}
         title="Noch keine Kalenderzeiträume"
-        description="Legen Sie das nächste Halbjahr an, damit Anmeldephasen und Betreuungsplan darauf verweisen können."
+        description="Lege das nächste Halbjahr an, damit Anmeldephasen und Betreuungsplan darauf verweisen können."
       />
     );
   } else if (!failedWithoutData || awaitingErrorText) {

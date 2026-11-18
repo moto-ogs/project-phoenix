@@ -72,7 +72,7 @@ func transferCode(account *parentbilling.LetterheadBankAccount, senderName strin
 	return PaymentCode{
 		Payload: payload,
 		Heading: "Bezahlen per QR-Code",
-		Text:    "Scannen Sie den Code mit Ihrer Banking-App und überweisen Sie.",
+		Text:    "Scannt den Code mit eurer Banking-App und überweist.",
 		Facts: []LetterFact{
 			{Label: "Empfänger", Value: name},
 			{Label: "IBAN", Value: groupIBAN(iban)},

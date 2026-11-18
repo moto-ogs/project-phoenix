@@ -169,8 +169,8 @@ function PermissionsPageContent() {
                 ? "Keine Berechtigungen gefunden"
                 : "Keine Berechtigungen vorhanden",
               description: searchTerm
-                ? "Versuchen Sie einen anderen Suchbegriff."
-                : "Berechtigungen legt das System an. Bitte wenden Sie sich an moto.",
+                ? "Versuche einen anderen Suchbegriff."
+                : "Berechtigungen legt das System an. Bitte wende dich an moto.",
               icon: (
                 <MotoDuotoneIcon
                   icon={permissionsConcept.icon}

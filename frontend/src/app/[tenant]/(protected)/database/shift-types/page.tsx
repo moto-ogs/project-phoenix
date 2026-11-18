@@ -4,6 +4,7 @@
 // lagen Liste und Formular in einem Slide-over, das der Dienstplan öffnete.
 // Der Dienstplan verlinkt jetzt hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import {
   Suspense,
   useCallback,
@@ -169,8 +170,7 @@ function ShiftTypesPageContent() {
     shiftTypeService.getShiftTypes({ withUsage: true }),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;
@@ -309,7 +309,7 @@ function ShiftTypesPageContent() {
         "Dienstarten benennen die Aufgabe eines geplanten Dienstes, zum Beispiel Betreuung, Vorbereitung oder Pause.",
       searchPlaceholder: "Dienstart suchen…",
       emptyDescription:
-        "Legen Sie eine Dienstart an oder fügen Sie die Beispiele hinzu, damit der Dienstplan Dienste benennen kann.",
+        "Lege eine Dienstart an oder füge die Beispiele hinzu, damit der Dienstplan Dienste benennen kann.",
       preserveDraftOnSectionsChange: true,
       stats: shiftTypeStats,
       toRow: (type) => ({

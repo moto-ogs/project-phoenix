@@ -381,7 +381,7 @@ describe("StudentRoomHistoryPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          /Das Anwesenheitsprotokoll ist für Ihre Schule ausgeschaltet/,
+          /Das Anwesenheitsprotokoll ist für deine Schule ausgeschaltet/,
         ),
       ).toBeInTheDocument();
     });
@@ -398,7 +398,7 @@ describe("StudentRoomHistoryPage", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("alert-error")).toHaveTextContent(
-        "Für das Anwesenheitsprotokoll fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+        "Für das Anwesenheitsprotokoll fehlt dir die Berechtigung. Bitte frage die Schule.",
       );
     });
   });
@@ -427,7 +427,7 @@ describe("StudentRoomHistoryPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Das Anwesenheitsprotokoll konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+          "Das Anwesenheitsprotokoll konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
         ),
       ).toBeInTheDocument();
     });
@@ -1258,7 +1258,7 @@ describe("StudentRoomHistoryPage", () => {
 
       expect(
         await screen.findByText(
-          "Das Anwesenheitsprotokoll konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+          "Das Anwesenheitsprotokoll konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
         ),
       ).toBeInTheDocument();
       // Die bestätigten Tage bleiben unter dem Hinweis stehen.
@@ -1317,7 +1317,7 @@ describe("StudentRoomHistoryPage", () => {
       fireEvent.click(screen.getByText(/Montag, 06/).closest("tr")!);
       await correct();
       const message =
-        "Das Anwesenheitsprotokoll konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.";
+        "Das Anwesenheitsprotokoll konnte nicht bearbeitet werden. Bitte versuche es später erneut.";
       expect(await screen.findByText(message)).toBeInTheDocument();
 
       routeParams.id = "43";

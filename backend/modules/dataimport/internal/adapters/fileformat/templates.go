@@ -342,7 +342,7 @@ func writeClassListHinweiseSheet(f *excelize.File) {
 		{"", "", ""},
 		{"Hinweis", "", "Klassenlisteneinträge sind Kinder OHNE OGS-Betreuung: Sie erscheinen nur auf Klassenlisten und in der Klassenansicht, nie in Anwesenheit oder Betreuungsplanung."},
 		{"Hinweis", "", "Kinder, die bereits in moto angelegt sind, werden übersprungen — sie stehen schon auf der Klassenliste."},
-		{"Hinweis", "", "Die Vorlage enthält nur die Kopfzeile: Bitte tragen Sie die Kinder ab Zeile 2 des Tabellenblatts \"Klassenliste\" ein, eine Zeile pro Kind."},
+		{"Hinweis", "", "Die Vorlage enthält nur die Kopfzeile: Bitte trage die Kinder ab Zeile 2 des Tabellenblatts \"Klassenliste\" ein, eine Zeile pro Kind."},
 	}
 	for rowIdx, row := range rows {
 		for colIdx, val := range row {

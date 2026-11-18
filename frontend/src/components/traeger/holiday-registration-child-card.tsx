@@ -233,7 +233,7 @@ export function HolidayRegistrationChildCard({
           <Alert
             type="info"
             icon={<School aria-hidden className="size-5" />}
-            message={`Die Schule „${known.schoolName}“ führt ein Kind mit gleichem Namen und Geburtsdatum. ${namedSchool} Bitte prüfen Sie die Schule.`}
+            message={`Die Schule „${known.schoolName}“ führt ein Kind mit gleichem Namen und Geburtsdatum. ${namedSchool} Bitte prüfe die Schule.`}
             actionLayout="responsive"
             action={
               !draft && onEdit ? (
@@ -242,7 +242,7 @@ export function HolidayRegistrationChildCard({
                   variant="ghost_tone"
                   size="compact"
                   aria-label={`Schule von ${child.firstName} ${child.lastName} ändern`}
-                  tooltip="Öffnet die Angaben des Kindes, dort wählen Sie die Schule."
+                  tooltip="Öffnet die Angaben des Kindes, dort wählst du die Schule."
                   onClick={onEdit}
                 >
                   Schule ändern
@@ -330,7 +330,7 @@ export function HolidayRegistrationChildCard({
             </ul>
             {registration.frozen && !cancelled ? (
               <p className="mt-2 text-sm text-gray-500">
-                Zum Umbuchen öffnen Sie die Anmeldung zuerst wieder.
+                Zum Umbuchen öffnest du die Anmeldung zuerst wieder.
               </p>
             ) : null}
           </InfoSection>
@@ -463,13 +463,12 @@ function RebookingEditor({
         <Alert
           type="info"
           size="compact"
-          message="Die Anmeldung ist bestätigt. moto berechnet den Beitrag mit dem geänderten Mittagessen neu. Ist die Rechnung schon verschickt, berechnen Sie den Unterschied als Korrektur in der Abrechnung."
+          message="Die Anmeldung ist bestätigt. moto berechnet den Beitrag mit dem geänderten Mittagessen neu. Ist die Rechnung schon verschickt, berechne den Unterschied als Korrektur in der Abrechnung."
         />
       ) : null}
       <p className="text-sm text-gray-700">
-        Wählen Sie je Woche ein Zeitmodell. Gibt es eine Woche an mehreren
-        Schulen, wählen Sie auch die Schule. Mindestens eine Woche bleibt
-        gebucht.
+        Wähle je Woche ein Zeitmodell. Gibt es eine Woche an mehreren Schulen,
+        wähle auch die Schule. Mindestens eine Woche bleibt gebucht.
       </p>
       <ul className="space-y-3">
         {groupParallelWeeks(period.weeks).map((group) => {
@@ -581,7 +580,7 @@ function RebookingEditor({
                   }}
                   hint={
                     weekDays.length === 0
-                      ? "Bitte wählen Sie mindestens einen Tag."
+                      ? "Bitte wähle mindestens einen Tag."
                       : `Gewählt: ${holidayDayList(weekDays)}`
                   }
                 />
@@ -618,7 +617,7 @@ function RebookingEditor({
         id="holiday-rebooking-overlap"
         message={
           weeksOverlap(period, draft)
-            ? "Zwei dieser Wochen überschneiden sich. Bitte wählen Sie nur eine davon."
+            ? "Zwei dieser Wochen überschneiden sich. Bitte wähle nur eine davon."
             : null
         }
       />

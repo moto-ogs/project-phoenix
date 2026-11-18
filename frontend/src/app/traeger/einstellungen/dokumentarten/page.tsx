@@ -29,7 +29,7 @@ const NOTICE_TEMPLATE_PATH =
   "/traeger/einstellungen/briefkopf/vorlagen/bescheid";
 
 const INFO =
-  "Hier legen Sie fest, welches Schreiben die Familien je Leistung bekommen. Die Wahl gilt ab der nächsten Freigabe. Schon ausgestellte Schreiben bleiben, wie sie sind.";
+  "Hier legst du fest, welches Schreiben die Familien je Leistung bekommen. Die Wahl gilt ab der nächsten Freigabe. Schon ausgestellte Schreiben bleiben, wie sie sind.";
 
 export default function TraegerDocumentKindsPage() {
   const { data: session } = useSession();
@@ -39,8 +39,8 @@ export default function TraegerDocumentKindsPage() {
     "traeger_settings:manage",
   );
   const remedyInstruction = canEditTemplates
-    ? "Tragen Sie sie zuerst in der Vorlage ein."
-    : "Bitten Sie eine Person mit der Rolle „Verwaltung“, sie einzutragen.";
+    ? "Trage sie zuerst in der Vorlage ein."
+    : "Frag eine Person mit der Rolle „Verwaltung“, ob sie es einträgt.";
   const {
     data: overview,
     loading,
@@ -105,7 +105,7 @@ export default function TraegerDocumentKindsPage() {
                 tooltip={
                   overview.legalRemedySet || !canEditTemplates
                     ? "Öffnet die Vorlage der Rechtsbehelfsbelehrung für die Bescheide."
-                    : "Öffnet die Vorlage, damit Sie die Rechtsbehelfsbelehrung eintragen."
+                    : "Öffnet die Vorlage, damit du die Rechtsbehelfsbelehrung einträgst."
                 }
               >
                 {overview.legalRemedySet || !canEditTemplates
@@ -117,7 +117,7 @@ export default function TraegerDocumentKindsPage() {
             {overview.legalRemedySet ? (
               <Alert
                 type="success"
-                message={`Ihre Vorlage „Bescheid“ hat eine Rechtsbehelfsbelehrung (Version ${overview.feeNoticeTemplateVersion}).`}
+                message={`Deine Vorlage „Bescheid“ hat eine Rechtsbehelfsbelehrung (Version ${overview.feeNoticeTemplateVersion}).`}
               />
             ) : (
               <Alert
@@ -125,8 +125,8 @@ export default function TraegerDocumentKindsPage() {
                 title="Noch keine Rechtsbehelfsbelehrung"
                 message={
                   notice
-                    ? `Ohne Belehrung können Sie keinen Gebührenbescheid freigeben. ${remedyInstruction}`
-                    : "Sie brauchen sie erst, wenn eine Leistung Gebührenbescheide ausstellt."
+                    ? `Ohne Belehrung kannst du keinen Gebührenbescheid freigeben. ${remedyInstruction}`
+                    : "Du brauchst sie erst, wenn eine Leistung Gebührenbescheide ausstellt."
                 }
               />
             )}

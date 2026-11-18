@@ -67,7 +67,7 @@ describe("ParentHolidayRegistrationsPage (#6673)", () => {
     ).toBeInTheDocument();
     expect(
       within(received).getByText(
-        "Der Träger prüft Ihre Anmeldung und schreibt Ihnen.",
+        "Der Träger prüft deine Anmeldung und schreibt dir.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -79,7 +79,7 @@ describe("ParentHolidayRegistrationsPage (#6673)", () => {
     // The same words as the receipt after sending (#4699).
     expect(within(received).getByText("Warteliste")).toBeInTheDocument();
     expect(
-      within(received).getByText(/dort steht Ihr Kind auf der Warteliste/i),
+      within(received).getByText(/dort steht dein Kind auf der Warteliste/i),
     ).toBeInTheDocument();
     // Anker: the received card is rendered; it has no way to the documents.
     expect(
@@ -128,7 +128,7 @@ describe("ParentHolidayRegistrationsPage (#6673)", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.server", "Ihre Ferienanmeldungen"),
+        catalogText("general.server", "Deine Ferienanmeldungen"),
         { exact: false },
       ),
     ).toBeInTheDocument();

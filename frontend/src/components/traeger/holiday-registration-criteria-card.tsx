@@ -193,7 +193,7 @@ export function HolidayRegistrationCriteriaCard({
       description={
         cancelled
           ? "Die Anmeldung ist storniert. Die Angaben lassen sich nicht mehr prüfen."
-          : "Was die Eltern sagen und was Ihr Büro geprüft hat. Die Prüfung zählt vor der Angabe der Eltern."
+          : "Was die Eltern sagen und was dein Büro geprüft hat. Die Prüfung zählt vor der Angabe der Eltern."
       }
       action={
         cancelled || editing ? undefined : (

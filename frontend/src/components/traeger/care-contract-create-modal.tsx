@@ -100,7 +100,7 @@ function conditionsMessage(missing: number, differing: number): string {
       `Bei ${children(differing)} haben die gebuchten Module verschiedene Bedingungen. Ein Vertrag braucht für alle Module dieselben.`,
     );
   }
-  return `${parts.join(" ")} Legen Sie die Bedingungen zuerst fest.`;
+  return `${parts.join(" ")} Lege die Bedingungen zuerst fest.`;
 }
 
 export function CareContractCreateModal({
@@ -160,7 +160,7 @@ export function CareContractCreateModal({
       selected.has(candidateKey(candidate)),
     );
     if (keys.length === 0) {
-      formErrors.invalid("Bitte wählen Sie mindestens ein Kind aus.", {});
+      formErrors.invalid("Bitte wähle mindestens ein Kind aus.", {});
       return;
     }
     await save.run(async (op) => {
@@ -216,9 +216,9 @@ export function CareContractCreateModal({
         <p className="text-sm text-gray-600">
           Diese angenommenen Kinder haben noch keinen Vertrag. Ein Vertrag
           umfasst alle Module eines Kindes. moto übernimmt Kind, Eltern, Beginn
-          und die Module je Wochentag aus der Anmeldung; Sie prüfen jeden
-          Entwurf vor dem Senden. Für „Bei der Annahme“ sind hier keine Entwürfe
-          nötig, wenn die Eltern im Anmeldeformular zugestimmt haben.
+          und die Module je Wochentag aus der Anmeldung; du prüfst jeden Entwurf
+          vor dem Senden. Für „Bei der Annahme“ sind hier keine Entwürfe nötig,
+          wenn die Eltern im Anmeldeformular zugestimmt haben.
         </p>
         {candidates.length === 0 ? (
           <EmptyState
@@ -254,8 +254,8 @@ export function CareContractCreateModal({
                 title="Gerade lässt sich kein Entwurf erstellen."
                 message={
                   acceptanceIssue
-                    ? "Bei jedem Kind steht, was noch fehlt. Mit „Später verschicken“ erstellen und senden Sie alle Verträge der Schule hier."
-                    : "Bei jedem Kind steht, was noch fehlt. Ist das erledigt, erstellen Sie die Entwürfe hier."
+                    ? "Bei jedem Kind steht, was noch fehlt. Mit „Später verschicken“ erstellst und sendest du alle Verträge der Schule hier."
+                    : "Bei jedem Kind steht, was noch fehlt. Ist das erledigt, erstellst du die Entwürfe hier."
                 }
                 actionLayout="responsive"
                 action={acceptanceIssue ? settingsLink : undefined}
@@ -265,7 +265,7 @@ export function CareContractCreateModal({
           return acceptanceIssue ? (
             <Alert
               type="info"
-              message="„Später verschicken“ gilt für jede spätere Annahme der Schule: Danach erstellen und senden Sie alle Verträge dieser Schule hier."
+              message="„Später verschicken“ gilt für jede spätere Annahme der Schule: Danach erstellst und sendest du alle Verträge dieser Schule hier."
               actionLayout="responsive"
               action={settingsLink}
             />

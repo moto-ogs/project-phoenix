@@ -233,25 +233,25 @@ func staffingAudiences(notice timetablePorts.StaffingNotice) []staffingAudience 
 	switch notice.Kind {
 	case timetablePorts.StaffingChangeSubstituted:
 		return []staffingAudience{
-			audience("substitute", ownKind, notice.SubstituteAccountIDs, "Sie vertreten", fmt.Sprintf("Sie vertreten %s %s", subject, when), own),
-			audience("subject", ownKind, notice.SubjectAccountIDs, "Sie werden vertreten", fmt.Sprintf("%s vertritt Sie %s", substitute, when), own),
-			audience("teacher", groupKind, notice.TeacherAccountIDs, "Vertretung in Ihrer Gruppe", fmt.Sprintf("%s vertritt %s %s", substitute, subject, when), group),
+			audience("substitute", ownKind, notice.SubstituteAccountIDs, "Du vertrittst", fmt.Sprintf("Du vertrittst %s %s", subject, when), own),
+			audience("subject", ownKind, notice.SubjectAccountIDs, "Du wirst vertreten", fmt.Sprintf("%s vertritt dich %s", substitute, when), own),
+			audience("teacher", groupKind, notice.TeacherAccountIDs, "Vertretung in deiner Gruppe", fmt.Sprintf("%s vertritt %s %s", substitute, subject, when), group),
 		}
 	case timetablePorts.StaffingChangeAbsent:
 		return []staffingAudience{
-			audience("subject", ownKind, notice.SubjectAccountIDs, "Dienstplan geändert", fmt.Sprintf("Sie sind %s als nicht da eingetragen.", when), own),
-			audience("teacher", groupKind, notice.TeacherAccountIDs, "Ausfall in Ihrer Gruppe", fmt.Sprintf("%s ist %s nicht da.", subject, when), group),
+			audience("subject", ownKind, notice.SubjectAccountIDs, "Dienstplan geändert", fmt.Sprintf("Du bist %s als nicht da eingetragen.", when), own),
+			audience("teacher", groupKind, notice.TeacherAccountIDs, "Ausfall in deiner Gruppe", fmt.Sprintf("%s ist %s nicht da.", subject, when), group),
 			audience("team", teamKind, notice.TeamAccountIDs, "Ausfall im Team", fmt.Sprintf("%s ist %s nicht da.", subject, when), day),
 		}
 	case timetablePorts.StaffingChangePresent:
 		return []staffingAudience{
-			audience("subject", ownKind, notice.SubjectAccountIDs, "Dienstplan geändert", fmt.Sprintf("Sie sind %s wieder eingeplant.", when), own),
+			audience("subject", ownKind, notice.SubjectAccountIDs, "Dienstplan geändert", fmt.Sprintf("Du bist %s wieder eingeplant.", when), own),
 			audience("teacher", groupKind, notice.TeacherAccountIDs, "Dienstplan geändert", fmt.Sprintf("%s ist %s doch da.", subject, when), group),
 			audience("team", teamKind, notice.TeamAccountIDs, "Dienstplan geändert", fmt.Sprintf("%s ist %s doch da.", subject, when), day),
 		}
 	case timetablePorts.StaffingChangeSubstituteRemoved:
 		return []staffingAudience{
-			audience("subject", ownKind, notice.SubjectAccountIDs, "Vertretung entfällt", fmt.Sprintf("Sie vertreten %s nicht mehr.", when), own),
+			audience("subject", ownKind, notice.SubjectAccountIDs, "Vertretung entfällt", fmt.Sprintf("Du vertrittst %s nicht mehr.", when), own),
 			audience("teacher", groupKind, notice.TeacherAccountIDs, "Vertretung entfällt", fmt.Sprintf("%s vertritt %s nicht mehr.", subject, when), group),
 		}
 	}

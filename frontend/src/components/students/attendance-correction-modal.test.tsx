@@ -173,9 +173,7 @@ describe("AttendanceCorrectionModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText(
-        "Bitte geben Sie einen Grund für die Korrektur an.",
-      ),
+      await screen.findByText("Bitte gib einen Grund für die Korrektur an."),
     ).toBeInTheDocument();
     const reason = screen.getByLabelText(/Grund der Korrektur/);
     await waitFor(() => expect(reason).toHaveFocus());
@@ -220,7 +218,7 @@ describe("AttendanceCorrectionModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Korrektur konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
+        "Die Korrektur konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
       ),
     ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();

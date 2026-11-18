@@ -123,13 +123,13 @@ describe("SettingsField at the school, with a Träger value", () => {
 
     expect(
       screen.getByText(
-        "Eigener Wert Ihrer Schule. „Zurücksetzen“ übernimmt den Wert des Trägers.",
+        "Eigener Wert deiner Schule. „Zurücksetzen“ übernimmt den Wert des Trägers.",
       ),
     ).toBeInTheDocument();
     // A toggle normally has no reset; back to the Träger value it does.
     const reset = screen.getByRole("button", {
       name: "Zurücksetzen",
-      description: "Übernimmt wieder den Wert, den Ihr Träger vorgibt.",
+      description: "Übernimmt wieder den Wert, den dein Träger vorgibt.",
     });
     fireEvent.click(reset);
 
@@ -379,7 +379,7 @@ describe("SettingsField resetting an own letter text", () => {
       name: "„Fußzeile“ zurücksetzen?",
     });
     expect(dialog).toHaveTextContent(
-      "Ihr Text beginnt mit: „Ganztag Nord e. V.“",
+      "Dein Text beginnt mit: „Ganztag Nord e. V.“",
     );
     expect(onReset).not.toHaveBeenCalled();
 

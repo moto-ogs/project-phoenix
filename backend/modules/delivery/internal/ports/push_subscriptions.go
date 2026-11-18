@@ -63,9 +63,9 @@ type PushSubscriptionRepository interface {
 	// DeleteUnboundByAccountForPortal is the unbound delete of the given
 	// portal; a portal other than parent or school is the staff portal.
 	DeleteUnboundByAccountForPortal(ctx context.Context, accountID, tenantID int64, portal string) error
-	// ListSessionLinks names every subscription with the session facts it
+	// ListSessionLinks pages through subscriptions by ID with the session facts each
 	// was registered under, across schools. Admin transaction required.
-	ListSessionLinks(ctx context.Context) ([]subscriptions.SessionLink, error)
+	ListSessionLinks(ctx context.Context, afterID int64, limit int) ([]subscriptions.SessionLink, error)
 	// DeleteSessionLinks removes the named subscriptions whose account,
 	// school, portal and token family still equal the link, so a row a
 	// re-subscribe rebound in between stays. Admin transaction required.

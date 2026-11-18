@@ -235,9 +235,9 @@ export function PasskeySettingsSection({
                 Sicherheitscode per E-Mail senden
               </p>
               <p className="text-sm text-gray-600">
-                Zum Einrichten senden wir einen sechsstelligen Code an Ihre
-                E-Mail-Adresse. Öffnen Sie danach Ihr E-Mail-Postfach und geben
-                Sie den Code hier ein.
+                Zum Einrichten senden wir einen sechsstelligen Code an deine
+                E-Mail-Adresse. Öffne danach dein E-Mail-Postfach und gib den
+                Code hier ein.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -246,7 +246,7 @@ export function PasskeySettingsSection({
                 variant="primary"
                 size="md"
                 className="gap-2"
-                tooltip="Schickt sofort einen sechsstelligen Code an Ihre E-Mail-Adresse."
+                tooltip="Schickt sofort einen sechsstelligen Code an deine E-Mail-Adresse."
                 disabled={busy}
                 onClick={() => void startEnrollment()}
               >
@@ -281,8 +281,8 @@ export function PasskeySettingsSection({
                   Code gesendet an {maskedEmail}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Öffnen Sie Ihr E-Mail-Postfach und tragen Sie den
-                  sechsstelligen Code ein.
+                  Öffne dein E-Mail-Postfach und trage den sechsstelligen Code
+                  ein.
                 </p>
               </div>
             )}
@@ -307,7 +307,7 @@ export function PasskeySettingsSection({
                 type="button"
                 variant="primary"
                 size="md"
-                tooltip="Speichert den Passkey, nachdem Ihr Gerät nach PIN oder Fingerabdruck fragt."
+                tooltip="Speichert den Passkey, nachdem dein Gerät nach PIN oder Fingerabdruck fragt."
                 disabled={busy || code.trim().length === 0}
                 onClick={() => void finishEnrollment()}
               >
@@ -348,7 +348,7 @@ export function PasskeySettingsSection({
           title="Keine Passkeys hinterlegt."
           description={
             supported
-              ? "Legen Sie über „Hinzufügen“ einen Passkey an, um sich ohne Passwort anzumelden."
+              ? "Lege über „Hinzufügen“ einen Passkey an, um dich ohne Passwort anzumelden."
               : undefined
           }
         />
@@ -399,8 +399,8 @@ export function PasskeySettingsSection({
             <span className="font-medium text-gray-900">
               {revokeTarget?.name || "Passkey"}
             </span>{" "}
-            wird entfernt. Die Anmeldung damit ist danach nicht mehr möglich.
-            Sie können jederzeit einen neuen Passkey hinzufügen.
+            wird entfernt. Die Anmeldung damit ist danach nicht mehr möglich. Du
+            kannst jederzeit einen neuen Passkey hinzufügen.
           </>
         }
         gate={{ mode: "twoStep", firstStepLabel: "Ja, entfernen" }}

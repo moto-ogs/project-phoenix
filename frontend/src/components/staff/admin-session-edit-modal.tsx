@@ -171,21 +171,21 @@ export function AdminSessionEditModal({
   const handleSubmit = async () => {
     formErrors.clear();
     if (!notesValid) {
-      formErrors.invalid("Bitte geben Sie eine Begründung ein.", {
-        notes: "Bitte geben Sie eine Begründung ein.",
+      formErrors.invalid("Bitte gib eine Begründung ein.", {
+        notes: "Bitte gib eine Begründung ein.",
       });
       return;
     }
     if (!timesValid) {
-      formErrors.invalid("Bitte prüfen Sie die Uhrzeiten.", {
+      formErrors.invalid("Bitte prüfe die Uhrzeiten.", {
         ...(checkInProblem ? { check_in_time: checkInProblem } : {}),
         ...(checkOutProblem ? { check_out_time: checkOutProblem } : {}),
       });
       return;
     }
     if (!breakValid || breakMinutes === null) {
-      formErrors.invalid("Bitte prüfen Sie die Pause.", {
-        break_minutes: "Bitte geben Sie volle Minuten von 0 bis 300 ein.",
+      formErrors.invalid("Bitte prüfe die Pause.", {
+        break_minutes: "Bitte gib volle Minuten von 0 bis 300 ein.",
       });
       return;
     }
@@ -263,13 +263,13 @@ export function AdminSessionEditModal({
   const saveBlockedReason = isSaving
     ? undefined
     : !notesValid
-      ? "Geben Sie zuerst eine Begründung ein."
+      ? "Gib zuerst eine Begründung ein."
       : !timesValid
-        ? "Prüfen Sie zuerst Beginn und Ende."
+        ? "Prüfe zuerst Beginn und Ende."
         : hasActiveBreak
           ? "Die laufende Pause muss die Person zuerst beenden."
           : !breakValid
-            ? "Prüfen Sie zuerst die Pause."
+            ? "Prüfe zuerst die Pause."
             : undefined;
 
   const footer = (
@@ -393,7 +393,7 @@ export function AdminSessionEditModal({
                     errorLive
                     error={
                       brk.minutes === null
-                        ? "Bitte geben Sie volle Minuten von 0 bis 300 ein."
+                        ? "Bitte gib volle Minuten von 0 bis 300 ein."
                         : undefined
                     }
                     onChange={(event) =>

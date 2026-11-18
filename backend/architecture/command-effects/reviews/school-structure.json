@@ -2028,7 +2028,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence/internal/application/presence.presenceFacade.EndActivitySession; modules/studentpresence/internal/application/presence/session_service.go:82.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "The guarded Student Presence session end returns IDs of the supervision rows it closes so Timetable can version those rows in its completion snapshot. The command uses the same tenant unit, locks, writes and after-commit events (#7383).",
       "source_owner": "school-structure",
       "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.EndActivitySession",
       "target_owner": "student-presence"
@@ -2039,7 +2039,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/studentpresence.Presence.EndActivitySession; modules/studentpresence.Presence (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
+      "reason": "The guarded Student Presence session end returns IDs of the supervision rows it closes so Timetable can version those rows in its completion snapshot. The command uses the same tenant unit, locks, writes and after-commit events (#7383).",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.EndActivitySession",
       "target_owner": "student-presence"

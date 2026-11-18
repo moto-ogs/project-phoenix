@@ -37,12 +37,12 @@ import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 const INFO = (
   <div className="space-y-2">
     <p>
-      Springer sind Fachkräfte Ihres Trägers, die an jeder seiner Schulen
-      einspringen. Blocken Sie eine Person für einen Tag und eine Zeit.
+      Springer sind Fachkräfte deines Trägers, die an jeder seiner Schulen
+      einspringen. Blocke eine Person für einen Tag und eine Zeit.
     </p>
     <p>
       Eine Person ist zu jeder Zeit nur für eine Schule geblockt. Andere Schulen
-      sehen nur, dass Ihre Schule geblockt hat, keinen Grund und keine Gruppe.
+      sehen nur, dass deine Schule geblockt hat, keinen Grund und keine Gruppe.
     </p>
   </div>
 );
@@ -100,8 +100,8 @@ function StaffPoolContent() {
                 value: ownBlocks,
                 label:
                   ownBlocks === 1
-                    ? "Blockung Ihrer Schule"
-                    : "Blockungen Ihrer Schule",
+                    ? "Blockung deiner Schule"
+                    : "Blockungen deiner Schule",
               },
             ]}
           />
@@ -163,13 +163,13 @@ function StaffPoolContent() {
             <EmptyState
               icon={<UsersThreeIcon className="h-12 w-12" aria-hidden="true" />}
               title="In dieser Woche sind keine Springer im Pool."
-              description="Ihr Träger legt Springer in den Personalakten an. Fragen Sie dort nach, wenn Sie jemanden brauchen."
+              description="Dein Träger legt Springer in den Personalakten an. Frage dort nach, wenn du jemanden brauchst."
             />
           ) : (
             <EmptyState
               icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
-              title="Ihr Träger führt sein Personal nicht in moto."
-              description="Dann gibt es hier keine Springer. Vertretungen planen Sie wie bisher im Dienstplan."
+              title="Dein Träger führt sein Personal nicht in moto."
+              description="Dann gibt es hier keine Springer. Vertretungen planst du wie bisher im Dienstplan."
             />
           )}
         </SectionCard>

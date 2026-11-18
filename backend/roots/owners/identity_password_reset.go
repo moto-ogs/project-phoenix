@@ -29,7 +29,7 @@ type PasswordResetWiring struct {
 	Backoff []time.Duration
 }
 
-func PasswordResetDependencies(wiring *PasswordResetWiring, logger *slog.Logger, signingSecret string) *identityaccessCompose.PasswordResetDependencies {
+func PasswordResetDependencies(wiring *PasswordResetWiring, logger *slog.Logger, signingSecret string) *identityPorts.PasswordResetDependencies {
 	if wiring == nil {
 		return nil
 	}
@@ -44,7 +44,7 @@ func PasswordResetDependencies(wiring *PasswordResetWiring, logger *slog.Logger,
 		identityaccess.PasswordResetScopeCaterer: wiring.CatererURL,
 		identityaccess.PasswordResetScopeTraeger: wiring.TraegerURL,
 	}
-	return &identityaccessCompose.PasswordResetDependencies{
+	return &identityPorts.PasswordResetDependencies{
 		DeliveryFor: func(records identityaccess.PasswordResetDeliveryRecorder) identityPorts.PasswordResetDelivery {
 			return passwordResetDelivery{
 				dispatcher: wiring.Dispatcher, durable: wiring.Durable, from: wiring.DefaultFrom, records: records, logger: logger,

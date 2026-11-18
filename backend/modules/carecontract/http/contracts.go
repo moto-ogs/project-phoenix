@@ -378,6 +378,9 @@ var errorRules = []struct {
 	{carecontract.ErrLetterheadTooLong, func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeCareContractLetterheadTooLong)
 	}},
+	{carecontract.ErrLetterheadMissing, func(err error) render.Renderer {
+		return common.ErrorConflictWithCode(err, common.CodeCareContractLetterheadMissing)
+	}},
 }
 
 func renderError(w http.ResponseWriter, r *http.Request, err error) {

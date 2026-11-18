@@ -346,7 +346,7 @@ describe("MyDayBlock (#2180)", () => {
     render(<MyDayBlock />);
 
     expect(
-      screen.getByText("Heute sind Sie für keinen Block eingeteilt"),
+      screen.getByText("Heute bist du für keinen Block eingeteilt"),
     ).toBeInTheDocument();
   });
 
@@ -362,7 +362,7 @@ describe("MyDayBlock (#2180)", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("Heute sind Sie für keinen Block eingeteilt"),
+      screen.queryByText("Heute bist du für keinen Block eingeteilt"),
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(swr.mutate).toHaveBeenCalled();

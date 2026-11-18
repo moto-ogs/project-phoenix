@@ -116,7 +116,7 @@ function DocumentDirectory({
     // Reiter, dort benennt die Karte ihren Inhalt (kein doppelter Titel).
     <SectionCard
       title={embedded ? "Personen" : "Personalunterlagen"}
-      description="Wählen Sie eine Person, um die für Sie freigegebenen Dokumente zu sehen."
+      description="Wähle eine Person, um die für dich freigegebenen Dokumente zu sehen."
     >
       {embedded && (
         <div className="mb-4">
@@ -147,7 +147,7 @@ function DocumentDirectory({
                 variant="compact"
                 className="px-4 py-6"
                 title="Keine Personen gefunden."
-                description="Passen Sie die Suche an."
+                description="Passe die Suche an."
               />
             </li>
           ) : null}
@@ -823,7 +823,7 @@ function StaffPageContent() {
       ? {
           title: "Keine Ehemaligen gefunden",
           description: searchTerm
-            ? "Zu dieser Suche gibt es keine Person. Setzen Sie die Suche zurück, um alle zu sehen."
+            ? "Zu dieser Suche gibt es keine Person. Setze die Suche zurück, um alle zu sehen."
             : "Hier erscheint, wer die Schule verlassen hat.",
           icon: <MotoConceptIcon concept={staffConcept} size={48} />,
           action: searchTerm ? (
@@ -849,8 +849,8 @@ function StaffPageContent() {
       ? {
           title: "Kein Personal gefunden",
           description: staffFilterActive
-            ? "Zu dieser Suche gibt es keine Person. Setzen Sie die Suche zurück, um alle zu sehen."
-            : "Es ist noch niemand angelegt. Mitarbeitende legen Sie im Reiter „Stammdaten“ an.",
+            ? "Zu dieser Suche gibt es keine Person. Setze die Suche zurück, um alle zu sehen."
+            : "Es ist noch niemand angelegt. Mitarbeitende legst du im Reiter „Stammdaten“ an.",
           icon: <MotoConceptIcon concept={staffConcept} size={48} />,
           action: staffFilterActive ? (
             <Button
@@ -871,7 +871,7 @@ function StaffPageContent() {
               variant="primary"
               size="md"
               onClick={() => router.push("/database/personal")}
-              tooltip="Öffnet das Personal in der Datenverwaltung, dort legen Sie Personen an."
+              tooltip="Öffnet das Personal in der Datenverwaltung, dort legst du Personen an."
             >
               Zur Datenverwaltung
             </Button>
@@ -1004,7 +1004,7 @@ function StaffPageContent() {
               Anträge von Mitarbeitenden
             </p>
             <p className="text-sm text-gray-600">
-              Urlaub, Krank und Fortbildung entscheiden Sie unter Anfragen.
+              Urlaub, Krank und Fortbildung entscheidest du unter Anfragen.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -1101,7 +1101,7 @@ function StaffPageContent() {
               <Alert
                 type="info"
                 announce="off"
-                message="Die Karten zeigen nur, wo jemand gerade ist. Personalakten sind für Ihr Konto nicht freigegeben. Fragen Sie bei Bedarf Ihre Leitung."
+                message="Die Karten zeigen nur, wo jemand gerade ist. Personalakten sind für dein Konto nicht freigegeben. Frage bei Bedarf deine Leitung."
               />
             )}
 
@@ -1118,8 +1118,8 @@ function StaffPageContent() {
                   announce="off"
                   message={
                     canNavigateToStaff
-                      ? "Hier stehen Personen, die früher bei Ihnen gearbeitet haben. Öffnen Sie eine Karte für die Angaben von damals."
-                      : "Hier stehen Personen, die früher bei Ihnen gearbeitet haben. Personalakten sind für Ihr Konto nicht freigegeben."
+                      ? "Hier stehen Personen, die früher bei dir gearbeitet haben. Öffne eine Karte für die Angaben von damals."
+                      : "Hier stehen Personen, die früher bei dir gearbeitet haben. Personalakten sind für dein Konto nicht freigegeben."
                   }
                 />
                 <FormerStaffCards

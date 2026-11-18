@@ -33,7 +33,7 @@ export const Default: Story = {};
 
 export const WithDescription: Story = {
   args: {
-    description: "Bitte wählen Sie, wie die Änderung angewendet werden soll.",
+    description: "Bitte wähle, wie die Änderung angewendet werden soll.",
   },
 };
 
@@ -51,7 +51,7 @@ export const Closed: Story = {
 
 export const WithError: Story = {
   args: {
-    description: "Bitte wählen Sie, wie die Änderung angewendet werden soll.",
+    description: "Bitte wähle, wie die Änderung angewendet werden soll.",
     error: "Die Änderung konnte nicht gespeichert werden.",
   },
 };

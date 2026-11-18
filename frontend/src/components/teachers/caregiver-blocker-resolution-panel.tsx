@@ -395,7 +395,7 @@ export function CaregiverBlockerResolutionPanel({
         : undefined;
       if (replacementStaffId && !replacementTeacherId) {
         actionErrors.invalid(
-          "Diese Ersatzkraft kann keine Stammgruppe leiten. Bitte wählen Sie eine andere Person.",
+          "Diese Ersatzkraft kann keine Stammgruppe leiten. Bitte wähle eine andere Person.",
         );
         return;
       }
@@ -426,12 +426,12 @@ export function CaregiverBlockerResolutionPanel({
       {totalRemaining === 0 ? (
         <Alert
           type="success"
-          message="Alle Zuordnungen wurden aufgelöst. Gehen Sie zurück zur Übersicht, um die Betreuung zu deaktivieren."
+          message="Alle Zuordnungen wurden aufgelöst. Gehe zurück zur Übersicht, um die Betreuung zu deaktivieren."
         />
       ) : (
         <p className="text-sm text-gray-600">
-          Lösen Sie die folgenden Zuordnungen auf, um die Betreuung deaktivieren
-          zu können. Sie können Zuordnungen entfernen oder an andere
+          Löse die folgenden Zuordnungen auf, um die Betreuung deaktivieren zu
+          können. Du kannst Zuordnungen entfernen oder an andere
           Betreuungskräfte übertragen.
         </p>
       )}
@@ -729,7 +729,7 @@ export function CaregiverBlockerResolutionPanel({
               <span className="font-medium text-gray-900">
                 {pendingRemoval.item.activityName}
               </span>{" "}
-              wird ohne Ersatz entfernt. Wählen Sie eine Ersatzkraft, um sie
+              wird ohne Ersatz entfernt. Wähle eine Ersatzkraft, um sie
               stattdessen zu übertragen.
             </p>
           ) : pendingRemoval?.kind === "group" ? (
@@ -738,7 +738,7 @@ export function CaregiverBlockerResolutionPanel({
               <span className="font-medium text-gray-900">
                 {pendingRemoval.item.groupName}
               </span>{" "}
-              wird ohne Ersatz entfernt. Wählen Sie eine Ersatzkraft, um sie
+              wird ohne Ersatz entfernt. Wähle eine Ersatzkraft, um sie
               stattdessen zu übertragen.
             </p>
           ) : null

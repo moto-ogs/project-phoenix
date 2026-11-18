@@ -48,7 +48,7 @@ const RULES_HREF = "/traeger/einstellungen?bereich=einsatzplanung";
 const INFO = (
   <div className="space-y-2">
     <p>
-      Hier planen Sie Personen mit Personalakte an allen ihren Schulen. Jede
+      Hier planst du Personen mit Personalakte an allen ihren Schulen. Jede
       Schicht steht sofort im Dienstplan der Schule.
     </p>
     <p>
@@ -224,7 +224,7 @@ export default function TraegerStaffPlanningPage() {
       {shownWeek && shownWeek.unreached.length > 0 ? (
         <Alert
           type="warning"
-          message={`Diese Woche fehlt von: ${shownWeek.unreached.map((school) => school.name).join(", ")}. Bitte laden Sie die Seite später neu.`}
+          message={`Diese Woche fehlt von: ${shownWeek.unreached.map((school) => school.name).join(", ")}. Bitte lade die Seite später neu.`}
         />
       ) : null}
 
@@ -232,7 +232,7 @@ export default function TraegerStaffPlanningPage() {
         <SectionCard>
           <EmptyState
             title="Noch niemand zu planen."
-            description="Hier stehen Personen mit Personalakte, die an einer Ihrer Schulen arbeiten. Legen Sie Personalakten unter „Personalakten“ an."
+            description="Hier stehen Personen mit Personalakte, die an einer deiner Schulen arbeiten. Lege Personalakten unter „Personalakten“ an."
           />
         </SectionCard>
       ) : null}
@@ -255,7 +255,7 @@ export default function TraegerStaffPlanningPage() {
       {warned.length > 0 ? (
         <SectionCard
           title="Hinweise dieser Woche"
-          description="moto zählt alle Schulen der Person zusammen. Die Prüfung ist eine Hilfe; ob die Planung erlaubt ist, entscheiden Sie."
+          description="moto zählt alle Schulen der Person zusammen. Die Prüfung ist eine Hilfe; ob die Planung erlaubt ist, entscheidest du."
           action={
             <span className="text-sm font-medium text-gray-600 tabular-nums">
               {warningCount} offen

@@ -232,7 +232,7 @@ describe("OfferingChangeRequestModal", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ab dem 14.08.2026 ist für Lara kein Betreuungstag mehr gebucht. Möchten Sie diese Anfrage wirklich senden?",
+        "Ab dem 14.08.2026 ist für Lara kein Betreuungstag mehr gebucht. Möchtest du diese Anfrage wirklich senden?",
       ),
     ).toBeInTheDocument();
 
@@ -506,7 +506,7 @@ describe("OfferingChangeRequestModal", () => {
       />,
     );
     const conflict =
-      "Am Montag sind „bis 13 Uhr“ und „bis 17 Uhr“ gewählt. Bitte wählen Sie pro Tag nur ein Angebot.";
+      "Am Montag sind „bis 13 Uhr“ und „bis 17 Uhr“ gewählt. Bitte wähle pro Tag nur ein Angebot.";
 
     expect(await screen.findByText("bis 17 Uhr")).toBeInTheDocument();
     expect(screen.queryByText(conflict)).not.toBeInTheDocument();
@@ -639,7 +639,7 @@ describe("OfferingChangeRequestModal", () => {
     expect(alert).toHaveTextContent(
       deMessages.parentMasterData.errorNoEnrollment,
     );
-    expect(alert).not.toHaveTextContent(/lehnen Sie/);
+    expect(alert).not.toHaveTextContent(/\blehne\b/);
   });
 
   it("asks parents to choose another offering when one is full", async () => {

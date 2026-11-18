@@ -175,6 +175,6 @@ export function buildStaffDeviationInput({
  */
 export function overlapWarningMessage(count: number): string {
   return count === 1
-    ? "Bitte prüfen Sie eine mögliche Zeitüberschneidung."
-    : `Bitte prüfen Sie ${count} mögliche Zeitüberschneidungen.`;
+    ? "Bitte prüfe eine mögliche Zeitüberschneidung."
+    : `Bitte prüfe ${count} mögliche Zeitüberschneidungen.`;
 }

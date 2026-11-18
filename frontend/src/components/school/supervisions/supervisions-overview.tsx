@@ -14,7 +14,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { getUserDisplayName } from "~/lib/auth-utils";
+import { getGreetingName } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { useTimeBasedGreeting } from "~/lib/greeting";
 import { LOCATION_COLORS } from "~/lib/location-helper";
@@ -115,22 +115,23 @@ export function SupervisionsOverview({
 }>) {
   const greeting = useTimeBasedGreeting();
   const { data: session } = useSession();
+  const greetingName = getGreetingName(session);
   const summary = summarizeDay(instances);
 
   const description =
     instances.length === 0
-      ? `Ihr Tag am ${formatDate(today)}.`
-      : `Ihre Aufsichten am ${formatDate(today)}. Sie sehen nur die Termine, für die Sie im Betreuungsplan eingeteilt sind.`;
+      ? `Dein Tag am ${formatDate(today)}.`
+      : `Deine Aufsichten am ${formatDate(today)}. Du siehst nur die Termine, für die du im Betreuungsplan eingeteilt bist.`;
 
   return (
     <SectionCard
-      title={`${greeting}, ${getUserDisplayName(session)}`}
+      title={greetingName ? `${greeting}, ${greetingName}` : greeting}
       description={description}
     >
       {instances.length === 0 ? (
         <EmptyState
-          title="Heute keine Aufsicht für Sie"
-          description="Für heute sind Sie im Betreuungsplan keiner Aufsicht zugeteilt. Die Einteilung macht das OGS-Büro."
+          title="Heute keine Aufsicht für dich"
+          description="Für heute bist du im Betreuungsplan keiner Aufsicht zugeteilt. Die Einteilung macht das OGS-Büro."
         />
       ) : (
         <div className="space-y-4">
@@ -156,7 +157,7 @@ export function SupervisionsOverview({
 
           <FramedList
             header={
-              <h2 className="text-sm font-semibold text-gray-900">Ihr Tag</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Dein Tag</h2>
             }
           >
             {instances.map((instance) => (

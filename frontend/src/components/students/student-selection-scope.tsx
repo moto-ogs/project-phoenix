@@ -90,7 +90,7 @@ export function StudentSelectionScope({
         const nextSelectedIds = new Set(schoolCheckin.selectedIds);
         for (const id of ids) nextSelectedIds.add(id);
         if (nextSelectedIds.size > MAX_SELECTED_STUDENTS) {
-          warning("Sie können höchstens 5.000 Kinder auswählen.");
+          warning("Du kannst höchstens 5.000 Kinder auswählen.");
           return;
         }
       }

@@ -46,7 +46,7 @@ import type { TraegerCalendar } from "~/lib/traeger-closing-days";
 const logger = createLogger({ component: "HolidayPeriodForm" });
 
 const INVALID_DATE_TEXT =
-  "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.";
+  "Bitte gib ein gültiges Datum im Format TT.MM.JJJJ ein.";
 
 /**
  * Date fields whose typed text is no valid date. The draft keeps the last
@@ -168,7 +168,7 @@ export function HolidayPeriodForm({
       ...invalidDateFields(invalidDates, draft),
     };
     if (Object.keys(errors).length > 0) {
-      errorPath.invalid("Bitte prüfen Sie die markierten Felder.", errors);
+      errorPath.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     errorPath.clear();
@@ -215,9 +215,7 @@ export function HolidayPeriodForm({
       >
         {/* Locked while saving: the answer replaces the draft, so an edit made
             meanwhile would be lost. */}
-        {/* pb-4: the last control („Woche hinzufügen“) ends above the
-            sticky save bar, not under its edge. */}
-        <fieldset disabled={saving} className="min-w-0 space-y-6 pb-4">
+        <fieldset disabled={saving} className="min-w-0 space-y-6">
           <div className="space-y-4">
             <Input
               controlSize="touch"
@@ -291,8 +289,8 @@ export function HolidayPeriodForm({
               label="Ferienwunsch aus der OGS-Anmeldung berücksichtigen"
               description={
                 <>
-                  Kinder Ihrer Schulen ohne Ferienwunsch warten hinter den
-                  anderen. Was ohne Ferienwunsch gilt, legen Sie in den{" "}
+                  Kinder deiner Schulen ohne Ferienwunsch warten hinter den
+                  anderen. Was ohne Ferienwunsch gilt, legst du in den{" "}
                   <NavigationLink
                     href={traegerPath(
                       `/traeger/einstellungen?bereich=${TRAEGER_HOLIDAY_TAB}`,
@@ -314,7 +312,7 @@ export function HolidayPeriodForm({
               label="Hinweise für Eltern"
               rows={3}
               maxLength={2000}
-              placeholder="Zum Beispiel: Mittagessen gibt es vor Ort. Oder: Bitte geben Sie ein Lunchpaket mit."
+              placeholder="Zum Beispiel: Mittagessen gibt es vor Ort. Oder: Bitte gebt ein Lunchpaket mit."
               value={draft.notes}
               error={fieldError("notes") ?? undefined}
               onChange={(event) =>
@@ -338,9 +336,9 @@ export function HolidayPeriodForm({
             <div>
               <h3 className="text-sm font-semibold text-gray-600">Wochen</h3>
               <p className="text-sm text-gray-600">
-                Jede Woche findet an einer Schule Ihres Trägers statt. Wollen
-                Sie dieselben Tage an mehreren Schulen anbieten? Legen Sie dafür
-                je Schule eine Woche an. Eltern wählen dann eine Schule.
+                Jede Woche findet an einer Schule deines Trägers statt. Willst
+                du dieselben Tage an mehreren Schulen anbieten? Lege dafür je
+                Schule eine Woche an. Eltern wählen dann eine Schule.
               </p>
               {/* What a booked time model allows is said only where one
                   exists: a new period has none. */}
@@ -350,14 +348,14 @@ export function HolidayPeriodForm({
                 {draft.weeks.some((week) =>
                   week.timeModels.some((model) => model.protected),
                 )
-                  ? " Ein gebuchtes Zeitmodell archivieren Sie: die Buchungen bleiben. Ein ungebuchtes entfernen Sie mit „×“."
+                  ? " Ein gebuchtes Zeitmodell archivierst du: die Buchungen bleiben. Ein ungebuchtes entfernst du mit „×“."
                   : ""}
                 {draft.weeks.some((week) =>
                   week.timeModels.some(
                     (model) => model.protected && !model.archived,
                   ),
                 )
-                  ? " Ein neuer Preis eines gebuchten Zeitmodells gilt für Anmeldungen, die Sie danach bestätigen. Bestätigte behalten ihren Betrag."
+                  ? " Ein neuer Preis eines gebuchten Zeitmodells gilt für Anmeldungen, die du danach bestätigst. Bestätigte behalten ihren Betrag."
                   : ""}
               </p>
             </div>

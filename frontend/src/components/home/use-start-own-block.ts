@@ -11,7 +11,7 @@ const logger = createLogger({ component: "HomeStartOwnBlock" });
 
 /** Erklärung am Starten-Knopf, gleich in „Mein Tag“ und der Jetzt-Zone (#6777). */
 export const START_OWN_BLOCK_TOOLTIP =
-  "Startet Ihre Aufsicht für diesen Block und öffnet sie.";
+  "Startet deine Aufsicht für diesen Block und öffnet sie.";
 
 /**
  * Einen eigenen Block starten und direkt in seine Kinderliste springen

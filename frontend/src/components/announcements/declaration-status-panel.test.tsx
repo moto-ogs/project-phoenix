@@ -298,7 +298,7 @@ describe("DeclarationStatusPanel (#3430)", () => {
 
     expect(
       screen.getByText(
-        "Achtung: Mindestens ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wenden Sie sich an den moto-Support.",
+        "Achtung: Mindestens ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an den moto-Support.",
       ),
     ).toBeInTheDocument();
     expect(

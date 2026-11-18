@@ -77,7 +77,8 @@ func (f reattachScanFixture) changeStayDuringTakeover(t *testing.T, change func(
 func (f reattachScanFixture) endStayDuringTakeover(t *testing.T, between func(t *testing.T)) *httptest.ResponseRecorder {
 	t.Helper()
 	return f.changeStayDuringTakeover(t, func(t *testing.T) {
-		require.NoError(t, f.active.EndActivitySession(testpkg.Ctx(t), f.stay), "the stay ends while the takeover waits")
+		_, err := f.active.EndActivitySession(testpkg.Ctx(t), f.stay)
+		require.NoError(t, err, "the stay ends while the takeover waits")
 		between(t)
 	})
 }

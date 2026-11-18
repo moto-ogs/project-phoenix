@@ -77,7 +77,7 @@ export function holidayFieldsSignature(
   return JSON.stringify(prepareHolidayFieldsForSave(fields));
 }
 
-const FILL_IN = "Bitte füllen Sie dieses Feld aus.";
+const FILL_IN = "Bitte fülle dieses Feld aus.";
 
 /** Checks the draft before saving; empty means it can be sent. */
 export function validateHolidayForm(
@@ -95,15 +95,15 @@ export function validateHolidayForm(
       errors[`fields.${index}.label`] = FILL_IN;
     } else if (field.key === "") {
       errors[`fields.${index}.label`] =
-        "Bitte verwenden Sie in der Frage mindestens einen Buchstaben oder eine Zahl.";
+        "Bitte verwende in der Frage mindestens einen Buchstaben oder eine Zahl.";
     }
     if (field.type === "select" && (field.options ?? []).length === 0) {
       errors[`fields.${index}.options`] =
-        "Bitte geben Sie mindestens eine Auswahl an.";
+        "Bitte gib mindestens eine Auswahl an.";
     }
     if (field.key !== "" && seen.has(field.key)) {
       errors[`fields.${index}.label`] =
-        "Diese Frage gibt es schon. Bitte formulieren Sie sie anders.";
+        "Diese Frage gibt es schon. Bitte formuliere sie anders.";
     }
     seen.add(field.key);
   });

@@ -34,7 +34,7 @@ describe("useApiErrorDisplay when the presenter chunk fails", () => {
       ),
     );
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Die Gruppe konnte nicht bearbeitet werden. Bitte versuchen Sie es später.",
+      "Die Gruppe konnte nicht bearbeitet werden. Bitte versuche es später.",
     );
     expect(screen.queryByRole("button", { name: "Wiederholen" })).toBeNull();
     expect(screen.queryByText("req-20")).toBeNull();

@@ -173,7 +173,7 @@ export function OfferingRequestReviewItem({
     }
     return approvalPreview &&
       approvalPreview.manual_planning_conflicts.length > 0
-      ? `${base} Bitte prüfen Sie jetzt im Betreuungsplan: ${joinNames(approvalPreview.manual_planning_conflicts.map((conflict) => conflict.activity_group_name))}.`
+      ? `${base} Bitte prüfe jetzt im Betreuungsplan: ${joinNames(approvalPreview.manual_planning_conflicts.map((conflict) => conflict.activity_group_name))}.`
       : `${base} Die angezeigten Folgeänderungen sind auch übernommen.`;
   };
 
@@ -574,9 +574,9 @@ export function OfferingRequestReviewItem({
                   ))}
                 </ul>
                 <p className="text-sm text-gray-700">
-                  Nach der Freigabe: Öffnen Sie den Betreuungsplan. Entfernen
-                  Sie {row.student_name} an den genannten Tagen aus diesen
-                  Gruppen oder ändern Sie die Gruppentage.
+                  Nach der Freigabe: Öffne den Betreuungsplan. Entferne{" "}
+                  {row.student_name} an den genannten Tagen aus diesen Gruppen
+                  oder ändere die Gruppentage.
                 </p>
               </div>
             )}

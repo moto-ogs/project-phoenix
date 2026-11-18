@@ -252,9 +252,7 @@ describe("ParentMessagesPage", () => {
       screen.getByRole("heading", { name: "Nachrichten", level: 1 }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Lesen Sie Nachrichten und schreiben Sie direkt an die OGS.",
-      ),
+      screen.getByText("Lies Nachrichten und schreibe direkt an die OGS."),
     ).toBeInTheDocument();
 
     const link = await screen.findByRole("link", { name: /Mia Schneider/ });
@@ -269,9 +267,7 @@ describe("ParentMessagesPage", () => {
     expect(
       screen.getByRole("link", { name: /Felix Schneider/ }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Tippen Sie, um zu schreiben."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Tippe, um zu schreiben.")).toBeInTheDocument();
   });
 
   it("zeigt fuer eine eigene ungelesene Nachricht zwei graue Versandhaken", async () => {
@@ -365,7 +361,7 @@ describe("ParentMessagesPage", () => {
     });
     expect(readReceipt).toBeInTheDocument();
     expect(readReceipt.className).toContain("text-moto-blue");
-    expect(screen.getByText("Sie: Danke für die Rückmeldung.")).toBeVisible();
+    expect(screen.getByText("Du: Danke für die Rückmeldung.")).toBeVisible();
     expect(screen.queryByText(/Zu .* ·/)).not.toBeInTheDocument();
   });
 

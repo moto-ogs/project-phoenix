@@ -90,13 +90,13 @@ describe("NotificationPreferencesSection", () => {
     renderWithToast(
       <NotificationPreferencesSection
         portal="school"
-        description="Wählen Sie zuerst die Themen. Dann erlauben Sie die Hinweise auf diesem Gerät."
+        description="Wähle zuerst die Themen. Dann erlaubst du die Hinweise auf diesem Gerät."
       />,
     );
 
     expect(
       await screen.findByText(
-        "Wählen Sie zuerst die Themen. Dann erlauben Sie die Hinweise auf diesem Gerät.",
+        "Wähle zuerst die Themen. Dann erlaubst du die Hinweise auf diesem Gerät.",
       ),
     ).toBeInTheDocument();
   });
@@ -218,7 +218,7 @@ describe("NotificationPreferencesSection", () => {
     renderWithToast(<NotificationPreferencesSection />);
 
     expect(
-      await screen.findByText("Von Ihrer Schule derzeit deaktiviert."),
+      await screen.findByText("Von deiner Schule derzeit deaktiviert."),
     ).toBeInTheDocument();
     // The choice belongs to the person and must survive the school toggling
     // its own setting off and on again.
@@ -235,7 +235,7 @@ describe("NotificationPreferencesSection", () => {
     renderWithToast(<NotificationPreferencesSection />);
 
     expect(
-      await screen.findByText(/Ihre Schule hat Benachrichtigungen derzeit/),
+      await screen.findByText(/Deine Schule hat Benachrichtigungen derzeit/),
     ).toBeInTheDocument();
     const preferenceSwitch = screen.getByRole("switch", {
       name: "Anstehende Abholung",
@@ -296,7 +296,7 @@ describe("NotificationPreferencesSection", () => {
     // Laden. Deshalb auf den Knopf selbst warten (#6320).
     expect(
       await screen.findByText(
-        "Bleiben Sie über Nachrichten und wichtige Änderungen zu Ihrem Kind informiert.",
+        "Bleibe über Nachrichten und wichtige Änderungen zu deinem Kind informiert.",
       ),
     ).toBeVisible();
     const enableAllButton = await screen.findByRole("button", {

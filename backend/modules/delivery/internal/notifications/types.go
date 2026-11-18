@@ -34,6 +34,10 @@ const (
 	// notification feed only: the portal has no push devices and no live
 	// channel, and no person decides them, so no portal offers them.
 	PortalTraeger = "traeger"
+	// PortalCaterer is the caterer portal (#7147). Like the Träger-Portal's,
+	// its types write the notification feed only: the portal has no push
+	// devices and no live channel.
+	PortalCaterer = "caterer"
 )
 
 // Channels a notification type is delivered over.
@@ -239,9 +243,9 @@ func RegisterType(def TypeDefinition) {
 	}
 	switch def.Portal {
 	case PortalStaff, PortalParent:
-	case PortalTraeger:
+	case PortalTraeger, PortalCaterer:
 		if !def.Feed || def.DefaultOn || def.Permission != "" || def.SchoolPortal || def.Channel != "" {
-			panic("notifications: Träger type " + def.Key + " must be a feed type without push, permission or other portal")
+			panic("notifications: " + def.Portal + " type " + def.Key + " must be a feed type without push, permission or other portal")
 		}
 	case PortalSchool:
 		// A school-only type is already offered there; SchoolPortal only
@@ -276,8 +280,8 @@ func validateTypeChannel(def TypeDefinition) {
 		if def.DefaultOn && def.Permission == "" && def.Portal != PortalParent {
 			panic("notifications: default-on type " + def.Key + " needs a permission")
 		}
-		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent && def.Portal != PortalTraeger {
-			panic("notifications: feed type " + def.Key + " needs the staff, parent or Träger portal")
+		if def.Feed && def.Portal != PortalStaff && def.Portal != PortalParent && def.Portal != PortalTraeger && def.Portal != PortalCaterer {
+			panic("notifications: feed type " + def.Key + " needs the staff, parent, Träger or caterer portal")
 		}
 	case ChannelEmail:
 		// An e-mail type is addressed by permission, not by a relation to a
@@ -399,6 +403,7 @@ func init() {
 	registerStaffNoticeTypes()
 	registerRoomChangeTypes()
 	registerSchoolClosingDayTypes()
+	registerCatererTypes()
 }
 
 // registerStaffAppointmentTypes registers the staff notices about the
@@ -408,7 +413,7 @@ func registerStaffAppointmentTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeInstanceCancelled,
 		Label:       "Absage eines Termins",
-		Description: "Wenn ein Termin oder Angebot abgesagt wird, für den Sie eingeplant sind. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Absagen in den nächsten 14 Tagen.",
+		Description: "Wenn ein Termin oder Angebot abgesagt wird, für den du eingeplant bist. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Absagen in den nächsten 14 Tagen.",
 		Group:       GroupAppointments,
 		Portal:      PortalStaff,
 		TenantGate:  settingInstanceCancelledEnabled,
@@ -448,7 +453,7 @@ func registerStaffNoticeTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeStaffNoticePublished,
 		Label:       "Hinweise der Leitung",
-		Description: "Wenn die Leitung einen neuen Hinweis für das Team anlegt. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+		Description: "Wenn die Leitung einen neuen Hinweis für das Team anlegt. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn du sie einschaltest.",
 		Group:       GroupMessages,
 		Portal:      PortalStaff,
 		TenantGate:  settingStaffNoticePublishedEnabled,
@@ -462,7 +467,7 @@ func registerPickupTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypePickupUpcoming,
 		Label:       "Anstehende Abholung",
-		Description: "Kurz bevor ein Kind abgeholt wird, das Sie gerade betreuen.",
+		Description: "Kurz bevor ein Kind abgeholt wird, das du gerade betreust.",
 		Group:       GroupPickup,
 		Portal:      PortalStaff,
 		TenantGate:  settingRemindersPickupUpcomingEnabled,
@@ -501,8 +506,8 @@ func registerActivityTypes() {
 	// the other about the slot you are assigned to.
 	RegisterType(TypeDefinition{
 		Key:         TypeActivityStart,
-		Label:       "Aktivität in Ihrem Raum",
-		Description: "Kurz bevor eine geplante Aktivität in einem Raum startet, den Sie gerade beaufsichtigen.",
+		Label:       "Aktivität in deinem Raum",
+		Description: "Kurz bevor eine geplante Aktivität in einem Raum startet, den du gerade beaufsichtigst.",
 		Group:       GroupActivities,
 		Portal:      PortalStaff,
 		TenantGate:  settingRemindersActivityStartEnabled,
@@ -520,7 +525,7 @@ func registerActivityTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeActivityRunningOver,
 		Label:       "AG dauert länger",
-		Description: "Wenn eine gestartete Aktivität in einem Raum Ihrer Aufsicht nach dem geplanten Ende noch läuft.",
+		Description: "Wenn eine gestartete Aktivität in einem Raum deiner Aufsicht nach dem geplanten Ende noch läuft.",
 		Group:       GroupActivities,
 		Portal:      PortalStaff,
 		TenantGate:  settingRemindersActivityRunningOverEnabled,
@@ -528,8 +533,8 @@ func registerActivityTypes() {
 	})
 	RegisterType(TypeDefinition{
 		Key:         TypeMyActivityStarting,
-		Label:       "Ihr nächster Einsatz",
-		Description: "Kurz bevor ein Einsatz aus Ihrem Betreuungsplan beginnt, auch wenn Sie gerade keine Aufsicht führen.",
+		Label:       "Dein nächster Einsatz",
+		Description: "Kurz bevor ein Einsatz aus deinem Betreuungsplan beginnt, auch wenn du gerade keine Aufsicht führst.",
 		Group:       GroupActivities,
 		Portal:      PortalStaff,
 		SortOrder:   4,
@@ -544,7 +549,7 @@ func registerStaffNoteTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeStaffStudentNoteShared,
 		Label:       "Notizen für das Team",
-		Description: "Wenn jemand aus dem Team eine Notiz zu einem Kind mit Ihnen teilt.",
+		Description: "Wenn jemand aus dem Team eine Notiz zu einem Kind mit dir teilt.",
 		Group:       GroupChildren,
 		Portal:      PortalStaff,
 		Permission:  permissionUsersRead,
@@ -559,7 +564,7 @@ func registerStaffMessageTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeStudentAbsenceReported,
 		Label:       "Krankmeldung eines Kindes",
-		Description: "Wenn für ein Kind aus Ihren Gruppen eine Krankmeldung oder Entschuldigung für heute eingetragen wird.",
+		Description: "Wenn für ein Kind aus deinen Gruppen eine Krankmeldung oder Entschuldigung für heute eingetragen wird.",
 		Group:       GroupChildren,
 		Portal:      PortalStaff,
 		TenantGate:  settingAbsenceReportedEnabled,
@@ -582,7 +587,7 @@ func registerStaffMessageTypes() {
 	RegisterType(TypeDefinition{
 		Key:          TypeStaffMessage,
 		Label:        "Nachrichten von Kolleginnen und Kollegen",
-		Description:  "Wenn Ihnen jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
+		Description:  "Wenn dir jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
 		Group:        GroupMessages,
 		Portal:       PortalStaff,
 		TenantGate:   settingStaffMessagingEnabled,
@@ -644,7 +649,7 @@ func registerParentMessageTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentBillingDocument,
 		Label:       "Neues Dokument vom Träger",
-		Description: "Wenn der Träger Ihnen ein Dokument schickt oder freigibt, zum Beispiel einen Vertrag.",
+		Description: "Wenn der Träger dir ein Dokument schickt oder freigibt, zum Beispiel einen Vertrag.",
 		Group:       GroupMessages,
 		Portal:      PortalParent,
 		SortOrder:   3,
@@ -653,7 +658,7 @@ func registerParentMessageTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentMessage,
 		Label:       "Neue Nachricht der OGS",
-		Description: "Wenn die OGS Ihnen zu einem Kind schreibt.",
+		Description: "Wenn die OGS dir zu einem Kind schreibt.",
 		Group:       GroupMessages,
 		Portal:      PortalParent,
 		TenantGate:  settingParentNotesEnabled,
@@ -668,7 +673,7 @@ func registerParentStatusTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentAppointment,
 		Label:       "Neuer oder geänderter Termin",
-		Description: "Wenn ein Termin für Sie angelegt, geändert oder abgesagt wird.",
+		Description: "Wenn ein Termin für dich angelegt, geändert oder abgesagt wird.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
 		SortOrder:   1,
@@ -677,7 +682,7 @@ func registerParentStatusTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentAppointmentReminder,
 		Label:       "Terminerinnerung",
-		Description: "Kurz vor einem Termin, zu dem Sie eingeladen sind.",
+		Description: "Kurz vor einem Termin, zu dem du eingeladen bist.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
 		TenantGate:  settingCalendarAppointmentReminder,
@@ -690,7 +695,7 @@ func registerParentStatusTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentCareCancelled,
 		Label:       "Betreuung fällt aus",
-		Description: "Wenn die OGS einen Betreuungstermin Ihres Kindes absagt.",
+		Description: "Wenn die OGS einen Betreuungstermin deines Kindes absagt.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
 		Feed:        true,
@@ -699,8 +704,8 @@ func registerParentStatusTypes() {
 
 	RegisterType(TypeDefinition{
 		Key:         TypeParentRequestDecided,
-		Label:       "Entscheidung über Ihre Anfrage",
-		Description: "Wenn die OGS über eine Ihrer Anfragen entschieden hat, etwa zu Betreuungszeiten, Stammdaten oder einer Abmeldung.",
+		Label:       "Entscheidung über deine Anfrage",
+		Description: "Wenn die OGS über eine deiner Anfragen entschieden hat, etwa zu Betreuungszeiten, Stammdaten oder einer Abmeldung.",
 		Group:       GroupChildren,
 		Portal:      PortalParent,
 		TenantGate:  settingParentNotesEnabled,
@@ -713,7 +718,7 @@ func registerParentStatusTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeMealPlanChanged,
 		Label:       "Speiseplan geändert",
-		Description: "Wenn sich das Essen an einem Tag ändert, an dem Ihr Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten.",
+		Description: "Wenn sich das Essen an einem Tag ändert, an dem dein Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn du sie einschaltest.",
 		Group:       GroupChildren,
 		Portal:      PortalParent,
 		TenantGate:  settingMealPlanChangedEnabled,
@@ -731,7 +736,7 @@ func registerSchoolTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeSchoolClassAbsenceReported,
 		Label:       "Krankmeldungen meiner Klassen",
-		Description: "Wenn ein Kind aus Ihren Klassen für heute krankgemeldet oder entschuldigt wird.",
+		Description: "Wenn ein Kind aus deinen Klassen für heute krankgemeldet oder entschuldigt wird.",
 		Group:       GroupChildren,
 		Portal:      PortalSchool,
 		TenantGate:  settingAbsenceReportedEnabled,
@@ -757,7 +762,7 @@ func registerSchoolTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeSchoolParentConferenceBooking,
 		Label:       "Buchungen am Elternsprechtag",
-		Description: "Wenn Eltern einen Termin an Ihrem Elternsprechtag buchen, verschieben oder absagen.",
+		Description: "Wenn Eltern einen Termin an deinem Elternsprechtag buchen, verschieben oder absagen.",
 		Group:       GroupAppointments,
 		Portal:      PortalSchool,
 		SortOrder:   1,
@@ -783,7 +788,7 @@ func registerStaffQualificationTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeStaffQualificationOwnExpiry,
 		Label:       "Eigene Nachweise",
-		Description: "Wenn einer Ihrer Nachweise bald abläuft und am Ablauftag. Eine E-Mail bekommen Sie in jedem Fall.",
+		Description: "Wenn einer deiner Nachweise bald abläuft und am Ablauftag. Eine E-Mail bekommst du in jedem Fall.",
 		Group:       GroupMessages,
 		Portal:      PortalStaff,
 		SortOrder:   6,

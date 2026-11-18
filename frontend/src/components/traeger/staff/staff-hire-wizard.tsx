@@ -37,7 +37,11 @@ import {
   type StaffHireMatch,
   type StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
-import { traegerPath } from "~/lib/traeger-url";
+import {
+  staffOverviewHref,
+  staffSubpageHref,
+  type StaffOverviewTab,
+} from "./staff-overview-tab";
 import { KindChoice, WeekHoursRow } from "./staff-contract-dialogs";
 import {
   CONTRACT_KIND_LABELS,
@@ -62,7 +66,7 @@ import {
 const logger = createLogger({ component: "TraegerStaffHireWizard" });
 
 const PERSONAL = "/traeger/personal";
-const CHECK_FIELDS = "Bitte prüfen Sie die markierten Felder.";
+const CHECK_FIELDS = "Bitte prüfe die markierten Felder.";
 
 interface School {
   readonly id: string;
@@ -130,7 +134,7 @@ function PersonStep({
           id="hire-personnel-number"
           name="personnel_number"
           label="Personalnummer"
-          hint="Aus Ihrem Lohnprogramm. Geht auch später."
+          hint="Aus deinem Lohnprogramm. Geht auch später."
           inputMode="numeric"
           autoComplete="off"
           maxLength={9}
@@ -178,7 +182,7 @@ function ContractStep({
   return (
     <SectionCard
       title="Arbeitsvertrag"
-      description="Art und Laufzeit. Die Stunden tragen Sie im nächsten Schritt je Schule ein."
+      description="Art und Laufzeit. Die Stunden trägst du im nächsten Schritt je Schule ein."
     >
       <div className="max-w-3xl space-y-5">
         <KindChoice
@@ -308,7 +312,7 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
   return (
     <SectionCard
       title="Prüfen"
-      description="Stimmt alles? Mit „Zurück“ ändern Sie eine Angabe."
+      description="Stimmt alles? Mit „Zurück“ änderst du eine Angabe."
     >
       <div className="max-w-3xl space-y-5">
         <DataGrid>
@@ -350,7 +354,11 @@ function ReviewStep({ draft }: Readonly<{ draft: HireDraft }>) {
 
 function DuplicateBody({
   matches,
-}: Readonly<{ matches: readonly StaffHireMatch[] }>) {
+  from,
+}: Readonly<{
+  matches: readonly StaffHireMatch[];
+  from: StaffOverviewTab | null;
+}>) {
   return (
     <div className="space-y-3 text-sm text-gray-700">
       <p>moto kennt schon eine Person mit diesem Namen und Geburtsdatum:</p>
@@ -360,7 +368,7 @@ function DuplicateBody({
             <li key={`record-${match.recordId}`}>
               Es gibt schon eine Personalakte.{" "}
               <ButtonLink
-                href={traegerPath(`${PERSONAL}/${match.recordId}`)}
+                href={staffSubpageHref(`${PERSONAL}/${match.recordId}`, from)}
                 variant="link"
                 newTab
                 tooltip="Öffnet die vorhandene Akte in einem neuen Tab."
@@ -377,10 +385,10 @@ function DuplicateBody({
         )}
       </ul>
       <p>
-        Ist es dieselbe Person? Dann brechen Sie ab. Eine Person ohne Akte
-        finden Sie bei den Personalakten unter „Ohne Akte“.
+        Ist es dieselbe Person? Dann brich ab. Eine Person ohne Akte findest du
+        bei den Personalakten unter „Ohne Akte“.
       </p>
-      <p>Sind es zwei Personen? Dann stellen Sie die Person trotzdem ein.</p>
+      <p>Sind es zwei Personen? Dann stelle die Person trotzdem ein.</p>
     </div>
   );
 }
@@ -388,7 +396,12 @@ function DuplicateBody({
 function HiredCard({
   record,
   onRestart,
-}: Readonly<{ record: StaffRecordDetail; onRestart: () => void }>) {
+  from,
+}: Readonly<{
+  record: StaffRecordDetail;
+  onRestart: () => void;
+  from: StaffOverviewTab | null;
+}>) {
   const schools = record.employments.map((site) => site.schoolName);
   return (
     <SectionCard>
@@ -401,7 +414,7 @@ function HiredCard({
         action={
           <div className="flex flex-wrap justify-center gap-3">
             <ButtonLink
-              href={traegerPath(`${PERSONAL}/${record.id}`)}
+              href={staffSubpageHref(`${PERSONAL}/${record.id}`, from)}
               variant="primary"
               size="md"
               tooltip="Öffnet die neue Akte mit Vertrag und Einsatzorten."
@@ -423,7 +436,7 @@ function HiredCard({
       {record.unsyncedSchools.length > 0 ? (
         <Alert
           type="warning"
-          message={`Das Soll ist bei ${record.unsyncedSchools.join(", ")} noch nicht angekommen. Speichern Sie später eine Änderung am Vertrag, dann holt moto es nach.`}
+          message={`Das Soll ist bei ${record.unsyncedSchools.join(", ")} noch nicht angekommen. Speichere später eine Änderung am Vertrag, dann holt moto es nach.`}
         />
       ) : null}
     </SectionCard>
@@ -438,11 +451,16 @@ function HiredCard({
 function IncompleteCard({
   name,
   incomplete,
-}: Readonly<{ name: string; incomplete: StaffHireIncomplete }>) {
+  from,
+}: Readonly<{
+  name: string;
+  incomplete: StaffHireIncomplete;
+  from: StaffOverviewTab | null;
+}>) {
   const schools = incomplete.schools.join(", ");
   const description = incomplete.recordId
-    ? `Die Akte und der Arbeitsvertrag sind gespeichert. moto konnte sie nur nicht noch einmal laden. Bitte öffnen Sie die Akte und prüfen Sie Vertrag und Schulen.`
-    : `Es gibt die Person jetzt an: ${schools}. Die Akte fehlt noch. Bitte legen Sie die Akte bei den Personalakten unter „Ohne Akte“ an und tragen Sie dort den Vertrag ein.`;
+    ? `Die Akte und der Arbeitsvertrag sind gespeichert. moto konnte sie nur nicht noch einmal laden. Bitte öffne die Akte und prüfe Vertrag und Schulen.`
+    : `Es gibt die Person jetzt an: ${schools}. Die Akte fehlt noch. Bitte lege die Akte bei den Personalakten unter „Ohne Akte“ an und trage dort den Vertrag ein.`;
   return (
     <SectionCard>
       <EmptyState
@@ -450,11 +468,14 @@ function IncompleteCard({
         titleAs="h2"
         icon={<WarningIcon aria-hidden className="size-6" />}
         title={`${name} ist nur zum Teil angelegt.`}
-        description={`${description} Bitte stellen Sie die Person nicht noch einmal ein.`}
+        description={`${description} Bitte stelle die Person nicht noch einmal ein.`}
         action={
           incomplete.recordId ? (
             <ButtonLink
-              href={traegerPath(`${PERSONAL}/${incomplete.recordId}`)}
+              href={staffSubpageHref(
+                `${PERSONAL}/${incomplete.recordId}`,
+                from,
+              )}
               variant="primary"
               size="md"
               tooltip="Öffnet die gespeicherte Akte."
@@ -463,7 +484,7 @@ function IncompleteCard({
             </ButtonLink>
           ) : (
             <ButtonLink
-              href={traegerPath(PERSONAL)}
+              href={staffOverviewHref("ohne-akte")}
               variant="primary"
               size="md"
               tooltip="Öffnet die Personalakten. Die Person steht dort unter „Ohne Akte“."
@@ -481,12 +502,18 @@ function StepActions({
   step,
   saving,
   onBack,
-}: Readonly<{ step: number; saving: boolean; onBack: () => void }>) {
+  cancelHref,
+}: Readonly<{
+  step: number;
+  saving: boolean;
+  onBack: () => void;
+  cancelHref: string;
+}>) {
   let back: ReactNode;
   if (step === 0) {
     back = (
       <ButtonLink
-        href={traegerPath(PERSONAL)}
+        href={cancelHref}
         variant="outline"
         size="md"
         noTooltip="Abbrechen führt zurück zu den Personalakten, ohne etwas anzulegen."
@@ -549,7 +576,16 @@ function stepOfRefusal(err: unknown): number {
 export function StaffHireWizard({
   schools,
   today,
-}: Readonly<{ schools: readonly School[]; today: string }>) {
+  from,
+}: Readonly<{
+  schools: readonly School[];
+  today: string;
+  /**
+   * Reiter der Personalakten, von dem man kam: Abbrechen führt dorthin,
+   * und eine geöffnete Akte führt mit Zurück dorthin.
+   */
+  from: StaffOverviewTab | null;
+}>) {
   const [draft, setDraft] = useState(() => emptyHireDraft(schools));
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -652,6 +688,7 @@ export function StaffHireWizard({
         <IncompleteCard
           name={`${draft.firstName.trim()} ${draft.lastName.trim()}`}
           incomplete={incomplete}
+          from={from}
         />
       </div>
     );
@@ -660,7 +697,7 @@ export function StaffHireWizard({
   if (hired) {
     return (
       <div ref={stepRef} className="flex flex-col gap-6">
-        <HiredCard record={hired} onRestart={restart} />
+        <HiredCard record={hired} onRestart={restart} from={from} />
       </div>
     );
   }
@@ -703,7 +740,12 @@ export function StaffHireWizard({
           ) : null}
           {step === HIRE_REVIEW_STEP ? <ReviewStep draft={draft} /> : null}
         </div>
-        <StepActions step={step} saving={saving} onBack={back} />
+        <StepActions
+          step={step}
+          saving={saving}
+          onBack={back}
+          cancelHref={staffOverviewHref(from)}
+        />
       </form>
       <ConfirmationModal
         isOpen={matches !== null}
@@ -717,7 +759,7 @@ export function StaffHireWizard({
         loadingText="Stellt ein…"
         isBackdropDismissDisabled
       >
-        <DuplicateBody matches={matches ?? []} />
+        <DuplicateBody matches={matches ?? []} from={from} />
       </ConfirmationModal>
     </>
   );

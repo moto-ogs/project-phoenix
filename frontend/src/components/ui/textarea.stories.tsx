@@ -23,7 +23,7 @@ export const RequiredWithHintAndError: Story = {
   args: {
     required: true,
     hint: "Höchstens 500 Zeichen.",
-    error: "Bitte geben Sie eine Notiz ein.",
+    error: "Bitte gib eine Notiz ein.",
   },
 };
 

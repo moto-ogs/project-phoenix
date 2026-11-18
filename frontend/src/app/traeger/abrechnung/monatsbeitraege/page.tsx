@@ -189,7 +189,7 @@ export default function TraegerMonatsbeitraegePage() {
   return (
     <TenantPage
       title={billingAreaTitle("monatsbeitraege")}
-      info="Hier rechnen Sie die Betreuung Monat für Monat ab. Der Beitrag ist die Summe der gebuchten Wochentage im Vertrag, mit den Preisen aus der Preisliste. Sie wählen Monat und Schulen, prüfen die Vorschau und geben den Lauf dann frei."
+      info="Hier rechnest du die Betreuung Monat für Monat ab. Der Beitrag ist die Summe der gebuchten Wochentage im Vertrag, mit den Preisen aus der Preisliste. Du wählst Monat und Schulen, prüfst die Vorschau und gibst den Lauf dann frei."
       stats={
         runs.length > 0 ? (
           <TenantPageStats
@@ -265,7 +265,7 @@ export default function TraegerMonatsbeitraegePage() {
                   href={traegerPath("/traeger/abrechnung/preise")}
                   variant="surface"
                   size="compact"
-                  tooltip="Öffnet die Preisliste, dort tragen Sie die Preise ein."
+                  tooltip="Öffnet die Preisliste, dort trägst du die Preise ein."
                 >
                   Preisliste öffnen
                 </ButtonLink>
@@ -286,7 +286,7 @@ export default function TraegerMonatsbeitraegePage() {
                   <CalendarRange className="h-12 w-12" aria-hidden="true" />
                 }
                 title="Noch kein Monatslauf."
-                description={`Starten Sie oben einen Lauf, zum Beispiel für ${formatMonth(data.list.suggestedMonth)}.`}
+                description={`Starte oben einen Lauf, zum Beispiel für ${formatMonth(data.list.suggestedMonth)}.`}
               />
             }
           />

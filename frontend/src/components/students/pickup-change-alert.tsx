@@ -88,7 +88,7 @@ function ChangeLine({
           compact
           tone="red"
           label="Neu"
-          accessibleLabel="Neu: Diese Änderung haben Sie noch nicht gesehen."
+          accessibleLabel="Neu: Diese Änderung hast du noch nicht gesehen."
         />
       ) : null}
     </span>

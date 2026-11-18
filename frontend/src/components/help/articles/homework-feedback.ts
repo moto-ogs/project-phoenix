@@ -13,7 +13,7 @@ export function homeworkFeedbackTopic(): HelpTopic {
     question:
       "Wie melde ich zurück, ob ein Kind die Hausaufgaben geschafft hat?",
     summary:
-      "In der Lernzeit sehen Sie die Hausaufgaben jeder Klasse und geben je Kind eine Rückmeldung.",
+      "In der Lernzeit siehst du die Hausaufgaben jeder Klasse und gibst je Kind eine Rückmeldung.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "ListChecks",
@@ -22,17 +22,17 @@ export function homeworkFeedbackTopic(): HelpTopic {
       "Die Lehrkraft hat für die Klasse des Kindes Hausaufgaben eingetragen.",
     ],
     steps: [
-      "Öffnen Sie `Aktuelle Aufsicht` und Ihre Lernzeit.",
+      "Öffne `Aktuelle Aufsicht` und deine Lernzeit.",
       "Unter dem Namen eines Kindes steht `Hausaufgaben:` mit dem, was zu tun ist.",
-      "Tippen Sie beim Kind auf `Hausaufgaben`.",
-      "Wählen Sie `Fertig`, `Nicht fertig` oder `War schwer`.",
-      "Schreiben Sie bei Bedarf eine `Kurze Notiz (freiwillig)`.",
-      "Tippen Sie auf `Rückmeldung speichern`.",
+      "Tippe beim Kind auf `Hausaufgaben`.",
+      "Wähle `Fertig`, `Nicht fertig` oder `War schwer`.",
+      "Schreibe bei Bedarf eine `Kurze Notiz (freiwillig)`.",
+      "Tippe auf `Rückmeldung speichern`.",
     ],
     result:
-      "Beim Kind steht `Rückmeldung:` mit Ihrer Antwort. Die Lehrkraft sieht sie in ihrer Klassenansicht.",
+      "Beim Kind steht `Rückmeldung:` mit deiner Antwort. Die Lehrkraft sieht sie in ihrer Klassenansicht.",
     notes: [
-      "Sie können die Rückmeldung am selben Tag ändern. Dann gilt die neue.",
+      "Du kannst die Rückmeldung am selben Tag ändern. Dann gilt die neue.",
       "Eltern sehen weder die Hausaufgaben noch die Rückmeldung.",
     ],
     differences: [

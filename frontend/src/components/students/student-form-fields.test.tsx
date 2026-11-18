@@ -58,9 +58,7 @@ describe("PersonalInfoSection", () => {
         formData={mockFormData}
         onChange={mockOnChange}
         fieldError={(name) =>
-          name === "last_name"
-            ? "Bitte geben Sie den Nachnamen ein."
-            : undefined
+          name === "last_name" ? "Bitte gib den Nachnamen ein." : undefined
         }
       />,
     );
@@ -70,7 +68,7 @@ describe("PersonalInfoSection", () => {
     expect(lastName).toHaveAttribute("aria-invalid", "true");
     expect(
       document.getElementById(lastName.getAttribute("aria-describedby")!),
-    ).toHaveTextContent("Bitte geben Sie den Nachnamen ein.");
+    ).toHaveTextContent("Bitte gib den Nachnamen ein.");
     expect(screen.getByDisplayValue("Max")).not.toHaveAttribute("aria-invalid");
   });
 

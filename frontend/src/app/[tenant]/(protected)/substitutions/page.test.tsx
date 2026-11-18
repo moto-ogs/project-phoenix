@@ -252,7 +252,7 @@ describe("SubstitutionPage", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Gruppe übergeben" }));
     expect(
-      screen.getByText("Sie können nur eigene Gruppen für heute übergeben."),
+      screen.getByText("Du kannst nur eigene Gruppen für heute übergeben."),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Startdatum")).not.toBeInTheDocument();
   });
@@ -265,9 +265,7 @@ describe("SubstitutionPage", () => {
 
     render(<SubstitutionPage />);
 
-    expect(
-      screen.getByText("Ihnen fehlt eine Berechtigung"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Dir fehlt eine Berechtigung")).toBeInTheDocument();
     expect(screen.queryByText("Laufende Betreuungen")).not.toBeInTheDocument();
   });
 
@@ -363,9 +361,7 @@ describe("SubstitutionPage", () => {
 
     render(<SubstitutionPage />);
 
-    expect(
-      screen.getByText("Ihnen fehlt eine Berechtigung"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Dir fehlt eine Berechtigung")).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Übergaben" })).toHaveLength(
       1,
     );

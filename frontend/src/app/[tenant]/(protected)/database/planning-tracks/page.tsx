@@ -6,6 +6,7 @@
 // Verwaltungsoberfläche in einem Auswahlfeld. Das Feld ist jetzt reine
 // Auswahl und verlinkt hierher.
 
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -95,8 +96,7 @@ function PlanningTracksPageContent() {
     planningTrackService.list(),
   );
   const accessRefused =
-    swrError instanceof ApiError &&
-    (swrError.status === 401 || swrError.status === 403);
+    swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
   useLayoutEffect(() => {
     if (!accessRefused) return;
@@ -140,7 +140,7 @@ function PlanningTracksPageContent() {
         "Planungsspuren bündeln Regeltermine farblich, zum Beispiel nach Jahrgang.",
       searchPlaceholder: "Planungsspur suchen…",
       emptyDescription:
-        "Legen Sie eine Planungsspur an, um Regeltermine im Betreuungsplan farblich zu bündeln.",
+        "Lege eine Planungsspur an, um Regeltermine im Betreuungsplan farblich zu bündeln.",
       stats: planningTrackStats,
       toRow: (track) => ({
         name: track.name,
@@ -175,7 +175,7 @@ function PlanningTracksPageContent() {
         confirmLabel: "Archivieren",
         loadingLabel: "Wird archiviert …",
         describe: (track) =>
-          `Die Planungsspur „${track.name}“ wird für neue Termine nicht mehr angeboten. Bestehende Termine behalten sie. Sie können die Spur jederzeit wiederherstellen.`,
+          `Die Planungsspur „${track.name}“ wird für neue Termine nicht mehr angeboten. Bestehende Termine behalten sie. Du kannst die Spur jederzeit wiederherstellen.`,
         run: (track) => planningTrackService.archive(track.id),
         toast: (track) => `Die Planungsspur „${track.name}“ ist archiviert.`,
       },

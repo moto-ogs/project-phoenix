@@ -33,16 +33,16 @@ describe("Textarea hint", () => {
         id="note"
         label="Vermerk"
         hint="Steht auf dem Beitrag."
-        error="Bitte geben Sie den Vermerk an."
+        error="Bitte gib den Vermerk an."
       />,
     );
 
     const field = screen.getByLabelText("Vermerk");
     expect(field).toHaveAccessibleDescription(
-      "Steht auf dem Beitrag. Bitte geben Sie den Vermerk an.",
+      "Steht auf dem Beitrag. Bitte gib den Vermerk an.",
     );
     const hint = screen.getByText("Steht auf dem Beitrag.");
-    const error = screen.getByText("Bitte geben Sie den Vermerk an.");
+    const error = screen.getByText("Bitte gib den Vermerk an.");
     expect(
       hint.compareDocumentPosition(error) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

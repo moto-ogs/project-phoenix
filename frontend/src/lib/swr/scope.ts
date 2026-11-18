@@ -25,7 +25,7 @@ import { useSyncExternalStore } from "react";
 // swr/no-direct-import permits package imports inside this shared wrapper only.
 import { unload, type Cache } from "swr";
 import { SWRGlobalState, createCacheHelper, getTimestamp } from "swr/_internal";
-import { ApiError } from "~/lib/api-error";
+import { isRefusal } from "~/lib/access-refusal";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { clearListOverlays } from "~/lib/list-overlays";
 import {
@@ -177,8 +177,6 @@ export function resetSWRScope({ revalidate }: { revalidate: boolean }): void {
   unload({ revalidate });
 }
 
-const REFUSAL_STATUSES = new Set([401, 403, 404]);
-
 /**
  * Whether `error` is the server's refusal of an entity with one of `codes`.
  * Programs branch on the code (ADR 0006), never on a message.
@@ -188,11 +186,7 @@ export function isEntityRefusal(
   codes: readonly ErrorCode[],
 ): boolean {
   return (
-    error instanceof ApiError &&
-    error.status !== undefined &&
-    REFUSAL_STATUSES.has(error.status) &&
-    error.code !== undefined &&
-    codes.includes(error.code)
+    isRefusal(error) && error.code !== undefined && codes.includes(error.code)
   );
 }
 

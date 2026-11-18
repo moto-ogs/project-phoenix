@@ -2,12 +2,21 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  TEST_PUSH_PUBLIC_KEY,
+  setPushPublicKey,
+} from "~/test/push-public-key-mock";
 import { ModalProvider } from "~/components/ui/modal-context";
 import {
   NotificationSetupDialog,
   setupStorageKey,
 } from "./notification-setup-dialog";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
+import { resetSWRScope } from "~/lib/swr/scope";
+
+// The dialog reads the preferences through the shared cache: real SWR.
+vi.unmock("swr");
 
 // The shared error path shows failures through the toast provider (#2517);
 // the component refreshes the scoped cache, which needs the session.
@@ -32,11 +41,11 @@ function renderWithToast(
 const mocks = vi.hoisted(() => ({
   fetchPreferences: vi.fn(),
   setPreference: vi.fn(),
+  disableAll: vi.fn(),
   needsIOSInstall: vi.fn(),
   isPushSupported: vi.fn(),
   syncSubscription: vi.fn(),
   subscribePush: vi.fn(),
-  verifyPushConfiguration: vi.fn(),
   isStandaloneApp: vi.fn(),
   isAndroidDevice: vi.fn(),
   isSamsungInternet: vi.fn(),
@@ -48,6 +57,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("~/lib/notification-preferences-api", () => ({
   fetchNotificationPreferences: mocks.fetchPreferences,
   setNotificationPreference: mocks.setPreference,
+  disableAllNotificationPreferences: mocks.disableAll,
 }));
 
 vi.mock("~/lib/push-api", () => ({
@@ -56,10 +66,13 @@ vi.mock("~/lib/push-api", () => ({
   isPushSupported: mocks.isPushSupported,
   syncExistingPushSubscription: mocks.syncSubscription,
   subscribePush: mocks.subscribePush,
-  verifyPushConfiguration: mocks.verifyPushConfiguration,
   isStandaloneApp: mocks.isStandaloneApp,
 }));
 
+vi.mock(
+  "~/lib/hooks/use-push-public-key",
+  async () => (await import("~/test/push-public-key-mock")).pushPublicKeyModule,
+);
 vi.mock("~/lib/pwa-install-prompt", () => ({
   isAndroidDevice: mocks.isAndroidDevice,
   isSamsungInternet: mocks.isSamsungInternet,
@@ -83,13 +96,14 @@ function renderDialog(props: {
 describe("NotificationSetupDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSWRScope({ revalidate: false });
     localStorage.clear();
     vi.stubGlobal("Notification", { permission: "default" });
     mocks.needsIOSInstall.mockReturnValue(false);
     mocks.isPushSupported.mockReturnValue(true);
     mocks.syncSubscription.mockResolvedValue(null);
     mocks.subscribePush.mockResolvedValue(undefined);
-    mocks.verifyPushConfiguration.mockResolvedValue(undefined);
+    setPushPublicKey("ready");
     mocks.isStandaloneApp.mockReturnValue(false);
     mocks.isAndroidDevice.mockReturnValue(false);
     mocks.isSamsungInternet.mockReturnValue(false);
@@ -129,7 +143,7 @@ describe("NotificationSetupDialog", () => {
 
     expect(
       await screen.findByText(
-        "Schalten Sie Benachrichtigungen ein. moto meldet sich dann bei wichtigen Ereignissen, auch wenn die App geschlossen ist.",
+        "Schalte Benachrichtigungen ein. moto meldet sich dann bei wichtigen Ereignissen, auch wenn die App geschlossen ist.",
       ),
     ).toBeInTheDocument();
   });
@@ -140,7 +154,27 @@ describe("NotificationSetupDialog", () => {
     await waitFor(() =>
       expect(mocks.fetchPreferences).toHaveBeenCalledWith("school"),
     );
-    expect(mocks.syncSubscription).toHaveBeenCalledWith("school");
+    expect(mocks.syncSubscription).toHaveBeenCalledWith(
+      "school",
+      TEST_PUSH_PUBLIC_KEY,
+    );
+  });
+
+  it("shares one preferences request with the settings card", async () => {
+    renderWithToast(
+      <ModalProvider>
+        <NotificationPreferencesSection portal="tenant" />
+        <NotificationSetupDialog accountId="42" portal="tenant" />
+      </ModalProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Benachrichtigungen aktivieren",
+      }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Abholung")).toBeInTheDocument();
+    expect(mocks.fetchPreferences).toHaveBeenCalledOnce();
   });
 
   it("explains the home-screen step first on iPhone and iPad", async () => {

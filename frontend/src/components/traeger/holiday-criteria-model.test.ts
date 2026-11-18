@@ -69,9 +69,9 @@ describe("holiday criteria model (#4700)", () => {
     ];
     expect(validateCriteria(drafts)).toEqual({
       "criteria.1.name": "Diesen Namen gibt es schon.",
-      "criteria.1.question": "Bitte schreiben Sie die Frage an die Eltern.",
-      "criteria.2.name": "Bitte geben Sie einen Namen ein.",
-      "criteria.2.question": "Bitte schreiben Sie die Frage an die Eltern.",
+      "criteria.1.question": "Bitte schreibe die Frage an die Eltern.",
+      "criteria.2.name": "Bitte gib einen Namen ein.",
+      "criteria.2.question": "Bitte schreibe die Frage an die Eltern.",
     });
     const many = Array.from({ length: 11 }, (_, index) => ({
       ...emptyCriterion(),

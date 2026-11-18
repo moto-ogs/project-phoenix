@@ -93,7 +93,7 @@ func (r *RelationshipResolver) resolveEntity(
 	if len(suggestions) > 0 {
 		return nil, []importModels.ValidationError{{
 			Field:       fieldName,
-			Message:     fmt.Sprintf("%s '%s' nicht gefunden. Meinten Sie: %s? (Wird ohne %s importiert)", entityType, name, strings.Join(suggestions, ", "), entityType),
+			Message:     fmt.Sprintf("%s '%s' nicht gefunden. Meintest du: %s? (Wird ohne %s importiert)", entityType, name, strings.Join(suggestions, ", "), entityType),
 			Code:        fmt.Sprintf("%s_not_found_with_suggestions", fieldName),
 			Severity:    importModels.ErrorSeverityWarning,
 			Suggestions: suggestions,

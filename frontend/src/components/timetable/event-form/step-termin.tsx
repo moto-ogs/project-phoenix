@@ -114,7 +114,7 @@ export function StepTermin({
   let dateHint: string | undefined;
   if (isEditingSeries) {
     dateHint = seriesStartEdit
-      ? "Den Serienbeginn ändern Sie unten im Feld „Serienbeginn“."
+      ? "Den Serienbeginn änderst du unten im Feld „Serienbeginn“."
       : "Der Serienbeginn bleibt unverändert.";
   } else if (isSeriesFlow) {
     dateHint =

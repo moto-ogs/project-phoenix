@@ -162,8 +162,7 @@ export function OfferingGapHints({
             <p className="mb-3 max-w-2xl text-sm text-gray-600">
               Fehlt „Regeltermin anlegen“? Dann sind einige Kinder an diesen
               Tagen schon ganz oder teilweise eingeplant. Oder sie haben noch
-              Unterricht. Prüfen Sie ihre Regeltermine und ergänzen Sie, was
-              fehlt.
+              Unterricht. Prüfe ihre Regeltermine und ergänze, was fehlt.
             </p>
           ) : null}
           <ResponsiveActionList id={openListId}>

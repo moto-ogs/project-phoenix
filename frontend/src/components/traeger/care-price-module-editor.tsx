@@ -235,7 +235,7 @@ export function CarePriceModuleEditor({
         </p>
         <p className="text-sm text-gray-600">
           Geschwisterpreise gelten nur mit einer Geschwisterregel „Preis laut
-          Preisliste“. Legen Sie diese unter „Ermäßigungen“ an.
+          Preisliste“. Lege diese unter „Ermäßigungen“ an.
         </p>
         <DataTable
           columns={tableColumns}

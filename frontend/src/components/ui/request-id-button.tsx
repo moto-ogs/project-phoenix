@@ -50,7 +50,7 @@ export function RequestIdButton({
         // ihn dann nicht doppelt vor, weil er schon der Name ist.
         tooltip={
           kitDefault(
-            "Kopiert die Kennung, damit Sie sie dem Support nennen können.",
+            "Kopiert die Kennung, damit du sie dem Support nennen kannst.",
           ) ?? copyLabel
         }
         onClick={() => void handleCopy()}

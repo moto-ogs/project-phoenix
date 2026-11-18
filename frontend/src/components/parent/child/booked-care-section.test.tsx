@@ -456,7 +456,7 @@ describe("BookedCareSection", () => {
     expect(await screen.findByText("Abmeldung bestätigt")).toBeVisible();
     expect(
       screen.getByText(
-        "Die Schule schließt die Abmeldung ab. Sie müssen nichts tun.",
+        "Die Schule schließt die Abmeldung ab. Du musst nichts tun.",
       ),
     ).toBeVisible();
   });
@@ -572,7 +572,7 @@ describe("BookedCareSection", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "Den Wochenplan können Sie hier nicht ändern. Änderungen an gebuchten Angeboten finden Sie im nächsten Abschnitt.",
+        "Den Wochenplan kannst du hier nicht ändern. Änderungen an gebuchten Angeboten findest du im nächsten Abschnitt.",
       ),
     ).toBeInTheDocument();
   });
@@ -591,11 +591,11 @@ describe("BookedCareSection", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        "Sie können hier keine Änderung anfragen. Bitte fragen Sie bei der OGS nach.",
+        "Du kannst hier keine Änderung anfragen. Bitte frage bei der OGS nach.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/Den Wochenplan können Sie hier nicht ändern/),
+      screen.queryByText(/Den Wochenplan kannst du hier nicht ändern/),
     ).not.toBeInTheDocument();
   });
 

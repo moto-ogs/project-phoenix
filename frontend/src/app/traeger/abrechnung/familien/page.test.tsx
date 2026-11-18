@@ -207,7 +207,7 @@ describe("TraegerBillingFamiliesPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        "Eine Familie steht hier, sobald Sie eine Ferienanmeldung bestätigen oder eine Rechnung freigeben.",
+        "Eine Familie steht hier, sobald du eine Ferienanmeldung bestätigst oder eine Rechnung freigibst.",
       )[0],
     ).toBeInTheDocument();
   });

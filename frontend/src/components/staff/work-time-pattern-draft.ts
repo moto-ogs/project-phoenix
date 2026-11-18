@@ -159,14 +159,14 @@ export function weekLabel(weekIndex: number): string {
  */
 export function validatePatternDraft(draft: PatternDraft): string | null {
   if (draft.invalidKeys.size > 0) {
-    return "Bitte korrigieren Sie die markierten Stunden.";
+    return "Bitte korrigiere die markierten Stunden.";
   }
   if (rotationTotal(draft) === 0) {
-    return "Das Modell hat noch keine Stunden. Bitte tragen Sie mindestens einen Tag ein.";
+    return "Das Modell hat noch keine Stunden. Bitte trage mindestens einen Tag ein.";
   }
   for (let w = 0; w < draft.rotationLength; w++) {
     if (weekTotal(draft, w) === 0) {
-      return `${weekLabel(w)} hat noch keine Stunden. Bitte tragen Sie mindestens einen Tag ein.`;
+      return `${weekLabel(w)} hat noch keine Stunden. Bitte trage mindestens einen Tag ein.`;
     }
   }
   return null;

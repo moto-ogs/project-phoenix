@@ -95,7 +95,7 @@ export function GroupTransferModal({
   const handleTransfer = async () => {
     formErrors.clear();
     if (!selectedStaffId) {
-      formErrors.invalid("Bitte wählen Sie eine pädagogische Fachkraft aus.");
+      formErrors.invalid("Bitte wähle eine pädagogische Fachkraft aus.");
       return;
     }
 
@@ -182,7 +182,7 @@ export function GroupTransferModal({
             ? undefined
             : availableUsers.length === 0
               ? "Es ist keine pädagogische Fachkraft verfügbar."
-              : "Wählen Sie zuerst eine Fachkraft aus."
+              : "Wähle zuerst eine Fachkraft aus."
         }
       >
         Übergeben
@@ -303,7 +303,7 @@ export function GroupTransferModal({
             label="Übergeben an:"
             hint={
               availableUsers.length === 0 && !loadError
-                ? "Keine pädagogische Fachkraft verfügbar. Bitte wenden Sie sich an die Verwaltung."
+                ? "Keine pädagogische Fachkraft verfügbar. Bitte wende dich an die Verwaltung."
                 : undefined
             }
             value={selectedStaffId}

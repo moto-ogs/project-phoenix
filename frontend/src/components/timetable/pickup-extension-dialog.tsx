@@ -221,7 +221,7 @@ function PickupExtensionStep({
             disabledReason={
               staleReason ??
               (busy === null && selected.size === 0
-                ? "Wählen Sie zuerst mindestens einen Termin aus."
+                ? "Wähle zuerst mindestens einen Termin aus."
                 : undefined)
             }
             tooltip={
@@ -263,7 +263,7 @@ function PickupExtensionStep({
           {task.kind === "weekday"
             ? `Gilt für alle kommenden ${getWeekdayLabel(task.weekday ?? 0)}e. `
             : ""}
-          Wenn Sie jetzt schließen, bleibt die Frage als Aufgabe auf der
+          Wenn du jetzt schließt, bleibt die Frage als Aufgabe auf der
           Startseite.
         </p>
       </div>

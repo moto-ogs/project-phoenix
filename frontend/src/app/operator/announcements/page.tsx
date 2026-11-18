@@ -477,12 +477,12 @@ export default function OperatorAnnouncementsPage() {
         ? {
             title: "Keine Ankündigungen",
             description:
-              "Erstellen Sie eine neue Ankündigung, um Nutzer zu informieren.",
+              "Erstelle eine neue Ankündigung, um Nutzer zu informieren.",
           }
         : {
             title: `Keine Ankündigungen mit dem Status „${ANNOUNCEMENT_STATUS_LABELS[statusFilter]}“`,
             description:
-              "Wählen Sie einen anderen Status oder setzen Sie den Filter zurück.",
+              "Wähle einen anderen Status oder setze den Filter zurück.",
             action: (
               <Button
                 type="button"
@@ -733,7 +733,7 @@ export default function OperatorAnnouncementsPage() {
                 <Alert
                   type="warning"
                   title="Diese Ankündigung enthält gelöschte Ziele"
-                  message="Die folgenden Organisationen/Schulen wurden gelöscht und sind in den Auswahllisten ausgeblendet. Sie bleiben als Ziel erhalten, damit die Ankündigung nicht versehentlich global sichtbar wird, und tauchen wieder auf, falls das Ziel wiederhergestellt wird. Entfernen Sie ein Ziel explizit, wenn die Ankündigung nach einer Wiederherstellung nicht mehr für dieses Ziel gelten soll."
+                  message="Die folgenden Organisationen/Schulen wurden gelöscht und sind in den Auswahllisten ausgeblendet. Sie bleiben als Ziel erhalten, damit die Ankündigung nicht versehentlich global sichtbar wird, und tauchen wieder auf, falls das Ziel wiederhergestellt wird. Entferne ein Ziel explizit, wenn die Ankündigung nach einer Wiederherstellung nicht mehr für dieses Ziel gelten soll."
                   actionLayout="stacked"
                   action={
                     <div>

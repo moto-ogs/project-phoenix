@@ -144,10 +144,10 @@ function matchesSearch(school: TraegerSchoolToday, search: string): boolean {
  * die Kachel daneben für die anwesenden Kinder braucht.
  */
 function childrenTotalHint(schoolCount: number): string {
-  if (schoolCount === 1) return "Alle betreuten Kinder Ihrer Schule.";
+  if (schoolCount === 1) return "Alle betreuten Kinder deiner Schule.";
   if (schoolCount > 1)
-    return `Alle betreuten Kinder in Ihren ${schoolCount} Schulen.`;
-  return "Alle betreuten Kinder in Ihren Schulen.";
+    return `Alle betreuten Kinder in deinen ${schoolCount} Schulen.`;
+  return "Alle betreuten Kinder in deinen Schulen.";
 }
 
 function TotalFigures({
@@ -296,7 +296,7 @@ function figureColumns(
               tone="warning"
               size="xs"
               label={String(school.figures.childrenSick)}
-              accessibleLabel=", erreicht Ihre Grenze"
+              accessibleLabel=", erreicht deine Grenze"
             />
           ) : (
             school.figures.childrenSick
@@ -316,7 +316,7 @@ function figureColumns(
               tone="warning"
               size="xs"
               label={String(school.figures.staffPresent)}
-              accessibleLabel=", erreicht Ihre Grenze"
+              accessibleLabel=", erreicht deine Grenze"
             />
           ) : (
             <span className="font-semibold">{school.figures.staffPresent}</span>
@@ -348,7 +348,7 @@ function figureColumns(
                 tone="warning"
                 size="xs"
                 label={formatRatio(school.figures.careRatio)}
-                accessibleLabel=", erreicht Ihre Grenze"
+                accessibleLabel=", erreicht deine Grenze"
               />
             ) : (
               formatRatio(school.figures.careRatio)
@@ -378,7 +378,7 @@ function figureColumns(
                 tone="warning"
                 size="xs"
                 label={String(open)}
-                accessibleLabel=", erreicht Ihre Grenze"
+                accessibleLabel=", erreicht deine Grenze"
               />
             ) : (
               open
@@ -536,7 +536,7 @@ export default function TraegerDashboardPage() {
       title="Dashboard"
       info={
         <>
-          Die Zahlen von jetzt für alle Schulen Ihres Trägers. Oben steht die
+          Die Zahlen von jetzt für alle Schulen deines Trägers. Oben steht die
           Summe, darunter die Auffälligkeiten und jede Schule. moto zeigt hier
           keine Namen. Die Zahlen aktualisieren sich jede Minute. Ein Klick auf
           eine Schule zeigt ihre Zahlen und Stammdaten.
@@ -611,7 +611,7 @@ export default function TraegerDashboardPage() {
               />
             ) : undefined
           }
-          description="Hier stehen die Schulen, an denen gerade etwas Ihre Grenzen erreicht."
+          description="Hier stehen die Schulen, an denen gerade etwas deine Grenzen erreicht."
           leading={
             quiet ? (
               <CheckCircleIcon
@@ -656,7 +656,7 @@ export default function TraegerDashboardPage() {
                 variant="surface"
                 size="compact"
                 className="w-full shrink-0 min-[480px]:w-auto min-[480px]:self-start sm:self-auto"
-                tooltip="Öffnet Ihre Grenzen für Auffälligkeiten in den Einstellungen."
+                tooltip="Öffnet deine Grenzen für Auffälligkeiten in den Einstellungen."
               >
                 {canChangeThresholds ? "Grenzen ändern" : "Grenzen ansehen"}
               </ButtonLink>
@@ -799,18 +799,18 @@ export default function TraegerDashboardPage() {
           schools.length === 0 ? (
             <EmptyState
               icon={<School className="h-12 w-12" aria-hidden="true" />}
-              title="Ihrem Träger sind noch keine Schulen zugeordnet."
-              description="Das moto-Team ordnet die Schulen Ihrem Träger zu."
+              title="Deinem Träger sind noch keine Schulen zugeordnet."
+              description="Das moto-Team ordnet die Schulen deinem Träger zu."
             />
           ) : (
             <EmptyState
               icon={<School className="h-12 w-12" aria-hidden="true" />}
-              title="Keine Schule passt zu Ihrer Suche."
+              title="Keine Schule passt zu deiner Suche."
               description={
                 emptySearchText(
                   search,
                   [],
-                  "Prüfen Sie den Namen oder suchen Sie nach dem Ort.",
+                  "Prüfe den Namen oder suche nach dem Ort.",
                 ).description
               }
               action={

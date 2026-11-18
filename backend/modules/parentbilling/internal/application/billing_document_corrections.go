@@ -174,10 +174,14 @@ func (b *BillingLetters) correctionLetter(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return fmt.Errorf("parent billing: read letterhead: %w", err)
 	}
+	// The cancellation or credit names the Träger as its sender (#7177).
+	if missingSender(head) {
+		return parentbilling.ErrLetterheadMissing
+	}
 	if head, err = withNoticeTemplate(ctx, b.letterheads, reviewer.OrganizationID, head, document.DocumentKind, false); err != nil {
 		return err
 	}
-	file, err := b.render(letterContent{
+	file, err := b.render(reviewer.OrganizationID, letterContent{
 		run: target.run, document: document, letterhead: head, invoice: &target.invoice,
 		leftCents: leftOf(target.invoice, append(append([]parentbilling.BillingDocument{}, target.history...), document)),
 	})

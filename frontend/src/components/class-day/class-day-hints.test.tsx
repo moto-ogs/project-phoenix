@@ -170,7 +170,7 @@ describe("ClassDayClass day hints", () => {
     // Leer speichern sagt, was fehlt, und schickt nichts.
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
-      (await screen.findAllByText("Bitte schreiben Sie einen Hinweis.")).length,
+      (await screen.findAllByText("Bitte schreibe einen Hinweis.")).length,
     ).toBeGreaterThan(0);
     expect(saveDayHint).not.toHaveBeenCalled();
 
@@ -260,7 +260,7 @@ describe("ClassDayClass day hints", () => {
     expect(
       (
         await screen.findAllByText(
-          "Der Hinweis ist zu lang. Bitte kürzen Sie ihn auf 500 Zeichen.",
+          "Der Hinweis ist zu lang. Bitte kürze ihn auf 500 Zeichen.",
         )
       ).length,
     ).toBeGreaterThan(0);

@@ -140,7 +140,7 @@ describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
     renderPage();
 
     expect(
-      screen.getByRole("heading", { name: "Aus Ihren Benachrichtigungen" }),
+      screen.getByRole("heading", { name: "Aus deinen Benachrichtigungen" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Sommerfest")).toBeInTheDocument();
     expect(screen.getByText("Bitte Kuchen mitbringen.")).toBeInTheDocument();
@@ -152,7 +152,7 @@ describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
     renderPage();
 
     expect(
-      screen.queryByRole("heading", { name: "Aus Ihren Benachrichtigungen" }),
+      screen.queryByRole("heading", { name: "Aus deinen Benachrichtigungen" }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByText("Sommerfest")).toHaveLength(1);
   });

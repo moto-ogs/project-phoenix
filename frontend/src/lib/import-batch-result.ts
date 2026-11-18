@@ -128,13 +128,13 @@ export function importBatchFailureMessage(
   const blockingRow = importBatchBlockingRow(result);
   if (saved === 0) {
     if (blockingRow === undefined) {
-      return "Der Import hat nicht geklappt. Bitte prüfen Sie die Datei. Laden Sie sie danach erneut hoch.";
+      return "Der Import hat nicht geklappt. Bitte prüfe die Datei. Lade sie danach erneut hoch.";
     }
-    return `Zeile ${blockingRow} hat nicht geklappt. Bitte korrigieren Sie diese Zeile. Laden Sie die Datei danach erneut hoch.`;
+    return `Zeile ${blockingRow} hat nicht geklappt. Bitte korrigiere diese Zeile. Lade die Datei danach erneut hoch.`;
   }
   const savedSentence = savedRowsSentence(saved);
   if (blockingRow === undefined) {
-    return `${savedSentence} Der Rest hat nicht geklappt. Laden Sie die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.`;
+    return `${savedSentence} Der Rest hat nicht geklappt. Lade die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.`;
   }
-  return `${savedSentence} Zeile ${blockingRow} hat den Rest angehalten. Bitte korrigieren Sie diese Zeile. Laden Sie die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.`;
+  return `${savedSentence} Zeile ${blockingRow} hat den Rest angehalten. Bitte korrigiere diese Zeile. Lade die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.`;
 }

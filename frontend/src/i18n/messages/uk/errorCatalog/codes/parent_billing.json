@@ -41,6 +41,8 @@
   "letterhead_too_long": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "number_range_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "number_range_missing": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "number_range_start_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "number_range_start_taken": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "parent_document_not_found": "Цей документ більше недоступний. Будь ласка, оновіть сторінку.",
   "payment_text_debtor_number_missing": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "recipient_email_missing": "Не вдалося змінити: {object}. Перевірте поточний стан.",
@@ -127,5 +129,6 @@
   "export_recipient_invalid": "The recipient was not saved. Please check the marked fields.",
   "export_recipient_not_found": "This recipient no longer exists. Please reload the page.",
   "export_recipient_name_taken": "A recipient with this name already exists. Please choose another name.",
-  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again."
+  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again.",
+  "letterhead_missing": "У бланку відсутні дані відправника. Без назви та адреси організатора рахунки й рішення не створюються. Додайте їх у розділі «Бланк та шаблони»."
 }

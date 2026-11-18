@@ -41,6 +41,8 @@
   "letterhead_too_long": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "number_range_invalid": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "number_range_missing": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "number_range_start_invalid": "Не удалось сохранить: {object}. Проверьте введённые данные.",
+  "number_range_start_taken": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "parent_document_not_found": "Этот документ больше недоступен. Пожалуйста, обновите страницу.",
   "payment_text_debtor_number_missing": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "recipient_email_missing": "Не удалось изменить: {object}. Проверьте текущее состояние.",
@@ -127,5 +129,6 @@
   "export_recipient_invalid": "The recipient was not saved. Please check the marked fields.",
   "export_recipient_not_found": "This recipient no longer exists. Please reload the page.",
   "export_recipient_name_taken": "A recipient with this name already exists. Please choose another name.",
-  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again."
+  "export_formats_invalid": "The assignment was not saved. Please reload the page and try again.",
+  "letterhead_missing": "В бланке отсутствуют данные отправителя. Без названия и адреса организации счета и решения не создаются. Добавьте их в разделе «Бланк и шаблоны»."
 }

@@ -281,6 +281,7 @@ type Notices interface {
 
 // Stable reasons why a decided end could not be mailed.
 const (
+	EndNoticeLetterheadMissing  = "letterhead_missing"
 	EndNoticeMissingStudent     = "missing_student"
 	EndNoticeNoPermittedAddress = "no_permitted_address"
 )

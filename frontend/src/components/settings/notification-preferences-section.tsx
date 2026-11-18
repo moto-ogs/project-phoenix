@@ -299,7 +299,7 @@ function NotificationPreferencesSectionContent({
       description={
         isParentPortal
           ? t("description")
-          : (description ?? "Wählen Sie, worüber moto Sie informieren soll.")
+          : (description ?? "Wähle, worüber moto dich informieren soll.")
       }
       actions={
         isParentPortal && loading ? (
@@ -338,7 +338,7 @@ function NotificationPreferencesSectionContent({
             tooltip={
               isParentPortal
                 ? t("disableAllTooltip")
-                : "Schaltet sofort alle Benachrichtigungen von moto für Sie aus."
+                : "Schaltet sofort alle Benachrichtigungen von moto für dich aus."
             }
             disabled={busy}
             onClick={() => void disableAll()}
@@ -361,7 +361,7 @@ function NotificationPreferencesSectionContent({
             message={
               isParentPortal
                 ? t("tenantDisabled")
-                : "Ihre Schule hat Benachrichtigungen derzeit deaktiviert. Ihre Auswahl wird gespeichert und gilt, sobald die Schule sie wieder einschaltet."
+                : "Deine Schule hat Benachrichtigungen derzeit deaktiviert. Deine Auswahl wird gespeichert und gilt, sobald die Schule sie wieder einschaltet."
             }
           />
         </div>
@@ -424,7 +424,7 @@ function NotificationPreferencesSectionContent({
                         <p className="mt-1 text-xs text-gray-500">
                           {isParentPortal
                             ? t("typeUnavailable")
-                            : "Von Ihrer Schule derzeit deaktiviert."}
+                            : "Von deiner Schule derzeit deaktiviert."}
                         </p>
                       )}
                     </div>

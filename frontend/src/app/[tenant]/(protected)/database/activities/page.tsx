@@ -319,8 +319,8 @@ function ActivitiesPageContent() {
                   : "Keine Aktivitäten vorhanden",
               description:
                 searchTerm || categoryFilter !== "all"
-                  ? "Versuchen Sie andere Suchkriterien oder Filter."
-                  : "Legen Sie die erste Aktivität an, um sie verplanen zu können.",
+                  ? "Versuche andere Suchkriterien oder Filter."
+                  : "Lege die erste Aktivität an, um sie verplanen zu können.",
               icon: (
                 <MotoDuotoneIcon
                   icon={activitiesConcept.icon}
@@ -354,7 +354,7 @@ function ActivitiesPageContent() {
               title="Aktivität löschen?"
               description={
                 <>
-                  Möchten Sie die Aktivität{" "}
+                  Möchtest du die Aktivität{" "}
                   <span className="font-medium">{selectedActivity.name}</span>{" "}
                   wirklich löschen? Diese Aktion kann nicht rückgängig gemacht
                   werden.

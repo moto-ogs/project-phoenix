@@ -122,7 +122,7 @@ describe("useApiLoadError", () => {
 
     expect(
       await screen.findByText(
-        "Die Liste ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Liste ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -184,7 +184,7 @@ describe("useApiLoadError mit module.not_booked", () => {
       fireEvent.click(screen.getByRole("button", { name: "Laden" }));
 
       const message = await screen.findByText(
-        "Diese Seite gehört zum Modul Zeiterfassung. Ihre Schule nutzt es nicht. Wenn Sie es brauchen, sprechen Sie mit Ihrer Leitung.",
+        "Diese Seite gehört zum Modul Zeiterfassung. Deine Schule nutzt es nicht. Wenn du es brauchst, sprich mit deiner Leitung.",
       );
       // Ein Hinweis (role=status), keine Fehlermeldung, kein Wiederholen.
       expect(message.closest('[role="status"]')).not.toBeNull();

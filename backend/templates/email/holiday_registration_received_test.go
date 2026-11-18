@@ -81,7 +81,7 @@ func TestHolidayRegistrationReceivedTemplate_RendersTheDeclaration(t *testing.T)
 	var out bytes.Buffer
 	require.NoError(t, tpl.ExecuteTemplate(&out, "holiday-registration-received.html", content))
 	body := out.String()
-	for _, want := range []string{"Ihre Erklärung", "Name: Eva Muster", "Abgegeben am 16.11.2026 um 09:30 Uhr", "Fassung der Texte: 3",
+	for _, want := range []string{"Deine Erklärung", "Name: Eva Muster", "Abgegeben am 16.11.2026 um 09:30 Uhr", "Fassung der Texte: 3",
 		"Sorgerecht", "Ich bin allein sorgeberechtigt oder die andere sorgeberechtigte Person ist einverstanden.", "Fotos",
 		"Ich bin mit Fotos einverstanden.", "Sie hängen im Flur."} {
 		assert.Contains(t, body, template.HTMLEscapeString(want))
@@ -91,5 +91,5 @@ func TestHolidayRegistrationReceivedTemplate_RendersTheDeclaration(t *testing.T)
 	delete(content, "Declaration")
 	out.Reset()
 	require.NoError(t, tpl.ExecuteTemplate(&out, "holiday-registration-received.html", content))
-	assert.NotContains(t, out.String(), "Ihre Erklärung", "a mail without a declaration has no section")
+	assert.NotContains(t, out.String(), "Deine Erklärung", "a mail without a declaration has no section")
 }

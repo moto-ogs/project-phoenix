@@ -329,6 +329,8 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       // contract signing, the demo entry and the school's login image.
       "/api/public/",
       "/api/tenant/resolve",
+      // The staff invitation's school picker (#7369); attaches no session.
+      "/api/tenant/list",
       "/api/invitations/validate",
       "/api/invitations/accept",
       "/api/guardian-invitations/",
@@ -346,6 +348,8 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       "/api/school/",
       "/api/invitations/validate",
       "/api/invitations/accept",
+      // The invitation's school picker (#7369); attaches no session.
+      "/api/tenant/list",
     ],
     localized: false,
     help: true,

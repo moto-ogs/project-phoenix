@@ -206,7 +206,7 @@ describe("kit tooltip defaults", () => {
     };
     const { unmount } = render(<Dropzone {...props} />);
     expect(button("Datei auswählen")).toHaveAccessibleDescription(
-      "Öffnet die Dateiauswahl Ihres Geräts.",
+      "Öffnet die Dateiauswahl deines Geräts.",
     );
     unmount();
 

@@ -83,13 +83,13 @@ export function CareNoticeRunStartModal({
     formErrors.clear();
     const invalid: Record<string, string> = {};
     if (selected.length === 0) {
-      invalid.school_ids = "Bitte wählen Sie mindestens eine Schule.";
+      invalid.school_ids = "Bitte wähle mindestens eine Schule.";
     }
     if (noticeDate && (noticeDate < bounds.min || noticeDate > bounds.max)) {
       invalid.notice_date = `Das Datum muss im Jahr ${year} liegen.`;
     }
     if (Object.keys(invalid).length > 0) {
-      formErrors.invalid("Bitte prüfen Sie Ihre Angaben.", invalid);
+      formErrors.invalid("Bitte prüfe deine Angaben.", invalid);
       return;
     }
     await save.run(async (op) => {
@@ -204,8 +204,8 @@ export function CareNoticeRunStartModal({
         />
         <p className="text-sm text-gray-600">
           Jedes Kind mit gültigem Vertrag bekommt einen Bescheid mit
-          Monatsraten. Sie prüfen zuerst die Vorschau. Die Nummer kommt erst
-          beim Ausstellen.
+          Monatsraten. Du prüfst zuerst die Vorschau. Die Nummer kommt erst beim
+          Ausstellen.
         </p>
       </form>
     </FormModal>

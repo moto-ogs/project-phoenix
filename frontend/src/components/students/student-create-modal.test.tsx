@@ -596,7 +596,7 @@ describe("StudentCreateModal", () => {
 
     expect(
       await screen.findByText(
-        "Das Kinderkontingent Ihrer Schule ist voll (50 von 50 Kindern). Bitte melden Sie sich beim moto-Team.",
+        "Das Kinderkontingent deiner Schule ist voll (50 von 50 Kindern). Bitte melde dich beim moto-Team.",
       ),
     ).toBeInTheDocument();
     expect(mockOnClose).not.toHaveBeenCalled();
@@ -663,7 +663,7 @@ describe("StudentCreateModal", () => {
     });
 
     expect(
-      await screen.findByText("Bitte prüfen Sie die markierten Felder."),
+      await screen.findByText("Bitte prüfe die markierten Felder."),
     ).toBeInTheDocument();
     expect(screen.getByTestId("error-first-name")).toHaveTextContent(
       "Bitte geben Sie den Vornamen ein.",
@@ -1119,7 +1119,7 @@ describe("StudentCreateModal", () => {
 
     expect(
       await screen.findByText(
-        "Die Einstellung für Betreuungstage ist gerade nicht erreichbar. Bitte versuchen Sie es erneut.",
+        "Die Einstellung für Betreuungstage ist gerade nicht erreichbar. Bitte versuche es erneut.",
       ),
     ).toBeInTheDocument();
     expect(

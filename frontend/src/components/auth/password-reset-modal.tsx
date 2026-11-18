@@ -82,22 +82,22 @@ export interface PasswordResetModalCopy {
 export const DEFAULT_PASSWORD_RESET_MODAL_COPY: PasswordResetModalCopy = {
   title: "Passwort zurücksetzen",
   description:
-    "Wir schicken Ihnen einen Link. Damit legen Sie ein neues Passwort fest.",
+    "Wir schicken dir einen Link. Damit legst du ein neues Passwort fest.",
   emailLabel: "E-Mail-Adresse",
-  invalidEmail: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+  invalidEmail: "Bitte gib eine gültige E-Mail-Adresse ein.",
   cancel: "Abbrechen",
   submit: "Link senden",
   submitting: "Wird gesendet …",
-  successTitle: "Bitte prüfen Sie Ihr Postfach",
+  successTitle: "Bitte prüfe dein Postfach",
   successMessage:
-    "Wenn es zu dieser Adresse ein Konto gibt, bekommen Sie gleich eine E-Mail mit dem Link.",
+    "Wenn es zu dieser Adresse ein Konto gibt, bekommst du gleich eine E-Mail mit dem Link.",
   successHint:
-    "Keine E-Mail da? Sehen Sie auch im Spam-Ordner nach. Stimmt die Adresse nicht, ändern Sie sie.",
+    "Keine E-Mail da? Sieh auch im Spam-Ordner nach. Stimmt die Adresse nicht, ändere sie.",
   changeAddress: "Adresse ändern",
   close: "Schließen",
   errorObject: "das Senden des Links",
   rateLimitWait: (countdown) =>
-    `Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in ${countdown} anfordern.`,
+    `Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link kannst du in ${countdown} anfordern.`,
 };
 
 const formatCountdown = (totalSeconds: number): string => {

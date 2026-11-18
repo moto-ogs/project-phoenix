@@ -127,10 +127,10 @@ const noticeColumns: DataTableColumn<CareNotice>[] = [
 function releaseBlockReason(run: CareNoticeRunDetail): string | undefined {
   if (run.previewCount === 0) return undefined;
   if (run.legalRemedyMissing) {
-    return "Tragen Sie zuerst die Rechtsbehelfsbelehrung in der Vorlage „Bescheid“ ein.";
+    return "Trage zuerst die Rechtsbehelfsbelehrung in der Vorlage „Bescheid“ ein.";
   }
   if (!run.numberRangeSet) {
-    return "Legen Sie zuerst das Muster der Rechnungsnummern für Monatsbeiträge fest.";
+    return "Lege zuerst das Muster der Rechnungsnummern für Monatsbeiträge fest.";
   }
   return undefined;
 }
@@ -197,7 +197,7 @@ export default function TraegerCareNoticeRunPage() {
       void invalidateFamily(traegerBillingRunKeys.noticeRuns());
       setConfirmingDiscard(false);
       success(
-        `Der Lauf ist verworfen. Für ${run.year} können Sie einen neuen Jahreslauf starten.`,
+        `Der Lauf ist verworfen. Für ${run.year} kannst du einen neuen Jahreslauf starten.`,
       );
     } catch (err) {
       logger.error("traeger_care_notice_run_discard_failed", {
@@ -328,7 +328,7 @@ export default function TraegerCareNoticeRunPage() {
                 )}
                 variant="outline"
                 size="md"
-                tooltip="Öffnet die Lastschrift der Raten mit der Datei für Ihre Bank."
+                tooltip="Öffnet die Lastschrift der Raten mit der Datei für deine Bank."
               >
                 Lastschrift der Raten
               </ButtonLink>
@@ -338,7 +338,7 @@ export default function TraegerCareNoticeRunPage() {
                 )}
                 variant="primary"
                 size="md"
-                tooltip="Öffnet den Versand, dort senden Sie die Bescheide an die Familien."
+                tooltip="Öffnet den Versand, dort sendest du die Bescheide an die Familien."
               >
                 An Familien senden
               </ButtonLink>
@@ -366,7 +366,7 @@ export default function TraegerCareNoticeRunPage() {
                 bleibt als „Verworfen“ in der Liste.
               </p>
               <p>
-                Danach ist das Jahr frei. Sie können sofort einen neuen Lauf
+                Danach ist das Jahr frei. Du kannst sofort einen neuen Lauf
                 starten.
               </p>
             </div>
@@ -391,7 +391,7 @@ export default function TraegerCareNoticeRunPage() {
           >
             {run.previewCount === 0 ? (
               <p className="text-sm text-gray-700">
-                Dieser Jahreslauf stellt keine Bescheide aus. Danach können Sie
+                Dieser Jahreslauf stellt keine Bescheide aus. Danach kannst du
                 einen neuen Jahreslauf starten.
               </p>
             ) : (
@@ -432,8 +432,8 @@ export default function TraegerCareNoticeRunPage() {
             }
             description={
               discarded
-                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} können Sie einen neuen Lauf starten.`
-                : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Sie können den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
+                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
+                : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
             }
             className="py-6"
           />
@@ -482,7 +482,7 @@ export default function TraegerCareNoticeRunPage() {
           {preview && run.previewCount > 0 && !run.numberRangeSet ? (
             <Alert
               type="warning"
-              message="Bevor Sie ausstellen: Legen Sie das Muster der Rechnungsnummern für Monatsbeiträge fest. Der Bescheid nimmt seine Nummer daraus."
+              message="Bevor du ausstellst: Lege das Muster der Rechnungsnummern für Monatsbeiträge fest. Der Bescheid nimmt seine Nummer daraus."
               action={
                 <ButtonLink
                   href={traegerPath("/traeger/einstellungen/abrechnung")}
@@ -547,8 +547,8 @@ export default function TraegerCareNoticeRunPage() {
             onRowClick={openNotice}
             caption={
               preview
-                ? "Wählen Sie eine Zeile. Sie sehen Seite 1 des Bescheids."
-                : "Wählen Sie eine Zeile, um Seite 1 des Bescheids anzusehen. Das Original zum Versand finden Sie unter „An Familien senden“."
+                ? "Wähle eine Zeile. Du siehst Seite 1 des Bescheids."
+                : "Wähle eine Zeile, um Seite 1 des Bescheids anzusehen. Das Original zum Versand findest du unter „An Familien senden“."
             }
             emptyState={
               <EmptyState

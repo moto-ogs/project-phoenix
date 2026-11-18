@@ -229,7 +229,7 @@ func validateExplicitScopeInstances(date calendar.Date, instanceIDs *[]int64, re
 		return nil
 	}
 	if len(*instanceIDs) == 0 {
-		return timetable.DeviationBadRequest("wählen Sie mindestens einen Termin aus").WithCode(timetable.CodeInstancesRequired).OnField("instance_ids")
+		return timetable.DeviationBadRequest("wähle mindestens einen Termin aus").WithCode(timetable.CodeInstancesRequired).OnField("instance_ids")
 	}
 	seen := make(map[int64]bool, len(*instanceIDs))
 	for _, instanceID := range *instanceIDs {
@@ -456,7 +456,7 @@ func planSubstitutionTarget(
 	action, _, ok := classifySubstitute(projectedRows, origProjected, sub.SubstituteStaffID)
 	if !ok {
 		return nil, timetable.DeviationConflict(timetable.CodeSubstituteConflict,
-			"dieser Termin hat bereits eine andere Ersatzperson. Entfernen Sie diese zuerst")
+			"dieser Termin hat bereits eine andere Ersatzperson. Entferne diese zuerst")
 	}
 	action = staging.stage(instance.ID, sub.SubstituteStaffID, action)
 	return &deviationSubOp{
@@ -488,7 +488,7 @@ func scopedStaffRows(rows []*scheduleModel.InstanceStaff, instanceIDs *[]int64) 
 		return rows, nil
 	}
 	if len(*instanceIDs) == 0 {
-		return nil, timetable.DeviationBadRequest("wählen Sie mindestens einen Termin aus").WithCode(timetable.CodeInstancesRequired).OnField("instance_ids")
+		return nil, timetable.DeviationBadRequest("wähle mindestens einen Termin aus").WithCode(timetable.CodeInstancesRequired).OnField("instance_ids")
 	}
 
 	requested := make(map[int64]bool, len(*instanceIDs))

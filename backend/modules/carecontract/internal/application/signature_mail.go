@@ -16,11 +16,11 @@ const (
 func contractMailKind(purpose string) (string, string, error) {
 	switch purpose {
 	case carecontract.MailPurposeContract:
-		return "Ihr Betreuungsvertrag", contractMailTemplate, nil
+		return "Dein Betreuungsvertrag", contractMailTemplate, nil
 	case carecontract.MailPurposeReminder:
-		return "Erinnerung: Ihr Betreuungsvertrag wartet auf Ihre Unterschrift", contractReminderMailTemplate, nil
+		return "Erinnerung: Dein Betreuungsvertrag wartet auf deine Unterschrift", contractReminderMailTemplate, nil
 	case carecontract.MailPurposeSigned:
-		return "Bestätigung: Ihr Betreuungsvertrag ist unterschrieben", contractSignedMailTemplate, nil
+		return "Bestätigung: Dein Betreuungsvertrag ist unterschrieben", contractSignedMailTemplate, nil
 	}
 	return "", "", fmt.Errorf("%s payload has the unknown purpose %q", carecontract.MailKindContract, purpose)
 }

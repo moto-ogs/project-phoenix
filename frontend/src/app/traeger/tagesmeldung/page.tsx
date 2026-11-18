@@ -412,8 +412,8 @@ export default function TraegerDailyAttendancePage() {
       info={
         <>
           Träger in Mecklenburg-Vorpommern melden dem Land ab 2027 die tägliche
-          An- und Abwesenheit der Kinder (§ 32 Absatz 1a KiföG M-V). Hier sehen
-          Sie je Tag, wer da war und wer gefehlt hat. Die Datei enthält eine
+          An- und Abwesenheit der Kinder (§ 32 Absatz 1a KiföG M-V). Hier siehst
+          du je Tag, wer da war und wer gefehlt hat. Die Datei enthält eine
           Zeile je Kind und Tag, ohne Namen. Heute zählt erst morgen mit.
         </>
       }
@@ -500,8 +500,8 @@ export default function TraegerDailyAttendancePage() {
             }
             description={
               selected
-                ? "Wählen Sie einen anderen Zeitraum oder alle Schulen."
-                : "Wählen Sie einen anderen Zeitraum, zum Beispiel ohne Ferien."
+                ? "Wähle einen anderen Zeitraum oder alle Schulen."
+                : "Wähle einen anderen Zeitraum, zum Beispiel ohne Ferien."
             }
           />
         </SectionCard>

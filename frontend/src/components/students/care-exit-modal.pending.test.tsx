@@ -105,7 +105,7 @@ describe("CareExitModal pending lock (#6593)", () => {
 
     expect(
       await screen.findByText(
-        "Das Betreuungsende konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
+        "Das Betreuungsende konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
       ),
     ).toBeVisible();
     expectSlideOverUnlocked(TITLE);

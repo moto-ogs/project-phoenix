@@ -33,7 +33,7 @@ describe("work-time pattern draft", () => {
     expect(draft.invalidKeys.has("0:3")).toBe(true);
     expect(weekTotal(draft, 0)).toBe(450);
     expect(validatePatternDraft(draft)).toBe(
-      "Bitte korrigieren Sie die markierten Stunden.",
+      "Bitte korrigiere die markierten Stunden.",
     );
     draft = withDecimalHours(draft, 0, 3, "");
     expect(draft.invalidKeys.size).toBe(0);
@@ -55,13 +55,13 @@ describe("work-time pattern draft", () => {
 
   it("refuses an empty pattern and an empty rotation week", () => {
     expect(validatePatternDraft(draftFromPattern(1, []))).toBe(
-      "Das Modell hat noch keine Stunden. Bitte tragen Sie mindestens einen Tag ein.",
+      "Das Modell hat noch keine Stunden. Bitte trage mindestens einen Tag ein.",
     );
     const onlyWeekA = draftFromPattern(2, [
       { weekIndex: 0, dayOfWeek: 0, targetMinutes: 60 },
     ]);
     expect(validatePatternDraft(onlyWeekA)).toBe(
-      "Woche B hat noch keine Stunden. Bitte tragen Sie mindestens einen Tag ein.",
+      "Woche B hat noch keine Stunden. Bitte trage mindestens einen Tag ein.",
     );
   });
 

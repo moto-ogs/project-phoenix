@@ -92,15 +92,13 @@ export function PersonalizationTab() {
       // stehen könnte; die Ablagefläche zeigt die Grenzen schon dauerhaft.
       const maxSize = 2 * 1024 * 1024;
       if (file.size > maxSize) {
-        showMessage(
-          "Das Bild ist zu groß. Bitte wählen Sie ein Bild bis 2 MB.",
-        );
+        showMessage("Das Bild ist zu groß. Bitte wähle ein Bild bis 2 MB.");
         return;
       }
 
       const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
       if (!allowedTypes.includes(file.type)) {
-        showMessage("Bitte wählen Sie ein Bild im Format JPG, PNG oder WebP.");
+        showMessage("Bitte wähle ein Bild im Format JPG, PNG oder WebP.");
         return;
       }
 
@@ -191,8 +189,8 @@ export function PersonalizationTab() {
         title="Login-Seite"
         description={
           canEdit
-            ? "Laden Sie ein eigenes Bild hoch, das auf der Login-Seite Ihrer Einrichtung angezeigt wird."
-            : "So sieht die Login-Seite Ihrer Einrichtung oben aus. Ein neues Bild kann nur hochladen, wer Einstellungen ändern darf."
+            ? "Lade ein eigenes Bild hoch, das auf der Login-Seite deiner Einrichtung angezeigt wird."
+            : "So sieht die Login-Seite deiner Einrichtung oben aus. Ein neues Bild kann nur hochladen, wer Einstellungen ändern darf."
         }
       >
         {loadError ? (

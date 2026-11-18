@@ -97,10 +97,10 @@ func (s *Store) EndGroupSession(ctx context.Context, groupID int64, at time.Time
 
 	supervisorIDs := []int64{}
 	stats.Queries++
-	err = db.NewRaw(`UPDATE active.group_supervisors SET end_date = ?, updated_at = ?
+	err = db.NewRaw(`UPDATE active.group_supervisors SET end_date = ?
 		WHERE tenant_id = ? AND group_id = ? AND start_date <= ?
 		AND (end_date IS NULL OR end_date > ?) RETURNING id`,
-		endDate, at, tenantID, groupID, endDate, endDate).Scan(ctx, &supervisorIDs)
+		endDate, tenantID, groupID, endDate, endDate).Scan(ctx, &supervisorIDs)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return result, stats, fmt.Errorf("end group session: end supervisors: %w", err)
 	}
@@ -219,7 +219,7 @@ func endOpenGroupSessions(ctx context.Context, db bun.IDB, tenantID int64, group
 	}
 
 	stats.Queries++
-	supervisors, err := db.NewUpdate().Table("active.group_supervisors").Set("end_date = ?", endDate).Set("updated_at = ?", at).
+	supervisors, err := db.NewUpdate().Table("active.group_supervisors").Set("end_date = ?", endDate).
 		Where("tenant_id = ?", tenantID).Where("group_id IN (?)", bun.List(open)).
 		Where("start_date <= ?", endDate).Where("(end_date IS NULL OR end_date > ?)", endDate).Exec(ctx)
 	if err != nil {

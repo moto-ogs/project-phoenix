@@ -19,99 +19,99 @@
   "steps": {
     "start": {
       "title": "Startseite kennenlernen",
-      "description": "Sehen Sie, was heute wichtig ist und welche Aufgaben offen sind."
+      "description": "Sieh, was heute wichtig ist und welche Aufgaben offen sind."
     },
     "childData": {
       "title": "Angaben zu meinem Kind ändern",
-      "description": "Hier finden Sie Angaben, Betreuungszeiten, Heimwege und Erziehungsberechtigte."
+      "description": "Hier findest du Angaben, Betreuungszeiten, Heimwege und Erziehungsberechtigte."
     },
     "messagesNews": {
       "title": "Nachrichten und Elternbriefe finden",
-      "description": "Lesen Sie Nachrichten und finden Sie Elternbriefe der {careTerm}."
+      "description": "Lies Nachrichten und finde Elternbriefe der {careTerm}."
     },
     "messages": {
       "title": "Nachrichten finden",
-      "description": "Hier lesen und schreiben Sie Nachrichten an die {careTerm}."
+      "description": "Hier liest und schreibst du Nachrichten an die {careTerm}."
     },
     "installApp": {
       "title": "moto als App auf dem Handy hinzufügen",
-      "description": "Fügen Sie moto zu Ihrem Startbildschirm hinzu. So öffnen Sie moto wie eine App."
+      "description": "Füge moto zu deinem Startbildschirm hinzu. So öffnest du moto wie eine App."
     },
     "notifications": {
       "title": "Benachrichtigungen einschalten",
-      "description": "Wählen Sie aus, worüber moto Sie auf diesem Gerät informieren soll."
+      "description": "Wähle aus, worüber moto dich auf diesem Gerät informieren soll."
     }
   },
   "tour": {
     "progress": "Schritt {current} von {total}",
-    "chooseMarked": "Tippen Sie auf den markierten Bereich.",
-    "targetMissing": "Dieser Bereich ist gerade nicht sichtbar. Sie können mit der Tour fortfahren.",
+    "chooseMarked": "Tippe auf den markierten Bereich.",
+    "targetMissing": "Dieser Bereich ist gerade nicht sichtbar. Du kannst mit der Tour fortfahren.",
     "common": {
       "moreTitle": "Bereich finden",
-      "more": "Öffnen Sie den markierten Bereich. Auf dem Handy finden Sie ihn unter Mehr.",
-      "settingsNavigation": "Öffnen Sie die Einstellungen."
+      "more": "Öffne den markierten Bereich. Auf dem Handy findest du ihn unter Mehr.",
+      "settingsNavigation": "Öffne die Einstellungen."
     },
     "start": {
-      "navigation": "Tippen Sie auf Start.",
+      "navigation": "Tippe auf Start.",
       "todoTitle": "Offene Aufgaben",
-      "todo": "Hier sehen Sie Aufgaben, die noch zu erledigen sind.",
-      "childTitle": "Ihr Kind",
-      "child": "Von hier kommen Sie direkt zu den wichtigsten Aktionen für Ihr Kind."
+      "todo": "Hier siehst du Aufgaben, die noch zu erledigen sind.",
+      "childTitle": "Dein Kind",
+      "child": "Von hier kommst du direkt zu den wichtigsten Aktionen für dein Kind."
     },
     "childData": {
-      "navigation": "Öffnen Sie den Bereich für Ihr Kind.",
+      "navigation": "Öffne den Bereich für dein Kind.",
       "chooseTitle": "Kind auswählen",
-      "choose": "Wählen Sie das Kind aus, dessen Angaben Sie sehen möchten.",
+      "choose": "Wähle das Kind aus, dessen Angaben du sehen möchtest.",
       "tabTitle": "Angaben öffnen",
-      "tab": "Tippen Sie auf Angaben.",
+      "tab": "Tippe auf Angaben.",
       "detailsTitle": "Angaben prüfen",
-      "details": "Hier sehen Sie die gespeicherten Angaben. Einige Angaben können Sie direkt bearbeiten.",
+      "details": "Hier siehst du die gespeicherten Angaben. Einige Angaben kannst du direkt bearbeiten.",
       "careTabTitle": "Betreuung öffnen",
-      "careTab": "Tippen Sie auf Betreuung.",
+      "careTab": "Tippe auf Betreuung.",
       "careTimesTitle": "Betreuungszeiten",
-      "careTimes": "Hier sehen Sie den Wochenplan. Tippen Sie für Änderungen auf „Änderungen anfragen“.",
+      "careTimes": "Hier siehst du den Wochenplan. Tippe für Änderungen auf „Änderungen anfragen“.",
       "departureTitle": "Heimweg",
-      "departure": "Hier sehen Sie, wie Ihr Kind an jedem Tag nach Hause geht.",
+      "departure": "Hier siehst du, wie dein Kind an jedem Tag nach Hause geht.",
       "contactsTabTitle": "Kontakte öffnen",
-      "contactsTab": "Tippen Sie auf Kontakte.",
+      "contactsTab": "Tippe auf Kontakte.",
       "guardiansTitle": "Erziehungsberechtigte und Kontakte",
-      "guardians": "Hier sehen Sie Erziehungsberechtigte, Abholpersonen und App-Zugänge."
+      "guardians": "Hier siehst du Erziehungsberechtigte, Abholpersonen und App-Zugänge."
     },
     "messagesNews": {
-      "messagesNavigation": "Öffnen Sie die Nachrichten.",
+      "messagesNavigation": "Öffne die Nachrichten.",
       "messagesTitle": "Nachrichten",
-      "messages": "Hier lesen Sie Nachrichten der {careTerm} und können antworten.",
-      "newsNavigation": "Öffnen Sie die Elternbriefe.",
+      "messages": "Hier liest du Nachrichten der {careTerm} und kannst antworten.",
+      "newsNavigation": "Öffne die Elternbriefe.",
       "newsTitle": "Elternbriefe",
-      "news": "Hier finden Sie Elternbriefe und wichtige Informationen der {careTerm}."
+      "news": "Hier findest du Elternbriefe und wichtige Informationen der {careTerm}."
     },
     "installApp": {
       "guideTitle": "moto zum Handy hinzufügen",
-      "guide": "Hier finden Sie die passende Anleitung für Ihr Handy."
+      "guide": "Hier findest du die passende Anleitung für dein Handy."
     },
     "notifications": {
       "topicsTitle": "Themen auswählen",
-      "topics": "Wählen Sie aus, zu welchen Themen Sie Benachrichtigungen bekommen möchten.",
+      "topics": "Wähle aus, zu welchen Themen du Benachrichtigungen bekommen möchtest.",
       "deviceTitle": "Benachrichtigungen erlauben",
-      "device": "Schalten Sie Benachrichtigungen für dieses Gerät ein.",
-      "deviceUnavailable": "Auf diesem Gerät können Sie Benachrichtigungen gerade nicht einschalten."
+      "device": "Schalte Benachrichtigungen für dieses Gerät ein.",
+      "deviceUnavailable": "Auf diesem Gerät kannst du Benachrichtigungen gerade nicht einschalten."
     }
   },
   "complete": {
     "title": "Geschafft",
-    "body": "Sie haben alle ersten Schritte kennengelernt.",
+    "body": "Du hast alle ersten Schritte kennengelernt.",
     "action": "Erste Schritte abschließen"
   },
   "dismiss": {
     "action": "Erste Schritte ausblenden",
     "title": "Erste Schritte ausblenden?",
-    "body": "Die Anleitungen finden Sie weiterhin in der Hilfe.",
+    "body": "Die Anleitungen findest du weiterhin in der Hilfe.",
     "confirm": "Ausblenden"
   },
   "tooltips": {
-    "open": "Zeigt die Liste Ihrer ersten Schritte.",
+    "open": "Zeigt die Liste deiner ersten Schritte.",
     "collapse": "Verkleinert die Liste zu einem Knopf am Bildschirmrand.",
-    "show": "Zeigt Ihnen die markierten Bereiche Schritt für Schritt.",
+    "show": "Zeigt dir die markierten Bereiche Schritt für Schritt.",
     "guide": "Öffnet die Anleitung in einem neuen Tab.",
     "installGuide": "Öffnet die Anleitung in einem neuen Tab und hakt den Schritt ab.",
     "complete": "Schließt die ersten Schritte ab und blendet sie auf diesem Gerät aus.",

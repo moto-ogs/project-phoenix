@@ -158,7 +158,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
     expect(table.getByText("Mögliche Doppelanmeldung")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "In einer Anmeldung ist ein Kind vielleicht doppelt angemeldet. Prüfen Sie die markierte Anmeldung.",
+        "In einer Anmeldung ist ein Kind vielleicht doppelt angemeldet. Prüfe die markierte Anmeldung.",
       ),
     ).toBeInTheDocument();
     expect(table.getByText("Eingegangen")).toBeInTheDocument();
@@ -474,7 +474,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
 
     expect(
       screen.getByText(
-        "moto löscht diese Anmeldungen am 09.01.2028. Laden Sie sie vorher herunter, wenn Sie sie länger brauchen. Gesundheitsangaben löscht moto schon am 11.04.2027.",
+        "moto löscht diese Anmeldungen am 09.01.2028. Lade sie vorher herunter, wenn du sie länger brauchst. Gesundheitsangaben löscht moto schon am 11.04.2027.",
       ),
     ).toBeInTheDocument();
 
@@ -646,7 +646,7 @@ describe("TraegerHolidayRegistrationsPage siblings (#5628)", () => {
     expect(bar.getByText("1 Anmeldung ausgewählt.")).toBeInTheDocument();
     expect(
       bar.getByText(
-        "Zum Zusammenführen als Geschwister wählen Sie eine weitere Anmeldung derselben Familie.",
+        "Zum Zusammenführen als Geschwister wähle eine weitere Anmeldung derselben Familie.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -811,7 +811,7 @@ describe("TraegerHolidayRegistrationsPage siblings (#5628)", () => {
 
     expect(
       await screen.findByText(
-        "Für diese Anmeldung gibt es schon eine Rechnung. Geschwister können Sie jetzt nicht mehr ändern.",
+        "Für diese Anmeldung gibt es schon eine Rechnung. Geschwister kannst du jetzt nicht mehr ändern.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/2 Anmeldungen ausgewählt/)).toBeInTheDocument();
@@ -996,9 +996,7 @@ describe("TraegerHolidayRegistrationsPage bulk confirmation (#6674)", () => {
       ["5", "22", false],
     ]);
     expect(
-      result.getByText(
-        "2 Anmeldungen bleiben offen. Prüfen Sie die Gründe unten.",
-      ),
+      result.getByText("2 Anmeldungen bleiben offen. Prüfe die Gründe unten."),
     ).toBeInTheDocument();
     expect(result.getByText("Debitorennummer fehlt")).toBeInTheDocument();
     expect(result.getByRole("link", { name: /Bodo Muster/ })).toHaveAttribute(
@@ -1278,7 +1276,7 @@ describe("TraegerHolidayRegistrationsPage bulk confirmation (#6674)", () => {
     expect(result.getByText("Noch nicht bestätigt")).toBeInTheDocument();
     expect(
       result.getByText(
-        "moto konnte nicht weiter bestätigen. Laden Sie die Seite neu und versuchen Sie es noch einmal.",
+        "moto konnte nicht weiter bestätigen. Lade die Seite neu und versuche es noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(result.queryByText("Angehalten")).not.toBeInTheDocument();

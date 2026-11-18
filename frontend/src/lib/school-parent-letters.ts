@@ -91,13 +91,13 @@ export function schoolParentLetterFieldErrors(
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (draft.schoolClass.trim() === "") {
-    errors.school_class = "Bitte wählen Sie eine Klasse.";
+    errors.school_class = "Bitte wähle eine Klasse.";
   }
   if (draft.title.trim() === "") {
-    errors.title = "Bitte geben Sie einen Betreff ein.";
+    errors.title = "Bitte gib einen Betreff ein.";
   }
   if (draft.body.trim() === "") {
-    errors.body = "Bitte schreiben Sie einen Text.";
+    errors.body = "Bitte schreibe einen Text.";
   }
   return errors;
 }

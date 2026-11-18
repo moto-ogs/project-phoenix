@@ -19,6 +19,11 @@ import (
 
 func testStore(t *testing.T, db *bun.DB) (*workerCommandsForTest, context.Context) {
 	t.Helper()
+	return testStoreOnClock(t, db, time.Now)
+}
+
+func testStoreOnClock(t *testing.T, db *bun.DB, now func() time.Time) (*workerCommandsForTest, context.Context) {
+	t.Helper()
 	ctx := testpkg.WithTenantRuntime(t, context.Background(), db)
 	raw := postgresadapter.New(func(ctx context.Context, _ int64) (bun.IDB, error) {
 		raw, ok := tenant.TransactionFromContext(ctx)
@@ -26,7 +31,7 @@ func testStore(t *testing.T, db *bun.DB) (*workerCommandsForTest, context.Contex
 			return nil, fmt.Errorf("transaction is required")
 		}
 		return raw.(bun.Tx), nil
-	}, postgresadapter.RequireAdminDatabase, time.Now)
+	}, postgresadapter.RequireAdminDatabase, now)
 	store := newWorkerCommandsForTest(raw, func(ctx context.Context, callback func(context.Context) error) error {
 		return tenant.WithAdminTx(ctx, db, func(txCtx context.Context, _ bun.Tx) error { return callback(txCtx) })
 	}, func(ctx context.Context, tenantID int64, callback func(context.Context) error) error {

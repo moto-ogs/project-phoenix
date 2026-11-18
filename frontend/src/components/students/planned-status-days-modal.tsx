@@ -762,8 +762,8 @@ export function PlannedStatusDaysModal({
     if (dateKeys.length === 0) {
       submitErrors.invalid(
         usesRangeSelection
-          ? "Bitte wählen Sie einen Zeitraum ohne bestehenden Status."
-          : "Bitte wählen Sie mindestens einen Tag ohne Krankmeldung oder Entschuldigung.",
+          ? "Bitte wähle einen Zeitraum ohne bestehenden Status."
+          : "Bitte wähle mindestens einen Tag ohne Krankmeldung oder Entschuldigung.",
       );
       return;
     }
@@ -870,21 +870,20 @@ export function PlannedStatusDaysModal({
   const submitBlockedReason = (() => {
     if (selectionKey === "")
       return isPartialExcusal
-        ? "Wählen Sie zuerst einen Tag aus."
-        : "Wählen Sie zuerst mindestens einen Tag aus.";
+        ? "Wähle zuerst einen Tag aus."
+        : "Wähle zuerst mindestens einen Tag aus.";
     if (hasInvalidRangeOrder)
       return "Das Bis-Datum darf nicht vor dem Von-Datum liegen.";
     if (hasSelectionTooWide)
       return "Ein Zeitraum darf höchstens 366 Tage umfassen.";
     if (conflictCheckFailed)
-      return "Wählen Sie die Tage neu, die Prüfung hat nicht geklappt.";
+      return "Wähle die Tage neu, die Prüfung hat nicht geklappt.";
     if (isCheckingConflicts || !checkedCurrentSelection) return undefined;
     if (partialConflicts.length > 0 && selectableDateKeys.length === 0)
       return "An allen gewählten Tagen ist schon etwas eingetragen.";
     if (isPartialExcusal && selectableDateKeys.length !== 1)
-      return "Wählen Sie genau einen freien Tag aus.";
-    if (isPartialExcusal && !fromTime)
-      return "Tragen Sie zuerst die Uhrzeit ein.";
+      return "Wähle genau einen freien Tag aus.";
+    if (isPartialExcusal && !fromTime) return "Trage zuerst die Uhrzeit ein.";
     return undefined;
   })();
 

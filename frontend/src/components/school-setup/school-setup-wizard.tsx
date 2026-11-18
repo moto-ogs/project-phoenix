@@ -43,10 +43,10 @@ const logger = createLogger({ component: "SchoolSetupWizard" });
 /** Nachladen nach dem Tourende, bis laufende Anfragen durch sind. */
 const TOUR_FOLLOW_UP_MS = [500, 2000, 5000];
 const TOUR_LEFT =
-  "Die Tour ist beendet, weil Sie eine andere Seite geöffnet haben. Mit „Zeig es mir“ starten Sie sie neu.";
-const CLICK_ACTION = "Klicken Sie auf die grün umrandete Stelle.";
+  "Die Tour ist beendet, weil du eine andere Seite geöffnet hast. Mit „Zeig es mir“ startest du sie neu.";
+const CLICK_ACTION = "Klicke auf die grün umrandete Stelle.";
 const TARGET_MISSING =
-  "Diese Stelle ist gerade nicht zu sehen. Vielleicht fehlt Ihnen ein Recht, oder die Seite lädt noch.";
+  "Diese Stelle ist gerade nicht zu sehen. Vielleicht fehlt dir ein Recht, oder die Seite lädt noch.";
 
 type RunAction = (
   action: () => Promise<SchoolSetupState>,
@@ -314,12 +314,12 @@ function SchoolSetupWizardForAdmin({
       >
         <p className="text-sm text-gray-700">
           {viaTraeger
-            ? "Die Checkliste verschwindet für Sie in allen OGS Ihres Trägers."
-            : "Die Checkliste verschwindet für Sie."}{" "}
-          Sie können sie nicht wieder einblenden.
+            ? "Die Checkliste verschwindet für dich in allen OGS deines Trägers."
+            : "Die Checkliste verschwindet für dich."}{" "}
+          Du kannst sie nicht wieder einblenden.
         </p>
         <p className="mt-2 text-sm text-gray-700">
-          Die Anleitungen zu allen Schritten finden Sie weiter unter „Hilfe“.
+          Die Anleitungen zu allen Schritten findest du weiter unter „Hilfe“.
         </p>
       </ConfirmationModal>
     </>

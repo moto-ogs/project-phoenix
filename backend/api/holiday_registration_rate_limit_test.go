@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +33,7 @@ func TestPublicLinkLimitsAreNeverTighterThanTheGeneralLimiter(t *testing.T) {
 // passes, the one after it is refused, reads and writes apart.
 func TestHolidayRegistrationRateLimitLetsItsBurstThrough(t *testing.T) {
 	t.Parallel()
-	limited := holidayRegistrationRateLimit(true, false)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	limited := holidayRegistrationRateLimit(true, false, customMiddleware.NewRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	send := func(method string) int {
@@ -48,5 +49,5 @@ func TestHolidayRegistrationRateLimitLetsItsBurstThrough(t *testing.T) {
 	}
 	assert.Equal(t, http.StatusTooManyRequests, send(http.MethodGet), "the read past the burst")
 	assert.Equal(t, http.StatusOK, send(http.MethodPost), "writes have a budget of their own")
-	assert.Nil(t, holidayRegistrationRateLimit(false, false), "no limiter while rate limiting is off")
+	assert.Nil(t, holidayRegistrationRateLimit(false, false, customMiddleware.NewRateLimiter), "no limiter while rate limiting is off")
 }

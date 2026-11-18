@@ -28,7 +28,7 @@ export default function CatererAccountPage() {
     <div className="space-y-6">
       <SectionCard
         title="Anmeldung"
-        description="Mit dieser E-Mail-Adresse melden Sie sich an."
+        description="Mit dieser E-Mail-Adresse meldest du dich an."
       >
         <DataGrid>
           <DataField label="E-Mail" fullWidth>
@@ -39,7 +39,7 @@ export default function CatererAccountPage() {
 
       <SectionCard
         title="Passwort"
-        description="Nach dem Ändern melden Sie sich auf allen Geräten neu an."
+        description="Nach dem Ändern meldest du dich auf allen Geräten neu an."
         actions={
           <Button
             type="button"

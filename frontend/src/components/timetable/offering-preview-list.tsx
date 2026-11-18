@@ -114,8 +114,8 @@ export function OfferingPreviewList({
       {anyRemoved ? (
         <p className="text-xs text-gray-600">
           Kinder fallen weg, wenn sie an diesem Tag in keinem gewählten Angebot
-          angemeldet sind. Soll ein Kind trotzdem kommen, ändern Sie seine
-          Angebote in der Anmeldung.
+          angemeldet sind. Soll ein Kind trotzdem kommen, ändere seine Angebote
+          in der Anmeldung.
         </p>
       ) : null}
       <ul className="flex flex-col gap-2">

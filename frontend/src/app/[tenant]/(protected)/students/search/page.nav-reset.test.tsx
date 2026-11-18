@@ -199,7 +199,7 @@ import StudentSearchPage from "./page";
 
 const STORAGE_KEY = "student-search:last-filters:tenant-2:3";
 const STALL_MESSAGE =
-  "Die Kinder laden gerade sehr lange. Bitte laden Sie die Liste noch einmal.";
+  "Die Kinder laden gerade sehr lange. Bitte lade die Liste noch einmal.";
 
 const mockStudent = {
   id: "7",
@@ -471,7 +471,7 @@ describe("StudentSearchPage: student list that does not finish loading (#3374)",
 
     expect(
       await screen.findByText(
-        "Die Liste der Kinder konnte nicht bearbeitet werden. Bitte versuchen Sie es später erneut.",
+        "Die Liste der Kinder konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       ),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));

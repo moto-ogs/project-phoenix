@@ -117,7 +117,7 @@ it("opens older runs page by page and keeps them after a download", async () => 
     </TraegerResourceTestProvider>,
   );
   expect(
-    await screen.findByText("Sie sehen 1 von 2 Läufen."),
+    await screen.findByText("Du siehst 1 von 2 Läufen."),
   ).toBeInTheDocument();
   expect(screen.getByText("Läufe").parentElement).toHaveTextContent("2Läufe");
   expect(
@@ -135,7 +135,7 @@ it("opens older runs page by page and keeps them after a download", async () => 
   });
   expect(api.fetchExportRuns).toHaveBeenLastCalledWith(1);
   expect(
-    screen.queryByText("Sie sehen 1 von 2 Läufen."),
+    screen.queryByText("Du siehst 1 von 2 Läufen."),
   ).not.toBeInTheDocument();
 
   fireEvent.click(olderDownload[0]!);
@@ -195,7 +195,7 @@ it("offers older files of the protocol", async () => {
     </TraegerResourceTestProvider>,
   );
   expect(
-    await screen.findByText("Sie sehen 1 von 2 Dateien."),
+    await screen.findByText("Du siehst 1 von 2 Dateien."),
   ).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Ältere anzeigen" }));
   expect(
@@ -220,7 +220,7 @@ it("keeps the card inset around the run table and the protocol table", async () 
   });
   renderPage();
   expect(
-    await screen.findByText("Sie sehen 1 von 2 Dateien."),
+    await screen.findByText("Du siehst 1 von 2 Dateien."),
   ).toBeInTheDocument();
 
   for (const title of ["Dateien je Lauf", "Exportprotokoll"]) {
@@ -371,8 +371,8 @@ it.each(["care", "holiday"] as const)(
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     const correction =
       runKind === "holiday"
-        ? "Bei Rechnungen ohne Gutschrift: Stornieren Sie die Rechnung. Korrigieren Sie die Debitorennummer in der Ferienanmeldung. Stellen Sie dann die Rechnung neu aus. Danach ist der Lauf wieder frei. Hat die Rechnung schon eine Gutschrift, ist kein Storno möglich. Laden Sie dann die Sollstellung für Ihr Steuerbüro herunter. Es kann die Buchungen daraus manuell in DATEV erfassen. Der DATEV-Download dieses Laufs bleibt gesperrt."
-        : "Tragen Sie bei der Familie die richtige Debitorennummer ein. Stornieren Sie dann die Rechnung und stellen Sie sie neu aus. Danach ist der Lauf wieder frei.";
+        ? "Bei Rechnungen ohne Gutschrift: Storniere die Rechnung. Korrigiere die Debitorennummer in der Ferienanmeldung. Stelle dann die Rechnung neu aus. Danach ist der Lauf wieder frei. Hat die Rechnung schon eine Gutschrift, ist kein Storno möglich. Lade dann die Sollstellung für dein Steuerbüro herunter. Es kann die Buchungen daraus manuell in DATEV erfassen. Der DATEV-Download dieses Laufs bleibt gesperrt."
+        : "Trage bei der Familie die richtige Debitorennummer ein. Storniere dann die Rechnung und stelle sie neu aus. Danach ist der Lauf wieder frei.";
     expect(screen.getByText(/So geht es weiter:/)).toHaveTextContent(
       correction,
     );

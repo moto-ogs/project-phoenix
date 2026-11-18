@@ -116,7 +116,7 @@ type correctRequestBody struct {
 // catalog text selected by the error code.
 var correctionUnsupportedReasons = map[string]string{
 	requestTypeOffering: "Angebote speichern keinen Stand von vor der Entscheidung. " +
-		"Bitte ändern Sie die Buchung des Kindes direkt.",
+		"Bitte ändere die Buchung des Kindes direkt.",
 }
 
 func (rs *Resource) correctTarget(kind string) (parentRequestCorrecter, bool) {

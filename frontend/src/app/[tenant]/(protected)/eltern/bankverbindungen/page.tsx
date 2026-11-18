@@ -180,7 +180,7 @@ function BankverbindungenContent() {
           icon: <Lock className="h-12 w-12" />,
           title: "Kein Zugriff auf Bankverbindungen",
           description:
-            "Sie brauchen dafür die Berechtigung „Bankverbindungen“. Bitte fragen Sie in der Schulleitung nach.",
+            "Du brauchst dafür die Berechtigung „Bankverbindungen“. Bitte frage in der Schulleitung nach.",
         }}
       />
     );
@@ -243,7 +243,7 @@ function BankverbindungenContent() {
     >
       <Alert
         type="info"
-        message="Die IBAN tragen Sie beim Kind ein, im Reiter „Erziehungsberechtigte“. Die Datei enthält die ganzen IBANs und wird protokolliert. Bitte nicht per E-Mail weitergeben."
+        message="Die IBAN trägst du beim Kind ein, im Reiter „Erziehungsberechtigte“. Die Datei enthält die ganzen IBANs und wird protokolliert. Bitte nicht per E-Mail weitergeben."
       />
 
       {/* A four-column table on a phone pushes the IBAN — the one value the

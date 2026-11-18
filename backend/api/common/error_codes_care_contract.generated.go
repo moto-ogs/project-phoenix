@@ -15,6 +15,7 @@ const CodeCareContractFieldInvalid = "care_contract.field_invalid"
 const CodeCareContractImportChanged = "care_contract.import_changed"
 const CodeCareContractImportFileInvalid = "care_contract.import_file_invalid"
 const CodeCareContractImportFileTooLarge = "care_contract.import_file_too_large"
+const CodeCareContractLetterheadMissing = "care_contract.letterhead_missing"
 const CodeCareContractLetterheadTooLong = "care_contract.letterhead_too_long"
 const CodeCareContractNoticeEndNotOpen = "care_contract.notice_end_not_open"
 const CodeCareContractNoticeTemplateMissing = "care_contract.notice_template_missing"
@@ -24,6 +25,7 @@ const CodeCareContractRecipientMissing = "care_contract.recipient_missing"
 const CodeCareContractSchoolOutsideTraeger = "care_contract.school_outside_traeger"
 const CodeCareContractSelectionInvalid = "care_contract.selection_invalid"
 const CodeCareContractSignatureInvalid = "care_contract.signature_invalid"
+const CodeCareContractSigningLetterheadMissing = "care_contract.signing_letterhead_missing"
 const CodeCareContractSigningLinkInvalid = "care_contract.signing_link_invalid"
 const CodeCareContractSpecialTerminationClosed = "care_contract.special_termination_closed"
 const CodeCareContractTemplateInvalid = "care_contract.template_invalid"
@@ -45,6 +47,7 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractImportChanged, "business_rejection"},
 	{CodeCareContractImportFileInvalid, "input"},
 	{CodeCareContractImportFileTooLarge, "input"},
+	{CodeCareContractLetterheadMissing, "business_rejection"},
 	{CodeCareContractLetterheadTooLong, "business_rejection"},
 	{CodeCareContractNoticeEndNotOpen, "business_rejection"},
 	{CodeCareContractNoticeTemplateMissing, "business_rejection"},
@@ -54,6 +57,7 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractSchoolOutsideTraeger, "permission"},
 	{CodeCareContractSelectionInvalid, "input"},
 	{CodeCareContractSignatureInvalid, "input"},
+	{CodeCareContractSigningLetterheadMissing, "business_rejection"},
 	{CodeCareContractSigningLinkInvalid, "business_rejection"},
 	{CodeCareContractSpecialTerminationClosed, "business_rejection"},
 	{CodeCareContractTemplateInvalid, "input"},

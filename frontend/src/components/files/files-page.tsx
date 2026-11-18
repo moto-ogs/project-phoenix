@@ -222,8 +222,8 @@ export function FilesPage() {
               icon: <FolderOpen className="h-12 w-12" aria-hidden="true" />,
               title: "Noch keine Ordner",
               description: canManage
-                ? "Legen Sie den ersten Ordner an und wählen Sie, wer ihn sehen darf."
-                : "Sobald die Leitung einen Ordner für Sie freigibt, erscheint er hier.",
+                ? "Lege den ersten Ordner an und wähle, wer ihn sehen darf."
+                : "Sobald die Leitung einen Ordner für dich freigibt, erscheint er hier.",
             }
           : null
       }
@@ -396,7 +396,7 @@ function FolderFilesPanel({
     const tooLarge = picked.find((file) => file.size > MAX_FILE_SIZE_BYTES);
     if (tooLarge) {
       showMessage(
-        `Die Datei „${tooLarge.name}“ ist größer als 25 MB. Bitte wählen Sie eine kleinere Datei.`,
+        `Die Datei „${tooLarge.name}“ ist größer als 25 MB. Bitte wähle eine kleinere Datei.`,
       );
       return;
     }
@@ -529,7 +529,7 @@ function FolderFilesPanel({
         }
         items.push({
           label: "Herunterladen",
-          description: "Speichert die Datei auf Ihrem Gerät",
+          description: "Speichert die Datei auf deinem Gerät",
           href: filesService.downloadUrl(folder.id, file.id),
           external: true,
           onClick: () => undefined,
@@ -637,7 +637,7 @@ function FolderFilesPanel({
               title="Noch keine Dateien in diesem Ordner"
               description={
                 canUpload
-                  ? "Laden Sie oben die erste Datei hoch."
+                  ? "Lade oben die erste Datei hoch."
                   : "Sobald die Leitung Dateien ablegt, erscheinen sie hier."
               }
             />

@@ -116,6 +116,23 @@ func TestExtraordinaryTerminationWaitsForTheTraegersEnd(t *testing.T) {
 	assert.Equal(t, 1, trail)
 }
 
+// The parents' button does not depend on the Träger's letterhead (§ 312k
+// BGB): their declaration is recorded and confirmed under the Träger's
+// organization name, so neither a 500 nor a lapsing withdrawal period
+// follows from settings the parents cannot repair.
+func TestParentDeclarationWithoutLetterheadIsRecordedAndConfirmed(t *testing.T) {
+	t.Parallel()
+	f := newNoticeFixture(t, "Träger Erklärung ohne Briefkopf", noticeToday)
+	f.notices.sender = noticeSender{letterhead: "Träger e.V."}
+
+	options, err := f.parentDeclare(terminate)
+	require.NoError(t, err)
+	assert.Equal(t, carecontract.StatusTerminated, options.Status)
+	require.Len(t, f.post.mails, 1, "the parents get their confirmation at once")
+	assert.Equal(t, "Ganztag im Quartier e.V.", f.post.mails[0].TraegerName)
+	assert.Equal(t, carecontract.StatusTerminated, f.state(t).status)
+}
+
 // The parents name a reason only with an extraordinary termination, and
 // always with it; the Träger sets no end on an ordinary termination.
 func TestExtraordinaryTerminationNeedsItsReason(t *testing.T) {

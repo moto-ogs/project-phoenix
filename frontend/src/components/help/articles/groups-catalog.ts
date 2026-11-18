@@ -14,8 +14,8 @@ export function groupsCatalogTopic(groupMode: HelpGroupMode): HelpTopic {
     title: "Gruppen anlegen",
     question: "Wie lege ich die Gruppen der OGS an?",
     summary: openCare
-      ? "Legen Sie Gruppen an, wenn Sie Kinder darin ordnen möchten."
-      : "Legen Sie jede Gruppe an und geben Sie ihr Raum und Leitung.",
+      ? "Lege Gruppen an, wenn du Kinder darin ordnen möchtest."
+      : "Lege jede Gruppe an und gib ihr Raum und Leitung.",
     group: "einrichten",
     audience: "lead",
     icon: "UsersThree",
@@ -24,40 +24,40 @@ export function groupsCatalogTopic(groupMode: HelpGroupMode): HelpTopic {
       {
         title: "Eine Gruppe anlegen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
-          "Öffnen Sie `Datenverwaltung` und danach `Gruppendaten`.",
-          "Wählen Sie oben rechts `+ Gruppe`.",
-          "Tragen Sie bei `Gruppenname` den Namen der Gruppe ein.",
-          "Wählen Sie bei Bedarf einen `Gruppenraum`.",
-          "Wählen Sie bei Bedarf eine `Gruppenleitung`. Mehrere sind möglich.",
-          "Wählen Sie `Erstellen`.",
+          "Klappe in der Seitenleiste `Verwaltung` auf.",
+          "Öffne `Datenverwaltung` und danach `Gruppendaten`.",
+          "Wähle oben rechts `+ Gruppe`.",
+          "Trage bei `Gruppenname` den Namen der Gruppe ein.",
+          "Wähle bei Bedarf einen `Gruppenraum`.",
+          "Wähle bei Bedarf eine `Gruppenleitung`. Mehrere sind möglich.",
+          "Wähle `Erstellen`.",
         ],
       },
       {
         title: "Eine Gruppe ändern",
         steps: [
-          "Öffnen Sie `Gruppendaten` und wählen Sie die Gruppe aus der Liste.",
-          "Ändern Sie die Angaben unter `Stammdaten`.",
-          "Wählen Sie `Speichern`.",
+          "Öffne `Gruppendaten` und wähle die Gruppe aus der Liste.",
+          "Ändere die Angaben unter `Stammdaten`.",
+          "Wähle `Speichern`.",
         ],
       },
       {
         title: "Eine Gruppe löschen",
         steps: [
-          "Öffnen Sie `Gruppendaten` und wählen Sie die Gruppe aus der Liste.",
-          "Wählen Sie oben rechts `Löschen`.",
-          "Bestätigen Sie mit `Ja, löschen`.",
+          "Öffne `Gruppendaten` und wähle die Gruppe aus der Liste.",
+          "Wähle oben rechts `Löschen`.",
+          "Bestätige mit `Ja, löschen`.",
         ],
       },
     ],
     result:
-      "Die Gruppe steht sofort zur Auswahl. Sie können Kinder darin eintragen.",
+      "Die Gruppe steht sofort zur Auswahl. Du kannst Kinder darin eintragen.",
     notes: [
       "Ein Kind kommt über sein Feld `OGS Gruppe` in die Gruppe, nicht hier.",
-      "Über `Alle Räume` filtern Sie die Liste auf die Gruppen eines Raums.",
+      "Über `Alle Räume` filterst du die Liste auf die Gruppen eines Raums.",
       ...(openCare
         ? [
-            "Ihre OGS arbeitet ohne feste Gruppen. Ihr Team sieht deshalb den Bereich `Gruppen` nicht.",
+            "Deine OGS arbeitet ohne feste Gruppen. Dein Team sieht deshalb den Bereich `Gruppen` nicht.",
           ]
         : []),
     ],
@@ -66,7 +66,7 @@ export function groupsCatalogTopic(groupMode: HelpGroupMode): HelpTopic {
       "Bei `Gruppenraum` steht `Kein Gruppenraum`, solange kein Raum gewählt ist.",
     ],
     troubleshootingDetails: [
-      "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen Ihnen die Leitungsrechte. Fragen Sie Ihre Leitung.",
+      "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen dir die Leitungsrechte. Frage deine Leitung.",
       "Fehlt eine Person bei `Gruppenleitung`? Dann ist sie noch nicht als Betreuungskraft angelegt.",
     ],
     related: [

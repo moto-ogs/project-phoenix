@@ -12,7 +12,7 @@ export function traegerCareNoticesTopic(): HelpTopic {
     audience: "traeger",
     icon: "CalendarDays",
     requirements: [
-      "Ihre Rolle im Träger-Büro ist Abrechnung.",
+      "Deine Rolle im Träger-Büro ist Abrechnung.",
       "Die Preisliste hat Preise für die Monate. Der Bescheid rechnet wie der Monatslauf.",
       "Die Vorlage `Bescheid` hat eine Rechtsbehelfsbelehrung. Ohne sie stellt moto keinen Bescheid aus.",
       "Das Muster der Rechnungsnummern für Monatsbeiträge ist festgelegt. Der Bescheid nimmt seine Nummer daraus.",
@@ -22,12 +22,12 @@ export function traegerCareNoticesTopic(): HelpTopic {
       {
         title: "Lauf starten",
         steps: [
-          "Wählen Sie `Abrechnung` und dann den Reiter `Jahresbescheide`.",
-          "Wählen Sie `Jahreslauf starten`.",
-          "Wählen Sie bei `Ab Monat` den ersten Monat, zum Beispiel September. Der Bescheid gilt bis Dezember.",
-          "Wählen Sie bei `Schulen` die Schulen. Alle sind schon gewählt.",
-          "Wählen Sie bei `Bescheiddatum` das Datum auf dem Bescheid. Lassen Sie das Feld leer, gilt der Tag der Ausstellung.",
-          "Wählen Sie `Vorschau öffnen`.",
+          "Wähle `Abrechnung` und dann den Reiter `Jahresbescheide`.",
+          "Wähle `Jahreslauf starten`.",
+          "Wähle bei `Ab Monat` den ersten Monat, zum Beispiel September. Der Bescheid gilt bis Dezember.",
+          "Wähle bei `Schulen` die Schulen. Alle sind schon gewählt.",
+          "Wähle bei `Bescheiddatum` das Datum auf dem Bescheid. Lässt du das Feld leer, gilt der Tag der Ausstellung.",
+          "Wähle `Vorschau öffnen`.",
         ],
       },
       {
@@ -36,7 +36,7 @@ export function traegerCareNoticesTopic(): HelpTopic {
           "Vor der Ausstellung ändert sich nichts. Die Vorschau zeigt immer den Stand von heute.",
         steps: [
           "Je Kind steht eine Zeile mit Zeitraum, Monatsrate und Jahresbetrag.",
-          "Wählen Sie eine Zeile. Sie sehen Seite 1 des Bescheids so, wie die Familie ihn bekommt.",
+          "Wähle eine Zeile. Du siehst Seite 1 des Bescheids so, wie die Familie ihn bekommt.",
           "Unter `I. Berechnung` steht je Modul der Betrag im Monat und für den Zeitraum.",
           "Unter `II. Abrechnung` stehen die Raten. Ein Monat, der schon begonnen hat, ist sofort fällig.",
         ],
@@ -44,23 +44,23 @@ export function traegerCareNoticesTopic(): HelpTopic {
       {
         title: "Bescheide ausstellen",
         steps: [
-          "Wählen Sie `Bescheide ausstellen`.",
-          "Prüfen Sie Zahl und Summe und wählen Sie `Ausstellen`.",
+          "Wähle `Bescheide ausstellen`.",
+          "Prüfe Zahl und Summe und wähle `Ausstellen`.",
           "Jeder Bescheid bekommt seine Nummer. Danach ändert er sich nicht mehr.",
-          "Hat sich seit Ihrer Prüfung etwas geändert, stellt moto nichts aus. Die Seite zeigt den neuen Stand. Prüfen Sie ihn und stellen Sie dann aus.",
+          "Hat sich seit deiner Prüfung etwas geändert, stellt moto nichts aus. Die Seite zeigt den neuen Stand. Prüfe ihn und stelle dann aus.",
         ],
       },
       {
         title: "Bescheide an die Familien senden",
         description:
-          "moto speichert jeden ausgestellten Bescheid einmal als PDF. Dieses Original bleibt gleich, auch wenn sich später Briefkopf, Vorlage, Adresse oder Vertrag ändern. Die Familie bekommt den Bescheid erst, wenn Sie senden.",
+          "moto speichert jeden ausgestellten Bescheid einmal als PDF. Dieses Original bleibt gleich, auch wenn sich später Briefkopf, Vorlage, Adresse oder Vertrag ändern. Die Familie bekommt den Bescheid erst, wenn du sendest.",
         steps: [
-          "Öffnen Sie den ausgestellten Jahreslauf und wählen Sie `An Familien senden`.",
-          "Wählen Sie `Originale speichern`. Gesendet wird dabei noch nichts.",
-          "Wählen Sie `An alle senden` und bestätigen Sie. Jede Familie mit E-Mail-Adresse bekommt das Original als Anhang.",
+          "Öffne den ausgestellten Jahreslauf und wähle `An Familien senden`.",
+          "Wähle `Originale speichern`. Gesendet wird dabei noch nichts.",
+          "Wähle `An alle senden` und bestätige. Jede Familie mit E-Mail-Adresse bekommt das Original als Anhang.",
           "Hat die Familie mit dieser Adresse ein Konto in der Eltern-App, liegt der Bescheid dort unter `Dokumente`.",
-          "Familien ohne E-Mail geben Sie den Bescheid auf Papier. Wählen Sie `Drucken` und dann `Nur Familien ohne E-Mail`.",
-          "Einen einzelnen Bescheid senden Sie über das Menü seiner Zeile mit `Senden` oder `Erneut senden`.",
+          "Familien ohne E-Mail gibst du den Bescheid auf Papier. Wähle `Drucken` und dann `Nur Familien ohne E-Mail`.",
+          "Einen einzelnen Bescheid sendest du über das Menü seiner Zeile mit `Senden` oder `Erneut senden`.",
         ],
       },
       {
@@ -68,19 +68,19 @@ export function traegerCareNoticesTopic(): HelpTopic {
         description:
           "Ein ausgestellter Bescheid ändert sich nie. Ändert sich ein Vertrag, gibt es einen Änderungsbescheid.",
         steps: [
-          "Starten Sie für dasselbe Jahr einen neuen Jahreslauf, zum Beispiel ab dem Monat der Änderung.",
+          "Starte für dasselbe Jahr einen neuen Jahreslauf, zum Beispiel ab dem Monat der Änderung.",
           "Die Vorschau zeigt nur Kinder, bei denen sich etwas geändert hat. Sie stehen als `Änderungsbescheid`.",
           "Der Änderungsbescheid nennt den alten Bescheid. Je Zeile steht `bisher`, `neu` und `Zu-/Abgang`.",
-          "Stellen Sie die Bescheide aus. Von da an gilt für diese Monate der Änderungsbescheid.",
+          "Stelle die Bescheide aus. Von da an gilt für diese Monate der Änderungsbescheid.",
         ],
       },
       {
         title: "Listen herunterladen",
         description:
-          "Die Jahresläufe, die Bescheide eines Laufs und den Versand laden Sie als Datei herunter.",
+          "Die Jahresläufe, die Bescheide eines Laufs und den Versand lädst du als Datei herunter.",
         steps: [
-          "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnen Sie einen Jahreslauf, für den Versand dort `An Familien senden`.",
-          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Wähle `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnest du einen Jahreslauf, für den Versand dort `An Familien senden`.",
+          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
           "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },
@@ -92,22 +92,22 @@ export function traegerCareNoticesTopic(): HelpTopic {
       "Endet ein Vertrag, setzt der Änderungsbescheid die Monate danach auf 0,00 €. Das ist ein Abgang.",
     ],
     notes: [
-      "E-Mail und Eltern-App sind keine förmliche Zustellung. Brauchen Sie einen Nachweis, dass die Familie den Bescheid bekommen hat? Dann stellen Sie ihn zusätzlich auf anderem Weg zu.",
-      "Ein Änderungsbescheid ist ein eigener Bescheid mit eigenem Original. Senden Sie ihn genauso. Der alte Bescheid bleibt unverändert.",
-      "Fehlt ein Preis oder gibt es einen doppelten Vertrag, bleibt die bisherige Bewertung gültig. Prüfen Sie die Hinweise im Monatslauf.",
+      "E-Mail und Eltern-App sind keine förmliche Zustellung. Brauchst du einen Nachweis, dass die Familie den Bescheid bekommen hat? Dann stellst du ihn zusätzlich auf anderem Weg zu.",
+      "Ein Änderungsbescheid ist ein eigener Bescheid mit eigenem Original. Sende ihn genauso. Der alte Bescheid bleibt unverändert.",
+      "Fehlt ein Preis oder gibt es einen doppelten Vertrag, bleibt die bisherige Bewertung gültig. Prüfe die Hinweise im Monatslauf.",
       "Das Essen steht nicht im Bescheid. Die Mensa rechnet es nach den Essen ab.",
-      "Der `Gesamtbetrag aller Bescheide` ist die Forderung vor Zahlungseingang. Zahlungen sieht moto nicht, auch nicht nach der Lastschrift. Ob eine Rate bezahlt ist, prüfen Sie in Ihrer Buchhaltung.",
+      "Der `Gesamtbetrag aller Bescheide` ist die Forderung vor Zahlungseingang. Zahlungen sieht moto nicht, auch nicht nach der Lastschrift. Ob eine Rate bezahlt ist, prüfe in deiner Buchhaltung.",
       "Ermäßigungen und Anteile von Kostenträgern stehen als eigene Zeilen im Bescheid.",
     ],
     troubleshootingDetails: [
-      "Bei `Nicht angekommen`: Wählen Sie im Menü der Zeile `Erneut senden`. Oder geben Sie der Familie den gedruckten Bescheid.",
-      "Ein Bescheid geht nicht raus und es steht `Die Person zahlt nicht mehr für diesen Vertrag`: Empfänger oder Zahler haben sich nach dem Ausstellen geändert. Der Bescheid geht nur an die Adresse, die er nennt. Drucken Sie den Bescheid und geben Sie ihn der Familie auf Papier.",
+      "Bei `Nicht angekommen`: Wähle im Menü der Zeile `Erneut senden`. Oder gib der Familie den gedruckten Bescheid.",
+      "Ein Bescheid geht nicht raus und es steht `Die Person zahlt nicht mehr für diesen Vertrag`: Empfänger oder Zahler haben sich nach dem Ausstellen geändert. Der Bescheid geht nur an die Adresse, die er nennt. Drucke den Bescheid und gib ihn der Familie auf Papier.",
       "Ein Bescheid steht nicht in der Eltern-App: Das Kind hat noch keinen Schülerdatensatz, oder das Konto der Familie hat eine andere E-Mail-Adresse. Die Familie bekommt ihn per E-Mail oder auf Papier.",
-      "`Bescheide ausstellen` geht nicht und oben steht `Rechtsbehelfsbelehrung fehlt`: Tragen Sie die Belehrung in der Vorlage `Bescheid` ein. Dafür brauchen Sie das Recht `Einstellungen`.",
-      "Ein Jahreslauf lässt sich nicht starten: Für dieses Jahr gibt es schon einen offenen Lauf. Öffnen Sie ihn in der Liste. Stellen Sie die Bescheide aus, oder schließen oder verwerfen Sie den leeren Lauf.",
-      "Die Vorschau ist leer, weil alle Bescheide noch gelten: Es gibt nichts Neues auszustellen. Wählen Sie `Jahreslauf abschließen` und dann `Abschließen`. Danach können Sie einen neuen Jahreslauf für andere Schulen starten.",
-      "Der Lauf zeigt `Dieser Lauf hat nichts abzurechnen`: Seine Schulen haben in diesem Jahr keinen Vertrag. Wählen Sie `Leeren Lauf verwerfen` und dann `Verwerfen`. Der Lauf steht danach als `Verworfen` in der Liste, und das Jahr ist frei für einen neuen Jahreslauf.",
-      "Im Monatslauf steht `Durch aufgehobenen Bescheid gesperrt`: Ein Änderungsbescheid hat den Monat auf 0,00 € gesetzt. Der Monat bleibt gesperrt, damit ihn niemand doppelt abrechnet. Wollen Sie ihn abrechnen, stellen Sie mit `Neuen Bescheid ausstellen` einen neuen Bescheid aus.",
+      "`Bescheide ausstellen` geht nicht und oben steht `Rechtsbehelfsbelehrung fehlt`: Trage die Belehrung in der Vorlage `Bescheid` ein. Dafür brauchst du das Recht `Einstellungen`.",
+      "Ein Jahreslauf lässt sich nicht starten: Für dieses Jahr gibt es schon einen offenen Lauf. Öffne ihn in der Liste. Stelle die Bescheide aus, oder schließe oder verwirf den leeren Lauf.",
+      "Die Vorschau ist leer, weil alle Bescheide noch gelten: Es gibt nichts Neues auszustellen. Wähle `Jahreslauf abschließen` und dann `Abschließen`. Danach kannst du einen neuen Jahreslauf für andere Schulen starten.",
+      "Der Lauf zeigt `Dieser Lauf hat nichts abzurechnen`: Seine Schulen haben in diesem Jahr keinen Vertrag. Wähle `Leeren Lauf verwerfen` und dann `Verwerfen`. Der Lauf steht danach als `Verworfen` in der Liste, und das Jahr ist frei für einen neuen Jahreslauf.",
+      "Im Monatslauf steht `Durch aufgehobenen Bescheid gesperrt`: Ein Änderungsbescheid hat den Monat auf 0,00 € gesetzt. Der Monat bleibt gesperrt, damit ihn niemand doppelt abrechnet. Willst du ihn abrechnen, stelle mit `Neuen Bescheid ausstellen` einen neuen Bescheid aus.",
     ],
     related: [
       HELP_TOPICS.traegerCareMonths,

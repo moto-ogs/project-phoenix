@@ -123,7 +123,7 @@ describe("lunch in the holiday registration", () => {
     renderCard({ ...child, bookings: { "12": "22" } });
     expect(
       screen.getByText(
-        /^4,30\s€ je Essen\. Ihr Kind isst an jedem Tag, den Sie wählen\.$/,
+        /^4,30\s€ je Essen\. Dein Kind isst an jedem Tag, den du wählst\.$/,
       ),
     ).toBeInTheDocument();
   });

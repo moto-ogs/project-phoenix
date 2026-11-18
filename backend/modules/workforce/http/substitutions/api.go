@@ -460,7 +460,7 @@ var moduleErrorSpecs = []moduleErrorSpec{
 	{target: workforce.ErrSubstitutionNotRunning, status: http.StatusConflict, code: codeNotRunning, message: "Die Gruppenübergabe ist nicht mehr aktiv."},
 	{target: workforce.ErrSubstitutionAlreadyAssigned, status: http.StatusConflict, code: codeAlreadyAssigned, message: "Diese Gruppenübergabe besteht bereits."},
 	{target: workforce.ErrSubstitutionConflict, status: http.StatusConflict, code: codeConflict, message: "Die Änderung steht im Konflikt mit der aktuellen Planung."},
-	{target: workforce.ErrSubstitutionSelfAssignment, status: http.StatusBadRequest, code: codeSelfAssignment, message: "Sie können sich nicht selbst hinzufügen."},
+	{target: workforce.ErrSubstitutionSelfAssignment, status: http.StatusBadRequest, code: codeSelfAssignment, message: "Du kannst dich nicht selbst hinzufügen."},
 }
 
 func operationErrorSpec(operation *workforce.SubstitutionOperationError) moduleErrorSpec {
@@ -479,7 +479,7 @@ func operationErrorSpec(operation *workforce.SubstitutionOperationError) moduleE
 }
 
 var internalModuleError = moduleErrorSpec{
-	status: http.StatusInternalServerError, code: codeInternal, message: "Das hat leider nicht geklappt. Bitte versuchen Sie es noch einmal.",
+	status: http.StatusInternalServerError, code: codeInternal, message: "Das hat leider nicht geklappt. Bitte versuche es noch einmal.",
 }
 
 // refusalDetails puts the values a schedule refusal names into wire form;

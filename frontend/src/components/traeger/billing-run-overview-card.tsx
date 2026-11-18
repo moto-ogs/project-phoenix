@@ -155,7 +155,7 @@ function invoicesDescription(
   const overview =
     "Die Übersicht für die Kämmerei enthält jede Position, die Summe je Rechnung und die Gesamtsumme. Storno und Gutschrift stehen als eigene Zeilen mit Minusbetrag.";
   return canPreview
-    ? `${overview} Wählen Sie eine Zeile, um ihr Schreiben als PDF zu sehen.`
+    ? `${overview} Wähle eine Zeile, um ihr Schreiben als PDF zu sehen.`
     : overview;
 }
 
@@ -239,7 +239,7 @@ function LetterPreviewPlaceholder() {
       variant="dashed"
       icon={<FileText className="h-10 w-10" aria-hidden="true" />}
       title="Noch kein Schreiben gewählt"
-      description="Wählen Sie links eine Rechnung. Hier sehen Sie dann ihr Schreiben mit Nummer, Beträgen und Gestaltung."
+      description="Wähle links eine Rechnung. Hier siehst du dann ihr Schreiben mit Nummer, Beträgen und Gestaltung."
       className="aspect-[210/297] w-full justify-center p-8"
     />
   );

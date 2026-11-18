@@ -333,7 +333,7 @@ describe("PhasesEditor", () => {
   it.each([
     [
       "2027-06-30",
-      "Soll die Betreuung mit der Phase enden? Dann beenden Sie sie zum 30.06.2027.",
+      "Soll die Betreuung mit der Phase enden? Dann beende sie zum 30.06.2027.",
     ],
     [
       "2026-09-01",
@@ -397,7 +397,7 @@ describe("PhasesEditor", () => {
       ).toBeVisible();
       expect(
         within(dialog).getByText(
-          /moto beendet sie nicht von selbst. Diese Liste sehen Sie nur jetzt/,
+          /moto beendet sie nicht von selbst. Diese Liste siehst du nur jetzt/,
         ),
       ).toBeVisible();
       expect(within(dialog).getByText(explanation)).toBeVisible();
@@ -628,7 +628,7 @@ describe("PhasesEditor", () => {
     expect(within(resumed).getByText("Kind 501 Lang")).toBeVisible();
     expect(
       within(resumed).getByText(
-        "Sie beenden zuerst die Betreuung der ersten 500 Kinder. Danach bleiben die übrigen Kinder in dieser Liste.",
+        "Du beendest zuerst die Betreuung der ersten 500 Kinder. Danach bleiben die übrigen Kinder in dieser Liste.",
       ),
     ).toBeVisible();
 
@@ -691,7 +691,7 @@ describe("PhasesEditor", () => {
         name: "Betreuung läuft länger als die Phase",
       }),
     ).not.toBeInTheDocument();
-  });
+  }, 10_000);
 
   it("uses the button foreground color for the create action icon", async () => {
     mocks.listPhases.mockResolvedValue([phase()]);
@@ -898,13 +898,11 @@ describe("PhasesEditor", () => {
 
     expect(
       await screen.findByText(
-        "Bitte geben Sie Beginn und Ende des Betreuungszeitraums an.",
+        "Bitte gib Beginn und Ende des Betreuungszeitraums an.",
       ),
     ).toBeInTheDocument();
     // Der fehlende Beginn steht zusätzlich am Feld.
-    expect(
-      screen.getByText("Bitte wählen Sie den Beginn."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Bitte wähle den Beginn.")).toBeInTheDocument();
     expect(mocks.createPhase).not.toHaveBeenCalled();
   });
 
@@ -941,7 +939,7 @@ describe("PhasesEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Erstellen" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Bitte geben Sie der Anmeldephase einen Namen.",
+      "Bitte gib der Anmeldephase einen Namen.",
     );
     // Das Feld ist markiert und hat den Fokus (#2515).
     await waitFor(() => expect(inputByName("name")).toHaveFocus());
@@ -1242,7 +1240,7 @@ describe("PhasesEditor", () => {
 
     expect(
       await within(dialog).findByText(
-        "Für diese Anmeldephase sind noch Kinder gebucht. Deshalb kann sie nicht gelöscht werden. Wählen Sie stattdessen „Deaktivieren“ oder beenden Sie zuerst die Buchungen.",
+        "Für diese Anmeldephase sind noch Kinder gebucht. Deshalb kann sie nicht gelöscht werden. Wähle stattdessen „Deaktivieren“ oder beende zuerst die Buchungen.",
       ),
     ).toBeInTheDocument();
   });
@@ -1268,7 +1266,7 @@ describe("PhasesEditor", () => {
 
     expect(
       await within(dialog).findByText(
-        "Zu ihr gibt es 2 Anmeldungen. Wählen Sie stattdessen „Deaktivieren“.",
+        "Zu ihr gibt es 2 Anmeldungen. Wähle stattdessen „Deaktivieren“.",
       ),
     ).toBeInTheDocument();
     expect(

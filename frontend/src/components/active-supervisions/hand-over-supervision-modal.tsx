@@ -69,7 +69,7 @@ function useSupervisionChange(
     if (mode === "hand-over" && !selectedStaffId) return;
     formErrors.clear();
     setIsSaving(true);
-    let message = "Sie sind nicht mehr als Aufsicht eingetragen.";
+    let message = "Du bist nicht mehr als Aufsicht eingetragen.";
     try {
       if (mode === "hand-over") {
         const result = await substitutionService.handOverSupervision(
@@ -128,7 +128,7 @@ function HandOverFields({
   return (
     <CustomSelect
       id="hand-over-supervisor"
-      label="An wen übergeben Sie?"
+      label="An wen übergibst du?"
       value={selectedStaffId}
       onChange={setSelectedStaffId}
       placeholder="Person auswählen..."
@@ -145,7 +145,7 @@ function ReleaseFields({ others }: { others: readonly string[] }) {
     return (
       <Alert
         type="info"
-        message="Sie sind die einzige Aufsicht. Übergeben Sie die Aufsicht an eine Person oder beenden Sie die Aktivität."
+        message="Du bist die einzige Aufsicht. Übergib die Aufsicht an eine Person oder beende die Aktivität."
       />
     );
   return (
@@ -180,7 +180,7 @@ function ModalBody(props: {
       {overview && !overview.isCurrentUserSupervising ? (
         <Alert
           type="info"
-          message="Sie beaufsichtigen diese Aktivität nicht mehr. Deshalb können Sie die Aufsicht nicht übergeben."
+          message="Du beaufsichtigst diese Aktivität nicht mehr. Deshalb kannst du die Aufsicht nicht übergeben."
         />
       ) : null}
       {overview?.isCurrentUserSupervising ? (
@@ -193,7 +193,7 @@ function ModalBody(props: {
             items={MODE_ITEMS}
             value={props.mode}
             onChange={props.setMode}
-            ariaLabel="Wie geben Sie die Aufsicht ab?"
+            ariaLabel="Wie gibst du die Aufsicht ab?"
             variant="joined"
             fullWidth
           />
@@ -241,7 +241,7 @@ function ModalFooter(props: {
         tooltip={
           props.mode === "hand-over"
             ? "Übergibt die Aufsicht sofort an die gewählte Person."
-            : "Beendet sofort nur Ihre Aufsicht, die Aktivität läuft weiter."
+            : "Beendet sofort nur deine Aufsicht, die Aktivität läuft weiter."
         }
         isLoading={props.isSaving}
         loadingText={
@@ -293,14 +293,14 @@ function submitBlockedReason(input: {
   const { overview, mode, selectedStaffId, others } = input;
   if (!overview) return undefined;
   if (!overview.isCurrentUserSupervising)
-    return "Sie beaufsichtigen diese Aktivität nicht mehr.";
+    return "Du beaufsichtigst diese Aktivität nicht mehr.";
   if (mode === "release")
     return others.length === 0
-      ? "Als einzige Aufsicht können Sie nur an eine Person übergeben."
+      ? "Als einzige Aufsicht kannst du nur an eine Person übergeben."
       : undefined;
   if (overview.availableTargets.length === 0)
     return "Gerade kann niemand die Aufsicht übernehmen.";
-  if (!selectedStaffId) return "Wählen Sie zuerst eine Person aus.";
+  if (!selectedStaffId) return "Wähle zuerst eine Person aus.";
   return undefined;
 }
 

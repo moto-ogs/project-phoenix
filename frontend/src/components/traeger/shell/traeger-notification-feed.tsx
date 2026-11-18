@@ -7,10 +7,9 @@
 // Die Nutzungsanalyse erfasst im Träger-Portal nichts (analytics-policy.ts),
 // darum nennt die Glocke keine Schule dafür.
 
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { NOTIFICATION_FEED_REFRESH_EVENT } from "~/lib/notification-events";
+import { NotificationFeedPageReload } from "~/components/dashboard/header/notification-feed-page-reload";
 import {
   type NotificationFeedPortal,
   NotificationFeedPortalProvider,
@@ -29,25 +28,8 @@ export function TraegerNotificationFeedProvider({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <NotificationFeedPortalProvider value={TRAEGER_NOTIFICATION_FEED_PORTAL}>
-      <ReloadOnPageChange />
+      <NotificationFeedPageReload />
       {children}
     </NotificationFeedPortalProvider>
   );
-}
-
-/**
- * Lädt Zähler und offene Liste nach jedem Seitenwechsel neu. Der erste
- * Abruf beim Laden der Seite kommt aus SWR selbst.
- */
-function ReloadOnPageChange() {
-  const pathname = usePathname();
-  const previousPathname = useRef(pathname);
-
-  useEffect(() => {
-    if (pathname === previousPathname.current) return;
-    previousPathname.current = pathname;
-    window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
-  }, [pathname]);
-
-  return null;
 }

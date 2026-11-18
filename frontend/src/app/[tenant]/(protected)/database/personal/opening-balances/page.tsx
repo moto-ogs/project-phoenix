@@ -369,7 +369,7 @@ function OpeningBalanceImportPageContent() {
       resetPreview();
       if (!paramsComplete) {
         importErrors.invalid(
-          "Bitte geben Sie zuerst Stichtag und Begründung an. Dann wird die Vorschau erstellt.",
+          "Bitte gib zuerst Stichtag und Begründung an. Dann wird die Vorschau erstellt.",
           {
             ...(effectiveDate
               ? {}
@@ -480,7 +480,7 @@ function OpeningBalanceImportPageContent() {
     (file: File) => {
       if (!isSpreadsheet(file)) {
         importErrors.invalid(
-          "Diese Datei passt nicht. Bitte laden Sie eine CSV- oder Excel-Datei hoch.",
+          "Diese Datei passt nicht. Bitte lade eine CSV- oder Excel-Datei hoch.",
         );
         return;
       }
@@ -657,7 +657,7 @@ function OpeningBalanceImportPageContent() {
               disabledReason={
                 isLoading
                   ? undefined
-                  : "Tragen Sie zuerst Stichtag und Begründung ein."
+                  : "Trage zuerst Stichtag und Begründung ein."
               }
               tooltip="Prüft die Datei noch einmal mit Stichtag und Begründung."
               onClick={() => void runPreview(uploadedFile)}

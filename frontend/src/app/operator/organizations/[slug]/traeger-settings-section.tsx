@@ -110,7 +110,7 @@ export function TraegerSettingsSection({
     <div className="space-y-8">
       <Alert
         type="info"
-        message="Sie ändern hier die Werte des Trägers für alle seine Schulen, so wie im Träger-Portal. moto speichert zu jeder Änderung, dass Sie sie als Operator gemacht haben."
+        message="Du änderst hier die Werte des Trägers für alle seine Schulen, so wie im Träger-Portal. moto speichert zu jeder Änderung, dass du sie als Operator gemacht hast."
       />
       {data.tabs.map((tab) => {
         const paymentText =
@@ -140,7 +140,7 @@ export function TraegerSettingsSection({
                 // Träger portal; a display only.
                 <SectionCard
                   title="Vorschau des Zahlungstexts"
-                  description="So steht der Text im Schreiben, mit Beispielwerten. Bei 0 € steht dort: „Sie müssen für diese Betreuung nichts bezahlen.“"
+                  description="So steht der Text im Schreiben, mit Beispielwerten. Bei 0 € steht dort: „Ihr müsst für diese Betreuung nichts bezahlen.“"
                 >
                   <figure aria-label="Vorschau des Zahlungstexts">
                     <p className="font-semibold wrap-anywhere whitespace-pre-line text-gray-900">

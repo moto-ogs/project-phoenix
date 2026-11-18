@@ -757,7 +757,7 @@ describe("EnrollmentForm", () => {
 
     expect(
       await screen.findByText(
-        "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
+        "Bei einigen Feldern steht ein Hinweis. Bitte korrigiere diese Felder.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Bitte Vornamen angeben.")).toHaveLength(2);
@@ -774,7 +774,7 @@ describe("EnrollmentForm", () => {
       );
       expect(
         await screen.findByText(
-          "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
+          "Bei einigen Feldern steht ein Hinweis. Bitte korrigiere diese Felder.",
         ),
       ).toBeInTheDocument();
       await submitAttemptFinished();
@@ -997,7 +997,7 @@ describe("EnrollmentForm", () => {
   // second step after the form.
   describe("grade-restricted offerings before the grade is picked", () => {
     const CHOOSE_GRADE_FIRST =
-      "Wählen Sie zuerst die Klassenstufe Ihres Kindes. Danach sehen Sie hier die passenden Betreuungsangebote.";
+      "Wähle zuerst die Klassenstufe deines Kindes. Danach siehst du hier die passenden Betreuungsangebote.";
 
     function gradeOffering(
       id: string,
@@ -1079,11 +1079,11 @@ describe("EnrollmentForm", () => {
 
       expect(
         screen.getByText(
-          "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wenden Sie sich bitte an die OGS.",
+          "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die OGS.",
         ),
       ).toBeVisible();
       expect(screen.getByRole("status")).toHaveTextContent(
-        "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wenden Sie sich bitte an die OGS.",
+        "Für die 4. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die OGS.",
       );
       expect(screen.queryByText(CHOOSE_GRADE_FIRST)).not.toBeInTheDocument();
     });
@@ -1202,7 +1202,7 @@ describe("EnrollmentForm", () => {
       expect(screen.getByLabelText("Jahr")).toBeInTheDocument();
       expect(
         screen.queryByText(
-          "Für die 2. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wenden Sie sich bitte an die OGS.",
+          "Für die 2. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die OGS.",
         ),
       ).not.toBeInTheDocument();
     });
@@ -1404,7 +1404,7 @@ describe("EnrollmentForm", () => {
 
     expect(
       screen.getByText(
-        /Mit der Anmeldung zum Ganztagsangebot ist Ihr Kind laut Ganztagsschulerlass zu den angemeldeten Zeiten schulpflichtig\./,
+        /Mit der Anmeldung zum Ganztagsangebot ist dein Kind laut Ganztagsschulerlass zu den angemeldeten Zeiten schulpflichtig\./,
       ),
     ).toBeInTheDocument();
   });
@@ -1977,7 +1977,7 @@ describe("EnrollmentForm", () => {
     // pickup field prompts the parent to pick care days first instead of
     // showing all weekdays.
     expect(
-      screen.getByText("Wählen Sie zuerst die Betreuungstage aus."),
+      screen.getByText("Wähle zuerst die Betreuungstage aus."),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Montag")).not.toBeInTheDocument();
 
@@ -2465,7 +2465,7 @@ describe("EnrollmentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
     expect(
       await screen.findByText(
-        "Bitte wählen Sie für jedes Kind mindestens ein Betreuungsangebot aus.",
+        "Bitte wähle für jedes Kind mindestens ein Betreuungsangebot aus.",
       ),
     ).toBeInTheDocument();
 
@@ -2666,7 +2666,7 @@ describe("EnrollmentForm", () => {
     await waitForLoaded();
 
     expect(
-      screen.queryByText("Wählen Sie zuerst die Betreuungstage aus."),
+      screen.queryByText("Wähle zuerst die Betreuungstage aus."),
     ).not.toBeInTheDocument();
     const group = screen.getByRole("group", { name: /Erlaubte Heimwege/ });
     expect(within(group).getAllByRole("button")).toHaveLength(5);
@@ -2720,9 +2720,7 @@ describe("EnrollmentForm", () => {
 
     const group = screen.getByRole("group", { name: /Erlaubte Heimwege/ });
     expect(
-      within(group).getByText(
-        "Wählen Sie pro Betreuungstag einen Heimweg aus.",
-      ),
+      within(group).getByText("Wähle pro Betreuungstag einen Heimweg aus."),
     ).toBeInTheDocument();
     fireEvent.click(within(group).getByRole("button", { name: "Mo" }));
     // The modes render as a real radio group, not checkboxes.
@@ -3057,7 +3055,7 @@ describe("EnrollmentForm", () => {
 
     const group = screen.getByRole("group", { name: /Erlaubte Heimwege/ });
     expect(
-      within(group).getByText("Wählen Sie zuerst die Betreuungstage aus."),
+      within(group).getByText("Wähle zuerst die Betreuungstage aus."),
     ).toBeInTheDocument();
     expect(within(group).queryByRole("checkbox")).not.toBeInTheDocument();
     expect(within(group).queryByRole("button")).not.toBeInTheDocument();
@@ -3328,7 +3326,7 @@ describe("EnrollmentForm", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Sie kommen nicht in die Eltern-App\? Bitte melden Sie sich bei der OGS\./,
+        /Du kommst nicht in die Eltern-App\? Bitte melde dich bei der OGS\./,
       ),
     ).toBeInTheDocument();
     expect(
@@ -4028,11 +4026,11 @@ describe("EnrollmentForm", () => {
     // The pickup field gets the pickup copy, not the bus copy — guards the
     // regression where the shared weekday_boolean input hardcoded bus text.
     expect(
-      screen.getByText(/an denen Ihr Kind abgeholt wird/),
+      screen.getByText(/an denen dein Kind abgeholt wird/),
     ).toBeInTheDocument();
     // The Buskind field still shows its own bus copy.
     expect(
-      screen.getByText(/an denen Ihr Kind mit dem Bus fährt/),
+      screen.getByText(/an denen dein Kind mit dem Bus fährt/),
     ).toBeInTheDocument();
   });
 
@@ -4537,7 +4535,7 @@ describe("EnrollmentForm", () => {
     const shortCare = perDayVariant("41", "Verlässlichkeit bis 13 Uhr");
     const longCare = perDayVariant("42", "Nachmittagsgruppe bis 17 Uhr");
     const conflictOnMonday =
-      "Am Montag sind „Verlässlichkeit bis 13 Uhr“ und „Nachmittagsgruppe bis 17 Uhr“ gewählt. Bitte wählen Sie pro Tag nur ein Angebot.";
+      "Am Montag sind „Verlässlichkeit bis 13 Uhr“ und „Nachmittagsgruppe bis 17 Uhr“ gewählt. Bitte wähle pro Tag nur ein Angebot.";
 
     function pick(offeringId: string, day: string) {
       const input = document.querySelector<HTMLInputElement>(
@@ -4614,7 +4612,7 @@ describe("EnrollmentForm", () => {
 
       expect(
         screen.getByText(
-          "Am Freitag sind „Verlässlichkeit bis 13 Uhr“ und „Freitag bis 15 Uhr“ gewählt. Bitte wählen Sie pro Tag nur ein Angebot.",
+          "Am Freitag sind „Verlässlichkeit bis 13 Uhr“ und „Freitag bis 15 Uhr“ gewählt. Bitte wähle pro Tag nur ein Angebot.",
         ),
       ).toBeInTheDocument();
     });
@@ -4641,14 +4639,14 @@ describe("EnrollmentForm", () => {
       pick("44", "Mi");
       pick("41", "Di");
       expect(
-        screen.queryByText(/Bitte wählen Sie pro Tag nur ein Angebot/),
+        screen.queryByText(/Bitte wähle pro Tag nur ein Angebot/),
       ).not.toBeInTheDocument();
       expect(screen.getByText("Höchstens eines pro Tag")).toBeInTheDocument();
       fireEvent.click(dayButton(offeringCard("children_0_offering_41"), "Mi"));
 
       expect(
         screen.getByText(
-          "Am Mittwoch sind „Nachmittag bis 15 Uhr“ und „Verlässlichkeit bis 13 Uhr“ gewählt. Bitte wählen Sie pro Tag nur ein Angebot.",
+          "Am Mittwoch sind „Nachmittag bis 15 Uhr“ und „Verlässlichkeit bis 13 Uhr“ gewählt. Bitte wähle pro Tag nur ein Angebot.",
         ),
       ).toBeInTheDocument();
     });
@@ -4707,7 +4705,7 @@ describe("EnrollmentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
     expect(
       await screen.findByText(
-        "Bitte wählen Sie für jedes Kind genau ein Betreuungsangebot aus.",
+        "Bitte wähle für jedes Kind genau ein Betreuungsangebot aus.",
       ),
     ).toBeInTheDocument();
     expect(mockSubmitEnrollment).not.toHaveBeenCalled();
@@ -5510,16 +5508,16 @@ describe("EnrollmentForm signature (#4786)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
     expect(
-      await screen.findAllByText("Bitte unterschreiben Sie die Anmeldung."),
+      await screen.findAllByText("Bitte unterschreibe die Anmeldung."),
     ).not.toHaveLength(0);
     expect(mockSubmitEnrollment).not.toHaveBeenCalled();
     expect(document.getElementById("signature-error")).toHaveTextContent(
-      "Bitte unterschreiben Sie die Anmeldung.",
+      "Bitte unterschreibe die Anmeldung.",
     );
 
     sign();
     expect(
-      screen.getByText("Ihre Unterschrift ist bereit."),
+      screen.getByText("Deine Unterschrift ist bereit."),
     ).toBeInTheDocument();
     expect(document.getElementById("signature-error")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
@@ -5542,7 +5540,7 @@ describe("EnrollmentForm signature (#4786)", () => {
     await fillRequiredFields();
     sign();
     expect(
-      screen.getByText("Ihre Unterschrift ist bereit."),
+      screen.getByText("Deine Unterschrift ist bereit."),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getAllByLabelText("Vorname")[0]!, {
@@ -5551,7 +5549,7 @@ describe("EnrollmentForm signature (#4786)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
 
     expect(
-      await screen.findAllByText("Bitte unterschreiben Sie die Anmeldung."),
+      await screen.findAllByText("Bitte unterschreibe die Anmeldung."),
     ).not.toHaveLength(0);
     expect(mockSubmitEnrollment).not.toHaveBeenCalled();
   });

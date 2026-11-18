@@ -121,7 +121,7 @@ describe("TraegerCatalogPreviewPage (#4704)", () => {
     expect(screen.getByText("Lehnt ab")).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Bitte tragen Sie für jeden Betreuungstag eine Gehzeit ein\. Diese Schule behält ihren bisherigen Stand\./,
+        /Bitte trage für jeden Betreuungstag eine Gehzeit ein\. Diese Schule behält ihren bisherigen Stand\./,
       ),
     ).toBeInTheDocument();
 
@@ -175,7 +175,7 @@ describe("TraegerCatalogPreviewPage (#4704)", () => {
     await vi.waitFor(() => expect(mockPreview).toHaveBeenCalledTimes(2));
     expect(
       await screen.findByText(
-        "Seit der Vorschau hat sich etwas geändert. Bitte sehen Sie sich die Vorschau noch einmal an.",
+        "Seit der Vorschau hat sich etwas geändert. Bitte sieh dir die Vorschau noch einmal an.",
       ),
     ).toBeInTheDocument();
   });

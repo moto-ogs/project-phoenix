@@ -327,7 +327,7 @@ describe("monthly run page held by an amended notice", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Der Jahresbescheid von Mia Muster setzt diesen Monat auf 0,00 €. Der Monat bleibt gesperrt. Dieser Lauf rechnet dafür keine Betreuung ab. Wollen Sie den Monat abrechnen, stellen Sie einen neuen Bescheid aus.",
+        "Der Jahresbescheid von Mia Muster setzt diesen Monat auf 0,00 €. Der Monat bleibt gesperrt. Dieser Lauf rechnet dafür keine Betreuung ab. Willst du den Monat abrechnen, stelle einen neuen Bescheid aus.",
       ),
     ).toBeInTheDocument();
     expect(

@@ -55,7 +55,7 @@ export function settingOriginNote(
   if (hasTraegerValueBeneath(setting)) {
     return audience === "operator"
       ? "Eigener Wert der Schule. „Zurücksetzen“ übernimmt den Wert des Trägers."
-      : "Eigener Wert Ihrer Schule. „Zurücksetzen“ übernimmt den Wert des Trägers.";
+      : "Eigener Wert deiner Schule. „Zurücksetzen“ übernimmt den Wert des Trägers.";
   }
   return null;
 }

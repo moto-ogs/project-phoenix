@@ -64,7 +64,7 @@ describe("RosterDeviationTodos (#5103)", () => {
     expect(state.keys).toContain("roster-deviations-4");
     expect(
       screen.getByText(
-        "2 Regeltermine weichen von den Anmeldungen ab. Prüfen Sie die Kinderlisten.",
+        "2 Regeltermine weichen von den Anmeldungen ab. Prüfe die Kinderlisten.",
       ),
     ).toBeInTheDocument();
     expect(

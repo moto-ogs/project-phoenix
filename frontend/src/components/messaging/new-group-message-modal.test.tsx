@@ -175,7 +175,7 @@ describe("Neue Gruppennachricht", () => {
     fireEvent.click(screen.getByRole("button", { name: "Senden" }));
 
     expect(
-      await screen.findByText("Bitte füllen Sie alle Felder aus."),
+      await screen.findByText("Bitte fülle alle Felder aus."),
     ).toBeInTheDocument();
     expect(mocks.createGroupThread).not.toHaveBeenCalled();
   });

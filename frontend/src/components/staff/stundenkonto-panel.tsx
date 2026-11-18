@@ -97,7 +97,7 @@ export function StundenkontoPanel({
   );
   const openingDisabledHint = () => {
     if (hasOpening) {
-      return "Löschen Sie zuerst den bestehenden Eröffnungssaldo.";
+      return "Lösche zuerst den bestehenden Eröffnungssaldo.";
     }
     if (!canResetClosedPeriod) {
       return "Ein Eröffnungssaldo geht erst nach dem ersten abgeschlossenen Kontotag.";
@@ -362,8 +362,8 @@ function AdjustmentModal({
     formErrors.clear();
     const h = Number.parseFloat(hours.replace(",", "."));
     if (Number.isNaN(h) || h <= 0 || h > 1000) {
-      formErrors.invalid("Bitte prüfen Sie die Stunden.", {
-        minutes_delta: "Bitte geben Sie eine Zahl zwischen 0 und 1000 ein.",
+      formErrors.invalid("Bitte prüfe die Stunden.", {
+        minutes_delta: "Bitte gib eine Zahl zwischen 0 und 1000 ein.",
       });
       return;
     }
@@ -414,7 +414,7 @@ function AdjustmentModal({
           canSubmit={canSubmit}
           submitLabel={copy.submit}
           submitTooltip={copy.submitTooltip}
-          missingInputReason="Tragen Sie zuerst die Stunden und eine Begründung ein."
+          missingInputReason="Trage zuerst die Stunden und eine Begründung ein."
           onCancel={onClose}
           onSubmit={handleSubmit}
         />
@@ -491,8 +491,8 @@ function ResetModal({
   const handleSubmit = async () => {
     formErrors.clear();
     if (!carryoverValid) {
-      formErrors.invalid("Bitte prüfen Sie den Übertrag.", {
-        carryover_minutes: "Bitte geben Sie 0 oder mehr Stunden ein.",
+      formErrors.invalid("Bitte prüfe den Übertrag.", {
+        carryover_minutes: "Bitte gib 0 oder mehr Stunden ein.",
       });
       return;
     }
@@ -539,7 +539,7 @@ function ResetModal({
           canSubmit={canSubmit}
           submitLabel="Zurücksetzen"
           submitTooltip="Setzt das Konto sofort zum Stichtag auf den Übertrag."
-          missingInputReason="Tragen Sie zuerst einen gültigen Übertrag und eine Begründung ein."
+          missingInputReason="Trage zuerst einen gültigen Übertrag und eine Begründung ein."
           onCancel={onClose}
           onSubmit={handleSubmit}
         />
@@ -642,8 +642,8 @@ function OpeningModal({
   const handleSubmit = async () => {
     formErrors.clear();
     if (opening === null || opening < -10_000 || opening > 10_000) {
-      formErrors.invalid("Bitte prüfen Sie den Saldo.", {
-        balance_minutes: "Bitte geben Sie eine Zahl ein, zum Beispiel 12,5.",
+      formErrors.invalid("Bitte prüfe den Saldo.", {
+        balance_minutes: "Bitte gib eine Zahl ein, zum Beispiel 12,5.",
       });
       return;
     }
@@ -690,7 +690,7 @@ function OpeningModal({
           canSubmit={canSubmit}
           submitLabel="Buchen"
           submitTooltip="Bucht den Stand sofort, das Konto steht am Stichtag auf diesem Wert."
-          missingInputReason="Tragen Sie zuerst einen gültigen Stand und eine Begründung ein."
+          missingInputReason="Trage zuerst einen gültigen Stand und eine Begründung ein."
           onCancel={onClose}
           onSubmit={handleSubmit}
         />
@@ -807,7 +807,7 @@ function AdjustmentModalFooter({
   );
 }
 
-const MISSING_DATE = "Bitte wählen Sie ein Datum.";
+const MISSING_DATE = "Bitte wähle ein Datum.";
 
 function NoteField({
   note,
