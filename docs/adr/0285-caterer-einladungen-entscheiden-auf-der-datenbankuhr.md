@@ -147,3 +147,20 @@ Laufzeit und die Gültigkeit in der Mail.
 Einladungen ablaufen, während eine andere Transaktion sie sperrt.
 `TestGetStudentGuardians_OpenInvitationPendingOnTheDatabaseClock` hält die
 Elternliste.
+
+## Nachtrag 2026-11-18: Rollback der Adressbindung
+
+Beim Rollback von 1.15.865 kann eine ältere Anwendung den Einladungsablauf
+auf ihrer eigenen Uhr prüfen. Down setzt den Ablauf einer unverbrauchten
+Einladung mit abweichender Empfängeradresse höchstens auf den Unix-Epoch.
+Auf Freigabe wartende Anfragen erhalten später einen neuen Link. Die
+Änderung gehört in Down von 1.15.865, da erst dieser Schritt die
+Empfängerbindung entfernt. [#7383](https://github.com/moto-ogs/project-phoenix/issues/7383)
+
+`api.NewAuthTestModule` ist für Elterneinladungsmails auf der echten Uhr
+vorgesehen. Tests, die die Uhr bewegen und die Mail lesen, verwenden
+`api.NewTestIdentityAccessWithConfig`. Dieser Testaufbau verwendet den
+Produktionspfad mit derselben Uhr für Ausstellung und Zustellung.
+`TestAuthTestModuleGuardianMailStatesTheLifetimeOnTheRealClock` und
+`assertGuardianInvitationOnTheDatabaseClock` prüfen beide Fälle. So kann
+der gemeinsame Testhelfer seine eingefrorenen Bindungen behalten.
