@@ -446,6 +446,9 @@ type TraegerStaffStore interface {
 	// hire just created at the school (#7206): entry day, last day, address
 	// and phone. The employment has no row yet.
 	InsertSchoolHireData(ctx context.Context, data domain.StaffMasterData) error
+	// SchoolStaffIDsByEmail returns the employments of the school whose
+	// master data reach the person at the address, without case (#7378).
+	SchoolStaffIDsByEmail(ctx context.Context, email string) ([]int64, error)
 
 	ReleaseOfTraeger(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error)
 	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)

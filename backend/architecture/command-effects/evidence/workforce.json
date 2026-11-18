@@ -7505,6 +7505,14 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolEmailQuery.FindSchoolEmailIdentities",
+      "binding_digest": "940022deac653bfe9e739f1cb6f6afa8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerSchoolEmails.FindSchoolEmailIdentities",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolEmailQuery.FindSchoolEmailIdentities",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerSchoolEmployments.SchoolEmployments",
       "binding_digest": "b25e9b7efe136a6b676049cfa6f5e00a",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerSchoolEmployments.SchoolEmployments",

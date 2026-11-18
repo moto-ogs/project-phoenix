@@ -236,6 +236,81 @@ describe("TraegerStaffRecordsPage", () => {
     ).toHaveAttribute("href", "/personal/import?from=ohne-akte");
   });
 
+  // #7378: „Akte anlegen“ in der Rückfrage beim Einstellen öffnet den
+  // Dialog für genau die Person, die es an der Schule schon gibt.
+  it("opens „Akte anlegen“ for the person the address names", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    api.previewStaffLink.mockResolvedValue({
+      ...PREVIEW,
+      members: [{ ...mira("2", "33", "Keller"), firstName: "Jonas" }],
+      fields: [],
+    });
+    renderPage();
+    const dialog = await screen.findByRole("dialog");
+    await vi.waitFor(() =>
+      expect(api.previewStaffLink).toHaveBeenCalledWith({
+        recordId: null,
+        members: [{ schoolId: "2", staffId: "33" }],
+        choices: {},
+      }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+    );
+    await vi.waitFor(() =>
+      expect(api.linkStaff).toHaveBeenCalledWith({
+        recordId: null,
+        members: [{ schoolId: "2", staffId: "33" }],
+        choices: {},
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith("/personal/5?from=ohne-akte"),
+    );
+    // The address still names the person until the router moves on; the
+    // dialog stays closed anyway.
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("drops the person from the address when the dialog closes", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    renderPage();
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+    expect(mockReplace).toHaveBeenCalledWith("?tab=ohne-akte", {
+      scroll: false,
+    });
+  });
+
+  it("opens the person again when the address names it again", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    const view = renderPage();
+    const rerender = () =>
+      view.rerender(
+        <TraegerResourceTestProvider>
+          <TraegerStaffRecordsPage />
+        </TraegerResourceTestProvider>,
+      );
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Abbrechen",
+      }),
+    );
+    rerender();
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    address.search = "tab=ohne-akte&schule=2&person=33";
+    rerender();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("ignores a person in the address that is no ID", async () => {
+    address.search = "tab=ohne-akte&schule=2&person=../x";
+    renderPage();
+    expect(await screen.findByText("Jonas Keller")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(api.previewStaffLink).not.toHaveBeenCalled();
+  });
+
   it("hands the default suggestions tab to its sub pages", async () => {
     renderPage();
     await screen.findByText("Vorschläge zum Verknüpfen");

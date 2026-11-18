@@ -18,7 +18,7 @@ import (
 // person may exist already: it names the people of a school the answer shows.
 const TraegerStaffViewHireCheck = "staff_hire_check"
 
-// Where a hire found a person with the same name and birthday.
+// Where a hire found a person who may be the same.
 const (
 	TraegerStaffHireMatchRecord = "record"
 	TraegerStaffHireMatchSchool = "school"
@@ -29,10 +29,12 @@ var (
 	// the field. A refused contract value is a TraegerContractError.
 	ErrTraegerStaffHireInvalid = errors.New("workforce: the hire is invalid")
 	// ErrTraegerStaffHireDuplicate holds a hire back because the Träger or
-	// one of its schools already keeps a person with this name and birthday;
-	// TraegerStaffHireDuplicateError names where. The Personalverwaltung
-	// confirms that these are two people, or links the existing person.
-	ErrTraegerStaffHireDuplicate = errors.New("workforce: a person with this name and birthday exists already")
+	// one of its schools already keeps a person who may be the same: same
+	// name and birthday, same name without a birthday, or, at a school, the
+	// same e-mail address. TraegerStaffHireDuplicateError names where and
+	// why. The Personalverwaltung confirms that these are two people, or
+	// completes the existing person instead.
+	ErrTraegerStaffHireDuplicate = errors.New("workforce: a person who may be the same exists already")
 )
 
 // ErrTraegerStaffHireIncomplete reports a hire that failed after it created
@@ -70,14 +72,22 @@ func (e *TraegerStaffHireError) Error() string {
 
 func (e *TraegerStaffHireError) Unwrap() error { return ErrTraegerStaffHireInvalid }
 
-// TraegerStaffHireMatch is one place a person with the hire's name and
-// birthday exists: a record of the Träger (RecordID) or an employment of
-// one of its schools without a record (SchoolID, SchoolName).
+// TraegerStaffHireMatch is one person who may be the one a hire names: a
+// record of the Träger (RecordID) or an employment of one of its schools
+// without a record (SchoolID, SchoolName, StaffID), with the name the
+// record or the school keeps. Reasons says why, at least one of
+// "name_birthday" (same name and birthday), "name" (same name, the person
+// has no birthday) and "email" (reached at the hire's address at a school). StaffID lets the Personalverwaltung open
+// that person under „Ohne Akte“ and create the record there.
 type TraegerStaffHireMatch struct {
-	Kind       string `json:"kind"`
-	RecordID   int64  `json:"staff_record_id,omitempty"`
-	SchoolID   int64  `json:"school_id,omitempty"`
-	SchoolName string `json:"school_name,omitempty"`
+	Kind       string   `json:"kind"`
+	RecordID   int64    `json:"staff_record_id,omitempty"`
+	SchoolID   int64    `json:"school_id,omitempty"`
+	SchoolName string   `json:"school_name,omitempty"`
+	StaffID    int64    `json:"staff_id,omitempty"`
+	FirstName  string   `json:"first_name"`
+	LastName   string   `json:"last_name"`
+	Reasons    []string `json:"reasons"`
 }
 
 // TraegerStaffHireDuplicateError lists the matches of a held-back hire.
@@ -86,7 +96,7 @@ type TraegerStaffHireDuplicateError struct {
 }
 
 func (e *TraegerStaffHireDuplicateError) Error() string {
-	return fmt.Sprintf("workforce: hire: %d existing people share name and birthday", len(e.Matches))
+	return fmt.Sprintf("workforce: hire: %d existing people may be the same", len(e.Matches))
 }
 
 func (e *TraegerStaffHireDuplicateError) Unwrap() error { return ErrTraegerStaffHireDuplicate }
@@ -102,8 +112,7 @@ type TraegerStaffHireSite struct {
 // Birthday is a calendar day (YYYY-MM-DD) and required: the check for a
 // person who exists already needs it. Email and Phone go to
 // each Einsatzort, where the school invites and reaches the person.
-// ConfirmDuplicate hires although a person with the same name and birthday
-// exists.
+// ConfirmDuplicate hires although a person who may be the same exists.
 type TraegerStaffHireInput struct {
 	FirstName        string
 	LastName         string
@@ -151,6 +160,14 @@ type TraegerSchoolEmploymentInput struct {
 // and the employment of a hire in the school of the caller's tenant
 // transaction, as guarded commands of their owners (ADR 0067). Neither gives
 // the person an account, a transponder or a role.
+
+// TraegerSchoolEmails finds who at the school of the caller's tenant
+// transaction signs in with an address (accounts, by lower-case address) or
+// holds an unused invitation to it (person IDs), for the check whether a
+// hired person exists already (#7378).
+type TraegerSchoolEmails interface {
+	FindSchoolEmailIdentities(ctx context.Context, emails []string) (accounts map[string]int64, invited map[string][]int64, err error)
+}
 
 // TraegerHirePersons creates the person of a hire at the People Directory.
 type TraegerHirePersons interface {

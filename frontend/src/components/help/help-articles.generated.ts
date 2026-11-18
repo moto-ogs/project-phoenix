@@ -15375,7 +15375,7 @@ export const traegerStaffRecordsTopic =
         "„Seit der Vorschau hat sich etwas an den Personalakten geändert“: Jemand hat gerade eine Akte geändert. Prüfe die Vorschau und übernimm noch einmal.",
         "„Diese Personalnummer ist schon vergeben“: Eine andere Akte oder eine andere Person an einer der Schulen hat die Nummer. Ändere zuerst die andere Nummer.",
         "Nach dem Einstellen steht da „ist nur zum Teil angelegt“: Stelle die Person nicht noch einmal ein. Öffne `Personalakten` und den Reiter `Ohne Akte`. Lege dort die Akte an und trage in der Akte den Vertrag ein.",
-        "Beim Einstellen fragt moto `Gibt es diese Person schon?`: Es gibt eine Akte oder eine Person an einer Schule mit demselben Namen und Geburtsdatum. Ist es dieselbe Person, brich ab und lege die Akte unter `Ohne Akte` an. Sind es zwei Personen, wähle `Trotzdem einstellen`.",
+        "Beim Einstellen fragt moto `Gibt es diese Person schon?`. Das passiert bei gleichem Namen und Geburtsdatum und bei gleichem Namen ohne Geburtsdatum. Es passiert auch, wenn eine Schule die Person unter derselben E-Mail-Adresse kennt. moto zeigt für jede Person den Grund. Ist es dieselbe Person, wähle bei ihr `Akte anlegen` oder `Akte öffnen`. Sind es zwei Personen, wähle `Trotzdem einstellen`.",
         "„Eine dieser Personen hat schon eine Personalakte“: Lade die Seite neu. Vielleicht hat jemand den Vorschlag gerade verknüpft.",
       ],
       related: [

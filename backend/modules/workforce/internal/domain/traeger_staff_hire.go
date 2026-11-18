@@ -108,9 +108,39 @@ func SchoolEmploymentType(contractKind string) *string {
 	}
 }
 
-// SamePerson reports whether a hire names a person by first name, last name
-// and birthday like someone the Träger or a school already keeps. Like the
-// proposals of ADR 0089 section 5 a name without a birthday is no match.
-func (h StaffHire) SamePerson(firstName, lastName, birthday string) bool {
-	return sharesKey(nameBirthdayKey(h.FirstName, h.LastName, h.Birthday), nameBirthdayKey(firstName, lastName, birthday))
+// Why a hire may name a person who exists already (#7378). A hire always
+// has a birthday; the person it matches may have none.
+const (
+	// HireMatchNameBirthday: same first name, last name and birthday.
+	HireMatchNameBirthday = "name_birthday"
+	// HireMatchName: same first and last name, and the person has no
+	// birthday that could tell the two apart.
+	HireMatchName = "name"
+	// HireMatchEmail: the person signs in with, is invited at or is reached
+	// at the hire's e-mail address.
+	HireMatchEmail = "email"
+)
+
+// NameMatch reports how a hire names a person the Träger or a school
+// already keeps: HireMatchNameBirthday for the same name and birthday,
+// HireMatchName for the same name of a person without a birthday, and ""
+// otherwise. A different birthday tells two people apart. Names compare
+// without case and surrounding or repeated spaces.
+func (h StaffHire) NameMatch(firstName, lastName, birthday string) string {
+	if !sameName(h.FirstName, firstName) || !sameName(h.LastName, lastName) {
+		return ""
+	}
+	switch strings.TrimSpace(birthday) {
+	case "":
+		return HireMatchName
+	case strings.TrimSpace(h.Birthday):
+		return HireMatchNameBirthday
+	default:
+		return ""
+	}
+}
+
+func sameName(a, b string) bool {
+	a, b = strings.Join(strings.Fields(a), " "), strings.Join(strings.Fields(b), " ")
+	return a != "" && strings.EqualFold(a, b)
 }
