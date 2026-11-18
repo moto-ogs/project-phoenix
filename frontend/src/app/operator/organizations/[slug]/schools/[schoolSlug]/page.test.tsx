@@ -44,6 +44,7 @@ const {
   mockMutateAccounts,
   mockMutateDevices,
   mockMutatePersons,
+  mockMutateRequiredDetails,
   mockListOrganizationSummaries,
   mockListOrganizationSchools,
   mockListSchoolAccounts,
@@ -65,6 +66,7 @@ const {
   mockMutateAccounts: vi.fn(),
   mockMutateDevices: vi.fn(),
   mockMutatePersons: vi.fn(),
+  mockMutateRequiredDetails: vi.fn(),
   mockListOrganizationSummaries: vi.fn(),
   mockListOrganizationSchools: vi.fn(),
   mockListSchoolAccounts: vi.fn(),
@@ -235,6 +237,7 @@ interface SetupOpts {
   accountsError?: Error;
   devicesError?: Error;
   personsError?: Error;
+  requiredDetailsError?: Error;
   accounts?: unknown[];
   devices?: unknown[];
   persons?: unknown[];
@@ -254,6 +257,7 @@ function setupSWR(opts: SetupOpts = {}) {
     accountsError,
     devicesError,
     personsError,
+    requiredDetailsError,
     accounts = [],
     devices = [],
     persons = [],
@@ -270,6 +274,13 @@ function setupSWR(opts: SetupOpts = {}) {
           error: schoolsError,
           isLoading: false,
           mutate: mockMutateSchools,
+        };
+      case operatorProvisioningKeys.schoolRequiredDetails():
+        return {
+          data: requiredDetailsError ? undefined : [],
+          error: requiredDetailsError,
+          isLoading: false,
+          mutate: mockMutateRequiredDetails,
         };
       case operatorProvisioningKeys.schoolAccounts(mockSchool.id):
         return {
@@ -324,6 +335,7 @@ describe("OperatorSchoolDetailPage", () => {
     });
     mockMutateOrgs.mockResolvedValue(undefined);
     mockMutateSchools.mockResolvedValue([mockSchool]);
+    mockMutateRequiredDetails.mockResolvedValue([]);
     await schoolPageProps.params;
   });
 
@@ -613,6 +625,22 @@ describe("OperatorSchoolDetailPage", () => {
     );
     // Edit modal renders fields keyed off the current school.
     expect(screen.getAllByLabelText(/Name/).length).toBeGreaterThan(0);
+  });
+
+  it("shows a failed required-details check with a retry", async () => {
+    setupSWR({ requiredDetailsError: new ApiError("down", 503) });
+
+    await renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die fehlenden Pflichtangaben"),
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+
+    await waitFor(() => expect(mockMutateRequiredDetails).toHaveBeenCalled());
   });
 
   it("opens soft-delete confirmation when Löschen is clicked", async () => {
