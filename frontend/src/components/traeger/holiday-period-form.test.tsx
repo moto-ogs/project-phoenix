@@ -153,6 +153,24 @@ describe("HolidayPeriodForm", () => {
     },
   );
 
+  it("opens the settings link from the form in a new tab (#7412)", () => {
+    render(
+      <ToastProvider>
+        <HolidayPeriodForm
+          period={stored}
+          schools={schools}
+          onSaved={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    const link = screen.getByRole("link", {
+      name: "Einstellungen, neuer Tab",
+    });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link.getAttribute("href")).toContain("/traeger/einstellungen");
+  });
+
   it("marks the missing fields of a new period and sends nothing", async () => {
     render(
       <ToastProvider>

@@ -43,9 +43,12 @@ describe("allocation mode of a holiday period (#4700)", () => {
         /1 Kriterium ist eingeschaltet: 1\. Beide Eltern berufstätig\./,
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Kriterien festlegen" }),
-    ).toHaveAttribute("href", "/traeger/ferien/kriterien");
+    // Inside a form the link opens a new tab, so the draft stays (#7412).
+    const link = screen.getByRole("link", {
+      name: "Kriterien festlegen, neuer Tab",
+    });
+    expect(link).toHaveAttribute("href", "/traeger/ferien/kriterien");
+    expect(link).toHaveAttribute("target", "_blank");
   });
 
   it("warns without an active criterion", () => {
