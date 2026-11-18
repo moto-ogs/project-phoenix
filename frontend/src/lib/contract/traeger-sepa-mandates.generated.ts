@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -37,7 +38,7 @@ export interface SEPAMandate {
   updated_at: string;
 }
 
-export const SEPAMandateSchema: z.ZodType<SEPAMandate, unknown> = z.object({
+export const SEPAMandateSchema: z.ZodType<SEPAMandate, unknown> = object<SEPAMandate>({
   id: int64StringOrNumber,
   contract_id: int64StringOrNumber,
   family_email: z.string(),
@@ -73,7 +74,7 @@ export interface SEPAMandateEvent {
   import_line?: number;
 }
 
-export const SEPAMandateEventSchema: z.ZodType<SEPAMandateEvent, unknown> = z.object({
+export const SEPAMandateEventSchema: z.ZodType<SEPAMandateEvent, unknown> = object<SEPAMandateEvent>({
   id: int64StringOrNumber,
   action: z.string(),
   source: z.string(),

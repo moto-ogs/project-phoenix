@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -45,7 +46,7 @@ export interface CareRun {
   invoice_date: string | null;
 }
 
-export const CareRunSchema: z.ZodType<CareRun, unknown> = z.object({
+export const CareRunSchema: z.ZodType<CareRun, unknown> = object<CareRun>({
   id: int64StringOrNumber,
   billing_month: calendarDate.nullable(),
   status: z.string(),
@@ -67,7 +68,7 @@ export interface CareRunList {
   suggested_month: string | null;
 }
 
-export const CareRunListSchema: z.ZodType<CareRunList, unknown> = z.object({
+export const CareRunListSchema: z.ZodType<CareRunList, unknown> = object<CareRunList>({
   runs: z.array(CareRunSchema).nullable(),
   suggested_month: calendarDate.nullable(),
 });
@@ -79,7 +80,7 @@ export interface CareRunSchool {
   open_run_id: string | null;
 }
 
-export const CareRunSchoolSchema: z.ZodType<CareRunSchool, unknown> = z.object({
+export const CareRunSchoolSchema: z.ZodType<CareRunSchool, unknown> = object<CareRunSchool>({
   id: int64StringOrNumber,
   name: z.string(),
   open_run_id: int64StringOrNumber.nullable(),
@@ -92,7 +93,7 @@ export interface CareExclusion {
   excluded_at: string;
 }
 
-export const CareExclusionSchema: z.ZodType<CareExclusion, unknown> = z.object({
+export const CareExclusionSchema: z.ZodType<CareExclusion, unknown> = object<CareExclusion>({
   reason: z.string(),
   account_id: int64StringOrNumber.nullable(),
   excluded_at: instant,
@@ -105,7 +106,7 @@ export interface CareWeekdayPrice {
   amount_cents: number;
 }
 
-export const CareWeekdayPriceSchema: z.ZodType<CareWeekdayPrice, unknown> = z.object({
+export const CareWeekdayPriceSchema: z.ZodType<CareWeekdayPrice, unknown> = object<CareWeekdayPrice>({
   weekday: z.string(),
   monthly_cents: safeInt,
   amount_cents: safeInt,
@@ -127,7 +128,7 @@ export interface CarePosition {
   key?: string;
 }
 
-export const CarePositionSchema: z.ZodType<CarePosition, unknown> = z.object({
+export const CarePositionSchema: z.ZodType<CarePosition, unknown> = object<CarePosition>({
   care_offering_id: int64StringOrNumber,
   module_name: z.string(),
   version_number: safeInt,
@@ -158,7 +159,7 @@ export interface CareReduction {
   amount_cents: number;
 }
 
-export const CareReductionSchema: z.ZodType<CareReduction, unknown> = z.object({
+export const CareReductionSchema: z.ZodType<CareReduction, unknown> = object<CareReduction>({
   kind: z.string(),
   rule_id: int64StringOrNumber,
   name: z.string(),
@@ -186,7 +187,7 @@ export interface CareMealPosition {
   key?: string;
 }
 
-export const CareMealPositionSchema: z.ZodType<CareMealPosition, unknown> = z.object({
+export const CareMealPositionSchema: z.ZodType<CareMealPosition, unknown> = object<CareMealPosition>({
   school_id: int64StringOrNumber,
   student_id: int64StringOrNumber,
   meal_month: calendarDate.nullable(),
@@ -209,7 +210,7 @@ export interface CareInvoiceCostShare {
   amount_cents: number;
 }
 
-export const CareInvoiceCostShareSchema: z.ZodType<CareInvoiceCostShare, unknown> = z.object({
+export const CareInvoiceCostShareSchema: z.ZodType<CareInvoiceCostShare, unknown> = object<CareInvoiceCostShare>({
   kind: z.string(),
   cost_bearer_id: int64StringOrNumber,
   cost_bearer_name: z.string(),
@@ -227,7 +228,7 @@ export interface CareRecipientName {
   email: string;
 }
 
-export const CareRecipientNameSchema: z.ZodType<CareRecipientName, unknown> = z.object({
+export const CareRecipientNameSchema: z.ZodType<CareRecipientName, unknown> = object<CareRecipientName>({
   first_name: z.string(),
   last_name: z.string(),
   second_name: z.string(),
@@ -243,7 +244,7 @@ export interface CareAmendmentValue {
   address?: PostalAddress;
 }
 
-export const CareAmendmentValueSchema: z.ZodType<CareAmendmentValue, unknown> = z.object({
+export const CareAmendmentValueSchema: z.ZodType<CareAmendmentValue, unknown> = object<CareAmendmentValue>({
   total_cents: safeInt.optional(),
   label: z.string().optional(),
   amount_cents: safeInt.optional(),
@@ -258,7 +259,7 @@ export interface CareRevocation {
   revoked_at: string;
 }
 
-export const CareRevocationSchema: z.ZodType<CareRevocation, unknown> = z.object({
+export const CareRevocationSchema: z.ZodType<CareRevocation, unknown> = object<CareRevocation>({
   reason: z.string(),
   account_id: int64StringOrNumber.nullable(),
   revoked_at: instant,
@@ -282,7 +283,7 @@ export interface CareAmendment {
   conflict?: string;
 }
 
-export const CareAmendmentSchema: z.ZodType<CareAmendment, unknown> = z.object({
+export const CareAmendmentSchema: z.ZodType<CareAmendment, unknown> = object<CareAmendment>({
   id: int64StringOrNumber,
   kind: z.string(),
   label: z.string(),
@@ -324,7 +325,7 @@ export interface CareInvoice {
   total_cents: number;
 }
 
-export const CareInvoiceSchema: z.ZodType<CareInvoice, unknown> = z.object({
+export const CareInvoiceSchema: z.ZodType<CareInvoice, unknown> = object<CareInvoice>({
   id: int64StringOrNumber,
   number: z.string(),
   issued_on: calendarDate.nullable(),
@@ -357,7 +358,7 @@ export interface CareUncountedContract {
   status: string;
 }
 
-export const CareUncountedContractSchema: z.ZodType<CareUncountedContract, unknown> = z.object({
+export const CareUncountedContractSchema: z.ZodType<CareUncountedContract, unknown> = object<CareUncountedContract>({
   contract_id: int64StringOrNumber,
   school_name: z.string(),
   child_first_name: z.string(),
@@ -374,7 +375,7 @@ export interface CareFeeNoticeHold {
   notice_number: string;
 }
 
-export const CareFeeNoticeHoldSchema: z.ZodType<CareFeeNoticeHold, unknown> = z.object({
+export const CareFeeNoticeHoldSchema: z.ZodType<CareFeeNoticeHold, unknown> = object<CareFeeNoticeHold>({
   contract_id: int64StringOrNumber,
   school_id: int64StringOrNumber,
   child_first_name: z.string(),
@@ -390,7 +391,7 @@ export interface CareMealGap {
   expired: boolean;
 }
 
-export const CareMealGapSchema: z.ZodType<CareMealGap, unknown> = z.object({
+export const CareMealGapSchema: z.ZodType<CareMealGap, unknown> = object<CareMealGap>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   month: calendarDate.nullable(),
@@ -409,7 +410,7 @@ export interface CareMealUnbilled {
   reason: string;
 }
 
-export const CareMealUnbilledSchema: z.ZodType<CareMealUnbilled, unknown> = z.object({
+export const CareMealUnbilledSchema: z.ZodType<CareMealUnbilled, unknown> = object<CareMealUnbilled>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   student_id: int64StringOrNumber,
@@ -435,7 +436,7 @@ export interface CareMealChanged {
   new_cents: number;
 }
 
-export const CareMealChangedSchema: z.ZodType<CareMealChanged, unknown> = z.object({
+export const CareMealChangedSchema: z.ZodType<CareMealChanged, unknown> = object<CareMealChanged>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   student_id: int64StringOrNumber,
@@ -457,7 +458,7 @@ export interface CareCostBearerTotal {
   amount_cents: number;
 }
 
-export const CareCostBearerTotalSchema: z.ZodType<CareCostBearerTotal, unknown> = z.object({
+export const CareCostBearerTotalSchema: z.ZodType<CareCostBearerTotal, unknown> = object<CareCostBearerTotal>({
   cost_bearer_id: int64StringOrNumber,
   cost_bearer_name: z.string(),
   invoice_count: safeInt,
@@ -472,7 +473,7 @@ export interface CareAmendable {
   positions: boolean;
 }
 
-export const CareAmendableSchema: z.ZodType<CareAmendable, unknown> = z.object({
+export const CareAmendableSchema: z.ZodType<CareAmendable, unknown> = object<CareAmendable>({
   amount: z.boolean(),
   recipient: z.boolean(),
   address: z.boolean(),
@@ -522,7 +523,7 @@ export interface CareRunDetail {
   legal_remedy_missing: boolean;
 }
 
-export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = z.object({
+export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<CareRunDetail>({
   id: int64StringOrNumber,
   billing_month: calendarDate.nullable(),
   status: z.string(),
@@ -571,7 +572,7 @@ export interface CareLetterSet {
   created_at: string;
 }
 
-export const CareLetterSetSchema: z.ZodType<CareLetterSet, unknown> = z.object({
+export const CareLetterSetSchema: z.ZodType<CareLetterSet, unknown> = object<CareLetterSet>({
   payment_due_on: calendarDate.nullable(),
   notes: z.string(),
   created_at: instant,
@@ -607,7 +608,7 @@ export interface CareLetterMailing {
   provider_block?: string;
 }
 
-export const CareLetterMailingSchema: z.ZodType<CareLetterMailing, unknown> = z.object({
+export const CareLetterMailingSchema: z.ZodType<CareLetterMailing, unknown> = object<CareLetterMailing>({
   invoice_id: int64StringOrNumber,
   kind: z.string(),
   number: z.string(),
@@ -647,7 +648,7 @@ export interface CareLetterSummary {
   without_inbox: number;
 }
 
-export const CareLetterSummarySchema: z.ZodType<CareLetterSummary, unknown> = z.object({
+export const CareLetterSummarySchema: z.ZodType<CareLetterSummary, unknown> = object<CareLetterSummary>({
   letters: safeInt,
   sent: safeInt,
   queued: safeInt,
@@ -664,7 +665,7 @@ export interface CareLetters {
   summary: CareLetterSummary;
 }
 
-export const CareLettersSchema: z.ZodType<CareLetters, unknown> = z.object({
+export const CareLettersSchema: z.ZodType<CareLetters, unknown> = object<CareLetters>({
   letters: CareLetterSetSchema.nullable(),
   documents: z.array(CareLetterMailingSchema).nullable(),
   summary: CareLetterSummarySchema,

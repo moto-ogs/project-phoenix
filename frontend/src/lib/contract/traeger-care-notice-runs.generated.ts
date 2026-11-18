@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -36,7 +37,7 @@ export interface CareNoticeRun {
   discarded_at: string | null;
 }
 
-export const CareNoticeRunSchema: z.ZodType<CareNoticeRun, unknown> = z.object({
+export const CareNoticeRunSchema: z.ZodType<CareNoticeRun, unknown> = object<CareNoticeRun>({
   id: int64StringOrNumber,
   year: safeInt,
   period_from: calendarDate.nullable(),
@@ -59,7 +60,7 @@ export interface CareNoticeRunList {
   suggested_month: string | null;
 }
 
-export const CareNoticeRunListSchema: z.ZodType<CareNoticeRunList, unknown> = z.object({
+export const CareNoticeRunListSchema: z.ZodType<CareNoticeRunList, unknown> = object<CareNoticeRunList>({
   runs: z.array(CareNoticeRunSchema).nullable(),
   suggested_year: safeInt,
   suggested_month: calendarDate.nullable(),
@@ -82,7 +83,7 @@ export interface CareNoticeLine {
   delta_cents: number;
 }
 
-export const CareNoticeLineSchema: z.ZodType<CareNoticeLine, unknown> = z.object({
+export const CareNoticeLineSchema: z.ZodType<CareNoticeLine, unknown> = object<CareNoticeLine>({
   kind: z.string(),
   label: z.string(),
   detail: z.string(),
@@ -108,7 +109,7 @@ export interface CareNoticeInstallment {
   delta_cents: number;
 }
 
-export const CareNoticeInstallmentSchema: z.ZodType<CareNoticeInstallment, unknown> = z.object({
+export const CareNoticeInstallmentSchema: z.ZodType<CareNoticeInstallment, unknown> = object<CareNoticeInstallment>({
   month: calendarDate.nullable(),
   due_on: calendarDate.nullable(),
   immediately_due: z.boolean(),
@@ -124,7 +125,7 @@ export interface CareNoticeReference {
   issued_on: string | null;
 }
 
-export const CareNoticeReferenceSchema: z.ZodType<CareNoticeReference, unknown> = z.object({
+export const CareNoticeReferenceSchema: z.ZodType<CareNoticeReference, unknown> = object<CareNoticeReference>({
   id: int64StringOrNumber,
   number: z.string(),
   issued_on: calendarDate.nullable(),
@@ -156,7 +157,7 @@ export interface CareNotice {
   legal_remedy: string;
 }
 
-export const CareNoticeSchema: z.ZodType<CareNotice, unknown> = z.object({
+export const CareNoticeSchema: z.ZodType<CareNotice, unknown> = object<CareNotice>({
   id: int64StringOrNumber,
   number: z.string(),
   issued_on: calendarDate.nullable(),
@@ -210,7 +211,7 @@ export interface CareNoticeRunDetail {
   legal_remedy_missing: boolean;
 }
 
-export const CareNoticeRunDetailSchema: z.ZodType<CareNoticeRunDetail, unknown> = z.object({
+export const CareNoticeRunDetailSchema: z.ZodType<CareNoticeRunDetail, unknown> = object<CareNoticeRunDetail>({
   id: int64StringOrNumber,
   year: safeInt,
   period_from: calendarDate.nullable(),
@@ -266,7 +267,7 @@ export interface CareNoticeMailing {
   provider_block?: string;
 }
 
-export const CareNoticeMailingSchema: z.ZodType<CareNoticeMailing, unknown> = z.object({
+export const CareNoticeMailingSchema: z.ZodType<CareNoticeMailing, unknown> = object<CareNoticeMailing>({
   notice_id: int64StringOrNumber,
   contract_id: int64StringOrNumber,
   kind: z.string(),
@@ -305,7 +306,7 @@ export interface CareNoticeLetterSummary {
   without_inbox: number;
 }
 
-export const CareNoticeLetterSummarySchema: z.ZodType<CareNoticeLetterSummary, unknown> = z.object({
+export const CareNoticeLetterSummarySchema: z.ZodType<CareNoticeLetterSummary, unknown> = object<CareNoticeLetterSummary>({
   notices: safeInt,
   letters: safeInt,
   sent: safeInt,
@@ -322,7 +323,7 @@ export interface CareNoticeLetters {
   summary: CareNoticeLetterSummary;
 }
 
-export const CareNoticeLettersSchema: z.ZodType<CareNoticeLetters, unknown> = z.object({
+export const CareNoticeLettersSchema: z.ZodType<CareNoticeLetters, unknown> = object<CareNoticeLetters>({
   notices: z.array(CareNoticeMailingSchema).nullable(),
   summary: CareNoticeLetterSummarySchema,
 });
@@ -335,7 +336,7 @@ export interface CareNoticeBankAccount {
   bank_name: string;
 }
 
-export const CareNoticeBankAccountSchema: z.ZodType<CareNoticeBankAccount, unknown> = z.object({
+export const CareNoticeBankAccountSchema: z.ZodType<CareNoticeBankAccount, unknown> = object<CareNoticeBankAccount>({
   account_holder: z.string(),
   iban: z.string(),
   bic: z.string(),
@@ -355,7 +356,7 @@ export interface CareNoticeLetter {
   bank_account: CareNoticeBankAccount | null;
 }
 
-export const CareNoticeLetterSchema: z.ZodType<CareNoticeLetter, unknown> = z.object({
+export const CareNoticeLetterSchema: z.ZodType<CareNoticeLetter, unknown> = object<CareNoticeLetter>({
   notice: CareNoticeSchema,
   sender_text: z.string(),
   footer_text: z.string(),

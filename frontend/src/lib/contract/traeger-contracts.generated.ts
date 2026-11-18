@@ -5,6 +5,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -16,7 +17,7 @@ export interface Concluded {
   at: string;
 }
 
-export const ConcludedSchema: z.ZodType<Concluded, unknown> = z.object({
+export const ConcludedSchema: z.ZodType<Concluded, unknown> = object<Concluded>({
   method: z.string(),
   at: instant,
 });
@@ -41,7 +42,7 @@ export interface ContractSummary {
   ends_on: string | null;
 }
 
-export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = z.object({
+export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object<ContractSummary>({
   student_id: int64StringOrNumber.nullable(),
   id: int64StringOrNumber,
   status: z.string(),
@@ -67,7 +68,7 @@ export interface ContractList {
   has_more: boolean;
 }
 
-export const ContractListSchema: z.ZodType<ContractList, unknown> = z.object({
+export const ContractListSchema: z.ZodType<ContractList, unknown> = object<ContractList>({
   contracts: z.array(ContractSummarySchema).nullable(),
   counts: z.record(z.string(), safeInt).nullable(),
   has_more: z.boolean(),
@@ -82,7 +83,7 @@ export interface Service {
   last_day: string | null;
 }
 
-export const ServiceSchema: z.ZodType<Service, unknown> = z.object({
+export const ServiceSchema: z.ZodType<Service, unknown> = object<Service>({
   weekday: z.string(),
   care_offering_id: int64StringOrNumber,
   module_name: z.string(),
@@ -109,7 +110,7 @@ export interface Candidate {
   mail_block?: string;
 }
 
-export const CandidateSchema: z.ZodType<Candidate, unknown> = z.object({
+export const CandidateSchema: z.ZodType<Candidate, unknown> = object<Candidate>({
   school_id: int64StringOrNumber,
   request_child_id: int64StringOrNumber,
   acceptance_issue: z.string(),
@@ -134,7 +135,7 @@ export interface SchoolConclusion {
   mode: string;
 }
 
-export const SchoolConclusionSchema: z.ZodType<SchoolConclusion, unknown> = z.object({
+export const SchoolConclusionSchema: z.ZodType<SchoolConclusion, unknown> = object<SchoolConclusion>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   mode: z.string(),
@@ -154,7 +155,7 @@ export interface TemplateInput {
   contract_partner: string;
 }
 
-export const TemplateInputSchema: z.ZodType<TemplateInput, unknown> = z.object({
+export const TemplateInputSchema: z.ZodType<TemplateInput, unknown> = object<TemplateInput>({
   term_kind: z.string(),
   term_months: safeInt.nullable(),
   notice_months: safeInt,
@@ -187,7 +188,7 @@ export interface Version {
   valid_until: string | null;
 }
 
-export const VersionSchema: z.ZodType<Version, unknown> = z.object({
+export const VersionSchema: z.ZodType<Version, unknown> = object<Version>({
   id: int64StringOrNumber,
   number: safeInt,
   status: z.string(),
@@ -214,7 +215,7 @@ export interface Party {
   has_account: boolean;
 }
 
-export const PartySchema: z.ZodType<Party, unknown> = z.object({
+export const PartySchema: z.ZodType<Party, unknown> = object<Party>({
   first_name: z.string(),
   last_name: z.string(),
   email: z.string(),
@@ -230,7 +231,7 @@ export interface Mailing {
   send_block?: string;
 }
 
-export const MailingSchema: z.ZodType<Mailing, unknown> = z.object({
+export const MailingSchema: z.ZodType<Mailing, unknown> = object<Mailing>({
   recipient: z.string(),
   sent_at: instant,
   state: z.string(),
@@ -256,7 +257,7 @@ export interface ContractSignature {
   intact: boolean;
 }
 
-export const ContractSignatureSchema: z.ZodType<ContractSignature, unknown> = z.object({
+export const ContractSignatureSchema: z.ZodType<ContractSignature, unknown> = object<ContractSignature>({
   method: z.string(),
   channel: z.string(),
   signer_name: z.string(),
@@ -280,7 +281,7 @@ export interface Reminder {
   sent_at: string;
 }
 
-export const ReminderSchema: z.ZodType<Reminder, unknown> = z.object({
+export const ReminderSchema: z.ZodType<Reminder, unknown> = object<Reminder>({
   number: safeInt,
   recipient: z.string(),
   sent_at: instant,
@@ -316,7 +317,7 @@ export interface ContractDetail {
   fee_text: string;
 }
 
-export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = z.object({
+export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<ContractDetail>({
   student_id: int64StringOrNumber.nullable(),
   id: int64StringOrNumber,
   status: z.string(),
@@ -363,7 +364,7 @@ export interface CreateSkip {
   reason: string;
 }
 
-export const CreateSkipSchema: z.ZodType<CreateSkip, unknown> = z.object({
+export const CreateSkipSchema: z.ZodType<CreateSkip, unknown> = object<CreateSkip>({
   school_id: int64StringOrNumber,
   request_child_id: int64StringOrNumber,
   reason: z.string(),
@@ -375,7 +376,7 @@ export interface CreateResult {
   skipped: CreateSkip[] | null;
 }
 
-export const CreateResultSchema: z.ZodType<CreateResult, unknown> = z.object({
+export const CreateResultSchema: z.ZodType<CreateResult, unknown> = object<CreateResult>({
   created: z.array(ContractSummarySchema).nullable(),
   skipped: z.array(CreateSkipSchema).nullable(),
 });
@@ -392,7 +393,7 @@ export interface SendSkip {
   reason: string;
 }
 
-export const SendSkipSchema: z.ZodType<SendSkip, unknown> = z.object({
+export const SendSkipSchema: z.ZodType<SendSkip, unknown> = object<SendSkip>({
   id: int64StringOrNumber,
   reason: z.string(),
 });
@@ -403,7 +404,7 @@ export interface SendResult {
   skipped: SendSkip[] | null;
 }
 
-export const SendResultSchema: z.ZodType<SendResult, unknown> = z.object({
+export const SendResultSchema: z.ZodType<SendResult, unknown> = object<SendResult>({
   sent: z.array(int64StringOrNumber).nullable(),
   skipped: z.array(SendSkipSchema).nullable(),
 });

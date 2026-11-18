@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -13,7 +14,7 @@ export interface BillingService {
   bundle_with: string[] | null;
 }
 
-export const BillingServiceSchema: z.ZodType<BillingService, unknown> = z.object({
+export const BillingServiceSchema: z.ZodType<BillingService, unknown> = object<BillingService>({
   service: z.string(),
   bundle_with: z.array(z.string()).nullable(),
 });
@@ -28,7 +29,7 @@ export interface ServiceTerms {
   updated_at: string | null;
 }
 
-export const ServiceTermsSchema: z.ZodType<ServiceTerms, unknown> = z.object({
+export const ServiceTermsSchema: z.ZodType<ServiceTerms, unknown> = object<ServiceTerms>({
   service: z.string(),
   payment_method: z.string(),
   due_days: safeInt,
@@ -43,7 +44,7 @@ export interface BillingTermsResponse {
   terms: ServiceTerms[] | null;
 }
 
-export const BillingTermsResponseSchema: z.ZodType<BillingTermsResponse, unknown> = z.object({
+export const BillingTermsResponseSchema: z.ZodType<BillingTermsResponse, unknown> = object<BillingTermsResponse>({
   services: z.array(BillingServiceSchema).nullable(),
   terms: z.array(ServiceTermsSchema).nullable(),
 });

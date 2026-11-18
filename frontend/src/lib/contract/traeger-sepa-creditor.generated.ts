@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -15,7 +16,7 @@ export interface SEPACreditor {
   updated_at: string | null;
 }
 
-export const SEPACreditorSchema: z.ZodType<SEPACreditor, unknown> = z.object({
+export const SEPACreditorSchema: z.ZodType<SEPACreditor, unknown> = object<SEPACreditor>({
   creditor_id: z.string(),
   prenotification_days: safeInt,
   missing_mandate: z.string(),

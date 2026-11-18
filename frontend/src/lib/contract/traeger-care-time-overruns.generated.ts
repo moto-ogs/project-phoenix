@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   calendarDate,
   int64StringOrNumber,
+  object,
   safeInt,
   success,
 } from "./runtime";
@@ -15,7 +16,7 @@ export interface OverrunFigures {
   extra_minutes: number;
 }
 
-export const OverrunFiguresSchema: z.ZodType<OverrunFigures, unknown> = z.object({
+export const OverrunFiguresSchema: z.ZodType<OverrunFigures, unknown> = object<OverrunFigures>({
   children: safeInt,
   overrun_days: safeInt,
   unbooked_days: safeInt,
@@ -32,7 +33,7 @@ export interface SchoolOverruns {
   figures: OverrunFigures;
 }
 
-export const SchoolOverrunsSchema: z.ZodType<SchoolOverruns, unknown> = z.object({
+export const SchoolOverrunsSchema: z.ZodType<SchoolOverruns, unknown> = object<SchoolOverruns>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   data_from: calendarDate.nullable(),
@@ -54,7 +55,7 @@ export interface OverrunChild {
   extra_minutes: number;
 }
 
-export const OverrunChildSchema: z.ZodType<OverrunChild, unknown> = z.object({
+export const OverrunChildSchema: z.ZodType<OverrunChild, unknown> = object<OverrunChild>({
   school_id: int64StringOrNumber,
   school_name: z.string(),
   student_id: int64StringOrNumber,
@@ -76,7 +77,7 @@ export interface OverrunEvaluation {
   children: OverrunChild[] | null;
 }
 
-export const OverrunEvaluationSchema: z.ZodType<OverrunEvaluation, unknown> = z.object({
+export const OverrunEvaluationSchema: z.ZodType<OverrunEvaluation, unknown> = object<OverrunEvaluation>({
   from: calendarDate.nullable(),
   to: calendarDate.nullable(),
   tolerance_minutes: safeInt,

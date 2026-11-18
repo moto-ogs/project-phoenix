@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   calendarDate,
   int64StringOrNumber,
+  object,
   openEnum,
   requestBody,
   safeInt,
@@ -19,7 +20,7 @@ export interface BillingPayment {
   cost_bearer_name: string;
 }
 
-export const BillingPaymentSchema: z.ZodType<BillingPayment, unknown> = z.object({
+export const BillingPaymentSchema: z.ZodType<BillingPayment, unknown> = object<BillingPayment>({
   kind: z.string(),
   cost_bearer_name: z.string(),
 });
@@ -46,7 +47,7 @@ export interface BillingFamily {
   open_cents: number;
 }
 
-export const BillingFamilySchema: z.ZodType<BillingFamily, unknown> = z.object({
+export const BillingFamilySchema: z.ZodType<BillingFamily, unknown> = object<BillingFamily>({
   id: int64StringOrNumber,
   recipient_first_name: z.string(),
   recipient_last_name: z.string(),
@@ -75,7 +76,7 @@ export interface FamilyChild {
   debtor_number: string;
 }
 
-export const FamilyChildSchema: z.ZodType<FamilyChild, unknown> = z.object({
+export const FamilyChildSchema: z.ZodType<FamilyChild, unknown> = object<FamilyChild>({
   first_name: z.string(),
   last_name: z.string(),
   birth_date: calendarDate.nullable(),
@@ -90,7 +91,7 @@ export interface FamilyChildNumbers {
   children: FamilyChild[] | null;
 }
 
-export const FamilyChildNumbersSchema: z.ZodType<FamilyChildNumbers, unknown> = z.object({
+export const FamilyChildNumbersSchema: z.ZodType<FamilyChildNumbers, unknown> = object<FamilyChildNumbers>({
   family_email: z.string(),
   recipient_first_name: z.string(),
   recipient_last_name: z.string(),
@@ -105,7 +106,7 @@ export interface debtorNumberSettings {
   scope: OpenEnum<DebtorNumberScope>;
 }
 
-export const debtorNumberSettingsSchema: z.ZodType<debtorNumberSettings, unknown> = z.object({
+export const debtorNumberSettingsSchema: z.ZodType<debtorNumberSettings, unknown> = object<debtorNumberSettings>({
   digits_only: z.boolean(),
   min_digits: safeInt,
   max_digits: safeInt,
@@ -138,7 +139,7 @@ export interface BillingFamilyDocument {
   due_on: string | null;
 }
 
-export const BillingFamilyDocumentSchema: z.ZodType<BillingFamilyDocument, unknown> = z.object({
+export const BillingFamilyDocumentSchema: z.ZodType<BillingFamilyDocument, unknown> = object<BillingFamilyDocument>({
   service: z.string(),
   recipient_kind: z.string(),
   recipient_second_name: z.string(),
@@ -186,7 +187,7 @@ export interface BillingFamilyDetail {
   documents: BillingFamilyDocument[] | null;
 }
 
-export const BillingFamilyDetailSchema: z.ZodType<BillingFamilyDetail, unknown> = z.object({
+export const BillingFamilyDetailSchema: z.ZodType<BillingFamilyDetail, unknown> = object<BillingFamilyDetail>({
   id: int64StringOrNumber,
   recipient_first_name: z.string(),
   recipient_last_name: z.string(),
@@ -229,7 +230,7 @@ export interface FamilyDebtorNumber {
   debtor_number: string;
 }
 
-export const FamilyDebtorNumberSchema: z.ZodType<FamilyDebtorNumber, unknown> = z.object({
+export const FamilyDebtorNumberSchema: z.ZodType<FamilyDebtorNumber, unknown> = object<FamilyDebtorNumber>({
   family_email: z.string(),
   debtor_number: z.string(),
 });

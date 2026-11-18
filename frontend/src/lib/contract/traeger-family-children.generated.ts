@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -21,7 +22,7 @@ export interface FamilyContractChild {
   child_last_name: string;
 }
 
-export const FamilyContractChildSchema: z.ZodType<FamilyContractChild, unknown> = z.object({
+export const FamilyContractChildSchema: z.ZodType<FamilyContractChild, unknown> = object<FamilyContractChild>({
   contract_id: int64StringOrNumber,
   school_name: z.string(),
   child_first_name: z.string(),
@@ -41,7 +42,7 @@ export interface FamilyChildCount {
   updated_at: string;
 }
 
-export const FamilyChildCountSchema: z.ZodType<FamilyChildCount, unknown> = z.object({
+export const FamilyChildCountSchema: z.ZodType<FamilyChildCount, unknown> = object<FamilyChildCount>({
   id: int64StringOrNumber,
   contract_id: int64StringOrNumber,
   stated_children: safeInt.nullable(),
@@ -65,7 +66,7 @@ export interface FamilyChildren {
   differing: boolean;
 }
 
-export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = z.object({
+export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<FamilyChildren>({
   contract_id: int64StringOrNumber,
   recipient_first_name: z.string(),
   recipient_last_name: z.string(),
@@ -82,7 +83,7 @@ export interface FamilyChildrenSet {
   rules: ContributionRule[] | null;
 }
 
-export const FamilyChildrenSetSchema: z.ZodType<FamilyChildrenSet, unknown> = z.object({
+export const FamilyChildrenSetSchema: z.ZodType<FamilyChildrenSet, unknown> = object<FamilyChildrenSet>({
   families: z.array(FamilyChildrenSchema).nullable(),
   rules: z.array(ContributionRuleSchema).nullable(),
 });

@@ -70,8 +70,22 @@ const pagination = z.object({
   total_records: safeInt,
 });
 
+/**
+ * z.object for a generated schema. The generator writes the interface and
+ * the shape from one model, so the type checker is handed the interface
+ * instead of deriving it from the shape: deriving every object type of the
+ * contract cost the build more than a gigabyte of memory (#2352).
+ */
+export function object<T>(
+  shape: Record<string, z.ZodType<unknown, unknown>>,
+): z.ZodType<T, unknown> {
+  return z.object(shape) as unknown as z.ZodType<T, unknown>;
+}
+
 /** common.Response */
-export function success<T extends z.ZodType>(data: T) {
+export function success<T>(
+  data: z.ZodType<T, unknown>,
+): z.ZodType<{ status: "success"; data: T }, unknown> {
   return z.object({ status: z.literal("success"), data });
 }
 
@@ -87,6 +101,11 @@ export const noData = z
   .transform(() => ({ data: null }));
 
 /** common.PaginatedResponse */
-export function paginated<T extends z.ZodType>(data: T) {
+export function paginated<T>(
+  data: z.ZodType<T, unknown>,
+): z.ZodType<
+  { status: "success"; data: T; pagination: z.output<typeof pagination> },
+  unknown
+> {
   return z.object({ status: z.literal("success"), data, pagination });
 }

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -18,7 +19,7 @@ export interface NumberRangeStart {
   set_by_account: boolean;
 }
 
-export const NumberRangeStartSchema: z.ZodType<NumberRangeStart, unknown> = z.object({
+export const NumberRangeStartSchema: z.ZodType<NumberRangeStart, unknown> = object<NumberRangeStart>({
   next_number: safeInt,
   example: z.string(),
   year: safeInt,
@@ -40,7 +41,7 @@ export interface NumberRange {
   updated_at: string | null;
 }
 
-export const NumberRangeSchema: z.ZodType<NumberRange, unknown> = z.object({
+export const NumberRangeSchema: z.ZodType<NumberRange, unknown> = object<NumberRange>({
   service: z.string(),
   pattern: z.string(),
   example: z.string(),

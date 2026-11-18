@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -31,7 +32,7 @@ export interface CareTariff {
   created_at: string;
 }
 
-export const CareTariffSchema: z.ZodType<CareTariff, unknown> = z.object({
+export const CareTariffSchema: z.ZodType<CareTariff, unknown> = object<CareTariff>({
   id: int64StringOrNumber,
   school_id: int64StringOrNumber,
   care_offering_id: int64StringOrNumber,
@@ -53,7 +54,7 @@ export interface CarePriceListHead {
   free_months: number[] | null;
 }
 
-export const CarePriceListHeadSchema: z.ZodType<CarePriceListHead, unknown> = z.object({
+export const CarePriceListHeadSchema: z.ZodType<CarePriceListHead, unknown> = object<CarePriceListHead>({
   school_id: int64StringOrNumber,
   valid_from: calendarDate.nullable(),
   free_months: z.array(safeInt).nullable(),
@@ -68,7 +69,7 @@ export interface CareTariffs {
   billed_until: Record<string, string | null> | null;
 }
 
-export const CareTariffsSchema: z.ZodType<CareTariffs, unknown> = z.object({
+export const CareTariffsSchema: z.ZodType<CareTariffs, unknown> = object<CareTariffs>({
   schools: z.array(CareSchoolSchema).nullable(),
   modules: z.array(CareModuleSchema).nullable(),
   tariffs: z.array(CareTariffSchema).nullable(),

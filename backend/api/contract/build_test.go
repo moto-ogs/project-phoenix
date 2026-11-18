@@ -390,7 +390,7 @@ func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
 	assert.Contains(t, shared, "  type OpenEnum,\n} from \"./runtime\";")
 	assert.Contains(t, shared, "  mode: OpenEnum<mode>;")
 	assert.Contains(t, shared, `export const MODE_VALUES = ["a", "b"] as const;`)
-	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = z.object({")
+	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = object<row>({")
 	assert.NotContains(t, shared, "export const routes")
 	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
 		assert.Contains(t, files[name], "import {\n  rowSchema,\n} from \"./shared.generated\";", name)

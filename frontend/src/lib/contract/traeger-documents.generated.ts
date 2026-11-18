@@ -4,6 +4,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   success,
 } from "./runtime";
@@ -14,7 +15,7 @@ export interface TraegerDocumentGroup {
   name: string;
 }
 
-export const TraegerDocumentGroupSchema: z.ZodType<TraegerDocumentGroup, unknown> = z.object({
+export const TraegerDocumentGroupSchema: z.ZodType<TraegerDocumentGroup, unknown> = object<TraegerDocumentGroup>({
   id: int64StringOrNumber,
   name: z.string(),
 });
@@ -26,7 +27,7 @@ export interface TraegerDocumentSchool {
   groups: TraegerDocumentGroup[] | null;
 }
 
-export const TraegerDocumentSchoolSchema: z.ZodType<TraegerDocumentSchool, unknown> = z.object({
+export const TraegerDocumentSchoolSchema: z.ZodType<TraegerDocumentSchool, unknown> = object<TraegerDocumentSchool>({
   id: int64StringOrNumber,
   name: z.string(),
   groups: z.array(TraegerDocumentGroupSchema).nullable(),
@@ -49,7 +50,7 @@ export interface TraegerDocumentRelease {
   released_at: string;
 }
 
-export const TraegerDocumentReleaseSchema: z.ZodType<TraegerDocumentRelease, unknown> = z.object({
+export const TraegerDocumentReleaseSchema: z.ZodType<TraegerDocumentRelease, unknown> = object<TraegerDocumentRelease>({
   id: int64StringOrNumber,
   audience: z.string(),
   school_id: int64StringOrNumber.nullable(),

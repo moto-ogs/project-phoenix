@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   instant,
+  object,
   requestBody,
   safeInt,
   success,
@@ -33,7 +34,7 @@ export interface studentLetterResponse {
   acknowledged_by: string;
 }
 
-export const studentLetterResponseSchema: z.ZodType<studentLetterResponse, unknown> = z.object({
+export const studentLetterResponseSchema: z.ZodType<studentLetterResponse, unknown> = object<studentLetterResponse>({
   announcement_id: z.string(),
   title: z.string(),
   published_at: instant,
@@ -53,7 +54,7 @@ export interface studentDeclarationResponse {
   signers: declarationSignerResponse[] | null;
 }
 
-export const studentDeclarationResponseSchema: z.ZodType<studentDeclarationResponse, unknown> = z.object({
+export const studentDeclarationResponseSchema: z.ZodType<studentDeclarationResponse, unknown> = object<studentDeclarationResponse>({
   announcement_id: z.string(),
   title: z.string(),
   published_at: instant,
@@ -69,7 +70,7 @@ export interface studentRecordsResponse {
   declarations: studentDeclarationResponse[] | null;
 }
 
-export const studentRecordsResponseSchema: z.ZodType<studentRecordsResponse, unknown> = z.object({
+export const studentRecordsResponseSchema: z.ZodType<studentRecordsResponse, unknown> = object<studentRecordsResponse>({
   letters: z.array(studentLetterResponseSchema).nullable(),
   declarations: z.array(studentDeclarationResponseSchema).nullable(),
 });
@@ -85,7 +86,7 @@ export interface pollChildResponse {
   can_answer: boolean;
 }
 
-export const pollChildResponseSchema: z.ZodType<pollChildResponse, unknown> = z.object({
+export const pollChildResponseSchema: z.ZodType<pollChildResponse, unknown> = object<pollChildResponse>({
   student_id: z.string(),
   first_name: z.string(),
   last_name: z.string(),
@@ -102,7 +103,7 @@ export interface pollOptionResultResponse {
   count: number;
 }
 
-export const pollOptionResultResponseSchema: z.ZodType<pollOptionResultResponse, unknown> = z.object({
+export const pollOptionResultResponseSchema: z.ZodType<pollOptionResultResponse, unknown> = object<pollOptionResultResponse>({
   option_id: z.string(),
   label: z.string(),
   count: safeInt,
@@ -116,7 +117,7 @@ export interface pollResultsResponse {
   options: pollOptionResultResponse[] | null;
 }
 
-export const pollResultsResponseSchema: z.ZodType<pollResultsResponse, unknown> = z.object({
+export const pollResultsResponseSchema: z.ZodType<pollResultsResponse, unknown> = object<pollResultsResponse>({
   child_count: safeInt,
   target_child_count: safeInt,
   answered_count: safeInt,

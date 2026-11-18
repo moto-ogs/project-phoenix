@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -31,7 +32,7 @@ export interface CareCostShare {
   updated_at: string;
 }
 
-export const CareCostShareSchema: z.ZodType<CareCostShare, unknown> = z.object({
+export const CareCostShareSchema: z.ZodType<CareCostShare, unknown> = object<CareCostShare>({
   id: int64StringOrNumber,
   contract_id: int64StringOrNumber,
   kind: z.string(),
@@ -58,7 +59,7 @@ export interface CareCostShareContract {
   shares: CareCostShare[] | null;
 }
 
-export const CareCostShareContractSchema: z.ZodType<CareCostShareContract, unknown> = z.object({
+export const CareCostShareContractSchema: z.ZodType<CareCostShareContract, unknown> = object<CareCostShareContract>({
   contract_id: int64StringOrNumber,
   school_id: int64StringOrNumber,
   school_name: z.string(),
@@ -75,7 +76,7 @@ export interface CareCostShareSet {
   warning_days: number;
 }
 
-export const CareCostShareSetSchema: z.ZodType<CareCostShareSet, unknown> = z.object({
+export const CareCostShareSetSchema: z.ZodType<CareCostShareSet, unknown> = object<CareCostShareSet>({
   contracts: z.array(CareCostShareContractSchema).nullable(),
   cost_bearers: z.array(CostBearerSchema).nullable(),
   expiring: safeInt,

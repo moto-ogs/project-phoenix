@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -20,7 +21,7 @@ export interface BookingOffering {
   module_names: string[] | null;
 }
 
-export const BookingOfferingSchema: z.ZodType<BookingOffering, unknown> = z.object({
+export const BookingOfferingSchema: z.ZodType<BookingOffering, unknown> = object<BookingOffering>({
   school_id: int64StringOrNumber,
   care_offering_id: int64StringOrNumber,
   module_names: z.array(z.string()).nullable(),
@@ -34,7 +35,7 @@ export interface RevenueAccount {
   updated_at: string;
 }
 
-export const RevenueAccountSchema: z.ZodType<RevenueAccount, unknown> = z.object({
+export const RevenueAccountSchema: z.ZodType<RevenueAccount, unknown> = object<RevenueAccount>({
   scope: z.string(),
   scope_id: int64StringOrNumber,
   account: z.string(),
@@ -51,7 +52,7 @@ export interface CostCenter {
   created_at: string;
 }
 
-export const CostCenterSchema: z.ZodType<CostCenter, unknown> = z.object({
+export const CostCenterSchema: z.ZodType<CostCenter, unknown> = object<CostCenter>({
   id: int64StringOrNumber,
   scope: z.string(),
   scope_id: int64StringOrNumber,
@@ -70,7 +71,7 @@ export interface BookingAccounts {
   cost_centers: CostCenter[] | null;
 }
 
-export const BookingAccountsSchema: z.ZodType<BookingAccounts, unknown> = z.object({
+export const BookingAccountsSchema: z.ZodType<BookingAccounts, unknown> = object<BookingAccounts>({
   standard_account: z.string(),
   cost_center_required: z.boolean(),
   schools: z.array(CareSchoolSchema).nullable(),
@@ -86,7 +87,7 @@ export interface SollstellungColumn {
   value?: string;
 }
 
-export const SollstellungColumnSchema: z.ZodType<SollstellungColumn, unknown> = z.object({
+export const SollstellungColumnSchema: z.ZodType<SollstellungColumn, unknown> = object<SollstellungColumn>({
   field: z.string(),
   header: z.string(),
   value: z.string().optional(),
@@ -103,7 +104,7 @@ export interface SollstellungMapping {
   file_name_pattern: string;
 }
 
-export const SollstellungMappingSchema: z.ZodType<SollstellungMapping, unknown> = z.object({
+export const SollstellungMappingSchema: z.ZodType<SollstellungMapping, unknown> = object<SollstellungMapping>({
   columns: z.array(SollstellungColumnSchema).nullable(),
   delimiter: z.string(),
   decimal_separator: z.string(),
@@ -120,7 +121,7 @@ export interface SollstellungSettings {
   updated_at: string | null;
 }
 
-export const SollstellungSettingsSchema: z.ZodType<SollstellungSettings, unknown> = z.object({
+export const SollstellungSettingsSchema: z.ZodType<SollstellungSettings, unknown> = object<SollstellungSettings>({
   mapping: SollstellungMappingSchema,
   custom: z.boolean(),
   updated_at: instant.nullable(),
@@ -132,7 +133,7 @@ export interface ExportFileNumbers {
   started: boolean;
 }
 
-export const ExportFileNumbersSchema: z.ZodType<ExportFileNumbers, unknown> = z.object({
+export const ExportFileNumbersSchema: z.ZodType<ExportFileNumbers, unknown> = object<ExportFileNumbers>({
   next: safeInt,
   started: z.boolean(),
 });
@@ -144,7 +145,7 @@ export interface DatevReadiness {
   invalid_settings: string[] | null;
 }
 
-export const DatevReadinessSchema: z.ZodType<DatevReadiness, unknown> = z.object({
+export const DatevReadinessSchema: z.ZodType<DatevReadiness, unknown> = object<DatevReadiness>({
   ready: z.boolean(),
   missing_settings: z.array(z.string()).nullable(),
   invalid_settings: z.array(z.string()).nullable(),
@@ -157,7 +158,7 @@ export interface ExportSettings {
   datev: DatevReadiness;
 }
 
-export const ExportSettingsSchema: z.ZodType<ExportSettings, unknown> = z.object({
+export const ExportSettingsSchema: z.ZodType<ExportSettings, unknown> = object<ExportSettings>({
   sollstellung: SollstellungSettingsSchema,
   file_numbers: ExportFileNumbersSchema,
   datev: DatevReadinessSchema,
@@ -171,7 +172,7 @@ export interface DatevRunOverview {
   fiscal_years: (string | null)[] | null;
 }
 
-export const DatevRunOverviewSchema: z.ZodType<DatevRunOverview, unknown> = z.object({
+export const DatevRunOverviewSchema: z.ZodType<DatevRunOverview, unknown> = object<DatevRunOverview>({
   run_kind: z.string(),
   run_id: int64StringOrNumber,
   new_bookings: safeInt,
@@ -184,7 +185,7 @@ export interface DatevRunOverviews {
   runs: DatevRunOverview[] | null;
 }
 
-export const DatevRunOverviewsSchema: z.ZodType<DatevRunOverviews, unknown> = z.object({
+export const DatevRunOverviewsSchema: z.ZodType<DatevRunOverviews, unknown> = object<DatevRunOverviews>({
   ready: z.boolean(),
   runs: z.array(DatevRunOverviewSchema).nullable(),
 });
@@ -198,7 +199,7 @@ export interface CostCenterFallback {
   cost_center: string;
 }
 
-export const CostCenterFallbackSchema: z.ZodType<CostCenterFallback, unknown> = z.object({
+export const CostCenterFallbackSchema: z.ZodType<CostCenterFallback, unknown> = object<CostCenterFallback>({
   number: z.string(),
   week_starts_on: calendarDate.nullable(),
   week_ends_on: calendarDate.nullable(),
@@ -217,7 +218,7 @@ export interface ExportFileHandover {
   settled_at?: string;
 }
 
-export const ExportFileHandoverSchema: z.ZodType<ExportFileHandover, unknown> = z.object({
+export const ExportFileHandoverSchema: z.ZodType<ExportFileHandover, unknown> = object<ExportFileHandover>({
   state: z.string(),
   reason: z.string().optional(),
   target_host: z.string(),
@@ -252,7 +253,7 @@ export interface ExportProtocolEntry {
   handover?: ExportFileHandover;
 }
 
-export const ExportProtocolEntrySchema: z.ZodType<ExportProtocolEntry, unknown> = z.object({
+export const ExportProtocolEntrySchema: z.ZodType<ExportProtocolEntry, unknown> = object<ExportProtocolEntry>({
   id: int64StringOrNumber,
   file_number: safeInt,
   format: z.string(),
@@ -283,7 +284,7 @@ export interface ExportProtocolPage {
   next_offset: number | null;
 }
 
-export const ExportProtocolPageSchema: z.ZodType<ExportProtocolPage, unknown> = z.object({
+export const ExportProtocolPageSchema: z.ZodType<ExportProtocolPage, unknown> = object<ExportProtocolPage>({
   files: z.array(ExportProtocolEntrySchema).nullable(),
   total: safeInt,
   next_offset: safeInt.nullable(),
@@ -301,7 +302,7 @@ export interface InvoiceHistoryEntry {
   note?: string;
 }
 
-export const InvoiceHistoryEntrySchema: z.ZodType<InvoiceHistoryEntry, unknown> = z.object({
+export const InvoiceHistoryEntrySchema: z.ZodType<InvoiceHistoryEntry, unknown> = object<InvoiceHistoryEntry>({
   kind: z.string(),
   at: instant,
   account_id: int64StringOrNumber.nullable(),
@@ -320,7 +321,7 @@ export interface InvoiceHistory {
   entries: InvoiceHistoryEntry[] | null;
 }
 
-export const InvoiceHistorySchema: z.ZodType<InvoiceHistory, unknown> = z.object({
+export const InvoiceHistorySchema: z.ZodType<InvoiceHistory, unknown> = object<InvoiceHistory>({
   kind: z.string(),
   id: int64StringOrNumber,
   number: z.string(),
@@ -340,7 +341,7 @@ export interface ExportRun {
   exports: number;
 }
 
-export const ExportRunSchema: z.ZodType<ExportRun, unknown> = z.object({
+export const ExportRunSchema: z.ZodType<ExportRun, unknown> = object<ExportRun>({
   run_kind: z.string(),
   run_id: int64StringOrNumber,
   label: z.string(),
@@ -360,7 +361,7 @@ export interface ExportRunPage {
   next_offset: number | null;
 }
 
-export const ExportRunPageSchema: z.ZodType<ExportRunPage, unknown> = z.object({
+export const ExportRunPageSchema: z.ZodType<ExportRunPage, unknown> = object<ExportRunPage>({
   runs: z.array(ExportRunSchema).nullable(),
   total: safeInt,
   not_exported: safeInt,

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -13,7 +14,7 @@ export interface ShiftTypeUsageResponse {
   series: number;
 }
 
-export const ShiftTypeUsageResponseSchema: z.ZodType<ShiftTypeUsageResponse, unknown> = z.object({
+export const ShiftTypeUsageResponseSchema: z.ZodType<ShiftTypeUsageResponse, unknown> = object<ShiftTypeUsageResponse>({
   shifts: safeInt,
   series: safeInt,
 });
@@ -29,7 +30,7 @@ export interface ShiftTypeResponse {
   usage?: ShiftTypeUsageResponse;
 }
 
-export const ShiftTypeResponseSchema: z.ZodType<ShiftTypeResponse, unknown> = z.object({
+export const ShiftTypeResponseSchema: z.ZodType<ShiftTypeResponse, unknown> = object<ShiftTypeResponse>({
   id: int64StringOrNumber,
   name: z.string(),
   color: z.string(),

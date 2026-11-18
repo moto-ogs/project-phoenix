@@ -5,6 +5,7 @@ import {
   int64String,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -37,7 +38,7 @@ export interface OwnAllowanceResponse {
   kept_by_traeger: boolean;
 }
 
-export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown> = z.object({
+export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown> = object<OwnAllowanceResponse>({
   name: z.string(),
   staff_id: z.string(),
   absence_type_id: z.string(),
@@ -58,7 +59,7 @@ export interface AbsenceRequestMailsResponse {
   absences: Record<string, Record<string, number> | null> | null;
 }
 
-export const AbsenceRequestMailsResponseSchema: z.ZodType<AbsenceRequestMailsResponse, unknown> = z.object({
+export const AbsenceRequestMailsResponseSchema: z.ZodType<AbsenceRequestMailsResponse, unknown> = object<AbsenceRequestMailsResponse>({
   absences: z.record(z.string(), z.record(z.string(), safeInt).nullable()).nullable(),
 });
 
@@ -82,7 +83,7 @@ export interface assignmentResponse {
   understaffed_ack: boolean;
 }
 
-export const assignmentResponseSchema: z.ZodType<assignmentResponse, unknown> = z.object({
+export const assignmentResponseSchema: z.ZodType<assignmentResponse, unknown> = object<assignmentResponse>({
   instance_id: int64StringOrNumber,
   title: z.string(),
   group_name: z.string().optional(),
@@ -114,7 +115,7 @@ export interface WorkSessionBreak {
   updated_at: string;
 }
 
-export const WorkSessionBreakSchema: z.ZodType<WorkSessionBreak, unknown> = z.object({
+export const WorkSessionBreakSchema: z.ZodType<WorkSessionBreak, unknown> = object<WorkSessionBreak>({
   id: int64String,
   tenant_id: int64String,
   session_id: int64String,
@@ -133,7 +134,7 @@ export interface closingDayRangeResponse {
   reason: string;
 }
 
-export const closingDayRangeResponseSchema: z.ZodType<closingDayRangeResponse, unknown> = z.object({
+export const closingDayRangeResponseSchema: z.ZodType<closingDayRangeResponse, unknown> = object<closingDayRangeResponse>({
   start_date: z.string(),
   end_date: z.string(),
   reason: z.string(),
@@ -144,7 +145,7 @@ export interface ConfigResponse {
   account_start_date: string;
 }
 
-export const ConfigResponseSchema: z.ZodType<ConfigResponse, unknown> = z.object({
+export const ConfigResponseSchema: z.ZodType<ConfigResponse, unknown> = object<ConfigResponse>({
   account_start_date: z.string(),
 });
 
@@ -167,7 +168,7 @@ export interface SessionResponse {
   updated_at: string;
 }
 
-export const SessionResponseSchema: z.ZodType<SessionResponse, unknown> = z.object({
+export const SessionResponseSchema: z.ZodType<SessionResponse, unknown> = object<SessionResponse>({
   id: int64String,
   tenant_id: int64String,
   staff_id: int64String,
@@ -212,7 +213,7 @@ export interface HistorySessionResponse {
   rounding_minutes: number;
 }
 
-export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unknown> = z.object({
+export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unknown> = object<HistorySessionResponse>({
   id: int64String,
   tenant_id: int64String,
   staff_id: int64String,
@@ -249,7 +250,7 @@ export interface WorkWeekSummary {
   is_over_weekly_max: boolean;
 }
 
-export const WorkWeekSummarySchema: z.ZodType<WorkWeekSummary, unknown> = z.object({
+export const WorkWeekSummarySchema: z.ZodType<WorkWeekSummary, unknown> = object<WorkWeekSummary>({
   week_number: safeInt,
   year: safeInt,
   total_net_minutes: safeInt,
@@ -274,7 +275,7 @@ export interface WorkDayLaborHint {
   break_too_short_required_minutes: number;
 }
 
-export const WorkDayLaborHintSchema: z.ZodType<WorkDayLaborHint, unknown> = z.object({
+export const WorkDayLaborHintSchema: z.ZodType<WorkDayLaborHint, unknown> = object<WorkDayLaborHint>({
   date: z.string(),
   net_minutes: safeInt,
   break_minutes: safeInt,
@@ -295,7 +296,7 @@ export interface HistoryResponse {
   labor_days: WorkDayLaborHint[] | null;
 }
 
-export const HistoryResponseSchema: z.ZodType<HistoryResponse, unknown> = z.object({
+export const HistoryResponseSchema: z.ZodType<HistoryResponse, unknown> = object<HistoryResponse>({
   sessions: z.array(HistorySessionResponseSchema).nullable(),
   weekly_summaries: z.array(WorkWeekSummarySchema).nullable(),
   labor_days: z.array(WorkDayLaborHintSchema).nullable(),
@@ -307,7 +308,7 @@ export interface PublicHoliday {
   name: string;
 }
 
-export const PublicHolidaySchema: z.ZodType<PublicHoliday, unknown> = z.object({
+export const PublicHolidaySchema: z.ZodType<PublicHoliday, unknown> = object<PublicHoliday>({
   date: z.string(),
   name: z.string(),
 });
@@ -328,7 +329,7 @@ export interface StaffVacationOpening {
   updated_at: string;
 }
 
-export const StaffVacationOpeningSchema: z.ZodType<StaffVacationOpening, unknown> = z.object({
+export const StaffVacationOpeningSchema: z.ZodType<StaffVacationOpening, unknown> = object<StaffVacationOpening>({
   id: int64StringOrNumber,
   tenant_id: int64StringOrNumber,
   staff_id: int64StringOrNumber,
@@ -356,7 +357,7 @@ export interface VacationQuotaSummary {
   opening?: StaffVacationOpening;
 }
 
-export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown> = z.object({
+export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown> = object<VacationQuotaSummary>({
   staff_id: int64StringOrNumber,
   year: safeInt,
   entitled_days: z.number(),

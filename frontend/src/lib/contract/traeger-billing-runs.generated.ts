@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -29,7 +30,7 @@ export interface BillingDocumentLink {
   reason: string;
 }
 
-export const BillingDocumentLinkSchema: z.ZodType<BillingDocumentLink, unknown> = z.object({
+export const BillingDocumentLinkSchema: z.ZodType<BillingDocumentLink, unknown> = object<BillingDocumentLink>({
   id: int64StringOrNumber,
   run_id: int64StringOrNumber,
   kind: z.string(),
@@ -55,7 +56,7 @@ export interface BillingPosition {
   booked_days: number | null;
 }
 
-export const BillingPositionSchema: z.ZodType<BillingPosition, unknown> = z.object({
+export const BillingPositionSchema: z.ZodType<BillingPosition, unknown> = object<BillingPosition>({
   kind: z.string(),
   amount_cents: safeInt,
   week_starts_on: calendarDate.nullable(),
@@ -83,7 +84,7 @@ export interface BillingCorrection {
   carried_from_number: string;
 }
 
-export const BillingCorrectionSchema: z.ZodType<BillingCorrection, unknown> = z.object({
+export const BillingCorrectionSchema: z.ZodType<BillingCorrection, unknown> = object<BillingCorrection>({
   id: int64StringOrNumber,
   child_id: int64StringOrNumber,
   amount_cents: safeInt,
@@ -104,7 +105,7 @@ export interface BillingCarriedCorrection {
   reason: string;
 }
 
-export const BillingCarriedCorrectionSchema: z.ZodType<BillingCarriedCorrection, unknown> = z.object({
+export const BillingCarriedCorrectionSchema: z.ZodType<BillingCarriedCorrection, unknown> = object<BillingCarriedCorrection>({
   position_id: int64StringOrNumber,
   source_number: z.string(),
   amount_cents: safeInt,
@@ -123,7 +124,7 @@ export interface BillingChild {
   total_cents: number;
 }
 
-export const BillingChildSchema: z.ZodType<BillingChild, unknown> = z.object({
+export const BillingChildSchema: z.ZodType<BillingChild, unknown> = object<BillingChild>({
   child_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -162,7 +163,7 @@ export interface BillingDocument {
   total_cents: number;
 }
 
-export const BillingDocumentSchema: z.ZodType<BillingDocument, unknown> = z.object({
+export const BillingDocumentSchema: z.ZodType<BillingDocument, unknown> = object<BillingDocument>({
   id: int64StringOrNumber,
   run_id: int64StringOrNumber,
   kind: z.string(),
@@ -196,7 +197,7 @@ export interface BillingEmergencyContact {
   phone: string;
 }
 
-export const BillingEmergencyContactSchema: z.ZodType<BillingEmergencyContact, unknown> = z.object({
+export const BillingEmergencyContactSchema: z.ZodType<BillingEmergencyContact, unknown> = object<BillingEmergencyContact>({
   name: z.string(),
   phone: z.string(),
 });
@@ -211,7 +212,7 @@ export interface BillingLetters {
   template_version: number;
 }
 
-export const BillingLettersSchema: z.ZodType<BillingLetters, unknown> = z.object({
+export const BillingLettersSchema: z.ZodType<BillingLetters, unknown> = object<BillingLetters>({
   payment_due_on: calendarDate.nullable(),
   notes: z.string(),
   emergency_contacts: z.array(BillingEmergencyContactSchema).nullable(),
@@ -251,7 +252,7 @@ export interface BillingRunDetail {
   fingerprint: string;
 }
 
-export const BillingRunDetailSchema: z.ZodType<BillingRunDetail, unknown> = z.object({
+export const BillingRunDetailSchema: z.ZodType<BillingRunDetail, unknown> = object<BillingRunDetail>({
   id: int64StringOrNumber,
   service: z.string(),
   holiday_period_id: int64StringOrNumber,
@@ -298,7 +299,7 @@ export interface BillingRun {
   discarded_at: string | null;
 }
 
-export const BillingRunSchema: z.ZodType<BillingRun, unknown> = z.object({
+export const BillingRunSchema: z.ZodType<BillingRun, unknown> = object<BillingRun>({
   id: int64StringOrNumber,
   service: z.string(),
   holiday_period_id: int64StringOrNumber,
@@ -322,7 +323,7 @@ export interface HolidayBillingPeriod {
   ends_on: string | null;
 }
 
-export const HolidayBillingPeriodSchema: z.ZodType<HolidayBillingPeriod, unknown> = z.object({
+export const HolidayBillingPeriodSchema: z.ZodType<HolidayBillingPeriod, unknown> = object<HolidayBillingPeriod>({
   id: int64StringOrNumber,
   name: z.string(),
   starts_on: calendarDate.nullable(),
@@ -346,7 +347,7 @@ export interface BillingLetterMailing {
   provider_block?: string;
 }
 
-export const BillingLetterMailingSchema: z.ZodType<BillingLetterMailing, unknown> = z.object({
+export const BillingLetterMailingSchema: z.ZodType<BillingLetterMailing, unknown> = object<BillingLetterMailing>({
   document_id: int64StringOrNumber,
   kind: z.string(),
   number: z.string(),
@@ -367,7 +368,7 @@ export interface BillingLetterMailings {
   documents: BillingLetterMailing[] | null;
 }
 
-export const BillingLetterMailingsSchema: z.ZodType<BillingLetterMailings, unknown> = z.object({
+export const BillingLetterMailingsSchema: z.ZodType<BillingLetterMailings, unknown> = object<BillingLetterMailings>({
   documents: z.array(BillingLetterMailingSchema).nullable(),
 });
 

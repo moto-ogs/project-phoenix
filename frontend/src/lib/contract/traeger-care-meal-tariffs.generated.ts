@@ -4,6 +4,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  object,
   requestBody,
   safeInt,
   success,
@@ -24,7 +25,7 @@ export interface CareMealTariff {
   created_at: string;
 }
 
-export const CareMealTariffSchema: z.ZodType<CareMealTariff, unknown> = z.object({
+export const CareMealTariffSchema: z.ZodType<CareMealTariff, unknown> = object<CareMealTariff>({
   id: int64StringOrNumber,
   school_id: int64StringOrNumber,
   valid_from: calendarDate.nullable(),
@@ -41,7 +42,7 @@ export interface CareMealTariffs {
   billed_until: Record<string, string | null> | null;
 }
 
-export const CareMealTariffsSchema: z.ZodType<CareMealTariffs, unknown> = z.object({
+export const CareMealTariffsSchema: z.ZodType<CareMealTariffs, unknown> = object<CareMealTariffs>({
   schools: z.array(CareSchoolSchema).nullable(),
   tariffs: z.array(CareMealTariffSchema).nullable(),
   billed_until: z.record(z.string(), calendarDate.nullable()).nullable(),

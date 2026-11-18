@@ -8,8 +8,7 @@ import (
 )
 
 // AdminSessionResponse is a work session as the admin session writes answer
-// it: the JSON workforce.WorkSessionWire writes, with the IDs as decimal
-// strings.
+// it, with the IDs as decimal strings.
 type AdminSessionResponse struct {
 	ID             common.ID  `json:"id"`
 	TenantID       common.ID  `json:"tenant_id"`
