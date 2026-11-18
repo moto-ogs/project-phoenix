@@ -823,7 +823,7 @@ order by ${quoted('Tage mit Nutzung')} desc`),
         },
         {
           name: 'OGS-App: Welcher Reiter auf „Alle Kinder“?',
-          description: 'Letzte 30 Tage. Wechsel auf einen Reiter von „Alle Kinder“ (Alle, Meine Gruppe, Meine Aufsicht), nur wenn die Schule Kinder nur dort finden lässt. Gezählt wird der Klick auf einen anderen Reiter, nicht der Reiter beim Öffnen der Seite (meist „Alle“). Wie oft die Seite insgesamt geöffnet wurde, zeigt „OGS-App: Welche Seiten werden am meisten genutzt?“.',
+          description: 'Letzte 30 Tage. Wechsel auf einen Reiter von „Alle Kinder“ (Alle, Meine Gruppe, Meine Aufsicht), nur wenn die Schule Kinder nur dort finden lässt. Gezählt wird jeder Wechsel auf einen anderen Reiter, per Klick oder Pfeiltaste (mit der Pfeiltaste zählt auch ein Reiter, über den man nur hinweggeht), nicht aber der Reiter beim Öffnen der Seite (meist „Alle“). „Meine Gruppe“ umfasst „Meine Gruppen“, „Meine Aufsicht“ auch „Aufsicht <Raum>“ bei mehreren Räumen. Wie oft die Seite insgesamt geöffnet wurde, zeigt „OGS-App: Welche Seiten werden am meisten genutzt?“.',
           ...hogql('production', (where) => `
 select
   multiIf(properties.child_scope = 'all', 'Alle', properties.child_scope = 'groups', 'Meine Gruppe', properties.child_scope = 'room', 'Meine Aufsicht', 'unbekannt') as Reiter,

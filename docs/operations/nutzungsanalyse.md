@@ -427,7 +427,8 @@ Clicks the browser reports inside a page (the tab of „Alle Kinder“, the
 bell) are no feature use of their own: the page view already counts the
 area, so they stand in `NO_FEATURE_EVENTS`. The tab event fires only when a
 person switches to another tab, never for the tab a page opens on; how often
-„Alle Kinder“ opened at all is in the page table.
+„Alle Kinder“ opened at all is in the page table. The tab band activates a tab
+on every arrow key, so a keyboard step over „Meine Gruppe“ counts as well.
 
 The demo funnel starts with the link request (`demo_link_requested` from the
 backend). The click on „Demo starten" before it happens on the website,
