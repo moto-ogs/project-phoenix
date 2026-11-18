@@ -591,6 +591,8 @@ export default function TraegerVertraegePage() {
         setSchoolId("");
       }}
       overflowMenu={[
+        ...exportItems,
+        { kind: "separator" },
         {
           label: "Verträge importieren",
           description:
@@ -599,8 +601,6 @@ export default function TraegerVertraegePage() {
           href: traegerPath("/traeger/vertraege/import"),
           onClick: () => undefined,
         },
-        { kind: "separator" },
-        ...exportItems,
       ]}
       actions={
         <Button

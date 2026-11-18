@@ -20,7 +20,7 @@ const OFFERING_PARAM = "angebot";
 
 export default function TraegerVertragsbedingungenPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<TenantPage title="Verträge" loading />}>
       <VertragsbedingungenContent />
     </Suspense>
   );
