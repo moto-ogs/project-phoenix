@@ -92,7 +92,31 @@ type GroupMessageResponse struct {
 	Body            string    `json:"body"`
 	CreatedAt       time.Time `json:"created_at"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []ParentMessageAttachmentResponse `json:"attachments,omitempty"`
+}
+
+// ParentMessageAttachmentResponse is one file of a message: the stored snapshot
+// (communication.MessageAttachment) as the conversation shows it.
+type ParentMessageAttachmentResponse struct {
+	ID          string `json:"id"`
+	Filename    string `json:"filename"`
+	SizeBytes   int    `json:"size_bytes"`
+	ContentType string `json:"content_type"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
+}
+
+// toAttachmentResponses reads the snapshot a message stores. The store
+// writes and checks its shape; a message without files has none.
+func toAttachmentResponses(snapshot json.RawMessage) []ParentMessageAttachmentResponse {
+	if len(snapshot) == 0 {
+		return nil
+	}
+	var out []ParentMessageAttachmentResponse
+	if err := json.Unmarshal(snapshot, &out); err != nil || len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 type GroupChildResponse struct {
@@ -299,7 +323,7 @@ func toGroupThreadDetail(detail *communication.ParentGroupThreadDetail, viewer .
 		messages = append(messages, GroupMessageResponse{
 			ID: strconv.FormatInt(message.ID, 10), SenderName: message.SenderName,
 			ClientMessageID: clientMessageIDForViewer(message.ClientMessageID, message.SenderAccountID, viewer), Body: message.Body, CreatedAt: message.CreatedAt,
-			Attachments: message.Attachments,
+			Attachments: toAttachmentResponses(message.Attachments),
 		})
 	}
 	return GroupThreadDetailResponse{

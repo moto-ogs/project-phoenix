@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
+	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
@@ -44,6 +45,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
+		{"/api/messages", parentMessagingAPI.RouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		// Class Day owns the child sheet the supervision route answers with.
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},

@@ -192,6 +192,108 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/messages/group-threads",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "GroupThreadSummaryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/group-threads/audience",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "target_id",
+          "kind": "string"
+        },
+        {
+          "name": "target_type",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "GroupChildResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/group-threads/{groupThreadId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GroupThreadDetailResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/group-threads/{groupThreadId}/mails",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GroupThreadMailsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/reachable-students",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ReachableStudentsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/students/{studentId}/guardians",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "audience",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "GuardianResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/threads/{threadId}/mails",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ThreadMailsResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/notifications/email-subscriptions/{type}",
       "portals": [
         "tenant"
@@ -1363,6 +1465,47 @@
           "kind": "ref",
           "ref": "TraegerReportTemplate"
         }
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/group-threads",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateGroupThreadRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GroupThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/group-threads/{groupThreadId}/close",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GroupThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/group-threads/{groupThreadId}/messages",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GroupMessageRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GroupThreadDetailResponse"
       }
     },
     {
@@ -3805,6 +3948,66 @@
       ]
     },
     {
+      "name": "CreateGroupThreadRequest",
+      "go_type": "messaging.CreateGroupThreadRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "client_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attachment_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "DayArrivalException",
       "go_type": "classday.DayArrivalException",
       "fields": [
@@ -4679,6 +4882,439 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupChildResponse",
+      "go_type": "messaging.GroupChildResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reachable",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "read",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupMessageRequest",
+      "go_type": "messaging.GroupMessageRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "client_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attachment_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupMessageResponse",
+      "go_type": "messaging.GroupMessageResponse",
+      "fields": [
+        {
+          "name": "client_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sender_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentMessageAttachmentResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupReadersResponse",
+      "go_type": "messaging.GroupReadersResponse",
+      "fields": [
+        {
+          "name": "target_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "recipient_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupThreadDetailResponse",
+      "go_type": "messaging.GroupThreadDetailResponse",
+      "fields": [
+        {
+          "name": "thread",
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupThreadResponse"
+          }
+        },
+        {
+          "name": "messages",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupMessageResponse"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupChildResponse"
+            }
+          }
+        },
+        {
+          "name": "family_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "read_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "readers",
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupReadersResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupThreadMailsResponse",
+      "go_type": "messaging.GroupThreadMailsResponse",
+      "fields": [
+        {
+          "name": "messages",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "int"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupThreadResponse",
+      "go_type": "messaging.GroupThreadResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "last_message_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupThreadSummaryResponse",
+      "go_type": "messaging.GroupThreadSummaryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "last_message_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "last_message_body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "read_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "readers",
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupReadersResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianReaderResponse",
+      "go_type": "messaging.GuardianReaderResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianResponse",
+      "go_type": "messaging.GuardianResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "readers",
+          "schema": {
+            "kind": "ref",
+            "ref": "ReadersResponse"
+          }
+        },
+        {
+          "name": "leadership_available",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -6578,6 +7214,50 @@
       ]
     },
     {
+      "name": "ParentMessageAttachmentResponse",
+      "go_type": "messaging.ParentMessageAttachmentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "PersonRequest",
       "go_type": "traegerstaff.PersonRequest",
       "request": true,
@@ -6720,6 +7400,42 @@
           "name": "available",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReachableStudentsResponse",
+      "go_type": "messaging.ReachableStudentsResponse",
+      "fields": [
+        {
+          "name": "student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReadersResponse",
+      "go_type": "messaging.ReadersResponse",
+      "fields": [
+        {
+          "name": "guardian",
+          "schema": {
+            "kind": "ref",
+            "ref": "GuardianReaderResponse"
+          }
+        },
+        {
+          "name": "school",
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolReadersResponse"
           }
         }
       ]
@@ -7663,6 +8379,34 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolReadersResponse",
+      "go_type": "messaging.SchoolReadersResponse",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "unnamed_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -9700,6 +10444,22 @@
             "elem": {
               "kind": "ref",
               "ref": "MemberResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ThreadMailsResponse",
+      "go_type": "messaging.ThreadMailsResponse",
+      "fields": [
+        {
+          "name": "messages",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }
