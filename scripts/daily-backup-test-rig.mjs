@@ -144,6 +144,8 @@ export function roleRestoreMatrix(t, rig, labels) {
     'ALTER TABLE records OWNER TO "diagnose synthetic";',
     'ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO "diagnose synthetic";',
     'GRANT pg_monitor TO phoenix_diagnostics;',
+    // A personal read login is disabled, but not when it owns data.
+    'CREATE ROLE dev_owner LOGIN; GRANT pg_read_all_data TO dev_owner; ALTER TABLE records OWNER TO dev_owner;',
   ];
   const profiles = [
     { group: 'phoenix_diagnostics', login: 'diagnose synthetic', label: 'diagnostics' },
