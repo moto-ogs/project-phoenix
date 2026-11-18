@@ -190,6 +190,9 @@ describe("Glocke im Träger-Portal", () => {
       expect(api.fetchNotificationFeedUnreadCount).toHaveBeenCalledTimes(1),
     );
 
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(api.fetchNotificationFeedUnreadCount).toHaveBeenCalledTimes(1);
+
     state.pathname = "/traeger/schliesstage";
     view.rerender(
       <TraegerNotificationFeedProvider>

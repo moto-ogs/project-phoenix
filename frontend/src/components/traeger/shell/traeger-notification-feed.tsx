@@ -8,7 +8,7 @@
 // darum nennt die Glocke keine Schule dafür.
 
 import { usePathname } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { NOTIFICATION_FEED_REFRESH_EVENT } from "~/lib/notification-events";
 import {
@@ -41,8 +41,13 @@ export function TraegerNotificationFeedProvider({
  */
 function ReloadOnPageChange() {
   const pathname = usePathname();
+  const previousPathname = useRef(pathname);
+
   useEffect(() => {
+    if (pathname === previousPathname.current) return;
+    previousPathname.current = pathname;
     window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
   }, [pathname]);
+
   return null;
 }
