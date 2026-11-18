@@ -54,7 +54,9 @@ type GuardianAccountHolder struct {
 
 // GuardianContact is the contact slice of users.guardian_profiles.
 type GuardianContact struct {
-	FirstName, LastName                           string
+	FirstName, LastName string
+	// Salutation is the chosen form of address; nil stores none.
+	Salutation                                    *string
 	Email, AddressStreet, AddressCity, PostalCode *string
 	PreferredContactMethod, LanguagePreference    string
 }
@@ -119,6 +121,12 @@ func NormalizeGuardianContact(contact GuardianContact) (GuardianContact, error) 
 	}
 	if contact.PreferredContactMethod != "" && !contactMethods[contact.PreferredContactMethod] {
 		return GuardianContact{}, guardianInvalid("invalid preferred contact method")
+	}
+	if contact.Salutation != nil && *contact.Salutation == "" {
+		contact.Salutation = nil
+	}
+	if contact.Salutation != nil && !textnorm.ValidSalutation(*contact.Salutation) {
+		return GuardianContact{}, guardianInvalid("invalid salutation")
 	}
 	return contact, nil
 }

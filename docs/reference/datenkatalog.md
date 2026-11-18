@@ -74,6 +74,13 @@ wird mit ihm zurückgegeben und gelöscht. Die Sicht
 `platform.delivery_guardian_contacts` speichert nichts; sie nennt dem Versand die
 Profil- und Kontoadresse je Elternkontakt samt Stopp.
 
+Migration 20261117221357 ergänzt `users.guardian_profiles.salutation` (#7362):
+die Anrede, die eine sorgeberechtigte Person im Eltern-Portal freiwillig für
+sich selbst wählt (`ms` = Frau, `mr` = Herr, leer = keine Angabe). Sie wählt nur
+das Grußwort deutscher E-Mails („Liebe“/„Lieber“ mit Vornamen); ohne Angabe
+bleibt die Begrüßung neutral. Das
+Feld gehört zum Elternkontakt und wird mit ihm zurückgegeben und gelöscht.
+
 Migration 1.15.727 ergänzt `platform.realtime_notifications` (#5504): eine
 Kopie eines In-App-Hinweises mit Empfängern, die andere API-Prozesse zwei
 Minuten lang lesen. Bei Eltern-Hinweisen enthält das JSON zusätzlich die

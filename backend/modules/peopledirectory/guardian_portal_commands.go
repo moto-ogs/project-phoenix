@@ -14,10 +14,12 @@ var ErrGuardianEmailTaken = errors.New("guardian e-mail is already used in this 
 // GuardianContactRecord is the contact slice of a guardian profile a portal
 // write sets. The owner normalizes it the way every guardian write does: names
 // trimmed, a non-empty e-mail trimmed and lower-cased. An empty contact method
-// or language on a create falls back to the column default.
+// or language on a create falls back to the column default. Salutation is
+// the form of address the person chose (ms, mr); nil stores none.
 type GuardianContactRecord struct {
 	FirstName              string
 	LastName               string
+	Salutation             *string
 	Email                  *string
 	AddressStreet          *string
 	AddressCity            *string

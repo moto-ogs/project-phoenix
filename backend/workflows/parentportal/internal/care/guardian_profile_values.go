@@ -11,6 +11,7 @@ type GuardianProfile struct {
 	UpdatedAt              time.Time
 	FirstName              string
 	LastName               string
+	Salutation             *string
 	Email                  *string
 	AddressStreet          *string
 	AddressCity            *string

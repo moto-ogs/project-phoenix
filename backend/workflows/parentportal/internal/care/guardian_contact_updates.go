@@ -88,6 +88,7 @@ func (s *Service) updateGuardianContactInTx(ctx context.Context, child *Child, a
 		return nil, err
 	}
 
+	applyOwnSalutation(profile, input.Salutation, profile.AccountID != nil && *profile.AccountID == accountID)
 	if err := s.writeGuardianContact(ctx, profile, input, before.email); err != nil {
 		return nil, err
 	}
@@ -108,6 +109,21 @@ func (s *Service) updateGuardianContactInTx(ctx context.Context, child *Child, a
 		child.HasPermission(GuardianPermissionPickupManage), false, s.GuardianPolicy.IsFullRole)
 	s.broadcastProfileChildrenAfterCommit(ctx, child.TenantID, target.profileLinks)
 	return result, nil
+}
+
+// applyOwnSalutation stores the form of address the caller chose for their
+// own profile. Another person's profile keeps what it has: the form of
+// address is each person's own, voluntary choice (#7362).
+func applyOwnSalutation(profile *GuardianProfile, chosen *string, isSelf bool) {
+	if !isSelf || chosen == nil {
+		return
+	}
+	if *chosen == "" {
+		profile.Salutation = nil
+		return
+	}
+	value := *chosen
+	profile.Salutation = &value
 }
 
 // editableGuardianContact is a guardian profile the caller may edit, locked

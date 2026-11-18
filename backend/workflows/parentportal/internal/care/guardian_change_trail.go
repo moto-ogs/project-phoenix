@@ -61,6 +61,7 @@ func (s *Service) auditPickupFlagChanges(ctx context.Context, accountID, student
 type guardianContactSnapshot struct {
 	firstName  string
 	lastName   string
+	salutation string
 	email      string
 	street     string
 	city       string
@@ -72,6 +73,7 @@ func snapshotGuardianContact(profile *GuardianProfile, phones []*GuardianPhoneNu
 	return guardianContactSnapshot{
 		firstName:  profile.FirstName,
 		lastName:   profile.LastName,
+		salutation: deref(profile.Salutation),
 		email:      deref(profile.Email),
 		street:     deref(profile.AddressStreet),
 		city:       deref(profile.AddressCity),
@@ -101,6 +103,7 @@ func (s *Service) auditContactChanges(ctx context.Context, accountID, studentID,
 	}
 	add(GuardianFieldFirstName, before.firstName, profile.FirstName)
 	add(GuardianFieldLastName, before.lastName, profile.LastName)
+	add(GuardianFieldSalutation, before.salutation, deref(profile.Salutation))
 	add(GuardianFieldEmail, before.email, deref(profile.Email))
 	add(GuardianFieldAddressStreet, before.street, deref(profile.AddressStreet))
 	add(GuardianFieldAddressCity, before.city, deref(profile.AddressCity))

@@ -70,8 +70,10 @@ export function buttonStyles({
   const variantStyles: Record<ButtonVariant, string> = {
     primary:
       "bg-gray-900 text-white shadow-md hover:bg-gray-700 hover:shadow-lg",
+    // Deckend weiß: Ein Knopf außerhalb einer Karte liegt auf dem
+    // gepunkteten Seitengrund, das Muster darf nicht durchscheinen (#7376).
     outline:
-      "bg-transparent text-gray-700 ring-1 ring-gray-300 shadow-md hover:bg-gray-50 hover:ring-gray-400",
+      "bg-white text-gray-700 ring-1 ring-gray-300 shadow-md hover:bg-gray-50 hover:ring-gray-400",
     outline_danger:
       "bg-moto-red-soft text-moto-red-strong ring-moto-red/30 shadow-md ring-1 hover:bg-moto-red/20 hover:ring-moto-red/50",
     danger:

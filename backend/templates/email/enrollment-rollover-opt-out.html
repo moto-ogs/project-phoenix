@@ -5,7 +5,7 @@
     {{template "school-brand" .}}
     <h1>Anmeldung wurde verlängert</h1>
 
-    <p>Sehr geehrte/r {{.GuardianFirstName}} {{.GuardianLastName}},</p>
+    <p>Guten Tag {{.GuardianFirstName}} {{.GuardianLastName}},</p>
 
     <p>{{if .SchoolName}}die <strong>{{.SchoolName}}</strong> hat{{else}}wir haben{{end}} Ihre Anmeldung für <strong>{{.PhaseName}}</strong> automatisch übernommen. Die Betreuung Ihres Kindes läuft im neuen Zeitraum weiter.{{if not .RenewalTermsRequired}} Sie müssen dafür nichts tun.{{end}}</p>
 

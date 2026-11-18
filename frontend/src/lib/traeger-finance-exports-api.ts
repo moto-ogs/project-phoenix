@@ -711,8 +711,12 @@ export type RevenueScope =
   /** The lunch of the holiday care (#5631). */
   | "holiday_meals"
   | "offering";
-/** Whose cost center: a school (KOST1), the holiday care (KOST1), an Angebot (KOST2). */
-export type CostCenterScope = "school" | "holiday" | "offering";
+/**
+ * Whose cost center: a school (KOST1), the holiday care a school hosts
+ * (KOST1, #7357), the holiday care of the Träger (KOST1), an Angebot (KOST2).
+ */
+export type CostCenterScope =
+  "school" | "school_holiday" | "holiday" | "offering";
 
 interface RevenueAccount {
   readonly scope: RevenueScope;

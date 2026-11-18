@@ -148,20 +148,21 @@ func (r bookingResolver) holidayMealAccount() string {
 }
 
 // holidayWeek is where a position of a holiday week books (invariant 5):
-// on the KOST1 of its host school on the first day of the week, else on
-// the holiday care's with the reason. hostSchoolID is zero without a host
-// school.
+// on the first day of the week on the holiday KOST1 of its host school
+// (#7357), else on that school's KOST1, else on the holiday care's of the
+// Träger with the reason. hostSchoolID is zero without a host school.
 func (r bookingResolver) holidayWeek(hostSchoolID int64, day calendar.Date) (parentbilling.PositionAccounts, string) {
 	accounts := r.holiday(day)
 	if hostSchoolID == 0 {
 		return accounts, parentbilling.CostCenterFallbackNoHostSchool
 	}
-	code := r.costCenter(bookingScope{parentbilling.BookingScopeSchool, hostSchoolID}, day)
-	if code == "" {
-		return accounts, parentbilling.CostCenterFallbackNoSchoolCostCenter
+	for _, scope := range []string{parentbilling.BookingScopeSchoolHoliday, parentbilling.BookingScopeSchool} {
+		if code := r.costCenter(bookingScope{scope, hostSchoolID}, day); code != "" {
+			accounts.CostCenter = code
+			return accounts, ""
+		}
 	}
-	accounts.CostCenter = code
-	return accounts, ""
+	return accounts, parentbilling.CostCenterFallbackNoSchoolCostCenter
 }
 
 // bookingResolverOf reads the assignments and the standard account of the
@@ -347,8 +348,8 @@ func (b *BookingAccounts) BookingAccounts(ctx context.Context, reviewer parentbi
 }
 
 // ownScope checks that a scope names a Leistung, a school or an Angebot of
-// the Träger; a cost center has no Leistung scope but the holiday care, a
-// revenue account no school.
+// the Träger; a cost center has no Leistung scope but the holiday care, of
+// the Träger or of one school (#7357), a revenue account no school.
 func (b *BookingAccounts) ownScope(ctx context.Context, organizationID int64, scope string, scopeID int64, costCenter bool) error {
 	switch {
 	case scope == parentbilling.BookingScopeHoliday && scopeID == 0,
@@ -357,7 +358,7 @@ func (b *BookingAccounts) ownScope(ctx context.Context, organizationID int64, sc
 		return nil
 	case scopeID <= 0:
 		return parentbilling.ErrBookingScopeNotFound
-	case scope == parentbilling.BookingScopeSchool && costCenter:
+	case (scope == parentbilling.BookingScopeSchool || scope == parentbilling.BookingScopeSchoolHoliday) && costCenter:
 		return b.ownSchool(ctx, organizationID, scopeID)
 	case scope == parentbilling.BookingScopeOffering:
 		return b.ownOffering(ctx, organizationID, scopeID)
@@ -432,8 +433,8 @@ func (b *BookingAccounts) SetRevenueAccount(ctx context.Context, reviewer parent
 	return b.BookingAccounts(ctx, reviewer)
 }
 
-// AddCostCenter adds a cost center of a school, the holiday care or an
-// Angebot from its day on.
+// AddCostCenter adds a cost center of a school, of the holiday care (of the
+// Träger or of one school) or of an Angebot from its day on.
 func (b *BookingAccounts) AddCostCenter(ctx context.Context, reviewer parentbilling.HolidayReviewer, center parentbilling.CostCenter,
 ) (parentbilling.BookingAccounts, error) {
 	if err := validReviewer(reviewer); err != nil {

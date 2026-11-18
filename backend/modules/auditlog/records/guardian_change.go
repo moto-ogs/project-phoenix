@@ -20,6 +20,7 @@ const (
 
 	GuardianFieldFirstName         = "first_name"
 	GuardianFieldLastName          = "last_name"
+	GuardianFieldSalutation        = "salutation"
 	GuardianFieldEmail             = "email"
 	GuardianFieldAddressStreet     = "address_street"
 	GuardianFieldAddressCity       = "address_city"
