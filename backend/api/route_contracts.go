@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
+	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
@@ -16,6 +17,7 @@ import (
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
@@ -41,6 +43,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		// Class Day owns the child sheet the supervision route answers with.
+		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
 		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
@@ -93,6 +96,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
 	}
+	// Appointments keeps its own day type.
+	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
 	return contract.Build(registrations, options)
 }
 

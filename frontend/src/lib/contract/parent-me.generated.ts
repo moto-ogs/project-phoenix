@@ -5,15 +5,95 @@ import {
   instant,
   int64String,
   openEnum,
+  requestBody,
+  safeInt,
   success,
   type OpenEnum,
 } from "./runtime";
+import {
+  EventSchema,
+  type Event,
+  type InvitationAnswer,
+} from "./shared.generated";
 
 export const ENROLLMENT_PHASE_AUDIENCE_VALUES = ["existing_students", "linked_parents", "new_students", "open"] as const;
 export type EnrollmentPhaseAudience = (typeof ENROLLMENT_PHASE_AUDIENCE_VALUES)[number];
 
 export const ENROLLMENT_PHASE_KIND_VALUES = ["custom", "holiday", "school_year"] as const;
 export type EnrollmentPhaseKind = (typeof ENROLLMENT_PHASE_KIND_VALUES)[number];
+
+/** Go: parent.ParentCalendarResponse */
+export interface ParentCalendarResponse {
+  from: string | null;
+  to: string | null;
+  events: Event[] | null;
+}
+
+export const ParentCalendarResponseSchema: z.ZodType<ParentCalendarResponse, unknown> = z.object({
+  from: calendarDate.nullable(),
+  to: calendarDate.nullable(),
+  events: z.array(EventSchema).nullable(),
+});
+
+/** Go: portal.AppointmentResponseCounts */
+export interface AppointmentResponseCounts {
+  accepted: number;
+  declined: number;
+  pending: number;
+}
+
+export const AppointmentResponseCountsSchema: z.ZodType<AppointmentResponseCounts, unknown> = z.object({
+  accepted: safeInt,
+  declined: safeInt,
+  pending: safeInt,
+});
+
+/** Go: portal.AppointmentAttendee */
+export interface AppointmentAttendee {
+  recipient_id: string;
+  recipient_type: string;
+  name: string;
+  status: string;
+  responded_at?: string;
+}
+
+export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = z.object({
+  recipient_id: z.string(),
+  recipient_type: z.string(),
+  name: z.string(),
+  status: z.string(),
+  responded_at: instant.optional(),
+});
+
+/** Go: portal.AppointmentOverview */
+export interface AppointmentOverview {
+  appointment_id: string;
+  occurrence_date?: string;
+  delivery_mode: string;
+  overview_visibility: string;
+  counts: AppointmentResponseCounts;
+  attendees: AppointmentAttendee[] | null;
+}
+
+export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = z.object({
+  appointment_id: z.string(),
+  occurrence_date: calendarDate.optional(),
+  delivery_mode: z.string(),
+  overview_visibility: z.string(),
+  counts: AppointmentResponseCountsSchema,
+  attendees: z.array(AppointmentAttendeeSchema).nullable(),
+});
+
+/** Go: parent.ParentCalendarFeedResponse */
+export interface ParentCalendarFeedResponse {
+  url: string;
+  webcal_url: string;
+}
+
+export const ParentCalendarFeedResponseSchema: z.ZodType<ParentCalendarFeedResponse, unknown> = z.object({
+  url: z.string(),
+  webcal_url: z.string(),
+});
 
 /** Go: parent.EnrollablePhaseResponse */
 export interface EnrollablePhaseResponse {
@@ -50,11 +130,64 @@ export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, u
   audience: openEnum<EnrollmentPhaseAudience>(),
 });
 
+/** Go: parent.ParentInvitationStatusResponse */
+export interface ParentInvitationStatusResponse {
+  status: string;
+}
+
+export const ParentInvitationStatusResponseSchema: z.ZodType<ParentInvitationStatusResponse, unknown> = z.object({
+  status: z.string(),
+});
+
+/** Query of GET /parent/me/calendar */
+export interface GetParentMeCalendarQuery {
+  from?: string;
+  to?: string;
+}
+
+/** Query of GET /parent/me/calendar/appointments/{appointmentId}/overview */
+export interface GetParentMeCalendarAppointmentsAppointmentIdOverviewQuery {
+  occurrence_date?: string;
+}
+
 export const routes = {
+  "GET /parent/me/calendar": {
+    method: "GET",
+    pattern: "/parent/me/calendar",
+    portals: ["parent"],
+    query: ["from", "to"],
+    response: success(ParentCalendarResponseSchema),
+  },
+  "GET /parent/me/calendar/appointments/{appointmentId}/overview": {
+    method: "GET",
+    pattern: "/parent/me/calendar/appointments/{appointmentId}/overview",
+    portals: ["parent"],
+    query: ["occurrence_date"],
+    response: success(AppointmentOverviewSchema),
+  },
+  "GET /parent/me/calendar/feed": {
+    method: "GET",
+    pattern: "/parent/me/calendar/feed",
+    portals: ["parent"],
+    response: success(ParentCalendarFeedResponseSchema),
+  },
   "GET /parent/me/enrollable-schools": {
     method: "GET",
     pattern: "/parent/me/enrollable-schools",
     portals: ["parent"],
     response: success(z.array(EnrollablePhaseResponseSchema)),
+  },
+  "POST /parent/me/calendar/feed/rotate": {
+    method: "POST",
+    pattern: "/parent/me/calendar/feed/rotate",
+    portals: ["parent"],
+    response: success(ParentCalendarFeedResponseSchema),
+  },
+  "POST /parent/me/calendar/recipients/{recipientId}/response": {
+    method: "POST",
+    pattern: "/parent/me/calendar/recipients/{recipientId}/response",
+    portals: ["parent"],
+    request: requestBody<InvitationAnswer>(),
+    response: success(ParentInvitationStatusResponseSchema),
   },
 } as const;

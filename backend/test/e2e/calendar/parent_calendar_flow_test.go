@@ -110,3 +110,44 @@ func TestParentCalendarHTTPFlow_ViewICSAndFeed(t *testing.T) {
 	staffScopeRR := doJSON(t, router, http.MethodGet, "/parent/me/calendar?from=2026-05-04&to=2026-05-04", manageToken, nil)
 	assert.Equal(t, http.StatusUnauthorized, staffScopeRR.Code, staffScopeRR.Body.String())
 }
+
+// TestParentCalendarHTTPFlow_AnswerAndRotateFeed drives the guardian's writes
+// through the real routers: she answers an invitation and renews the address
+// of her subscription feed.
+func TestParentCalendarHTTPFlow_AnswerAndRotateFeed(t *testing.T) {
+	t.Parallel()
+	db, router := setupParentCalendarRoute(t)
+	_, organizerAccount := testpkg.CreateTestCalendarStaff(t, db, "E2E", "ParentAnswerOrg")
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	manageToken := calendarToken(t, organizerAccount.ID, permissions.CalendarManage, permissions.CalendarOwn)
+	createRR := doJSON(t, router, http.MethodPost, "/calendar/appointments", manageToken, map[string]any{
+		"title": "Sommerfest", "start_date": "2026-06-12", "end_date": "2026-06-12",
+		"start_time": "15:00", "end_time": "18:00", "delivery_mode": "rsvp_required",
+		"targets": []map[string]any{{"type": "guardian_profile", "id": chain.GuardianProfileID}},
+	})
+	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
+	var created createAppointmentE2EResponse
+	require.NoError(t, json.Unmarshal(createRR.Body.Bytes(), &created))
+	require.Len(t, created.Data.Recipients, 1)
+	parentToken := parentCalendarToken(t, chain.AccountID)
+
+	respondPath := "/parent/me/calendar/recipients/" + strconv.FormatInt(created.Data.Recipients[0].ID, 10) + "/response"
+	respondRR := doJSON(t, router, http.MethodPost, respondPath, parentToken, map[string]any{"status": "declined"})
+	require.Equal(t, http.StatusOK, respondRR.Code, respondRR.Body.String())
+	listRR := doJSON(t, router, http.MethodGet, "/parent/me/calendar?from=2026-06-12&to=2026-06-12", parentToken, nil)
+	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
+	var listed calendarListE2EResponse
+	require.NoError(t, json.Unmarshal(listRR.Body.Bytes(), &listed))
+	require.Len(t, listed.Data.Events, 1)
+	assert.Equal(t, "declined", listed.Data.Events[0].ResponseStatus)
+
+	feedRR := doJSON(t, router, http.MethodGet, "/parent/me/calendar/feed", parentToken, nil)
+	require.Equal(t, http.StatusOK, feedRR.Code, feedRR.Body.String())
+	var feed, rotated feedE2EResponse
+	require.NoError(t, json.Unmarshal(feedRR.Body.Bytes(), &feed))
+	rotateRR := doJSON(t, router, http.MethodPost, "/parent/me/calendar/feed/rotate", parentToken, nil)
+	require.Equal(t, http.StatusOK, rotateRR.Code, rotateRR.Body.String())
+	require.NoError(t, json.Unmarshal(rotateRR.Body.Bytes(), &rotated))
+	assert.NotEmpty(t, rotated.Data.URL)
+	assert.NotEqual(t, feed.Data.URL, rotated.Data.URL)
+}
