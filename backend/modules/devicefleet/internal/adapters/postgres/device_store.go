@@ -91,8 +91,12 @@ func (s *DeviceStore) Create(ctx context.Context, input devicefleet.CreateDevice
 		}
 		err = insert.Returning("*").Scan(ctx)
 	} else {
-		query, args := createWithinSlots(row, input.RecordedBy, *slotLimit)
-		err = db.NewRaw(query, args...).Scan(ctx, &row)
+		args := createWithinSlotsArgs(row, input.RecordedBy, *slotLimit)
+		if input.RecordedBy == nil {
+			err = db.NewRaw(createWithinSlotsSQL, args...).Scan(ctx, &row)
+		} else {
+			err = db.NewRaw(createWithinSlotsRecordedSQL, args...).Scan(ctx, &row)
+		}
 	}
 	stats.StatementDuration = time.Since(started)
 	switch {
@@ -116,37 +120,41 @@ func isTakenDeviceID(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.IntegrityViolation() && pgErr.Field('n') == deviceIDIndex
 }
 
-// createWithinSlots builds the INSERT of a device at a school with a
+// createWithinSlotsArgs binds the INSERT of a device at a school with a
 // Geräteplatz limit (#2312). The device's ID is reserved only while the
 // school's live devices that occupy a Geräteplatz stay below the limit; the
 // history entry of #2321 and the device row both hang on that reservation,
 // so a full school gets neither and the statement returns no row. The
 // caller holds the school's Geräteplatz lock, so the count cannot move
 // before the insert commits.
-func createWithinSlots(row deviceRow, recordedBy *devicefleet.LifecycleActorRef, slotLimit int) (string, []any) {
-	query := `WITH new_device AS (
+func createWithinSlotsArgs(row deviceRow, recordedBy *devicefleet.LifecycleActorRef, slotLimit int) []any {
+	args := []any{row.TenantID, devicefleet.WebManualDeviceID, slotLimit}
+	if recordedBy != nil {
+		record := lifecycleRecord(*recordedBy, row.CreatedAt)
+		args = append(args, row.TenantID, record.ActorKind, record.AccountID, record.OperatorID,
+			row.DeviceID, row.DeviceType, row.Name, row.Name, row.Status, record.OccurredAt)
+	}
+	return append(args, row.TenantID, row.CreatedAt, row.DeviceID, row.DeviceType, row.Name, row.Status, row.APIKeyHash,
+		row.MaskedAPIKey, row.LastSeen, row.RegisteredByID, row.RoomID)
+}
+
+const (
+	createWithinSlotsReserve = `WITH new_device AS (
 	SELECT nextval(pg_get_serial_sequence('iot.devices', 'id')) AS id
 	WHERE (
 		SELECT count(*) FROM iot.devices AS "device"
 		WHERE "device".tenant_id = ? AND "device".archived_at IS NULL AND "device".device_id <> ?
 	) < ?
 )`
-	args := []any{row.TenantID, devicefleet.WebManualDeviceID, slotLimit}
-	if recordedBy != nil {
-		record := lifecycleRecord(*recordedBy, row.CreatedAt)
-		query += `, event AS (` + lifecycleCreatedSQL + ` WHERE EXISTS (SELECT 1 FROM new_device))`
-		args = append(args, row.TenantID, record.ActorKind, record.AccountID, record.OperatorID,
-			row.DeviceID, row.DeviceType, row.Name, row.Name, row.Status, record.OccurredAt)
-	}
-	query += `
+	createWithinSlotsInsert = `
 INSERT INTO iot.devices (id, tenant_id, created_at, device_id, device_type, name, status, api_key_hash,
 	masked_api_key, last_seen, registered_by_id, room_id)
 SELECT new_device.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM new_device
 RETURNING *`
-	args = append(args, row.TenantID, row.CreatedAt, row.DeviceID, row.DeviceType, row.Name, row.Status, row.APIKeyHash,
-		row.MaskedAPIKey, row.LastSeen, row.RegisteredByID, row.RoomID)
-	return query, args
-}
+	createWithinSlotsSQL         = createWithinSlotsReserve + createWithinSlotsInsert
+	createWithinSlotsRecordedSQL = createWithinSlotsReserve + `, event AS (` + lifecycleCreatedSQL +
+		` WHERE EXISTS (SELECT 1 FROM new_device))` + createWithinSlotsInsert
+)
 
 // CountSlotDevices counts the live devices of the school in context that
 // occupy a Geräteplatz (#2312).

@@ -88,8 +88,17 @@ func TestDeviceSlotsSchoolPortal(t *testing.T) {
 	denied := f.register(t, "slots-reader", "devices:read")
 	assert.Equal(t, http.StatusForbidden, denied.Code, "devices:read registers nothing")
 
+	createdEvents := func() int {
+		var n int
+		require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM audit.device_lifecycle_events WHERE tenant_id = ? AND action = 'created'`,
+			tenantID).Scan(context.Background(), &n))
+		return n
+	}
+	eventsBefore := createdEvents()
 	created := f.register(t, "slots-last", "devices:manage")
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
+	require.Equal(t, eventsBefore+1, createdEvents(), "a registration within the limit is in the device history")
+	eventsBefore++
 
 	full := f.register(t, "slots-beyond", "devices:manage")
 	require.Equal(t, http.StatusConflict, full.Code, full.Body.String())
@@ -97,6 +106,7 @@ func TestDeviceSlotsSchoolPortal(t *testing.T) {
 	assert.Contains(t, full.Body.String(), `"device_slots":3`)
 	summary, _ = f.slotSummary(t, "devices:read")
 	assert.Equal(t, 3, summary.Occupied, "the refused registration left no device")
+	assert.Equal(t, eventsBefore, createdEvents(), "the refused registration left no history entry")
 	assert.Equal(t, 0, *summary.Free)
 
 	duplicate := f.register(t, first.DeviceID, "devices:manage")
