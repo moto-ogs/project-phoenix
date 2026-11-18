@@ -230,15 +230,28 @@ func (rs *Resource) getMinimalStaffProfile(w http.ResponseWriter, r *http.Reques
 		rs.failure(w, r, FailureNotFound, errors.New(msgStaffNotFound), "not_found")
 		return
 	}
-	profile := map[string]any{
-		"id": staff.ID, "name": person.FirstName + " " + person.LastName,
-		"firstName": person.FirstName, "lastName": person.LastName,
+	profile := MinimalStaffProfileResponse{
+		ID: staff.ID, Name: person.FirstName + " " + person.LastName,
+		FirstName: person.FirstName, LastName: person.LastName,
 	}
 	if staff.IsDeleted() {
-		profile["started_on"] = calendar.DateFromTime(staff.CreatedAt)
-		profile["ended_on"] = staffEndedOn(staff)
+		startedOn := calendar.DateFromTime(staff.CreatedAt)
+		profile.StartedOn = &startedOn
+		profile.EndedOn = staffEndedOn(staff)
 	}
 	rs.respond(w, r, http.StatusOK, profile, message)
+}
+
+// MinimalStaffProfileResponse identifies a staff member for the financial
+// Stammdaten section and the documents tab, nothing more. A former staff
+// member also carries the employment period.
+type MinimalStaffProfileResponse struct {
+	ID        int64          `json:"id"`
+	Name      string         `json:"name"`
+	FirstName string         `json:"firstName"`
+	LastName  string         `json:"lastName"`
+	StartedOn *calendar.Date `json:"started_on,omitempty"`
+	EndedOn   *calendar.Date `json:"ended_on,omitempty"`
 }
 
 // serveStaffAvatar streams the avatar of the account behind a staff member.

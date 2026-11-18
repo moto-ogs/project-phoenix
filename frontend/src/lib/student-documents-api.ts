@@ -39,8 +39,8 @@ export interface StudentDocumentList {
 }
 
 interface BackendStudentDocument {
-  id: number;
-  student_id: number;
+  id: number | string;
+  student_id: number | string;
   category: string;
   category_label: string;
   filename: string;
@@ -59,7 +59,7 @@ interface BackendStudentDocumentCategory {
 }
 
 interface BackendStudentDocumentList {
-  student_id: number;
+  student_id: number | string;
   documents: BackendStudentDocument[];
   visible_categories: BackendStudentDocumentCategory[];
 }

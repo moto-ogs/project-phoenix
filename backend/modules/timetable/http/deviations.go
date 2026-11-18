@@ -49,10 +49,10 @@ type deviationSubstitution struct {
 	InstanceIDs       *[]int64 `json:"instance_ids,omitempty"`
 }
 
-// deviationPresence clears an absence in an optional appointment scope. Its
+// DeviationPresence clears an absence in an optional appointment scope. Its
 // decoder accepts the former numeric staff id so an already-open frontend from
 // before this change keeps its established day-wide correction behavior.
-type deviationPresence struct {
+type DeviationPresence struct {
 	StaffID     int64    `json:"staff_id"`
 	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
 }
@@ -62,19 +62,19 @@ type deviationSubstitutionRemoval struct {
 	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
 }
 
-func (p *deviationPresence) UnmarshalJSON(data []byte) error {
+func (p *DeviationPresence) UnmarshalJSON(data []byte) error {
 	var legacyStaffID int64
 	if err := json.Unmarshal(data, &legacyStaffID); err == nil {
 		p.StaffID = legacyStaffID
 		p.InstanceIDs = nil
 		return nil
 	}
-	type presenceObject deviationPresence
+	type presenceObject DeviationPresence
 	var object presenceObject
 	if err := json.Unmarshal(data, &object); err != nil {
 		return err
 	}
-	*p = deviationPresence(object)
+	*p = DeviationPresence(object)
 	return nil
 }
 
@@ -92,7 +92,7 @@ type applyDeviationsRequest struct {
 	SubstitutionRemovals []deviationSubstitutionRemoval `json:"substitution_removals,omitempty"`
 	// Presences marks staff present again. Numeric legacy items are day-wide;
 	// object items may target selected appointments.
-	Presences []deviationPresence `json:"presences,omitempty"`
+	Presences []DeviationPresence `json:"presences,omitempty"`
 	// GuardianNotice informs the families of the booked children when cancel
 	// is set (#2601).
 	GuardianNotice *GuardianNoticeRequest `json:"guardian_notice,omitempty"`

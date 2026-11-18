@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   instant,
   noData,
+  object,
   success,
 } from "./runtime";
 
@@ -12,7 +13,7 @@ export interface deviceHistoryChange {
   after: string | null;
 }
 
-export const deviceHistoryChangeSchema: z.ZodType<deviceHistoryChange, unknown> = z.object({
+export const deviceHistoryChangeSchema: z.ZodType<deviceHistoryChange, unknown> = object<deviceHistoryChange>({
   before: z.string().nullable(),
   after: z.string().nullable(),
 });
@@ -28,7 +29,7 @@ export interface deviceHistoryResponse {
   school_name: string;
 }
 
-export const deviceHistoryResponseSchema: z.ZodType<deviceHistoryResponse, unknown> = z.object({
+export const deviceHistoryResponseSchema: z.ZodType<deviceHistoryResponse, unknown> = object<deviceHistoryResponse>({
   id: z.string(),
   action: z.string(),
   actor_kind: z.string(),

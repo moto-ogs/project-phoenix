@@ -24,7 +24,7 @@ func (rs *Resource) pendingChangeRequestCount(w http.ResponseWriter, r *http.Req
 		renderError(w, r, rs.QueueError(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{
-		"pending_count": pending,
+	common.Respond(w, r, http.StatusOK, ChangeRequestPendingCountResponse{
+		PendingCount: pending,
 	}, "Pending change request count retrieved")
 }

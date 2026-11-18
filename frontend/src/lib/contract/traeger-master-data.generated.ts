@@ -4,6 +4,7 @@ import {
   instant,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -16,7 +17,7 @@ export interface TraegerContact {
   email: string;
 }
 
-export const TraegerContactSchema: z.ZodType<TraegerContact, unknown> = z.object({
+export const TraegerContactSchema: z.ZodType<TraegerContact, unknown> = object<TraegerContact>({
   name: z.string(),
   phone: z.string(),
   email: z.string(),
@@ -28,7 +29,7 @@ export interface TraegerWithdrawalContact {
   email: string;
 }
 
-export const TraegerWithdrawalContactSchema: z.ZodType<TraegerWithdrawalContact, unknown> = z.object({
+export const TraegerWithdrawalContactSchema: z.ZodType<TraegerWithdrawalContact, unknown> = object<TraegerWithdrawalContact>({
   phone: z.string(),
   email: z.string(),
 });
@@ -42,7 +43,7 @@ export interface TraegerLogo {
   updated_at: string;
 }
 
-export const TraegerLogoSchema: z.ZodType<TraegerLogo, unknown> = z.object({
+export const TraegerLogoSchema: z.ZodType<TraegerLogo, unknown> = object<TraegerLogo>({
   content_type: z.string(),
   width: safeInt,
   height: safeInt,
@@ -62,7 +63,7 @@ export interface TraegerBankAccount {
   updated_at: string;
 }
 
-export const TraegerBankAccountSchema: z.ZodType<TraegerBankAccount, unknown> = z.object({
+export const TraegerBankAccountSchema: z.ZodType<TraegerBankAccount, unknown> = object<TraegerBankAccount>({
   id: int64StringOrNumber,
   label: z.string(),
   account_holder: z.string(),
@@ -81,7 +82,7 @@ export interface TraegerProfile {
   bank_accounts: TraegerBankAccount[] | null;
 }
 
-export const TraegerProfileSchema: z.ZodType<TraegerProfile, unknown> = z.object({
+export const TraegerProfileSchema: z.ZodType<TraegerProfile, unknown> = object<TraegerProfile>({
   contact: TraegerContactSchema,
   withdrawal: TraegerWithdrawalContactSchema,
   logo: TraegerLogoSchema.nullable(),
@@ -96,7 +97,7 @@ export interface TraegerDocumentTemplateSummary {
   updated_at: string | null;
 }
 
-export const TraegerDocumentTemplateSummarySchema: z.ZodType<TraegerDocumentTemplateSummary, unknown> = z.object({
+export const TraegerDocumentTemplateSummarySchema: z.ZodType<TraegerDocumentTemplateSummary, unknown> = object<TraegerDocumentTemplateSummary>({
   kind: z.string(),
   version: safeInt,
   standard: z.boolean(),
@@ -109,7 +110,7 @@ export interface InvoiceLayout {
   hide_time_models: boolean;
 }
 
-export const InvoiceLayoutSchema: z.ZodType<InvoiceLayout, unknown> = z.object({
+export const InvoiceLayoutSchema: z.ZodType<InvoiceLayout, unknown> = object<InvoiceLayout>({
   group_by_child: z.boolean(),
   hide_time_models: z.boolean(),
 });
@@ -128,7 +129,7 @@ export interface TraegerDocumentTemplate {
   legal_remedy: string;
 }
 
-export const TraegerDocumentTemplateSchema: z.ZodType<TraegerDocumentTemplate, unknown> = z.object({
+export const TraegerDocumentTemplateSchema: z.ZodType<TraegerDocumentTemplate, unknown> = object<TraegerDocumentTemplate>({
   kind: z.string(),
   version: safeInt,
   standard: z.boolean(),
@@ -151,7 +152,7 @@ export interface Template {
   legal_remedy: string;
 }
 
-export const TemplateSchema: z.ZodType<Template, unknown> = z.object({
+export const TemplateSchema: z.ZodType<Template, unknown> = object<Template>({
   subject: z.string(),
   salutation: z.string(),
   body: z.string(),
@@ -167,7 +168,7 @@ export interface Placeholder {
   table: boolean;
 }
 
-export const PlaceholderSchema: z.ZodType<Placeholder, unknown> = z.object({
+export const PlaceholderSchema: z.ZodType<Placeholder, unknown> = object<Placeholder>({
   name: z.string(),
   label: z.string(),
   table: z.boolean(),
@@ -181,7 +182,7 @@ export interface TraegerDocumentTemplateDetail {
   versions: TraegerDocumentTemplate[] | null;
 }
 
-export const TraegerDocumentTemplateDetailSchema: z.ZodType<TraegerDocumentTemplateDetail, unknown> = z.object({
+export const TraegerDocumentTemplateDetailSchema: z.ZodType<TraegerDocumentTemplateDetail, unknown> = object<TraegerDocumentTemplateDetail>({
   current: TraegerDocumentTemplateSchema,
   standard_template: TemplateSchema,
   placeholders: z.array(PlaceholderSchema).nullable(),
@@ -221,7 +222,7 @@ export interface Row {
   bold: boolean;
 }
 
-export const RowSchema: z.ZodType<Row, unknown> = z.object({
+export const RowSchema: z.ZodType<Row, unknown> = object<Row>({
   label: z.string(),
   value: z.string(),
   bold: z.boolean(),
@@ -235,7 +236,7 @@ export interface Block {
   rows: Row[] | null;
 }
 
-export const BlockSchema: z.ZodType<Block, unknown> = z.object({
+export const BlockSchema: z.ZodType<Block, unknown> = object<Block>({
   heading: z.string(),
   text: z.string(),
   bold: z.boolean(),
@@ -253,7 +254,7 @@ export interface SampleLetter {
   legal_remedy?: Block[];
 }
 
-export const SampleLetterSchema: z.ZodType<SampleLetter, unknown> = z.object({
+export const SampleLetterSchema: z.ZodType<SampleLetter, unknown> = object<SampleLetter>({
   recipient: z.array(z.string()).nullable(),
   facts: z.array(RowSchema).nullable(),
   subject: z.string(),

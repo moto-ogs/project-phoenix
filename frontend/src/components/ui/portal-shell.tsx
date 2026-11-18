@@ -8,6 +8,10 @@ import {
 } from "~/components/ui/navigation-progress";
 import { NavigationScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { ButtonLink } from "~/components/ui/button";
+import {
+  FIXED_LAYER_SHIFT,
+  useFixedLayersFollowViewport,
+} from "./hooks/useFixedLayersFollowViewport";
 
 /** Ziel des Sprunglinks „Zum Inhalt“: das <main> jeder Portalhülle. */
 const MAIN_CONTENT_ID = "hauptinhalt";
@@ -60,6 +64,7 @@ export function PortalShell({
   bottomNav,
   children,
 }: PortalShellProps) {
+  useFixedLayersFollowViewport();
   return (
     <NavigationProgressProvider>
       <Suspense fallback={null}>
@@ -93,7 +98,7 @@ export function PortalShell({
         <NavigationProgressBar />
         <div
           data-portal-background
-          className={`moto-dotted-background moto-dotted-background--app-fixed moto-dotted-background--fullscreen pointer-events-none ${Z_LAYER.base} ${backgroundClassName}`}
+          className={`moto-dotted-background moto-dotted-background--app-fixed moto-dotted-background--fullscreen pointer-events-none ${Z_LAYER.base} ${FIXED_LAYER_SHIFT} ${backgroundClassName}`}
           aria-hidden="true"
         />
         {topLayer}

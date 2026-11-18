@@ -45,6 +45,11 @@ type studentNoteResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// studentNoteDeletedResponse names the note a delete removed.
+type studentNoteDeletedResponse struct {
+	ID string `json:"id"`
+}
+
 type studentNoteRequestBody struct {
 	Kind             string  `json:"kind"`
 	Visibility       string  `json:"visibility"`
@@ -223,8 +228,8 @@ func (rs *Resource) deleteStudentNote(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, studentNoteErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{
-		"id": strconv.FormatInt(noteID, 10),
+	common.Respond(w, r, http.StatusOK, studentNoteDeletedResponse{
+		ID: strconv.FormatInt(noteID, 10),
 	}, "Student note deleted")
 }
 

@@ -6,6 +6,7 @@ import {
   int64String,
   int64StringOrNumber,
   noData,
+  object,
   requestBody,
   safeInt,
   success,
@@ -20,7 +21,7 @@ export interface DayTotals {
   list_entries: number;
 }
 
-export const DayTotalsSchema: z.ZodType<DayTotals, unknown> = z.object({
+export const DayTotalsSchema: z.ZodType<DayTotals, unknown> = object<DayTotals>({
   students: safeInt,
   staying: safeInt,
   leaving: safeInt,
@@ -36,7 +37,7 @@ export interface DayHint {
   updated_at: string;
 }
 
-export const DayHintSchema: z.ZodType<DayHint, unknown> = z.object({
+export const DayHintSchema: z.ZodType<DayHint, unknown> = object<DayHint>({
   body: z.string(),
   author_name: z.string().optional(),
   own: z.boolean(),
@@ -49,7 +50,7 @@ export interface DayMorningAttendance {
   source: string;
 }
 
-export const DayMorningAttendanceSchema: z.ZodType<DayMorningAttendance, unknown> = z.object({
+export const DayMorningAttendanceSchema: z.ZodType<DayMorningAttendance, unknown> = object<DayMorningAttendance>({
   status: z.string(),
   source: z.string(),
 });
@@ -60,7 +61,7 @@ export interface DayHomeworkFeedback {
   note?: string;
 }
 
-export const DayHomeworkFeedbackSchema: z.ZodType<DayHomeworkFeedback, unknown> = z.object({
+export const DayHomeworkFeedbackSchema: z.ZodType<DayHomeworkFeedback, unknown> = object<DayHomeworkFeedback>({
   status: z.string(),
   note: z.string().optional(),
 });
@@ -92,7 +93,7 @@ export interface DayRow {
   status_by_school?: boolean;
 }
 
-export const DayRowSchema: z.ZodType<DayRow, unknown> = z.object({
+export const DayRowSchema: z.ZodType<DayRow, unknown> = object<DayRow>({
   student_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -125,7 +126,7 @@ export interface DayArrivalException {
   origin: string;
 }
 
-export const DayArrivalExceptionSchema: z.ZodType<DayArrivalException, unknown> = z.object({
+export const DayArrivalExceptionSchema: z.ZodType<DayArrivalException, unknown> = object<DayArrivalException>({
   arrival_time: z.string(),
   reason: z.string().optional(),
   origin: z.string(),
@@ -138,7 +139,7 @@ export interface DayHomework {
   description: string;
 }
 
-export const DayHomeworkSchema: z.ZodType<DayHomework, unknown> = z.object({
+export const DayHomeworkSchema: z.ZodType<DayHomework, unknown> = object<DayHomework>({
   id: int64String,
   subject: z.string().optional(),
   description: z.string(),
@@ -151,7 +152,7 @@ export interface DayHandover {
   absent_count: number;
 }
 
-export const DayHandoverSchema: z.ZodType<DayHandover, unknown> = z.object({
+export const DayHandoverSchema: z.ZodType<DayHandover, unknown> = object<DayHandover>({
   handed_over_at: instant,
   handed_over_by: z.string().optional(),
   absent_count: safeInt,
@@ -179,7 +180,7 @@ export interface DayReport {
   can_report_absences: boolean;
 }
 
-export const DayReportSchema: z.ZodType<DayReport, unknown> = z.object({
+export const DayReportSchema: z.ZodType<DayReport, unknown> = object<DayReport>({
   school_class: z.string(),
   date: z.string(),
   weekday: z.string(),
@@ -211,7 +212,7 @@ export interface AbsenceListChild {
   not_recorded_days: number;
 }
 
-export const AbsenceListChildSchema: z.ZodType<AbsenceListChild, unknown> = z.object({
+export const AbsenceListChildSchema: z.ZodType<AbsenceListChild, unknown> = object<AbsenceListChild>({
   student_id: int64StringOrNumber,
   first_name: z.string(),
   last_name: z.string(),
@@ -229,7 +230,7 @@ export interface AbsenceListCounts {
   not_recorded_days: number;
 }
 
-export const AbsenceListCountsSchema: z.ZodType<AbsenceListCounts, unknown> = z.object({
+export const AbsenceListCountsSchema: z.ZodType<AbsenceListCounts, unknown> = object<AbsenceListCounts>({
   absent_days: safeInt,
   excused_days: safeInt,
   unexcused_days: safeInt,
@@ -250,7 +251,7 @@ export interface AbsenceListReport {
   totals: AbsenceListCounts;
 }
 
-export const AbsenceListReportSchema: z.ZodType<AbsenceListReport, unknown> = z.object({
+export const AbsenceListReportSchema: z.ZodType<AbsenceListReport, unknown> = object<AbsenceListReport>({
   available_from: calendarDate.nullable(),
   incomplete: z.boolean(),
   school_class: z.string(),
@@ -273,7 +274,7 @@ export interface ArrivalExceptionResponse {
   origin: string;
 }
 
-export const ArrivalExceptionResponseSchema: z.ZodType<ArrivalExceptionResponse, unknown> = z.object({
+export const ArrivalExceptionResponseSchema: z.ZodType<ArrivalExceptionResponse, unknown> = object<ArrivalExceptionResponse>({
   school_class: z.string(),
   date: z.string(),
   arrival_time: z.string(),
@@ -289,7 +290,7 @@ export interface ArrivalExceptionListResponse {
   exceptions: ArrivalExceptionResponse[] | null;
 }
 
-export const ArrivalExceptionListResponseSchema: z.ZodType<ArrivalExceptionListResponse, unknown> = z.object({
+export const ArrivalExceptionListResponseSchema: z.ZodType<ArrivalExceptionListResponse, unknown> = object<ArrivalExceptionListResponse>({
   school_class: z.string(),
   can_edit: z.boolean(),
   exceptions: z.array(ArrivalExceptionResponseSchema).nullable(),
@@ -302,7 +303,7 @@ export interface ArrivalExceptionBlockStartResponse {
   start: string;
 }
 
-export const ArrivalExceptionBlockStartResponseSchema: z.ZodType<ArrivalExceptionBlockStartResponse, unknown> = z.object({
+export const ArrivalExceptionBlockStartResponseSchema: z.ZodType<ArrivalExceptionBlockStartResponse, unknown> = object<ArrivalExceptionBlockStartResponse>({
   school_class: z.string(),
   date: z.string(),
   start: z.string(),
@@ -317,7 +318,7 @@ export interface ClassesResponse {
   can_view_school_day: boolean;
 }
 
-export const ClassesResponseSchema: z.ZodType<ClassesResponse, unknown> = z.object({
+export const ClassesResponseSchema: z.ZodType<ClassesResponse, unknown> = object<ClassesResponse>({
   classes: z.array(z.string()).nullable(),
   can_write_arrival_exception: z.boolean(),
   can_report_class_trip: z.boolean(),
@@ -340,7 +341,7 @@ export interface SchoolDayTotals {
   changes: number;
 }
 
-export const SchoolDayTotalsSchema: z.ZodType<SchoolDayTotals, unknown> = z.object({
+export const SchoolDayTotalsSchema: z.ZodType<SchoolDayTotals, unknown> = object<SchoolDayTotals>({
   students: safeInt,
   staying: safeInt,
   leaving: safeInt,
@@ -370,7 +371,7 @@ export interface SchoolDayChild {
   changed?: boolean;
 }
 
-export const SchoolDayChildSchema: z.ZodType<SchoolDayChild, unknown> = z.object({
+export const SchoolDayChildSchema: z.ZodType<SchoolDayChild, unknown> = object<SchoolDayChild>({
   student_id: int64String.optional(),
   list_entry: z.boolean().optional(),
   list_entry_id: int64String.optional(),
@@ -392,7 +393,7 @@ export interface SchoolDayClass {
   children: SchoolDayChild[] | null;
 }
 
-export const SchoolDayClassSchema: z.ZodType<SchoolDayClass, unknown> = z.object({
+export const SchoolDayClassSchema: z.ZodType<SchoolDayClass, unknown> = object<SchoolDayClass>({
   school_class: z.string(),
   totals: SchoolDayTotalsSchema,
   children: z.array(SchoolDayChildSchema).nullable(),
@@ -409,7 +410,7 @@ export interface SchoolDayReport {
   can_report_absences: boolean;
 }
 
-export const SchoolDayReportSchema: z.ZodType<SchoolDayReport, unknown> = z.object({
+export const SchoolDayReportSchema: z.ZodType<SchoolDayReport, unknown> = object<SchoolDayReport>({
   date: z.string(),
   weekday: z.string(),
   school_day: z.boolean(),
@@ -432,7 +433,7 @@ export interface SharedNote {
   updated_at: string;
 }
 
-export const SharedNoteSchema: z.ZodType<SharedNote, unknown> = z.object({
+export const SharedNoteSchema: z.ZodType<SharedNote, unknown> = object<SharedNote>({
   id: int64String,
   kind: z.string(),
   category: z.string().optional(),
@@ -453,7 +454,7 @@ export interface StudentSharedNotes {
   notes: SharedNote[] | null;
 }
 
-export const StudentSharedNotesSchema: z.ZodType<StudentSharedNotes, unknown> = z.object({
+export const StudentSharedNotesSchema: z.ZodType<StudentSharedNotes, unknown> = object<StudentSharedNotes>({
   student_id: int64String,
   first_name: z.string(),
   last_name: z.string(),
@@ -477,7 +478,7 @@ export interface ClassTripResult {
   date_count: number;
 }
 
-export const ClassTripResultSchema: z.ZodType<ClassTripResult, unknown> = z.object({
+export const ClassTripResultSchema: z.ZodType<ClassTripResult, unknown> = object<ClassTripResult>({
   kind: z.string(),
   student_count: safeInt,
   date_count: safeInt,

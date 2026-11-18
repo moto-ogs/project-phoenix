@@ -33,11 +33,11 @@ interface BackendAttendanceRecord {
   check_in_time: string;
   check_out_time?: string | null;
   duration_minutes?: number | null;
-  checked_in_by: number;
-  checked_out_by?: number | null;
+  checked_in_by: number | string;
+  checked_out_by?: number | string | null;
   checked_in_actor?: AttendanceActor | null;
   checked_out_actor?: AttendanceActor | null;
-  device_id: number;
+  device_id: number | string;
   sessions?: BackendAttendanceSession[] | null;
 }
 
@@ -64,7 +64,7 @@ interface BackendAttendanceSlot {
 }
 
 interface BackendAttendanceVisit {
-  room_id?: number | null;
+  room_id?: number | string | null;
   room_name?: string;
   entry_time: string;
   exit_time?: string | null;
@@ -101,12 +101,12 @@ interface AttendanceRecord {
   checkInTime: Date;
   checkOutTime: Date | null;
   durationMinutes: number | null;
-  checkedInBy: number;
-  checkedOutBy: number | null;
+  checkedInBy: number | string;
+  checkedOutBy: number | string | null;
   /** Who recorded the day's arrival and pickup (#4761). */
   checkedInActor: AttendanceActor | null;
   checkedOutActor: AttendanceActor | null;
-  deviceId: number;
+  deviceId: number | string;
   sessions: AttendanceSession[];
   /**
    * Reasons staff left when the child went home early (#3324), in the order
@@ -139,7 +139,7 @@ interface AttendanceSlot {
 }
 
 interface AttendanceVisit {
-  roomId: number | null;
+  roomId: number | string | null;
   roomName: string;
   entryTime: Date;
   exitTime: Date | null;

@@ -1,10 +1,14 @@
-import { proxyPost } from "~/lib/route-wrapper.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-/**
- * POST /api/students/care-end
- *
- * Confirms "Betreuung beenden" for exactly the state a preview described
- * (#2487). Pure pass-through: the backend owns the users:delete gate, the
- * preview-token comparison and the atomic write.
- */
-export const POST = proxyPost("/api/students/care-end");
+const post = catalogProxy(portalRoutes.tenant, "POST");
+
+// Without this literal route, Next selects students/[id], not the portal's
+// catch-all. Delegate with the path that the catch-all would receive.
+export const POST = withPrivateNoStore((request: NextRequest) =>
+  post(request, {
+    params: Promise.resolve({ path: ["students", "care-end"] }),
+  }),
+);

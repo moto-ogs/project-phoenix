@@ -50,7 +50,7 @@ type materializeResponse struct {
 	InstanceStudentsCreated     int                  `json:"instance_students_created"`
 	InstanceStaffCreated        int                  `json:"instance_staff_created"`
 	Warnings                    []materializeWarning `json:"warnings"`
-	DurationMS                  int64                `json:"duration_ms"`
+	DurationMS                  int                  `json:"duration_ms"`
 }
 
 // materializeWarning is the API shape for soft preconditions surfaced by
@@ -126,7 +126,7 @@ func newMaterializeResponse(result *timetableModule.MaterializationResult) mater
 		InstanceStudentsCreated:     result.InstanceStudentsCreated,
 		InstanceStaffCreated:        result.InstanceStaffCreated,
 		Warnings:                    warnings,
-		DurationMS:                  result.DurationMS,
+		DurationMS:                  int(result.DurationMS),
 	}
 }
 

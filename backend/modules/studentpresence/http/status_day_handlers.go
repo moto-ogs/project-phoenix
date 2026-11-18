@@ -93,9 +93,9 @@ func (rs *Resource) bulkCreateStudentStatusDays(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	common.Respond(w, r, http.StatusCreated, map[string]any{
-		"student_count": len(req.StudentIDs),
-		"date_count":    len(dates),
+	common.Respond(w, r, http.StatusCreated, StatusDaysBulkCreatedResponse{
+		StudentCount: len(req.StudentIDs),
+		DateCount:    len(dates),
 	}, "Student status days created successfully")
 }
 
@@ -134,7 +134,7 @@ func (rs *Resource) deleteStudentStatusDay(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, map[string]bool{"deleted": true}, "Student status day deleted successfully")
+	common.Respond(w, r, http.StatusOK, StatusDayDeletedResponse{Deleted: true}, "Student status day deleted successfully")
 }
 
 // newStatusDayWriteContext bundles the collaborators the status-day write
