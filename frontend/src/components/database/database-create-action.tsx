@@ -12,6 +12,7 @@ import {
   MOBILE_CREATE_FAB_MEDIA_QUERY,
   useFloatingFabOffset,
 } from "~/lib/hooks/use-floating-fab-offset";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 interface DatabaseCreateActionProps {
   label: string;
@@ -97,7 +98,7 @@ export function DatabaseCreateAction({
           mounted &&
           createPortal(
             <span
-              className="fixed right-4 bottom-24 z-40 md:hidden"
+              className={`fixed right-4 bottom-24 z-40 md:hidden ${FIXED_LAYER_SHIFT}`}
               data-setup-tour="create"
             >
               <OverflowMenu
@@ -143,7 +144,7 @@ export function DatabaseCreateAction({
             disabled={disabled}
             disabledReason={disabledReason}
             tooltip={tooltip}
-            className="fixed right-4 bottom-24 z-40 flex md:hidden"
+            className={`fixed right-4 bottom-24 z-40 flex md:hidden ${FIXED_LAYER_SHIFT}`}
             // Schwebender Symbolknopf: Das Portal löst ihn aus dem
             // Filter-Kontext der Kopfkarte, damit `fixed` den Viewport meint.
             data-setup-tour="create"
