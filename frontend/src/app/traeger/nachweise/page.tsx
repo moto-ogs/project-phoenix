@@ -72,7 +72,7 @@ const STATUS_ORDER: readonly StaffProofStatus[] = [
 const NO_MAPPING = "";
 
 const INFO =
-  "Hier siehst du, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis trägst du in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legst du je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Eine Nachweisart öffnest du im Reiter „Nachweisarten“, um sie zu bearbeiten oder zu archivieren. Jedes Anzeigen und jeder Download dieser Liste steht im Zugriffsprotokoll der Schulen.";
+  "Hier siehst du, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis trägst du in der Personalakte ein. Eine Nachweisart legt fest, wie lange ein Nachweis gilt. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legst du je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Eine Nachweisart öffnest du im Reiter „Nachweisarten“, um sie zu bearbeiten oder zu archivieren. Jedes Anzeigen und jeder Download dieser Liste steht im Zugriffsprotokoll der Schulen.";
 
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);

@@ -179,6 +179,20 @@ describe("TraegerStaffProofsPage", () => {
     expect(await screen.findByLabelText(/Warnung vor Ablauf/)).toHaveValue("8");
   });
 
+  it("explains that a proof type determines how long a proof is valid", () => {
+    renderPage();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Erklärung zu Personalnachweise",
+      }),
+    );
+
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Eine Nachweisart legt fest, wie lange ein Nachweis gilt.",
+    );
+  });
+
   it("maps a school kind onto a kind of the Träger", async () => {
     api.mapSchoolProofKind.mockResolvedValue([
       {
