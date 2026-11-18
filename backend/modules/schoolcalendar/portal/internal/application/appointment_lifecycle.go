@@ -25,9 +25,9 @@ func (s *service) CreateStaffAppointment(ctx context.Context, req CreateAppointm
 // organizes. allowEmptyParents keeps a bulk parent target without reachable
 // guardians from failing the write; Schultermine use it (#4798).
 func (s *service) createAppointment(ctx context.Context, req CreateAppointmentRequest, allowEmptyParents bool) (*AppointmentDetail, error) {
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 	return s.createAppointmentFor(ctx, staff.ID, req, allowEmptyParents)
 }
@@ -152,9 +152,9 @@ func (s *service) loadOrganizedAppointment(ctx context.Context, appointmentID in
 	if appointmentID <= 0 {
 		return nil, fmt.Errorf("%w: appointment id is required", ErrInvalidRequest)
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 	appointment, err := s.findAppointment(ctx, appointmentID)
 	if err != nil {

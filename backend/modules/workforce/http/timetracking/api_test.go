@@ -435,8 +435,7 @@ func TestGetStaffIDFromClaims_ZeroID(t *testing.T) {
 
 	rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, defaultPersonSvc(), nil)
 	_, err := rs.getStaffIDFromClaims(context.Background(), Identity{AccountID: 0})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid token")
+	require.ErrorIs(t, err, errNoAccount)
 }
 
 func TestGetStaffIDFromClaims_PersonNotFound(t *testing.T) {
@@ -444,16 +443,34 @@ func TestGetStaffIDFromClaims_PersonNotFound(t *testing.T) {
 
 	rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, personNotFoundSvc(), nil)
 	_, err := rs.getStaffIDFromClaims(context.Background(), Identity{AccountID: testAccountID})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "person not found")
+	require.ErrorIs(t, err, workforce.ErrNoStaffProfile)
 }
 
+// personNotFoundSvc answers like the root binding for an account without a
+// person in this school, such as a Träger person (#7306).
 func personNotFoundSvc() *stubStaffDirectory {
 	return &stubStaffDirectory{
 		personByAccountIDFn: func(_ context.Context, _ int64) (*workforce.Person, error) {
-			return nil, errors.New("not found")
+			return nil, fmt.Errorf("%w: person not found", workforce.ErrNoStaffProfile)
 		},
 	}
+}
+
+// staffLookupFailsSvc fails the person lookup with a database fault.
+func staffLookupFailsSvc() *stubStaffDirectory {
+	return &stubStaffDirectory{
+		personByAccountIDFn: func(_ context.Context, _ int64) (*workforce.Person, error) {
+			return nil, errors.New("connection reset")
+		},
+	}
+}
+
+// assertNoStaffProfile checks the refusal of an own-data route for a caller
+// without a staff profile: 403 with its own code, never 401 (#7306).
+func assertNoStaffProfile(t *testing.T, w *httptest.ResponseRecorder) {
+	t.Helper()
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Contains(t, w.Body.String(), `"code":"workforce.no_staff_profile"`)
 }
 
 func TestGetStaffIDFromClaims_StaffNotFound(t *testing.T) {
@@ -464,13 +481,55 @@ func TestGetStaffIDFromClaims_StaffNotFound(t *testing.T) {
 			return &workforce.Person{ID: 10}, nil
 		},
 		staffByPersonIDFn: func(_ context.Context, _ int64) (*workforce.StaffProfile, error) {
-			return nil, errors.New("not found")
+			return nil, fmt.Errorf("%w: staff not found", workforce.ErrNoStaffProfile)
 		},
 	}
 	rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, pSvc, nil)
 	_, err := rs.getStaffIDFromClaims(context.Background(), Identity{AccountID: testAccountID})
+	require.ErrorIs(t, err, workforce.ErrNoStaffProfile)
+}
+
+func TestGetStaffIDFromClaims_LookupFailureIsNoRefusal(t *testing.T) {
+	t.Parallel()
+
+	rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, staffLookupFailsSvc(), nil)
+	_, err := rs.getStaffIDFromClaims(context.Background(), Identity{AccountID: testAccountID})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "staff record not found")
+	assert.NotErrorIs(t, err, workforce.ErrNoStaffProfile)
+	assert.NotErrorIs(t, err, errNoAccount)
+}
+
+func TestOwnRoutesSeparateMissingAccountProfileAndLookupFailure(t *testing.T) {
+	t.Parallel()
+
+	handlers := map[string]func(*Resource, http.ResponseWriter, *http.Request){
+		"getCurrent":   (*Resource).getCurrent,
+		"getOwnShifts": (*Resource).getOwnShifts,
+	}
+	for name, handler := range handlers {
+		t.Run(name+"/no staff profile", func(t *testing.T) {
+			t.Parallel()
+			rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, personNotFoundSvc(), nil)
+			w := httptest.NewRecorder()
+			handler(rs, w, withCaller(httptest.NewRequest(http.MethodGet, "/x?from=2026-01-05&to=2026-01-11", nil), testpkg.Tenant(t)))
+			assertNoStaffProfile(t, w)
+		})
+		t.Run(name+"/lookup failure", func(t *testing.T) {
+			t.Parallel()
+			rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, staffLookupFailsSvc(), nil)
+			w := httptest.NewRecorder()
+			handler(rs, w, withCaller(httptest.NewRequest(http.MethodGet, "/x?from=2026-01-05&to=2026-01-11", nil), testpkg.Tenant(t)))
+			assert.Equal(t, http.StatusInternalServerError, w.Code)
+		})
+		t.Run(name+"/no account", func(t *testing.T) {
+			t.Parallel()
+			rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, defaultPersonSvc(), nil)
+			rs.identity = func(context.Context) Identity { return Identity{} }
+			w := httptest.NewRecorder()
+			handler(rs, w, withCaller(httptest.NewRequest(http.MethodGet, "/x?from=2026-01-05&to=2026-01-11", nil), testpkg.Tenant(t)))
+			assert.Equal(t, http.StatusUnauthorized, w.Code)
+		})
+	}
 }
 
 // --- checkIn handler ---
@@ -517,7 +576,9 @@ func TestCheckIn_InvalidBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestCheckIn_InvalidClaims(t *testing.T) {
+// Without a staff profile in this school the stamp is refused with its own
+// code; before #7306 it answered 401 and sent the browser to the login page.
+func TestCheckIn_NoStaffProfile(t *testing.T) {
 	t.Parallel()
 
 	rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, personNotFoundSvc(), nil)
@@ -529,7 +590,7 @@ func TestCheckIn_InvalidClaims(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	rs.checkIn(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assertNoStaffProfile(t, w)
 }
 
 func TestCheckIn_ServiceConflict(t *testing.T) {
@@ -635,7 +696,7 @@ func TestCheckOut_NoActiveSession(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
-func TestCheckOut_Unauthorized(t *testing.T) {
+func TestCheckOut_NoStaffProfile(t *testing.T) {
 	t.Parallel()
 
 	rs := testResource(&mockWorkSessionService{}, &mockStaffAbsenceService{}, personNotFoundSvc(), nil)
@@ -645,7 +706,7 @@ func TestCheckOut_Unauthorized(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	rs.checkOut(w, r)
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assertNoStaffProfile(t, w)
 }
 
 // --- getCurrent handler ---

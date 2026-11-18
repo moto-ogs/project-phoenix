@@ -10,6 +10,7 @@ import {
 } from "./staff-onboarding-steps";
 
 const everything = {
+  hasOwnStaff: true,
   hasOwnGroup: true,
   webAttendance: true,
   canSeeCalendar: true,
@@ -20,6 +21,7 @@ const everything = {
 };
 
 const noSchoolPreconditions = {
+  hasOwnStaff: true,
   hasOwnGroup: false,
   webAttendance: false,
   canSeeCalendar: false,
@@ -73,6 +75,20 @@ describe("staffOnboardingSteps", () => {
     );
 
     expect(steps.map((step) => step.key)).toEqual(["supervision"]);
+  });
+
+  it("omits own-calendar and work-time steps without a staff profile", () => {
+    const steps = staffOnboardingSteps(
+      { dismissed: false, schoolReady: true, doneSteps: [], skippedSteps: [] },
+      { ...everything, hasOwnStaff: false },
+    );
+
+    expect(steps.map((step) => step.key)).toEqual([
+      "groups",
+      "students",
+      "attendance",
+      "supervision",
+    ]);
   });
 
   it("has nothing open once every step is done or skipped", () => {

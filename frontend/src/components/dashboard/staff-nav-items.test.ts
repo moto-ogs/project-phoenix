@@ -48,7 +48,12 @@ function session(permissions: string[]): Session {
   } as unknown as Session;
 }
 
-const STAFF = { isAdmin: false, isCaregiver: true, openCareGroupMode: false };
+const STAFF = {
+  isAdmin: false,
+  isCaregiver: true,
+  openCareGroupMode: false,
+  hasOwnStaff: true,
+};
 
 describe("staff navigation items (#6580)", () => {
   it("lists every page of the tree once, here or in a catalog with an image", () => {
@@ -137,6 +142,7 @@ describe("staff navigation items (#6580)", () => {
         isAdmin: true,
         isCaregiver: false,
         openCareGroupMode: false,
+        hasOwnStaff: true,
         session: session([]),
       };
       expect(
@@ -154,6 +160,43 @@ describe("staff navigation items (#6580)", () => {
           { ...admin, isCaregiver: true },
         ),
       ).toBe(true);
+    });
+
+    it("hides own-data pages without a staff profile, also from admins (#7306)", () => {
+      const own = item({
+        requiresPermission: "time_tracking:own",
+        requiresOwnStaff: true,
+      });
+      const admin = {
+        isAdmin: true,
+        isCaregiver: false,
+        openCareGroupMode: false,
+        hasOwnStaff: false,
+        session: session([]),
+      };
+      expect(staffNavItemPermitted(own, admin)).toBe(false);
+      expect(staffNavItemPermitted(own, { ...admin, hasOwnStaff: true })).toBe(
+        true,
+      );
+      expect(
+        staffNavItemPermitted(own, {
+          ...STAFF,
+          hasOwnStaff: false,
+          session: session(["time_tracking:own"]),
+        }),
+      ).toBe(false);
+      // Pages without own data stay for an admin without a profile.
+      expect(
+        staffNavItemPermitted(item({ requiresPermission: "x:y" }), admin),
+      ).toBe(true);
+    });
+
+    it("marks exactly the three own-data pages", () => {
+      expect(
+        STAFF_NAV_ITEMS.filter((entry) => entry.requiresOwnStaff)
+          .map((entry) => entry.href)
+          .sort(),
+      ).toEqual(["/calendar", "/mein-dienstplan", "/time-tracking"]);
     });
   });
 
@@ -276,6 +319,7 @@ describe("staffNavPageState: one rule for sidebar and mobile navigation", () => 
       isAdmin: true,
       isCaregiver: true,
       openCareGroupMode: false,
+      hasOwnStaff: true,
     };
     expect(
       staffNavPageState("/tagesplan", inputs({ viewer: admin }), SIDEBAR),

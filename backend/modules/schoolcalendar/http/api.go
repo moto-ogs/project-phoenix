@@ -464,6 +464,8 @@ func renderCalendarError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, calendarService.ErrInvalidRequest):
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+	case errors.Is(err, calendarService.ErrNoStaffProfile):
+		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCalendarNoStaffProfile))
 	case errors.Is(err, calendarService.ErrForbidden):
 		common.RenderError(w, r, common.ErrorForbidden(err))
 	case errors.Is(err, calendarService.ErrNotFound):

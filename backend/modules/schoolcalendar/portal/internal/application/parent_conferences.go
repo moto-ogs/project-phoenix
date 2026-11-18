@@ -37,9 +37,9 @@ func (s *service) ListSchoolParentConferences(ctx context.Context) (*SchoolParen
 	if err != nil {
 		return nil, err
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 	classes, err := s.taughtClasses(ctx)
 	if err != nil {
@@ -73,9 +73,9 @@ func (s *service) CreateSchoolParentConference(ctx context.Context, req ParentCo
 	if err != nil {
 		return nil, err
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 	account, err := s.cfg.UserContext.GetCurrentUser(ctx)
 	if err != nil {
@@ -187,9 +187,9 @@ func (s *service) loadOwnParentConference(ctx context.Context, id int64, lock bo
 	if err != nil {
 		return nil, err
 	}
-	staff, err := s.cfg.UserContext.GetCurrentStaff(ctx)
+	staff, err := s.currentStaff(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: current staff required", ErrForbidden)
+		return nil, err
 	}
 	conference, err := store.FindParentConference(ctx, id, lock)
 	if err != nil {
