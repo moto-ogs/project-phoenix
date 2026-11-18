@@ -37,6 +37,14 @@ test('defines one dashboard per product surface plus the two across schools', ()
   assert.equal(new Set(names).size, names.length, 'insight names are the sync key and must be unique');
 });
 
+test('every insight description fits PostHog\'s limit of 400 characters', () => {
+  // The API rejects a longer insight description only on write; --check and
+  // --dry-run never send it, so the sync after a merge would fail.
+  for (const insight of insights) {
+    assert.ok((insight.description ?? '').length <= 400, `${insight.name}: ${(insight.description ?? "").length} characters`);
+  }
+});
+
 test('every insight filters on production or the demo, never staging', () => {
   for (const insight of insights) {
     const deployment = DEPLOYMENTS[insight.deployment];
@@ -150,6 +158,20 @@ test('feature areas have unique names, each event belongs to one area, and the k
   const expression = featureExpression();
   for (const name of names) assert.ok(expression.includes(`'${name}'`), name);
   assert.match(expression, /startsWith\(event, 'demo_'\)/, 'the demo funnel events are no feature use');
+});
+
+test('the Alle Kinder tile counts tab changes per tab kind, and browser clicks are no feature use', () => {
+  const tile = insights.find((insight) => insight.name === 'OGS-App: Welcher Reiter auf „Alle Kinder“?');
+  const query = tile.query.source.query;
+  assert.match(query, /event = 'child_scope_tab_selected'/);
+  assert.match(query, /properties\.surface = 'ogs'/);
+  for (const value of ['all', 'groups', 'room']) assert.match(query, new RegExp(`properties\\.child_scope = '${value}'`), value);
+  assert.ok(readBrowserEvents().includes('child_scope_tab_selected'), 'the browser filter lets the event through');
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read']) {
+    assert.match(noFeature, new RegExp(`'${event}'`), `${event} is no feature use`);
+  }
 });
 
 test('the rarely used page lists name every route template of their portal', () => {

@@ -53,6 +53,7 @@ const {
   mockUseOptionalSupervision,
   mockUseUserContext,
   mockPageHeader,
+  mockTrackEvent,
   flags,
 } = vi.hoisted(() => ({
   mockGetStudents: vi.fn(),
@@ -63,6 +64,7 @@ const {
   mockUseOptionalSupervision: vi.fn(),
   mockUseUserContext: vi.fn(),
   mockPageHeader: vi.fn(),
+  mockTrackEvent: vi.fn(),
   mockFetchAnswerFilters: vi.fn(),
   flags: { childSearchOnly: false },
 }));
@@ -71,6 +73,10 @@ let currentSearch = new URLSearchParams();
 // Mutable clock so the planning-date tests can advance the page across
 // midnight via rerender; null reads the frozen test clock.
 let clockNow: Date | null = null;
+
+vi.mock("~/lib/analytics", () => ({
+  trackEvent: mockTrackEvent,
+}));
 
 vi.mock("next-auth/react", () => ({
   useSession: () => mockUseSession(),
@@ -915,6 +921,32 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
       expect(lastStudentFilters()?.roomId).toBeUndefined();
     });
     expect(lastStudentFilters()?.groupId).toEqual([]);
+  });
+
+  // Nutzungsanalyse (#5046): nur ein echter Reiterwechsel zählt, mit der Art
+  // des Reiters und ohne Raum.
+  it("counts a tab change by the person, not the opening tab or a repeat click", () => {
+    mockTrackEvent.mockClear();
+    render(<StudentSearchPage />);
+    expect(screen.getByRole("tab", { name: "Alle" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(mockTrackEvent).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Alle" }));
+    expect(mockTrackEvent).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Meine Gruppe" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Meine Gruppe" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Meine Aufsicht" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Alle" }));
+
+    expect(mockTrackEvent.mock.calls).toEqual([
+      ["child_scope_tab_selected", { child_scope: "groups" }],
+      ["child_scope_tab_selected", { child_scope: "room" }],
+      ["child_scope_tab_selected", { child_scope: "all" }],
+    ]);
   });
 
   it("marks the tab that matches a filter restored from the URL", () => {

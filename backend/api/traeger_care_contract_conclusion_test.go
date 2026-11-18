@@ -27,7 +27,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -57,13 +56,12 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	return run
 }
 
-// careContractConclusionClock is the day of the conclusion runs: before the
-// school year 2027/28 of the fixture starts, independent of the day the test
-// runs. The acceptances keep the database's instants, which the run compares
-// only with each other.
-func careContractConclusionClock() time.Time {
-	return time.Date(2026, time.November, 18, 12, 0, 0, 0, calendar.Berlin)
-}
+// careContractConclusionClock is the clock of the conclusion runs: the
+// instant the fixture's /traeger router runs on (holidayFixtureNow), before
+// the school year 2027/28 of the fixture starts and independent of the day
+// the test runs. One owner clock for the run and the routes that read its
+// stamps: sent_at, concluded_at and the signing links (#7295).
+func careContractConclusionClock() time.Time { return holidayFixtureNow() }
 
 func setTraegerConclusionMode(t *testing.T, f careContractFixture, mode string) {
 	t.Helper()
@@ -330,8 +328,10 @@ func TestCareContractConclusionKeepsConsentAfterAnUnchangedTemplateSave(t *testi
 // recordCareContractAcceptance arranges a parent submission whose required
 // conditions block was ticked, with the checksum taken when it was shown,
 // after the conditions were saved; the school accepted it an hour later. The
-// instants come from the database clock, which also stamps the templates.
-// It returns the instant of the acceptance.
+// instants are on Enrollment's clock, the one the fixture's router and the
+// conclusion run share (careContractConclusionClock), so the acceptance lies
+// before the run whatever day the database is on. It returns the instant of
+// the acceptance.
 func recordCareContractAcceptance(t *testing.T, f careContractFixture) time.Time {
 	t.Helper()
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/contract-templates", nil)
@@ -349,8 +349,7 @@ func recordCareContractAcceptance(t *testing.T, f careContractFixture) time.Time
 func recordCareContractTextAcceptance(t *testing.T, f careContractFixture, text string) time.Time {
 	t.Helper()
 	ctx := context.Background()
-	var submitted time.Time
-	require.NoError(t, f.db.NewRaw(`SELECT NOW()`).Scan(ctx, &submitted))
+	submitted := careContractConclusionClock().Add(-2 * time.Hour)
 	accepted := submitted.Add(time.Hour)
 	snapshot, err := json.Marshal([]enrollment.LegalBlocksSnapshotEntry{{
 		SnapshotAt: submitted, ConsentFlags: json.RawMessage(`{"terms":true}`), FormSchemaID: 81, DisplayedFormSchemaID: 81,
