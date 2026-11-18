@@ -354,7 +354,7 @@ var moduleLegacyFileBudgets = map[string]int{
 
 // ADR 0289: the maintenance seal constructors of the sealed document files in
 // modules/careplan/compose (+13) and modules/workforce/compose (+6).
-const moduleComposeBudgetTotal = 13660
+const moduleComposeBudgetTotal = 13654
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
