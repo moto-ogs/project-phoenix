@@ -100,7 +100,9 @@ func (req *PhaseRequest) input() enrollment.TraegerPhaseInput {
 
 // OfferingRequest is the office's draft of a Träger care offering.
 type OfferingRequest struct {
-	careplan.TraegerOfferingDraft
+	Fields           OfferingFieldsRequest    `json:"fields"`
+	Prices           []CarePriceRequest       `json:"prices"`
+	ContractTemplate *ContractTemplateRequest `json:"contract_template,omitempty"`
 }
 
 // Bind accepts the request; the owner validates it.
@@ -211,7 +213,7 @@ func (rs *Resource) createOffering(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	offering, err := rs.offerings.CreateTraegerOffering(r.Context(), actor.OrganizationID, id, req.TraegerOfferingDraft)
+	offering, err := rs.offerings.CreateTraegerOffering(r.Context(), actor.OrganizationID, id, req.draft())
 	if err != nil {
 		renderCatalogError(w, r, err)
 		return
@@ -229,7 +231,7 @@ func (rs *Resource) updateOffering(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	offering, err := rs.offerings.UpdateTraegerOffering(r.Context(), actor.OrganizationID, id, req.TraegerOfferingDraft)
+	offering, err := rs.offerings.UpdateTraegerOffering(r.Context(), actor.OrganizationID, id, req.draft())
 	if err != nil {
 		renderCatalogError(w, r, err)
 		return

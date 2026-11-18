@@ -119,7 +119,7 @@ type HolidayRegistrationBooking struct {
 	// PriceCents is the price the booking has now: the price of the time
 	// model, times the booked days in a week by days (#4701). The
 	// contribution a confirmation freezes is the Elternabrechnung's (#4664).
-	PriceCents int64 `json:"price_cents"`
+	PriceCents int `json:"price_cents"`
 	// Days are the booked days of a week by days, empty for a whole week
 	// (#4701).
 	Days []calendar.Date `json:"days,omitempty"`
@@ -127,9 +127,9 @@ type HolidayRegistrationBooking struct {
 	// (#5631). LunchDays is the number of lunches and LunchPriceCents their
 	// price now: the price of one lunch of the week times LunchDays. Both
 	// are zero without lunch.
-	Lunch           bool  `json:"lunch"`
-	LunchDays       int   `json:"lunch_days"`
-	LunchPriceCents int64 `json:"lunch_price_cents"`
+	Lunch           bool `json:"lunch"`
+	LunchDays       int  `json:"lunch_days"`
+	LunchPriceCents int  `json:"lunch_price_cents"`
 	// Placement is HolidayPlacementPlaced, HolidayPlacementWaitlisted
 	// (#4699) or HolidayPlacementPending (#4700); WaitlistPosition is the place in the waiting list of the
 	// week, from 1, for a waitlisted booking of a registration that counts.

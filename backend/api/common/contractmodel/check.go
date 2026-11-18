@@ -124,9 +124,20 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 	case KindRef:
 		c.object(at, s.Ref, raw)
 	default:
-		if reason := scalar(s.Kind, raw); reason != "" {
-			c.failf(at, "want %s, found %s", reason, shown(raw))
+		c.leaf(at, s.Kind, raw)
+	}
+}
+
+// leaf checks a value without members: a scalar, or any JSON value.
+func (c *checker) leaf(at, kind string, raw json.RawMessage) {
+	if kind == KindJSON {
+		if !json.Valid(raw) {
+			c.failf(at, "want a JSON value, found %s", shown(raw))
 		}
+		return
+	}
+	if reason := scalar(kind, raw); reason != "" {
+		c.failf(at, "want %s, found %s", reason, shown(raw))
 	}
 }
 

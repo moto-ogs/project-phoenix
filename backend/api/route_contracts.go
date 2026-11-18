@@ -13,25 +13,31 @@ import (
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	exportTransferHTTP "github.com/moto-ogs/project-phoenix/modules/exporttransfer/http"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
+	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
+	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
+	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
+	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+	traegerCatalogHTTP "github.com/moto-ogs/project-phoenix/workflows/traegercatalog/http"
 )
 
 // contractRegistrations lists every typed registration under its mount and
 // refuses one the route catalog does not know.
 func contractRegistrations() ([]contract.Registration, error) {
-	mounts := []struct {
-		prefix string
-		routes []common.RouteContract
-	}{
+	mounts := append([]contractMount{
 		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
 		// The projection renders the answer of Care Plan's student writes
 		// (studentHTTPResources binds it), so its type is named here.
@@ -58,7 +64,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
-	}
+	}, traegerContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -78,6 +84,41 @@ func contractRegistrations() ([]contract.Registration, error) {
 		}
 	}
 	return registrations, nil
+}
+
+// contractMount is an owner's registrations under the prefix it is mounted at.
+type contractMount struct {
+	prefix string
+	routes []common.RouteContract
+}
+
+// traegerContractMounts are the Träger-Portal's staff, holiday and master
+// data routes (#2352), mounted like their resources in the serve mounts.
+func traegerContractMounts() []contractMount {
+	return []contractMount{
+		{"/traeger/absence-types", workforceTraegerStaff.AbsenceTypeRouteContracts()},
+		{"/traeger/staff-proofs", workforceTraegerStaff.ProofRouteContracts()},
+		{"/traeger/staff-planning", workforceTraegerStaff.PlanningRouteContracts()},
+		{"/traeger/staff-pool", workforceTraegerStaff.PoolRouteContracts()},
+		{"/traeger/staff-exports", workforceTraegerStaff.ExportRouteContracts()},
+		{"/traeger/accounts", traegerPortalHTTP.AccountRouteContracts()},
+		{"/traeger/profile", traegerPortalHTTP.ProfileRouteContracts()},
+		{"/traeger/school-sessions", traegerPortalHTTP.SchoolSessionRouteContracts()},
+		{"/traeger/schools", traegerViewHTTP.SchoolRouteContracts()},
+		{"/traeger/organization", traegerViewHTTP.OrganizationRouteContracts()},
+		{"/traeger/access-log", traegerViewHTTP.AccessLogRouteContracts()},
+		{"/traeger/reports", traegerViewHTTP.ReportRouteContracts()},
+		{"/traeger/holiday-periods", enrollmentHTTP.HolidayPeriodRouteContracts()},
+		{"/traeger/holiday-closures", enrollmentHTTP.HolidayClosureRouteContracts()},
+		{"/traeger/holiday-closures/pending", holidayClosureHTTP.TraegerRouteContracts()},
+		{"/traeger/closing-days", calendarAPI.TraegerClosingDayRouteContracts()},
+		// Enrollment renders the registration a rebooking answers.
+		{"/traeger/holiday-contributions", parentBillingHTTP.HolidayRouteContracts(enrollmentOwner.HolidayRegistrationDetail{})},
+		{"/traeger/required-details", parentBillingHTTP.RequiredDetailsRouteContracts()},
+		{"/traeger/export-recipient", exportTransferHTTP.RecipientRouteContracts()},
+		{"/traeger/settings", settingsHTTP.TraegerRouteContracts(configModels.SettingsSchema{})},
+		{"/traeger/catalog", traegerCatalogHTTP.RouteContracts()},
+	}
 }
 
 // ContractDocument builds the model of the frontend/backend contract from

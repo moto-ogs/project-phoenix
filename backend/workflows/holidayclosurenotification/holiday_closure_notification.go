@@ -47,7 +47,7 @@ type Notice struct {
 	Reason       string     `json:"reason"`
 	Previous     *Range     `json:"previous"`
 	Current      *Range     `json:"current"`
-	Revision     int64      `json:"revision"`
+	Revision     int        `json:"revision"`
 	Status       string     `json:"status"`
 	Changed      bool       `json:"changed"`
 	CanNotify    bool       `json:"can_notify"`
@@ -77,9 +77,9 @@ type Pending struct {
 
 // NotifiedPending is the answer of the Büro's click on the whole list.
 type NotifiedPending struct {
-	RetriedMails int64 `json:"retried_mails"`
-	Notices      int   `json:"notices"`
-	Families     int   `json:"families"`
+	RetriedMails int `json:"retried_mails"`
+	Notices      int `json:"notices"`
+	Families     int `json:"families"`
 }
 
 // Notifications is the workflow.
@@ -88,12 +88,12 @@ type Notifications interface {
 	SchoolNotices(ctx context.Context, schoolID int64) ([]Notice, error)
 	// NotifyFromSchool confirms a notice of the school, or takes its
 	// failed command up again, for accountID.
-	NotifyFromSchool(ctx context.Context, schoolID, accountID, noticeID, revision int64, token string) (Notice, error)
+	NotifyFromSchool(ctx context.Context, schoolID, accountID, noticeID int64, revision int, token string) (Notice, error)
 	// PendingHolidayClosures lists the notices of the Träger's schools.
 	PendingHolidayClosures(ctx context.Context, organizationID int64) (Pending, error)
 	// NotifyFromTraeger confirms a notice of a current school of the
 	// Träger, or takes its failed command up again, for accountID.
-	NotifyFromTraeger(ctx context.Context, organizationID, accountID, noticeID, revision int64, token string) (Notice, error)
+	NotifyFromTraeger(ctx context.Context, organizationID, accountID, noticeID int64, revision int, token string) (Notice, error)
 	// NotifyPendingHolidayClosures confirms every notice of the list the
 	// Büro saw, each under its own operation; token is that list's.
 	NotifyPendingHolidayClosures(ctx context.Context, organizationID, accountID int64, token string) (NotifiedPending, error)

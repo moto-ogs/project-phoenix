@@ -25,7 +25,7 @@ func TestReplacementConfirmationResolvesBlockedPredecessor(t *testing.T) {
 			first := w.schoolNotices(t)[0]
 			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, first.Revision,
+				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, int64(first.Revision),
 					schoolcalendar.HolidayClosureActor{Channel: "school", AccountID: account.ID, ImpactToken: first.Token})
 				return err
 			}))

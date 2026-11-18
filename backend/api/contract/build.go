@@ -18,6 +18,7 @@ var (
 	unmarshalerType = reflect.TypeFor[json.Unmarshaler]()
 	timeType        = reflect.TypeFor[time.Time]()
 	dateType        = reflect.TypeFor[calendar.Date]()
+	rawJSONType     = reflect.TypeFor[json.RawMessage]()
 )
 
 type builder struct {
@@ -276,6 +277,12 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 	case reflect.Struct:
 		name, err := b.object(t, where, request)
 		return Schema{Kind: KindRef, Ref: name}, err
+	case reflect.Interface:
+		// Only the empty interface: its value decides what travels, and a
+		// nil one is null.
+		if t.NumMethod() == 0 {
+			return Schema{Kind: KindJSON, Nullable: true}, nil
+		}
 	}
 	return Schema{}, fmt.Errorf("%s: unsupported type %s", where, t)
 }
@@ -286,6 +293,10 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
 	if t == timeType {
 		return Schema{Kind: KindInstant}, true, nil
+	}
+	if t == rawJSONType {
+		// Raw JSON travels as it is; empty renders as null.
+		return Schema{Kind: KindJSON, Nullable: true}, true, nil
 	}
 	if b.dates[t] {
 		// A day type renders its zero value as null.

@@ -103,7 +103,7 @@ func (s *Service) plans(ctx context.Context, organizationID int64, notices []sch
 func view(notice schoolcalendar.HolidayClosureNotice) Notice {
 	result := Notice{
 		ID: notice.ProposalID, SchoolID: notice.SchoolID, ClosingDayID: notice.ClosingDayID, Reason: notice.Reason,
-		Revision: notice.Revision, Status: string(notice.Status), Changed: notice.Changed, CanNotify: notice.CanNotify(),
+		Revision: int(notice.Revision), Status: string(notice.Status), Changed: notice.Changed, CanNotify: notice.CanNotify(),
 		ConfirmedAt: notice.ConfirmedAt, UpdatedAt: notice.UpdatedAt,
 	}
 	if notice.Previous != nil {
@@ -175,8 +175,8 @@ func organizationsOf(notices []schoolcalendar.HolidayClosureNotice, suggestedOnl
 // NotifyFromSchool confirms the notice in the school's transaction and then
 // processes the Träger's due commands: a failure there leaves the
 // committed command for the worker.
-func (s *Service) NotifyFromSchool(ctx context.Context, schoolID, accountID, noticeID, revision int64, token string) (Notice, error) {
-	return s.confirm(ctx, schoolID, noticeID, revision, schoolcalendar.HolidayClosureActor{
+func (s *Service) NotifyFromSchool(ctx context.Context, schoolID, accountID, noticeID int64, revision int, token string) (Notice, error) {
+	return s.confirm(ctx, schoolID, noticeID, int64(revision), schoolcalendar.HolidayClosureActor{
 		AccountID: accountID, Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: token,
 	})
 }
@@ -184,12 +184,12 @@ func (s *Service) NotifyFromSchool(ctx context.Context, schoolID, accountID, not
 // NotifyFromTraeger checks in a Träger transaction that the notice belongs
 // to a current school of the Träger, then confirms it in the school's own
 // transaction: never a school transaction inside the Träger's.
-func (s *Service) NotifyFromTraeger(ctx context.Context, organizationID, accountID, noticeID, revision int64, token string) (Notice, error) {
+func (s *Service) NotifyFromTraeger(ctx context.Context, organizationID, accountID, noticeID int64, revision int, token string) (Notice, error) {
 	notice, err := s.traegerNotice(ctx, organizationID, noticeID)
 	if err != nil {
 		return Notice{}, err
 	}
-	return s.confirm(ctx, notice.SchoolID, noticeID, revision, schoolcalendar.HolidayClosureActor{
+	return s.confirm(ctx, notice.SchoolID, noticeID, int64(revision), schoolcalendar.HolidayClosureActor{
 		AccountID: accountID, Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: organizationID, ImpactToken: token,
 	})
 }
@@ -424,10 +424,11 @@ func (s *Service) NotifyPendingHolidayClosures(ctx context.Context, organization
 		}
 	}
 	var result NotifiedPending
-	result.RetriedMails, err = s.retryPendingMails(ctx, organizationID, pending.mailKeys)
+	retried, err := s.retryPendingMails(ctx, organizationID, pending.mailKeys)
 	if err != nil {
 		return result, err
 	}
+	result.RetriedMails = int(retried)
 	var operations []string
 	for _, schoolID := range slices.Sorted(maps.Keys(bySchool)) {
 		confirmed, operationIDs, err := s.confirmAtSchool(ctx, organizationID, accountID, schoolID, bySchool[schoolID])
@@ -459,7 +460,7 @@ func (s *Service) confirmAtSchool(ctx context.Context, organizationID, accountID
 		operations = nil
 		confirmations := make([]schoolcalendar.HolidayClosureConfirmation, len(notices))
 		for i, notice := range notices {
-			confirmations[i] = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: notice.Revision, ImpactToken: notice.Token}
+			confirmations[i] = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: int64(notice.Revision), ImpactToken: notice.Token}
 		}
 		confirmed, err := s.Proposals.ConfirmHolidayClosureNotices(ctx, confirmations, schoolcalendar.HolidayClosureActor{
 			AccountID: accountID, Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: organizationID,

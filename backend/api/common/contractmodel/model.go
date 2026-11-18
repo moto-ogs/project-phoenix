@@ -20,6 +20,10 @@ const (
 	KindArray    = "array"
 	KindMap      = "map"
 	KindRef      = "ref"
+	// KindJSON is any JSON value: a field of type any, whose form the
+	// handler's data decides (a form condition compares with a string, a
+	// number or a list).
+	KindJSON = "json"
 )
 
 // Schema is one value on the wire.

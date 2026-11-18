@@ -149,7 +149,7 @@ func mergeTraegerCopy(copy careplan.TraegerOfferingCopy, row careplan.CareOfferi
 	} else {
 		row = traegerOfferingOf(copy.Fields, copy.PhaseID)
 		for _, field := range sortedTraegerKeys(baseline) {
-			applied.Fields = append(applied.Fields, careplan.TraegerFieldChange{Field: field, State: traegerFieldNew, Traeger: baseline[field]})
+			applied.Fields = append(applied.Fields, careplan.TraegerOfferingFieldChange{Field: field, State: traegerFieldNew, Traeger: baseline[field]})
 		}
 	}
 	return row, applied, nil

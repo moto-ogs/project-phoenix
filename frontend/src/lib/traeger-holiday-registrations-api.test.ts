@@ -355,7 +355,7 @@ describe("traeger-holiday-registrations-api", () => {
     );
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("POST");
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
-      "/api/traeger/holiday-periods/5/registrations/7/children/9/bookings",
+      "/api/traeger/holiday-contributions/5/registrations/7/children/9/bookings",
     );
     expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("PUT");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({

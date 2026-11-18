@@ -179,7 +179,7 @@ func TestBulkConfirmationGuardsAndBudget(t *testing.T) {
 	}
 	var confirmations []schoolcalendar.HolidayClosureConfirmation
 	for _, notice := range w.schoolNotices(t) {
-		confirmations = append(confirmations, schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: notice.Revision, ImpactToken: notice.Token})
+		confirmations = append(confirmations, schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: int64(notice.Revision), ImpactToken: notice.Token})
 	}
 	events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	actor := schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: w.organization}
@@ -232,7 +232,7 @@ func TestUnprocessedMoveKeepsTheLastToldRange(t *testing.T) {
 	var pending schoolcalendar.HolidayClosureConfirmation
 	for _, notice := range w.schoolNotices(t) {
 		if notice.Status == "suggested" {
-			pending = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: notice.Revision, ImpactToken: notice.Token}
+			pending = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: int64(notice.Revision), ImpactToken: notice.Token}
 		}
 	}
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
@@ -273,7 +273,7 @@ func TestDeletingUnpreparedNewClosureWithdrawsItsCommands(t *testing.T) {
 						continue
 					}
 					require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-						_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID, notice.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
+						_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID, int64(notice.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
 						return err
 					}))
 				}
@@ -384,7 +384,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			first := w.schoolNotices(t)[0]
 			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, first.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, int64(first.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
 				return err
 			}))
 			// An unrelated calendar revision makes the confirmed command await approval.
@@ -428,7 +428,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			require.Len(t, notices, 1, "the new source proposal replaces the old renewal in both portals")
 			require.NotEqual(t, stale.ID, notices[0].ID)
 			err = tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID, stale.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID, int64(stale.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
 				return err
 			})
 			require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeChanged, "a stale renewal must not reach a uniqueness error")
@@ -445,7 +445,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			require.Len(t, w.mails(t), 2)
 			assert.Contains(t, string(w.mails(t)[0].Payload), "12.07.2030")
 			err = tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID, stale.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID, int64(stale.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
 				return err
 			})
 			require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeChanged, "the old command also stays superseded after the newer proposal is confirmed")
@@ -488,7 +488,7 @@ func TestPreparationFailureKeepsTheLastToldSourceRange(t *testing.T) {
 			continue
 		}
 		require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-			_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID, notice.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
+			_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID, int64(notice.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
 			return err
 		}))
 	}
@@ -573,7 +573,7 @@ func TestAuthorizationHistoryCommitsWithTheCommandAndAnonymizesActors(t *testing
 	n := w.schoolNotices(t)[0]
 	events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	err := tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, n.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
+		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
 		if err != nil {
 			return err
 		}
@@ -601,7 +601,7 @@ func TestAuthorizationHistoryCommitsWithTheCommandAndAnonymizesActors(t *testing
 	_, err = w.db.ExecContext(w.ctx, `UPDATE calendar.holiday_closure_events SET state='needs_confirmation' WHERE organization_id=?`, w.organization)
 	require.NoError(t, err)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, n.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
+		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
 		return err
 	}))
 	require.NoError(t, w.db.NewRaw(`SELECT account_id FROM calendar.holiday_closure_authorizations WHERE tenant_id=? ORDER BY id`, w.school).Scan(w.ctx, &accounts))

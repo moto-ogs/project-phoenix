@@ -362,6 +362,25 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Equal(t, map[int64]int{north: 1, south: 1}, staffAccessEntries(t, db, office.organization, "traeger_staff_financial"))
 	})
 
+	t.Run("the bank section reads masked and saves through its own route", func(t *testing.T) {
+		path := fmt.Sprintf("/traeger/staff-records/%d/financial", record.ID)
+		rec := traegerJSON(t, router, office.token, http.MethodGet, path, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		masked := decode[workforce.TraegerStaffFinancial](t, rec)
+		require.NotNil(t, masked.IBAN)
+		assert.Equal(t, "•••• 3000", *masked.IBAN, "the read shows the mask only")
+		assert.Nil(t, masked.TaxID)
+
+		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"iban": "DE89 3704 0044 0532 0130 00"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, record.ID, decode[struct {
+			ID int64 `json:"id"`
+		}](t, rec).ID)
+		rec = traegerJSON(t, router, office.token, http.MethodGet, path, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, "•••• 3000", *decode[workforce.TraegerStaffFinancial](t, rec).IBAN, "the same IBAN in another spelling changes nothing")
+	})
+
 	t.Run("the school reads that the Träger keeps the values and changes none of them", func(t *testing.T) {
 		keptIn := func(staffID int64) bool {
 			school, err := tenant.NewTenantID(south)

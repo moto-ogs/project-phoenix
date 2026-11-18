@@ -42,8 +42,8 @@ func (rs *AbsenceTypesResource) TraegerRouter(protectedTraegerRoutes func(chi.Ro
 	return r
 }
 
-// absenceTypeRequest is the whole type; an update replaces every field.
-type absenceTypeRequest struct {
+// AbsenceTypeRequest is the whole type; an update replaces every field.
+type AbsenceTypeRequest struct {
 	Name             string  `json:"name"`
 	AllowanceEnabled bool    `json:"allowance_enabled"`
 	StandardDays     float64 `json:"standard_days"`
@@ -52,9 +52,9 @@ type absenceTypeRequest struct {
 	IsActive         *bool   `json:"is_active"`
 }
 
-func (req *absenceTypeRequest) Bind(*http.Request) error { return nil }
+func (req *AbsenceTypeRequest) Bind(*http.Request) error { return nil }
 
-func (req *absenceTypeRequest) toInput() workforce.TraegerAbsenceTypeInput {
+func (req *AbsenceTypeRequest) toInput() workforce.TraegerAbsenceTypeInput {
 	active := req.IsActive == nil || *req.IsActive
 	return workforce.TraegerAbsenceTypeInput{
 		Name: req.Name, AllowanceEnabled: req.AllowanceEnabled, StandardDays: req.StandardDays,
@@ -80,7 +80,7 @@ func (rs *AbsenceTypesResource) create(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &absenceTypeRequest{}
+	req := &AbsenceTypeRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceTraegerAbsenceTypeInvalid))
 		return
@@ -98,7 +98,7 @@ func (rs *AbsenceTypesResource) update(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &absenceTypeRequest{}
+	req := &AbsenceTypeRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceTraegerAbsenceTypeInvalid))
 		return
@@ -135,14 +135,14 @@ func (rs *RecordsResource) absenceAccounts(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, http.StatusOK, accounts, "Absence accounts retrieved successfully")
 }
 
-// absenceAllowanceRequest sets the days of one person, type and year.
-type absenceAllowanceRequest struct {
+// AbsenceAllowanceRequest sets the days of one person, type and year.
+type AbsenceAllowanceRequest struct {
 	Year         int     `json:"year"`
 	EntitledDays float64 `json:"entitled_days"`
 	Reason       string  `json:"reason"`
 }
 
-func (req *absenceAllowanceRequest) Bind(*http.Request) error { return nil }
+func (req *AbsenceAllowanceRequest) Bind(*http.Request) error { return nil }
 
 // setAbsenceAllowance serves PUT
 // /traeger/staff-records/{id}/absence-accounts/{typeId}.
@@ -155,7 +155,7 @@ func (rs *RecordsResource) setAbsenceAllowance(w http.ResponseWriter, r *http.Re
 	if !ok {
 		return
 	}
-	req := &absenceAllowanceRequest{}
+	req := &AbsenceAllowanceRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -167,7 +167,7 @@ func (rs *RecordsResource) setAbsenceAllowance(w http.ResponseWriter, r *http.Re
 		renderAbsenceError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int64{"id": typeID}, "Absence allowance saved successfully")
+	common.Respond(w, r, http.StatusOK, IDResponse{ID: typeID}, "Absence allowance saved successfully")
 }
 
 func renderAbsenceError(w http.ResponseWriter, r *http.Request, err error) {

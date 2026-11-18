@@ -107,7 +107,7 @@ func (s *HolidayRegistrationStore) ReadHolidayProofs(ctx context.Context, organi
 	var rows []struct {
 		ID          int64     `bun:"id"`
 		Filename    string    `bun:"filename"`
-		SizeBytes   int64     `bun:"size_bytes"`
+		SizeBytes   int       `bun:"size_bytes"`
 		ContentType string    `bun:"content_type"`
 		CreatedAt   time.Time `bun:"created_at"`
 	}

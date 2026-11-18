@@ -424,7 +424,7 @@ func TestHolidayClosureNoticesKeepTheirFiltersBeneathRLS(t *testing.T) {
 		for _, notice := range notices {
 			assert.Equal(t, own.school, notice.SchoolID, "the school reads no notice of another school")
 		}
-		_, err = events.ConfirmHolidayClosureNotice(ctx, foreignNotice.ID, foreignNotice.Revision,
+		_, err = events.ConfirmHolidayClosureNotice(ctx, foreignNotice.ID, int64(foreignNotice.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool})
 		require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeNotFound, "nor confirms one")
 		return nil
@@ -489,7 +489,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	seen := w.schoolNotices(t)[0]
 	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, seen.ID, seen.Revision,
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, seen.ID, int64(seen.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: seen.Token})
 		return err
 	}))
@@ -514,7 +514,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	_, err = w.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, other.ID, w.school)
 	require.NoError(t, err)
 	err = tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, renewed.ID, renewed.Revision,
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, renewed.ID, int64(renewed.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: w.organization, ImpactToken: renewed.Token})
 		return err
 	})
@@ -642,7 +642,7 @@ func TestUnresolvedHolidayClosureSurvivesRetirement(t *testing.T) {
 	notice := w.schoolNotices(t)[0]
 	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, notice.ID, notice.Revision,
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, notice.ID, int64(notice.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
 		return err
 	}))
