@@ -83,7 +83,7 @@ func TestBillingCapturesOnceOnTheKeyDate(t *testing.T) {
 	counts.terminals = map[int64]int{schoolID: 2}
 	ctx := adminCtx(t, db)
 
-	keyDay, err := billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(10), testpkg.UniqueTestTenantID(t))
+	keyDay, err := billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(10)}, testpkg.UniqueTestTenantID(t))
 	require.NoError(t, err)
 	assert.Equal(t, 10, keyDay.Day)
 	assert.Equal(t, "2099-05-10", keyDay.NextKeyDate)
@@ -127,7 +127,7 @@ func TestBillingCaptureSkipsSchoolsCreatedAfterTheKeyDate(t *testing.T) {
 	require.NoError(t, err)
 	ctx := adminCtx(t, db)
 
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(15), testpkg.UniqueTestTenantID(t))
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(15)}, testpkg.UniqueTestTenantID(t))
 	require.NoError(t, err)
 	// The worker was down on the 15th: the capture on the 20th is late but
 	// keeps the key date, and its time says so.
@@ -173,7 +173,7 @@ func TestBillingKeyDayIsStampedOnTheReportClock(t *testing.T) {
 	require.NoError(t, err)
 	ctx := adminCtx(t, db)
 
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(10), testpkg.UniqueTestTenantID(t))
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(10)}, testpkg.UniqueTestTenantID(t))
 	require.NoError(t, err)
 	written, err := billing.RecordDueBillingKeyDates(ctx, berlinTime(2025, time.March, 10, 6, 0))
 	require.NoError(t, err)
@@ -284,11 +284,11 @@ func TestBillingKeyDayRejectsDaysNotInEveryMonth(t *testing.T) {
 	assert.Equal(t, "2099-09-15", initial.NextKeyDate)
 
 	for _, day := range []int{0, 29, 31, -3} {
-		_, err := billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(day), testpkg.UniqueTestTenantID(t))
+		_, err := billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(day)}, testpkg.UniqueTestTenantID(t))
 		require.ErrorIs(t, err, organizationtenancy.ErrInvalidBillingKeyDay, "day %d", day)
 	}
 	operatorID := testpkg.UniqueTestTenantID(t)
-	updated, err := billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(28), operatorID)
+	updated, err := billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(28)}, operatorID)
 	require.NoError(t, err)
 	assert.Equal(t, 28, updated.Day)
 	assert.Equal(t, "2099-08-28", updated.NextKeyDate)

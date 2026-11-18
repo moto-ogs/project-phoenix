@@ -73,7 +73,7 @@ func TestBillingCaptureSurvivesALeaseRenewal(t *testing.T) {
 	billing, err := NewBilling(BillingDependencies{Counts: counts, Now: func() time.Time { return berlinTime(2099, time.June, 1, 12, 0) }})
 	require.NoError(t, err)
 	ctx := adminCtx(t, db)
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(10), testpkg.UniqueTestTenantID(t))
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(10)}, testpkg.UniqueTestTenantID(t))
 	require.NoError(t, err)
 
 	var asserts atomic.Int32
@@ -102,7 +102,7 @@ func TestBillingCaptureStopsWhenTheLeaseIsLost(t *testing.T) {
 	billing, err := NewBilling(BillingDependencies{Counts: counts, Now: func() time.Time { return berlinTime(2099, time.June, 1, 12, 0) }})
 	require.NoError(t, err)
 	ctx := adminCtx(t, db)
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(10), testpkg.UniqueTestTenantID(t))
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(10)}, testpkg.UniqueTestTenantID(t))
 	require.NoError(t, err)
 
 	var asserts atomic.Int32

@@ -33,12 +33,12 @@ func TestBillingCaptureUsesTheOwnKeyDayOfASchoolAndItsTraeger(t *testing.T) {
 	other, _ := testpkg.CreateTestTenant(t, db)
 	counts.students = map[int64]int{bach: 11, linden: 22, other: 33}
 
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.StandardBillingKeyDay(15), operator)
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Day: new(15)}, operator)
 	require.NoError(t, err)
 	five, twenty := 5, 20
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: nord.ID}, &five), operator)
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: nord.ID}, Day: &five}, operator)
 	require.NoError(t, err)
-	keyDay, err := billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: linden, School: true}, &twenty), operator)
+	keyDay, err := billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: linden, School: true}, Day: &twenty}, operator)
 	require.NoError(t, err)
 	assert.Equal(t, 15, keyDay.Day, "the standard stays")
 	overrides := keyDay.Overrides
@@ -94,7 +94,7 @@ func TestBillingCaptureUsesTheOwnKeyDayOfASchoolAndItsTraeger(t *testing.T) {
 
 	// The school goes back to its Träger's day; only the Träger stays listed.
 	now = berlinTime(2099, time.October, 25, 12, 0)
-	keyDay, err = billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: linden, School: true}, nil), operator)
+	keyDay, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: linden, School: true}, Day: nil}, operator)
 	require.NoError(t, err)
 	require.Len(t, keyDay.Overrides, 1)
 	assert.Equal(t, "2099-11-05", keyDay.Overrides[0].NextKeyDate)
@@ -125,20 +125,20 @@ func TestBillingKeyDayOverrideChangesOnlyWhatChanged(t *testing.T) {
 	require.NoError(t, err)
 
 	ten, thirty := 10, 30
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: deleted, School: true}, &ten), operator)
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: deleted, School: true}, Day: &ten}, operator)
 	require.ErrorIs(t, err, organizationtenancy.ErrSchoolNotFound)
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: deleted, School: true}, nil), operator)
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: deleted, School: true}, Day: nil}, operator)
 	require.ErrorIs(t, err, organizationtenancy.ErrSchoolNotFound, "a reset is refused too")
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: -1}, &ten), operator)
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: -1}, Day: &ten}, operator)
 	require.ErrorIs(t, err, organizationtenancy.ErrOrganizationNotFound)
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: school, School: true}, &thirty), operator)
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: school, School: true}, Day: &thirty}, operator)
 	require.ErrorIs(t, err, organizationtenancy.ErrInvalidBillingKeyDay)
 
-	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: school, School: true}, &ten), operator)
+	_, err = billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: school, School: true}, Day: &ten}, operator)
 	require.NoError(t, err)
 	// Saved again after the key date: no change, so March is still captured.
 	now = berlinTime(2099, time.March, 12, 12, 0)
-	keyDay, err := billing.SetBillingKeyDay(ctx, organizationtenancy.OwnBillingKeyDay(organizationtenancy.BillingKeyDayTarget{ID: school, School: true}, &ten), operator)
+	keyDay, err := billing.SetBillingKeyDay(ctx, organizationtenancy.BillingKeyDayChange{Target: &organizationtenancy.BillingKeyDayTarget{ID: school, School: true}, Day: &ten}, operator)
 	require.NoError(t, err)
 	require.Len(t, keyDay.Overrides, 1)
 	assert.Equal(t, berlinTime(2099, time.March, 1, 12, 0), keyDay.Overrides[0].UpdatedAt.In(now.Location()))

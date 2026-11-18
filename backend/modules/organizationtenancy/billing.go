@@ -66,17 +66,6 @@ type BillingKeyDayChange struct {
 	Day    *int
 }
 
-// StandardBillingKeyDay changes the key day of every school.
-func StandardBillingKeyDay(day int) BillingKeyDayChange {
-	return BillingKeyDayChange{Day: &day}
-}
-
-// OwnBillingKeyDay sets (day not nil) or resets (day nil) the own key day of
-// a Träger or a school.
-func OwnBillingKeyDay(target BillingKeyDayTarget, day *int) BillingKeyDayChange {
-	return BillingKeyDayChange{Target: &target, Day: day}
-}
-
 // BillingKeyDayTarget names whose own key day the operator sets: the Träger
 // ID, or with School the school ID.
 type BillingKeyDayTarget struct {
