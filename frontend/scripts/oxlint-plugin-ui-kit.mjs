@@ -676,7 +676,9 @@ function exclusiveBranches(node, scope) {
     if (!parent) break;
     if (parent.type === "ConditionalExpression") {
       excluded.add(parent.test);
-      excluded.add(parent.consequent === child ? parent.alternate : parent.consequent);
+      excluded.add(
+        parent.consequent === child ? parent.alternate : parent.consequent,
+      );
     } else if (parent.type === "LogicalExpression") {
       excluded.add(parent.left === child ? parent.right : parent.left);
     }
