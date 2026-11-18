@@ -13,7 +13,7 @@ import {
 import { SentrySessionContext } from "~/components/auth/sentry-session-context";
 import { ModuleBookingAudienceProvider } from "~/contexts/ToastContext";
 import { TenantAuthWrapper } from "~/components/auth/tenant-auth-wrapper";
-import { PushSubscriptionSync } from "~/components/notifications/service-worker-registrar";
+import { PushSubscriptionSync } from "~/components/notifications/push-subscription-sync";
 import { announcementKeys, shellResourceKeys } from "~/lib/swr/shell-keys";
 import { USER_CONTEXT_SWR_KEY } from "~/lib/hooks/use-user-context";
 import { REMINDERS_SWR_KEY } from "~/lib/reminders-api";

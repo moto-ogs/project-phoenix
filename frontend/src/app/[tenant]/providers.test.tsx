@@ -13,7 +13,7 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: null, status: "loading" }),
 }));
 
-vi.mock("~/components/notifications/service-worker-registrar", () => ({
+vi.mock("~/components/notifications/push-subscription-sync", () => ({
   PushSubscriptionSync: () => <span data-testid="push-subscription-sync" />,
 }));
 

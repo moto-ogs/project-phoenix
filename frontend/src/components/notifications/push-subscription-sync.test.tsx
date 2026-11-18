@@ -4,7 +4,7 @@ import {
   TEST_PUSH_PUBLIC_KEY,
   setPushPublicKey,
 } from "~/test/push-public-key-mock";
-import { PushSubscriptionSync } from "./service-worker-registrar";
+import { PushSubscriptionSync } from "./push-subscription-sync";
 
 const mocks = vi.hoisted(() => ({
   useSession: vi.fn(),
