@@ -48,9 +48,10 @@ func (req *AcceptGuardianInvitationRequest) Bind(_ *http.Request) error {
 
 // AcceptGuardianInvitationResponse mirrors AcceptInvitationResponse so the
 // frontend can reuse mapping helpers. The account's ID travels as a string
-// (ADR 0270), as the contract of the public route requires.
+// (ADR 0270), as the contract of the public route requires. Remove legacy-id
+// after a production release sends strings; the previous release sends numbers.
 type AcceptGuardianInvitationResponse struct {
-	AccountID  common.ID `json:"account_id"`
+	AccountID  common.ID `json:"account_id" contract:"legacy-id"`
 	Email      string    `json:"email"`
 	TenantSlug string    `json:"tenant_slug,omitempty"`
 }
