@@ -43,6 +43,9 @@ import {
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 
+const ACCIDENT_REPORT_INFO =
+  "Hier steht die Unfallanzeige zu einem Unfall dieses Kindes. Ist sie unterschrieben, gibst du das PDF selbst an die Unfallkasse weiter.";
+
 // Unfallanzeige (#4771): one accident report of a child. The page shows what
 // was recorded, lets the leadership sign it (drawn signature or the signed
 // paper copy) and offers the PDF in the layout of the official form. A signed
@@ -117,6 +120,7 @@ export default function AccidentReportPage() {
       title={
         report?.supersedesId ? "Unfallanzeige (Korrektur)" : "Unfallanzeige"
       }
+      info={ACCIDENT_REPORT_INFO}
       back
       backHref={backHref}
       backLabel="Zurück zum Kinderprofil"

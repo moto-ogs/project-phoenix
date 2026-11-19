@@ -47,6 +47,12 @@ import { useOpenCareGroupMode } from "~/lib/tenant-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
 
+const SUBSTITUTIONS_INFO =
+  "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt. Fehlt in einer Aufsicht jemand, wähle dort „Betreuer hinzufügen“. Mit „Gruppe übergeben“ gibst du eine Gruppe an eine andere Person.";
+// Ohne feste Gruppen gibt es keine Gruppenübergabe.
+const SUBSTITUTIONS_OPEN_CARE_INFO =
+  "Hier siehst du, wer heute eine Aufsicht oder einen Termin übernimmt. Fehlt in einer Aufsicht jemand, wähle dort „Betreuer hinzufügen“.";
+
 const logger = createLogger({ component: "SubstitutionsPage" });
 
 const EMPTY_OVERVIEW: SubstitutionOverview = {
@@ -1059,6 +1065,7 @@ function LoadedPage({ session, data, openCare }: LoadedPageProps) {
     // stehen im overlays-Slot, damit sie in jedem Zustand gemountet bleiben.
     <TenantPage
       title="Übergaben"
+      info={openCare ? SUBSTITUTIONS_OPEN_CARE_INFO : SUBSTITUTIONS_INFO}
       overlays={
         <PageOverlays
           data={data}
@@ -1105,6 +1112,7 @@ function LoadingFallback() {
   return (
     <TenantPage
       title="Übergaben"
+      info={SUBSTITUTIONS_OPEN_CARE_INFO}
       // Das Gerüst trägt die vorlesbare Ankündigung selbst — ein zweites
       // role="status" darunter wäre eine doppelte Meldung.
       loading={<ListSkeleton rows={6} />}

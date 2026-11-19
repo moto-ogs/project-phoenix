@@ -519,6 +519,30 @@ describe("RoomDetailPage", () => {
     expect(screen.queryByTestId("room-stammdaten")).not.toBeInTheDocument();
   });
 
+  it("explains the room's occupancy, or only its record in binary mode", () => {
+    const { unmount } = render(<RoomDetailPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Gruppenraum Sonne" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier siehst du, ob dieser Raum belegt ist und welche Kinder gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
+      ),
+    ).toBeInTheDocument();
+    unmount();
+
+    presenceModeState.mode = "binary";
+    render(<RoomDetailPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Gruppenraum Sonne" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier stehen die Angaben zu diesem Raum. Deine Schule erfasst nicht, welche Kinder in welchem Raum sind.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("falls back to the room list for an external referrer", () => {
     searchParams.set("from", "//attacker.example");
     render(<RoomDetailPage />);

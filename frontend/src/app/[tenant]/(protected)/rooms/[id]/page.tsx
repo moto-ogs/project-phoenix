@@ -69,6 +69,12 @@ import { useTenantRouter } from "~/lib/tenant-router";
 import { RoomDetailLoadingPage } from "./page-skeleton";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
+const ROOM_INFO =
+  "Hier siehst du, ob dieser Raum belegt ist und welche Kinder gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.";
+// Erfasst die Schule nur, ob ein Kind da ist, gibt es keine Belegung.
+const ROOM_RECORD_INFO =
+  "Hier stehen die Angaben zu diesem Raum. Deine Schule erfasst nicht, welche Kinder in welchem Raum sind.";
+
 const logger = createLogger({ component: "RoomDetailPage" });
 
 type RoomTab = "uebersicht" | "plan" | "stammdaten";
@@ -340,6 +346,7 @@ function RoomDetailPageContent() {
         referrer={referrer}
         backLabel={backLabel}
         preview={preview}
+        info={hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO}
       />
     );
   }
@@ -348,6 +355,7 @@ function RoomDetailPageContent() {
     return (
       <TenantPage
         title="Raum"
+        info={hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -415,6 +423,7 @@ function RoomDetailPageContent() {
   return (
     <TenantPage
       title={room.name}
+      info={hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO}
       stats={statusLine ?? undefined}
       back
       backHref={referrer}

@@ -10,6 +10,11 @@ import { resolveDetailReferrer } from "~/lib/tenant-path";
 import { RoomsGridSkeleton } from "../page-skeleton";
 import { transitConcept } from "~/lib/concepts/transit";
 
+const TRANSIT_INFO =
+  "Hier stehen Kinder, die da sind, aber in keinem Raum. Wähle Kinder aus und dann den „Zielraum“. Mit „In Raum setzen“ sind sie dort.";
+const TRANSIT_BINARY_MODE_INFO =
+  "Hier wären Kinder, die da sind, aber in keinem Raum. Deine Schule nutzt das zurzeit nicht.";
+
 /** Der Rückweg der Kindakte aus dieser Liste. */
 const TRANSIT_PATH = "/rooms/unterwegs";
 
@@ -37,7 +42,7 @@ function transitDayStatusFromReferrer(
  */
 export default function TransitPage() {
   return (
-    <BinaryModeGuard title="Unterwegs">
+    <BinaryModeGuard title="Unterwegs" info={TRANSIT_BINARY_MODE_INFO}>
       <Suspense fallback={<RoomsGridSkeleton />}>
         <TransitPageContent />
       </Suspense>
@@ -63,6 +68,7 @@ function TransitPageContent() {
   return (
     <TenantPage
       title="Unterwegs"
+      info={TRANSIT_INFO}
       stats={
         totalCount === null
           ? undefined

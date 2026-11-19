@@ -55,6 +55,9 @@ import { Button } from "~/components/ui/button";
 import { AttendanceExportDialog } from "~/components/students/attendance-export-dialog";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 
+const ROOM_HISTORY_INFO =
+  "Hier siehst du für jeden Tag, wann dieses Kind kam und ging und wo es war. Bei jedem Tag steht, wer es an- und abgemeldet hat. Über das Menü mit den drei Punkten exportierst du die Liste.";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 const ROOM_HISTORY_DESCRIPTION =
@@ -815,6 +818,7 @@ function StudentRoomHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={changeHistoryConcept} size="page" />}
         title={displayName || "Anwesenheitsprotokoll"}
+        info={ROOM_HISTORY_INFO}
         stats={studentMeta ?? dayLine}
         statsLoading={loading}
         loading={loading}
