@@ -1,4 +1,10 @@
-/** Private, session- or token-bound file routes. Audited for #5119. */
+/**
+ * Private, session- or token-bound file routes. Audited for #5119. A file
+ * route the contract registers (`response: fileAnswer`) has no route file:
+ * the portal's catalog proxy answers it private and uncached
+ * (catalog-proxy.server.ts, #2352), and `route-cache-policy.test.ts` keeps
+ * it out of this list.
+ */
 export const PRIVATE_DOWNLOAD_ROUTES = [
   ["announcement-attachments/[announcementId]/[attachmentId]/download", "GET"],
   ["birthdays/staff-export", "POST"],
@@ -63,13 +69,11 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["students/[id]/attendance-history/export", "GET"],
   ["students/[id]/documents/[documentId]/download", "GET"],
   ["students/care-schedule-change-requests/[requestId]/proof", "GET"],
-  ["students/day-log/export", "GET"],
   ["students/export", "POST"],
   ["surveys/[surveyId]/results/export", "GET"],
   ["timetable/betreuungsplan/export", "POST"],
   ["timetable/lists/export", "POST"],
   ["traeger-documents/[id]/file", "GET"],
-  ["traeger/access-log/export", "GET"],
   ["traeger/billing-families/[id]/export", "GET"],
   ["traeger/billing-families/export", "GET"],
   ["traeger/billing-runs/export", "GET"],
@@ -116,7 +120,6 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["traeger/contracts/[id]/document", "GET"],
   ["traeger/contracts/[id]/paper-signature", "GET"],
   ["traeger/contracts/[id]/versions/[number]/document", "GET"],
-  ["traeger/documents/[id]/file", "GET"],
   ["traeger/holiday-periods/[id]/form/documents/[documentId]", "GET"],
   ["traeger/holiday-periods/[id]/registrations/export", "GET"],
   ["traeger/holiday-periods/[id]/registrations/pdf", "GET"],
