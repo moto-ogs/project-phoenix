@@ -3,4 +3,4 @@
  * Text; die Seite gibt ihn auch dem Modulwächter.
  */
 export const DIENSTPLAN_INFO =
-  "Hier planst du die Schichten deines Teams, also wer wann arbeitet. Wähle in der Zeile einer Person einen Tag und trage die Schicht ein. Fehlt jemand bei einem Termin, regelst du das im „Vertretungsplan“.";
+  "Hier planst du die Schichten deines Teams, also wer wann arbeitet. Wähle in der Zeile einer Person den Tag für die Schicht. Fehlt jemand, findest du im Drei-Punkte-Menü „Springer des Trägers“.";

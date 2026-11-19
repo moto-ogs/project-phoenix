@@ -11,7 +11,10 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { activeSettingsSectionId } from "~/components/settings/settings-nav-items";
 import { useSettingsTabs } from "~/components/settings/settings-page";
 
-// Info-Knopf am Titel (#7566), in jedem Bereich und Zustand derselbe.
+// Info-Knopf am Titel (#7566), in jedem Bereich derselbe. Ohne freigegebene
+// Bereiche gibt es nichts zu wählen.
+const SETTINGS_EMPTY_INFO =
+  "Hier stellt die Leitung ein, wie deine OGS arbeitet.";
 const SETTINGS_INFO =
   "Hier stellst du ein, wie deine OGS arbeitet. Fang mit dem Bereich „Betrieb“ an, dort steht das Wichtigste. Die übrigen Bereiche passt du an, wenn du sie brauchst.";
 
@@ -99,7 +102,7 @@ function SettingsContent() {
     return (
       <TenantPage
         title="Einstellungen"
-        info={SETTINGS_INFO}
+        info={SETTINGS_EMPTY_INFO}
         stats="0 Bereiche"
         empty={{
           title: "Keine Einstellungen verfügbar.",

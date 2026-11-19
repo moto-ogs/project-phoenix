@@ -105,9 +105,11 @@ import { StaffDetailSkeleton } from "./page-skeleton";
 
 const logger = createLogger({ component: "StaffDetailPage" });
 
-/** Info-Knopf am Titel (#7566): gilt auch für Fehler und gelöschte Personen. */
+// Info-Knopf am Titel (#7566). Ohne geladene Person gibt es keine Reiter.
+const STAFF_DETAIL_MISSING_INFO =
+  "Hier stehen sonst die Angaben zu einer Person aus deinem Team.";
 const STAFF_DETAIL_INFO =
-  "Hier stehen alle Angaben zu dieser Person. Wähle unter dem Namen einen Bereich, etwa „Abwesenheiten“ oder „Stammdaten“. Welche Bereiche du siehst, hängt von deinen Rechten ab.";
+  "Hier stehen alle Angaben zu dieser Person. Wähle unter dem Namen einen Bereich, etwa „Abwesenheiten“ oder „Stammdaten“. Welche Bereiche du siehst, hängt von deinen Rechten und deiner Schule ab.";
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
@@ -543,7 +545,7 @@ export default function StaffDetailContent() {
     return (
       <TenantPage
         title="Mitarbeitende"
-        info={STAFF_DETAIL_INFO}
+        info={STAFF_DETAIL_MISSING_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -556,7 +558,7 @@ export default function StaffDetailContent() {
     return (
       <TenantPage
         title="Mitarbeitende"
-        info={STAFF_DETAIL_INFO}
+        info={STAFF_DETAIL_MISSING_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
