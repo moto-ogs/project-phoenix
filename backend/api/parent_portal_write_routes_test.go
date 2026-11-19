@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -125,4 +126,47 @@ func TestParentPortalSurveyAnswersThroughTheParentMount(t *testing.T) {
 	form = parentHTTP.SurveyFormResponse{}
 	r.call(t, http.MethodGet, path, f.token, nil, &form)
 	assert.True(t, form.Participated, "the answer is stored once")
+}
+
+// A guardian asks to book a care offering and then changes the note of the
+// waiting request; the stored request carries the edit.
+func TestParentPortalOfferingChangeIsRequestedAndEditedThroughTheParentMount(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	r := newParentPortalRoutes(t, db)
+	f := r.family(t)
+	phase := r.scalar(t, `SELECT q.phase_id FROM enrollment.request_children AS c JOIN enrollment.requests AS q ON q.id = c.request_id
+		WHERE c.created_student_id = ?`, f.StudentID)
+	offering := testpkg.CreateTestCareOffering(t, db, phase, "Nachmittag")
+	change := func(note string) map[string]any {
+		return map[string]any{
+			"offerings":      []map[string]any{{"offering_id": fmt.Sprint(offering.ID), "selected_days": []string{}}},
+			"effective_from": "2026-12-01", "note": note,
+		}
+	}
+	type pending struct {
+		PendingRequest *struct {
+			ID   string `json:"id"`
+			Note string `json:"note"`
+		} `json:"pending_request"`
+	}
+
+	var requested pending
+	r.call(t, http.MethodPost, childPath(f, "/care-offerings/requests"), f.token, change("Bitte ab Dezember"), &requested)
+	require.NotNil(t, requested.PendingRequest)
+	request := r.scalar(t, `SELECT id FROM enrollment.offering_change_requests WHERE student_id = ? AND status = 'pending'`, f.StudentID)
+	require.Equal(t, fmt.Sprint(request), requested.PendingRequest.ID)
+
+	edit := change("Bitte erst ab Januar")
+	var updatedAt time.Time
+	require.NoError(t, r.db.NewRaw(`SELECT updated_at FROM enrollment.offering_change_requests WHERE id = ?`, request).Scan(context.Background(), &updatedAt))
+	edit["expected_version"] = careplan.ParentRequestVersion(updatedAt)
+	var edited pending
+	r.call(t, http.MethodPut, childPath(f, fmt.Sprintf("/care-offerings/requests/%d", request)), f.token, edit, &edited)
+	require.NotNil(t, edited.PendingRequest)
+	assert.Equal(t, "Bitte erst ab Januar", edited.PendingRequest.Note)
+	var stored pending
+	r.call(t, http.MethodGet, childPath(f, "/care-offerings"), f.token, nil, &stored)
+	require.NotNil(t, stored.PendingRequest)
+	assert.Equal(t, "Bitte erst ab Januar", stored.PendingRequest.Note, "a later read shows the edited request")
 }

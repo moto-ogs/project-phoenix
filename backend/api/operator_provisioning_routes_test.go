@@ -243,6 +243,16 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	var slots int
 	require.NoError(t, f.db.NewSelect().TableExpr("platform.schools").Column("device_slots").Where("id = ?", schoolID).Scan(testpkg.Ctx(t), &slots))
 	assert.Equal(t, 3, slots)
+
+	// Removing the device takes it out of the school's fleet.
+	f.call(t, http.MethodDelete, fmt.Sprintf("/operator/devices/%d", device.ID), nil, nil)
+	var fleet []struct {
+		ID int64 `json:"id"`
+	}
+	f.call(t, http.MethodGet, fmt.Sprintf("/operator/schools/%d/devices", schoolID), nil, &fleet)
+	for _, row := range fleet {
+		assert.NotEqual(t, device.ID, row.ID, "the removed device is no longer listed")
+	}
 }
 
 // The operator's own profile and the caterer list read and write through
