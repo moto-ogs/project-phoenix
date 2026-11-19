@@ -112,6 +112,18 @@ export const noData = z
   ])
   .transform(() => ({ data: null }));
 
+/**
+ * A route that answers a file (`File` in the Go registration): the proxy
+ * streams the bytes with their file headers and decodes nothing.
+ */
+export const fileAnswer = { kind: "file" } as const;
+
+/**
+ * A route that takes a multipart/form-data upload (`Multipart`): the proxy
+ * streams the body to the backend within the route's `maxBodyBytes`.
+ */
+export const multipart = { kind: "multipart" } as const;
+
 /** common.PaginatedResponse */
 export function paginated<T>(
   data: z.ZodType<T, unknown>,

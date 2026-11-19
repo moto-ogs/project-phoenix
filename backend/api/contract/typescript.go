@@ -309,15 +309,20 @@ func (w *tsWriter) query(out *strings.Builder, route Route) {
 	out.WriteString("}\n")
 }
 
+// envelopeHelper names the runtime helper of the route's answer.
+func envelopeHelper(route Route) string {
+	switch {
+	case route.File:
+		return "fileAnswer"
+	case route.NoData:
+		return "noData"
+	case route.Paginated:
+		return "paginated"
+	}
+	return "success"
+}
+
 func (w *tsWriter) route(out *strings.Builder, route Route) {
-	wrap := "success"
-	if route.Paginated {
-		wrap = "paginated"
-	}
-	if route.NoData {
-		wrap = "noData"
-	}
-	w.helpers[wrap] = true
 	fmt.Fprintf(out, "  %q: {\n    method: %q,\n    pattern: %q,\n    portals: [%s],\n", route.Key(), route.Method, route.Pattern, quoted(route.Portals))
 	if route.Deprecated {
 		out.WriteString("    deprecated: true,\n")
@@ -328,6 +333,9 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.MaxBodyBytes > 0 {
 		fmt.Fprintf(out, "    maxBodyBytes: %d,\n", route.MaxBodyBytes)
 	}
+	if route.TooLargeCode != "" {
+		fmt.Fprintf(out, "    tooLargeCode: %q,\n", route.TooLargeCode)
+	}
 	if len(route.Query) > 0 {
 		names := make([]string, len(route.Query))
 		for i, param := range route.Query {
@@ -335,22 +343,34 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 		}
 		fmt.Fprintf(out, "    query: [%s],\n", quoted(names))
 	}
+	if route.Multipart {
+		w.helpers["multipart"] = true
+		out.WriteString("    request: multipart,\n")
+	}
 	if route.Request != nil {
 		w.helpers["requestBody"] = true
 		fmt.Fprintf(out, "    request: requestBody<%s>(),\n", w.tsType(*route.Request, true))
 	}
+	w.response(out, route)
+	out.WriteString("  },\n")
+}
+
+// response writes the route's answer: a decoder, the decoders of its
+// variants, or the marker of an answer without data.
+func (w *tsWriter) response(out *strings.Builder, route Route) {
+	wrap := envelopeHelper(route)
+	w.helpers[wrap] = true
 	if route.Variants != nil {
 		fmt.Fprintf(out, "    variantParam: %q,\n    defaultVariant: %q,\n    response: {\n", route.Variants.QueryParam, route.Variants.Default)
 		for _, value := range sortedKeys(route.Variants.Cases) {
 			fmt.Fprintf(out, "      %s: %s(%s),\n", value, wrap, w.zod(route.Variants.Cases[value]))
 		}
 		out.WriteString("    },\n")
-	} else if route.NoData {
-		out.WriteString("    response: noData,\n")
+	} else if route.NoData || route.File {
+		fmt.Fprintf(out, "    response: %s,\n", wrap)
 	} else {
 		fmt.Fprintf(out, "    response: %s(%s),\n", wrap, w.zod(*route.Response))
 	}
-	out.WriteString("  },\n")
 }
 
 func optionalMark(optional bool) string {
