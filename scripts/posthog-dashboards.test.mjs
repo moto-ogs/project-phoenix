@@ -4,6 +4,7 @@ import {
   DEPLOYMENTS,
   FEATURES,
   ONBOARDING_SURFACE_LABELS,
+  PARENT_FIRST_STEP_LABELS,
   ON_WORKDAY,
   POSTHOG_HOST,
   SCHOOL_BREAKDOWN,
@@ -16,6 +17,7 @@ import {
   posthogClient,
   publicHolidays,
   readBrowserEvents,
+  readOnboardingChecklistSteps,
   readOnboardingSurfaces,
   readPageNames,
   readRouteTemplates,
@@ -228,6 +230,37 @@ test('the entry dashboard counts self-opening surfaces from consenting browsers 
     assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
     const byPrefix = event.startsWith('onboarding_') && noFeature.includes("startsWith(event, 'onboarding_')");
     assert.ok(byPrefix || noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard shows the parents\' first steps from consenting browsers only, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Eltern (nur mit Einwilligung)');
+  assert.ok(tile, 'the tile exists');
+  assert.equal(tile.deployment, 'production');
+  assert.match(tile.description, /nur mit Einwilligung/i);
+  const query = tile.query.source.query;
+  for (const event of ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed']) {
+    assert.match(query, new RegExp(`'${event}'`), event);
+  }
+  assert.match(query, /properties\.onboarding_surface = 'parent_first_steps'/);
+  assert.match(query, /properties\.checklist = 'parent_first_steps'/);
+  assert.match(query, /properties\.surface = 'parents'/);
+
+  // Every allowed step of the browser filter has a German name on the tile.
+  assert.deepEqual(Object.keys(PARENT_FIRST_STEP_LABELS).sort(), readOnboardingChecklistSteps().sort());
+  assert.throws(() => readOnboardingChecklistSteps('const OTHER = 1;'), /ONBOARDING_CHECKLIST_STEPS/);
+  for (const [value, label] of Object.entries(PARENT_FIRST_STEP_LABELS)) {
+    assert.ok(query.includes(`'${value}'`) && query.includes(`'${label}'`), value);
+  }
+
+  // The checklist events pass the browser filter and fall outside „Sonstiges“.
+  const browserEvents = readBrowserEvents();
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed']) {
+    assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
+    assert.ok(noFeature.includes("startsWith(event, 'onboarding_')") || noFeature.includes(`'${event}'`), `${event} is no feature use`);
   }
 });
 

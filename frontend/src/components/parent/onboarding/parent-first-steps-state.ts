@@ -1,4 +1,16 @@
+import type { OnboardingChecklistStep } from "~/lib/analytics-policy";
 import type { ParentFirstStepKey } from "./parent-first-steps-tours";
+
+/** Fester Schritt-Schlüssel für die Nutzungsanalyse (#7557). */
+export const PARENT_FIRST_STEP_ANALYTICS_KEYS: Readonly<
+  Record<ParentFirstStepKey, OnboardingChecklistStep>
+> = {
+  start: "start",
+  childData: "child_data",
+  messagesNews: "messages_news",
+  installApp: "install_app",
+  notifications: "notifications",
+};
 
 const STORAGE_VERSION = 1;
 

@@ -120,15 +120,17 @@ function analyticsEnabled(): boolean {
   );
 }
 
-function execute(name: string, run: Operation): void {
-  if (!analyticsEnabled()) return;
+/** Runs or queues the operation; false when collection drops it. */
+function execute(name: string, run: Operation): boolean {
+  if (!analyticsEnabled()) return false;
 
   if (!instance) {
     pendingOperations.push({ name, run });
-    return;
+    return true;
   }
 
   runOperation(name, run);
+  return true;
 }
 
 function runOperation(name: string, run: Operation): void {
@@ -143,8 +145,12 @@ function runOperation(name: string, run: Operation): void {
   }
 }
 
-export function capturePostHog(event: string, properties?: Properties): void {
-  execute("capture", (posthog) => posthog.capture(event, properties));
+/** Captures the event; false when collection is off and the event is dropped. */
+export function capturePostHog(
+  event: string,
+  properties?: Properties,
+): boolean {
+  return execute("capture", (posthog) => posthog.capture(event, properties));
 }
 
 export function resetAndCapturePostHog(

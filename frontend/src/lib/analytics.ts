@@ -11,6 +11,8 @@ import { analyticsDeployment } from "~/lib/analytics-deployment";
 import type {
   AnalyticsRole,
   AnalyticsSurface,
+  OnboardingChecklist,
+  OnboardingChecklistStep,
   OnboardingSurface,
 } from "~/lib/analytics-policy";
 import type { DemoVisit } from "~/lib/demo-access";
@@ -41,10 +43,15 @@ export type AnalyticsEvent =
   // trackOnboardingSurface mit einer festen Fläche.
   | "onboarding_surface_shown"
   | "onboarding_surface_accepted"
-  | "onboarding_surface_dismissed";
+  | "onboarding_surface_dismissed"
+  // Checklisten mit Zustand nur im Browser (#7557), nur über
+  // trackOnboardingChecklist mit festen Werten.
+  | "onboarding_checklist_step_done"
+  | "onboarding_checklist_dismissed"
+  | "onboarding_checklist_completed";
 
-function captureEvent(event: AnalyticsEvent, props?: Properties): void {
-  capturePostHog(event, props);
+function captureEvent(event: AnalyticsEvent, props?: Properties): boolean {
+  return capturePostHog(event, props);
 }
 
 export function trackEvent(
@@ -57,14 +64,32 @@ export function trackEvent(
 /**
  * Eine selbstöffnende Fläche des Einstiegs (#7541) wurde angezeigt, von der
  * Person angenommen oder geschlossen. Nur die feste Fläche geht mit; das
- * Portal setzt der Filter als `surface` aus dem Kontext.
+ * Portal setzt der Filter als `surface` aus dem Kontext. Gibt false zurück,
+ * wenn die Erfassung (noch) aus ist und das Ereignis verworfen wurde.
  */
 export function trackOnboardingSurface(
   action: "shown" | "accepted" | "dismissed",
   surface: OnboardingSurface,
-): void {
-  captureEvent(`onboarding_surface_${action}`, {
+): boolean {
+  return captureEvent(`onboarding_surface_${action}`, {
     onboarding_surface: surface,
+  });
+}
+
+/**
+ * Eine Checkliste des Einstiegs, deren Zustand nur im Browser liegt (#7557):
+ * ein Schritt erledigt, die Checkliste ausgeblendet oder abgeschlossen. Nur
+ * die feste Checkliste und beim Schritt sein fester Schlüssel gehen mit.
+ */
+export function trackOnboardingChecklist(
+  checklist: OnboardingChecklist,
+  event:
+    | { readonly action: "step_done"; readonly step: OnboardingChecklistStep }
+    | { readonly action: "dismissed" | "completed" },
+): void {
+  captureEvent(`onboarding_checklist_${event.action}`, {
+    checklist,
+    ...(event.action === "step_done" ? { checklist_step: event.step } : {}),
   });
 }
 
