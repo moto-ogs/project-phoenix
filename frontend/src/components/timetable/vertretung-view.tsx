@@ -925,6 +925,7 @@ function VertretungContent() {
     <TenantPage
       overlays={overlays}
       title="Vertretungsplan"
+      info="Hier planst du Vertretungen, wenn jemand fehlt. Wähle oben den Tag. Unter „Offene Lücken“ stehen die Termine, die noch jemand übernehmen muss."
       stats={statusLine}
       statsLoading={showSkeleton || isLoading}
       actions={

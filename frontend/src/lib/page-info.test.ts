@@ -30,17 +30,7 @@ const PORTALS = [
  * neue Seite braucht `info`, und eine Seite, die `info` bekommt, fliegt hier
  * heraus. Lehrer-Seiten tragen das Präfix `school:`.
  */
-const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
-  "/calendar-periods",
-  "/dashboard",
-  "/meal-plan",
-  "/payroll",
-  "/profile",
-  "/statistics",
-  "/vertretung",
-  "school:/einstellungen",
-  "school:/elternbriefe/[id]",
-];
+const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [];
 
 /**
  * Seiten ohne eigenen Seitenkopf: Sie leiten nur weiter und zeigen nie einen
@@ -50,6 +40,7 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
 const PAGES_WITHOUT_OWN_HEAD: Readonly<Record<string, string>> = {
   "/admin/change-requests": "Leitet zu /anfragen weiter (#2429).",
   "/admin/enrollments/change-requests": "Leitet zu /anfragen weiter (#2429).",
+  "/dashboard": "Leitet zur Startseite /home weiter (#2180).",
   "/parent-attention/[studentId]":
     "Leitet beim Neuladen in die Kindakte weiter (#7577).",
 };

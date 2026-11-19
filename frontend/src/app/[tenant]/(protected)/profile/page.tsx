@@ -48,9 +48,14 @@ const logger = createLogger({ component: "ProfilePage" });
 // Der Ladezustand kommt aus dem Seitengeruest, nicht aus einem eigenen
 // Skelett: dieselbe Kopfkarte und dieselben Platzhalterflaechen wie auf jeder
 // anderen Flaeche des Portals. Der Vorlesetext benennt die Profilseite.
+// Info-Knopf am Titel (#7579), im Ladezustand und auf der fertigen Seite.
+const PROFILE_INFO =
+  "Hier stehen deine eigenen Angaben. Unter „Persönliche Daten“ änderst du deinen Namen. Weiter unten legst du fest, worüber moto dich benachrichtigt.";
+
 const profileLoadingFallback = (
   <TenantPage
     title="Profil"
+    info={PROFILE_INFO}
     statsLoading
     loading
     loadingLabel="Profil wird geladen…"
@@ -197,6 +202,7 @@ function ProfileContent() {
   return (
     <TenantPage
       title="Profil"
+      info={PROFILE_INFO}
       stats={
         statsParts.length > 1 ? (
           <TenantPageStats items={statsParts.map((label) => ({ label }))} />
