@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"os"
 	"path/filepath"
 	"strings"
@@ -194,7 +196,11 @@ func multipartPDFRequest(t *testing.T, fieldName, fileName string, content []byt
 	t.Helper()
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	part, err := writer.CreateFormFile(fieldName, fileName)
+	// A browser declares a PDF as application/pdf; the upload checks that.
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, fieldName, fileName))
+	header.Set("Content-Type", "application/pdf")
+	part, err := writer.CreatePart(header)
 	require.NoError(t, err)
 	_, err = part.Write(content)
 	require.NoError(t, err)

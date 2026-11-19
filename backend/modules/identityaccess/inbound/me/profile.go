@@ -17,6 +17,7 @@ import (
 // Avatar upload constants
 const (
 	maxUploadSize   = 5 * 1024 * 1024 // 5MB
+	maxUploadBody   = maxUploadSize + 4096
 	avatarDir       = "public/uploads/avatars"
 	globalAvatarDir = "global"
 )
@@ -110,10 +111,9 @@ func (res *Resource) updateCurrentProfile(w http.ResponseWriter, r *http.Request
 // uploadAvatar stores an uploaded avatar image and points the caller's
 // avatar at it; the file is removed again when the update fails.
 func (res *Resource) uploadAvatar(w http.ResponseWriter, r *http.Request) {
-	uploaded, err := common.ParseImage(w, r, "avatar", maxUploadSize)
+	uploaded, err := common.Declared(common.ParseImageWithLimits, common.DeclaredImageTypes)(w, r, "avatar", maxUploadSize, maxUploadBody)
 	if err != nil {
-		render.Status(r, http.StatusBadRequest)
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		common.RenderError(w, r, common.ErrorUpload(err, maxUploadSize))
 		return
 	}
 	defer common.CloseFile(uploaded.File)

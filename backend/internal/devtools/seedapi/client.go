@@ -7,7 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"mime"
 	"mime/multipart"
+	"net/textproto"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -192,6 +195,20 @@ func (c *Client) PostFileWithAuthFields(auth AuthRef, path, fieldName, filename 
 	return c.uploadFile(auth, "POST", path, fieldName, filename, contents, fields)
 }
 
+// browserFilePartHeader declares the file part as a browser does: the type
+// its extension names, application/octet-stream when it names none. The
+// uploads check the declared type (#2352).
+func browserFilePartHeader(fieldName, filename string) textproto.MIMEHeader {
+	declared := mime.TypeByExtension(filepath.Ext(filename))
+	if declared == "" {
+		declared = "application/octet-stream"
+	}
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Disposition", mime.FormatMediaType("form-data", map[string]string{"name": fieldName, "filename": filename}))
+	header.Set("Content-Type", declared)
+	return header
+}
+
 func (c *Client) uploadFile(auth AuthRef, method, path, fieldName, filename string, contents []byte, fields map[string]string) ([]byte, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
@@ -200,7 +217,7 @@ func (c *Client) uploadFile(auth AuthRef, method, path, fieldName, filename stri
 			return nil, fmt.Errorf("write multipart field %s: %w", name, err)
 		}
 	}
-	part, err := writer.CreateFormFile(fieldName, filename)
+	part, err := writer.CreatePart(browserFilePartHeader(fieldName, filename))
 	if err != nil {
 		return nil, fmt.Errorf("build multipart body: %w", err)
 	}

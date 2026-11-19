@@ -10,9 +10,12 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -215,8 +218,16 @@ func NewMultipartRequest(t *testing.T, method, target string, fieldName, fileNam
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
-	// Create form file field
-	fw, err := writer.CreateFormFile(fieldName, fileName)
+	// The file part declares the type its extension names, as a browser
+	// does; the uploads check it (#2352).
+	declared := mime.TypeByExtension(filepath.Ext(fileName))
+	if declared == "" {
+		declared = "application/octet-stream"
+	}
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Disposition", mime.FormatMediaType("form-data", map[string]string{"name": fieldName, "filename": fileName}))
+	header.Set("Content-Type", declared)
+	fw, err := writer.CreatePart(header)
 	if err != nil {
 		t.Fatalf("failed to create form file: %v", err)
 	}
