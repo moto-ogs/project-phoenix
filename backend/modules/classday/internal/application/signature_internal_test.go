@@ -18,8 +18,8 @@ func TestListSignature(t *testing.T) {
 	t.Parallel()
 
 	gid := int64(7)
-	base := func() *classday.Result {
-		return &classday.Result{
+	base := func() *classday.ClassdayResult {
+		return &classday.ClassdayResult{
 			ListLabel:  "Ganztag",
 			Provenance: "Plan",
 			Counters:   classday.Counters{Planned: 2, Present: 1},
@@ -81,8 +81,8 @@ func TestListSignature(t *testing.T) {
 func TestListSignatureExportHeader(t *testing.T) {
 	t.Parallel()
 
-	base := func() *classday.Result {
-		return &classday.Result{
+	base := func() *classday.ClassdayResult {
+		return &classday.ClassdayResult{
 			ListLabel:             "Ganztag",
 			Provenance:            "Plan",
 			ExportHeaderSignature: "Tagesliste Plan – Ganztag\x1fEnthalten: 3 Angebote",

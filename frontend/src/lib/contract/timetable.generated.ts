@@ -1893,8 +1893,8 @@ export const SlotListRowSchema: z.ZodType<SlotListRow, unknown> = object<SlotLis
   group_title: optional(str),
 });
 
-/** Go: classday.Result */
-export interface Result {
+/** Go: classday.ClassdayResult */
+export interface ClassdayResult {
   date: string;
   target: string;
   pickup_cohort?: string;
@@ -1911,7 +1911,7 @@ export interface Result {
   signature: string;
 }
 
-export const ResultSchema: z.ZodType<Result, unknown> = object<Result>({
+export const ClassdayResultSchema: z.ZodType<ClassdayResult, unknown> = object<ClassdayResult>({
   date: str,
   target: str,
   pickup_cohort: optional(str),
@@ -2919,7 +2919,7 @@ export const routes = {
     pattern: "/api/timetable/lists/preview",
     portals: ["tenant"],
     request: requestBody<slotListRequest>(),
-    response: success(ResultSchema),
+    response: success(ClassdayResultSchema),
   },
   "POST /api/timetable/materialize": {
     method: "POST",

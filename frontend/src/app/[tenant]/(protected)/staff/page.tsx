@@ -522,7 +522,7 @@ function StaffPageContent() {
   const { rows: pendingAbsences, canReview: canReviewAbsences } =
     useStaffPendingAbsences();
   const pendingByStaff = useMemo(() => {
-    const map = new Map<number, number>();
+    const map = new Map<string, number>();
     for (const row of pendingAbsences) {
       map.set(row.staff_id, (map.get(row.staff_id) ?? 0) + 1);
     }
@@ -1145,7 +1145,7 @@ function StaffPageContent() {
                     const notes = formatStaffNotes(staffMember.staffNotes, 80);
                     const supervisions = staffMember.supervisions ?? [];
                     const pendingRequestCount =
-                      pendingByStaff.get(Number(staffMember.id)) ?? 0;
+                      pendingByStaff.get(String(staffMember.id)) ?? 0;
 
                     const navigateToStaff = () => {
                       if (!profileTabAvailable) {

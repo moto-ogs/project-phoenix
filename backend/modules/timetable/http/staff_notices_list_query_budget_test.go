@@ -30,12 +30,15 @@ import (
 type noticeBudgetRoute struct {
 	path, scenario, scope, permission string
 	management                        bool
+	// message is the shared envelope's message; empty for a route that
+	// still answers only {"data": …}.
+	message string
 }
 
 var noticeBudgetRoutes = []noticeBudgetRoute{
-	{path: "/api/staff-notices/", scenario: "api.staff_notices.list", permission: "admin:*", management: true},
-	{path: "/api/staff-notices/today", scenario: "api.staff_notices.today", permission: "users:read"},
-	{path: "/school/staff-notices/today", scenario: "school.staff_notices.today", scope: "school", permission: "staff_notices:read"},
+	{path: "/api/staff-notices/", scenario: "api.staff_notices.list", permission: "admin:*", management: true, message: "Staff notices retrieved"},
+	{path: "/api/staff-notices/today", scenario: "api.staff_notices.today", permission: "users:read", message: "Staff notices of today retrieved"},
+	{path: "/school/staff-notices/today", scenario: "school.staff_notices.today", scope: "school", permission: "staff_notices:read", message: "Staff notices of today retrieved"},
 }
 
 type noticeBudgetFixture struct {
@@ -133,10 +136,7 @@ func noticeBudgetDTO(notice timetable.StaffNotice, management bool, ack bool) ma
 	return out
 }
 
-// assertNoticeBudgetResponse pins the exact wire of the route: the today
-// routes answer in the shared envelope (#2352), the management list keeps
-// its bare data member.
-func assertNoticeBudgetResponse(t *testing.T, route noticeBudgetRoute, rec *httptest.ResponseRecorder, expected []map[string]any) {
+func assertNoticeBudgetResponse(t *testing.T, rec *httptest.ResponseRecorder, route noticeBudgetRoute, expected []map[string]any) {
 	t.Helper()
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var body map[string]any
@@ -146,8 +146,8 @@ func assertNoticeBudgetResponse(t *testing.T, route noticeBudgetRoute, rec *http
 		data = append(data, row)
 	}
 	want := map[string]any{"data": data}
-	if !route.management {
-		want["status"], want["message"] = "success", "Staff notices of today retrieved"
+	if route.message != "" {
+		want["status"], want["message"] = "success", route.message
 	}
 	require.Equal(t, want, body, "exact wire fields, order, dates and acknowledgement visibility")
 }
@@ -223,7 +223,7 @@ func TestStaffNoticeListRouteQueryBudgets(t *testing.T) {
 					for _, i := range indices {
 						expected = append(expected, noticeBudgetDTO(notices[i], route.management, i%2 == 0))
 					}
-					assertNoticeBudgetResponse(t, route, rec, expected)
+					assertNoticeBudgetResponse(t, rec, route, expected)
 					assertNoticeBudgetReadOnly(t, counter)
 					assertNoticeRouteBudget(t, route, size, counter.Measurement(queries))
 				}
@@ -314,7 +314,7 @@ func TestStaffNoticeListRouteContracts(t *testing.T) {
 				counter.Start()
 				rec := routetest.ExecuteRequestForTest(t, f.router, req)
 				counter.Stop()
-				assertNoticeBudgetResponse(t, route, rec, expected)
+				assertNoticeBudgetResponse(t, rec, route, expected)
 				assertNoticeBudgetReadOnly(t, counter)
 				for _, denied := range []struct {
 					name, permission, scope string
@@ -358,7 +358,7 @@ func TestStaffNoticeListRouteContracts(t *testing.T) {
 					counter.Start()
 					rec := routetest.ExecuteRequestForTest(t, f.router, req)
 					counter.Stop()
-					assertNoticeBudgetResponse(t, route, rec, []map[string]any{
+					assertNoticeBudgetResponse(t, rec, route, []map[string]any{
 						noticeBudgetDTO(notices[5], false, false), noticeBudgetDTO(notices[0], false, false),
 					})
 					assertNoticeBudgetReadOnly(t, counter)

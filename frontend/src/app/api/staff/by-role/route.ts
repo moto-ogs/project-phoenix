@@ -1,26 +1,17 @@
-import { createGetHandler } from "~/lib/route-wrapper.server";
-import { apiGet } from "~/lib/api-helpers.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-export const GET = createGetHandler(async (request, token, _params) => {
-  const { searchParams } = new URL(request.url);
-  const role = searchParams.get("role");
-  const roles = searchParams.get("roles");
+// The contract registers this route (#2352). While staff/[id] keeps its own
+// GET (it rebuilds the staff record), Next selects that file for this path,
+// not the portal's catch-all. Hand the request to the catalog proxy with the
+// path the catch-all would receive.
+const path = {
+  params: Promise.resolve({ path: ["staff", "by-role"] }),
+};
 
-  if (!role && !roles) {
-    throw new Error("Role or roles parameter is required");
-  }
-
-  // Build query string - forward whichever param is present
-  const params = new URLSearchParams();
-  if (roles) {
-    params.set("roles", roles);
-  } else if (role) {
-    params.set("role", role);
-  }
-
-  const response = await apiGet<{ data: unknown }>(
-    `/api/staff/by-role?${params.toString()}`,
-    token,
-  );
-  return response.data;
-});
+const get = catalogProxy(portalRoutes.tenant, "GET");
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, path),
+);

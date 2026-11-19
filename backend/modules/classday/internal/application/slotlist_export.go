@@ -102,16 +102,16 @@ func slotListExportRows(rows []classday.SlotListRow, pickupBased, checklist bool
 	return docRows
 }
 
-func documentTitle(result *classday.Result) string {
+func documentTitle(result *classday.ClassdayResult) string {
 	return fmt.Sprintf("Tagesliste %s – %s", result.Source.Label(), result.ListLabel)
 }
 
-func exportFilename(params listRequest, result *classday.Result) string {
+func exportFilename(params listRequest, result *classday.ClassdayResult) string {
 	return fmt.Sprintf("Tagesliste %s %s %s", params.Source.Label(), result.ListLabel, params.Date.String())
 }
 
 // exportFilters builds the header lines stamped on the printed export.
-func exportFilters(params listRequest, result *classday.Result) []string {
+func exportFilters(params listRequest, result *classday.ClassdayResult) []string {
 	filters := []string{
 		"Datum: " + params.date.Format("02.01.2006"),
 		"Datenbasis: " + params.Source.Label() + " – " + result.Provenance,
@@ -137,7 +137,7 @@ func exportFilters(params listRequest, result *classday.Result) []string {
 // absent from it. Such an ID is disclosed via an explicit "Gruppe #<id>" marker
 // rather than dropped — otherwise an empty or partial confidential export would
 // print as if it were unfiltered (#1565 review pass 2).
-func selectedGroupNames(params listRequest, result *classday.Result) []string {
+func selectedGroupNames(params listRequest, result *classday.ClassdayResult) []string {
 	if len(params.GroupIDs) == 0 {
 		return nil
 	}
@@ -157,7 +157,7 @@ func selectedGroupNames(params listRequest, result *classday.Result) []string {
 	return names
 }
 
-func includedSummary(params listRequest, result *classday.Result) string {
+func includedSummary(params listRequest, result *classday.ClassdayResult) string {
 	if params.Target == classday.TargetPickupCohort {
 		return result.ListLabel
 	}
@@ -178,7 +178,7 @@ func includedSummary(params listRequest, result *classday.Result) string {
 // occurrence excluded from the merge in collectSlotEntries) are dropped in both
 // branches when they yield no export rows, so the header cannot claim content the
 // export does not contain (#1565).
-func summarySlotCount(params listRequest, result *classday.Result) int {
+func summarySlotCount(params listRequest, result *classday.ClassdayResult) int {
 	all := !params.InstanceIDsSet && len(params.InstanceIDs) == 0
 	selected := int64Set(params.InstanceIDs)
 	count := 0
@@ -196,7 +196,7 @@ func summarySlotCount(params listRequest, result *classday.Result) int {
 	return count
 }
 
-func subtitle(result *classday.Result) string {
+func subtitle(result *classday.ClassdayResult) string {
 	switch result.Source {
 	case classday.SourcePlanned:
 		return fmt.Sprintf("%d geplante Kinder", result.Counters.Planned)

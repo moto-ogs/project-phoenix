@@ -2,6 +2,10 @@ package api
 
 import (
 	"fmt"
+	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
+	groupsHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
+	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
+	gradeTransitionHTTP "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
 	"reflect"
 	"strings"
 
@@ -114,6 +118,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, staffPortalAdminContractMounts()...)
 	mounts = append(mounts, staffPortalEnrollmentContractMounts()...)
 	mounts = append(mounts, staffPortalCalendarContractMounts()...)
 	mounts = append(mounts, staffPortalLiveContractMounts()...)
@@ -605,5 +610,24 @@ func staffPortalEnrollmentContractMounts() []contractMount {
 			{Method: "POST", Pattern: "/invitations/{invitationId}/approve", Portals: portals, NoData: true},
 			{Method: "POST", Pattern: "/invitations/{invitationId}/reject", Portals: portals, NoData: true},
 		}},
+	}
+}
+
+// staffPortalAdminContractMounts lists the staff portal's administration
+// routes (staff, notices, statistics, groups, users, grade transitions) that
+// left their pass-through route files in the closing round of #2352.
+func staffPortalAdminContractMounts() []contractMount {
+	return []contractMount{
+		{"/api/staff", timeTrackingHTTP.StaffAdminWorkflowRouteContracts()},
+		{"/api/admin/grade-transitions", gradeTransitionHTTP.RouteContracts()},
+		{"/api/staff-notices", timetableHTTP.StaffNoticeRouteContracts()},
+		{"/api/statistics", statisticsHTTP.RouteContracts()},
+		{"/api/settings", settingsAdminRouteContracts()},
+		{"/api/birthdays", birthdaysAPI.RouteContracts()},
+		{"/api/feedback", feedbackStudentRouteContracts()},
+		{"/api/reminders", reminderRouteContracts()},
+		{"/api/staff", staffDirectoryRouteContracts()},
+		{"/api/groups", groupsHTTP.RouteContracts()},
+		{"/api/users", userRouteContracts()},
 	}
 }

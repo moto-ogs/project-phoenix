@@ -245,8 +245,8 @@ describe("UebersichtTab Freizeitausgleich-Verteilung", () => {
   beforeEach(() => {
     const absences: StaffAbsenceRow[] = [
       {
-        id: 1,
-        staff_id: 1,
+        id: "1",
+        staff_id: "1",
         absence_type: "comp_time",
         date_start: "2025-03-05",
         date_end: "2025-03-05",

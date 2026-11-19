@@ -55,7 +55,7 @@ export function isRebookableAbsence(row: StaffAbsenceRow): boolean {
 
 function useRebookingPreview(args: {
   staffId: string;
-  absenceIds: readonly number[];
+  absenceIds: readonly string[];
   value: string;
 }) {
   const { staffId, absenceIds, value } = args;

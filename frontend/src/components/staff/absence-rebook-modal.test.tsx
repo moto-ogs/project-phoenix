@@ -84,10 +84,10 @@ const sickLeave: AbsenceType = {
   schoolLimitDays: null,
 };
 
-function friday(id: number, day: string): StaffAbsenceRow {
+function friday(id: string, day: string): StaffAbsenceRow {
   return {
     id,
-    staff_id: 4,
+    staff_id: "4",
     absence_type: "comp_time",
     date_start: day,
     date_end: day,
@@ -97,7 +97,7 @@ function friday(id: number, day: string): StaffAbsenceRow {
   };
 }
 
-const fridays = [friday(71, "2026-08-07"), friday(72, "2026-08-14")];
+const fridays = [friday("71", "2026-08-07"), friday("72", "2026-08-14")];
 
 function rebooking(extra: Partial<AbsenceRebooking> = {}): AbsenceRebooking {
   return {
@@ -246,7 +246,7 @@ describe("AbsenceRebookModal", () => {
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(mocks.rebookAbsences).toHaveBeenLastCalledWith("4", {
-      absenceIds: [71, 72],
+      absenceIds: ["71", "72"],
       absenceType: "other",
       absenceTypeId: "12",
       reason: "Kontingent angelegt",
@@ -348,7 +348,7 @@ it("withdraws a cached rebooking preview when a later dry run is rejected", asyn
     const invalidate = useInvalidateFamily();
     reload = () =>
       invalidate(
-        staffAbsenceKeys.rebookingPreview(staff.id, [71, 72], "custom:12"),
+        staffAbsenceKeys.rebookingPreview(staff.id, ["71", "72"], "custom:12"),
       );
     return null;
   }

@@ -6,8 +6,8 @@ import { isVacationWorkflowAbsence } from "./abwesenheiten-tab";
 
 function absence(overrides: Partial<StaffAbsenceRow>): StaffAbsenceRow {
   return {
-    id: 1,
-    staff_id: 2,
+    id: "1",
+    staff_id: "2",
     absence_type: "sick",
     date_start: "2026-07-14",
     date_end: "2026-07-14",

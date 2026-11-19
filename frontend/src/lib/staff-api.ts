@@ -1228,8 +1228,9 @@ class StaffHistoryService {
 // Admin counterpart to /api/time-tracking/absences (which is self-scoped).
 // Backend response shape matches BackendStaffAbsence in time-tracking-helpers.ts.
 export interface StaffAbsenceRow {
-  id: number;
-  staff_id: number;
+  // The contract decoder hands every identifier over as a decimal string.
+  id: string;
+  staff_id: string;
   absence_type: string;
   /** School-defined Abwesenheitsart (#2403); absent for the standard types. */
   absence_type_id?: string | null;
@@ -1242,7 +1243,7 @@ export interface StaffAbsenceRow {
   end_half_day?: boolean;
   note: string;
   status: string;
-  approved_by?: number | null;
+  approved_by?: string | null;
   approved_at?: string | null;
   decision_note?: string;
   working_days?: number | null;
@@ -1281,8 +1282,8 @@ export interface AbsencePlanGap {
 }
 
 interface AbsencePlanGapWire {
-  absence_id: number;
-  staff_id: number;
+  absence_id: number | string;
+  staff_id: number | string;
   absence_type: string;
   date_start: string;
   date_end: string;
@@ -1321,9 +1322,9 @@ interface BackendStaffVacationOpening extends Omit<
   StaffVacationOpening,
   "id" | "staff_id" | "decided_by"
 > {
-  id: number;
-  staff_id: number;
-  decided_by: number;
+  id: number | string;
+  staff_id: number | string;
+  decided_by: number | string;
 }
 
 function mapStaffVacationOpening(
@@ -1338,7 +1339,7 @@ function mapStaffVacationOpening(
 }
 
 export interface StaffVacationQuotaSummary {
-  staff_id: number;
+  staff_id: string;
   year: number;
   entitled_days: number;
   carryover_days: number;

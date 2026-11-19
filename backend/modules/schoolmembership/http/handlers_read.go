@@ -121,7 +121,8 @@ func (rs *Resource) listCurrentStaff(w http.ResponseWriter, r *http.Request, fil
 	rs.respond(w, r, http.StatusOK, responses, "Staff members retrieved successfully")
 }
 
-type documentDirectoryEntry struct {
+// DocumentDirectoryEntry is one staff identity of the document directory.
+type DocumentDirectoryEntry struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
 	FirstName string `json:"firstName"`
@@ -143,13 +144,13 @@ func (rs *Resource) listDocumentDirectory(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	entries := make([]documentDirectoryEntry, 0, len(members))
+	entries := make([]DocumentDirectoryEntry, 0, len(members))
 	for _, staff := range members {
 		person := persons[staff.PersonID]
 		if person == nil {
 			continue
 		}
-		entries = append(entries, documentDirectoryEntry{
+		entries = append(entries, DocumentDirectoryEntry{
 			ID:        staff.ID,
 			Name:      person.FirstName + " " + person.LastName,
 			FirstName: person.FirstName,

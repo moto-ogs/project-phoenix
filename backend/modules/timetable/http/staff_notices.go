@@ -239,7 +239,7 @@ func (rs *StaffNoticeResource) list(w http.ResponseWriter, r *http.Request) {
 	for _, view := range views {
 		out = append(out, toNoticeResponse(noticeViewFields(view), true))
 	}
-	render.JSON(w, r, map[string]any{"data": out})
+	common.Respond(w, r, http.StatusOK, out, "Staff notices retrieved")
 }
 
 func (rs *StaffNoticeResource) create(w http.ResponseWriter, r *http.Request) {
@@ -254,8 +254,7 @@ func (rs *StaffNoticeResource) create(w http.ResponseWriter, r *http.Request) {
 		renderNoticeServiceError(w, r, err)
 		return
 	}
-	render.Status(r, http.StatusCreated)
-	render.JSON(w, r, map[string]any{"data": toNoticeResponse(noticeFieldsOf(notice), true)})
+	common.Respond(w, r, http.StatusCreated, toNoticeResponse(noticeFieldsOf(notice), true), "Staff notice created")
 }
 
 func (rs *StaffNoticeResource) update(w http.ResponseWriter, r *http.Request) {
@@ -275,7 +274,7 @@ func (rs *StaffNoticeResource) update(w http.ResponseWriter, r *http.Request) {
 		renderNoticeServiceError(w, r, err)
 		return
 	}
-	render.JSON(w, r, map[string]any{"data": toNoticeResponse(noticeFieldsOf(notice), true)})
+	common.Respond(w, r, http.StatusOK, toNoticeResponse(noticeFieldsOf(notice), true), "Staff notice updated")
 }
 
 func (rs *StaffNoticeResource) remove(w http.ResponseWriter, r *http.Request) {
@@ -289,7 +288,7 @@ func (rs *StaffNoticeResource) remove(w http.ResponseWriter, r *http.Request) {
 		renderNoticeServiceError(w, r, err)
 		return
 	}
-	render.JSON(w, r, map[string]any{"status": "ok"})
+	common.Respond(w, r, http.StatusOK, nil, "Staff notice deleted")
 }
 
 // oneFor liefert den Handler eines einzelnen Hinweises für eine Leserart,
@@ -307,7 +306,7 @@ func (rs *StaffNoticeResource) oneFor(reader string) http.HandlerFunc {
 			renderNoticeServiceError(w, r, err)
 			return
 		}
-		render.JSON(w, r, map[string]any{"data": toNoticeResponse(noticeViewFields(view), false)})
+		common.Respond(w, r, http.StatusOK, toNoticeResponse(noticeViewFields(view), false), "Staff notice retrieved")
 	}
 }
 
@@ -358,7 +357,7 @@ func (rs *StaffNoticeResource) acknowledgements(w http.ResponseWriter, r *http.R
 			AcknowledgedAt: row.AcknowledgedAt.Format(time.RFC3339),
 		})
 	}
-	render.JSON(w, r, map[string]any{"data": out})
+	common.Respond(w, r, http.StatusOK, out, "Staff notice acknowledgements retrieved")
 }
 
 // --- Hilfen ---

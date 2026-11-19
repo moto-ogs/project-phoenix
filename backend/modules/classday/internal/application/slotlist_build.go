@@ -12,7 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 )
 
-func (s *service) BuildList(ctx context.Context, params classday.Params) (*classday.Result, error) {
+func (s *service) BuildList(ctx context.Context, params classday.Params) (*classday.ClassdayResult, error) {
 	if err := s.requireTimetableEnabled(ctx); err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (s *service) BuildList(ctx context.Context, params classday.Params) (*class
 	return s.buildList(ctx, listRequest{Params: params, date: date})
 }
 
-func (s *service) buildList(ctx context.Context, params listRequest) (*classday.Result, error) {
+func (s *service) buildList(ctx context.Context, params listRequest) (*classday.ClassdayResult, error) {
 	if err := s.validateListRequest(params); err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (s *service) buildList(ctx context.Context, params listRequest) (*classday.
 
 	listLabel := s.listLabel(params, pickupCfg)
 
-	result := &classday.Result{
+	result := &classday.ClassdayResult{
 		Date:         params.Date.String(),
 		Target:       params.Target,
 		PickupCohort: params.PickupCohort,
@@ -126,7 +126,7 @@ func (s *service) validateListRequest(params listRequest) error {
 
 // completeListResult derives filter options, ordered rows, counters and hashes
 // from the same unfiltered source rows.
-func completeListResult(params listRequest, result *classday.Result, allRows []classday.SlotListRow) {
+func completeListResult(params listRequest, result *classday.ClassdayResult, allRows []classday.SlotListRow) {
 	result.Groups, result.Classes = availableOptions(allRows)
 
 	rows := filterRows(allRows, params)
@@ -180,7 +180,7 @@ func listRowLess(left, right *classday.SlotListRow) bool {
 // unchanged data. Unit/record separators (0x1f / 0x1e) delimit fields so no value
 // can be confused with a boundary. See the Result.Signature doc for how the
 // export drift guard uses it (#1565 review pass 2 + pass 7).
-func listSignature(r *classday.Result) string {
+func listSignature(r *classday.ClassdayResult) string {
 	var b strings.Builder
 	b.WriteString(r.ListLabel)
 	b.WriteByte('\x1e')

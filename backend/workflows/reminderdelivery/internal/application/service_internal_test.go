@@ -430,7 +430,7 @@ func TestActivityReminders(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, out, 2)
 
-		byTitle := map[string]reminder.Reminder{}
+		byTitle := map[string]reminder.StaffReminder{}
 		for _, r := range out {
 			byTitle[r.Title] = r
 		}

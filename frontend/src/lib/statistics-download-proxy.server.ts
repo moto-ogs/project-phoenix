@@ -6,7 +6,7 @@ import { tenant } from "./route-wrapper.server";
  * Query of a Statistik request: the single-valued keys plus every
  * group_id and school_class, which the backend reads as repeatable filters.
  */
-export function statisticsQuery(
+function statisticsQuery(
   request: NextRequest,
   keys: readonly string[],
 ): string {

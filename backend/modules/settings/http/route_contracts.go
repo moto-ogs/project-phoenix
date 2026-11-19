@@ -15,3 +15,9 @@ func RouteContractTypes() ContractTypes {
 		HomeBlockPolicies:  homeBlockPoliciesRequest{},
 	}
 }
+
+// RevealedValueResponse is the plain value of a secret setting
+// (GET /api/settings/values/{key}/reveal); its form depends on the setting.
+type RevealedValueResponse struct {
+	Value any `json:"value"`
+}

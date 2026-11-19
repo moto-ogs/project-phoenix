@@ -514,7 +514,7 @@ func TestComputeBatchMatchesCompute(t *testing.T) {
 		batch, err := w.service().ComputeBatch(context.Background(), []reminder.BatchScope{personalCaregiver(7)})
 		require.NoError(t, err)
 
-		hasInstance := func(rs []reminder.Reminder, id string) bool {
+		hasInstance := func(rs []reminder.StaffReminder, id string) bool {
 			for _, r := range rs {
 				if r.ActivityInstanceID != nil && *r.ActivityInstanceID == id {
 					return true

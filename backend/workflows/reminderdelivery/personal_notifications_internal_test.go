@@ -173,8 +173,8 @@ func (c *captureNotifier) Notify(ctx context.Context, notices []PersonalReminder
 
 func str(s string) *string { return &s }
 
-func pickupFixture(studentID, due string) Reminder {
-	return Reminder{
+func pickupFixture(studentID, due string) StaffReminder {
+	return StaffReminder{
 		Type:      TypePickupUpcoming,
 		StudentID: str(studentID),
 		Title:     "Kind Name", // must never surface in a notification
@@ -182,8 +182,8 @@ func pickupFixture(studentID, due string) Reminder {
 	}
 }
 
-func activityFixture(instanceID, due string) Reminder {
-	return Reminder{
+func activityFixture(instanceID, due string) StaffReminder {
+	return StaffReminder{
 		Type:               TypeActivityStart,
 		ActivityInstanceID: str(instanceID),
 		Title:              "Bastel-AG",
@@ -191,7 +191,7 @@ func activityFixture(instanceID, due string) Reminder {
 	}
 }
 
-func resultOf(rems ...Reminder) *Result {
+func resultOf(rems ...StaffReminder) *Result {
 	return &Result{Enabled: true, Reminders: rems, Count: len(rems)}
 }
 
@@ -412,7 +412,7 @@ func TestPersonalRemindersAggregatePerTypeAndDedupPerPerson(t *testing.T) {
 	// A newly due overdue pickup for the caregiver alone.
 	setup.computer.results[caregiverStaffID] = resultOf(
 		pickupFixture("11", "14:00"),
-		Reminder{Type: TypePickupOverdue, StudentID: str("14"), DueTime: "13:30"},
+		StaffReminder{Type: TypePickupOverdue, StudentID: str("14"), DueTime: "13:30"},
 	)
 	setup.consent.byType[TypePickupOverdue] = []int64{caregiverAccountID}
 
@@ -552,7 +552,7 @@ func TestPersonalRemindersSkipConditions(t *testing.T) {
 
 	t.Run("reminder feature off", func(t *testing.T) {
 		setup := buildReminderProducer(t, map[int64]*Result{
-			caregiverStaffID: {Enabled: false, Reminders: []Reminder{reminder}},
+			caregiverStaffID: {Enabled: false, Reminders: []StaffReminder{reminder}},
 		}, consent)
 		setup.notify(context.Background(), time.Now())
 		assert.Empty(t, setup.notifier.notices)

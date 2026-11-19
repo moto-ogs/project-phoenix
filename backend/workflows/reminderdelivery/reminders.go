@@ -53,8 +53,8 @@ const (
 	TypeActivityRunningOver = "activity_running_over"
 )
 
-// Reminder is a single visual reminder shown to staff.
-type Reminder struct {
+// StaffReminder is a single visual reminder shown to staff.
+type StaffReminder struct {
 	Type string `json:"type"`
 	// Entity IDs are serialized as strings to honor the repo's int64→string API
 	// contract (JS loses precision on int64 as a JSON number). Exactly one is set
@@ -75,9 +75,9 @@ type Reminder struct {
 // type — the header bell uses it to show/hide itself (and the /reminders page
 // link it exposes) regardless of whether anything is currently due.
 type Result struct {
-	Reminders []Reminder `json:"reminders"`
-	Count     int        `json:"count"`
-	Enabled   bool       `json:"enabled"`
+	Reminders []StaffReminder `json:"reminders"`
+	Count     int             `json:"count"`
+	Enabled   bool            `json:"enabled"`
 	// NextChangeAt is the wall-clock "HH:MM" of the soonest same-day future
 	// moment at which this list changes purely by time passing. A boundary on
 	// the following calendar day is an RFC 3339 instant, including its Berlin
@@ -87,7 +87,7 @@ type Result struct {
 	// event, not this.
 	NextChangeAt string `json:"next_change_at,omitempty"`
 	// AssignedActivityInstanceIDs names the activity instances this person is
-	// personally planned on, keyed exactly like Reminder.ActivityInstanceID.
+	// personally planned on, keyed exactly like StaffReminder.ActivityInstanceID.
 	//
 	// Set by ComputeBatch only and never serialized: the /reminders page shows
 	// one activity list and does not care where an entry came from. A consumer

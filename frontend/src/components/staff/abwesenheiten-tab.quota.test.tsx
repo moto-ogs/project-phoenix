@@ -62,7 +62,7 @@ function quota(
   overrides: Partial<StaffVacationQuotaSummary> = {},
 ): StaffVacationQuotaSummary {
   return {
-    staff_id: 4,
+    staff_id: "4",
     year,
     entitled_days: 30,
     carryover_days: 2,

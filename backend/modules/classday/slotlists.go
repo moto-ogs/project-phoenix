@@ -124,7 +124,7 @@ type ExportDocument struct {
 
 // SlotLists builds slot lists for preview (JSON) and export (PDF/XLSX).
 type SlotLists interface {
-	BuildList(ctx context.Context, params Params) (*Result, error)
+	BuildList(ctx context.Context, params Params) (*ClassdayResult, error)
 	ListOptions(ctx context.Context, date Date) (*OptionsResult, error)
 	RenderList(ctx context.Context, params Params, format Format) (File, error)
 }
@@ -398,11 +398,11 @@ type Counters struct {
 	Unplanned int `json:"unplanned"`
 }
 
-// Result is the preview payload (and the input of the export rendering).
+// ClassdayResult is the preview payload (and the input of the export rendering).
 // Slots/Groups/Classes are the full available option sets (before the filters
 // are applied), so the UI dropdowns stay populated while rows/counters reflect
 // the active selection.
-type Result struct {
+type ClassdayResult struct {
 	Date         string                `json:"date"`
 	Target       Target                `json:"target"`
 	PickupCohort PickupCohort          `json:"pickup_cohort,omitempty"`

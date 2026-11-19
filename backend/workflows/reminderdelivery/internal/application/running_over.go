@@ -83,8 +83,8 @@ func runningOverRoomIDs(due []*ports.ActivityInstance) map[int64]struct{} {
 // buildRunningOverReminders renders due blocks. Pure. A child counts once its
 // pickup time is reached (pickup minute <= now); a child without a pickup
 // time for today never counts.
-func buildRunningOverReminders(due []*ports.ActivityInstance, today calendar.Date, nowMin int, facts runningOverFacts) []reminder.Reminder {
-	out := make([]reminder.Reminder, 0, len(due))
+func buildRunningOverReminders(due []*ports.ActivityInstance, today calendar.Date, nowMin int, facts runningOverFacts) []reminder.StaffReminder {
+	out := make([]reminder.StaffReminder, 0, len(due))
 	for _, inst := range due {
 		count := 0
 		for _, studentID := range facts.roomStudents[inst.RoomID] {
@@ -97,7 +97,7 @@ func buildRunningOverReminders(due []*ports.ActivityInstance, today calendar.Dat
 			}
 		}
 		endMin := minutesOfDay(inst.EndTime)
-		out = append(out, reminder.Reminder{
+		out = append(out, reminder.StaffReminder{
 			Type:               reminder.TypeActivityRunningOver,
 			ActivityInstanceID: int64String(inst.ID),
 			Title:              inst.Title,
@@ -170,7 +170,7 @@ func (s *service) loadRunningOverFacts(ctx context.Context, today string, due []
 
 // runningOverReminders is the single-caller path over today's loaded blocks:
 // the started ones in the caller's rooms (every room for admins).
-func (s *service) runningOverReminders(ctx context.Context, scope reminder.Scope, roomIDs []int64, instances []*ports.ActivityInstance, today string, nowMin, grace int) ([]reminder.Reminder, int, error) {
+func (s *service) runningOverReminders(ctx context.Context, scope reminder.Scope, roomIDs []int64, instances []*ports.ActivityInstance, today string, nowMin, grace int) ([]reminder.StaffReminder, int, error) {
 	w := runningOverWindow{nowMin: nowMin, grace: grace, today: calendar.Date(today)}
 	due, nextChange := dueRunningOver(instances, activityScopeFilter(activityRoomFilter(scope, roomIDs), nil), w)
 	facts, err := s.loadRunningOverFacts(ctx, today, due)

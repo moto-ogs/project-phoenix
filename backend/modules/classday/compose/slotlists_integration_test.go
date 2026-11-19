@@ -347,8 +347,8 @@ type tenantScopedSlotLists struct {
 	inner classday.SlotLists
 }
 
-func (s tenantScopedSlotLists) BuildList(ctx context.Context, params classday.Params) (*classday.Result, error) {
-	var result *classday.Result
+func (s tenantScopedSlotLists) BuildList(ctx context.Context, params classday.Params) (*classday.ClassdayResult, error) {
+	var result *classday.ClassdayResult
 	err := tenant.WithTenantTx(ctx, s.db, tenant.FromContext(ctx), func(txCtx context.Context, _ bun.Tx) error {
 		built, err := s.inner.BuildList(txCtx, params)
 		result = built
