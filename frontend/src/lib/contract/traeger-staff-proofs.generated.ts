@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   int64StringOrNumber,
   nullable,
   object,
@@ -146,6 +147,11 @@ export interface ProofMappingRequest {
   proof_type_id?: number | null;
 }
 
+/** Query of GET /traeger/staff-proofs/export */
+export interface GetTraegerStaffProofsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/staff-proofs/records/{id}/{typeId}": {
     method: "DELETE",
@@ -158,6 +164,13 @@ export const routes = {
     pattern: "/traeger/staff-proofs/",
     portals: ["org"],
     response: success(TraegerStaffProofListSchema),
+  },
+  "GET /traeger/staff-proofs/export": {
+    method: "GET",
+    pattern: "/traeger/staff-proofs/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/staff-proofs/school-kinds": {
     method: "GET",

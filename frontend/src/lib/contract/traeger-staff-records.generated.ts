@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   noData,
@@ -551,6 +552,11 @@ export interface PersonnelNumberRequest {
   personnel_number?: string | null;
 }
 
+/** Query of GET /traeger/staff-records/export */
+export interface GetTraegerStaffRecordsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 /** Query of GET /traeger/staff-records/{id}/absence-accounts */
 export interface GetTraegerStaffRecordsIdAbsenceAccountsQuery {
   year?: number;
@@ -586,6 +592,13 @@ export const routes = {
     pattern: "/traeger/staff-records/",
     portals: ["org"],
     response: success(TraegerStaffOverviewSchema),
+  },
+  "GET /traeger/staff-records/export": {
+    method: "GET",
+    pattern: "/traeger/staff-records/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/staff-records/{id}": {
     method: "GET",
