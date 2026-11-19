@@ -131,7 +131,7 @@ import {
   EarlyCheckoutNoteField,
   useEarlyCheckoutCheck,
 } from "~/components/students/early-checkout-note";
-import { StudentDetailLoadingPage } from "./page-skeleton";
+import { StudentDetailLoadingPage, STUDENT_DETAIL_INFO } from "./page-skeleton";
 import {
   announceChangeRequestsChanged,
   CHANGE_REQUESTS_REFRESH_EVENT,
@@ -1003,6 +1003,7 @@ function StudentDetailPageContent() {
     return (
       <TenantPage
         title="Kindakte"
+        info={STUDENT_DETAIL_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -1450,11 +1451,7 @@ function StudentDetailPageContent() {
       backLabel={backLabel}
       leading={<StudentHeaderAvatar student={student} />}
       title={studentHeaderTitle(student)}
-      info={
-        isHolidayGuest
-          ? undefined
-          : "Hier stehen alle Angaben zu diesem Kind. Oben siehst du, wo es gerade ist. Wähle darunter den Bereich, den du brauchst."
-      }
+      info={isHolidayGuest ? undefined : STUDENT_DETAIL_INFO}
       actions={
         canManageRecord ? (
           <StudentRecordActions

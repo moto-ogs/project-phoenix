@@ -157,6 +157,8 @@ import { substitutionConcept } from "~/lib/concepts/substitution";
 const logger = createLogger({ component: "OgsGroupsPage" });
 const GROUP_ACCESS_RECONCILE_INTERVAL_MS = 15 * 60_000;
 const EMPTY_GROUP_TRANSFERS: GroupTransfer[] = [];
+const OGS_GROUPS_INFO =
+  "Hier siehst du die Kinder deiner Gruppe und wer gerade da ist. Oben steht, wie viele Kinder da, krank oder entschuldigt sind. Tippe auf ein Kind, um seine Angaben zu öffnen.";
 
 function groupTransfers(
   handovers: Substitution[],
@@ -1077,6 +1079,7 @@ function OGSGroupPageContent() {
     return (
       <TenantPage
         title={OGS_GROUPS_LABEL}
+        info={OGS_GROUPS_INFO}
         empty={{
           icon: <MotoConceptIcon concept={groupsConcept} size={48} />,
           title: "Keine OGS-Gruppe zugeordnet",
@@ -1421,7 +1424,7 @@ function OGSGroupPageContent() {
           Vertretungshinweis und das Kebab-Menü. */}
       <TenantPage
         title={currentGroup?.name ?? OGS_GROUPS_LABEL}
-        info="Hier siehst du die Kinder deiner Gruppe und wer gerade da ist. Oben steht, wie viele Kinder da, krank oder entschuldigt sind. Tippe auf ein Kind, um seine Angaben zu öffnen."
+        info={OGS_GROUPS_INFO}
         stats={groupStats}
         statsLoading={showSkeleton}
         actions={
