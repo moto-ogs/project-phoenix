@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 )
@@ -14,12 +15,13 @@ import (
 // member is named with the name the school's directory has now; the moto
 // support stays anonymous to the school.
 type LifecycleEventResponse struct {
-	ID         string                                 `json:"id"`
-	Action     string                                 `json:"action"`
-	ActorKind  string                                 `json:"actor_kind"`
-	ActorName  *string                                `json:"actor_name"`
-	Changes    map[string]devicefleet.LifecycleChange `json:"changes"`
-	OccurredAt wireTime                               `json:"occurred_at"`
+	ID        string                                 `json:"id"`
+	Action    string                                 `json:"action"`
+	ActorKind string                                 `json:"actor_kind"`
+	ActorName *string                                `json:"actor_name"`
+	Changes   map[string]devicefleet.LifecycleChange `json:"changes"`
+	// OccurredAt keeps the administrative API's second precision (RFC 3339).
+	OccurredAt string `json:"occurred_at"`
 }
 
 // getDeviceHistory answers the history of one device of the school, newest
@@ -76,7 +78,7 @@ func newLifecycleEventResponse(event devicefleet.LifecycleEvent, names map[int64
 	}
 	return LifecycleEventResponse{
 		ID: strconv.FormatInt(event.ID, 10), Action: string(event.Action), ActorKind: string(event.ActorKind),
-		ActorName: actorName, Changes: event.Changes, OccurredAt: wireTime(event.OccurredAt),
+		ActorName: actorName, Changes: event.Changes, OccurredAt: event.OccurredAt.Format(time.RFC3339),
 	}
 }
 

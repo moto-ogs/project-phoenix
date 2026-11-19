@@ -53,7 +53,7 @@ export interface BirthdayOverview {
 
 interface BackendCelebration {
   kind: BirthdayKind;
-  id: number;
+  id: number | string;
   name: string;
   group_name?: string;
   school_class?: string;

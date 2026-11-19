@@ -36,7 +36,7 @@ type ChangeRequestResponse struct {
 	Request           *AdminRequestSummary           `json:"request,omitempty"`
 	Messages          []ChangeRequestMessageResponse `json:"messages,omitempty"`
 	// RosterImpacts answer an approval that changed bookings (#5102).
-	RosterImpacts []childRosterImpactResponse `json:"roster_impacts,omitempty"`
+	RosterImpacts []enrollmentChildRosterImpactResponse `json:"roster_impacts,omitempty"`
 }
 
 type ChangeRequestMessageResponse struct {

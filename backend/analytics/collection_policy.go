@@ -2,7 +2,6 @@ package analytics
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -69,14 +68,19 @@ func (p CollectionPolicy) EnrollmentActor(r *http.Request, actor Actor) (Actor, 
 	return actor, err == nil && id > 0
 }
 
+// PolicyResponse says whether the usage analytics may capture the session.
+type PolicyResponse struct {
+	Enabled bool `json:"enabled"`
+}
+
 // PolicyHandler serves only a boolean, using the verified session. Anonymous
-// parents/school logins cannot yet determine their schools and stay off.
-func PolicyHandler(policy CollectionPolicy, actor func(*http.Request) (Actor, bool)) http.HandlerFunc {
+// parents/school logins cannot yet determine their schools and stay off. The
+// root writes the answer in the shared success envelope.
+func PolicyHandler(policy CollectionPolicy, actor func(*http.Request) (Actor, bool), respond func(http.ResponseWriter, *http.Request, PolicyResponse)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		current, ok := actor(r)
-		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]bool{"enabled": ok && policy.AllowsActor(r.Context(), current)}})
+		respond(w, r, PolicyResponse{Enabled: ok && policy.AllowsActor(r.Context(), current)})
 	}
 }
 

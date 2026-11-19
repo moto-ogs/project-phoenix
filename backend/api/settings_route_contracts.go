@@ -33,3 +33,14 @@ func settingsRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/home-layout/policies", Portals: portals, Request: types.HomeBlockPolicies, NoData: true},
 	}
 }
+
+// settingsAdminRouteContracts registers the schema and the reveal of a
+// secret value of the settings page (#2352), relative to /api/settings. The
+// value writes keep their route files: they renew the cached tenant view.
+func settingsAdminRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/schema", Portals: portals, Response: configModel.SettingsSchema{}},
+		{Method: "GET", Pattern: "/values/{key}/reveal", Portals: portals, Response: settingsHTTP.RevealedValueResponse{}},
+	}
+}

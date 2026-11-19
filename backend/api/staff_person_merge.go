@@ -32,7 +32,7 @@ func (a staffPersonMergeAudit) RecordStaffPersonMergePreview(ctx context.Context
 	return a.create(ctx, &auditRecords.OperatorAuditEntry{OperatorID: operatorID, Action: "view", ResourceType: "person", Changes: changes, RequestIP: clientIP})
 }
 
-func (a staffPersonMergeAudit) RecordStaffPersonMerge(ctx context.Context, operatorID, schoolID int64, candidate staffpersonmerge.Candidate) error {
+func (a staffPersonMergeAudit) RecordStaffPersonMerge(ctx context.Context, operatorID, schoolID int64, candidate staffpersonmerge.StaffPersonMergeCandidate) error {
 	changes, err := json.Marshal(struct {
 		SchoolID        int64 `json:"school_id"`
 		DonorID         int64 `json:"donor_person_id"`

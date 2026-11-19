@@ -127,7 +127,7 @@ describe("caregiverCapabilityService", () => {
     );
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "/api/operator/provisioning/schools/10/accounts/55/caregiver-capability",
+      "/api/operator/schools/10/accounts/55/caregiver-capability",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({

@@ -3,6 +3,7 @@ package contract
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -181,6 +182,19 @@ func TestBuildRejects(t *testing.T) {
 	bothAnswers.NoData = true
 	strayEnum := get("/api/rows/", inner{})
 	strayEnum.Enums = []EnumSpec{{Name: "Gone", Fields: []string{"inner.gone"}, Values: []string{"x"}}}
+	limitWithoutBody := get("/api/rows/", inner{})
+	limitWithoutBody.MaxBodyBytes = 1024
+	negativeLimit := post(body{})
+	negativeLimit.MaxBodyBytes = -1
+	publicWrite := post(body{})
+	publicWrite.Portals = []string{PublicPortal}
+	publicRetry := get("/api/links/{token}", inner{})
+	publicRetry.Portals = []string{PublicPortal}
+	publicRetry.NoRetryAfterRenewal = "mails a code"
+	publicBeside := get("/api/links/{token}", inner{})
+	publicBeside.Portals = []string{PublicPortal, "tenant"}
+	publicLink := get("/api/rows/{token}", inner{})
+	publicLink.Portals = []string{PublicPortal}
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -205,6 +219,12 @@ func TestBuildRejects(t *testing.T) {
 		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
 		"a day type entry nothing uses":             {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}}, "day type contract.ownDay"},
 		"an owner's day type without an entry":      {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a body limit on a route without a body":    {[]Registration{limitWithoutBody}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a negative body limit":                     {[]Registration{negativeLimit}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a public write without a body limit":       {[]Registration{publicWrite}, Options{Identifiers: identifiers}, "a public write needs MaxBodyBytes"},
+		"a public route that names a retry":         {[]Registration{publicRetry}, Options{Identifiers: identifiers}, "has no session to renew"},
+		"a public route beside a session portal":    {[]Registration{publicBeside}, Options{Identifiers: identifiers}, "names no session portal"},
+		"a public pattern a session pattern takes":  {[]Registration{publicLink, get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers}, "overlaps the session route GET /api/rows/{id}"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -377,6 +397,28 @@ func TestTypeScriptWritesARouteWithoutData(t *testing.T) {
 	assert.NotContains(t, source, "success")
 }
 
+// The proxy traits travel into contract.json and onto the route object the
+// catalog proxy reads; a route without them carries neither key.
+func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
+	t.Parallel()
+	once := post(body{})
+	once.NoRetryAfterRenewal = "a renewed session would mail the code twice"
+	once.MaxBodyBytes = 64 * 1024
+	plain := get("/api/rows/{id}", inner{})
+	doc, err := Build([]Registration{once, plain}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	encoded, err := json.Marshal(doc.Routes)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"no_retry_after_renewal":"a renewed session would mail the code twice","max_body_bytes":65536`)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "    pattern: \"/api/rows/\",\n    portals: [\"tenant\"],\n    noRetryAfterRenewal: \"a renewed session would mail the code twice\",\n    maxBodyBytes: 65536,\n")
+	assert.Equal(t, 1, strings.Count(source, "noRetryAfterRenewal"))
+	assert.Equal(t, 1, strings.Count(source, "maxBodyBytes"))
+}
+
 // Two portals mount the same handlers, so two resources answer with one Go
 // type. It is written once and both files import it.
 func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
@@ -489,4 +531,39 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 
 	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers, NumericIDs: options.NumericIDs})
 	require.ErrorContains(t, err, "has its own UnmarshalJSON", "without an entry the wrapper stops the generator")
+}
+
+// session and supervisor refer to each other, as a room session and its
+// supervisions do.
+type session struct {
+	Name        string        `json:"name"`
+	Supervisors []*supervisor `json:"supervisors,omitempty"`
+}
+
+type supervisor struct {
+	Role    string   `json:"role"`
+	Session *session `json:"session,omitempty"`
+}
+
+func TestATypeOfACycleReadsTheLaterSchemaLazily(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{get("/api/rows/sessions", []session{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	first, second := strings.Index(source, "export const supervisorSchema"), strings.Index(source, "export const sessionSchema")
+	require.True(t, first >= 0 && second > first, source)
+	assert.Contains(t, source, "  session: optional(lazy(() => sessionSchema)),")
+	assert.Contains(t, source, "  supervisors: optional(arr(nullable(supervisorSchema))),")
+}
+
+func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {
+	t.Parallel()
+	link := get("/api/rows/public/{token}", inner{})
+	link.Portals = []string{PublicPortal}
+	// /api/rows/public/x/ matches both; the literal "public" wins in chi
+	// and in the proxy, so the pair is ordered.
+	_, err := Build([]Registration{link, get("/api/rows/{id}/history", inner{})}, Options{Identifiers: identifiers})
+	assert.NoError(t, err)
 }

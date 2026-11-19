@@ -1,20 +1,17 @@
-import { apiGet } from "~/lib/api-helpers.server";
-import { createGetHandler } from "~/lib/route-wrapper.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-interface DirectoryEntry {
-  id: number;
-  name: string;
-  firstName: string;
-  lastName: string;
-}
+// The contract registers this route (#2352). While staff/[id] keeps its own
+// GET (it rebuilds the staff record), Next selects that file for this path,
+// not the portal's catch-all. Hand the request to the catalog proxy with the
+// path the catch-all would receive.
+const path = {
+  params: Promise.resolve({ path: ["staff", "documents-directory"] }),
+};
 
-export const GET = createGetHandler(async (_request, token) => {
-  const response = await apiGet<{ data: DirectoryEntry[] }>(
-    "/api/staff/documents-directory",
-    token,
-  );
-  return (response.data ?? []).map((entry) => ({
-    ...entry,
-    id: entry.id.toString(),
-  }));
-});
+const get = catalogProxy(portalRoutes.tenant, "GET");
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, path),
+);

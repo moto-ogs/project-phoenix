@@ -56,29 +56,47 @@ type RoutePost = (request: NextRequest, context: unknown) => Promise<Response>;
 
 const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
   "auth/password": () => import("./auth/password/route"),
-  "parent/me/news/[announcementId]/declaration": () =>
-    import("./parent/me/news/[announcementId]/declaration/route"),
   "operator/profile/password": () =>
     import("./operator/profile/password/route"),
   "operator/profile/email-change": () =>
     import("./operator/profile/email-change/route"),
   "caterer/account/password": () => import("./caterer/account/password/route"),
+  // Hands the request to the Träger catalog proxy, whose contract switches
+  // the retry off.
+  "traeger/auth/mfa/step-up": () => import("./traeger/auth/mfa/step-up/route"),
   "caterer/account/mfa/disable": () =>
     import("./caterer/account/mfa/disable/route"),
   "caterer/account/mfa/confirm": () =>
     import("./caterer/account/mfa/confirm/route"),
   "parent/me/mfa/disable": () => import("./parent/me/mfa/disable/route"),
   "parent/me/mfa/confirm": () => import("./parent/me/mfa/confirm/route"),
-  "parent/me/children/[studentId]/care-exception": () =>
-    import("./parent/me/children/[studentId]/care-exception/route"),
+  "parent/me/children/[studentId]/sick-note": () =>
+    import("./parent/me/children/[studentId]/sick-note/route"),
+};
+
+/**
+ * Routes the portal's catalog proxy serves (#2352): their contract switches
+ * the retry off, and the catch-all route runs them.
+ */
+const CATALOG: Record<
+  string,
+  { load: () => Promise<{ POST: unknown }>; path: string[] }
+> = {
+  "parent/me/news/[announcementId]/declaration": {
+    load: () => import("./parent/[...path]/route"),
+    path: ["me", "news", "1", "declaration"],
+  },
 };
 
 async function post(route: string, host: string, body: unknown) {
-  const { POST } = await ROUTES[route]!();
+  const catalog = CATALOG[route];
+  const { POST } = await (catalog?.load ?? ROUTES[route])!();
   const url = `http://${host}/api/${route.replace(/\[[^\]]+\]/g, "1")}`;
-  const params = Object.fromEntries(
-    [...route.matchAll(/\[([^\]]+)\]/g)].map(([, name]) => [name, "1"]),
-  );
+  const params = catalog
+    ? { path: catalog.path }
+    : Object.fromEntries(
+        [...route.matchAll(/\[([^\]]+)\]/g)].map(([, name]) => [name, "1"]),
+      );
   return (POST as RoutePost)(
     new NextRequest(url, {
       method: "POST",
@@ -157,11 +175,22 @@ describe("routes that carry the current password or a code", () => {
     expect(sendsOfSecret()).toBe(1);
   });
 
+  it("the Träger code step mails once after a 401", async () => {
+    const response = await post(
+      "traeger/auth/mfa/step-up",
+      "traeger.localhost:3000",
+      {},
+    );
+
+    expect(response.status).toBe(401);
+    expect(backend).toHaveBeenCalledOnce();
+  });
+
   it("a route without a credential repeats the call with the renewed session", async () => {
     const response = await post(
-      "parent/me/children/[studentId]/care-exception",
+      "parent/me/children/[studentId]/sick-note",
       "parents.localhost:3000",
-      { note: SECRET },
+      { dates: ["2026-09-09"], reason: SECRET },
     );
 
     // Anker: the session renewed and the call ran twice, so the harness

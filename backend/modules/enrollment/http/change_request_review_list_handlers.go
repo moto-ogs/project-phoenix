@@ -237,9 +237,7 @@ func (rs *Resource) pendingChangeRequestReviewCount(w http.ResponseWriter, r *ht
 		mapChangeRequestError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{
-		"pending_count": pending,
-	}, "Pending enrollment change request count retrieved")
+	common.Respond(w, r, http.StatusOK, EnrollmentChangeRequestPendingCountResponse{PendingCount: pending}, "Pending enrollment change request count retrieved")
 }
 
 // listChangeRequestReviewEntries serves GET /admin/change-requests/list.
@@ -355,4 +353,10 @@ func formatReviewChildIDs(ids []int64) []string {
 		formatted = append(formatted, strconv.FormatInt(id, 10))
 	}
 	return formatted
+}
+
+// EnrollmentChangeRequestPendingCountResponse is the badge of the change requests that
+// wait for a review.
+type EnrollmentChangeRequestPendingCountResponse struct {
+	PendingCount int `json:"pending_count"`
 }

@@ -328,7 +328,7 @@ export const devicePinKeys = {
 } as const;
 
 export const databaseKeys = {
-  counts: () => "/api/database/counts",
+  counts: () => "/api/database/stats",
   // The SSE hook revalidates every key containing this name.
   calendarPeriods: () => "database-calendar-periods-list",
   /** The id/name options of one API list for a select, per query. */

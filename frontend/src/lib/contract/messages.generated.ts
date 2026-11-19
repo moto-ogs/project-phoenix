@@ -4,6 +4,8 @@ import {
   arr,
   bool,
   instant,
+  json,
+  noData,
   nullable,
   object,
   optional,
@@ -13,6 +15,87 @@ import {
   str,
   success,
 } from "./runtime";
+
+/** Go: messaging.GuardianReaderResponse */
+export interface GuardianReaderResponse {
+  account_id: string;
+  name: string;
+  relationship_type?: string;
+}
+
+export const GuardianReaderResponseSchema: z.ZodType<GuardianReaderResponse, unknown> = object<GuardianReaderResponse>({
+  account_id: str,
+  name: str,
+  relationship_type: optional(str),
+});
+
+/** Go: messaging.SchoolReadersResponse */
+export interface SchoolReadersResponse {
+  kind: string;
+  names: string[] | null;
+  unnamed_count: number;
+}
+
+export const SchoolReadersResponseSchema: z.ZodType<SchoolReadersResponse, unknown> = object<SchoolReadersResponse>({
+  kind: str,
+  names: nullable(arr(str)),
+  unnamed_count: safeInt,
+});
+
+/** Go: messaging.ReadersResponse */
+export interface ReadersResponse {
+  guardian: GuardianReaderResponse;
+  school: SchoolReadersResponse;
+}
+
+export const ReadersResponseSchema: z.ZodType<ReadersResponse, unknown> = object<ReadersResponse>({
+  guardian: GuardianReaderResponseSchema,
+  school: SchoolReadersResponseSchema,
+});
+
+/** Go: messaging.ParentChatInboxThreadResponse */
+export interface ParentChatInboxThreadResponse {
+  thread_id: string;
+  student_id: string;
+  student_name: string;
+  school_class?: string;
+  group_name?: string;
+  guardian_name: string;
+  relationship_type?: string;
+  audience: string;
+  readers: ReadersResponse;
+  last_message_at?: string;
+  last_sender_kind?: string;
+  last_message_body?: string;
+  unread_count: number;
+}
+
+export const ParentChatInboxThreadResponseSchema: z.ZodType<ParentChatInboxThreadResponse, unknown> = object<ParentChatInboxThreadResponse>({
+  thread_id: str,
+  student_id: str,
+  student_name: str,
+  school_class: optional(str),
+  group_name: optional(str),
+  guardian_name: str,
+  relationship_type: optional(str),
+  audience: str,
+  readers: ReadersResponseSchema,
+  last_message_at: optional(instant),
+  last_sender_kind: optional(str),
+  last_message_body: optional(str),
+  unread_count: safeInt,
+});
+
+/** Go: messaging.CountScopeResponse */
+export interface CountScopeResponse {
+  scope: string;
+  has_own_groups: boolean;
+}
+
+export const CountScopeResponseSchema: z.ZodType<CountScopeResponse, unknown> = object<CountScopeResponse>({
+  scope: str,
+  has_own_groups: bool,
+});
 
 /** Go: messaging.GroupReadersResponse */
 export interface GroupReadersResponse {
@@ -177,43 +260,6 @@ export const ReachableStudentsResponseSchema: z.ZodType<ReachableStudentsRespons
   student_ids: nullable(arr(str)),
 });
 
-/** Go: messaging.GuardianReaderResponse */
-export interface GuardianReaderResponse {
-  account_id: string;
-  name: string;
-  relationship_type?: string;
-}
-
-export const GuardianReaderResponseSchema: z.ZodType<GuardianReaderResponse, unknown> = object<GuardianReaderResponse>({
-  account_id: str,
-  name: str,
-  relationship_type: optional(str),
-});
-
-/** Go: messaging.SchoolReadersResponse */
-export interface SchoolReadersResponse {
-  kind: string;
-  names: string[] | null;
-  unnamed_count: number;
-}
-
-export const SchoolReadersResponseSchema: z.ZodType<SchoolReadersResponse, unknown> = object<SchoolReadersResponse>({
-  kind: str,
-  names: nullable(arr(str)),
-  unnamed_count: safeInt,
-});
-
-/** Go: messaging.ReadersResponse */
-export interface ReadersResponse {
-  guardian: GuardianReaderResponse;
-  school: SchoolReadersResponse;
-}
-
-export const ReadersResponseSchema: z.ZodType<ReadersResponse, unknown> = object<ReadersResponse>({
-  guardian: GuardianReaderResponseSchema,
-  school: SchoolReadersResponseSchema,
-});
-
 /** Go: messaging.MessageableGuardianResponse */
 export interface MessageableGuardianResponse {
   account_id: string;
@@ -233,6 +279,80 @@ export const MessageableGuardianResponseSchema: z.ZodType<MessageableGuardianRes
   leadership_available: bool,
 });
 
+/** Go: messaging.ParentChatMessageResponse */
+export interface ParentChatMessageResponse {
+  client_message_id?: string;
+  id: string;
+  sender_kind: string;
+  sender_name: string;
+  body: string;
+  created_at: string;
+  kind: string;
+  event_type?: string;
+  event_actor_kind?: string;
+  request_type?: string;
+  request_status?: string;
+  payload?: unknown | null;
+  ref_table?: string;
+  ref_id?: string;
+  applied_at?: string;
+  applied_by?: string;
+  decision_reason?: string;
+  read_by_staff?: boolean;
+  read_by_guardian?: boolean;
+  group_thread_id?: string;
+  group_thread_title?: string;
+  attachments?: unknown | null;
+}
+
+export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageResponse, unknown> = object<ParentChatMessageResponse>({
+  client_message_id: optional(str),
+  id: str,
+  sender_kind: str,
+  sender_name: str,
+  body: str,
+  created_at: instant,
+  kind: str,
+  event_type: optional(str),
+  event_actor_kind: optional(str),
+  request_type: optional(str),
+  request_status: optional(str),
+  payload: optional(nullable(json)),
+  ref_table: optional(str),
+  ref_id: optional(str),
+  applied_at: optional(instant),
+  applied_by: optional(str),
+  decision_reason: optional(str),
+  read_by_staff: optional(bool),
+  read_by_guardian: optional(bool),
+  group_thread_id: optional(str),
+  group_thread_title: optional(str),
+  attachments: optional(nullable(json)),
+});
+
+/** Go: messaging.ParentChatThreadDetailResponse */
+export interface ParentChatThreadDetailResponse {
+  thread_id: string;
+  student_id: string;
+  student_name: string;
+  guardian_name: string;
+  relationship_type?: string;
+  audience: string;
+  readers: ReadersResponse;
+  messages: ParentChatMessageResponse[] | null;
+}
+
+export const ParentChatThreadDetailResponseSchema: z.ZodType<ParentChatThreadDetailResponse, unknown> = object<ParentChatThreadDetailResponse>({
+  thread_id: str,
+  student_id: str,
+  student_name: str,
+  guardian_name: str,
+  relationship_type: optional(str),
+  audience: str,
+  readers: ReadersResponseSchema,
+  messages: nullable(arr(ParentChatMessageResponseSchema)),
+});
+
 /** Go: messaging.ThreadMailsResponse */
 export interface ThreadMailsResponse {
   messages: Record<string, string> | null;
@@ -240,6 +360,15 @@ export interface ThreadMailsResponse {
 
 export const ThreadMailsResponseSchema: z.ZodType<ThreadMailsResponse, unknown> = object<ThreadMailsResponse>({
   messages: nullable(rec(str)),
+});
+
+/** Go: messaging.ParentChatUnreadCountResponse */
+export interface ParentChatUnreadCountResponse {
+  unread_count: number;
+}
+
+export const ParentChatUnreadCountResponseSchema: z.ZodType<ParentChatUnreadCountResponse, unknown> = object<ParentChatUnreadCountResponse>({
+  unread_count: safeInt,
 });
 
 /** Go: messaging.CreateGroupThreadRequest */
@@ -260,6 +389,45 @@ export interface GroupMessageRequest {
   attachment_ids?: string[] | null;
 }
 
+/** Go: messaging.OpenThreadRequest */
+export interface OpenThreadRequest {
+  student_id?: string;
+  guardian_account_id?: string;
+  audience?: string;
+}
+
+/** Go: messaging.ParentChatPostMessageRequest */
+export interface ParentChatPostMessageRequest {
+  client_message_id?: string;
+  body?: string;
+  handled_up_to_message_id?: string;
+  attachment_ids?: string[] | null;
+}
+
+/** Go: messaging.MarkHandledRequest */
+export interface MarkHandledRequest {
+  handled_up_to_message_id?: string;
+}
+
+/** Go: messaging.CountScopeRequest */
+export interface CountScopeRequest {
+  scope?: string;
+}
+
+/** Go: messaging.CountScopeSavedResponse */
+export interface CountScopeSavedResponse {
+  scope: string;
+}
+
+export const CountScopeSavedResponseSchema: z.ZodType<CountScopeSavedResponse, unknown> = object<CountScopeSavedResponse>({
+  scope: str,
+});
+
+/** Query of GET /api/messages/ */
+export interface GetMessagesQuery {
+  unread?: boolean;
+}
+
 /** Query of GET /api/messages/group-threads/audience */
 export interface GetMessagesGroupThreadsAudienceQuery {
   target_id?: string;
@@ -272,6 +440,19 @@ export interface GetMessagesStudentsStudentIdGuardiansQuery {
 }
 
 export const routes = {
+  "GET /api/messages/": {
+    method: "GET",
+    pattern: "/api/messages/",
+    portals: ["tenant"],
+    query: ["unread"],
+    response: success(z.array(ParentChatInboxThreadResponseSchema)),
+  },
+  "GET /api/messages/count-scope": {
+    method: "GET",
+    pattern: "/api/messages/count-scope",
+    portals: ["tenant"],
+    response: success(CountScopeResponseSchema),
+  },
   "GET /api/messages/group-threads": {
     method: "GET",
     pattern: "/api/messages/group-threads",
@@ -310,11 +491,29 @@ export const routes = {
     query: ["audience"],
     response: success(z.array(MessageableGuardianResponseSchema)),
   },
+  "GET /api/messages/students/{studentId}/threads": {
+    method: "GET",
+    pattern: "/api/messages/students/{studentId}/threads",
+    portals: ["tenant"],
+    response: success(z.array(ParentChatInboxThreadResponseSchema)),
+  },
+  "GET /api/messages/threads/{threadId}": {
+    method: "GET",
+    pattern: "/api/messages/threads/{threadId}",
+    portals: ["tenant"],
+    response: success(ParentChatThreadDetailResponseSchema),
+  },
   "GET /api/messages/threads/{threadId}/mails": {
     method: "GET",
     pattern: "/api/messages/threads/{threadId}/mails",
     portals: ["tenant"],
     response: success(ThreadMailsResponseSchema),
+  },
+  "GET /api/messages/unread-count": {
+    method: "GET",
+    pattern: "/api/messages/unread-count",
+    portals: ["tenant"],
+    response: success(ParentChatUnreadCountResponseSchema),
   },
   "POST /api/messages/group-threads": {
     method: "POST",
@@ -335,5 +534,45 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<GroupMessageRequest>(),
     response: success(GroupThreadDetailResponseSchema),
+  },
+  "POST /api/messages/mark-all-read": {
+    method: "POST",
+    pattern: "/api/messages/mark-all-read",
+    portals: ["tenant"],
+    response: success(ParentChatUnreadCountResponseSchema),
+  },
+  "POST /api/messages/threads/open": {
+    method: "POST",
+    pattern: "/api/messages/threads/open",
+    portals: ["tenant"],
+    request: requestBody<OpenThreadRequest>(),
+    response: success(ParentChatThreadDetailResponseSchema),
+  },
+  "POST /api/messages/threads/{threadId}": {
+    method: "POST",
+    pattern: "/api/messages/threads/{threadId}",
+    portals: ["tenant"],
+    request: requestBody<ParentChatPostMessageRequest>(),
+    response: success(z.array(ParentChatMessageResponseSchema)),
+  },
+  "POST /api/messages/threads/{threadId}/handled": {
+    method: "POST",
+    pattern: "/api/messages/threads/{threadId}/handled",
+    portals: ["tenant"],
+    request: requestBody<MarkHandledRequest>(),
+    response: noData,
+  },
+  "POST /api/messages/threads/{threadId}/unread": {
+    method: "POST",
+    pattern: "/api/messages/threads/{threadId}/unread",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "PUT /api/messages/count-scope": {
+    method: "PUT",
+    pattern: "/api/messages/count-scope",
+    portals: ["tenant"],
+    request: requestBody<CountScopeRequest>(),
+    response: success(CountScopeSavedResponseSchema),
   },
 } as const;

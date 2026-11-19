@@ -6,19 +6,19 @@ import (
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
 
-// rosterImpactResponse is the wire form of a booking change's effect on the
+// enrollmentRosterImpactResponse is the wire form of a booking change's effect on the
 // child's Regeltermine (#5102). Weekdays are ISO (1 = Monday); template IDs
 // travel as strings like every other ID.
-type rosterImpactResponse struct {
-	EffectiveFrom string                           `json:"effective_from"`
-	Adjusted      []adjustedRosterTemplateResponse `json:"adjusted"`
-	NotAdjusted   []manualRosterTemplateResponse   `json:"not_adjusted"`
+type enrollmentRosterImpactResponse struct {
+	EffectiveFrom string                                     `json:"effective_from"`
+	Adjusted      []enrollmentAdjustedRosterTemplateResponse `json:"adjusted"`
+	NotAdjusted   []enrollmentManualRosterTemplateResponse   `json:"not_adjusted"`
 	// PickupOverrides are weekdays whose stored staff pickup time hides the
 	// booked pickup time; the office can reset them to the booking.
-	PickupOverrides []pickupOverrideResponse `json:"pickup_overrides"`
+	PickupOverrides []enrollmentPickupOverrideResponse `json:"pickup_overrides"`
 }
 
-type pickupOverrideResponse struct {
+type enrollmentPickupOverrideResponse struct {
 	Weekday    int    `json:"weekday"`
 	Date       string `json:"date"`
 	StoredTime string `json:"stored_time"`
@@ -27,14 +27,14 @@ type pickupOverrideResponse struct {
 	ResetNow bool `json:"reset_now"`
 }
 
-type adjustedRosterTemplateResponse struct {
+type enrollmentAdjustedRosterTemplateResponse struct {
 	TemplateID      string `json:"template_id"`
 	Name            string `json:"name"`
 	RemovedWeekdays []int  `json:"removed_weekdays"`
 	AddedWeekdays   []int  `json:"added_weekdays"`
 }
 
-type manualRosterTemplateResponse struct {
+type enrollmentManualRosterTemplateResponse struct {
 	TemplateID string `json:"template_id"`
 	Name       string `json:"name"`
 	Weekdays   []int  `json:"weekdays"`
@@ -44,27 +44,27 @@ type manualRosterTemplateResponse struct {
 	Until *string `json:"until"`
 }
 
-func newRosterImpactResponse(impact RosterImpact) rosterImpactResponse {
-	out := rosterImpactResponse{
+func newRosterImpactResponse(impact RosterImpact) enrollmentRosterImpactResponse {
+	out := enrollmentRosterImpactResponse{
 		EffectiveFrom:   impact.EffectiveFrom.String(),
-		Adjusted:        make([]adjustedRosterTemplateResponse, 0, len(impact.Adjusted)),
-		NotAdjusted:     make([]manualRosterTemplateResponse, 0, len(impact.NotAdjusted)),
-		PickupOverrides: make([]pickupOverrideResponse, 0, len(impact.PickupOverrides)),
+		Adjusted:        make([]enrollmentAdjustedRosterTemplateResponse, 0, len(impact.Adjusted)),
+		NotAdjusted:     make([]enrollmentManualRosterTemplateResponse, 0, len(impact.NotAdjusted)),
+		PickupOverrides: make([]enrollmentPickupOverrideResponse, 0, len(impact.PickupOverrides)),
 	}
 	for _, override := range impact.PickupOverrides {
-		out.PickupOverrides = append(out.PickupOverrides, pickupOverrideResponse{
+		out.PickupOverrides = append(out.PickupOverrides, enrollmentPickupOverrideResponse{
 			Weekday: override.Weekday, Date: override.Date.String(), StoredTime: override.StoredTime, BookedTime: override.BookedTime,
 			ResetNow: override.ResetNow,
 		})
 	}
 	for _, template := range impact.Adjusted {
-		out.Adjusted = append(out.Adjusted, adjustedRosterTemplateResponse{
+		out.Adjusted = append(out.Adjusted, enrollmentAdjustedRosterTemplateResponse{
 			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
 			RemovedWeekdays: nonNilWeekdays(template.RemovedWeekdays), AddedWeekdays: nonNilWeekdays(template.AddedWeekdays),
 		})
 	}
 	for _, template := range impact.NotAdjusted {
-		response := manualRosterTemplateResponse{
+		response := enrollmentManualRosterTemplateResponse{
 			TemplateID: strconv.FormatInt(template.TemplateID, 10), Name: template.Name,
 			Weekdays: nonNilWeekdays(template.Weekdays), ViaTarget: template.ViaTarget,
 		}
@@ -83,22 +83,22 @@ func nonNilWeekdays(weekdays []int) []int {
 	return weekdays
 }
 
-// childRosterImpactResponse is one child's roster impact of an approved
+// enrollmentChildRosterImpactResponse is one child's roster impact of an approved
 // change request.
-type childRosterImpactResponse struct {
-	ChildID      string               `json:"child_id"`
-	StudentID    string               `json:"student_id"`
-	FirstName    string               `json:"first_name"`
-	RosterImpact rosterImpactResponse `json:"roster_impact"`
+type enrollmentChildRosterImpactResponse struct {
+	ChildID      string                         `json:"child_id"`
+	StudentID    string                         `json:"student_id"`
+	FirstName    string                         `json:"first_name"`
+	RosterImpact enrollmentRosterImpactResponse `json:"roster_impact"`
 }
 
-func newChildRosterImpactResponses(impacts []capability.ChildRosterImpact) []childRosterImpactResponse {
+func newChildRosterImpactResponses(impacts []capability.ChildRosterImpact) []enrollmentChildRosterImpactResponse {
 	if len(impacts) == 0 {
 		return nil
 	}
-	out := make([]childRosterImpactResponse, 0, len(impacts))
+	out := make([]enrollmentChildRosterImpactResponse, 0, len(impacts))
 	for _, impact := range impacts {
-		out = append(out, childRosterImpactResponse{
+		out = append(out, enrollmentChildRosterImpactResponse{
 			ChildID: strconv.FormatInt(impact.ChildID, 10), StudentID: strconv.FormatInt(impact.StudentID, 10),
 			FirstName: impact.FirstName, RosterImpact: newRosterImpactResponse(impact.Impact),
 		})

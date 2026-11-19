@@ -2,15 +2,5 @@
   "api/students/change-requests": [
     "GET tenant /api/students/change-requests query=view,search,student_id,types,status,from,to,cursor,limit",
     "POST tenant /api/students/change-requests/bulk-approve"
-  ],
-  "api/students/change-requests/rss-feed": [
-    "GET tenant /api/students/change-requests/rss-feed raw",
-    "POST tenant /api/students/change-requests/rss-feed raw"
-  ],
-  "api/students/change-requests/rss-feed/rotate": [
-    "POST tenant /api/students/change-requests/rss-feed/rotate raw"
-  ],
-  "api/students/school-checkin/batch": [
-    "POST tenant /api/students/school-checkin/batch max=65536"
   ]
 }

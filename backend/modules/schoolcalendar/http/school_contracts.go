@@ -61,5 +61,13 @@ func TraegerClosingDayRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: portals, Query: days, Response: traegercalendar.Calendar{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: TraegerClosingDayRequest{}, Response: traegercalendar.ClosingDay{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: TraegerClosingDayRequest{}, Response: traegercalendar.ClosingDay{}},
+		{
+			// The token of the preview confirms that the parents of the
+			// affected holiday bookings learn of the reopened days (#6457).
+			Method: "DELETE", Pattern: "/{id}", Portals: portals,
+			Query:    []common.QueryParam{{Name: "holiday_bookings_token", Kind: common.QueryString}},
+			Response: TraegerClosingDayDeleted{},
+		},
 	}
 }

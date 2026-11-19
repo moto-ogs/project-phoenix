@@ -94,7 +94,7 @@ func TestEligibleOn_CandidateRulesBeforeEnrollment(t *testing.T) {
 func TestSummarySlotCount_CancelledSlots(t *testing.T) {
 	t.Parallel()
 
-	result := &classday.Result{
+	result := &classday.ClassdayResult{
 		Slots: []classday.Slot{
 			{InstanceID: 1, Status: ports.InstanceStatusActive},    // baseline → counts
 			{InstanceID: 2, Status: ports.InstanceStatusCancelled}, // always skipped

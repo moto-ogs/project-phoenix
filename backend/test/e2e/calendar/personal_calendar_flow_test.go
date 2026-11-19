@@ -27,7 +27,7 @@ func setupPersonalCalendarRoute(t *testing.T) (*bun.DB, chi.Router) {
 	resource := calendarAPI.NewResource(serviceFactory.Calendar, nil, slog.Default())
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
-	router.Mount("/calendar", resource.Router(rootAPI.TenantSessionChain))
+	router.Mount("/api/calendar", resource.Router(rootAPI.TenantSessionChain))
 	return db, router
 }
 
@@ -103,7 +103,7 @@ func TestPersonalCalendarHTTPFlow_StaffInvitationRSVP(t *testing.T) {
 			{"type": "staff", "id": invitee.ID},
 		},
 	}
-	createRR := doJSON(t, router, http.MethodPost, "/calendar/appointments", manageToken, createBody)
+	createRR := doJSON(t, router, http.MethodPost, "/api/calendar/appointments", manageToken, createBody)
 	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
 
 	var created createAppointmentE2EResponse
@@ -113,7 +113,7 @@ func TestPersonalCalendarHTTPFlow_StaffInvitationRSVP(t *testing.T) {
 	recipientID := created.Data.Recipients[0].ID
 	assert.Equal(t, "pending", created.Data.Recipients[0].Status)
 
-	listRR := doJSON(t, router, http.MethodGet, "/calendar/my?from=2026-05-04&to=2026-05-04", ownToken, nil)
+	listRR := doJSON(t, router, http.MethodGet, "/api/calendar/my?from=2026-05-04&to=2026-05-04", ownToken, nil)
 	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
 	var listed calendarListE2EResponse
 	require.NoError(t, json.Unmarshal(listRR.Body.Bytes(), &listed))
@@ -123,12 +123,12 @@ func TestPersonalCalendarHTTPFlow_StaffInvitationRSVP(t *testing.T) {
 	assert.Equal(t, "pending", listed.Data.Events[0].ResponseStatus)
 	assert.True(t, listed.Data.Events[0].CanRespond)
 
-	respondRR := doJSON(t, router, http.MethodPost, "/calendar/recipients/"+strconv.FormatInt(recipientID, 10)+"/response", ownToken, map[string]any{
+	respondRR := doJSON(t, router, http.MethodPost, "/api/calendar/recipients/"+strconv.FormatInt(recipientID, 10)+"/response", ownToken, map[string]any{
 		"status": "accepted",
 	})
 	require.Equal(t, http.StatusOK, respondRR.Code, respondRR.Body.String())
 
-	listRR = doJSON(t, router, http.MethodGet, "/calendar/my?from=2026-05-04&to=2026-05-04", ownToken, nil)
+	listRR = doJSON(t, router, http.MethodGet, "/api/calendar/my?from=2026-05-04&to=2026-05-04", ownToken, nil)
 	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
 	require.NoError(t, json.Unmarshal(listRR.Body.Bytes(), &listed))
 	require.Len(t, listed.Data.Events, 1)
@@ -146,7 +146,7 @@ func TestPersonalCalendarHTTPFlow_EditCancelDeleteAndICS(t *testing.T) {
 	manageToken := calendarToken(t, organizerAccount.ID, permissions.CalendarManage, permissions.CalendarOwn)
 	ownToken := calendarToken(t, inviteeAccount.ID, permissions.CalendarOwn)
 
-	createRR := doJSON(t, router, http.MethodPost, "/calendar/appointments", manageToken, map[string]any{
+	createRR := doJSON(t, router, http.MethodPost, "/api/calendar/appointments", manageToken, map[string]any{
 		"title":         "Original",
 		"start_date":    "2026-05-04",
 		"end_date":      "2026-05-04",
@@ -160,8 +160,8 @@ func TestPersonalCalendarHTTPFlow_EditCancelDeleteAndICS(t *testing.T) {
 	require.NoError(t, json.Unmarshal(createRR.Body.Bytes(), &created))
 	apptID := created.Data.Appointment.ID
 	require.Greater(t, apptID, int64(0))
-	path := "/calendar/appointments/" + strconv.FormatInt(apptID, 10)
-	listPath := "/calendar/my?from=2026-05-01&to=2026-05-10"
+	path := "/api/calendar/appointments/" + strconv.FormatInt(apptID, 10)
+	listPath := "/api/calendar/my?from=2026-05-01&to=2026-05-10"
 
 	// Edit details (audience stays fixed).
 	updRR := doJSON(t, router, http.MethodPut, path, manageToken, map[string]any{
@@ -209,6 +209,46 @@ func TestPersonalCalendarHTTPFlow_EditCancelDeleteAndICS(t *testing.T) {
 	assert.Empty(t, listed.Data.Events)
 }
 
+// TestPersonalCalendarHTTPFlow_CancelOneOccurrence cancels one date of a
+// weekly series; the series' iCalendar file then excludes that date.
+func TestPersonalCalendarHTTPFlow_CancelOneOccurrence(t *testing.T) {
+	t.Parallel()
+	db, router := setupPersonalCalendarRoute(t)
+
+	_, organizerAccount := testpkg.CreateTestCalendarStaff(t, db, "E2E", "SeriesOrg")
+	invitee, _ := testpkg.CreateTestCalendarStaff(t, db, "E2E", "SeriesInv")
+	manageToken := calendarToken(t, organizerAccount.ID, permissions.CalendarManage, permissions.CalendarOwn)
+
+	createRR := doJSON(t, router, http.MethodPost, "/api/calendar/appointments", manageToken, map[string]any{
+		"title":         "Wöchentliche AG",
+		"start_date":    "2026-05-04",
+		"end_date":      "2026-05-04",
+		"start_time":    "14:00",
+		"end_time":      "15:00",
+		"delivery_mode": "informational",
+		"recurrence":    map[string]any{"frequency": "weekly", "interval_count": 1, "weekdays": []string{"monday"}, "ends_on": "2026-05-25"},
+		"targets":       []map[string]any{{"type": "staff", "id": invitee.ID}},
+	})
+	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
+	var created createAppointmentE2EResponse
+	require.NoError(t, json.Unmarshal(createRR.Body.Bytes(), &created))
+	path := "/api/calendar/appointments/" + strconv.FormatInt(created.Data.Appointment.ID, 10)
+
+	cancelRR := doJSON(t, router, http.MethodPost, path+"/occurrences/2026-05-11/cancel", manageToken, nil)
+	require.Equal(t, http.StatusOK, cancelRR.Code, cancelRR.Body.String())
+	var cancelled struct {
+		Data struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(cancelRR.Body.Bytes(), &cancelled))
+	assert.Equal(t, "cancelled", cancelled.Data.Status)
+
+	icsRR := doJSON(t, router, http.MethodGet, path+"/ics", manageToken, nil)
+	require.Equal(t, http.StatusOK, icsRR.Code, icsRR.Body.String())
+	assert.Contains(t, icsRR.Body.String(), "EXDATE;TZID=Europe/Berlin:20260511T140000")
+}
+
 // TestPersonalCalendarHTTPFlow_ForbiddenEdit confirms a non-organizer cannot
 // edit or delete someone else's appointment through the HTTP layer.
 func TestPersonalCalendarHTTPFlow_ForbiddenEdit(t *testing.T) {
@@ -220,7 +260,7 @@ func TestPersonalCalendarHTTPFlow_ForbiddenEdit(t *testing.T) {
 	ownerToken := calendarToken(t, organizerAccount.ID, permissions.CalendarManage, permissions.CalendarOwn)
 	otherToken := calendarToken(t, otherAccount.ID, permissions.CalendarManage, permissions.CalendarOwn)
 
-	createRR := doJSON(t, router, http.MethodPost, "/calendar/appointments", ownerToken, map[string]any{
+	createRR := doJSON(t, router, http.MethodPost, "/api/calendar/appointments", ownerToken, map[string]any{
 		"title":         "Owner only",
 		"start_date":    "2026-05-04",
 		"end_date":      "2026-05-04",
@@ -233,7 +273,7 @@ func TestPersonalCalendarHTTPFlow_ForbiddenEdit(t *testing.T) {
 	var created createAppointmentE2EResponse
 	require.NoError(t, json.Unmarshal(createRR.Body.Bytes(), &created))
 	apptID := created.Data.Appointment.ID
-	path := "/calendar/appointments/" + strconv.FormatInt(apptID, 10)
+	path := "/api/calendar/appointments/" + strconv.FormatInt(apptID, 10)
 
 	// A different manager (an invitee here) may not delete it.
 	delRR := doJSON(t, router, http.MethodDelete, path, otherToken, nil)

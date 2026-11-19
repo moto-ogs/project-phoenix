@@ -363,7 +363,7 @@ describe("active-service", () => {
 
         const result = await activeService.endSupervision("200");
 
-        expect(result.isActive).toBe(false);
+        expect(result?.isActive).toBe(false);
       });
     });
   });

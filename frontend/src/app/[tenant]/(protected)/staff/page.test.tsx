@@ -464,7 +464,7 @@ describe("StaffPage", () => {
       error: null,
     } as never);
     vi.mocked(useStaffPendingAbsences).mockReturnValue({
-      rows: [{ staff_id: 1 }, { staff_id: 1 }] as never,
+      rows: [{ staff_id: "1" }, { staff_id: "1" }] as never,
       canReview: true,
     });
 
@@ -493,7 +493,7 @@ describe("StaffPage", () => {
       error: null,
     } as never);
     vi.mocked(useStaffPendingAbsences).mockReturnValue({
-      rows: [{ staff_id: 1 }, { staff_id: 2 }] as never,
+      rows: [{ staff_id: "1" }, { staff_id: "2" }] as never,
       canReview: true,
     });
 

@@ -19,7 +19,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 	t.Parallel()
 
 	t.Run("unique slot labels stay clean", func(t *testing.T) {
-		rows := []classday.Row{
+		rows := []classday.SlotListRow{
 			{InstanceID: 1, Slot: "Fußball 14:00–15:00", StudentID: 10},
 			{InstanceID: 2, Slot: "Basteln 14:00–15:00", StudentID: 20},
 		}
@@ -29,7 +29,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 	})
 
 	t.Run("same label different rooms disambiguates by room", func(t *testing.T) {
-		rows := []classday.Row{
+		rows := []classday.SlotListRow{
 			{InstanceID: 1, Slot: "Fußball 14:00–15:00", RoomName: "Sporthalle", StudentID: 10},
 			{InstanceID: 2, Slot: "Fußball 14:00–15:00", RoomName: "Kunstraum", StudentID: 20},
 		}
@@ -40,7 +40,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 	})
 
 	t.Run("same label same room falls back to a stable ordinal", func(t *testing.T) {
-		rows := []classday.Row{
+		rows := []classday.SlotListRow{
 			{InstanceID: 2, Slot: "Fußball 14:00–15:00", RoomName: "Sporthalle", StudentID: 20},
 			{InstanceID: 1, Slot: "Fußball 14:00–15:00", RoomName: "Sporthalle", StudentID: 10},
 		}
@@ -56,7 +56,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 	})
 
 	t.Run("mixed collision uses room where unique and ordinal otherwise", func(t *testing.T) {
-		rows := []classday.Row{
+		rows := []classday.SlotListRow{
 			{InstanceID: 1, Slot: "AG 14:00", RoomName: "Raum A", StudentID: 10},
 			{InstanceID: 2, Slot: "AG 14:00", RoomName: "", StudentID: 20},
 			{InstanceID: 3, Slot: "AG 14:00", RoomName: "", StudentID: 30},
@@ -80,7 +80,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 		// textually identical to the first ordinal " (1)" the shared-room / no-room
 		// instances fall back to. The two namespaces must stay disjoint so distinct
 		// instances never share a GroupTitle (#1565 review pass 2 follow-up).
-		rows := []classday.Row{
+		rows := []classday.SlotListRow{
 			{InstanceID: 1, Slot: "AG 14:00", RoomName: "1", StudentID: 10},
 			{InstanceID: 2, Slot: "AG 14:00", RoomName: "", StudentID: 20},
 			{InstanceID: 3, Slot: "AG 14:00", RoomName: "", StudentID: 30},
@@ -101,7 +101,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 	})
 
 	t.Run("non-slot grouping is unaffected", func(t *testing.T) {
-		rows := []classday.Row{
+		rows := []classday.SlotListRow{
 			{InstanceID: 1, Slot: "Fußball", SchoolClass: "3a", StudentID: 10},
 			{InstanceID: 2, Slot: "Fußball", SchoolClass: "3b", StudentID: 20},
 		}

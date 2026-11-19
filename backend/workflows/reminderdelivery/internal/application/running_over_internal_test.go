@@ -272,7 +272,7 @@ func TestComputeBatchMatchesComputeForRunningOver(t *testing.T) {
 
 	batch, err := build().service().ComputeBatch(context.Background(), []reminder.BatchScope{caregiver(7), caregiver(8)})
 	require.NoError(t, err)
-	var running []reminder.Reminder
+	var running []reminder.StaffReminder
 	for _, r := range batch[7].Reminders {
 		if r.Type == reminder.TypeActivityRunningOver {
 			running = append(running, r)

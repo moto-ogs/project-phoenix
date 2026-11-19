@@ -60,19 +60,11 @@ func Build(routes []Registration, options Options) (Document, error) {
 			b.deprecated[field] = true
 		}
 	}
-	doc := Document{}
-	seen := map[string]bool{}
-	for _, rc := range routes {
-		route, err := b.route(rc, options)
-		if err != nil {
-			return Document{}, err
-		}
-		if seen[route.Key()] {
-			return Document{}, fmt.Errorf("%s is registered twice", route.Key())
-		}
-		seen[route.Key()] = true
-		doc.Routes = append(doc.Routes, route)
+	built, err := b.routes(routes, options)
+	if err != nil {
+		return Document{}, err
 	}
+	doc := Document{Routes: built}
 	if err := b.unused(options); err != nil {
 		return Document{}, err
 	}
@@ -86,6 +78,25 @@ func Build(routes []Registration, options Options) (Document, error) {
 	sort.Slice(doc.Enums, func(i, j int) bool { return doc.Enums[i].Name < doc.Enums[j].Name })
 	sort.Slice(doc.Routes, func(i, j int) bool { return doc.Routes[i].Key() < doc.Routes[j].Key() })
 	return doc, nil
+}
+
+// routes builds every registration once and refuses what the public proxy
+// path cannot serve.
+func (b *builder) routes(registrations []Registration, options Options) ([]Route, error) {
+	var routes []Route
+	seen := map[string]bool{}
+	for _, rc := range registrations {
+		route, err := b.route(rc, options)
+		if err != nil {
+			return nil, err
+		}
+		if seen[route.Key()] {
+			return nil, fmt.Errorf("%s is registered twice", route.Key())
+		}
+		seen[route.Key()] = true
+		routes = append(routes, route)
+	}
+	return routes, publicRoutesStandApart(routes)
 }
 
 func (b *builder) registerEnums(rc Registration) error {
@@ -127,10 +138,16 @@ func (b *builder) enumName(enum EnumSpec) (string, error) {
 }
 
 func (b *builder) route(rc Registration, options Options) (Route, error) {
-	route := Route{Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated}
+	route := Route{
+		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
+		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
+	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
 		return route, fmt.Errorf("invalid route registration %q", where)
+	}
+	if rc.MaxBodyBytes < 0 || (rc.MaxBodyBytes > 0 && rc.Request == nil) {
+		return route, fmt.Errorf("%s: a body limit needs a positive size and a request body", where)
 	}
 	if len(rc.Portals) == 0 {
 		return route, fmt.Errorf("%s names no portal", where)

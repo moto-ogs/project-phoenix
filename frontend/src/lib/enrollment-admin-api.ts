@@ -116,7 +116,7 @@ export interface AdminOfferingAdjustment {
 interface AdminEnrollmentChangeRequestMessage {
   id: string;
   author_type: AdminEnrollmentChangeRequestMessageAuthor;
-  author_account_id?: number | null;
+  author_account_id?: number | string | null;
   body: string;
   internal_only: boolean;
   created_at: string;
@@ -135,7 +135,7 @@ export interface AdminEnrollmentChangeRequest {
   created_at: string;
   updated_at: string;
   reviewed_at?: string | null;
-  reviewed_by_account_id?: number | null;
+  reviewed_by_account_id?: number | string | null;
   request?: AdminRequestSummary;
   messages?: AdminEnrollmentChangeRequestMessage[];
   /** An approval that changed bookings reports its effect per child (#5102). */
@@ -227,7 +227,7 @@ export interface AdminRequestChild {
   status: ChildStatus;
   status_reason?: string | null;
   reviewed_at?: string | null;
-  reviewed_by?: number | null;
+  reviewed_by?: number | string | null;
   activation_mode: string;
   created_student_id?: string;
   /**

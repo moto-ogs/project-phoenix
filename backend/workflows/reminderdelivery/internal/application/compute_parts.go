@@ -12,7 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/workflows/reminderdelivery/ports"
 )
 
-func (s *service) computePickupPart(ctx context.Context, scope reminder.Scope, today string, nowMin int, pickupUpcoming, pickupOverdue bool, nextChange int) (pickupPart []reminder.Reminder, next int, err error) {
+func (s *service) computePickupPart(ctx context.Context, scope reminder.Scope, today string, nowMin int, pickupUpcoming, pickupOverdue bool, nextChange int) (pickupPart []reminder.StaffReminder, next int, err error) {
 	if pickupUpcoming || pickupOverdue {
 		studentIDs, serr := s.pickupScopeStudentIDs(ctx, scope, today)
 		if serr != nil {
@@ -59,7 +59,7 @@ func (s *service) activityGates(ctx context.Context) (activityGates, error) {
 	return gates, nil
 }
 
-func (s *service) computeActivityPart(ctx context.Context, scope reminder.Scope, today string, nowMin int, gates activityGates, nextChange int) (activityPart []reminder.Reminder, next int, err error) {
+func (s *service) computeActivityPart(ctx context.Context, scope reminder.Scope, today string, nowMin int, gates activityGates, nextChange int) (activityPart []reminder.StaffReminder, next int, err error) {
 	if !gates.any() {
 		return nil, nextChange, nil
 	}
@@ -110,7 +110,7 @@ func (s *service) activityInputs(ctx context.Context, scope reminder.Scope, toda
 	return roomIDs, instances, nil
 }
 
-func (s *service) runningOverPart(ctx context.Context, scope reminder.Scope, roomIDs []int64, today string, nowMin int) ([]reminder.Reminder, int, error) {
+func (s *service) runningOverPart(ctx context.Context, scope reminder.Scope, roomIDs []int64, today string, nowMin int) ([]reminder.StaffReminder, int, error) {
 	grace, err := s.runningOverMinutes(ctx)
 	if err != nil {
 		return nil, -1, err
@@ -125,7 +125,7 @@ func (s *service) runningOverPart(ctx context.Context, scope reminder.Scope, roo
 	return s.runningOverReminders(ctx, scope, roomIDs, instances, today, nowMin, grace)
 }
 
-func (s *service) startAndOverduePart(ctx context.Context, scope reminder.Scope, roomIDs []int64, instances []*ports.ActivityInstance, nowMin int, gates activityGates) ([]reminder.Reminder, int, error) {
+func (s *service) startAndOverduePart(ctx context.Context, scope reminder.Scope, roomIDs []int64, instances []*ports.ActivityInstance, nowMin int, gates activityGates) ([]reminder.StaffReminder, int, error) {
 	lead, err := s.leadMinutes(ctx, s.Settings.ActivityLeadMinutes)
 	if err != nil {
 		return nil, -1, err
@@ -140,7 +140,7 @@ func (s *service) startAndOverduePart(ctx context.Context, scope reminder.Scope,
 	return s.activityRemindersFor(ctx, scope, roomIDs, instances, nowMin, lead, overdueThreshold, gates.start, gates.overdue)
 }
 
-func (s *service) renderDuePickups(ctx context.Context, readable map[int64]*ports.Student, dues []duePickup, nextChange int) ([]reminder.Reminder, int, error) {
+func (s *service) renderDuePickups(ctx context.Context, readable map[int64]*ports.Student, dues []duePickup, nextChange int) ([]reminder.StaffReminder, int, error) {
 	dueIDs := make([]int64, len(dues))
 	for i, d := range dues {
 		dueIDs[i] = d.id

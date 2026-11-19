@@ -243,6 +243,16 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	var slots int
 	require.NoError(t, f.db.NewSelect().TableExpr("platform.schools").Column("device_slots").Where("id = ?", schoolID).Scan(testpkg.Ctx(t), &slots))
 	assert.Equal(t, 3, slots)
+
+	// Removing the device takes it out of the school's fleet.
+	f.call(t, http.MethodDelete, fmt.Sprintf("/operator/devices/%d", device.ID), nil, nil)
+	var fleet []struct {
+		ID int64 `json:"id"`
+	}
+	f.call(t, http.MethodGet, fmt.Sprintf("/operator/schools/%d/devices", schoolID), nil, &fleet)
+	for _, row := range fleet {
+		assert.NotEqual(t, device.ID, row.ID, "the removed device is no longer listed")
+	}
 }
 
 // The operator's own profile and the caterer list read and write through
@@ -397,4 +407,15 @@ func TestOperatorRoutesListUnregisteredTagScansOfATraeger(t *testing.T) {
 	var all []scan
 	f.call(t, http.MethodGet, fmt.Sprintf("/operator/unregistered-tag-scans?organization_id=%d&school_id=%d&resolved=all", organizationID, schoolID), nil, &all)
 	assert.ElementsMatch(t, []string{"ROUTE-OPEN", "ROUTE-DONE"}, tags(all), "asked for all, the handled scan too")
+
+	var openID int64
+	require.NoError(t, f.db.NewRaw(`SELECT id FROM audit.unregistered_tag_scans WHERE tenant_id = ? AND tag_uid = 'ROUTE-OPEN'`, schoolID).Scan(testpkg.Ctx(t), &openID))
+	var resolved struct {
+		ResolutionNote *string `json:"resolution_note"`
+		ResolvedAt     *string `json:"resolved_at"`
+	}
+	f.call(t, http.MethodPost, fmt.Sprintf("/operator/unregistered-tag-scans/%d/resolve", openID), map[string]string{"note": " Karte ausgetauscht "}, &resolved)
+	require.NotNil(t, resolved.ResolutionNote)
+	assert.Equal(t, "Karte ausgetauscht", *resolved.ResolutionNote)
+	assert.NotNil(t, resolved.ResolvedAt, "the scan is handled")
 }

@@ -7,7 +7,13 @@ import {
   type CatalogMethod,
   type CatalogRoute,
 } from "./contract/catalog-proxy.server";
+import {
+  CATALOG_OUTSIDE_MOUNTS,
+  CATALOG_PUBLIC_OUTSIDE_MOUNTS,
+} from "./contract/catalog-outside-mounts";
 import { makePortalHandlers } from "./portal-handlers.server";
+
+import type { RouteContext } from "./route-wrapper-utils.server";
 
 export { isStringParam } from "./route-wrapper-utils.server";
 
@@ -46,9 +52,40 @@ export function createOptionalTenantJsonProxy(options: JsonProxyOptions) {
 
 /**
  * The staff portal's proxy: forwards `/api/…` to the backend's `/api/…`
- * for the routes the contract registers for this portal.
+ * for the routes the contract registers for this portal, and the public
+ * routes under that mount without a session (`portalRoutes.public`).
  */
 export const catalogProxy = (
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
-) => makeCatalogProxy(tenant, "/api", routes, method);
+  publicRoutes: readonly CatalogRoute[] = [],
+) =>
+  makeCatalogProxy(
+    tenant,
+    "/api",
+    routes,
+    method,
+    CATALOG_OUTSIDE_MOUNTS.tenant,
+    { routes: publicRoutes, outside: CATALOG_PUBLIC_OUTSIDE_MOUNTS.tenant },
+  );
+
+/**
+ * The staff portal's proxy for a route file below `/api/<head…>` that Next
+ * would give another file: the file's catch-all `path` is the tail after the
+ * head, so the head goes in front again before the proxy matches it.
+ */
+export function catalogProxyUnder(
+  head: readonly string[],
+  routes: readonly CatalogRoute[],
+  method: CatalogMethod,
+) {
+  const handler = catalogProxy(routes, method);
+  return (request: NextRequest, context: RouteContext) =>
+    handler(request, {
+      params: context.params.then((params) => {
+        const tail = params.path;
+        const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
+        return { ...params, path: [...head, ...rest] };
+      }),
+    });
+}

@@ -111,15 +111,18 @@ export async function findFormerEmployment(
   email: string,
   signal?: AbortSignal,
 ): Promise<FormerEmployment | null> {
-  const response = await transportFetch("/api/invitations/former-employment", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await transportFetch(
+    "/api/auth/invitations/former-employment",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+      credentials: "include",
+      signal,
     },
-    body: JSON.stringify({ email }),
-    credentials: "include",
-    signal,
-  });
+  );
   if (!response.ok) {
     throw await buildApiError(
       response,
@@ -152,7 +155,7 @@ export async function listPendingInvitations(): Promise<PendingInvitation[]> {
 }
 
 export async function resendInvitation(id: number): Promise<void> {
-  const response = await transportFetch(`/api/invitations/${id}/resend`, {
+  const response = await transportFetch(`/api/auth/invitations/${id}/resend`, {
     method: "POST",
     credentials: "include",
   });
@@ -165,7 +168,7 @@ export async function resendInvitation(id: number): Promise<void> {
 }
 
 export async function revokeInvitation(id: number): Promise<void> {
-  const response = await transportFetch(`/api/invitations/${id}`, {
+  const response = await transportFetch(`/api/auth/invitations/${id}`, {
     method: "DELETE",
     credentials: "include",
   });

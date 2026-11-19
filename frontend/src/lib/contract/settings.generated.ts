@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  json,
   noData,
   nullable,
   object,
@@ -13,6 +14,9 @@ import {
   str,
   success,
 } from "./runtime";
+import {
+  SettingsSchemaSchema,
+} from "./shared.generated";
 
 /** Go: records.DevicePINStatus */
 export interface DevicePINStatus {
@@ -125,6 +129,15 @@ export const schoolContactEmailResponseSchema: z.ZodType<schoolContactEmailRespo
   email: str,
 });
 
+/** Go: settingshttp.RevealedValueResponse */
+export interface RevealedValueResponse {
+  value: unknown | null;
+}
+
+export const RevealedValueResponseSchema: z.ZodType<RevealedValueResponse, unknown> = object<RevealedValueResponse>({
+  value: nullable(json),
+});
+
 /** Go: settingshttp.homeLayoutBlockRequest */
 export interface homeLayoutBlockRequest {
   key?: string;
@@ -169,11 +182,23 @@ export const routes = {
     portals: ["tenant"],
     response: success(PayrollStatusSchema),
   },
+  "GET /api/settings/schema": {
+    method: "GET",
+    pattern: "/api/settings/schema",
+    portals: ["tenant"],
+    response: success(SettingsSchemaSchema),
+  },
   "GET /api/settings/school-contact-email": {
     method: "GET",
     pattern: "/api/settings/school-contact-email",
     portals: ["tenant"],
     response: success(schoolContactEmailResponseSchema),
+  },
+  "GET /api/settings/values/{key}/reveal": {
+    method: "GET",
+    pattern: "/api/settings/values/{key}/reveal",
+    portals: ["tenant"],
+    response: success(RevealedValueResponseSchema),
   },
   "PUT /api/settings/home-layout": {
     method: "PUT",

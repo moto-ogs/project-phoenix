@@ -1,6 +1,8 @@
 package operator
 
 import (
+	"encoding/json"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 )
@@ -50,6 +52,19 @@ func ProvisioningRouteContracts() []common.RouteContract {
 		route("POST", "/schools/{id}/create-account", createSchoolAccountRequest{}, organizationtenancy.CreatedAccount{}),
 		route("GET", "/schools/{id}/accounts", nil, []organizationtenancy.SchoolAccount{}),
 		route("GET", "/schools/{id}/devices", nil, []organizationtenancy.OperatorDevice{}),
+		route("DELETE", "/devices/{id}", nil, nil),
+		route("DELETE", "/persons/{id}", nil, nil),
+		route("PUT", "/organizations/{id}", updateOrganizationRequest{}, organizationtenancy.Organization{}),
+		route("DELETE", "/organizations/{id}", nil, nil),
+		route("DELETE", "/organizations/{id}/traeger-members/{accountId}/mfa", resetTraegerMemberMFARequest{}, nil),
+		route("PUT", "/schools/{id}", updateSchoolRequest{}, organizationtenancy.School{}),
+		route("DELETE", "/schools/{id}", nil, nil),
+		route("GET", "/schools/{id}/persons", nil, []organizationtenancy.OperatorPerson{}),
+		route("GET", "/schools/{id}/pwa-usage", nil, organizationtenancy.SchoolPWAUsage{}),
+		// People Directory renders the capability; this package hands it on.
+		route("GET", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, json.RawMessage{}),
+		route("POST", "/schools/{id}/accounts/{accountId}/caregiver-capability/", updateCaregiverCapabilityRequest{}, json.RawMessage{}),
+		route("DELETE", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, json.RawMessage{}),
 	}
 }
 

@@ -36,7 +36,7 @@ var (
 type AnnouncementAttachmentResponse struct {
 	ID          string    `json:"id"`
 	Filename    string    `json:"filename"`
-	SizeBytes   int64     `json:"size_bytes"`
+	SizeBytes   int64     `json:"size_bytes" contract:"number"`
 	ContentType string    `json:"content_type"`
 	UploadedAt  time.Time `json:"uploaded_at"`
 }
@@ -48,7 +48,7 @@ type AnnouncementAttachmentResponse struct {
 type AnnouncementAttachmentListResponse struct {
 	Attachments []AnnouncementAttachmentResponse `json:"attachments"`
 	MaxCount    int                              `json:"max_count"`
-	MaxBytes    int64                            `json:"max_bytes"`
+	MaxBytes    int64                            `json:"max_bytes" contract:"number"`
 	Editable    bool                             `json:"editable"`
 }
 

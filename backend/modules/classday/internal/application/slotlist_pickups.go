@@ -178,7 +178,7 @@ type pickupEntryInputs struct {
 // collectPickupEntries derives the cohort from effective times, dated care
 // participation and attendance. Closed attendance rows count historically.
 func (s *service) collectPickupEntries(
-	ctx context.Context, params listRequest, buckets pickupBucketConfig, result *classday.Result,
+	ctx context.Context, params listRequest, buckets pickupBucketConfig, result *classday.ClassdayResult,
 ) ([]mergedEntry, error) {
 	students, studentIDs, present, err := s.loadPickupCandidates(ctx, params.date)
 	if err != nil {

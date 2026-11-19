@@ -148,7 +148,7 @@ export const staffAbsenceKeys = {
   /** Probelauf einer Umbuchung (#3258), je Auswahl und Zielart. */
   rebookingPreview: (
     staffId: string,
-    absenceIds: readonly number[],
+    absenceIds: readonly string[],
     value: string,
   ) =>
     `staff-absences-rebooking-preview-${encodeURIComponent(staffId)}-${absenceIds.join(",")}-${encodeURIComponent(value)}`,

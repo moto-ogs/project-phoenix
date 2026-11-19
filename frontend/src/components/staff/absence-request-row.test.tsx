@@ -7,8 +7,8 @@ import { AbsenceRequestRow } from "./absence-request-row";
 
 function requestedRow(): StaffAbsenceRow {
   return {
-    id: 17,
-    staff_id: 42,
+    id: "17",
+    staff_id: "42",
     absence_type: "vacation",
     date_start: "2027-07-10",
     date_end: "2027-07-11",

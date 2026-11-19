@@ -66,7 +66,7 @@ type AdminRequestUpload struct {
 	ID          string    `json:"id"`
 	FieldKey    string    `json:"field_key"`
 	Filename    string    `json:"filename"`
-	SizeBytes   int64     `json:"size_bytes"`
+	SizeBytes   int64     `json:"size_bytes" contract:"number"`
 	ContentType string    `json:"content_type"`
 	UploadedAt  time.Time `json:"uploaded_at"`
 }

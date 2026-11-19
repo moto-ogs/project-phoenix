@@ -499,7 +499,7 @@ func collectFreshReminders(
 // therefore means exactly what it says, and the same activity never arrives
 // twice.
 func notificationTypeFor(
-	reminder Reminder,
+	reminder StaffReminder,
 	assigned map[string]struct{},
 	consent map[string]struct{},
 ) (string, bool) {
@@ -518,7 +518,7 @@ func notificationTypeFor(
 // reminderIdentity builds the dedup identity of one reminder occurrence:
 // type + entity + due time. A rescheduled pickup (new DueTime) is a new
 // occurrence on purpose — the plan changed, staff should hear about it again.
-func reminderIdentity(r Reminder) string {
+func reminderIdentity(r StaffReminder) string {
 	entity := ""
 	switch {
 	case r.StudentID != nil:

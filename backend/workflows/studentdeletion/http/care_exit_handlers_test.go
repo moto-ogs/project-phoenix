@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -32,6 +33,7 @@ func TestCareWithdrawalHandlers_StaleDeletionRollsBackCompletion(t *testing.T) {
 	var preview struct {
 		Data struct {
 			ConfirmationName string `json:"confirmation_name"`
+			Fingerprint      string `json:"fingerprint"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(previewResponse.Body.Bytes(), &preview))
@@ -53,4 +55,25 @@ func TestCareWithdrawalHandlers_StaleDeletionRollsBackCompletion(t *testing.T) {
 	require.NotNil(t, stored)
 	assert.Equal(t, careplan.WithdrawalStatePending, stored.State)
 	assert.Equal(t, student.ID, *stored.StudentID)
+
+	// The confirmed deletion, through the production path, resolves the task.
+	confirmed := testutil.NewAuthenticatedRequest(
+		t, http.MethodDelete, fmt.Sprintf("/api/students/care-withdrawals/%d", completion.ID), map[string]any{
+			"expected_fingerprint": preview.Data.Fingerprint,
+			"confirmation_name":    preview.Data.ConfirmationName,
+			"reason":               studentdeletion.ReasonPrivacyRequest,
+			"acknowledged":         true,
+		},
+	)
+	claims.Permissions = []string{"users:delete"}
+	confirmed.Header.Set("Authorization", "Bearer "+testutil.MintTestJWT(t, claims))
+	production := chi.NewRouter()
+	production.Mount("/api/students", tc.router())
+	deleted := testutil.ExecuteRequestForTest(t, production, confirmed)
+	require.Equal(t, http.StatusOK, deleted.Code, deleted.Body.String())
+	resolved, err := repos.CareWithdrawal.FindByID(testpkg.Ctx(t), completion.ID)
+	require.NoError(t, err)
+	require.NotNil(t, resolved)
+	assert.Equal(t, careplan.WithdrawalStateResolved, resolved.State)
+	assert.Nil(t, resolved.StudentID)
 }

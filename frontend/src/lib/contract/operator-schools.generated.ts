@@ -6,6 +6,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  json,
   noData,
   nullable,
   object,
@@ -17,8 +18,12 @@ import {
 } from "./runtime";
 import {
   OperatorDeviceSchema,
+  OperatorPersonSchema,
   SchoolSchema,
   SchoolSummarySchema,
+  SettingsSchemaSchema,
+  type MFAAdminOverrideSetRequest,
+  type MFAAdminResetRequest,
 } from "./shared.generated";
 
 /** Go: organizationtenancy.SchoolRequiredDetails */
@@ -63,6 +68,41 @@ export const SchoolAccountSchema: z.ZodType<SchoolAccount, unknown> = object<Sch
   is_active_caregiver: bool,
 });
 
+/** Go: operator.MFAAdminStateResponse */
+export interface MFAAdminStateResponse {
+  enrolled: boolean;
+  override: string;
+}
+
+export const MFAAdminStateResponseSchema: z.ZodType<MFAAdminStateResponse, unknown> = object<MFAAdminStateResponse>({
+  enrolled: bool,
+  override: str,
+});
+
+/** Go: organizationtenancy.PWAPortalUsage */
+export interface PWAPortalUsage {
+  standalone_users: number;
+  eligible_users: number;
+}
+
+export const PWAPortalUsageSchema: z.ZodType<PWAPortalUsage, unknown> = object<PWAPortalUsage>({
+  standalone_users: safeInt,
+  eligible_users: safeInt,
+});
+
+/** Go: organizationtenancy.SchoolPWAUsage */
+export interface SchoolPWAUsage {
+  window_days: number;
+  staff: PWAPortalUsage;
+  parent: PWAPortalUsage;
+}
+
+export const SchoolPWAUsageSchema: z.ZodType<SchoolPWAUsage, unknown> = object<SchoolPWAUsage>({
+  window_days: safeInt,
+  staff: PWAPortalUsageSchema,
+  parent: PWAPortalUsageSchema,
+});
+
 /** Go: careplan.BookingAuthorityImpactChild */
 export interface BookingAuthorityImpactChild {
   student_id: string;
@@ -93,6 +133,15 @@ export const BookingAuthorityImpactSchema: z.ZodType<BookingAuthorityImpact, unk
   planned_completions: nullable(arr(BookingAuthorityImpactChildSchema)),
 });
 
+/** Go: operator.revealedSettingValue */
+export interface revealedSettingValue {
+  value: unknown | null;
+}
+
+export const revealedSettingValueSchema: z.ZodType<revealedSettingValue, unknown> = object<revealedSettingValue>({
+  value: nullable(json),
+});
+
 /** Go: operator.createSchoolRequest */
 export interface createSchoolRequest {
   organization_id?: number;
@@ -106,6 +155,13 @@ export interface createSchoolRequest {
   email?: string;
   federal_state?: string;
   hidden?: boolean;
+}
+
+/** Go: operator.updateCaregiverCapabilityRequest */
+export interface updateCaregiverCapabilityRequest {
+  first_name?: string;
+  last_name?: string;
+  position?: string;
 }
 
 /** Go: operator.createSchoolAccountRequest */
@@ -193,12 +249,53 @@ export const operatorInvitationResponseSchema: z.ZodType<operatorInvitationRespo
   email_retry_count: safeInt,
 });
 
+/** Go: operator.childQuotaRequest */
+export interface childQuotaRequest {
+  bundles?: number;
+  bundle_size?: number | null;
+}
+
+/** Go: operator.updateSchoolRequest */
+export interface updateSchoolRequest {
+  organization_id?: number;
+  name?: string;
+  slug?: string;
+  subdomain?: string;
+  address?: string;
+  city?: string;
+  zip?: string;
+  phone?: string;
+  email?: string;
+  active?: boolean;
+  hidden?: boolean;
+  child_quota?: childQuotaRequest | null;
+}
+
 /** Go: operator.deviceSlotsRequest */
 export interface deviceSlotsRequest {
   device_slots?: number | null;
 }
 
 export const routes = {
+  "DELETE /operator/schools/{id}": {
+    method: "DELETE",
+    pattern: "/operator/schools/{id}",
+    portals: ["platform"],
+    response: noData,
+  },
+  "DELETE /operator/schools/{id}/accounts/{accountId}/caregiver-capability/": {
+    method: "DELETE",
+    pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+    portals: ["platform"],
+    response: success(z.unknown()),
+  },
+  "DELETE /operator/schools/{id}/accounts/{accountId}/mfa/": {
+    method: "DELETE",
+    pattern: "/operator/schools/{id}/accounts/{accountId}/mfa/",
+    portals: ["platform"],
+    request: requestBody<MFAAdminResetRequest>(),
+    response: noData,
+  },
   "GET /operator/schools/": {
     method: "GET",
     pattern: "/operator/schools/",
@@ -223,11 +320,35 @@ export const routes = {
     portals: ["platform"],
     response: success(z.array(SchoolAccountSchema)),
   },
+  "GET /operator/schools/{id}/accounts/{accountId}/caregiver-capability/": {
+    method: "GET",
+    pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+    portals: ["platform"],
+    response: success(z.unknown()),
+  },
+  "GET /operator/schools/{id}/accounts/{accountId}/mfa/": {
+    method: "GET",
+    pattern: "/operator/schools/{id}/accounts/{accountId}/mfa/",
+    portals: ["platform"],
+    response: success(MFAAdminStateResponseSchema),
+  },
   "GET /operator/schools/{id}/devices": {
     method: "GET",
     pattern: "/operator/schools/{id}/devices",
     portals: ["platform"],
     response: success(z.array(OperatorDeviceSchema)),
+  },
+  "GET /operator/schools/{id}/persons": {
+    method: "GET",
+    pattern: "/operator/schools/{id}/persons",
+    portals: ["platform"],
+    response: success(z.array(OperatorPersonSchema)),
+  },
+  "GET /operator/schools/{id}/pwa-usage": {
+    method: "GET",
+    pattern: "/operator/schools/{id}/pwa-usage",
+    portals: ["platform"],
+    response: success(SchoolPWAUsageSchema),
   },
   "GET /operator/schools/{id}/settings/booking-authority-impact": {
     method: "GET",
@@ -235,12 +356,31 @@ export const routes = {
     portals: ["platform"],
     response: success(BookingAuthorityImpactSchema),
   },
+  "GET /operator/schools/{id}/settings/schema": {
+    method: "GET",
+    pattern: "/operator/schools/{id}/settings/schema",
+    portals: ["platform"],
+    response: success(SettingsSchemaSchema),
+  },
+  "GET /operator/schools/{id}/settings/values/{key}/reveal": {
+    method: "GET",
+    pattern: "/operator/schools/{id}/settings/values/{key}/reveal",
+    portals: ["platform"],
+    response: success(revealedSettingValueSchema),
+  },
   "POST /operator/schools/": {
     method: "POST",
     pattern: "/operator/schools/",
     portals: ["platform"],
     request: requestBody<createSchoolRequest>(),
     response: success(SchoolSchema),
+  },
+  "POST /operator/schools/{id}/accounts/{accountId}/caregiver-capability/": {
+    method: "POST",
+    pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+    portals: ["platform"],
+    request: requestBody<updateCaregiverCapabilityRequest>(),
+    response: success(z.unknown()),
   },
   "POST /operator/schools/{id}/create-account": {
     method: "POST",
@@ -260,6 +400,20 @@ export const routes = {
     method: "POST",
     pattern: "/operator/schools/{id}/restore",
     portals: ["platform"],
+    response: noData,
+  },
+  "PUT /operator/schools/{id}": {
+    method: "PUT",
+    pattern: "/operator/schools/{id}",
+    portals: ["platform"],
+    request: requestBody<updateSchoolRequest>(),
+    response: success(SchoolSchema),
+  },
+  "PUT /operator/schools/{id}/accounts/{accountId}/mfa/override": {
+    method: "PUT",
+    pattern: "/operator/schools/{id}/accounts/{accountId}/mfa/override",
+    portals: ["platform"],
+    request: requestBody<MFAAdminOverrideSetRequest>(),
     response: noData,
   },
   "PUT /operator/schools/{id}/device-slots": {

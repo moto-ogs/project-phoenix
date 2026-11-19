@@ -1,3 +1,8 @@
+// Temporary (#2352): the client asks for a phase's texts at
+// /api/enrollment/legal/{tenantSlug}/{phaseId} through the staff portal's
+// catalog proxy now. This file turns ?phaseId= of bundles built before that
+// change into the path for one production deploy; delete it afterwards,
+// together with its test, so the proxy serves /api/enrollment/legal/{slug}.
 import { createPublicJsonProxy } from "~/lib/backend-proxy-route.server";
 import { problemResponse } from "~/lib/api-helpers.server";
 import {

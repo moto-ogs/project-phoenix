@@ -97,7 +97,12 @@ export function resolveTargetForDate(
 function sortAbsencesById(
   absences: readonly StaffAbsenceRow[],
 ): readonly StaffAbsenceRow[] {
-  return [...absences].sort((a, b) => a.id - b.id);
+  // The ids are decimal strings of int64 values: a shorter one is smaller,
+  // equal lengths compare digit by digit, so no id is rounded.
+  return [...absences].sort(
+    (a, b) =>
+      a.id.length - b.id.length || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
 }
 
 interface EffectiveAbsenceRange {
@@ -309,8 +314,8 @@ export function adaptHistorySessionForMetrics(
 
 export function adaptAbsenceForMetrics(absence: StaffAbsence): StaffAbsenceRow {
   return {
-    id: Number(absence.id),
-    staff_id: Number(absence.staffId),
+    id: String(absence.id),
+    staff_id: String(absence.staffId),
     absence_type: absence.absenceType,
     absence_type_id: absence.absenceTypeId,
     absence_type_label: absence.absenceTypeLabel,
@@ -321,7 +326,7 @@ export function adaptAbsenceForMetrics(absence: StaffAbsence): StaffAbsenceRow {
     end_half_day: absence.endHalfDay,
     note: absence.note,
     status: absence.status,
-    approved_by: absence.approvedBy ? Number(absence.approvedBy) : null,
+    approved_by: absence.approvedBy ? String(absence.approvedBy) : null,
     approved_at: absence.approvedAt,
     working_days: absence.workingDays,
     decision_note: absence.decisionNote,

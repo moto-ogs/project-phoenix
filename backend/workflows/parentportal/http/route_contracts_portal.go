@@ -56,6 +56,8 @@ func PortalRouteContracts(foreign ForeignContractTypes) []common.RouteContract {
 	routes = append(routes, communicationRouteContracts()...)
 	routes = append(routes, childStatusRouteContracts()...)
 	routes = append(routes, childCareRouteContracts()...)
+	routes = append(routes, childWriteRouteContracts()...)
+	routes = append(routes, accountWriteRouteContracts()...)
 	routes = append(routes, childMasterDataRouteContracts()...)
 	return append(routes, formRouteContracts(foreign)...)
 }
@@ -113,6 +115,11 @@ func communicationRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: news + "/read", Portals: portals, Request: stampRequest{}, Response: AnnouncementReadResponse{}},
 		{Method: "POST", Pattern: news + "/acknowledge", Portals: portals, Request: stampRequest{}, Response: AnnouncementAcknowledgedResponse{}},
 		{Method: "POST", Pattern: news + "/respond", Portals: portals, Request: respondRequest{}, Response: AnnouncementAnsweredResponse{}},
+		{
+			Method: "POST", Pattern: news + "/declaration", Portals: portals,
+			NoRetryAfterRenewal: "a renewed session would send the account password twice",
+			Request:             declarationRequest{}, Response: DeclarationRecordedResponse{},
+		},
 		{
 			// format=pdf answers a file; the proxy forwards only the JSON form.
 			Method: "GET", Pattern: news + "/declaration/proof", Portals: portals,

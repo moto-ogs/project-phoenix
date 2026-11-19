@@ -124,7 +124,7 @@ type ExportDocument struct {
 
 // SlotLists builds slot lists for preview (JSON) and export (PDF/XLSX).
 type SlotLists interface {
-	BuildList(ctx context.Context, params Params) (*Result, error)
+	BuildList(ctx context.Context, params Params) (*ClassdayResult, error)
 	ListOptions(ctx context.Context, date Date) (*OptionsResult, error)
 	RenderList(ctx context.Context, params Params, format Format) (File, error)
 }
@@ -355,14 +355,14 @@ type Slot struct {
 	RoomName string `json:"room_name,omitempty"`
 }
 
-// GroupOption is one selectable education group in the group filter.
-type GroupOption struct {
+// ClassdayGroupOption is one selectable education group in the group filter.
+type ClassdayGroupOption struct {
 	ID   int64  `json:"id,string"`
 	Name string `json:"name"`
 }
 
-// Row is one child on the list.
-type Row struct {
+// SlotListRow is one child on the list.
+type SlotListRow struct {
 	StudentID   int64  `json:"student_id,string"`
 	Name        string `json:"name"`
 	SchoolClass string `json:"school_class"`
@@ -398,24 +398,24 @@ type Counters struct {
 	Unplanned int `json:"unplanned"`
 }
 
-// Result is the preview payload (and the input of the export rendering).
+// ClassdayResult is the preview payload (and the input of the export rendering).
 // Slots/Groups/Classes are the full available option sets (before the filters
 // are applied), so the UI dropdowns stay populated while rows/counters reflect
 // the active selection.
-type Result struct {
-	Date         string        `json:"date"`
-	Target       Target        `json:"target"`
-	PickupCohort PickupCohort  `json:"pickup_cohort,omitempty"`
-	ListKind     ListKind      `json:"list_kind,omitempty"`
-	ListLabel    string        `json:"list_label"`
-	Source       Source        `json:"source"`
-	GroupBy      GroupBy       `json:"group_by,omitempty"`
-	Provenance   string        `json:"provenance"`
-	Slots        []Slot        `json:"slots"`
-	Groups       []GroupOption `json:"groups"`
-	Classes      []string      `json:"classes"`
-	Counters     Counters      `json:"counters"`
-	Rows         []Row         `json:"rows"`
+type ClassdayResult struct {
+	Date         string                `json:"date"`
+	Target       Target                `json:"target"`
+	PickupCohort PickupCohort          `json:"pickup_cohort,omitempty"`
+	ListKind     ListKind              `json:"list_kind,omitempty"`
+	ListLabel    string                `json:"list_label"`
+	Source       Source                `json:"source"`
+	GroupBy      GroupBy               `json:"group_by,omitempty"`
+	Provenance   string                `json:"provenance"`
+	Slots        []Slot                `json:"slots"`
+	Groups       []ClassdayGroupOption `json:"groups"`
+	Classes      []string              `json:"classes"`
+	Counters     Counters              `json:"counters"`
+	Rows         []SlotListRow         `json:"rows"`
 	// Signature is a stable content hash of the rendered list (label,
 	// provenance, counters and every row). The export endpoint re-derives the
 	// list in a second request after the client verified this preview, so live

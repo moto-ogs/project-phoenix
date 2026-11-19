@@ -36,3 +36,29 @@ func SchoolSessionRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: SchoolSessionRequest{}, Response: SchoolSessionResponse{}},
 	}
 }
+
+// StepUpRouteContracts registers the code step in the running Träger session
+// (#7068), with patterns relative to /traeger/auth. Starting it mails a code,
+// so the proxy does not send it again after a session renewal.
+func StepUpRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{
+			Method: "POST", Pattern: "/mfa/step-up", Portals: traegerPortal, Response: StepUpStartResponse{},
+			NoRetryAfterRenewal: "a renewed session would mail the code twice",
+		},
+	}
+}
+
+// invitationAcceptBodyBytes bounds the accept body: a name and two passwords.
+const invitationAcceptBodyBytes = 4 << 10
+
+// InvitationRouteContracts registers the mailed invitation into the
+// Träger-Büro, which its link opens without a session (#2352), with patterns
+// relative to /traeger/invitations.
+func InvitationRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalPublic}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{token}", Portals: portals, Response: InvitationPreviewResponse{}},
+		{Method: "POST", Pattern: "/{token}/accept", Portals: portals, Request: AcceptRequest{}, Response: AcceptResponse{}, MaxBodyBytes: invitationAcceptBodyBytes},
+	}
+}

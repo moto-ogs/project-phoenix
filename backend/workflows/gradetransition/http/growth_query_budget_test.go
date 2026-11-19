@@ -84,7 +84,7 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("2%c", 'a'+i), *mapping.ToClass)
 			require.Equal(t, "promoted", mapping.Action)
 		}
-		var history []gradehttp.HistoryResponse
+		var history []gradehttp.TransitionHistoryResponse
 		historyQ := get(fmt.Sprintf("/%d/history", transition.ID), &history)
 		require.Len(t, history, n)
 		actualStudents := make([]int64, 0, n)
@@ -95,7 +95,7 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 			require.NotEmpty(t, row.PersonName)
 		}
 		require.ElementsMatch(t, studentIDs, actualStudents)
-		var preview gradehttp.PreviewResponse
+		var preview gradehttp.TransitionPreviewResponse
 		previewQ := get(fmt.Sprintf("/%d/preview", transition.ID), &preview)
 		require.Equal(t, transition.ID, preview.TransitionID)
 		require.Equal(t, n, preview.TotalStudents)

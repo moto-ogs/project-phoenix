@@ -75,8 +75,8 @@ describe("StaffSessionTable across the March clock change", () => {
   it("shows the last day of March and of an absence spanning the change", () => {
     setTestClock("2026-04-15T12:00:00+02:00");
     const absence = {
-      id: 5,
-      staff_id: 7,
+      id: "5",
+      staff_id: "7",
       absence_type: "sick",
       date_start: "2026-03-27",
       date_end: "2026-03-30",

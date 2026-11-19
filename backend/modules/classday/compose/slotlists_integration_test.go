@@ -347,8 +347,8 @@ type tenantScopedSlotLists struct {
 	inner classday.SlotLists
 }
 
-func (s tenantScopedSlotLists) BuildList(ctx context.Context, params classday.Params) (*classday.Result, error) {
-	var result *classday.Result
+func (s tenantScopedSlotLists) BuildList(ctx context.Context, params classday.Params) (*classday.ClassdayResult, error) {
+	var result *classday.ClassdayResult
 	err := tenant.WithTenantTx(ctx, s.db, tenant.FromContext(ctx), func(txCtx context.Context, _ bun.Tx) error {
 		built, err := s.inner.BuildList(txCtx, params)
 		result = built
@@ -474,7 +474,7 @@ func (f *mensaFixture) addPlannedPresent(t *testing.T, n int) {
 	}
 }
 
-func rowByStudent(rows []classday.Row, studentID int64) *classday.Row {
+func rowByStudent(rows []classday.SlotListRow, studentID int64) *classday.SlotListRow {
 	for i := range rows {
 		if rows[i].StudentID == studentID {
 			return &rows[i]

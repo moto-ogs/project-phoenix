@@ -101,9 +101,9 @@ func (rs *GradeTransitionResource) Router(protectedTenantRoutes func(chi.Router,
 
 // TransitionRequest represents a request to create or update a transition
 type TransitionRequest struct {
-	AcademicYear string           `json:"academic_year"`
-	Notes        *string          `json:"notes,omitempty"`
-	Mappings     []MappingRequest `json:"mappings,omitempty"`
+	AcademicYear string                     `json:"academic_year"`
+	Notes        *string                    `json:"notes,omitempty"`
+	Mappings     []TransitionMappingRequest `json:"mappings,omitempty"`
 }
 
 // Bind performs basic binding validation for the transition request.
@@ -112,16 +112,16 @@ func (req *TransitionRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// ApplyRequest carries the fingerprint of the preview the admin confirmed. It is
+// TransitionApplyRequest carries the fingerprint of the preview the admin confirmed. It is
 // optional (a caller without a preview omits it), but when present the apply is
 // refused with 409 preview_stale unless the current cohort still matches — the
 // confirmation must bind to the children that were actually shown (#405 review).
-type ApplyRequest struct {
+type TransitionApplyRequest struct {
 	ExpectedFingerprint string `json:"expected_fingerprint,omitempty"`
 }
 
-// MappingRequest represents a class mapping in a request
-type MappingRequest struct {
+// TransitionMappingRequest represents a class mapping in a request
+type TransitionMappingRequest struct {
 	FromClass string  `json:"from_class"`
 	ToClass   *string `json:"to_class,omitempty"` // null = graduate
 }
@@ -135,60 +135,60 @@ type MappingRequest struct {
 // Sending the digits as text keeps the value exact end to end, and the frontend
 // already models every backend id as a string (#405 review).
 type TransitionResponse struct {
-	ID           int64             `json:"id,string"`
-	AcademicYear string            `json:"academic_year"`
-	Status       string            `json:"status"`
-	AppliedAt    *string           `json:"applied_at,omitempty"`
-	AppliedBy    *int64            `json:"applied_by,string,omitempty"`
-	RevertedAt   *string           `json:"reverted_at,omitempty"`
-	RevertedBy   *int64            `json:"reverted_by,string,omitempty"`
-	CreatedAt    string            `json:"created_at"`
-	CreatedBy    int64             `json:"created_by,string"`
-	Notes        *string           `json:"notes,omitempty"`
-	Mappings     []MappingResponse `json:"mappings,omitempty"`
-	CanModify    bool              `json:"can_modify"`
-	CanApply     bool              `json:"can_apply"`
-	CanRevert    bool              `json:"can_revert"`
+	ID           int64                       `json:"id,string"`
+	AcademicYear string                      `json:"academic_year"`
+	Status       string                      `json:"status"`
+	AppliedAt    *string                     `json:"applied_at,omitempty"`
+	AppliedBy    *int64                      `json:"applied_by,string,omitempty"`
+	RevertedAt   *string                     `json:"reverted_at,omitempty"`
+	RevertedBy   *int64                      `json:"reverted_by,string,omitempty"`
+	CreatedAt    string                      `json:"created_at"`
+	CreatedBy    int64                       `json:"created_by,string"`
+	Notes        *string                     `json:"notes,omitempty"`
+	Mappings     []TransitionMappingResponse `json:"mappings,omitempty"`
+	CanModify    bool                        `json:"can_modify"`
+	CanApply     bool                        `json:"can_apply"`
+	CanRevert    bool                        `json:"can_revert"`
 }
 
-// MappingResponse represents a mapping in API responses. Ids are strings for the
+// TransitionMappingResponse represents a mapping in API responses. Ids are strings for the
 // reason given on TransitionResponse.
-type MappingResponse struct {
+type TransitionMappingResponse struct {
 	ID        int64   `json:"id,string"`
 	FromClass string  `json:"from_class"`
 	ToClass   *string `json:"to_class,omitempty"`
 	Action    string  `json:"action"` // "promote" or "graduate"
 }
 
-// PreviewResponse is the wire shape of a transition preview.
-type PreviewResponse struct {
-	TransitionID    int64                    `json:"transition_id,string"`
-	AcademicYear    string                   `json:"academic_year"`
-	TotalStudents   int                      `json:"total_students"`
-	ToPromote       int                      `json:"to_promote"`
-	ToGraduate      int                      `json:"to_graduate"`
-	ByMapping       []MappingPreviewResponse `json:"by_mapping"`
-	UnmappedClasses []UnmappedClassResponse  `json:"unmapped_classes"`
-	Warnings        []string                 `json:"warnings"`
-	Fingerprint     string                   `json:"fingerprint"`
+// TransitionPreviewResponse is the wire shape of a transition preview.
+type TransitionPreviewResponse struct {
+	TransitionID    int64                              `json:"transition_id,string"`
+	AcademicYear    string                             `json:"academic_year"`
+	TotalStudents   int                                `json:"total_students"`
+	ToPromote       int                                `json:"to_promote"`
+	ToGraduate      int                                `json:"to_graduate"`
+	ByMapping       []TransitionMappingPreviewResponse `json:"by_mapping"`
+	UnmappedClasses []TransitionUnmappedClassResponse  `json:"unmapped_classes"`
+	Warnings        []string                           `json:"warnings"`
+	Fingerprint     string                             `json:"fingerprint"`
 }
 
-// MappingPreviewResponse shows the impact of a single mapping.
-type MappingPreviewResponse struct {
+// TransitionMappingPreviewResponse shows the impact of a single mapping.
+type TransitionMappingPreviewResponse struct {
 	FromClass    string  `json:"from_class"`
 	ToClass      *string `json:"to_class,omitempty"`
 	StudentCount int     `json:"student_count"`
 	Action       string  `json:"action"` // "promote" or "graduate"
 }
 
-// UnmappedClassResponse shows a class not included in the transition.
-type UnmappedClassResponse struct {
+// TransitionUnmappedClassResponse shows a class not included in the transition.
+type TransitionUnmappedClassResponse struct {
 	ClassName    string `json:"class_name"`
 	StudentCount int    `json:"student_count"`
 }
 
-// ResultResponse is the wire shape of an apply or revert outcome.
-type ResultResponse struct {
+// TransitionResultResponse is the wire shape of an apply or revert outcome.
+type TransitionResultResponse struct {
 	TransitionID      int64    `json:"transition_id,string"`
 	Status            string   `json:"status"`
 	StudentsPromoted  int      `json:"students_promoted"`
@@ -209,13 +209,13 @@ type SuggestedMappingResponse struct {
 	Ambiguous bool `json:"ambiguous,omitempty"`
 }
 
-// HistoryResponse represents one grade transition history row in API responses.
+// TransitionHistoryResponse represents one grade transition history row in API responses.
 //
 // The ledger's rfid_tag column is deliberately NOT part of this shape: this
 // route requires only grade_transitions:read, which does not imply the right to
 // read children's RFID identifiers, and the UI has no use for the value — it
 // exists solely so a revert can re-link the released tags server-side.
-type HistoryResponse struct {
+type TransitionHistoryResponse struct {
 	ID           int64   `json:"id,string"`
 	TransitionID int64   `json:"transition_id,string"`
 	StudentID    int64   `json:"student_id,string"`
@@ -233,10 +233,10 @@ type HistoryResponse struct {
 	StudentState string `json:"student_state"`
 }
 
-func toHistoryResponses(rows []gradetransition.HistoryEntry) []HistoryResponse {
-	out := make([]HistoryResponse, 0, len(rows))
+func toHistoryResponses(rows []gradetransition.HistoryEntry) []TransitionHistoryResponse {
+	out := make([]TransitionHistoryResponse, 0, len(rows))
 	for _, h := range rows {
-		out = append(out, HistoryResponse{
+		out = append(out, TransitionHistoryResponse{
 			StudentState: h.StudentState,
 			ID:           h.ID,
 			TransitionID: h.TransitionID,
@@ -283,9 +283,9 @@ func toTransitionResponse(t gradetransition.Transition) TransitionResponse {
 		resp.RevertedAt = &formatted
 	}
 	if len(t.Mappings) > 0 {
-		resp.Mappings = make([]MappingResponse, 0, len(t.Mappings))
+		resp.Mappings = make([]TransitionMappingResponse, 0, len(t.Mappings))
 		for _, m := range t.Mappings {
-			resp.Mappings = append(resp.Mappings, MappingResponse{
+			resp.Mappings = append(resp.Mappings, TransitionMappingResponse{
 				ID:        m.ID,
 				FromClass: m.FromClass,
 				ToClass:   m.ToClass,
@@ -296,12 +296,12 @@ func toTransitionResponse(t gradetransition.Transition) TransitionResponse {
 	return resp
 }
 
-func toPreviewResponse(preview gradetransition.Preview) PreviewResponse {
-	resp := PreviewResponse{
+func toPreviewResponse(preview gradetransition.Preview) TransitionPreviewResponse {
+	resp := TransitionPreviewResponse{
 		TransitionID: preview.TransitionID, AcademicYear: preview.AcademicYear,
 		TotalStudents: preview.TotalStudents, ToPromote: preview.ToPromote, ToGraduate: preview.ToGraduate,
-		ByMapping:       make([]MappingPreviewResponse, 0, len(preview.ByMapping)),
-		UnmappedClasses: make([]UnmappedClassResponse, 0, len(preview.UnmappedClasses)),
+		ByMapping:       make([]TransitionMappingPreviewResponse, 0, len(preview.ByMapping)),
+		UnmappedClasses: make([]TransitionUnmappedClassResponse, 0, len(preview.UnmappedClasses)),
 		Warnings:        preview.Warnings,
 		Fingerprint:     preview.Fingerprint,
 	}
@@ -309,12 +309,12 @@ func toPreviewResponse(preview gradetransition.Preview) PreviewResponse {
 		resp.Warnings = []string{}
 	}
 	for _, m := range preview.ByMapping {
-		resp.ByMapping = append(resp.ByMapping, MappingPreviewResponse{
+		resp.ByMapping = append(resp.ByMapping, TransitionMappingPreviewResponse{
 			FromClass: m.FromClass, ToClass: m.ToClass, StudentCount: m.StudentCount, Action: previewAction(m.Action),
 		})
 	}
 	for _, u := range preview.UnmappedClasses {
-		resp.UnmappedClasses = append(resp.UnmappedClasses, UnmappedClassResponse{ClassName: u.ClassName, StudentCount: u.StudentCount})
+		resp.UnmappedClasses = append(resp.UnmappedClasses, TransitionUnmappedClassResponse{ClassName: u.ClassName, StudentCount: u.StudentCount})
 	}
 	return resp
 }
@@ -327,19 +327,19 @@ func previewAction(action string) string {
 	return "promote"
 }
 
-func toResultResponse(result gradetransition.Result) ResultResponse {
+func toResultResponse(result gradetransition.Result) TransitionResultResponse {
 	warnings := result.Warnings
 	if warnings == nil {
 		warnings = []string{}
 	}
-	return ResultResponse{
+	return TransitionResultResponse{
 		TransitionID: result.TransitionID, Status: result.Status,
 		StudentsPromoted: result.StudentsPromoted, StudentsGraduated: result.StudentsGraduated,
 		CanRevert: result.CanRevert, Warnings: warnings,
 	}
 }
 
-func toMappings(requests []MappingRequest) []gradetransition.Mapping {
+func toMappings(requests []TransitionMappingRequest) []gradetransition.Mapping {
 	if requests == nil {
 		return nil
 	}
@@ -560,7 +560,7 @@ func (rs *GradeTransitionResource) apply(w http.ResponseWriter, r *http.Request)
 	// workflow reads as "caller opted out of the stale-preview check", so a
 	// destructive transition ran unguarded on a cohort that may have changed
 	// since the admin confirmed it (#405 review).
-	var req ApplyRequest
+	var req TransitionApplyRequest
 	if r.Body != nil {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("invalid request body: %w", err)))

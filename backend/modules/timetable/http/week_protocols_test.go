@@ -151,7 +151,7 @@ func (r *weekProtocolRoutes) call(t *testing.T, caller weekProtocolCaller, metho
 	} else {
 		req = httptest.NewRequest(method, path, nil)
 	}
-	return routetest.ExecuteWithAuthPermissions(t, r.router(caller), req, claims, granted)
+	return routetest.ExecuteWithAuthPermissions(t, testpkg.MountedQueryBudgetRouter("/api/week-protocols", r.router(caller)), req, claims, granted)
 }
 
 func weekProtocolBody(t *testing.T, rr *httptest.ResponseRecorder) map[string]any {
@@ -185,7 +185,7 @@ func TestWeekProtocolRoutesReach(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "timetable.week_protocol_not_found")
 	rr = routes.call(t, stranger, http.MethodGet, "/", "", weekProtocolRead)
 	require.Equal(t, http.StatusOK, rr.Code)
-	assert.JSONEq(t, `{"data":[]}`, rr.Body.String(), "staff of another group list nothing")
+	assert.JSONEq(t, `{"status":"success","data":[],"message":"Week protocols retrieved"}`, rr.Body.String(), "staff of another group list nothing")
 
 	member := weekProtocolCaller{staff: true, groups: []int64{weekProtocolTestGroup}}
 	rr = routes.call(t, member, http.MethodGet, path, "", weekProtocolRead)
@@ -201,11 +201,23 @@ func TestWeekProtocolRoutesReach(t *testing.T) {
 	assert.Len(t, friday["missing"], 2)
 	assert.Equal(t, false, days[0].(map[string]any)["captured"], "Monday was not recorded")
 
+	rr = routes.call(t, member, http.MethodGet, "/?group_id="+strconv.FormatInt(weekProtocolTestGroup, 10), "", weekProtocolRead)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var listed struct {
+		Status string           `json:"status"`
+		Data   []map[string]any `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &listed), rr.Body.String())
+	assert.Equal(t, "success", listed.Status)
+	require.Len(t, listed.Data, 1, "the member lists the protocol of the group")
+	assert.Equal(t, strconv.FormatInt(routes.protocolID, 10), listed.Data[0]["id"])
+	assert.Nil(t, listed.Data[0]["days"], "the list leaves the days out")
+
 	// A guest has a staff record and may even supervise the group, but
 	// reads no protocol and writes nothing.
 	rr = routes.call(t, member, http.MethodGet, "/", "", weekProtocolGuest)
 	require.Equal(t, http.StatusOK, rr.Code)
-	assert.JSONEq(t, `{"data":[]}`, rr.Body.String(), "a guest lists nothing")
+	assert.JSONEq(t, `{"status":"success","data":[],"message":"Week protocols retrieved"}`, rr.Body.String(), "a guest lists nothing")
 	rr = routes.call(t, member, http.MethodGet, path, "", weekProtocolGuest)
 	assert.Equal(t, http.StatusNotFound, rr.Code, "a guest opens nothing")
 	rr = routes.call(t, member, http.MethodPut, path+"/notes", `{"week_note":"x"}`, weekProtocolGuest)

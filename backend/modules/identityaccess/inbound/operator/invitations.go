@@ -97,8 +97,8 @@ func (req *AcceptInvitationRequest) Bind(r *http.Request) error {
 
 // --- Response types ---
 
-// InvitationResponse represents a pending invitation in API responses
-type InvitationResponse struct {
+// PendingOperatorInvitationResponse represents a pending invitation in API responses
+type PendingOperatorInvitationResponse struct {
 	ID              int64      `json:"id"`
 	Email           string     `json:"email"`
 	DisplayName     *string    `json:"display_name,omitempty"`
@@ -120,8 +120,8 @@ type InvitationValidationResponse struct {
 
 // InvitationsListResponse combines pending invitations and existing operators
 type InvitationsListResponse struct {
-	Invitations []*InvitationResponse `json:"invitations"`
-	Operators   []*OperatorListItem   `json:"operators"`
+	Invitations []*PendingOperatorInvitationResponse `json:"invitations"`
+	Operators   []*OperatorListItem                  `json:"operators"`
 }
 
 // OperatorListItem represents an operator in the list
@@ -184,9 +184,9 @@ func (rs *InvitationsResource) ListInvitations(w http.ResponseWriter, r *http.Re
 		operatorNames[op.ID] = op.DisplayName
 	}
 
-	invitations := make([]*InvitationResponse, 0, len(pending))
+	invitations := make([]*PendingOperatorInvitationResponse, 0, len(pending))
 	for _, t := range pending {
-		inv := &InvitationResponse{
+		inv := &PendingOperatorInvitationResponse{
 			ID:              t.ID,
 			Email:           t.Email,
 			DisplayName:     t.DisplayName,

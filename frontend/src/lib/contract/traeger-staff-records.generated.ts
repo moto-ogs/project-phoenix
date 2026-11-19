@@ -17,8 +17,10 @@ import {
   success,
 } from "./runtime";
 import {
+  TraegerStaffProofSchema,
   TraegerStaffReleaseSchema,
   TraegerStaffSchoolSchema,
+  type TraegerStaffProof,
   type TraegerStaffRelease,
   type TraegerStaffSchool,
 } from "./shared.generated";
@@ -79,33 +81,6 @@ export const TraegerStaffChangeSchema: z.ZodType<TraegerStaffChange, unknown> = 
   school_id: optional(int64StringOrNumber),
   school_name: optional(str),
   occurred_at: instant,
-});
-
-/** Go: workforce.TraegerStaffProof */
-export interface TraegerStaffProof {
-  type_id: string;
-  type_name: string;
-  mandatory: boolean;
-  police_certificate: boolean;
-  held: boolean;
-  status: string;
-  presented_on?: string;
-  issued_on?: string;
-  no_relevant_entry: boolean;
-  expires_on?: string;
-}
-
-export const TraegerStaffProofSchema: z.ZodType<TraegerStaffProof, unknown> = object<TraegerStaffProof>({
-  type_id: int64StringOrNumber,
-  type_name: str,
-  mandatory: bool,
-  police_certificate: bool,
-  held: bool,
-  status: str,
-  presented_on: optional(str),
-  issued_on: optional(str),
-  no_relevant_entry: bool,
-  expires_on: optional(str),
 });
 
 /** Go: workforce.TraegerContractSoll */

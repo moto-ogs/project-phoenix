@@ -101,7 +101,7 @@ func (rs *Resource) updateAdminChildOfferings(w http.ResponseWriter, r *http.Req
 // correction on the child's Regeltermine (#5102).
 type adminChildOfferingsResponse struct {
 	AdminRequestChild
-	RosterImpact rosterImpactResponse `json:"roster_impact"`
+	RosterImpact enrollmentRosterImpactResponse `json:"roster_impact"`
 }
 
 func (rs *Resource) applyAdminOfferingUpdate(

@@ -83,6 +83,7 @@ func setupUnreadTest(t *testing.T) *unreadEnv {
 		SchoolRepo:       capabilitySchools{schools: reposSchools.School},
 		Notifications:    NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
 		RateLimitRepo:    repos.Enrollment(),
+		LateInviteRepo:   repos.Enrollment(),
 		OutboxEnqueuer:   discardingOutbox{},
 		Settings:         settings,
 		FrontendURL:      "http://localhost:3000",
@@ -155,7 +156,8 @@ func (env *unreadEnv) do(t *testing.T, method, path, token, body string) *httpte
 		req.Header.Set("Content-Type", "application/json")
 	}
 	rec := httptest.NewRecorder()
-	env.router.ServeHTTP(rec, req)
+	// Mounted like production, so the contract check sees the real route.
+	testpkg.MountedQueryBudgetRouter("/api/enrollment", env.router).ServeHTTP(rec, req)
 	return rec
 }
 
@@ -434,4 +436,29 @@ func TestAdminRequestDetailCarriesLegalEvidence(t *testing.T) {
 	public := env.do(t, http.MethodGet, "/requests/"+submitted.Request.StatusToken, "", "")
 	require.Equal(t, http.StatusOK, public.Code, public.Body.String())
 	require.NotContains(t, public.Body.String(), "legal_blocks_snapshot")
+}
+
+// Staff invite a family after the window at the production mount (#2352);
+// the answer carries the token once and the invitation is stored.
+func TestAdminLateInvite_CreatesInvitationForPhase(t *testing.T) {
+	t.Parallel()
+	env := setupUnreadTest(t)
+	staff := env.reader(t, env.tenantID, managePermissions...)
+
+	rec := env.do(t, http.MethodPost, "/phases/"+strconv.FormatInt(env.phaseID, 10)+"/late-invites", staff,
+		`{"guardian_email":"spaet@example.com","guardian_first_name":"Sina","guardian_last_name":"Spät","reason":"Zugezogen"}`)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	var body struct {
+		Data enrollmentAPI.AdminCreateLateInviteResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, strconv.FormatInt(env.phaseID, 10), body.Data.PhaseID)
+	assert.Equal(t, "spaet@example.com", body.Data.GuardianEmail)
+	assert.NotEmpty(t, body.Data.Token)
+
+	stored, err := env.db.NewSelect().TableExpr("enrollment.late_invites").
+		Where("id = ? AND phase_id = ? AND guardian_email = ?", body.Data.ID, env.phaseID, "spaet@example.com").
+		Count(testpkg.TenantContext(env.tenantID))
+	require.NoError(t, err)
+	assert.EqualValues(t, 1, stored)
 }

@@ -56,6 +56,10 @@ type Registration struct {
 	Enums            []EnumSpec
 	Deprecated       bool
 	DeprecatedFields []string
+	// NoRetryAfterRenewal and MaxBodyBytes are the proxy traits of
+	// common.RouteContract.
+	NoRetryAfterRenewal string
+	MaxBodyBytes        int
 }
 
 // VariantSpec is a response whose shape a query parameter selects.

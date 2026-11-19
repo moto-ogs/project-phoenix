@@ -14,12 +14,14 @@ import {
 import {
   HomeworkFeedbackResponseSchema,
   OperationPlannedInstanceSchema,
+  OperationRosterRowSchema,
   OperationRosterSchema,
   ScheduledInstanceSchema,
   startOperationResponseSchema,
   type CompleteOperationRequest,
   type HomeworkFeedbackRequest,
   type OperationPlannedInstance,
+  type PatchAttendanceRequest,
 } from "./shared.generated";
 
 /** Go: timetablehttp.SchoolSupervisionsResponse */
@@ -93,6 +95,13 @@ export const routes = {
     pattern: "/school/supervisions/{id}/students/{student_id}/sheet",
     portals: ["school"],
     response: success(SupervisionStudentSheetSchema),
+  },
+  "PATCH /school/supervisions/{id}/students/{student_id}/attendance": {
+    method: "PATCH",
+    pattern: "/school/supervisions/{id}/students/{student_id}/attendance",
+    portals: ["school"],
+    request: requestBody<PatchAttendanceRequest>(),
+    response: success(OperationRosterRowSchema),
   },
   "POST /school/supervisions/{id}/complete": {
     method: "POST",

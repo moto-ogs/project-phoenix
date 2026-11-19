@@ -97,8 +97,8 @@ type PersonResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// PersonRequest is the create and update payload.
-type PersonRequest struct {
+// DirectoryPersonRequest is the create and update payload.
+type DirectoryPersonRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	TagID     string `json:"tag_id,omitempty"`
@@ -107,7 +107,7 @@ type PersonRequest struct {
 
 // Bind reports every blank name as its own field (#2511); the shared error
 // envelope lists them in `errors`. The text is diagnostics (#2520).
-func (request *PersonRequest) Bind(*http.Request) error {
+func (request *DirectoryPersonRequest) Bind(*http.Request) error {
 	missing := validation.Errors{}
 	if request.FirstName == "" {
 		missing["first_name"] = errors.New("is required")
@@ -159,7 +159,7 @@ func (rs *Resource) getPerson(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs *Resource) createPerson(w http.ResponseWriter, r *http.Request) {
-	request := &PersonRequest{}
+	request := &DirectoryPersonRequest{}
 	if err := render.Bind(r, request); err != nil {
 		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
 		return
@@ -192,7 +192,7 @@ func (rs *Resource) updatePerson(w http.ResponseWriter, r *http.Request) {
 		rs.moduleFailure(w, r, err)
 		return
 	}
-	request := &PersonRequest{}
+	request := &DirectoryPersonRequest{}
 	if err := render.Bind(r, request); err != nil {
 		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
 		return

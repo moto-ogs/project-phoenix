@@ -146,6 +146,24 @@ describe("DatabasePage", () => {
     });
   });
 
+  // The counts come through the catalog proxy under the backend's path
+  // (#2352); /api/database/counts only stays for older bundles.
+  it("reads the counts from the stats route", async () => {
+    render(<DatabasePage />);
+
+    const fetcher = vi
+      .mocked(useSWR)
+      .mock.calls.map((call) => call[1])
+      .find((candidate) => typeof candidate === "function") as
+      (() => Promise<unknown>) | undefined;
+    expect(fetcher).toBeDefined();
+    await expect(fetcher!()).resolves.toEqual(mockCountsResponse.data);
+    const url = vi.mocked(global.fetch).mock.calls[0]?.[0];
+    expect(String(url instanceof Request ? url.url : url)).toBe(
+      "/api/database/stats",
+    );
+  });
+
   it("shows the card-grid skeleton during the initial counts request", () => {
     vi.mocked(useSWR).mockReturnValue({
       data: undefined,

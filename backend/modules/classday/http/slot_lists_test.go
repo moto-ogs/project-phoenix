@@ -19,7 +19,7 @@ import (
 type mockSlotListsService struct {
 	optionsResult *classday.OptionsResult
 	optionsErr    error
-	buildResult   *classday.Result
+	buildResult   *classday.ClassdayResult
 	buildErr      error
 	renderFile    classday.File
 	renderErr     error
@@ -29,7 +29,7 @@ type mockSlotListsService struct {
 	lastFormat    classday.Format
 }
 
-func (m *mockSlotListsService) BuildList(_ context.Context, params classday.Params) (*classday.Result, error) {
+func (m *mockSlotListsService) BuildList(_ context.Context, params classday.Params) (*classday.ClassdayResult, error) {
 	m.buildCalled = true
 	m.lastParams = params
 	if m.buildErr != nil {
@@ -78,11 +78,11 @@ func TestPreviewSlotListParsesExplicitEmptySlotSelection(t *testing.T) {
 	t.Parallel()
 
 	mock := &mockSlotListsService{
-		buildResult: &classday.Result{
+		buildResult: &classday.ClassdayResult{
 			Date:   "2030-09-04",
 			Target: classday.TargetSlots,
 			Source: classday.SourceReconciliation,
-			Rows:   []classday.Row{},
+			Rows:   []classday.SlotListRow{},
 		},
 	}
 	rs := NewSlotListResource(mock)
@@ -106,11 +106,11 @@ func TestPreviewSlotListParsesStringIDs(t *testing.T) {
 	t.Parallel()
 
 	mock := &mockSlotListsService{
-		buildResult: &classday.Result{
+		buildResult: &classday.ClassdayResult{
 			Date:   "2030-09-04",
 			Target: classday.TargetSlots,
 			Source: classday.SourcePlanned,
-			Rows:   []classday.Row{},
+			Rows:   []classday.SlotListRow{},
 		},
 	}
 	rs := NewSlotListResource(mock)

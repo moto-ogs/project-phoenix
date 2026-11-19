@@ -181,21 +181,25 @@ func parseDate(raw string) (string, error) {
 }
 
 type assignmentRequest struct {
-	Type          workforce.SubstitutionTargetType `json:"type"`
-	GroupHandover *struct {
-		GroupID       jsonID `json:"group_id"`
-		TargetStaffID jsonID `json:"target_staff_id"`
-		StartDate     string `json:"start_date,omitempty"`
-		EndDate       string `json:"end_date,omitempty"`
-	} `json:"group_handover"`
-	AdditionalSupervision *struct {
-		ActiveGroupID jsonID `json:"active_group_id"`
-		TargetStaffID jsonID `json:"target_staff_id"`
-		// HandOver ends the caller's own supervision once the target joined
-		// (#4763).
-		HandOver bool `json:"hand_over,omitempty"`
-	} `json:"additional_supervision"`
-	ScheduleSubstitution *scheduleAssignmentRequest `json:"schedule_substitution"`
+	Type                  workforce.SubstitutionTargetType `json:"type"`
+	GroupHandover         *groupHandoverRequest            `json:"group_handover"`
+	AdditionalSupervision *additionalSupervisionRequest    `json:"additional_supervision"`
+	ScheduleSubstitution  *scheduleAssignmentRequest       `json:"schedule_substitution"`
+}
+
+type groupHandoverRequest struct {
+	GroupID       jsonID `json:"group_id"`
+	TargetStaffID jsonID `json:"target_staff_id"`
+	StartDate     string `json:"start_date,omitempty"`
+	EndDate       string `json:"end_date,omitempty"`
+}
+
+type additionalSupervisionRequest struct {
+	ActiveGroupID jsonID `json:"active_group_id"`
+	TargetStaffID jsonID `json:"target_staff_id"`
+	// HandOver ends the caller's own supervision once the target joined
+	// (#4763).
+	HandOver bool `json:"hand_over,omitempty"`
 }
 
 type scheduleAssignmentRequest struct {
@@ -206,12 +210,14 @@ type scheduleAssignmentRequest struct {
 	Substitutions        []workforce.ScheduleSubstitutionChange  `json:"substitutions,omitempty"`
 	SubstitutionRemovals []workforce.ScheduleSubstitutionRemoval `json:"substitution_removals,omitempty"`
 	Presences            []workforce.SchedulePresenceChange      `json:"presences,omitempty"`
-	WholeDays            *struct {
-		AbsentStaffID     int64      `json:"absent_staff_id"`
-		SubstituteStaffID *int64     `json:"substitute_staff_id,omitempty"`
-		Dates             []wireDate `json:"dates"`
-		Reason            *string    `json:"reason,omitempty"`
-	} `json:"whole_days,omitempty"`
+	WholeDays            *wholeDaysRequest                       `json:"whole_days,omitempty"`
+}
+
+type wholeDaysRequest struct {
+	AbsentStaffID     int64      `json:"absent_staff_id"`
+	SubstituteStaffID *int64     `json:"substitute_staff_id,omitempty"`
+	Dates             []wireDate `json:"dates"`
+	Reason            *string    `json:"reason,omitempty"`
 }
 
 type endRequest struct {
@@ -282,15 +288,29 @@ func (rs *Resource) assign(w http.ResponseWriter, r *http.Request) {
 		rs.renderModuleError(w, r, err)
 		return
 	}
+	answer, message := assignmentResponseOf(request.Type, created)
+	rs.runtime.Success(w, r, http.StatusCreated, answer, message)
+}
+
+// SubstitutionAssignmentResponse is the answer of an assignment (#2352): Type names the
+// target, and exactly the member of that name carries the result.
+type SubstitutionAssignmentResponse struct {
+	Type                  workforce.SubstitutionTargetType        `json:"type"`
+	GroupHandover         *workforce.SubstitutionAssignmentResult `json:"group_handover,omitempty"`
+	AdditionalSupervision *workforce.SubstitutionAssignmentResult `json:"additional_supervision,omitempty"`
+	ScheduleSubstitution  *workforce.ScheduleSubstitutionResult   `json:"schedule_substitution,omitempty"`
+}
+
+// assignmentResponseOf names the result of an assignment by its target and
+// the message that goes with it.
+func assignmentResponseOf(requested workforce.SubstitutionTargetType, created *workforce.SubstitutionAssignmentResult) (SubstitutionAssignmentResponse, string) {
 	if created.ScheduleSubstitution != nil {
-		rs.runtime.Success(w, r, http.StatusCreated, created.ScheduleSubstitution, "Vertretung gespeichert")
-		return
+		return SubstitutionAssignmentResponse{Type: workforce.TargetScheduleSubstitution, ScheduleSubstitution: created.ScheduleSubstitution}, "Vertretung gespeichert"
 	}
-	if request.Type == workforce.TargetAdditionalSupervision {
-		rs.runtime.Success(w, r, http.StatusCreated, created, "Betreuer hinzugefügt")
-		return
+	if requested == workforce.TargetAdditionalSupervision {
+		return SubstitutionAssignmentResponse{Type: workforce.TargetAdditionalSupervision, AdditionalSupervision: created}, "Betreuer hinzugefügt"
 	}
-	rs.runtime.Success(w, r, http.StatusCreated, created, "Gruppe übergeben")
+	return SubstitutionAssignmentResponse{Type: workforce.TargetGroupHandover, GroupHandover: created}, "Gruppe übergeben"
 }
 
 func decodeAssignment(body io.Reader) (assignmentRequest, error) {
@@ -304,6 +324,27 @@ func decodeAssignment(body io.Reader) (assignmentRequest, error) {
 		return assignmentRequest{}, errors.New("request body must contain one JSON object")
 	}
 	return request, nil
+}
+
+// SubstitutionEndResponse is the answer of ending an assignment.
+type SubstitutionEndResponse struct {
+	Ended bool `json:"ended"`
+}
+
+// ContractTypes are the bodies of the routes, handed to the root's typed
+// contract: this package may not import the contract types. LaxID is the
+// identifier that takes a JSON number or a decimal string, Day the strict
+// calendar day of the whole-day substitution.
+type ContractTypes struct {
+	Overview, Assignment, AssignmentRequest, End, EndRequest, LaxID, Day any
+}
+
+// RouteContractTypes returns the zero values of the route bodies.
+func RouteContractTypes() ContractTypes {
+	return ContractTypes{
+		Overview: workforce.SubstitutionOverviewResult{}, Assignment: SubstitutionAssignmentResponse{}, AssignmentRequest: assignmentRequest{},
+		End: SubstitutionEndResponse{}, EndRequest: endRequest{}, LaxID: jsonID(0), Day: wireDate(""),
+	}
 }
 
 func (rs *Resource) end(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +369,7 @@ func (rs *Resource) end(w http.ResponseWriter, r *http.Request) {
 	case workforce.TargetAdditionalSupervision:
 		message = "Aufsicht abgegeben"
 	}
-	rs.runtime.Success(w, r, http.StatusOK, map[string]bool{"ended": true}, message)
+	rs.runtime.Success(w, r, http.StatusOK, SubstitutionEndResponse{Ended: true}, message)
 }
 
 func (rs *Resource) parseScheduleRange(w http.ResponseWriter, r *http.Request, query *workforce.SubstitutionOverviewQuery) bool {

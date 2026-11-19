@@ -391,6 +391,11 @@ type ReplaceMealParticipationRequest struct {
 	Weekdays []parentService.MealWeekday `json:"weekdays"`
 }
 
+// MealPlanSavedResponse names the day the regular meal plan applies from.
+type MealPlanSavedResponse struct {
+	EffectiveFrom string `json:"effective_from"`
+}
+
 type SetMealParticipationDayRequest struct {
 	Participating *bool `json:"participating"`
 }
@@ -476,7 +481,7 @@ func (rs *Resource) replaceMealParticipation(w http.ResponseWriter, r *http.Requ
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"effective_from": string(effectiveFrom)}, "Regular meal participation saved")
+	common.Respond(w, r, http.StatusOK, MealPlanSavedResponse{EffectiveFrom: string(effectiveFrom)}, "Regular meal participation saved")
 }
 
 func (rs *Resource) setMealParticipationDay(w http.ResponseWriter, r *http.Request) {

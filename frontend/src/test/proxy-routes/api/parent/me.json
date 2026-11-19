@@ -1,8 +1,5 @@
 {
   "api/parent/me/news/[announcementId]/attachments": [
     "GET parent /parent-news-attachments/announcementId%2F1"
-  ],
-  "api/parent/me/news/[announcementId]/declaration": [
-    "POST parent /parent/me/news/announcementId%2F1/declaration"
   ]
 }

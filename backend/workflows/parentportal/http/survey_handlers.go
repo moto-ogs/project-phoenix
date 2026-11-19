@@ -13,68 +13,73 @@ import (
 
 // Parent surveys (#4781): the form of a survey entry and its answers.
 
-type surveyOptionResponse struct {
+type parentSurveyOptionResponse struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
 }
 
-type surveyQuestionResponse struct {
-	ID       string                 `json:"id"`
-	Position int                    `json:"position"`
-	Kind     string                 `json:"kind"`
-	Prompt   string                 `json:"prompt"`
-	Required bool                   `json:"required"`
-	Options  []surveyOptionResponse `json:"options"`
+type parentSurveyQuestionResponse struct {
+	ID       string                       `json:"id"`
+	Position int                          `json:"position"`
+	Kind     string                       `json:"kind"`
+	Prompt   string                       `json:"prompt"`
+	Required bool                         `json:"required"`
+	Options  []parentSurveyOptionResponse `json:"options"`
 }
 
-type surveyFormSurvey struct {
-	ID        string                   `json:"id"`
-	Title     string                   `json:"title"`
-	Intro     string                   `json:"intro"`
-	Anonymous bool                     `json:"anonymous"`
-	ClosesAt  time.Time                `json:"closes_at"`
-	Questions []surveyQuestionResponse `json:"questions"`
+type parentSurveyFormSurvey struct {
+	ID        string                         `json:"id"`
+	Title     string                         `json:"title"`
+	Intro     string                         `json:"intro"`
+	Anonymous bool                           `json:"anonymous"`
+	ClosesAt  time.Time                      `json:"closes_at"`
+	Questions []parentSurveyQuestionResponse `json:"questions"`
 }
 
 // SurveyFormResponse is the survey a guardian answers.
 type SurveyFormResponse struct {
-	Survey       surveyFormSurvey `json:"survey"`
-	SchoolName   string           `json:"school_name"`
-	Participated bool             `json:"participated"`
+	Survey       parentSurveyFormSurvey `json:"survey"`
+	SchoolName   string                 `json:"school_name"`
+	Participated bool                   `json:"participated"`
 }
 
 func toSurveyFormResponse(f *parentService.SurveyForm) SurveyFormResponse {
-	questions := make([]surveyQuestionResponse, 0, len(f.Questions))
+	questions := make([]parentSurveyQuestionResponse, 0, len(f.Questions))
 	for _, q := range f.Questions {
-		options := make([]surveyOptionResponse, 0, len(q.Options))
+		options := make([]parentSurveyOptionResponse, 0, len(q.Options))
 		for _, o := range q.Options {
-			options = append(options, surveyOptionResponse{ID: strconv.FormatInt(o.ID, 10), Label: o.Label})
+			options = append(options, parentSurveyOptionResponse{ID: strconv.FormatInt(o.ID, 10), Label: o.Label})
 		}
-		questions = append(questions, surveyQuestionResponse{
+		questions = append(questions, parentSurveyQuestionResponse{
 			ID: strconv.FormatInt(q.ID, 10), Position: q.Position, Kind: q.Kind, Prompt: q.Prompt, Required: q.Required, Options: options,
 		})
 	}
 	return SurveyFormResponse{
-		Survey: surveyFormSurvey{
+		Survey: parentSurveyFormSurvey{
 			ID: strconv.FormatInt(f.SurveyID, 10), Title: f.Title, Intro: f.Intro, Anonymous: f.Anonymous, ClosesAt: f.ClosesAt, Questions: questions,
 		},
 		SchoolName: f.SchoolName, Participated: f.Participated,
 	}
 }
 
-type surveyAnswerRequest struct {
+// SurveySubmittedResponse confirms that the answers were stored.
+type SurveySubmittedResponse struct {
+	Submitted bool `json:"submitted"`
+}
+
+type parentSurveyAnswerRequest struct {
 	QuestionID string   `json:"question_id"`
 	OptionIDs  []string `json:"option_ids,omitempty"`
 	ScaleValue *int     `json:"scale_value,omitempty"`
 	Text       *string  `json:"text,omitempty"`
 }
 
-type surveyAnswersRequest struct {
-	Answers []surveyAnswerRequest `json:"answers"`
+type parentSurveyAnswersRequest struct {
+	Answers []parentSurveyAnswerRequest `json:"answers"`
 }
 
 func decodeSurveyAnswers(r *http.Request) ([]parentService.SurveyAnswer, error) {
-	var req surveyAnswersRequest
+	var req parentSurveyAnswersRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.New("invalid request body")
 	}
@@ -134,5 +139,5 @@ func (rs *Resource) submitAnnouncementSurvey(w http.ResponseWriter, r *http.Requ
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"submitted": true}, "Survey answered")
+	common.Respond(w, r, http.StatusOK, SurveySubmittedResponse{Submitted: true}, "Survey answered")
 }

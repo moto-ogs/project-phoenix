@@ -48,6 +48,14 @@ export type StudentConsentState = (typeof STUDENT_CONSENT_STATE_VALUES)[number];
 export const SUPERVISOR_ROLE_VALUES = ["teacher"] as const;
 export type SupervisorRole = (typeof SUPERVISOR_ROLE_VALUES)[number];
 
+/** Go: studentdeletionhttp.studentDeleteRequest */
+export interface studentDeleteRequest {
+  expected_fingerprint?: string;
+  confirmation_name?: string;
+  reason?: string;
+  acknowledged?: boolean;
+}
+
 /** Go: careplanhttp.studentDocumentDeletedResponse */
 export interface studentDocumentDeletedResponse {
   student_id: string;
@@ -632,6 +640,15 @@ export interface ChangeRequestPendingCountResponse {
 
 export const ChangeRequestPendingCountResponseSchema: z.ZodType<ChangeRequestPendingCountResponse, unknown> = object<ChangeRequestPendingCountResponse>({
   pending_count: safeInt,
+});
+
+/** Go: requestfeedhttp.FeedStatus */
+export interface FeedStatus {
+  active: boolean;
+}
+
+export const FeedStatusSchema: z.ZodType<FeedStatus, unknown> = object<FeedStatus>({
+  active: bool,
 });
 
 /** Go: students.childQuotaResponse */
@@ -2074,6 +2091,15 @@ export const parentRequestConflictResolvedResponseSchema: z.ZodType<parentReques
   resolved_count: safeInt,
 });
 
+/** Go: requestfeedhttp.FeedLink */
+export interface FeedLink {
+  url: string;
+}
+
+export const FeedLinkSchema: z.ZodType<FeedLink, unknown> = object<FeedLink>({
+  url: str,
+});
+
 /** Go: careplanhttp.correctRequestBody */
 export interface correctRequestBody {
   approve?: boolean | null;
@@ -2324,6 +2350,47 @@ export interface BulkPickupSchedulePatchRequest {
   schedules?: PickupScheduleInput[] | null;
   confirmed_exception?: boolean;
 }
+
+/** Go: studentpresencehttp.schoolCheckinBatchRequest */
+export interface schoolCheckinBatchRequest {
+  action?: string;
+  student_ids?: string[] | null;
+  reason?: string;
+}
+
+/** Go: studentpresencehttp.schoolCheckinBatchResult */
+export interface schoolCheckinBatchResult {
+  student_id: string;
+  ok: boolean;
+  changed: boolean;
+  status?: string;
+  location?: string;
+  error?: string;
+}
+
+export const schoolCheckinBatchResultSchema: z.ZodType<schoolCheckinBatchResult, unknown> = object<schoolCheckinBatchResult>({
+  student_id: str,
+  ok: bool,
+  changed: bool,
+  status: optional(str),
+  location: optional(str),
+  error: optional(str),
+});
+
+/** Go: studentpresencehttp.schoolCheckinBatchResponse */
+export interface schoolCheckinBatchResponse {
+  action: string;
+  results: schoolCheckinBatchResult[] | null;
+  succeeded: number;
+  failed: number;
+}
+
+export const schoolCheckinBatchResponseSchema: z.ZodType<schoolCheckinBatchResponse, unknown> = object<schoolCheckinBatchResponse>({
+  action: str,
+  results: nullable(arr(schoolCheckinBatchResultSchema)),
+  succeeded: safeInt,
+  failed: safeInt,
+});
 
 /** Go: studentpresencehttp.BulkCreateStudentStatusDaysRequest */
 export interface BulkCreateStudentStatusDaysRequest {
@@ -2992,6 +3059,13 @@ export interface GetStudentsIdStatusDaysQuery {
 }
 
 export const routes = {
+  "DELETE /api/students/care-withdrawals/{completionId}": {
+    method: "DELETE",
+    pattern: "/api/students/care-withdrawals/{completionId}",
+    portals: ["tenant"],
+    request: requestBody<studentDeleteRequest>(),
+    response: noData,
+  },
   "DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}": {
     method: "DELETE",
     pattern: "/api/students/class-arrival-exceptions/{schoolClass}/{date}",
@@ -3116,6 +3190,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(ChangeRequestPendingCountResponseSchema),
   },
+  "GET /api/students/change-requests/rss-feed/": {
+    method: "GET",
+    pattern: "/api/students/change-requests/rss-feed/",
+    portals: ["tenant"],
+    response: success(FeedStatusSchema),
+  },
   "GET /api/students/child-quota": {
     method: "GET",
     pattern: "/api/students/child-quota",
@@ -3160,6 +3240,12 @@ export const routes = {
     pattern: "/api/students/privacy-consent/defaults",
     portals: ["tenant"],
     response: success(PrivacyConsentDefaultsResponseSchema),
+  },
+  "GET /api/students/school-classes": {
+    method: "GET",
+    pattern: "/api/students/school-classes",
+    portals: ["tenant"],
+    response: success(z.array(z.string())),
   },
   "GET /api/students/status-days": {
     method: "GET",
@@ -3349,6 +3435,18 @@ export const routes = {
     request: requestBody<resolveConflictBody>(),
     response: success(parentRequestConflictResolvedResponseSchema),
   },
+  "POST /api/students/change-requests/rss-feed/": {
+    method: "POST",
+    pattern: "/api/students/change-requests/rss-feed/",
+    portals: ["tenant"],
+    response: success(FeedLinkSchema),
+  },
+  "POST /api/students/change-requests/rss-feed/rotate": {
+    method: "POST",
+    pattern: "/api/students/change-requests/rss-feed/rotate",
+    portals: ["tenant"],
+    response: success(FeedLinkSchema),
+  },
   "POST /api/students/change-requests/{kind}/{requestId}/correct": {
     method: "POST",
     pattern: "/api/students/change-requests/{kind}/{requestId}/correct",
@@ -3397,6 +3495,14 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<BulkPickupSchedulePatchRequest>(),
     response: success(BulkUpsertResultSchema),
+  },
+  "POST /api/students/school-checkin/batch": {
+    method: "POST",
+    pattern: "/api/students/school-checkin/batch",
+    portals: ["tenant"],
+    maxBodyBytes: 65536,
+    request: requestBody<schoolCheckinBatchRequest>(),
+    response: success(schoolCheckinBatchResponseSchema),
   },
   "POST /api/students/status-days/bulk": {
     method: "POST",

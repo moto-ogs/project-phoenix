@@ -1030,7 +1030,7 @@ export interface MonthSummary {
  * computed live and any divergence surfaces as drift on the MonthSummary.
  */
 export interface BackendMonthCloseSnapshot {
-  staff_id: number;
+  staff_id: number | string;
   year: number;
   month: number;
   closing_balance_minutes: number;
@@ -1040,11 +1040,11 @@ export interface BackendMonthCloseSnapshot {
   credited_minutes: number;
   adjustment_minutes: number;
   closed_at: string;
-  closed_by: number;
+  closed_by: number | string;
   close_reason?: string;
   source: string;
   reopened_at?: string;
-  reopened_by?: number;
+  reopened_by?: number | string;
   reopen_reason?: string;
 }
 

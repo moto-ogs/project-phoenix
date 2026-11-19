@@ -101,6 +101,12 @@ export interface transferDeviceRequest {
 }
 
 export const routes = {
+  "DELETE /operator/devices/{id}": {
+    method: "DELETE",
+    pattern: "/operator/devices/{id}",
+    portals: ["platform"],
+    response: noData,
+  },
   "GET /operator/devices/": {
     method: "GET",
     pattern: "/operator/devices/",
