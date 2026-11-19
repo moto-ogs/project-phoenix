@@ -2009,6 +2009,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/by-role",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "role",
+          "kind": "string"
+        },
+        {
+          "name": "roles",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "nullable": true,
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffWithRoleResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/dashboard-summary",
       "portals": [
         "tenant"
@@ -2022,6 +2047,20 @@
       "response": {
         "kind": "ref",
         "ref": "DashboardSummary"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/documents-directory",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "DocumentDirectoryEntry"
+        }
       }
     },
     {
@@ -31316,6 +31355,36 @@
       ]
     },
     {
+      "name": "DocumentDirectoryEntry",
+      "go_type": "staff.DocumentDirectoryEntry",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "firstName",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "lastName",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DocumentKindOverview",
       "go_type": "parentbilling.DocumentKindOverview",
       "fields": [
@@ -57906,6 +57975,79 @@
           "name": "decided_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffWithRoleResponse",
+      "go_type": "staff.StaffWithRoleResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "teacher_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "full_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_active_caregiver",
+          "schema": {
+            "kind": "bool"
           }
         },
         {

@@ -505,5 +505,6 @@ func staffPortalAdminContractMounts() []contractMount {
 		{"/api/birthdays", birthdaysAPI.RouteContracts()},
 		{"/api/feedback", feedbackStudentRouteContracts()},
 		{"/api/reminders", reminderRouteContracts()},
+		{"/api/staff", staffDirectoryRouteContracts()},
 	}
 }

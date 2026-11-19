@@ -128,6 +128,35 @@ export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unk
   approved_by: optional(str),
 });
 
+/** Go: staff.StaffWithRoleResponse */
+export interface StaffWithRoleResponse {
+  id: string;
+  person_id: string;
+  teacher_id?: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  account_id: string;
+  email: string;
+  is_active_caregiver: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const StaffWithRoleResponseSchema: z.ZodType<StaffWithRoleResponse, unknown> = object<StaffWithRoleResponse>({
+  id: int64StringOrNumber,
+  person_id: int64StringOrNumber,
+  teacher_id: optional(int64StringOrNumber),
+  first_name: str,
+  last_name: str,
+  full_name: str,
+  account_id: int64StringOrNumber,
+  email: str,
+  is_active_caregiver: bool,
+  created_at: instant,
+  updated_at: instant,
+});
+
 /** Go: workforce.DashboardPeriodTotals */
 export interface DashboardPeriodTotals {
   soll_minutes: number;
@@ -162,6 +191,21 @@ export const DashboardSummarySchema: z.ZodType<DashboardSummary, unknown> = obje
   period: DashboardPeriodTotalsSchema,
   saldo_school_total_minutes: safeInt,
   pending_requests_count: safeInt,
+});
+
+/** Go: staff.DocumentDirectoryEntry */
+export interface DocumentDirectoryEntry {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+}
+
+export const DocumentDirectoryEntrySchema: z.ZodType<DocumentDirectoryEntry, unknown> = object<DocumentDirectoryEntry>({
+  id: int64StringOrNumber,
+  name: str,
+  firstName: str,
+  lastName: str,
 });
 
 /** Go: staff.MinimalStaffProfileResponse */
@@ -1246,6 +1290,12 @@ export interface GetStaffAbsencesRequestsQuery {
   view?: string;
 }
 
+/** Query of GET /api/staff/by-role */
+export interface GetStaffByRoleQuery {
+  role?: string;
+  roles?: string;
+}
+
 /** Query of GET /api/staff/dashboard-summary */
 export interface GetStaffDashboardSummaryQuery {
   period?: string;
@@ -1418,12 +1468,25 @@ export const routes = {
     query: ["search", "types", "view"],
     response: success(z.array(absenceRequestResponseSchema)),
   },
+  "GET /api/staff/by-role": {
+    method: "GET",
+    pattern: "/api/staff/by-role",
+    portals: ["tenant"],
+    query: ["role", "roles"],
+    response: success(z.array(StaffWithRoleResponseSchema).nullable()),
+  },
   "GET /api/staff/dashboard-summary": {
     method: "GET",
     pattern: "/api/staff/dashboard-summary",
     portals: ["tenant"],
     query: ["period"],
     response: success(DashboardSummarySchema),
+  },
+  "GET /api/staff/documents-directory": {
+    method: "GET",
+    pattern: "/api/staff/documents-directory",
+    portals: ["tenant"],
+    response: success(z.array(DocumentDirectoryEntrySchema)),
   },
   "GET /api/staff/documents-profile/{id}": {
     method: "GET",
