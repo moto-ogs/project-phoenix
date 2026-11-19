@@ -51,6 +51,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/groups/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/guardians/students/{studentId}/guardians/{guardianId}",
       "portals": [
         "tenant"
@@ -1042,6 +1050,50 @@
       "response": {
         "kind": "ref",
         "ref": "FolderListResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/groups/",
+      "portals": [
+        "tenant"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "name",
+          "kind": "string"
+        },
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "page_size",
+          "kind": "int"
+        },
+        {
+          "name": "room_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "GroupResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/groups/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GroupResponse"
       }
     },
     {
@@ -7820,6 +7872,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/groups/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GroupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GroupResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/guardians/bulk-invite",
       "portals": [
         "tenant"
@@ -11942,6 +12009,21 @@
       "response": {
         "kind": "ref",
         "ref": "FolderResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/groups/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GroupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GroupResponse"
       }
     },
     {
@@ -33923,6 +34005,116 @@
       ]
     },
     {
+      "name": "GroupRequest",
+      "go_type": "schoolstructurehttp.GroupRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "teacher_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupResponse",
+      "go_type": "schoolstructurehttp.GroupResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "Room"
+          }
+        },
+        {
+          "name": "representative_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "representative",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "TeacherResponse"
+          }
+        },
+        {
+          "name": "teachers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "TeacherResponse"
+            }
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "GroupThreadChildResponse",
       "go_type": "parent.GroupThreadChildResponse",
       "fields": [
@@ -51252,6 +51444,24 @@
       ]
     },
     {
+      "name": "Room",
+      "go_type": "schoolstructurehttp.Room",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoomReferencesResponse",
       "go_type": "httpadapter.RoomReferencesResponse",
       "fields": [
@@ -61316,6 +61526,55 @@
         {
           "name": "school_class",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TeacherResponse",
+      "go_type": "schoolstructurehttp.TeacherResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "specialization",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "full_name",
           "schema": {
             "kind": "string"
           }

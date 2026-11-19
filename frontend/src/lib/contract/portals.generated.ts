@@ -9,6 +9,7 @@ import { routes as classListEntries } from "./class-list-entries.generated";
 import { routes as enrollment } from "./enrollment.generated";
 import { routes as feedback } from "./feedback.generated";
 import { routes as files } from "./files.generated";
+import { routes as groups } from "./groups.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
 import { routes as mealBillingMonths } from "./meal-billing-months.generated";
@@ -644,6 +645,11 @@ export const portalRoutes = {
     files["GET /api/files/folders"],
     files["POST /api/files/folders"],
     files["PUT /api/files/folders/{folderId}"],
+    groups["DELETE /api/groups/{id}"],
+    groups["GET /api/groups/"],
+    groups["GET /api/groups/{id}"],
+    groups["POST /api/groups/"],
+    groups["PUT /api/groups/{id}"],
     guardians["DELETE /api/guardians/students/{studentId}/guardians/{guardianId}"],
     guardians["DELETE /api/guardians/{id}/email-block"],
     guardians["DELETE /api/guardians/{id}/email-stop"],

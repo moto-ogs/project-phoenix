@@ -41,6 +41,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	reviewStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/requestreview/http"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
+	groupsHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
@@ -506,5 +507,6 @@ func staffPortalAdminContractMounts() []contractMount {
 		{"/api/feedback", feedbackStudentRouteContracts()},
 		{"/api/reminders", reminderRouteContracts()},
 		{"/api/staff", staffDirectoryRouteContracts()},
+		{"/api/groups", groupsHTTP.RouteContracts()},
 	}
 }
