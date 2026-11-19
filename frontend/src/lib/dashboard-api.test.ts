@@ -185,22 +185,21 @@ describe("fetchDashboardAnalyticsClient", () => {
     vi.clearAllMocks();
   });
 
-  it("successfully fetches and returns dashboard analytics data", async () => {
-    const mockData = {
-      studentsPresent: 42,
-      studentsInRooms: 30,
-      studentsInTransit: 12,
-    };
+  it("reads the figures through the catalog proxy and maps them once", async () => {
+    const backendData = { students_present: 42, students_in_rooms: 30 };
 
     vi.mocked(fetchWithAuth).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: mockData }),
+      json: () => Promise.resolve({ status: "success", data: backendData }),
     } as Response);
 
     const result = await fetchDashboardAnalyticsClient();
 
-    expect(fetchWithAuth).toHaveBeenCalledWith("/api/dashboard/analytics");
-    expect(result).toEqual(mockData);
+    expect(fetchWithAuth).toHaveBeenCalledWith(
+      "/api/active/analytics/dashboard",
+    );
+    expect(mapDashboardAnalyticsResponse).toHaveBeenCalledWith(backendData);
+    expect(result).toEqual({ ...backendData, mapped: true });
   });
 
   it("throws error when response is not ok", async () => {
@@ -212,18 +211,6 @@ describe("fetchDashboardAnalyticsClient", () => {
     await expect(fetchDashboardAnalyticsClient()).rejects.toThrow(
       "Dashboard fetch failed: 500",
     );
-  });
-
-  it("extracts data property from JSON response", async () => {
-    const innerData = { studentsPresent: 100, freeRooms: 5 };
-
-    vi.mocked(fetchWithAuth).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ data: innerData }),
-    } as Response);
-
-    const result = await fetchDashboardAnalyticsClient();
-
-    expect(result).toEqual(innerData);
+    expect(mapDashboardAnalyticsResponse).not.toHaveBeenCalled();
   });
 });

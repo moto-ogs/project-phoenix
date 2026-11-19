@@ -107,6 +107,18 @@ export interface UpdateAbsenceTypeRequest {
   school_limit_days?: unknown | null;
 }
 
+/** Go: absencetypes.SetAllowanceRequest */
+export interface SetAllowanceRequest {
+  year?: number;
+  entitled_days?: number;
+  reason?: string;
+}
+
+/** Query of GET /api/absence-types/{id}/allowances/{staffId} */
+export interface GetAbsenceTypesIdAllowancesStaffIdQuery {
+  year?: number;
+}
+
 /** Query of GET /api/absence-types/{id}/allowances/{staffId}/preview */
 export interface GetAbsenceTypesIdAllowancesStaffIdPreviewQuery {
   date_end?: string;
@@ -120,6 +132,13 @@ export const routes = {
     pattern: "/api/absence-types/",
     portals: ["tenant"],
     response: success(z.array(AbsenceTypeResponseSchema)),
+  },
+  "GET /api/absence-types/{id}/allowances/{staffId}": {
+    method: "GET",
+    pattern: "/api/absence-types/{id}/allowances/{staffId}",
+    portals: ["tenant"],
+    query: ["year"],
+    response: success(AllowanceSummaryResponseSchema),
   },
   "GET /api/absence-types/{id}/allowances/{staffId}/preview": {
     method: "GET",
@@ -141,5 +160,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<UpdateAbsenceTypeRequest>(),
     response: success(AbsenceTypeResponseSchema),
+  },
+  "PUT /api/absence-types/{id}/allowances/{staffId}": {
+    method: "PUT",
+    pattern: "/api/absence-types/{id}/allowances/{staffId}",
+    portals: ["tenant"],
+    request: requestBody<SetAllowanceRequest>(),
+    response: success(AllowanceSummaryResponseSchema),
   },
 } as const;

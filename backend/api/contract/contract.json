@@ -81,6 +81,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/display/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/enrollment/admin/requests/{id}/",
       "portals": [
         "tenant"
@@ -315,6 +323,17 @@
         "tenant"
       ],
       "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/shift-types/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ShiftTypeDeleteResponse"
+      }
     },
     {
       "method": "DELETE",
@@ -1407,6 +1426,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/absence-types/{id}/allowances/{staffId}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AllowanceSummaryResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/absence-types/{id}/allowances/{staffId}/preview",
       "portals": [
         "tenant"
@@ -1428,6 +1464,17 @@
       "response": {
         "kind": "ref",
         "ref": "AllowancePreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/active/analytics/dashboard",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DashboardAnalyticsResponse"
       }
     },
     {
@@ -1899,6 +1946,20 @@
       "response": {
         "kind": "ref",
         "ref": "StatsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/display/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "InfoDisplayResponse"
+        }
       }
     },
     {
@@ -4891,6 +4952,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/care-offerings",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CareOfferingOptionResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/care-schedule-change-requests/{requestId}",
       "portals": [
         "tenant"
@@ -5136,6 +5211,40 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/enrollment-answer-filters",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "EnrollmentAnswerFilterResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/offering-change-requests/course-waitlists",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "activity_group_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CourseWaitlistResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/ogs-group-live",
       "portals": [
         "tenant"
@@ -5149,6 +5258,20 @@
       "response": {
         "kind": "ref",
         "ref": "Projection"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/ogs-group-navigation",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "NavigationGroup"
+        }
       }
     },
     {
@@ -10415,6 +10538,21 @@
     },
     {
       "method": "PATCH",
+      "pattern": "/api/display/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InfoDisplayWriteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "InfoDisplayResponse"
+      }
+    },
+    {
+      "method": "PATCH",
       "pattern": "/api/enrollment/requests/{statusToken}",
       "portals": [
         "public"
@@ -10815,6 +10953,32 @@
         "ref": "ClassListAssignRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/display/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InfoDisplayWriteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "InfoDisplayCreatedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/display/{id}/regenerate",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InfoDisplayTokenResponse"
+      }
     },
     {
       "method": "POST",
@@ -11537,6 +11701,21 @@
       "response": {
         "kind": "ref",
         "ref": "Status"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/search/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolSearchRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SearchResult"
       }
     },
     {
@@ -15983,6 +16162,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/absence-types/{id}/allowances/{staffId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SetAllowanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AllowanceSummaryResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/activities/categories/{categoryId}",
       "portals": [
         "tenant"
@@ -16458,6 +16652,21 @@
         "ref": "homeBlockPoliciesRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/shift-types/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ShiftTypeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ShiftTypeResponse"
+      }
     },
     {
       "method": "PUT",
@@ -18881,6 +19090,20 @@
       ]
     },
     {
+      "name": "MatchField",
+      "values": [
+        "class",
+        "contact",
+        "email",
+        "enrollment_answer",
+        "group",
+        "name",
+        "parent_note",
+        "phone",
+        "student_note"
+      ]
+    },
+    {
       "name": "PickupStatus",
       "values": [
         "Geht alleine nach Hause",
@@ -18893,6 +19116,13 @@
       "values": [
         "feminine",
         "masculine"
+      ]
+    },
+    {
+      "name": "ShiftTypeRemovalOutcome",
+      "values": [
+        "archived",
+        "deleted"
       ]
     },
     {
@@ -20241,6 +20471,49 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActiveGroupSummary",
+      "go_type": "presence.ActiveGroupSummary",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "location",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -31578,6 +31851,24 @@
       ]
     },
     {
+      "name": "CareOfferingOptionResponse",
+      "go_type": "presenceprojectionhttp.CareOfferingOptionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CareOfferingRequest",
       "go_type": "enrollmenthttp.CareOfferingRequest",
       "request": true,
@@ -38309,6 +38600,97 @@
       ]
     },
     {
+      "name": "CourseWaitlistEntryResponse",
+      "go_type": "careplanhttp.CourseWaitlistEntryResponse",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rank",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CourseWaitlistResponse",
+      "go_type": "careplanhttp.CourseWaitlistResponse",
+      "fields": [
+        {
+          "name": "activity_group_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "participant_limit",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "free_slots",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "slot_free_for_next",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CourseWaitlistEntryResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CoursesResponse",
       "go_type": "parent.CoursesResponse",
       "fields": [
@@ -39140,6 +39522,49 @@
       ]
     },
     {
+      "name": "CurrentActivityItem",
+      "go_type": "presence.CurrentActivityItem",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_capacity",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DailyAttendance",
       "go_type": "traegerview.DailyAttendance",
       "fields": [
@@ -39468,6 +39893,159 @@
           "name": "balance_minutes",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DashboardAnalyticsResponse",
+      "go_type": "presence.DashboardAnalyticsResponse",
+      "fields": [
+        {
+          "name": "students_present",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_in_transit",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_on_playground",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_in_rooms",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_sick",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_excused",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_home",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_at_school",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_in_class",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "active_activities",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "free_rooms",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "total_rooms",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "capacity_utilization",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "activity_categories",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "active_ogs_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_in_group_rooms",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "supervisors_today",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_in_home_room",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "recent_activity",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RecentActivityItem"
+            }
+          }
+        },
+        {
+          "name": "current_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CurrentActivityItem"
+            }
+          }
+        },
+        {
+          "name": "active_groups_summary",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ActiveGroupSummary"
+            }
+          }
+        },
+        {
+          "name": "last_updated",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -42545,6 +43123,65 @@
       ]
     },
     {
+      "name": "EnrollmentAnswerFilterResponse",
+      "go_type": "presenceprojectionhttp.EnrollmentAnswerFilterResponse",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EnrollmentAnswerOptionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentAnswerOptionResponse",
+      "go_type": "presenceprojectionhttp.EnrollmentAnswerOptionResponse",
+      "fields": [
+        {
+          "name": "value",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollmentChangeRequestPendingCountResponse",
       "go_type": "enrollmenthttp.EnrollmentChangeRequestPendingCountResponse",
       "fields": [
@@ -45308,60 +45945,6 @@
             "elem": {
               "kind": "ref",
               "ref": "GapInstance"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Group",
-      "go_type": "grouplive.Group",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "room_id",
-          "optional": true,
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "room_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "via_substitution",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "is_personal",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "leaders",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "string"
             }
           }
         }
@@ -53653,6 +54236,102 @@
       ]
     },
     {
+      "name": "InfoDisplayCreatedResponse",
+      "go_type": "display.InfoDisplayCreatedResponse",
+      "fields": [
+        {
+          "name": "display",
+          "schema": {
+            "kind": "ref",
+            "ref": "InfoDisplayResponse"
+          }
+        },
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InfoDisplayResponse",
+      "go_type": "display.InfoDisplayResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InfoDisplayTokenResponse",
+      "go_type": "display.InfoDisplayTokenResponse",
+      "fields": [
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InfoDisplayWriteRequest",
+      "go_type": "display.InfoDisplayWriteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_active",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "InitiateEmailChangeRequest",
       "go_type": "operator.InitiateEmailChangeRequest",
       "request": true,
@@ -56639,6 +57318,60 @@
           "name": "last_name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NavigationGroup",
+      "go_type": "grouplive.NavigationGroup",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "via_substitution",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_personal",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "leaders",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -66426,7 +67159,7 @@
             "nullable": true,
             "elem": {
               "kind": "ref",
-              "ref": "Group"
+              "ref": "NavigationGroup"
             }
           }
         },
@@ -67712,6 +68445,42 @@
           "name": "remaining_after",
           "schema": {
             "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RecentActivityItem",
+      "go_type": "presence.RecentActivityItem",
+      "fields": [
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "timestamp",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -73765,6 +74534,20 @@
       ]
     },
     {
+      "name": "SchoolSearchRequest",
+      "go_type": "schoolsearchviewhttp.SchoolSearchRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "query",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolSessionRequest",
       "go_type": "traegerportal.SchoolSessionRequest",
       "request": true,
@@ -74472,6 +75255,332 @@
               "kind": "ref",
               "ref": "SupervisorInfoResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchChild",
+      "go_type": "schoolsearchview.SearchChild",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "match",
+          "schema": {
+            "kind": "ref",
+            "ref": "SearchMatch"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchContact",
+      "go_type": "schoolsearchview.SearchContact",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "match",
+          "schema": {
+            "kind": "ref",
+            "ref": "SearchMatch"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SearchContactChild"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchContactChild",
+      "go_type": "schoolsearchview.SearchContactChild",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchGroup",
+      "go_type": "schoolsearchview.SearchGroup",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchMatch",
+      "go_type": "schoolsearchview.SearchMatch",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "enum",
+            "ref": "MatchField"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchResult",
+      "go_type": "schoolsearchview.SearchResult",
+      "fields": [
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SearchChild"
+            }
+          }
+        },
+        {
+          "name": "contacts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SearchContact"
+            }
+          }
+        },
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SearchStaff"
+            }
+          }
+        },
+        {
+          "name": "rooms",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SearchRoom"
+            }
+          }
+        },
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SearchGroup"
+            }
+          }
+        },
+        {
+          "name": "scope",
+          "schema": {
+            "kind": "ref",
+            "ref": "SearchScope"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchRoom",
+      "go_type": "schoolsearchview.SearchRoom",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "building",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchScope",
+      "go_type": "schoolsearchview.SearchScope",
+      "fields": [
+        {
+          "name": "children",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "child_details",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "contacts",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "rooms",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SearchStaff",
+      "go_type": "schoolsearchview.SearchStaff",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -75626,6 +76735,34 @@
       ]
     },
     {
+      "name": "SetAllowanceRequest",
+      "go_type": "absencetypes.SetAllowanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "year",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "entitled_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SetDayRequest",
       "go_type": "mealplan.SetDayRequest",
       "request": true,
@@ -76132,6 +77269,25 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftTypeDeleteResponse",
+      "go_type": "shifttypes.ShiftTypeDeleteResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "outcome",
+          "schema": {
+            "kind": "enum",
+            "ref": "ShiftTypeRemovalOutcome"
           }
         }
       ]

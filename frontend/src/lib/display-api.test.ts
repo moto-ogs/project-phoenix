@@ -9,7 +9,7 @@ import {
   deleteDisplay,
 } from "./display-api";
 import { ApiError } from "./api-error";
-import type { BackendDisplay } from "./display-helpers";
+import type { InfoDisplayResponse } from "./contract/display.generated";
 
 const originalFetch = globalThis.fetch;
 
@@ -29,9 +29,10 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   });
 }
 
-function mkBackendDisplay(id: number): BackendDisplay {
+function mkBackendDisplay(id: number): InfoDisplayResponse {
   return {
-    id,
+    id: String(id),
+    tenant_id: "1",
     name: `Display ${id}`,
     is_active: true,
     created_at: "2026-07-01T08:00:00Z",
@@ -94,10 +95,23 @@ describe("listDisplays", () => {
     ]);
   });
 
-  it("returns an empty list when data is missing", async () => {
-    mockFetch(() => Promise.resolve(jsonResponse({ status: "success" })));
+  it("reads the list from the catalog proxy under /api/display/", async () => {
+    const fetchMock = mockFetch(() =>
+      Promise.resolve(jsonResponse({ status: "success", data: [] })),
+    );
 
     await expect(listDisplays()).resolves.toEqual([]);
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/display/");
+  });
+
+  it("reads the backend's former bare list for one release", async () => {
+    mockFetch(() =>
+      Promise.resolve(jsonResponse({ displays: [mkBackendDisplay(8)] })),
+    );
+
+    const displays = await listDisplays();
+
+    expect(displays.map((display) => display.id)).toEqual(["8"]);
   });
 
   it("throws an ApiError with code and request id on failure", async () => {
@@ -142,6 +156,7 @@ describe("createDisplay", () => {
     const fetchMock = mockFetch(() =>
       Promise.resolve(
         jsonResponse({
+          status: "success",
           data: { display: mkBackendDisplay(3), token: "secret-token" },
         }),
       ),
@@ -152,7 +167,7 @@ describe("createDisplay", () => {
     expect(result.token).toBe("secret-token");
     expect(result.display.id).toBe("3");
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/displays");
+    expect(url).toBe("/api/display/");
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Foyer" });
   });
@@ -161,24 +176,29 @@ describe("createDisplay", () => {
 describe("updateDisplay", () => {
   it("PATCHes only the provided fields with snake_case keys", async () => {
     const fetchMock = mockFetch(() =>
-      Promise.resolve(jsonResponse({ data: { display: mkBackendDisplay(4) } })),
+      Promise.resolve(
+        jsonResponse({ status: "success", data: mkBackendDisplay(4) }),
+      ),
     );
 
     const result = await updateDisplay("4", { isActive: false });
 
     expect(result.id).toBe("4");
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/displays/4");
+    expect(url).toBe("/api/display/4");
     expect(init?.method).toBe("PATCH");
     expect(JSON.parse(init?.body as string)).toEqual({ is_active: false });
   });
 
   it("includes the name when renaming", async () => {
     const fetchMock = mockFetch(() =>
-      Promise.resolve(jsonResponse({ data: { display: mkBackendDisplay(4) } })),
+      Promise.resolve(jsonResponse({ display: mkBackendDisplay(4) })),
     );
 
-    await updateDisplay("4", { name: "Mensa" });
+    // The backend's former bare answer {display} is read for one release.
+    await expect(updateDisplay("4", { name: "Mensa" })).resolves.toMatchObject({
+      id: "4",
+    });
 
     const [, init] = fetchMock.mock.calls[0]!;
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Mensa" });
@@ -188,12 +208,14 @@ describe("updateDisplay", () => {
 describe("regenerateDisplayToken", () => {
   it("POSTs to the regenerate endpoint and returns the new token", async () => {
     const fetchMock = mockFetch(() =>
-      Promise.resolve(jsonResponse({ data: { token: "fresh-token" } })),
+      Promise.resolve(
+        jsonResponse({ status: "success", data: { token: "fresh-token" } }),
+      ),
     );
 
     await expect(regenerateDisplayToken("9")).resolves.toBe("fresh-token");
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/displays/9/regenerate");
+    expect(url).toBe("/api/display/9/regenerate");
     expect(init?.method).toBe("POST");
   });
 });
@@ -201,12 +223,12 @@ describe("regenerateDisplayToken", () => {
 describe("deleteDisplay", () => {
   it("DELETEs the display and resolves on success", async () => {
     const fetchMock = mockFetch(() =>
-      Promise.resolve(new Response(null, { status: 204 })),
+      Promise.resolve(jsonResponse({ status: "success", data: null })),
     );
 
     await expect(deleteDisplay("5")).resolves.toBeUndefined();
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/displays/5");
+    expect(url).toBe("/api/display/5");
     expect(init?.method).toBe("DELETE");
   });
 

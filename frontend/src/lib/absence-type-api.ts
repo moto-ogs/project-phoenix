@@ -177,7 +177,7 @@ class AbsenceTypeService {
     year: number,
   ): Promise<AbsenceTypeAllowanceSummary> {
     const response = await sessionFetch(
-      `/api/staff/absence-types/${absenceTypeId}/allowances/${staffId}?year=${year}`,
+      `/api/absence-types/${absenceTypeId}/allowances/${staffId}?year=${year}`,
     );
     return readAllowance(response);
   }
@@ -227,7 +227,7 @@ class AbsenceTypeService {
     payload: { year: number; entitledDays: number; reason: string },
   ): Promise<AbsenceTypeAllowanceSummary> {
     const response = await sessionFetch(
-      `/api/staff/absence-types/${absenceTypeId}/allowances/${staffId}`,
+      `/api/absence-types/${absenceTypeId}/allowances/${staffId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

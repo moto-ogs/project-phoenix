@@ -53,6 +53,10 @@ func StudentRouteContracts() []common.RouteContract {
 			),
 			Response: statusDayOverviewResponse{},
 		},
+		// The filter options of the child list; their reshaping route files
+		// left in #7563.
+		{Method: "GET", Pattern: "/care-offerings", Portals: tenant, Response: []CareOfferingOptionResponse{}},
+		{Method: "GET", Pattern: "/enrollment-answer-filters", Portals: tenant, Response: []EnrollmentAnswerFilterResponse{}},
 	}
 }
 

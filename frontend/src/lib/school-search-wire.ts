@@ -1,54 +1,24 @@
 import type {
+  SearchMatch,
+  SearchResult,
+} from "~/lib/contract/search.generated";
+import type {
   SchoolSearchMatch,
   SchoolSearchMatchField,
   SchoolSearchResult,
-} from "~/lib/school-search";
+} from "~/lib/school-search-types";
 
-/** The backend's search answer (snake_case, IDs as strings). */
-export interface BackendSchoolSearchResult {
-  children: Array<{
-    id: string;
-    first_name: string;
-    last_name: string;
-    school_class: string;
-    group_name?: string;
-    match: BackendMatch;
-  }>;
-  contacts: Array<{
-    id: string;
-    first_name: string;
-    last_name: string;
-    match: BackendMatch;
-    children: Array<{
-      id: string;
-      first_name: string;
-      last_name: string;
-      school_class: string;
-      relationship_type: string;
-    }>;
-  }>;
-  staff: Array<{ id: string; first_name: string; last_name: string }>;
-  rooms: Array<{ id: string; name: string; building?: string }>;
-  groups: Array<{ id: string; name: string }>;
-  scope?: {
-    children?: boolean;
-    child_details?: boolean;
-    contacts?: boolean;
-    staff?: boolean;
-    rooms?: boolean;
-    groups?: boolean;
-  };
-}
+/**
+ * The backend's search answer, the contract's SearchResult (snake_case, IDs
+ * as strings); it arrives through the portal's catalog proxy (#7563).
+ */
+export type BackendSchoolSearchResult = SearchResult;
 
-interface BackendMatch {
-  field: SchoolSearchMatchField;
-  label?: string;
-  text?: string;
-}
+type BackendMatch = SearchMatch;
 
 function mapMatch(match: BackendMatch): SchoolSearchMatch {
   return {
-    field: match.field,
+    field: match.field as SchoolSearchMatchField,
     ...(match.label ? { label: match.label } : {}),
     ...(match.text ? { text: match.text } : {}),
   };

@@ -40,7 +40,10 @@ type Runtime struct {
 	AnyPermission func(...string) Middleware
 	HasPermission func(context.Context, string) bool
 	ParseID       func(http.ResponseWriter, *http.Request, string, string) (int64, bool)
-	Failure       func(http.ResponseWriter, *http.Request, FailureKind, error, string)
+	// Success writes the shared answer envelope around an admin route's data
+	// (#7563); the public dashboard keeps its bare body for the screens.
+	Success func(http.ResponseWriter, *http.Request, int, any, string)
+	Failure func(http.ResponseWriter, *http.Request, FailureKind, error, string)
 	// FeatureEnabled resolves the opt-in display.enabled toggle for the
 	// current tenant. It fails closed: a resolution error must not open the
 	// admin routes for a tenant that never enabled the feature.
@@ -58,7 +61,7 @@ type Resource struct {
 // NewResource constructs the display API resource.
 func NewResource(displays devicefleet.Capability, runtime Runtime) *Resource {
 	if displays == nil || runtime.Protected == nil || runtime.AnyPermission == nil ||
-		runtime.HasPermission == nil || runtime.ParseID == nil || runtime.Failure == nil ||
+		runtime.HasPermission == nil || runtime.ParseID == nil || runtime.Success == nil || runtime.Failure == nil ||
 		runtime.FeatureEnabled == nil || runtime.Read == "" || runtime.Manage == "" {
 		panic("display HTTP: all dependencies are required")
 	}
@@ -87,11 +90,9 @@ func (rs *Resource) Router() chi.Router {
 		r.With(rs.runtime.AnyPermission(rs.runtime.Read, rs.runtime.Manage), withTx).Get("/", rs.listDisplays)
 		manage := rs.runtime.AnyPermission(rs.runtime.Read, rs.runtime.Manage)
 		r.With(manage, rs.requireManage, withTx).Post("/", rs.createDisplay)
-		r.Route("/{id}", func(r chi.Router) {
-			r.With(manage, rs.requireManage, withTx).Patch("/", rs.updateDisplay)
-			r.With(manage, rs.requireManage, withTx).Post("/regenerate", rs.regenerateToken)
-			r.With(manage, rs.requireManage, withTx).Delete("/", rs.deleteDisplay)
-		})
+		r.With(manage, rs.requireManage, withTx).Patch("/{id}", rs.updateDisplay)
+		r.With(manage, rs.requireManage, withTx).Post("/{id}/regenerate", rs.regenerateToken)
+		r.With(manage, rs.requireManage, withTx).Delete("/{id}", rs.deleteDisplay)
 	})
 
 	return r
@@ -111,9 +112,9 @@ func (rs *Resource) requireManage(next http.Handler) http.Handler {
 	})
 }
 
-// displayView is the wire shape of one screen. It is spelled out here so the
-// owner's value can change without moving the public contract.
-type displayView struct {
+// InfoDisplayResponse is the wire shape of one screen. It is spelled out here
+// so the owner's value can change without moving the public contract.
+type InfoDisplayResponse struct {
 	ID        int64     `json:"id"`
 	TenantID  int64     `json:"tenant_id"`
 	CreatedAt time.Time `json:"created_at"`
@@ -122,8 +123,20 @@ type displayView struct {
 	IsActive  bool      `json:"is_active"`
 }
 
-func newDisplayView(value devicefleet.Display) displayView {
-	return displayView{
+// InfoDisplayCreatedResponse carries a new screen and its raw token, which
+// appears exactly once, in this answer.
+type InfoDisplayCreatedResponse struct {
+	Display InfoDisplayResponse `json:"display"`
+	Token   string              `json:"token"`
+}
+
+// InfoDisplayTokenResponse carries a screen's newly minted raw token.
+type InfoDisplayTokenResponse struct {
+	Token string `json:"token"`
+}
+
+func newDisplayView(value devicefleet.Display) InfoDisplayResponse {
+	return InfoDisplayResponse{
 		ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt,
 		UpdatedAt: value.UpdatedAt, Name: value.Name, IsActive: value.IsActive,
 	}
@@ -193,14 +206,16 @@ func (rs *Resource) listDisplays(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInternal, err, "failed to list displays")
 		return
 	}
-	views := make([]displayView, 0, len(displays))
+	views := make([]InfoDisplayResponse, 0, len(displays))
 	for _, value := range displays {
 		views = append(views, newDisplayView(value))
 	}
-	render.JSON(w, r, map[string]any{"displays": views})
+	rs.runtime.Success(w, r, http.StatusOK, views, "Displays retrieved")
 }
 
-type displayWriteRequest struct {
+// InfoDisplayWriteRequest names or (de)activates a screen; a create needs
+// the name, an update at least one of both.
+type InfoDisplayWriteRequest struct {
 	Name     *string `json:"name"`
 	IsActive *bool   `json:"is_active"`
 }
@@ -209,7 +224,7 @@ func (rs *Resource) createDisplay(w http.ResponseWriter, r *http.Request) {
 	if !rs.featureEnabled(w, r) {
 		return
 	}
-	var req displayWriteRequest
+	var req InfoDisplayWriteRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err, "")
 		return
@@ -225,10 +240,9 @@ func (rs *Resource) createDisplay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.Status(r, http.StatusCreated)
 	// The raw token appears exactly once, in this response. It is never
 	// persisted or logged; the admin UI shows it in a one-time modal.
-	render.JSON(w, r, map[string]any{"display": newDisplayView(created), "token": rawToken})
+	rs.runtime.Success(w, r, http.StatusCreated, InfoDisplayCreatedResponse{Display: newDisplayView(created), Token: rawToken}, "Display created")
 }
 
 func (rs *Resource) updateDisplay(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +254,7 @@ func (rs *Resource) updateDisplay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req displayWriteRequest
+	var req InfoDisplayWriteRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, FailureInvalid, err, "")
 		return
@@ -255,7 +269,7 @@ func (rs *Resource) updateDisplay(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	render.JSON(w, r, map[string]any{"display": newDisplayView(updated)})
+	rs.runtime.Success(w, r, http.StatusOK, newDisplayView(updated), "Display updated")
 }
 
 func (rs *Resource) regenerateToken(w http.ResponseWriter, r *http.Request) {
@@ -273,7 +287,7 @@ func (rs *Resource) regenerateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Same one-time contract as createDisplay.
-	render.JSON(w, r, map[string]any{"token": rawToken})
+	rs.runtime.Success(w, r, http.StatusOK, InfoDisplayTokenResponse{Token: rawToken}, "Display token regenerated")
 }
 
 func (rs *Resource) deleteDisplay(w http.ResponseWriter, r *http.Request) {
@@ -289,7 +303,7 @@ func (rs *Resource) deleteDisplay(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	render.NoContent(w, r)
+	rs.runtime.Success(w, r, http.StatusOK, nil, "Display deleted")
 }
 
 func (rs *Resource) parseDisplayID(w http.ResponseWriter, r *http.Request) (int64, bool) {

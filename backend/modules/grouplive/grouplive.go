@@ -27,7 +27,7 @@ const studentPhotoStoredURLPrefix = "/uploads/student-photos/"
 // Query is the single public capability of the projection.
 type Query interface {
 	LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error)
-	ListGroups(ctx context.Context) ([]Group, error)
+	ListGroups(ctx context.Context) ([]NavigationGroup, error)
 	AtSchoolCounter
 }
 
@@ -77,7 +77,7 @@ func New(deps Dependencies) Query {
 	return &service{deps: deps}
 }
 
-type Group struct {
+type NavigationGroup struct {
 	ID              int64  `json:"id,string"`
 	Name            string `json:"name"`
 	RoomID          *int64 `json:"room_id,string,omitempty"`
@@ -150,7 +150,7 @@ type Transfer struct {
 }
 
 type Projection struct {
-	Groups             []Group               `json:"groups"`
+	Groups             []NavigationGroup     `json:"groups"`
 	GroupID            *int64                `json:"group_id,string,omitempty"`
 	Students           []Student             `json:"students"`
 	RoomStatus         map[string]RoomStatus `json:"room_status"`
@@ -161,7 +161,7 @@ type Projection struct {
 
 func EmptyProjection() *Projection {
 	return &Projection{
-		Groups:             []Group{},
+		Groups:             []NavigationGroup{},
 		Students:           []Student{},
 		RoomStatus:         map[string]RoomStatus{},
 		PickupTimes:        []PickupTime{},
@@ -177,7 +177,7 @@ func emptyTracking() TrackingIndicators {
 type buildState struct {
 	caller     Caller
 	selected   GroupRecord
-	groups     []Group
+	groups     []NavigationGroup
 	students   []RosterStudent
 	studentIDs []int64
 	presence   PresenceSnapshot

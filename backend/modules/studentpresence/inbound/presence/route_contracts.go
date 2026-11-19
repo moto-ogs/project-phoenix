@@ -25,5 +25,7 @@ func RouteContracts() []common.RouteContract {
 		// The ended supervision is read back; a failed read answers null.
 		{Method: "POST", Pattern: "/supervisors/{id}/end", Portals: portals, Response: &SupervisorResponse{}},
 		{Method: "POST", Pattern: "/tracking-indicators", Portals: portals, Request: TrackingIndicatorsRequest{}, Response: TrackingIndicatorsResponse{}},
+		// The dashboard's figures left their reshaping route file in #7563.
+		{Method: "GET", Pattern: "/analytics/dashboard", Portals: portals, Response: DashboardAnalyticsResponse{}},
 	}
 }

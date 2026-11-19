@@ -1,10 +1,12 @@
-// Temporary (#7563): the child routes /api/students and /api/students/{id}
-// keep their BFF files for one release, because an installed app with an
-// older bundle reads the shape those files build. A request that carries this
-// header asks for the contract's shape instead: the files hand it to the
-// catalog proxy. The current client sends it on every call to those two
-// paths. Delete this module together with the two files after the next
-// production deploy; the portal's catch-all then answers both paths.
+// Temporary (#7563): the child routes /api/students and /api/students/{id},
+// the AG waiting lists (/api/students/offering-change-requests/course-
+// waitlists) and the school search (/api/search) keep their BFF files for
+// one release, because an installed app with an older bundle reads the shape
+// those files build. A request that carries this header asks for the
+// contract's shape instead: the files hand it to the catalog proxy. The
+// current client sends it on every call to those paths. Delete this module
+// together with the files after the next production deploy; the portal's
+// catch-all then answers the paths.
 
 export const CONTRACT_WIRE_HEADER = "X-Moto-Wire";
 

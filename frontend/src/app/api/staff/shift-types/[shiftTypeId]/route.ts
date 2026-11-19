@@ -1,3 +1,10 @@
+/**
+ * Temporary (#7563): PUT and DELETE /api/shift-types/{id} are registered in
+ * the contract, and the current client reaches them through the portal's
+ * catalog proxy. An installed bundle of the previous release still calls
+ * this path; it reads the same `data` from this route's envelope. Delete this
+ * file after the next production deploy.
+ */
 import type { NextRequest } from "next/server";
 import { apiDelete } from "~/lib/api-helpers.server";
 import { createDeleteHandler, proxyPut } from "~/lib/route-wrapper.server";
