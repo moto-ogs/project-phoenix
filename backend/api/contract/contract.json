@@ -178,6 +178,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/staff/{id}/absences/{absenceId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/staff/{id}/documents/{documentId}",
       "portals": [
         "tenant"
@@ -192,6 +200,36 @@
       "pattern": "/api/staff/{id}/planned-exit",
       "portals": [
         "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/staff/{id}/target-overrides/{overrideId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/staff/{id}/time-tracking/adjustments/{adjustmentId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/staff/{id}/vacation/opening",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "year",
+          "kind": "int"
+        }
       ],
       "no_data": true
     },
@@ -1670,6 +1708,63 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/absences/pending",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "nullable": true,
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffAbsenceResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/absences/plan-gaps",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AbsencePlanGap"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/absences/requests",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "types",
+          "kind": "string"
+        },
+        {
+          "name": "view",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "absenceRequestResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/dashboard-summary",
       "portals": [
         "tenant"
@@ -1836,6 +1931,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/time-tracking/month-close",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "month",
+          "kind": "int"
+        },
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "nullable": true,
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffMonthBalanceSnapshot"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/time-tracking/month-close/traeger-staff",
       "portals": [
         "tenant"
@@ -1941,6 +2061,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/{id}/absences",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "nullable": true,
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffAbsenceResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/{id}/payroll-number",
       "portals": [
         "tenant"
@@ -2010,6 +2155,45 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/{id}/target-overrides",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffTargetOverride"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/{id}/time-tracking/adjustments",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "nullable": true,
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffBalanceAdjustment"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/{id}/time-tracking/comp-time-preview",
       "portals": [
         "tenant"
@@ -2031,6 +2215,27 @@
       "response": {
         "kind": "ref",
         "ref": "CompTimeBalancePreview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/{id}/time-tracking/history",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HistoryResponse"
       }
     },
     {
@@ -2104,6 +2309,23 @@
           "kind": "ref",
           "ref": "TraegerProofResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/{id}/vacation/quota",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "VacationQuotaSummary"
       }
     },
     {
@@ -7631,6 +7853,62 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/staff/absences/{absenceId}/approve",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "VacationDecisionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffAbsenceResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/absences/{absenceId}/deny",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "VacationDecisionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffAbsenceResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/absences/{absenceId}/plan-sync",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "absencePlanSyncResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/absences/{absenceId}/question",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "VacationDecisionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffAbsenceResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/staff/qualification-types",
       "portals": [
         "tenant"
@@ -7657,6 +7935,21 @@
       "response": {
         "kind": "ref",
         "ref": "ExportTransferResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/time-tracking/month-close",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "monthCloseRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MonthCloseResult"
       }
     },
     {
@@ -7691,6 +7984,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/staff/{id}/absences",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateAbsenceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffAbsenceResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/staff/{id}/absences/rebook",
       "portals": [
         "tenant"
@@ -7717,6 +8025,78 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/staff/{id}/target-overrides",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "targetOverrideRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffTargetOverride"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/{id}/time-tracking/adjustments",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createBalanceAdjustmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffBalanceAdjustment"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/{id}/time-tracking/month-close/reopen",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "monthCloseRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/{id}/time-tracking/opening",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "openingBalanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffBalanceAdjustment"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/{id}/time-tracking/reset",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "resetBalanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffBalanceAdjustment"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/staff/{id}/time-tracking/sessions",
       "portals": [
         "tenant"
@@ -7728,6 +8108,21 @@
       "response": {
         "kind": "ref",
         "ref": "AdminSessionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/{id}/vacation/opening",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setVacationOpeningRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffVacationOpening"
       }
     },
     {
@@ -11533,6 +11928,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/staff/{id}/vacation/quota",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "VacationQuotaRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "VacationQuotaSummary"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/students/class-arrival-exceptions/{schoolClass}/{date}",
       "portals": [
         "tenant"
@@ -13457,6 +13867,54 @@
           "schema": {
             "kind": "ref",
             "ref": "AbsenceListCounts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AbsencePlanGap",
+      "go_type": "workforce.AbsencePlanGap",
+      "fields": [
+        {
+          "name": "absence_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "absence_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_end",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "open_shifts",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "open_blocks",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -40849,6 +41307,48 @@
       ]
     },
     {
+      "name": "MonthCloseResult",
+      "go_type": "workforce.MonthCloseResult",
+      "fields": [
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "month",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "closed_staff",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_staff",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "snapshots",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "StaffMonthBalanceSnapshot"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "MonthSummary",
       "go_type": "workforce.MonthSummary",
       "fields": [
@@ -55918,6 +56418,78 @@
       ]
     },
     {
+      "name": "StaffBalanceAdjustment",
+      "go_type": "workforce.StaffBalanceAdjustment",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "minutes_delta",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "effective_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "decided_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffExcusedRequestResponse",
       "go_type": "requestreview.StaffExcusedRequestResponse",
       "fields": [
@@ -56238,6 +56810,136 @@
       ]
     },
     {
+      "name": "StaffMonthBalanceSnapshot",
+      "go_type": "workforce.StaffMonthBalanceSnapshot",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "month",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "closing_balance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "carry_in_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "adjustment_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "closed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "closed_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "close_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reopened_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reopened_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reopen_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffPoolAssignmentResponse",
       "go_type": "timetablehttp.StaffPoolAssignmentResponse",
       "fields": [
@@ -56424,6 +57126,66 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffTargetOverride",
+      "go_type": "workforce.StaffTargetOverride",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "daily_minutes",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday_minutes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "created_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "kept_by_traeger",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -65291,6 +66053,55 @@
       ]
     },
     {
+      "name": "VacationDecisionRequest",
+      "go_type": "workforce.VacationDecisionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "decision_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "VacationQuotaRequest",
+      "go_type": "timetracking.VacationQuotaRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "year",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "entitled_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "carryover_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "VacationQuotaSummary",
       "go_type": "workforce.VacationQuotaSummary",
       "fields": [
@@ -65956,6 +66767,183 @@
           "name": "is_over_weekly_max",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "absencePlanSyncResponse",
+      "go_type": "timetracking.absencePlanSyncResponse",
+      "fields": [
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "absenceRequestResponse",
+      "go_type": "timetracking.absenceRequestResponse",
+      "fields": [
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "absence_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_end",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "end_half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "approved_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "working_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "decision_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "substitute_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "duration_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absence_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "approved_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -68707,6 +69695,41 @@
         },
         {
           "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createBalanceAdjustmentRequest",
+      "go_type": "timetracking.createBalanceAdjustmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "minutes_delta",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -72727,6 +73750,34 @@
       ]
     },
     {
+      "name": "monthCloseRequest",
+      "go_type": "timetracking.monthCloseRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "year",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "month",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "moveStaffRequest",
       "go_type": "timetablehttp.moveStaffRequest",
       "request": true,
@@ -73517,6 +74568,35 @@
       "fields": [
         {
           "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "openingBalanceRequest",
+      "go_type": "timetracking.openingBalanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "balance_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -75797,6 +76877,34 @@
       ]
     },
     {
+      "name": "resetBalanceRequest",
+      "go_type": "timetracking.resetBalanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "carryover_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "resolveConflictBody",
       "go_type": "careplanhttp.resolveConflictBody",
       "request": true,
@@ -76525,6 +77633,35 @@
         },
         {
           "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "setVacationOpeningRequest",
+      "go_type": "timetracking.setVacationOpeningRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "remaining_days",
+          "optional": true,
+          "schema": {
+            "kind": "number",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -78628,6 +79765,46 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "targetOverrideRequest",
+      "go_type": "timetracking.targetOverrideRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "daily_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
           }
         }
       ]

@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
@@ -11,7 +13,6 @@ import (
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
-	"reflect"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
@@ -104,6 +105,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, staffPortalAdminContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -484,5 +486,14 @@ func mealPlanRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/meal-billing-months/", Portals: portals, Response: types.BillingMonths},
 		{Method: "GET", Pattern: "/meal-billing-months/{month}", Portals: portals, Response: types.BillingMonth},
 		{Method: "POST", Pattern: "/meal-billing-months/{month}/release", Portals: portals, Request: types.BillingMonthRelease, Response: types.BillingMonth},
+	}
+}
+
+// staffPortalAdminContractMounts lists the staff portal's administration
+// routes (staff, notices, statistics, groups, users, grade transitions) that
+// left their pass-through route files in the closing round of #2352.
+func staffPortalAdminContractMounts() []contractMount {
+	return []contractMount{
+		{"/api/staff", timeTrackingHTTP.StaffAdminWorkflowRouteContracts()},
 	}
 }
