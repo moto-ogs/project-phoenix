@@ -1264,15 +1264,15 @@ order by Ereignis, Anzahl desc`),
           ...hogql('production', (where) => `
 select
   count() as ${quoted('Schulen mit Checkliste')},
-  countIf(Abgeschlossen = 1) as ${quoted('Abgeschlossen')},
-  countIf(Ausgeblendet = 1 and Abgeschlossen = 0) as ${quoted('Ausgeblendet ohne Abschluss')},
-  round(100 * countIf(Abgeschlossen = 1) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
-  round(100 * countIf(Ausgeblendet = 1 and Abgeschlossen = 0) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
+  countIf(HatAbgeschlossen = 1) as ${quoted('Abgeschlossen')},
+  countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) as ${quoted('Ausgeblendet ohne Abschluss')},
+  round(100 * countIf(HatAbgeschlossen = 1) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
+  round(100 * countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
 from (
   select
     toString(properties.school_id) as Schule_ID,
-    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.completed)}) > 0 as Abgeschlossen,
-    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.dismissed)}) > 0 as Ausgeblendet
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.completed)}) > 0 as HatAbgeschlossen,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.dismissed)}) > 0 as HatAusgeblendet
   from events
   where ${where}
     and event in ${sqlList(Object.values(SETUP_CHECKLIST_EVENTS))}

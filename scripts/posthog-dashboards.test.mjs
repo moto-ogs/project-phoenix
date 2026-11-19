@@ -278,8 +278,9 @@ test('the entry dashboard shows the setup checklist from the server: completed, 
   assert.match(outcome.query.source.query, /'onboarding_setup_checklist_completed'/);
   assert.match(outcome.query.source.query, /'onboarding_setup_checklist_dismissed'/);
   assert.match(outcome.query.source.query, /group by Schule_ID/, 'a rate per school, never per person');
-  assert.match(outcome.query.source.query, /countIf\(Abgeschlossen = 1\)/, 'PostHog requires the UInt8 condition explicitly');
-  assert.match(outcome.query.source.query, /countIf\(Ausgeblendet = 1 and Abgeschlossen = 0\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /countIf\(HatAbgeschlossen = 1\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /countIf\(HatAusgeblendet = 1 and HatAbgeschlossen = 0\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /as HatAbgeschlossen/, 'the inner flag differs from the visible aggregate');
   assert.match(skipped.query.source.query, /'onboarding_setup_checklist_step_skipped'/);
 
   // Every step of the wizard (schoolsetup.StepKeys) has its German name on the tile.
