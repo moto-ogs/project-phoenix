@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/stretchr/testify/require"
@@ -281,4 +282,20 @@ func TestCompanionEntryUnmarshal_AcceptsStringIDs(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(`{"weekdays":["mon"]}`), &entry))
 		require.Zero(t, entry.CompanionStudentID)
 	})
+}
+
+// A child without a name or class is refused with one field error per blank
+// field, also when the value is only spaces (#7563: the BFF route checked it
+// before).
+func TestStudentRequestBind_RefusesBlankNamesAsFieldErrors(t *testing.T) {
+	t.Parallel()
+	req := &careplanhttp.StudentRequest{FirstName: "  ", LastName: "Muster", SchoolClass: ""}
+	var missing validation.Errors
+	require.ErrorAs(t, req.Bind(nil), &missing)
+	require.Len(t, missing, 2)
+	require.Contains(t, missing, "first_name")
+	require.Contains(t, missing, "school_class")
+
+	req = &careplanhttp.StudentRequest{FirstName: "Max", LastName: "Muster", SchoolClass: "1a"}
+	require.NoError(t, req.Bind(nil))
 }

@@ -1,4 +1,11 @@
 // app/api/activities/categories/route.ts
+//
+// Temporary (#7563): the contract registers GET and POST /api/activities/categories, and the
+// current client reads the contract's shape through the catalog proxy. An
+// installed bundle of the previous release reads the shape this file maps.
+// Delete this file after the next production deploy; the portal's catch-all
+// then answers the path.
+import type { ActivityCategoryResponse } from "~/lib/contract/activities.generated";
 import type { NextRequest } from "next/server";
 import { apiGet, apiPost } from "~/lib/api-helpers.server";
 import {
@@ -8,7 +15,6 @@ import {
 import { buildQueryString } from "~/lib/route-wrapper-utils.server";
 import type {
   ActivityCategory,
-  BackendActivityCategory,
   CategoryWriteRequest,
 } from "~/lib/activity-helpers";
 import {
@@ -30,7 +36,7 @@ export const GET = createGetHandler(
   async (request: NextRequest, token: string) => {
     const response = await apiGet<{
       status: string;
-      data: BackendActivityCategory[];
+      data: ActivityCategoryResponse[];
     }>(`/api/activities/categories${buildQueryString(request)}`, token);
 
     // Handle response structure
@@ -50,7 +56,7 @@ export const GET = createGetHandler(
  */
 export const POST = createPostHandler<ActivityCategory, CategoryWriteRequest>(
   async (_request: NextRequest, body: CategoryWriteRequest, token: string) => {
-    const response = await apiPost<{ data: BackendActivityCategory }>(
+    const response = await apiPost<{ data: ActivityCategoryResponse }>(
       "/api/activities/categories",
       token,
       toCategoryWriteBody(body),

@@ -187,13 +187,17 @@ func createDisplayViaAPI(t *testing.T, router http.Handler, adminJWT, name strin
 	rec := doDisplayRequest(t, router, http.MethodPost, "/", adminJWT, map[string]any{"name": name})
 	require.Equal(t, http.StatusCreated, rec.Code, "create display failed: %s", rec.Body.String())
 
-	var created struct {
-		Display struct {
-			ID int64 `json:"id"`
-		} `json:"display"`
-		Token string `json:"token"`
+	// The admin answers carry the shared envelope (#7563).
+	var envelope struct {
+		Data struct {
+			Display struct {
+				ID int64 `json:"id"`
+			} `json:"display"`
+			Token string `json:"token"`
+		} `json:"data"`
 	}
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
+	created := envelope.Data
 	require.NotEmpty(t, created.Token, "create must return the raw token once")
 	return fmt.Sprintf("%d", created.Display.ID), created.Token
 }
@@ -308,10 +312,13 @@ func TestDisplayAdminCRUD(t *testing.T) {
 
 		rec := doDisplayRequest(t, router, http.MethodPost, "/"+id+"/regenerate", adminJWT, nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		var regen struct {
-			Token string `json:"token"`
+		var envelope struct {
+			Data struct {
+				Token string `json:"token"`
+			} `json:"data"`
 		}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &regen))
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
+		regen := envelope.Data
 		require.NotEmpty(t, regen.Token)
 		require.NotEqual(t, oldToken, regen.Token)
 
@@ -325,7 +332,7 @@ func TestDisplayAdminCRUD(t *testing.T) {
 		id, rawToken := createDisplayViaAPI(t, router, adminJWT, "Turnhalle")
 
 		rec := doDisplayRequest(t, router, http.MethodDelete, "/"+id, adminJWT, nil)
-		require.Equal(t, http.StatusNoContent, rec.Code)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 		dashRec := doDashboardRequest(t, router, rawToken)
 		assert.Equal(t, http.StatusNotFound, dashRec.Code)
@@ -743,4 +750,60 @@ func firstClock(clocks []func() time.Time) func() time.Time {
 		return calendar.Now
 	}
 	return clocks[0]
+}
+
+// The display management the staff portal reaches through its catalog proxy
+// (#7563) answers within its registered contract under /api/display, in the
+// shared envelope. The screens' dashboard keeps its bare body.
+func TestDisplayManagementAnswersItsContract(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := newDisplayTestTenant(t, db)
+	router := testpkg.MountedQueryBudgetRouter("/api/display", newDisplayRouter(t, db))
+	account := testpkg.CreateTestAccount(t, db, fmt.Sprintf("display-contract-%d@test.local", tenantID))
+	jwt := displayTestJWT(t, account.ID, tenantID, []string{"display:read", "display:manage"})
+	exec := func(method, path string, body any, status int) []byte {
+		t.Helper()
+		rec := doDisplayRequest(t, router, method, path, jwt, body)
+		require.Equal(t, status, rec.Code, rec.Body.String())
+		return rec.Body.Bytes()
+	}
+	type display struct {
+		ID       int64  `json:"id"`
+		Name     string `json:"name"`
+		IsActive bool   `json:"is_active"`
+	}
+
+	var created struct {
+		Data struct {
+			Display display `json:"display"`
+			Token   string  `json:"token"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(exec(http.MethodPost, "/", map[string]any{"name": "Foyer"}, http.StatusCreated), &created))
+	require.NotEmpty(t, created.Data.Token)
+	path := fmt.Sprintf("/%d", created.Data.Display.ID)
+
+	var listed struct {
+		Data []display `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(exec(http.MethodGet, "/", nil, http.StatusOK), &listed))
+	assert.Equal(t, []display{created.Data.Display}, listed.Data)
+
+	var updated struct {
+		Data display `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(exec(http.MethodPatch, path, map[string]any{"is_active": false}, http.StatusOK), &updated))
+	assert.Equal(t, display{ID: created.Data.Display.ID, Name: "Foyer", IsActive: false}, updated.Data)
+
+	var regenerated struct {
+		Data struct {
+			Token string `json:"token"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(exec(http.MethodPost, path+"/regenerate", nil, http.StatusOK), &regenerated))
+	assert.NotEqual(t, created.Data.Token, regenerated.Data.Token)
+
+	exec(http.MethodDelete, path, nil, http.StatusOK)
+	assert.Equal(t, http.StatusNotFound, doDisplayRequest(t, router, http.MethodPatch, path, jwt, map[string]any{"name": "weg"}).Code)
 }

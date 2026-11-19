@@ -4,8 +4,16 @@ import {
   createGetHandler,
   createPostHandler,
 } from "~/lib/route-wrapper.server";
-import type { BackendRoom } from "~/lib/room-helpers";
+import type { RoomResponse } from "~/lib/contract/rooms.generated";
 import { createLogger } from "~/lib/logger";
+
+/**
+ * Temporary (#7563): GET and POST /api/rooms are registered in the contract,
+ * and the portal's catalog proxy answers them once this file is gone. It
+ * stays one release for an installed app with an older bundle, which reads
+ * the list with numeric room ids and its pagination; the current client
+ * reads both shapes. Delete this file after the next production deploy.
+ */
 
 const logger = createLogger({ component: "RoomsRoute" });
 
@@ -72,32 +80,19 @@ export const GET = createGetHandler(
     try {
       const response = await apiGet<ApiRoomsResponse>(endpoint, token);
 
-      if (!response) {
-        logger.warn("API returned null response for rooms");
-        return NextResponse.json([]);
+      // A failed or malformed answer stays a failure (#7563); an empty list
+      // would read as "this school has no rooms".
+      if (response?.status !== "success" || !Array.isArray(response.data)) {
+        throw new Error("rooms API response has unexpected structure");
       }
 
       logger.debug("rooms API response received");
-
-      if (response.status === "success" && Array.isArray(response.data)) {
-        // The backend format as it is; the service factory maps it.
-        return NextResponse.json({
-          data: response.data,
-          pagination: response.pagination,
-          status: response.status,
-          message: response.message,
-        });
-      }
-
-      logger.warn("rooms API response has unexpected structure");
+      // The backend format as it is; the client maps it.
       return NextResponse.json({
-        data: [],
-        pagination: {
-          current_page: 1,
-          page_size: 50,
-          total_pages: 1,
-          total_records: 0,
-        },
+        data: response.data,
+        pagination: response.pagination,
+        status: response.status,
+        message: response.message,
       });
     } catch (error) {
       logger.warn("rooms fetch failed", {
@@ -108,7 +103,7 @@ export const GET = createGetHandler(
   },
 );
 
-export const POST = createPostHandler<BackendRoom, RoomCreateRequest>(
+export const POST = createPostHandler<RoomResponse, RoomCreateRequest>(
   async (_request: NextRequest, body: RoomCreateRequest, token: string) => {
     // Validate required fields - only name is mandatory
     if (!body.name || body.name.trim() === "") {
@@ -120,6 +115,6 @@ export const POST = createPostHandler<BackendRoom, RoomCreateRequest>(
       throw new Error("Capacity must be greater than 0");
     }
 
-    return apiPost<BackendRoom>("/api/rooms", token, body);
+    return apiPost<RoomResponse>("/api/rooms", token, body);
   },
 );

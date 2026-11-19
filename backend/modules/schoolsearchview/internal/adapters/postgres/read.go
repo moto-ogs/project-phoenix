@@ -322,7 +322,7 @@ const (
 
 // searchArguments are the arguments of a search statement in the order of
 // its parts; contacts are those of its contact part.
-func searchArguments(schoolID int64, text string, scope schoolsearchview.Scope, contacts []any) []any {
+func searchArguments(schoolID int64, text string, scope schoolsearchview.SearchScope, contacts []any) []any {
 	args := []any{
 		scope.ChildDetails, schoolID, // liveCTE
 		scope.ChildDetails, text, scope.Children, schoolsearchview.ChildLimit, // childHitsCTE
@@ -357,10 +357,10 @@ type hitRow struct {
 // empty, else by name and e-mail address, each with every child still at the
 // school; staff, rooms and groups by name. Every list is present and bounded
 // by its limit.
-func (r *Reader) Search(ctx context.Context, text, phoneKey, alternativeKey string, scope schoolsearchview.Scope) (schoolsearchview.Result, error) {
-	result := schoolsearchview.Result{
-		Children: []schoolsearchview.Child{}, Contacts: []schoolsearchview.Contact{},
-		Staff: []schoolsearchview.Staff{}, Rooms: []schoolsearchview.Room{}, Groups: []schoolsearchview.Group{},
+func (r *Reader) Search(ctx context.Context, text, phoneKey, alternativeKey string, scope schoolsearchview.SearchScope) (schoolsearchview.SearchResult, error) {
+	result := schoolsearchview.SearchResult{
+		Children: []schoolsearchview.SearchChild{}, Contacts: []schoolsearchview.SearchContact{},
+		Staff: []schoolsearchview.SearchStaff{}, Rooms: []schoolsearchview.SearchRoom{}, Groups: []schoolsearchview.SearchGroup{},
 	}
 	if !scope.Children && !scope.Contacts && !scope.Staff && !scope.Rooms && !scope.Groups {
 		return result, nil
@@ -384,28 +384,28 @@ func (r *Reader) Search(ctx context.Context, text, phoneKey, alternativeKey stri
 	for _, row := range rows {
 		switch row.Kind {
 		case kindChild:
-			result.Children = append(result.Children, schoolsearchview.Child{
+			result.Children = append(result.Children, schoolsearchview.SearchChild{
 				ID: row.ID, FirstName: row.A, LastName: row.B, SchoolClass: row.C, GroupName: row.D,
-				Match: schoolsearchview.Match{Field: schoolsearchview.MatchField(row.E), Text: row.F},
+				Match: schoolsearchview.SearchMatch{Field: schoolsearchview.MatchField(row.E), Text: row.F},
 			})
 		case kindContact:
 			contactIndex[row.ID] = len(result.Contacts)
-			result.Contacts = append(result.Contacts, schoolsearchview.Contact{
+			result.Contacts = append(result.Contacts, schoolsearchview.SearchContact{
 				ID: row.ID, FirstName: row.A, LastName: row.B,
-				Match:    schoolsearchview.Match{Field: schoolsearchview.MatchField(row.E), Text: row.F},
-				Children: []schoolsearchview.ContactChild{},
+				Match:    schoolsearchview.SearchMatch{Field: schoolsearchview.MatchField(row.E), Text: row.F},
+				Children: []schoolsearchview.SearchContactChild{},
 			})
 		case kindContactChild:
 			i := contactIndex[row.Ref]
-			result.Contacts[i].Children = append(result.Contacts[i].Children, schoolsearchview.ContactChild{
+			result.Contacts[i].Children = append(result.Contacts[i].Children, schoolsearchview.SearchContactChild{
 				ID: row.ID, FirstName: row.A, LastName: row.B, SchoolClass: row.C, RelationshipType: row.D,
 			})
 		case kindStaff:
-			result.Staff = append(result.Staff, schoolsearchview.Staff{ID: row.ID, FirstName: row.A, LastName: row.B})
+			result.Staff = append(result.Staff, schoolsearchview.SearchStaff{ID: row.ID, FirstName: row.A, LastName: row.B})
 		case kindRoom:
-			result.Rooms = append(result.Rooms, schoolsearchview.Room{ID: row.ID, Name: row.A, Building: row.B})
+			result.Rooms = append(result.Rooms, schoolsearchview.SearchRoom{ID: row.ID, Name: row.A, Building: row.B})
 		case kindGroup:
-			result.Groups = append(result.Groups, schoolsearchview.Group{ID: row.ID, Name: row.A})
+			result.Groups = append(result.Groups, schoolsearchview.SearchGroup{ID: row.ID, Name: row.A})
 		}
 	}
 	return result, nil
@@ -422,9 +422,9 @@ type childRow struct {
 
 // ChildrenByID reads the first limit children of ids that are still at the
 // school, in the order of ids, with their OGS group.
-func (r *Reader) ChildrenByID(ctx context.Context, ids []int64, limit int) ([]schoolsearchview.Child, error) {
+func (r *Reader) ChildrenByID(ctx context.Context, ids []int64, limit int) ([]schoolsearchview.SearchChild, error) {
 	if len(ids) == 0 || limit <= 0 {
-		return []schoolsearchview.Child{}, nil
+		return []schoolsearchview.SearchChild{}, nil
 	}
 	db, schoolID, err := r.database(ctx)
 	if err != nil {
@@ -434,9 +434,9 @@ func (r *Reader) ChildrenByID(ctx context.Context, ids []int64, limit int) ([]sc
 	if err := db.NewRaw(childrenByIDSQL, bun.List(ids), schoolID, limit).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("school search view: children by id: %w", err)
 	}
-	out := make([]schoolsearchview.Child, 0, len(rows))
+	out := make([]schoolsearchview.SearchChild, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, schoolsearchview.Child{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass, GroupName: row.GroupName, GroupID: row.GroupID})
+		out = append(out, schoolsearchview.SearchChild{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass, GroupName: row.GroupName, GroupID: row.GroupID})
 	}
 	return out, nil
 }

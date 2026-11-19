@@ -1,8 +1,10 @@
 import { apiErrorFromResponse, type ApiError } from "./api-error";
 // API client for tenant-defined shift types (Schichtarten, #1836).
-// Admin CRUD goes through /api/shift-types (time_tracking:manage); update
-// and delete keep their route under /api/staff/shift-types.
+// Admin CRUD goes through /api/shift-types (time_tracking:manage), served by
+// the portal's catalog proxy; update and delete left /api/staff/shift-types
+// in #7563.
 
+import type { ShiftTypeDeleteResponse } from "./contract/shift-types.generated";
 import { sessionFetch } from "./session-cache";
 import {
   mapShiftType,
@@ -94,7 +96,7 @@ class ShiftTypeService {
     id: string,
     payload: ShiftTypePayload,
   ): Promise<ShiftType> {
-    const response = await sessionFetch(`/api/staff/shift-types/${id}`, {
+    const response = await sessionFetch(`/api/shift-types/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toBackendBody(payload)),
@@ -107,7 +109,7 @@ class ShiftTypeService {
    * archived instead of deleted, so they keep it (#6845).
    */
   async deleteShiftType(id: string): Promise<ShiftTypeRemoval> {
-    const response = await sessionFetch(`/api/staff/shift-types/${id}`, {
+    const response = await sessionFetch(`/api/shift-types/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) {
@@ -115,7 +117,7 @@ class ShiftTypeService {
     }
     if (response.status === 204) return "deleted";
     const json = (await response.json()) as {
-      data?: { outcome?: string } | null;
+      data?: ShiftTypeDeleteResponse | null;
     };
     return json.data?.outcome === "archived" ? "archived" : "deleted";
   }

@@ -1,3 +1,6 @@
+// Temporary (#7563): tests of the route file that serves bundles built
+// before #7563; it answers the contract record with the flat fields those
+// bundles read. Delete this file with the route.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Session } from "next-auth";
 import { NextRequest } from "next/server";
@@ -45,7 +48,10 @@ describe("POST /api/staff/externals", () => {
       data: {
         id: "9007199254740993",
         person_id: "198",
+        started_on: "2026-10-09",
+        ended_on: null,
         is_teacher: false,
+        was_present_today: false,
         is_external: true,
         external_organization: "Musikschule",
         external_account_status: "invitation_pending",
@@ -105,7 +111,10 @@ describe("POST /api/staff/externals", () => {
       data: {
         id: "77",
         person_id: "199",
+        started_on: "2026-10-09",
+        ended_on: null,
         is_teacher: false,
+        was_present_today: false,
         is_external: true,
         external_account_status: "none",
         person: {

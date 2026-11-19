@@ -8,6 +8,7 @@ import type { Teacher, TeacherWithCredentials } from "@/lib/teacher-api";
 import { teacherService } from "@/lib/teacher-api";
 import { displayEmail } from "~/lib/demo-build";
 
+import type { StaffRecordResponse } from "~/lib/contract/staff.generated";
 import { mapTeacherResponse } from "~/lib/teacher-helpers";
 import { staffConcept } from "~/lib/concepts/staff";
 
@@ -336,7 +337,8 @@ export const teachersConfig = defineEntityConfig<Teacher>({
   },
 
   service: {
-    mapResponse: mapTeacherResponse,
+    // The list and the record answer staff records of the contract (#7563).
+    mapResponse: (data) => mapTeacherResponse(data as StaffRecordResponse),
     mapRequest: prepareTeacherForBackend,
 
     // Custom create handler for teacher-specific flow

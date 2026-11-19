@@ -4,8 +4,18 @@ import {
   createPostHandler,
 } from "@/lib/route-wrapper.server";
 import { apiGet, apiPost } from "~/lib/api-helpers.server";
-import type { BackendDevice, Device } from "@/lib/iot-helpers";
+import type { DeviceResponse } from "~/lib/contract/iot.generated";
+import type { Device } from "@/lib/iot-helpers";
 import { mapDeviceResponse } from "@/lib/iot-helpers";
+
+/**
+ * Temporary (#7563): GET and POST /api/iot/ are registered in the contract,
+ * and the portal's catalog proxy answers them once this file is gone. It
+ * stays one release for an installed app with an older bundle, which reads
+ * the list as mapped devices inside a second envelope with pagination; the
+ * current client reads both shapes. The kiosk's device API is not served
+ * here. Delete this file after the next production deploy.
+ */
 
 /**
  * Type definition for paginated response that the database page expects
@@ -25,7 +35,10 @@ export const GET = createGetHandler(
     request: NextRequest,
     token: string,
   ): Promise<PaginatedDevicesResponse> => {
-    const response = await apiGet<{ data: BackendDevice[] }>("/api/iot", token);
+    const response = await apiGet<{ data: DeviceResponse[] }>(
+      "/api/iot",
+      token,
+    );
 
     if (!response?.data || !Array.isArray(response.data)) {
       return {
@@ -39,7 +52,7 @@ export const GET = createGetHandler(
       };
     }
 
-    const mappedDevices = response.data.map((device: BackendDevice) =>
+    const mappedDevices = response.data.map((device: DeviceResponse) =>
       mapDeviceResponse(device),
     );
 
@@ -56,7 +69,7 @@ export const GET = createGetHandler(
 );
 
 export const POST = createPostHandler(async (request, body, token) => {
-  const response = await apiPost<{ data: BackendDevice }>(
+  const response = await apiPost<{ data: DeviceResponse }>(
     "/api/iot",
     token,
     body,

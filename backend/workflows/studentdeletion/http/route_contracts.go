@@ -10,6 +10,8 @@ func StudentRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}/delete-impact", Portals: portals, Response: studentDeleteImpactResponse{}},
 		{Method: "GET", Pattern: "/care-withdrawals/{completionId}/deletion-impact", Portals: portals, Response: studentDeleteImpactResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/purge", Portals: portals, NoData: true},
+		// The body carries the deletion confirmation the preview quoted.
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Request: studentDeleteRequest{}, NoData: true},
 		// The body carries the deletion confirmation.
 		{Method: "DELETE", Pattern: "/care-withdrawals/{completionId}", Portals: portals, Request: studentDeleteRequest{}, NoData: true},
 	}

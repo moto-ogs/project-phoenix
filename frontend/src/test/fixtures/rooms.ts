@@ -1,18 +1,18 @@
-import type { BackendRoom } from "~/lib/room-helpers";
+import type { RoomResponse } from "~/lib/contract/rooms.generated";
 
 let roomIdCounter = 0;
 
 function nextId() {
-  return ++roomIdCounter;
+  return String(++roomIdCounter);
 }
 
 /**
- * Builds a BackendRoom with sensible defaults.
- * Uses the extended BackendRoom type from room-helpers.ts
+ * Builds a room of the contract (`RoomResponse`, as the catalog proxy hands
+ * it on) with sensible defaults.
  */
-export function buildBackendRoom(
-  overrides?: Partial<BackendRoom>,
-): BackendRoom {
+export function buildRoomResponse(
+  overrides?: Partial<RoomResponse>,
+): RoomResponse {
   const id = overrides?.id ?? nextId();
   return {
     id,
@@ -23,6 +23,9 @@ export function buildBackendRoom(
     category: "classroom",
     color: "#FF0000",
     is_occupied: false,
+    student_count: 0,
+    is_system: false,
+    is_open_room: false,
     created_at: "2024-01-15T10:00:00Z",
     updated_at: "2024-01-15T12:00:00Z",
     ...overrides,

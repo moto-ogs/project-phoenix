@@ -50,15 +50,15 @@ func (rs *Resource) createStaff(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case result.TeacherCreationFailed:
 		rs.respond(w, r, http.StatusCreated,
-			buildStaffResponse(access, result.Staff, &person, false, enrichment{}),
+			plainStaffRecord(access, result.Staff, &person, enrichment{}),
 			"Staff member created successfully, but failed to create teacher record")
 	case isTeacher:
 		rs.respond(w, r, http.StatusCreated,
-			buildTeacherResponse(access, result.Staff, &person, *result.Teacher, enrichment{}),
+			buildStaffRecordResponse(access, result.Staff, &person, *result.Teacher, enrichment{}),
 			"Teacher created successfully")
 	default:
 		rs.respond(w, r, http.StatusCreated,
-			buildStaffResponse(access, result.Staff, &person, false, enrichment{}),
+			plainStaffRecord(access, result.Staff, &person, enrichment{}),
 			"Staff member created successfully")
 	}
 }
@@ -137,20 +137,20 @@ func (rs *Resource) resolveUpdateTarget(w http.ResponseWriter, r *http.Request, 
 
 // updateResponseFor maps the teacher-record outcome of the update to the
 // endpoint's historical response/message contract.
-func (rs *Resource) updateResponseFor(ctx context.Context, result UpdateStaffResult, person *Person) (any, string) {
+func (rs *Resource) updateResponseFor(ctx context.Context, result UpdateStaffResult, person *Person) (StaffRecordResponse, string) {
 	access := rs.fieldAccess(ctx)
 	switch result.Action {
 	case TeacherActionUpdated, TeacherActionCreated, TeacherActionExisting:
 		if result.Teacher != nil {
-			return buildTeacherResponse(access, result.Staff, person, *result.Teacher, enrichment{}), "Teacher updated successfully"
+			return buildStaffRecordResponse(access, result.Staff, person, *result.Teacher, enrichment{}), "Teacher updated successfully"
 		}
-		return buildStaffResponse(access, result.Staff, person, false, enrichment{}), "Teacher updated successfully"
+		return plainStaffRecord(access, result.Staff, person, enrichment{}), "Teacher updated successfully"
 	case TeacherActionUpdateFailed:
-		return buildStaffResponse(access, result.Staff, person, false, enrichment{}), "Staff member updated successfully, but failed to update teacher record"
+		return plainStaffRecord(access, result.Staff, person, enrichment{}), "Staff member updated successfully, but failed to update teacher record"
 	case TeacherActionCreateFailed:
-		return buildStaffResponse(access, result.Staff, person, false, enrichment{}), "Staff member updated successfully, but failed to create teacher record"
+		return plainStaffRecord(access, result.Staff, person, enrichment{}), "Staff member updated successfully, but failed to create teacher record"
 	default:
-		return buildStaffResponse(access, result.Staff, person, false, enrichment{}), "Staff member updated successfully"
+		return plainStaffRecord(access, result.Staff, person, enrichment{}), "Staff member updated successfully"
 	}
 }
 

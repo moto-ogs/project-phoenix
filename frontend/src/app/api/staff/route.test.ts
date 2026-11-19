@@ -1,3 +1,7 @@
+// Temporary (#7563): tests of the staff route file that serves bundles built
+// before #7563. The mapping of the record is tested at the client mapper
+// (`lib/staff-api.test.ts`, `lib/teacher-helpers.test.ts`). Delete this file
+// with the route.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, POST } from "./route";
 import {
@@ -6,10 +10,11 @@ import {
   createMockRequest,
   defaultSession,
 } from "~/test/route-test-helpers";
-
-// ============================================================================
-// Mocks (using vi.hoisted for proper hoisting)
-// ============================================================================
+import {
+  backendStaffRecord,
+  legacyStaffFields,
+} from "~/test/staff-record-wire";
+import { ApiResponseError } from "~/lib/api-response-error.server";
 
 const { mockAuth, mockApiGet, mockApiPost } = vi.hoisted(() => ({
   mockAuth: vi.fn<() => Promise<ExtendedSession | null>>(),
@@ -27,393 +32,104 @@ vi.mock("~/lib/api-helpers.server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/api-helpers.server")>()),
   apiGet: mockApiGet,
   apiPost: mockApiPost,
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
 }));
 
-// ============================================================================
-// Test Helpers
-// ============================================================================
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockAuth.mockResolvedValue(defaultSession);
+});
 
-async function parseJsonResponse<T>(response: Response): Promise<T> {
-  return (await response.json()) as T;
-}
+describe("GET /api/staff (temporary)", () => {
+  it("answers the contract record with the flat fields older bundles read", async () => {
+    mockApiGet.mockResolvedValueOnce({
+      status: "success",
+      data: [backendStaffRecord()],
+    });
 
-// ============================================================================
-// Tests
-// ============================================================================
-
-describe("GET /api/staff", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockAuth.mockResolvedValue(defaultSession);
-  });
-
-  it("fetches staff list as array from backend", async () => {
-    const mockStaff = [
-      {
-        id: 1,
-        person_id: 10,
-        staff_notes: "Test note",
-        is_teacher: true,
-        teacher_id: 5,
-        specialization: "Math",
-        role: "Teacher",
-        qualifications: "PhD",
-        person: {
-          id: 10,
-          first_name: "John",
-          last_name: "Doe",
-          email: "john@example.com",
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-        was_present_today: true,
-      },
-    ];
-    mockApiGet.mockResolvedValueOnce(mockStaff);
-
-    const request = createMockRequest("/api/staff");
-    const response = await GET(request, createMockContext());
-
-    expect(mockApiGet).toHaveBeenCalledWith("/api/staff", "test-token");
-    expect(response.status).toBe(200);
-
-    const json = await parseJsonResponse<{
-      data: Array<{ id: string; name: string; firstName: string }>;
-    }>(response);
-    expect(json.data).toHaveLength(1);
-    expect(json.data[0]?.id).toBe("1");
-    expect(json.data[0]?.name).toBe("John Doe");
-    expect(json.data[0]?.firstName).toBe("John");
-  });
-
-  it("fetches staff list with data wrapper from backend", async () => {
-    const mockStaff = {
-      data: [
-        {
-          id: 1,
-          person_id: 10,
-          staff_notes: "Test note",
-          is_teacher: false,
-          specialization: null,
-          role: "Admin",
-          qualifications: null,
-          person: {
-            id: 10,
-            first_name: "Jane",
-            last_name: "Smith",
-            email: "jane@example.com",
-            created_at: "2024-01-01T00:00:00Z",
-            updated_at: "2024-01-01T00:00:00Z",
-          },
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-      ],
-    };
-    mockApiGet.mockResolvedValueOnce(mockStaff);
-
-    const request = createMockRequest("/api/staff");
-    const response = await GET(request, createMockContext());
+    const response = await GET(
+      createMockRequest("/api/staff"),
+      createMockContext(),
+    );
 
     expect(response.status).toBe(200);
-
-    const json = await parseJsonResponse<{
-      data: Array<{ id: string; name: string; role: string | null }>;
-    }>(response);
-    expect(json.data).toHaveLength(1);
-    expect(json.data[0]?.id).toBe("1");
-    expect(json.data[0]?.name).toBe("Jane Smith");
-    expect(json.data[0]?.role).toBe("Admin");
-  });
-
-  it("keeps a bigint person_id as the exact decimal string", async () => {
-    // 2^53 + 1 — not representable as a JS number, so a mapping that ran it
-    // through Number() would hand the edit screen a DIFFERENT person's id.
-    const personID = "9007199254740993";
-    mockApiGet.mockResolvedValueOnce([
-      {
-        id: 1,
-        person_id: personID,
-        is_teacher: false,
-        person: {
-          id: 1,
-          first_name: "Jane",
-          last_name: "Smith",
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
+    const json = (await response.json()) as { data: unknown[] };
+    expect(json.data).toEqual([
+      expect.objectContaining({
+        ...legacyStaffFields,
+        id: "7",
+        person_id: "10",
+        teacher_id: "5",
+        person: expect.objectContaining({ id: "10", account_id: "50" }),
+      }),
     ]);
-
-    const request = createMockRequest("/api/staff");
-    const response = await GET(request, createMockContext());
-
-    const json = await parseJsonResponse<{
-      data: Array<{ person_id: string }>;
-    }>(response);
-    expect(json.data[0]?.person_id).toBe(personID);
   });
 
-  it("keeps a bigint account_id as the exact decimal string", async () => {
-    const accountID = "9007199254740993";
-    mockApiGet.mockResolvedValueOnce([
-      {
-        id: 1,
-        person_id: "1",
-        is_teacher: false,
-        person: {
-          id: 1,
-          first_name: "Jane",
-          last_name: "Smith",
-          account_id: accountID,
-          created_at: "2024-01-01T00:00:00Z",
-          updated_at: "2024-01-01T00:00:00Z",
-        },
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
-    ]);
+  it("forwards only the filters the contract names", async () => {
+    mockApiGet.mockResolvedValueOnce({ status: "success", data: [] });
 
-    const request = createMockRequest("/api/staff");
-    const response = await GET(request, createMockContext());
-
-    const json = await parseJsonResponse<{
-      data: Array<{ account_id: string }>;
-    }>(response);
-    expect(json.data[0]?.account_id).toBe(accountID);
-  });
-
-  it("returns empty array when backend returns null", async () => {
-    mockApiGet.mockResolvedValueOnce(null);
-
-    const request = createMockRequest("/api/staff");
-    const response = await GET(request, createMockContext());
-
-    expect(response.status).toBe(200);
-
-    const json = await parseJsonResponse<{ data: unknown[] }>(response);
-    expect(json.data).toEqual([]);
-  });
-
-  it("forwards query parameters to backend", async () => {
-    mockApiGet.mockResolvedValueOnce([]);
-
-    const request = createMockRequest("/api/staff?is_teacher=true");
-    const response = await GET(request, createMockContext());
+    await GET(
+      createMockRequest(
+        "/api/staff?strict=1&search=x&first_name=Jo&teachers_only=true",
+      ),
+      createMockContext(),
+    );
 
     expect(mockApiGet).toHaveBeenCalledWith(
-      "/api/staff?is_teacher=true",
+      "/api/staff?first_name=Jo&teachers_only=true",
       "test-token",
     );
-    expect(response.status).toBe(200);
   });
 
-  it("handles backend errors gracefully", async () => {
-    mockApiGet.mockRejectedValueOnce(new Error("Backend error"));
+  it("answers 502 when the backend leaves the contract", async () => {
+    mockApiGet.mockResolvedValueOnce({
+      status: "success",
+      data: [{ id: "7" }],
+    });
 
-    const request = createMockRequest("/api/staff");
-    const response = await GET(request, createMockContext());
+    const response = await GET(
+      createMockRequest("/api/staff"),
+      createMockContext(),
+    );
 
-    expect(response.status).toBe(500);
-    const json = await parseJsonResponse<{ detail: string }>(response);
-    expect(json.detail).toBe("Internal Server Error");
-    expect(JSON.stringify(json)).not.toContain("Backend error");
+    expect(response.status).toBe(502);
+  });
+
+  it("keeps a backend error's status", async () => {
+    mockApiGet.mockRejectedValueOnce(
+      new ApiResponseError(
+        403,
+        JSON.stringify({ status: 403, code: "general.forbidden" }),
+        { contentType: "application/problem+json" },
+      ),
+    );
+
+    const response = await GET(
+      createMockRequest("/api/staff"),
+      createMockContext(),
+    );
+
+    expect(response.status).toBe(403);
   });
 });
 
-describe("POST /api/staff", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockAuth.mockResolvedValue(defaultSession);
-  });
-
-  it("creates a new staff member successfully", async () => {
-    const mockCreatedStaff = {
-      id: 1,
-      person_id: 10,
-      staff_notes: "New staff",
-      is_teacher: true,
-      teacher_id: 5,
-      specialization: "Science",
-      role: "Teacher",
-      qualifications: "MSc",
-      person: {
-        id: 10,
-        first_name: "Alice",
-        last_name: "Johnson",
-        email: "alice@example.com",
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
-      created_at: "2024-01-15T10:00:00Z",
-      updated_at: "2024-01-15T10:00:00Z",
-    };
-    mockApiPost.mockResolvedValueOnce(mockCreatedStaff);
-
-    const request = createMockRequest("/api/staff", {
-      method: "POST",
-      body: {
-        person_id: 10,
-        is_teacher: true,
-        specialization: "Science",
-        role: "Teacher",
-        qualifications: "MSc",
-        staff_notes: "New staff",
-      },
-    });
-    const response = await POST(request, createMockContext());
-
-    expect(mockApiPost).toHaveBeenCalledWith(
-      "/api/staff",
-      "test-token",
-      expect.objectContaining({
-        person_id: "10",
-        is_teacher: true,
-        specialization: "Science",
-      }),
-    );
-    expect(response.status).toBe(200);
-
-    const json = await parseJsonResponse<{
-      data: {
-        id: string;
-        name: string;
-        specialization: string | null;
-      };
-    }>(response);
-    expect(json.data.id).toBe("1");
-    expect(json.data.name).toBe("Alice Johnson");
-    expect(json.data.specialization).toBe("Science");
-  });
-
-  it("validates person_id is required", async () => {
-    const request = createMockRequest("/api/staff", {
-      method: "POST",
-      body: { is_teacher: true },
-    });
-    const response = await POST(request, createMockContext());
-
-    expect(response.status).toBe(500);
-  });
-
-  // The provisioned person id is a PostgreSQL bigint and arrives as a decimal
-  // string, so it crosses the client → route hop without passing through a JS
-  // number (#2222). It leaves as a string too — the backend field takes either
-  // form, so the digits never have to fit in a JS number.
-  it("accepts person_id as a decimal string", async () => {
+describe("POST /api/staff (temporary)", () => {
+  it("forwards the body as sent and answers the record with the flat fields", async () => {
     mockApiPost.mockResolvedValueOnce({
-      id: 1,
-      person_id: 10,
-      is_teacher: true,
-      created_at: "2024-01-15T10:00:00Z",
-      updated_at: "2024-01-15T10:00:00Z",
+      status: "success",
+      data: backendStaffRecord(),
     });
+    const body = { person_id: "9007199254740993", staff_notes: " neu " };
 
-    const request = createMockRequest("/api/staff", {
-      method: "POST",
-      body: { person_id: "10", is_teacher: true },
-    });
-    const response = await POST(request, createMockContext());
+    const response = await POST(
+      createMockRequest("/api/staff", { method: "POST", body }),
+      createMockContext(),
+    );
 
     expect(response.status).toBe(200);
-    expect(mockApiPost).toHaveBeenCalledWith(
-      "/api/staff",
-      "test-token",
-      expect.objectContaining({ person_id: "10" }),
+    expect(mockApiPost).toHaveBeenCalledWith("/api/staff", "test-token", body);
+    const json = (await response.json()) as { data: unknown };
+    expect(json.data).toEqual(
+      expect.objectContaining({ ...legacyStaffFields, person_id: "10" }),
     );
-  });
-
-  // The case the string contract exists for: 2^53 + 1 is a valid bigint that a
-  // JS number rounds to 2^53, an id belonging to a different person. Carried as
-  // a string it reaches the backend exactly as sent, so this is a normal
-  // request rather than one the route has to refuse.
-  it("forwards a person_id beyond 2^53 unchanged", async () => {
-    mockApiPost.mockResolvedValueOnce({
-      id: 1,
-      person_id: 10,
-      is_teacher: true,
-      created_at: "2024-01-15T10:00:00Z",
-      updated_at: "2024-01-15T10:00:00Z",
-    });
-
-    const request = createMockRequest("/api/staff", {
-      method: "POST",
-      body: { person_id: "9007199254740993", is_teacher: true }, // 2^53 + 1
-    });
-    const response = await POST(request, createMockContext());
-
-    expect(response.status).toBe(200);
-    expect(mockApiPost).toHaveBeenCalledWith(
-      "/api/staff",
-      "test-token",
-      expect.objectContaining({ person_id: "9007199254740993" }),
-    );
-  });
-
-  it("refuses a person_id that is not a plain positive integer", async () => {
-    const request = createMockRequest("/api/staff", {
-      method: "POST",
-      body: { person_id: "0012", is_teacher: true },
-    });
-    const response = await POST(request, createMockContext());
-
-    expect(response.status).toBe(500);
-    expect(mockApiPost).not.toHaveBeenCalled();
-  });
-
-  it("validates person_id must be positive", async () => {
-    const request = createMockRequest("/api/staff", {
-      method: "POST",
-      body: { person_id: -1, is_teacher: true },
-    });
-    const response = await POST(request, createMockContext());
-
-    expect(response.status).toBe(500);
-  });
-
-  it("normalizes empty strings to empty strings (not undefined)", async () => {
-    const mockCreatedStaff = {
-      id: 1,
-      person_id: 10,
-      staff_notes: "",
-      is_teacher: false,
-      person: {
-        id: 10,
-        first_name: "Bob",
-        last_name: "Wilson",
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-01T00:00:00Z",
-      },
-      created_at: "2024-01-15T10:00:00Z",
-      updated_at: "2024-01-15T10:00:00Z",
-    };
-    mockApiPost.mockResolvedValueOnce(mockCreatedStaff);
-
-    const request = createMockRequest("/api/staff", {
-      method: "POST",
-      body: {
-        person_id: 10,
-        staff_notes: "",
-        specialization: "",
-      },
-    });
-    const response = await POST(request, createMockContext());
-
-    expect(mockApiPost).toHaveBeenCalledWith(
-      "/api/staff",
-      "test-token",
-      expect.objectContaining({
-        person_id: "10",
-        staff_notes: "",
-        specialization: "",
-      }),
-    );
-    expect(response.status).toBe(200);
   });
 });

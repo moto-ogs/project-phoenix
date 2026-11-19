@@ -64,7 +64,7 @@ func (a *activityEnrollments) ActivityGroupIDs(_ context.Context, ids []int64, d
 // so the activities asked for it prove the search reads the root's clock.
 var searchDay = calendar.NewDate(2031, time.June, 2)
 
-var fullScope = schoolsearchview.Scope{Children: true, ChildDetails: true, Contacts: true, Staff: true, Rooms: true, Groups: true}
+var fullScope = schoolsearchview.SearchScope{Children: true, ChildDetails: true, Contacts: true, Staff: true, Rooms: true, Groups: true}
 
 // owners are the bound ports of one search; a nil port answers nothing.
 type owners struct {
@@ -74,12 +74,12 @@ type owners struct {
 	reader     *schoolsearchview.NoteReader
 }
 
-func search(t *testing.T, db *bun.DB, tenantID int64, answers *answerSearch, text string, scope schoolsearchview.Scope) schoolsearchview.Result {
+func search(t *testing.T, db *bun.DB, tenantID int64, answers *answerSearch, text string, scope schoolsearchview.SearchScope) schoolsearchview.SearchResult {
 	t.Helper()
 	return searchWith(t, db, tenantID, owners{answers: answers}, text, scope)
 }
 
-func searchWith(t *testing.T, db *bun.DB, tenantID int64, ports owners, text string, scope schoolsearchview.Scope) schoolsearchview.Result {
+func searchWith(t *testing.T, db *bun.DB, tenantID int64, ports owners, text string, scope schoolsearchview.SearchScope) schoolsearchview.SearchResult {
 	t.Helper()
 	if ports.answers == nil {
 		ports.answers = &answerSearch{}
@@ -92,7 +92,7 @@ func searchWith(t *testing.T, db *bun.DB, tenantID int64, ports owners, text str
 	}
 	searcher, err := compose.New(ports.answers, ports.notes, ports.activities, func() calendar.Date { return searchDay })
 	require.NoError(t, err)
-	var result schoolsearchview.Result
+	var result schoolsearchview.SearchResult
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, _ bun.Tx) error {
 		result, err = searcher.SearchSchool(ctx, schoolsearchview.Query{Text: text, Scope: scope, Notes: ports.reader})
 		return err
@@ -232,12 +232,12 @@ func TestWithoutContactAccessTheSearchFindsNoContactData(t *testing.T) {
 	testpkg.CreateTestStudentGuardianLink(t, db, child.ID, father.ID, "primary_guardian")
 	addPhone(t, db, tenantID, father.ID, "0221 555123")
 	answers := &answerSearch{matches: []enrollment.StudentAnswerMatch{{StudentID: child.ID, Label: "Seepferdchen", Answer: "Ja"}}}
-	guest := schoolsearchview.Scope{Children: true}
+	guest := schoolsearchview.SearchScope{Children: true}
 
 	byPhone := search(t, db, tenantID, answers, "0221 555123", guest)
-	require.Equal(t, schoolsearchview.Result{
-		Children: []schoolsearchview.Child{}, Contacts: []schoolsearchview.Contact{},
-		Staff: []schoolsearchview.Staff{}, Rooms: []schoolsearchview.Room{}, Groups: []schoolsearchview.Group{},
+	require.Equal(t, schoolsearchview.SearchResult{
+		Children: []schoolsearchview.SearchChild{}, Contacts: []schoolsearchview.SearchContact{},
+		Staff: []schoolsearchview.SearchStaff{}, Rooms: []schoolsearchview.SearchRoom{}, Groups: []schoolsearchview.SearchGroup{},
 		Scope: guest,
 	}, byPhone, "the same empty shape as a number nobody has; the scope is the account's own")
 	byEmail := search(t, db, tenantID, answers, "jens.brueckner", guest)
@@ -263,11 +263,11 @@ func TestChildDetailsFindParentNotesAndRegistrationAnswers(t *testing.T) {
 	notes := search(t, db, tenantID, answers, "oma", fullScope)
 	require.Len(t, notes.Children, 2)
 	require.Equal(t, noted.ID, notes.Children[0].ID)
-	require.Equal(t, schoolsearchview.Match{Field: schoolsearchview.MatchParentNote, Text: "Wird freitags von der Oma abgeholt"}, notes.Children[0].Match)
+	require.Equal(t, schoolsearchview.SearchMatch{Field: schoolsearchview.MatchParentNote, Text: "Wird freitags von der Oma abgeholt"}, notes.Children[0].Match)
 	require.Equal(t, swimmer.ID, notes.Children[1].ID, "the answer hit follows the direct hits")
-	require.Equal(t, schoolsearchview.Match{Field: schoolsearchview.MatchEnrollmentAnswer, Label: "Seepferdchen vorhanden", Text: "Ja"}, notes.Children[1].Match)
+	require.Equal(t, schoolsearchview.SearchMatch{Field: schoolsearchview.MatchEnrollmentAnswer, Label: "Seepferdchen vorhanden", Text: "Ja"}, notes.Children[1].Match)
 
-	restricted := search(t, db, tenantID, answers, "oma", schoolsearchview.Scope{Children: true})
+	restricted := search(t, db, tenantID, answers, "oma", schoolsearchview.SearchScope{Children: true})
 	require.Empty(t, restricted.Children, "parent notes stay behind users:read")
 }
 
@@ -365,7 +365,7 @@ func TestStaffRoomsAndGroupsFollowTheirScope(t *testing.T) {
 	group := testpkg.CreateTestEducationGroup(t, db, "Wiesenthal-Füchse")
 
 	result := search(t, db, tenantID, nil, "wiesenthal", fullScope)
-	require.Equal(t, []schoolsearchview.Staff{{ID: staff.ID, FirstName: "Greta", LastName: "Wiesenthal"}}, result.Staff)
+	require.Equal(t, []schoolsearchview.SearchStaff{{ID: staff.ID, FirstName: "Greta", LastName: "Wiesenthal"}}, result.Staff)
 	require.Len(t, result.Rooms, 1)
 	require.Equal(t, room.ID, result.Rooms[0].ID)
 	require.Len(t, result.Groups, 1)
@@ -381,7 +381,7 @@ func TestStaffRoomsAndGroupsFollowTheirScope(t *testing.T) {
 	require.Len(t, byDigits.Rooms, 1, "digits that read like a phone number still find a room")
 	require.Equal(t, numbered.ID, byDigits.Rooms[0].ID)
 
-	none := search(t, db, tenantID, nil, "wiesenthal", schoolsearchview.Scope{Children: true})
+	none := search(t, db, tenantID, nil, "wiesenthal", schoolsearchview.SearchScope{Children: true})
 	require.Empty(t, none.Staff)
 	require.Empty(t, none.Rooms)
 	require.Empty(t, none.Groups)
@@ -518,7 +518,7 @@ func TestNoteHitsFollowTheDirectHitsBeforeTheAnswers(t *testing.T) {
 	ports.reader = nil
 	require.NotContains(t, func() []int64 {
 		out := []int64{}
-		for _, child := range searchWith(t, db, tenantID, ports, "ausflug", schoolsearchview.Scope{Children: true}).Children {
+		for _, child := range searchWith(t, db, tenantID, ports, "ausflug", schoolsearchview.SearchScope{Children: true}).Children {
 			out = append(out, child.ID)
 		}
 		return out

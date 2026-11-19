@@ -692,8 +692,8 @@ func (p supervisionPlanning) Pickups(ctx context.Context, studentIDs []int64, da
 			PickupTime:  supervisionWallClock(pickup.PickupTime),
 			IsException: pickup.IsException, DayDepartureMode: pickup.DayDepartureMode,
 			Notes: pickup.Notes,
-			DayNotes: owners.CalendarMapSlice(pickup.DayNotes, func(note careplan.NoteData) supervisiondashboard.DayNote {
-				return supervisiondashboard.DayNote{ID: note.ID, Content: note.Content}
+			DayNotes: owners.CalendarMapSlice(pickup.DayNotes, func(note careplan.NoteData) supervisiondashboard.DashboardDayNote {
+				return supervisiondashboard.DashboardDayNote{ID: note.ID, Content: note.Content}
 			}),
 		}
 	}
@@ -720,8 +720,8 @@ func (p supervisionPlanning) Arrivals(ctx context.Context, studentIDs []int64, d
 			ArrivalTime: supervisionWallClock(arrival.ArrivalTime),
 			IsException: arrival.IsException,
 			Notes:       arrival.Notes,
-			DayNotes: owners.CalendarMapSlice(arrival.DayNotes, func(note careplan.ArrivalNoteData) supervisiondashboard.DayNote {
-				return supervisiondashboard.DayNote{ID: note.ID, Content: note.Content}
+			DayNotes: owners.CalendarMapSlice(arrival.DayNotes, func(note careplan.ArrivalNoteData) supervisiondashboard.DashboardDayNote {
+				return supervisiondashboard.DashboardDayNote{ID: note.ID, Content: note.Content}
 			}),
 		}
 	}
@@ -775,7 +775,7 @@ type supervisionTeacherHints struct {
 	hints peopledirectory.SchoolDayHintQuery
 }
 
-func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []int64, date supervisiondashboard.Date) ([]supervisiondashboard.TeacherHint, error) {
+func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []int64, date supervisiondashboard.Date) ([]supervisiondashboard.SupervisionTeacherHint, error) {
 	day, err := calendarpkg.ParseDate(string(date))
 	if err != nil {
 		return nil, err
@@ -784,9 +784,9 @@ func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []
 	if err != nil {
 		return nil, err
 	}
-	result := make([]supervisiondashboard.TeacherHint, 0, len(rows))
+	result := make([]supervisiondashboard.SupervisionTeacherHint, 0, len(rows))
 	for _, hint := range rows {
-		result = append(result, supervisiondashboard.TeacherHint{
+		result = append(result, supervisiondashboard.SupervisionTeacherHint{
 			StudentID: hint.StudentID, Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
 		})
 	}

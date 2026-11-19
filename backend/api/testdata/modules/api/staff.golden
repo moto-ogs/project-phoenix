@@ -18,6 +18,7 @@ GET /api/staff/dashboard-summary -> basis
 GET /api/staff/documents-directory -> personalakte
 GET /api/staff/documents-profile/{id} -> personalakte
 GET /api/staff/financial-profile/{id} -> personalakte
+GET /api/staff/former -> basis
 GET /api/staff/me/qualifications -> basis
 GET /api/staff/qualification-types -> basis
 GET /api/staff/qualifications -> basis

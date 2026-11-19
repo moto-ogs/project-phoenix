@@ -1,25 +1,14 @@
-import { apiGet } from "~/lib/api-helpers.server";
-import { createGetHandler } from "~/lib/route-wrapper.server";
-import type { CareOfferingOption } from "~/lib/student-helpers";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-interface ApiCareOfferingsResponse {
-  data: Array<{ id: number; name: string }>;
-}
+const get = catalogProxy(portalRoutes.tenant, "GET");
 
-/**
- * Active care offerings that count as care, for the "Nach Angebot"
- * selection of the present-children picker (#4571). Readable with
- * users:read; the offering catalog itself stays behind config:read.
- */
-export const GET = createGetHandler(
-  async (_request, token): Promise<CareOfferingOption[]> => {
-    const response = await apiGet<ApiCareOfferingsResponse>(
-      "/api/students/care-offerings",
-      token,
-    );
-    return response.data.map((offering) => ({
-      id: String(offering.id),
-      name: offering.name,
-    }));
-  },
+// Without this literal route, Next selects students/[id], not the portal's
+// catch-all. Delegate with the path that the catch-all would receive.
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, {
+    params: Promise.resolve({ path: ["students", "care-offerings"] }),
+  }),
 );

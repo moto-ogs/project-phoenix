@@ -1,39 +1,41 @@
 // app/api/staff/externals/[id]/invitation/route.ts
+//
+// Temporary (#7563): the contract registers POST
+// /api/staff/externals/{id}/invitation, and the current client reads the
+// contract record. Bundles built before #7563 read the flat fields this file
+// used to build and call this same path, so it answers the contract record
+// with those fields beside it for one production deploy. Delete it after the
+// next production deploy, together with its test; the portal's catch-all then
+// answers the path.
 import type { NextRequest } from "next/server";
-import { apiPost } from "~/lib/api-helpers.server";
-import { bffError } from "~/lib/api-response-error.server";
-import { createPostHandler } from "~/lib/route-wrapper.server";
-import type { ExternalInvitationAccess } from "~/lib/staff-api";
+import { contractWrite } from "~/lib/contract/client.server";
 import {
-  mapBackendStaff,
-  type BackendStaffResponse,
-} from "~/lib/staff-route-mapping";
+  routes,
+  type ExternalInvitationRequest,
+} from "~/lib/contract/staff.generated";
+import { createPostHandler } from "~/lib/route-wrapper.server";
+import { requireNumericParam } from "~/lib/route-wrapper-utils.server";
+import { withLegacyStaffFields } from "~/lib/staff-route-mapping";
 
-interface ExternalInvitationRequest {
-  email: string;
-  access: ExternalInvitationAccess;
-}
-
-const DECIMAL_ID = /^\d+$/;
+const INVITE = routes["POST /api/staff/externals/{id}/invitation"];
 
 /**
  * Handler for POST /api/staff/externals/[id]/invitation
- * Invites an external caregiver who has no account yet (#4573) with the
- * chosen access, `view` or `supervise` (ADR 0091). The id is the
- * staff id as a decimal string; it is forwarded as is, never as a number.
+ * Invites an external caregiver who has no account yet (#4573). The id is
+ * the staff id as a decimal string; anything else answers 400 here, as the
+ * backend would.
  */
 export const POST = createPostHandler<
-  ReturnType<typeof mapBackendStaff>,
+  ReturnType<typeof withLegacyStaffFields>,
   ExternalInvitationRequest
 >(async (_request: NextRequest, body, token, params) => {
-  const id = params.id;
-  if (typeof id !== "string" || !DECIMAL_ID.test(id)) {
-    throw bffError(400, "Invalid staff id");
-  }
-  const response = await apiPost<{ data: BackendStaffResponse }>(
-    `/api/staff/externals/${encodeURIComponent(id)}/invitation`,
+  const id = requireNumericParam(params, "id");
+  const result = await contractWrite(
+    INVITE,
+    `/api/staff/externals/${id}/invitation`,
     token,
-    { email: body.email, access: body.access },
+    body,
   );
-  return mapBackendStaff(response.data);
+  if (!result.ok) throw result.error.cause;
+  return withLegacyStaffFields(result.value.data);
 });

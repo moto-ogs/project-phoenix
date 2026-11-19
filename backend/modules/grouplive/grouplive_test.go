@@ -408,7 +408,7 @@ func TestGetSelectsPersonalGroupFirstInDirectoryOrder(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got.GroupID)
 	assert.Equal(t, zebraGroupID, *got.GroupID, "the default selection prefers a personal group over the first sorted one")
-	assert.Equal(t, []Group{
+	assert.Equal(t, []NavigationGroup{
 		{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), RoomName: "Raum A"},
 		{ID: 2, Name: "Zebra", ViaSubstitution: true, IsPersonal: true},
 	}, got.Groups, "groups keep the directory order and carry rooms, substitution, and personal flags")
@@ -932,7 +932,7 @@ func TestListGroupsToleratesMissingRoomNames(t *testing.T) {
 	got, err := newService(f).ListGroups(context.Background())
 	require.NoError(t, err, "the group list degrades to nameless rooms instead of failing")
 	assert.Equal(t, 0, f.accessCalls, "the group list never resolves student access")
-	assert.Equal(t, []Group{{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), IsPersonal: true}, {ID: 2, Name: "Zebra", IsPersonal: true}}, got)
+	assert.Equal(t, []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), IsPersonal: true}, {ID: 2, Name: "Zebra", IsPersonal: true}}, got)
 
 	empty, err := newService(&fakes{caller: fullCaller}).ListGroups(context.Background())
 	require.NoError(t, err)
@@ -1006,7 +1006,7 @@ func TestLiveGroupDoesNotLoadTheLeadership(t *testing.T) {
 func TestListGroupsSortsWithTheInjectedCollation(t *testing.T) {
 	t.Parallel()
 
-	names := func(groups []Group) []string {
+	names := func(groups []NavigationGroup) []string {
 		result := make([]string, 0, len(groups))
 		for _, group := range groups {
 			result = append(result, group.Name)
@@ -1059,7 +1059,7 @@ func TestProjectionSerializesAllIDsAsStrings(t *testing.T) {
 
 	id := int64(9223372036854775807)
 	projection := Projection{
-		Groups:      []Group{{ID: id, RoomID: &id}},
+		Groups:      []NavigationGroup{{ID: id, RoomID: &id}},
 		GroupID:     &id,
 		Students:    []Student{{ID: id}},
 		RoomStatus:  map[string]RoomStatus{"student": {CurrentRoomID: &id}},
@@ -1124,7 +1124,7 @@ func TestProjectionWireGolden(t *testing.T) {
 
 	since := time.Date(2026, time.August, 21, 6, 30, 0, 0, time.UTC)
 	projection := Projection{
-		Groups:  []Group{{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), RoomName: "Raum A", IsPersonal: true}},
+		Groups:  []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), RoomName: "Raum A", IsPersonal: true}},
 		GroupID: new(appleGroupID),
 		Students: []Student{{
 			ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Location: "Raum A",

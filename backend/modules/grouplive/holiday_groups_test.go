@@ -61,7 +61,7 @@ func holidayGroupService(f *fakes, holiday HolidayGroups) Query {
 	})
 }
 
-func groupIDs(groups []Group) []int64 {
+func groupIDs(groups []NavigationGroup) []int64 {
 	ids := make([]int64, 0, len(groups))
 	for _, group := range groups {
 		ids = append(ids, group.ID)

@@ -92,16 +92,16 @@ func (rs *Resource) parseAndGetActivity(w http.ResponseWriter, r *http.Request) 
 }
 
 // newCategoryResponse converts a category model to a response object
-func newCategoryResponse(category *activityContract.Category) CategoryResponse {
+func newCategoryResponse(category *activityContract.Category) ActivityCategoryResponse {
 	// Handle nil category input
 	if category == nil {
 		slog.Default().Warn("Attempted to create CategoryResponse from nil category")
-		return CategoryResponse{
+		return ActivityCategoryResponse{
 			Name: "Unknown Category", // Provide a safe default
 		}
 	}
 
-	return CategoryResponse{
+	return ActivityCategoryResponse{
 		ID:          category.ID,
 		Name:        category.Name,
 		Description: category.Description,
@@ -134,7 +134,7 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 		EnrollmentCount: enrollmentCount,
 		CreatedAt:       group.CreatedAt,
 		UpdatedAt:       group.UpdatedAt,
-		Schedules:       []ScheduleResponse{},
+		Schedules:       []ActivityScheduleResponse{},
 	}
 
 	// Safely add optional fields with nil checks
@@ -150,7 +150,7 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 
 	// Add schedules if available - with thorough nil checking
 	if group.Schedules != nil {
-		scheduleResponses := make([]ScheduleResponse, 0, len(group.Schedules))
+		scheduleResponses := make([]ActivityScheduleResponse, 0, len(group.Schedules))
 		for _, schedule := range group.Schedules {
 			if schedule == nil {
 				slog.Default().Warn("Nil schedule encountered", slog.Int64("group_id", group.ID))
@@ -171,11 +171,11 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 // =============================================================================
 
 // newScheduleResponse converts a schedule model to a response object.
-func newScheduleResponse(schedule *activityContract.Schedule) ScheduleResponse {
+func newScheduleResponse(schedule *activityContract.Schedule) ActivityScheduleResponse {
 	if schedule == nil {
-		return ScheduleResponse{}
+		return ActivityScheduleResponse{}
 	}
-	return ScheduleResponse{
+	return ActivityScheduleResponse{
 		ID:              schedule.ID,
 		Weekday:         schedule.Weekday,
 		TimeframeID:     schedule.TimeframeID,
@@ -186,11 +186,11 @@ func newScheduleResponse(schedule *activityContract.Schedule) ScheduleResponse {
 }
 
 // newSupervisorResponse converts a supervisor model to a response object with staff details.
-func newSupervisorResponse(supervisor *activityContract.SupervisorPlanned) SupervisorResponse {
+func newSupervisorResponse(supervisor *activityContract.SupervisorPlanned) ActivitySupervisorResponse {
 	if supervisor == nil {
-		return SupervisorResponse{}
+		return ActivitySupervisorResponse{}
 	}
-	resp := SupervisorResponse{
+	resp := ActivitySupervisorResponse{
 		ID:        supervisor.ID,
 		StaffID:   supervisor.StaffID,
 		IsPrimary: supervisor.IsPrimary,

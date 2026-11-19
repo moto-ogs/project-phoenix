@@ -6,7 +6,6 @@ import type {
   CreateInvitationRequest,
   PendingInvitation,
   BackendInvitationValidation,
-  BackendInvitation,
   BackendFormerEmployment,
   FormerEmployment,
 } from "./invitation-helpers";
@@ -14,7 +13,9 @@ import {
   mapFormerEmploymentResponse,
   mapInvitationValidationResponse,
   mapPendingInvitationResponse,
+  toCreateInvitationBody,
 } from "./invitation-helpers";
+import type { SchoolInvitationResponse } from "~/lib/contract/auth-invitations.generated";
 
 const hasDataProperty = <T>(value: unknown): value is { data: T } => {
   return typeof value === "object" && value !== null && "data" in value;
@@ -81,12 +82,13 @@ export async function acceptInvitation(
 export async function createInvitation(
   data: CreateInvitationRequest,
 ): Promise<PendingInvitation> {
-  const response = await transportFetch("/api/invitations", {
+  // The staff portal's catalog proxy serves /auth/invitations (#7563).
+  const response = await transportFetch("/api/auth/invitations", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(toCreateInvitationBody(data)),
     credentials: "include",
   });
 
@@ -97,9 +99,8 @@ export async function createInvitation(
     );
   }
 
-  const raw = (await response.json()) as unknown;
-  const invitationData = extractData<BackendInvitation>(raw);
-  return mapPendingInvitationResponse(invitationData);
+  const json = (await response.json()) as { data: SchoolInvitationResponse };
+  return mapPendingInvitationResponse(json.data);
 }
 
 /**
@@ -137,7 +138,7 @@ export async function findFormerEmployment(
 }
 
 export async function listPendingInvitations(): Promise<PendingInvitation[]> {
-  const response = await transportFetch("/api/invitations", {
+  const response = await transportFetch("/api/auth/invitations", {
     credentials: "include",
   });
   if (!response.ok) {
@@ -146,19 +147,18 @@ export async function listPendingInvitations(): Promise<PendingInvitation[]> {
       "Offene Einladungen konnten nicht geladen werden.",
     );
   }
-  const raw = (await response.json()) as unknown;
-  const extracted = extractData<BackendInvitation[] | BackendInvitation>(raw);
-  if (Array.isArray(extracted)) {
-    return extracted.map(mapPendingInvitationResponse);
-  }
-  return [mapPendingInvitationResponse(extracted)];
+  const json = (await response.json()) as { data: SchoolInvitationResponse[] };
+  return json.data.map(mapPendingInvitationResponse);
 }
 
-export async function resendInvitation(id: number): Promise<void> {
-  const response = await transportFetch(`/api/auth/invitations/${id}/resend`, {
-    method: "POST",
-    credentials: "include",
-  });
+export async function resendInvitation(id: string): Promise<void> {
+  const response = await transportFetch(
+    `/api/auth/invitations/${encodeURIComponent(id)}/resend`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
   if (!response.ok) {
     throw await buildApiError(
       response,
@@ -167,11 +167,14 @@ export async function resendInvitation(id: number): Promise<void> {
   }
 }
 
-export async function revokeInvitation(id: number): Promise<void> {
-  const response = await transportFetch(`/api/auth/invitations/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
+export async function revokeInvitation(id: string): Promise<void> {
+  const response = await transportFetch(
+    `/api/auth/invitations/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    },
+  );
   if (!response.ok) {
     throw await buildApiError(
       response,

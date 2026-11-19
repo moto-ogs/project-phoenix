@@ -113,7 +113,7 @@ func (rs *Resource) mountCategories(r chi.Router, withTx common.Middleware) {
 	// dedicated activities:manage_categories permission instead.
 	r.With(common.RequiresPermission(permissions.ActivitiesManageCategories), withTx).
 		Post("/categories", common.BindAction(
-			func() *CategoryRequest { return &CategoryRequest{} },
+			func() *ActivityCategoryRequest { return &ActivityCategoryRequest{} },
 			http.StatusCreated, rs.createCategory, categoryErrorRenderer, "Category created successfully"))
 	r.With(common.RequiresPermission(permissions.ActivitiesManageCategories), withTx).
 		Put("/categories/{categoryId}", rs.updateCategory)

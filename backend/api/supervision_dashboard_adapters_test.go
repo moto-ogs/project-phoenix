@@ -385,7 +385,7 @@ func TestSupervisionPlanningMapsEffectiveTimes(t *testing.T) {
 	clock := "15:30"
 	assert.Equal(t, map[int64]supervisiondashboard.Pickup{42: {
 		Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma",
-		DayNotes:         []supervisiondashboard.DayNote{{ID: 3, Content: "Klingeln"}},
+		DayNotes:         []supervisiondashboard.DashboardDayNote{{ID: 3, Content: "Klingeln"}},
 		DayDepartureMode: "pickup",
 	}}, pickups, "nil plans are dropped, not projected as empty; a day Abholart marks the row (#3946)")
 
@@ -394,7 +394,7 @@ func TestSupervisionPlanningMapsEffectiveTimes(t *testing.T) {
 	arrivalClock := "11:45"
 	assert.Equal(t, map[int64]supervisiondashboard.Arrival{42: {
 		Date: "2026-08-19", WeekdayName: "Mittwoch", ArrivalTime: &arrivalClock, Notes: "Bus",
-		DayNotes: []supervisiondashboard.DayNote{{ID: 4, Content: "Verspätung"}},
+		DayNotes: []supervisiondashboard.DashboardDayNote{{ID: 4, Content: "Verspätung"}},
 	}}, arrivals)
 
 	_, err = p.Pickups(ctx, nil, "yesterday")

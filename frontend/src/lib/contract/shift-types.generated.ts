@@ -9,7 +9,22 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
+
+export const SHIFT_TYPE_REMOVAL_OUTCOME_VALUES = ["archived", "deleted"] as const;
+export type ShiftTypeRemovalOutcome = (typeof SHIFT_TYPE_REMOVAL_OUTCOME_VALUES)[number];
+
+/** Go: shifttypes.ShiftTypeDeleteResponse */
+export interface ShiftTypeDeleteResponse {
+  id: string;
+  outcome: OpenEnum<ShiftTypeRemovalOutcome>;
+}
+
+export const ShiftTypeDeleteResponseSchema: z.ZodType<ShiftTypeDeleteResponse, unknown> = object<ShiftTypeDeleteResponse>({
+  id: int64StringOrNumber,
+  outcome: str,
+});
 
 /** Go: shifttypes.ShiftTypeUsageResponse */
 export interface ShiftTypeUsageResponse {
@@ -59,6 +74,12 @@ export interface GetShiftTypesQuery {
 }
 
 export const routes = {
+  "DELETE /api/shift-types/{id}": {
+    method: "DELETE",
+    pattern: "/api/shift-types/{id}",
+    portals: ["tenant"],
+    response: success(ShiftTypeDeleteResponseSchema),
+  },
   "GET /api/shift-types/": {
     method: "GET",
     pattern: "/api/shift-types/",
@@ -78,5 +99,12 @@ export const routes = {
     pattern: "/api/shift-types/defaults",
     portals: ["tenant"],
     response: success(z.array(ShiftTypeResponseSchema)),
+  },
+  "PUT /api/shift-types/{id}": {
+    method: "PUT",
+    pattern: "/api/shift-types/{id}",
+    portals: ["tenant"],
+    request: requestBody<ShiftTypeRequest>(),
+    response: success(ShiftTypeResponseSchema),
   },
 } as const;

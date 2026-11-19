@@ -18,9 +18,6 @@ type listStaffFilters struct {
 	lastName     string
 	teachersOnly bool
 	filterByRole string
-	// employment is "former" for the Ehemalige filter (#3403); any other
-	// value lists the current staff.
-	employment string
 }
 
 func parseListStaffFilters(r *http.Request) listStaffFilters {
@@ -29,7 +26,6 @@ func parseListStaffFilters(r *http.Request) listStaffFilters {
 		lastName:     r.URL.Query().Get("last_name"),
 		teachersOnly: r.URL.Query().Get("teachers_only") == "true",
 		filterByRole: r.URL.Query().Get("role"),
-		employment:   r.URL.Query().Get("employment"),
 	}
 }
 
@@ -60,21 +56,11 @@ func (rs *Resource) passesRoleFilter(ctx context.Context, person *Person, role s
 	return rs.runtime.AccountHasRole(ctx, *person.AccountID, role)
 }
 
-// listStaff lists the current staff, or with ?employment=former the former
-// employments (#3403).
-func (rs *Resource) listStaff(w http.ResponseWriter, r *http.Request) {
-	filters := parseListStaffFilters(r)
-	if filters.employment == employmentFormer {
-		rs.listFormerStaff(w, r, filters)
-		return
-	}
-	rs.listCurrentStaff(w, r, filters)
-}
-
-// listCurrentStaff lists the staff directory. Every foreign lookup is
+// listStaff lists the current staff directory. Every foreign lookup is
 // batched, so the response costs a fixed number of round trips regardless of
 // staff count.
-func (rs *Resource) listCurrentStaff(w http.ResponseWriter, r *http.Request, filters listStaffFilters) {
+func (rs *Resource) listStaff(w http.ResponseWriter, r *http.Request) {
+	filters := parseListStaffFilters(r)
 	ctx := r.Context()
 	members, err := rs.membership.ListStaff(ctx, schoolmembership.StaffFilter{})
 	if err != nil {
@@ -95,7 +81,7 @@ func (rs *Resource) listCurrentStaff(w http.ResponseWriter, r *http.Request, fil
 	data := rs.withInvitations(ctx, rs.loadDirectory(ctx, staffIDsOf(members), accountIDsOf(persons)), members, persons)
 	access := rs.fieldAccess(ctx)
 
-	responses := make([]any, 0, len(members))
+	responses := make([]StaffRecordResponse, 0, len(members))
 	for _, staff := range members {
 		person := persons[staff.PersonID]
 		if person == nil {
@@ -192,15 +178,15 @@ func (rs *Resource) getStaff(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if teacher, exists := teachers[staff.ID]; exists {
-			rs.respond(w, r, http.StatusOK, buildTeacherResponse(access, staff, person, teacher, data), "Teacher retrieved successfully")
+			rs.respond(w, r, http.StatusOK, buildStaffRecordResponse(access, staff, person, teacher, data), "Teacher retrieved successfully")
 			return
 		}
 	}
 	if teacher := rs.teacherByStaff(ctx, staff.ID); teacher != nil {
-		rs.respond(w, r, http.StatusOK, buildTeacherResponse(access, staff, person, *teacher, data), "Teacher retrieved successfully")
+		rs.respond(w, r, http.StatusOK, buildStaffRecordResponse(access, staff, person, *teacher, data), "Teacher retrieved successfully")
 		return
 	}
-	rs.respond(w, r, http.StatusOK, buildStaffResponse(access, staff, person, false, data), "Staff member retrieved successfully")
+	rs.respond(w, r, http.StatusOK, plainStaffRecord(access, staff, person, data), "Staff member retrieved successfully")
 }
 
 // getFinancialProfile returns only the identity needed to operate the

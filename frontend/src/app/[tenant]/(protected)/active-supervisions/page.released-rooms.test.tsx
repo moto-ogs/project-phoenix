@@ -2163,7 +2163,7 @@ describe("Aggregate fetcher error contract", () => {
 
   it("throws on aggregate failure for admins too — no silent fallback fan-out (#2096)", async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("/api/active-supervision-dashboard")) {
+      if (url.includes("/api/active/supervision-dashboard")) {
         return Promise.resolve({ ok: false, status: 500 });
       }
       return Promise.reject(new Error(`unexpected: ${url}`));
@@ -2195,7 +2195,7 @@ describe("Aggregate fetcher error contract", () => {
     } as never);
 
     global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("/api/active-supervision-dashboard")) {
+      if (url.includes("/api/active/supervision-dashboard")) {
         return Promise.resolve({ ok: false, status: 500 });
       }
       return Promise.reject(new Error("should not be called"));
@@ -2262,7 +2262,7 @@ describe("Page-load request budget", () => {
     expect(
       vi.mocked(global.fetch).mock.calls.map(([url]) => String(url)),
     ).toEqual([
-      "/api/active-supervision-dashboard?group_id=1",
+      "/api/active/supervision-dashboard?group_id=1",
       "/api/timetable/operations/active-groups/1/roster",
     ]);
   });

@@ -17,12 +17,12 @@ type DeviceResponse struct {
 	DeviceType     string    `json:"device_type"`
 	Name           *string   `json:"name,omitempty"`
 	Status         string    `json:"status"`
-	LastSeen       *wireTime `json:"last_seen,omitempty"`
+	LastSeen       *WireTime `json:"last_seen,omitempty"`
 	RegisteredByID *int64    `json:"registered_by_id,omitempty"`
 	RoomName       *string   `json:"room_name,omitempty"`
 	IsOnline       bool      `json:"is_online"`
-	CreatedAt      wireTime  `json:"created_at"`
-	UpdatedAt      wireTime  `json:"updated_at"`
+	CreatedAt      WireTime  `json:"created_at"`
+	UpdatedAt      WireTime  `json:"updated_at"`
 }
 
 // DeviceCreationResponse represents a device creation response with API key
@@ -105,12 +105,12 @@ func newDeviceResponse(ctx context.Context, svc devicefleet.DeviceOnlineMonitori
 		RegisteredByID: device.RegisteredByID,
 		RoomName:       device.RoomName,
 		IsOnline:       svc.IsDeviceOnline(ctx, device),
-		CreatedAt:      wireTime(device.CreatedAt),
-		UpdatedAt:      wireTime(device.UpdatedAt),
+		CreatedAt:      WireTime(device.CreatedAt),
+		UpdatedAt:      WireTime(device.UpdatedAt),
 	}
 
 	if device.LastSeen != nil {
-		lastSeen := wireTime(*device.LastSeen)
+		lastSeen := WireTime(*device.LastSeen)
 		response.LastSeen = &lastSeen
 	}
 

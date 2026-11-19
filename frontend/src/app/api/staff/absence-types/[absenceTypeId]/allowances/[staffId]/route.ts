@@ -1,3 +1,11 @@
+/**
+ * Temporary (#7563): GET and PUT /api/absence-types/{id}/allowances/{staffId}
+ * are registered in the contract, and the current client reaches them through
+ * the portal's catalog proxy; the backend refuses a read without a year with
+ * 400. An installed bundle of the previous release still calls this path and
+ * reads the same `data` from this route's envelope. Delete this file after
+ * the next production deploy.
+ */
 import type { NextRequest } from "next/server";
 
 import { apiGet } from "~/lib/api-helpers.server";

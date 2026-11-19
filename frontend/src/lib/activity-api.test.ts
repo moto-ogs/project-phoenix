@@ -3,17 +3,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type {
-  BackendActivitySchedule,
-  BackendTimeframe,
   BackendStudentEnrollment,
   Activity,
   UpdateActivityRequest,
 } from "./activity-helpers";
+import { mapActivityResponse } from "./activity-helpers";
 import { buildBackendActivity } from "~/test/fixtures/activities";
-
-const { mockGetServerApiUrl } = vi.hoisted(() => ({
-  mockGetServerApiUrl: vi.fn(() => "http://server:8080"),
-}));
 
 // Mock dependencies
 vi.mock("./session-cache", () => {
@@ -64,58 +59,26 @@ vi.mock("./session-cache", () => {
   };
 });
 
-vi.mock("./api", () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
-
 vi.mock("./auth-api", () => ({
   handleAuthFailure: vi.fn(),
 }));
 
-vi.mock("~/lib/server-api-url", () => ({
-  getServerApiUrl: mockGetServerApiUrl,
-}));
-
 // Import after mocks
 import { getCachedSession } from "./session-cache";
-import api from "./api";
 import * as activityApi from "./activity-api";
 
 const mockedGetSession = vi.mocked(getCachedSession);
-const mockedApiGet = vi.mocked(api.get);
 
 // Sample test data
 const sampleBackendActivity = buildBackendActivity({
-  id: 1,
+  id: "1",
   name: "Basketball AG",
   max_participants: 20,
   is_open: true,
-  category_id: 1,
-  supervisor_id: 10,
+  category_id: "1",
+  supervisor_id: "10",
   enrollment_count: 15,
 });
-
-const sampleBackendSchedule: BackendActivitySchedule = {
-  id: 1,
-  weekday: 1,
-  timeframe_id: 1,
-  activity_group_id: 1,
-  created_at: "2024-01-01T00:00:00Z",
-  updated_at: "2024-01-01T00:00:00Z",
-};
-
-const sampleBackendTimeframe: BackendTimeframe = {
-  id: 1,
-  name: "Morning",
-  start_time: "08:00",
-  end_time: "12:00",
-  description: "Morning slot",
-};
 
 const sampleBackendEnrollment: BackendStudentEnrollment = {
   id: 1,
@@ -128,7 +91,6 @@ const sampleBackendEnrollment: BackendStudentEnrollment = {
 describe("activity-api", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetServerApiUrl.mockReturnValue("http://server:8080");
     // Reset window for browser detection
     vi.stubGlobal("window", undefined);
   });
@@ -155,9 +117,12 @@ describe("activity-api", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]?.name).toBe("Basketball AG");
-      expect(mockGetServerApiUrl).not.toHaveBeenCalled();
+      expect(result[0]?.ag_category_id).toBe("1");
+      expect(result[0]?.created_at).toBeInstanceOf(Date);
     });
 
+    // Temporary (#7563): the previous release's route file answers a paged
+    // object of mapped activities.
     it("handles nested data.data structure in browser context", async () => {
       vi.stubGlobal("window", {});
       mockedGetSession.mockResolvedValueOnce({
@@ -167,13 +132,21 @@ describe("activity-api", () => {
 
       const mockResponse = {
         ok: true,
-        json: async () => ({ data: { data: [sampleBackendActivity] } }),
+        json: async () => ({
+          data: {
+            data: [
+              JSON.parse(
+                JSON.stringify(mapActivityResponse(sampleBackendActivity)),
+              ) as unknown,
+            ],
+          },
+        }),
       };
       vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
 
       const result = await activityApi.fetchActivities();
 
-      expect(result).toHaveLength(1);
+      expect(result).toEqual([mapActivityResponse(sampleBackendActivity)]);
     });
 
     it("handles direct array response in browser context", async () => {
@@ -270,6 +243,25 @@ describe("activity-api", () => {
       const result = await activityApi.updateActivity("1", updateRequest);
 
       expect(result.name).toBe("Updated Activity");
+    });
+
+    it("maps the contract's activity", async () => {
+      vi.stubGlobal("window", {});
+      mockedGetSession.mockResolvedValueOnce({
+        user: { id: "1" },
+        expires: "2099-01-01",
+      });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: sampleBackendActivity }),
+        }),
+      );
+
+      const result = await activityApi.updateActivity("1", updateRequest);
+
+      expect(result).toEqual(mapActivityResponse(sampleBackendActivity));
     });
   });
 
@@ -450,126 +442,6 @@ describe("activity-api", () => {
       const result = await activityApi.getEnrolledStudents("1");
 
       expect(result).toHaveLength(1);
-    });
-  });
-
-  describe("getActivitySchedules", () => {
-    it("fetches schedules in server context", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: [sampleBackendSchedule] },
-      });
-
-      const result = await activityApi.getActivitySchedules("1");
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.weekday).toBe("1");
-    });
-
-    it("returns empty array on error", async () => {
-      mockedApiGet.mockRejectedValueOnce(new Error("Network error"));
-
-      const result = await activityApi.getActivitySchedules("1");
-
-      expect(result).toEqual([]);
-    });
-
-    it("handles direct array response", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: [sampleBackendSchedule],
-      });
-
-      const result = await activityApi.getActivitySchedules("1");
-
-      expect(result).toHaveLength(1);
-    });
-  });
-
-  describe("getActivitySchedule", () => {
-    it("fetches single schedule in server context", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: sampleBackendSchedule },
-      });
-
-      const result = await activityApi.getActivitySchedule("1", "1");
-
-      expect(result?.weekday).toBe("1");
-    });
-
-    it("returns null on error", async () => {
-      mockedApiGet.mockRejectedValueOnce(new Error("Not found"));
-
-      const result = await activityApi.getActivitySchedule("1", "999");
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe("getTimeframes", () => {
-    it("fetches timeframes in server context", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: [sampleBackendTimeframe] },
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.name).toBe("Morning");
-    });
-
-    it("handles direct array response with backend format", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: [sampleBackendTimeframe],
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("handles frontend format timeframes", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const frontendTimeframe = {
-        id: "1",
-        name: "Morning",
-        start_time: "08:00",
-        end_time: "12:00",
-      };
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({ data: [frontendTimeframe] }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.id).toBe("1");
-    });
-
-    it("returns empty array for invalid response", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: null,
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toEqual([]);
-    });
-
-    it("returns empty array for empty array", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: [] },
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toEqual([]);
     });
   });
 });

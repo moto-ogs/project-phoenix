@@ -109,9 +109,6 @@ export default {
     "created_at: new Date(),",
     "updated_at: new Date(),",
   ],
-  "src/app/api/activities/quick-create/route.ts": [
-    "created_at: new Date().toISOString(),",
-  ],
   "src/app/[tenant]/(protected)/time-tracking/page.tsx": [
     "const now = new Date();",
     "const now = new Date();",

@@ -40,6 +40,12 @@ func reviewRouteContracts(decisions DecisionResponses) []common.RouteContract {
 		{Method: "GET", Pattern: "/care-schedule-change-requests/{requestId}", Portals: portals, Response: decisions.CareDetail},
 		{Method: "POST", Pattern: "/offering-change-requests/{requestId}/preview", Portals: portals, Request: PreviewOfferingRequestBody{}, Response: OfferingRequestPreviewResponse{}},
 		{Method: "POST", Pattern: "/offering-change-requests/{requestId}/decide", Portals: portals, Request: DecideOfferingRequestBody{}, Response: offeringDecisionResponse{}},
+		// The AG waiting lists left their reshaping route file in #7563.
+		{
+			Method: "GET", Pattern: "/offering-change-requests/course-waitlists", Portals: portals,
+			Query:    []common.QueryParam{{Name: "activity_group_id", Kind: common.QueryID}},
+			Response: []CourseWaitlistResponse{},
+		},
 		{Method: "POST", Pattern: "/excused-absence-requests/{requestId}/decide", Portals: portals, Request: DecideExcusedRequestBody{}, Response: decisions.ExcusedDecision},
 		{Method: "POST", Pattern: "/change-requests/bulk-approve", Portals: portals, Request: bulkApproveParentRequestsBody{}, Response: parentRequestsApprovedResponse{}},
 		{Method: "POST", Pattern: "/change-requests/conflicts/resolve", Portals: portals, Request: resolveConflictBody{}, Response: parentRequestConflictResolvedResponse{}},

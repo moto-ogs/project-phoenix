@@ -1,14 +1,17 @@
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 // Client API for the info-point display domain (issue #1325).
-// Admin CRUD goes through the session-authenticated Next.js proxy routes
-// under /api/displays; the public dashboard fetch is token-only.
+// Admin CRUD goes through the portal's catalog proxy under /api/display;
+// the public dashboard fetch is token-only.
 
 import type {
-  BackendDisplay,
-  BackendDisplayCreateResponse,
-  InfoDisplay,
-} from "~/lib/display-helpers";
+  InfoDisplayCreatedResponse,
+  InfoDisplayResponse,
+  InfoDisplayTokenResponse,
+  InfoDisplayWriteRequest,
+} from "~/lib/contract/display.generated";
+import type { InfoDisplay } from "~/lib/display-helpers";
 import { mapDisplayResponse } from "~/lib/display-helpers";
+import { dataOrBare } from "~/lib/envelope-or-bare";
 
 // ---------------------------------------------------------------------------
 // Public dashboard payload (mirrors backend services/display DashboardPayload)
@@ -89,13 +92,14 @@ export async function fetchDisplayDashboard(
 // ---------------------------------------------------------------------------
 // Admin CRUD (session-authenticated)
 // ---------------------------------------------------------------------------
+//
+// The management routes go through the portal's catalog proxy under
+// /api/display (#7563), where the backend answers in the shared envelope.
+// Temporary (#7563): for one release a display answer may still arrive in
+// the backend's former bare form ({displays}, {display}); dataOrBare and the
+// two readers below accept both. Read `data` directly afterwards.
 
-interface ApiEnvelope<T> {
-  status?: string;
-  data?: T;
-}
-
-async function parseEnvelope<T>(response: Response): Promise<T> {
+async function readData<T>(response: Response): Promise<T> {
   if (!response.ok) {
     // Code, Feldfehler und Vorgangskennung kommen aus dem Fehlerumschlag.
     throw await apiErrorFromResponse(
@@ -103,16 +107,16 @@ async function parseEnvelope<T>(response: Response): Promise<T> {
       `display request failed (${response.status})`,
     );
   }
-  const envelope = (await response.json()) as ApiEnvelope<T>;
-  return (envelope.data ?? envelope) as T;
+  return dataOrBare<T>(await response.json());
 }
 
 export async function listDisplays(): Promise<InfoDisplay[]> {
-  const response = await transportFetch("/api/displays", { cache: "no-store" });
-  const displays = await parseEnvelope<BackendDisplay[]>(response);
-  // parseEnvelope falls back to the envelope object when `data` is absent
-  // (empty list responses) — only a real array may be mapped.
-  return (Array.isArray(displays) ? displays : []).map(mapDisplayResponse);
+  const response = await transportFetch("/api/display/", { cache: "no-store" });
+  const answer = await readData<
+    InfoDisplayResponse[] | { displays?: InfoDisplayResponse[] } | null
+  >(response);
+  const displays = Array.isArray(answer) ? answer : (answer?.displays ?? []);
+  return displays.map(mapDisplayResponse);
 }
 
 export interface DisplayWithToken {
@@ -121,12 +125,12 @@ export interface DisplayWithToken {
 }
 
 export async function createDisplay(name: string): Promise<DisplayWithToken> {
-  const response = await transportFetch("/api/displays", {
+  const response = await transportFetch("/api/display/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name } satisfies InfoDisplayWriteRequest),
   });
-  const data = await parseEnvelope<BackendDisplayCreateResponse>(response);
+  const data = await readData<InfoDisplayCreatedResponse>(response);
   return { display: mapDisplayResponse(data.display), token: data.token };
 }
 
@@ -134,35 +138,36 @@ export async function updateDisplay(
   id: string,
   changes: { name?: string; isActive?: boolean },
 ): Promise<InfoDisplay> {
+  const body: InfoDisplayWriteRequest = {
+    ...(changes.name !== undefined ? { name: changes.name } : {}),
+    ...(changes.isActive !== undefined ? { is_active: changes.isActive } : {}),
+  };
   const response = await transportFetch(
-    `/api/displays/${encodeURIComponent(id)}`,
+    `/api/display/${encodeURIComponent(id)}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(changes.name !== undefined ? { name: changes.name } : {}),
-        ...(changes.isActive !== undefined
-          ? { is_active: changes.isActive }
-          : {}),
-      }),
+      body: JSON.stringify(body),
     },
   );
-  const data = await parseEnvelope<{ display: BackendDisplay }>(response);
-  return mapDisplayResponse(data.display);
+  const answer = await readData<
+    InfoDisplayResponse | { display: InfoDisplayResponse }
+  >(response);
+  return mapDisplayResponse("display" in answer ? answer.display : answer);
 }
 
 export async function regenerateDisplayToken(id: string): Promise<string> {
   const response = await transportFetch(
-    `/api/displays/${encodeURIComponent(id)}/regenerate`,
+    `/api/display/${encodeURIComponent(id)}/regenerate`,
     { method: "POST" },
   );
-  const data = await parseEnvelope<{ token: string }>(response);
+  const data = await readData<InfoDisplayTokenResponse>(response);
   return data.token;
 }
 
 export async function deleteDisplay(id: string): Promise<void> {
   const response = await transportFetch(
-    `/api/displays/${encodeURIComponent(id)}`,
+    `/api/display/${encodeURIComponent(id)}`,
     {
       method: "DELETE",
     },

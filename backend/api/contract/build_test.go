@@ -218,6 +218,7 @@ func TestBuildRejects(t *testing.T) {
 		"a reader entry nothing uses":               {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Readers: map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsFields}}, "reader contract.ownReader"},
 		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
 		"a day type entry nothing uses":             {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}}, "day type contract.ownDay"},
+		"an instant type entry nothing uses":        {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Instants: []reflect.Type{reflect.TypeFor[stamp]()}}, "instant type contract.stamp"},
 		"an owner's day type without an entry":      {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
 		"a body limit on a route without a body":    {[]Registration{limitWithoutBody}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
 		"a negative body limit":                     {[]Registration{negativeLimit}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
@@ -286,6 +287,21 @@ func TestARootNamedDayTypeTravelsAsADate(t *testing.T) {
 	assert.True(t, fields["optional"].Optional)
 	assert.Equal(t, Schema{Kind: KindDate}, fields["until"].Schema)
 	assert.Equal(t, KindMap, fields["answers"].Schema.Kind, "a day keys a map as its string")
+}
+
+type stampRow struct {
+	At    stamp  `json:"at"`
+	Until *stamp `json:"until,omitempty"`
+}
+
+func TestARootNamedInstantTypeTravelsAsAnInstant(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{get("/api/rows/", stampRow{})}, Options{Identifiers: identifiers, Instants: []reflect.Type{reflect.TypeFor[stamp]()}})
+	require.NoError(t, err)
+	fields := fieldsOf(t, doc, "stampRow")
+	assert.Equal(t, Schema{Kind: KindInstant}, fields["at"].Schema)
+	assert.Equal(t, Schema{Kind: KindInstant}, fields["until"].Schema)
+	assert.True(t, fields["until"].Optional)
 }
 
 func TestARequestTypeNamesWhatGoReads(t *testing.T) {

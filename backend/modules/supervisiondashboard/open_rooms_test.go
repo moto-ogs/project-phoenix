@@ -58,7 +58,7 @@ func openRoomFakes() (*fakes, *[]SessionBlocksQuery) {
 	return f, &asked
 }
 
-func openRoomByName(t *testing.T, projection *Projection, name string) OpenRoom {
+func openRoomByName(t *testing.T, projection *DashboardProjection, name string) OpenRoom {
 	t.Helper()
 	for _, room := range projection.OpenRooms {
 		if room.Name == name {

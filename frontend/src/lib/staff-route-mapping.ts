@@ -1,94 +1,47 @@
-// Wire mapping shared by the /api/staff route handlers.
-import type { RoleForm } from "~/lib/position-title";
-import type { ExternalAccountStatus } from "~/lib/staff-api";
-import type { WireID } from "~/lib/wire-id";
-import { toIdString, toOptionalIdString } from "~/lib/wire-id";
+// Temporary (#7563): the staff route files answer the contract record of
+// /api/staff and, beside it, the flat fields that app bundles built before
+// #7563 read (`name`, `firstName`, `tag_id`, …). The current client reads only
+// the contract record. Delete this file with the route files after the next
+// production deploy; the portal's catalog proxy then answers these paths.
+import type {
+  ExternalStaffResponse,
+  FormerStaffResponse,
+  StaffRecordResponse,
+} from "~/lib/contract/staff.generated";
 
 /**
- * Type definition for staff member response from backend
+ * The contract record with the flat fields older bundles read. The record's
+ * own fields come last, so a field the contract names keeps its contract
+ * value.
  */
-export interface BackendStaffResponse {
-  // Decimal string since #3915 — a staff ID is a bigint and must not be
-  // parsed as a JavaScript number before this mapper sees it.
-  id: WireID;
-  // Decimal string since #2222 — person_id is a bigint the staff screens send
-  // back to identify the person they edit, so it must not pass through a JS
-  // number. A number is still accepted (older server, test fixture).
-  person_id: WireID;
-  staff_notes?: string;
-  is_teacher: boolean;
-  teacher_id?: number;
-  specialization?: string;
-  role?: string;
-  /** Form der Position aus den Stammdaten (`feminine`/`masculine`), fehlt ohne Angabe. */
-  role_form?: RoleForm;
-  qualifications?: string;
-  account_role?: string;
-  person?: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email?: string;
-    avatar?: string;
-    tag_id?: string;
-    account_id?: WireID;
-    created_at: string;
-    updated_at: string;
+export function withLegacyStaffFields<
+  T extends StaffRecordResponse | ExternalStaffResponse,
+>(record: T) {
+  const person = record.person;
+  const firstName = person?.first_name ?? "";
+  const lastName = person?.last_name ?? "";
+  return {
+    name: person ? `${firstName} ${lastName}` : "",
+    firstName,
+    lastName,
+    first_name: firstName,
+    last_name: lastName,
+    email: person?.email ?? null,
+    avatar: person?.avatar ?? null,
+    account_id: person?.account_id,
+    tag_id: person?.tag_id ?? null,
+    staff_id: record.id,
+    ...record,
   };
-  created_at: string;
-  updated_at: string;
-  was_present_today?: boolean;
-  work_status?: string;
-  absence_type?: string;
-  // Externe Betreuungskraft, mit oder ohne Konto (#3823, #4573).
-  is_external?: boolean;
-  external_organization?: string;
-  // Kontostand der externen Kraft (#4573); fehlt bei allen anderen.
-  external_account_status?: ExternalAccountStatus;
-  // Geplanter letzter Arbeitstag (#4809), "YYYY-MM-DD"; nur mit Personalrecht.
-  planned_exit_date?: string;
 }
 
-/**
- * Maps a backend staff response to the frontend representation
- * Always uses staff.id as unique identifier (NEVER teacher_id to avoid duplicates)
- */
-export function mapBackendStaff(staff: BackendStaffResponse) {
+/** A former employment with the camel-case fields older bundles read. */
+export function withLegacyFormerFields(entry: FormerStaffResponse) {
   return {
-    id: toIdString(staff.id),
-    name: staff.person
-      ? `${staff.person.first_name} ${staff.person.last_name}`
-      : "",
-    firstName: staff.person?.first_name ?? "",
-    lastName: staff.person?.last_name ?? "",
-    email: staff.person?.email ?? null,
-    avatar: staff.person?.avatar ?? null,
-    account_id: toOptionalIdString(staff.person?.account_id),
-    specialization: staff.specialization ?? null,
-    role: staff.role ?? null,
-    role_form: staff.role_form ?? null,
-    qualifications: staff.qualifications ?? null,
-    account_role: staff.account_role ?? null,
-    tag_id: staff.person?.tag_id ?? null,
-    staff_notes: staff.staff_notes ?? null,
-    created_at: staff.created_at,
-    updated_at: staff.updated_at,
-    staff_id: toIdString(staff.id),
-    teacher_id: staff.teacher_id ? String(staff.teacher_id) : undefined,
-    // Ob ein Betreuungsprofil (users.teachers) existiert — steuert u. a.,
-    // ob das Position-Feld im Edit-Formular angeboten wird (für Lehrkräfte
-    // gibt es keinen Speicherort dafür).
-    is_teacher: staff.is_teacher,
-    // Decimal string, exactly as it arrived: the edit screens send this id back
-    // to address the person record, and a JS number would round it past 2^53
-    // onto a different person (#2222).
-    person_id: toIdString(staff.person_id),
-    was_present_today: staff.was_present_today,
-    work_status: staff.work_status,
-    absence_type: staff.absence_type,
-    is_external: staff.is_external ?? false,
-    external_organization: staff.external_organization ?? null,
-    external_account_status: staff.external_account_status ?? null,
-    planned_exit_date: staff.planned_exit_date ?? null,
+    firstName: entry.first_name,
+    lastName: entry.last_name,
+    startedOn: entry.started_on,
+    endedOn: entry.ended_on,
+    ...entry,
   };
 }

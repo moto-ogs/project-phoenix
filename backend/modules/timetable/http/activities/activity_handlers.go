@@ -29,7 +29,7 @@ func buildBaseActivityResponse(group *activityContract.Group, enrollmentCount in
 		EnrollmentCount: enrollmentCount,
 		CreatedAt:       group.CreatedAt,
 		UpdatedAt:       group.UpdatedAt,
-		Schedules:       []ScheduleResponse{},
+		Schedules:       []ActivityScheduleResponse{},
 	}
 
 	return response
@@ -50,7 +50,7 @@ func addSupervisorsToResponse(response *ActivityResponse, supervisors []*activit
 	}
 
 	supervisorIDs := make([]int64, 0, len(supervisors))
-	supervisorDetails := make([]SupervisorResponse, 0, len(supervisors))
+	supervisorDetails := make([]ActivitySupervisorResponse, 0, len(supervisors))
 
 	for _, supervisor := range supervisors {
 		if supervisor != nil {
@@ -74,7 +74,7 @@ func addSchedulesToResponse(response *ActivityResponse, schedules []*activityCon
 		return
 	}
 
-	responseSchedules := make([]ScheduleResponse, 0, len(schedules))
+	responseSchedules := make([]ActivityScheduleResponse, 0, len(schedules))
 	for _, schedule := range schedules {
 		if schedule != nil {
 			responseSchedules = append(responseSchedules, newScheduleResponse(schedule))
@@ -89,7 +89,7 @@ func addSchedulesToResponse(response *ActivityResponse, schedules []*activityCon
 // updateGroupFields updates the basic fields of an activity group from a request.
 func updateGroupFields(group *activityContract.Group, req *ActivityRequest) {
 	group.Name = req.Name
-	group.MaxParticipants = req.MaxParticipants
+	group.MaxParticipants = participantLimit(req.MaxParticipants)
 	group.IsOpen = req.IsOpen
 	group.CategoryID = req.CategoryID
 	group.PlannedRoomID = req.PlannedRoomID
@@ -248,6 +248,10 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	if err := validateNewActivity(req.Name, req.MaxParticipants); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 
 	// Get current staff ID - required for created_by
 	staffID, _, err := rs.getStaffIDAndManagePermission(r)
@@ -259,7 +263,7 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 	// Create activity group with creator
 	group := &activityContract.Group{
 		Name:            req.Name,
-		MaxParticipants: req.MaxParticipants,
+		MaxParticipants: participantLimit(req.MaxParticipants),
 		IsOpen:          req.IsOpen,
 		CategoryID:      req.CategoryID,
 		PlannedRoomID:   req.PlannedRoomID,
@@ -311,7 +315,7 @@ func (rs *Resource) quickCreateActivity(w http.ResponseWriter, r *http.Request) 
 	// Create activity group with smart defaults and creator
 	group := &activityContract.Group{
 		Name:            req.Name,
-		MaxParticipants: req.MaxParticipants,
+		MaxParticipants: participantLimit(req.MaxParticipants),
 		IsOpen:          true, // Default to true for quick-create
 		CategoryID:      req.CategoryID,
 		PlannedRoomID:   req.RoomID,
@@ -489,7 +493,7 @@ func activityListResponses(groups []*activityContract.Group, enrollmentCounts ma
 
 		// Get supervisors from map (O(1) lookup)
 		if supervisors := supervisorMap[group.ID]; len(supervisors) > 0 {
-			supervisorResponses := make([]SupervisorResponse, 0, len(supervisors))
+			supervisorResponses := make([]ActivitySupervisorResponse, 0, len(supervisors))
 			for _, supervisor := range supervisors {
 				supervisorResponses = append(supervisorResponses, newSupervisorResponse(supervisor))
 			}
@@ -539,7 +543,7 @@ func createdActivityResponse(createdGroup *activityContract.Group) ActivityRespo
 		CreatedAt:       createdGroup.CreatedAt,
 		UpdatedAt:       createdGroup.UpdatedAt,
 		EnrollmentCount: 0,
-		Schedules:       []ScheduleResponse{}, // Always use empty slice, not nil
+		Schedules:       []ActivityScheduleResponse{}, // Always use empty slice, not nil
 	}
 
 	return response

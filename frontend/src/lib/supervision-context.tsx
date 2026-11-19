@@ -31,6 +31,7 @@ import {
   type SupervisedRoom,
   type SupervisionSnapshot,
 } from "~/lib/supervision-derive";
+import type { NavigationGroup } from "~/lib/contract/students.generated";
 import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
 
 const logger = createLogger({ component: "SupervisionContext" });
@@ -257,7 +258,9 @@ export function SupervisionProvider({
     }
 
     try {
-      const response = await fetch("/api/groups/context", {
+      // The navigation's groups come through the portal's catalog proxy
+      // (#7563) as the contract's list in `data`.
+      const response = await fetch("/api/students/ogs-group-navigation", {
         headers: {
           "Content-Type": "application/json",
         },
@@ -267,13 +270,18 @@ export function SupervisionProvider({
 
       if (response.ok) {
         const json = (await response.json()) as {
-          data?: { groups?: NavigationEducationalGroup[] };
+          data?:
+            | NavigationGroup[]
+            | { groups?: NavigationEducationalGroup[] }
+            | null;
           groups?: NavigationEducationalGroup[];
         };
-        // Route wrapper wraps response as { success, data: { groups } }
-        applyCurrent(
-          sortNavigationGroups(json.data?.groups ?? json.groups ?? []),
-        );
+        // Temporary (#7563): the former route's `{ groups }` is still read
+        // for one release; read `data` alone afterwards.
+        const groups = Array.isArray(json.data)
+          ? json.data
+          : (json.data?.groups ?? json.groups ?? []);
+        applyCurrent(sortNavigationGroups(groups));
       } else {
         applyCurrent([], true);
       }

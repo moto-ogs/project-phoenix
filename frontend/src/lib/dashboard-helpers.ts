@@ -1,3 +1,5 @@
+import type { DashboardAnalyticsResponse } from "./contract/active.generated";
+
 // Dashboard Analytics Types
 export interface DashboardAnalytics {
   // Student Overview
@@ -72,57 +74,10 @@ interface ActiveGroupInfo {
   status: "active" | "transitioning" | "preparing";
 }
 
-// Backend response types
-export interface DashboardAnalyticsResponse {
-  students_present: number;
-  students_in_transit: number; // Students present but not in any active visit
-  students_on_playground: number;
-  students_in_rooms: number; // Students in indoor rooms (excluding playground)
-  students_sick: number;
-  students_excused: number;
-  students_home: number;
-  students_at_school?: number;
-  students_in_class?: number;
-  active_activities: number;
-  /**
-   * Still sent by the backend, deliberately not mapped: the "Freie Räume"
-   * StatCard was dropped from the dashboard, and nothing else consumed the
-   * number. Kept here so the wire contract stays documented.
-   */
-  free_rooms: number;
-  total_rooms: number;
-  capacity_utilization: number;
-  activity_categories: number;
-  active_ogs_groups: number;
-  students_in_group_rooms: number;
-  supervisors_today: number;
-  students_in_home_room: number;
-  recent_activity: Array<{
-    type: string;
-    group_name: string;
-    room_name: string;
-    count: number;
-    timestamp: string;
-  }>;
-  current_activities: Array<{
-    id: string;
-    name: string;
-    category: string;
-    participants: number;
-    max_capacity: number | null;
-    status: string;
-  }>;
-  active_groups_summary: Array<{
-    name: string;
-    type: string;
-    student_count: number;
-    max_capacity?: number | null;
-    location: string;
-    status: string;
-  }>;
-  last_updated: string;
-}
-
+// The backend's answer is the contract's DashboardAnalyticsResponse. Its
+// free_rooms is deliberately not mapped: the "Freie Räume" StatCard was
+// dropped from the dashboard, and nothing else consumed the number.
+export type { DashboardAnalyticsResponse } from "./contract/active.generated";
 // Mapping function
 export function mapDashboardAnalyticsResponse(
   data: DashboardAnalyticsResponse,
@@ -145,14 +100,14 @@ export function mapDashboardAnalyticsResponse(
     studentsInGroupRooms: data.students_in_group_rooms,
     supervisorsToday: data.supervisors_today,
     studentsInHomeRoom: data.students_in_home_room,
-    recentActivity: data.recent_activity.map((activity) => ({
+    recentActivity: (data.recent_activity ?? []).map((activity) => ({
       type: activity.type as RecentActivity["type"],
       groupName: activity.group_name,
       roomName: activity.room_name,
       count: activity.count,
       timestamp: new Date(activity.timestamp),
     })),
-    currentActivities: data.current_activities.map((activity) => ({
+    currentActivities: (data.current_activities ?? []).map((activity) => ({
       id: activity.id,
       name: activity.name,
       category: activity.category,
@@ -160,7 +115,7 @@ export function mapDashboardAnalyticsResponse(
       maxCapacity: activity.max_capacity,
       status: activity.status as CurrentActivity["status"],
     })),
-    activeGroupsSummary: data.active_groups_summary.map((group) => ({
+    activeGroupsSummary: (data.active_groups_summary ?? []).map((group) => ({
       name: group.name,
       type: group.type as ActiveGroupInfo["type"],
       studentCount: group.student_count,

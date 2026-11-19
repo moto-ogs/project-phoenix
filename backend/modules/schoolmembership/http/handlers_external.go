@@ -8,9 +8,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 )
 
-// externalStaffResponse is the staff response of the external-caregiver
+// ExternalStaffResponse is the staff response of the external-caregiver
 // writes. InvitationToken is set for the local demo seeder only.
-type externalStaffResponse struct {
+type ExternalStaffResponse struct {
 	StaffResponse
 	InvitationToken string `json:"invitation_token,omitempty"`
 }
@@ -78,7 +78,7 @@ func (rs *Resource) respondExternal(w http.ResponseWriter, r *http.Request, stat
 		rs.internal(w, r, err)
 		return
 	}
-	response := externalStaffResponse{
+	response := ExternalStaffResponse{
 		StaffResponse: buildStaffResponse(rs.fieldAccess(ctx), staff, person, true, enrichment{invitationPending: result.Invited}),
 	}
 	if rs.runtime.ExposeSeedInvitationToken(r) {

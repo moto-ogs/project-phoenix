@@ -1,33 +1,48 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { PendingInvitationsList } from "~/components/admin/pending-invitations-list";
-import type { BackendInvitation } from "~/lib/invitation-helpers";
+import type { SchoolInvitationResponse } from "~/lib/contract/auth-invitations.generated";
 
-const manyInvitations: BackendInvitation[] = [
+// The fields every invitation of the contract carries (#7563).
+const invitationDefaults = {
+  employment_action: "",
+  reset_master_data: false,
+  reset_qualifications: false,
+  reset_work_time: false,
+  delivery_status: "sent",
+  email_retry_count: 0,
+};
+
+const manyInvitations: SchoolInvitationResponse[] = [
   {
-    id: 1,
+    ...invitationDefaults,
+    id: "1",
     email: "neue.lehrkraft@example.com",
     role_id: "2",
     role_name: "teacher",
     expires_at: "2099-01-01T12:00:00Z",
-    created_by: 1,
+    created_by: "1",
     creator: "admin@example.com",
   },
   {
-    id: 2,
+    ...invitationDefaults,
+    id: "2",
     email: "abgelaufen@example.com",
     role_id: "3",
     role_name: "supervisor",
     expires_at: "2020-01-01T12:00:00Z",
-    created_by: 1,
+    created_by: "1",
     first_name: "Erika",
     last_name: "Musterfrau",
   },
 ];
 
-function mockInvitations(invitations: BackendInvitation[], shouldFail = false) {
+function mockInvitations(
+  invitations: SchoolInvitationResponse[],
+  shouldFail = false,
+) {
   return installStorybookFetch(({ url, method }) => {
-    if (!url.includes("/api/invitations")) return undefined;
+    if (!url.includes("/api/auth/invitations")) return undefined;
 
     if (shouldFail) {
       return jsonResponse({ error: "Interner Serverfehler" }, { status: 500 });
@@ -48,7 +63,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Loads via `/api/invitations` on mount — each story stubs `fetch` to simulate the backend response.",
+          "Loads via `/api/auth/invitations` on mount — each story stubs `fetch` to simulate the backend response.",
       },
     },
   },

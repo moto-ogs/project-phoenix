@@ -392,7 +392,7 @@ func postFormerEmployment(resource *Resource, body string) *httptest.ResponseRec
 func TestInvitationEmploymentActionWireContract(t *testing.T) {
 	t.Parallel()
 	for _, action := range []identityaccess.EmploymentAction{"", identityaccess.EmploymentActionResume, identityaccess.EmploymentActionNew, "unknown"} {
-		req := CreateInvitationRequest{Email: "invitee@example.com", RoleID: 42, EmploymentAction: action}
+		req := CreateSchoolInvitationRequest{Email: "invitee@example.com", RoleID: 42, EmploymentAction: action}
 		err := req.Bind(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil))
 		if action == "unknown" {
 			require.Error(t, err)
@@ -417,7 +417,7 @@ func TestInvitationEmploymentActionWireContract(t *testing.T) {
 func TestInvitationResetWireContract(t *testing.T) {
 	t.Parallel()
 	for _, action := range []identityaccess.EmploymentAction{"", identityaccess.EmploymentActionResume, identityaccess.EmploymentActionNew} {
-		req := CreateInvitationRequest{Email: "return@example.test", RoleID: 42, EmploymentAction: action, ResetMasterData: true, ResetQualifications: true, ResetWorkTime: true}
+		req := CreateSchoolInvitationRequest{Email: "return@example.test", RoleID: 42, EmploymentAction: action, ResetMasterData: true, ResetQualifications: true, ResetWorkTime: true}
 		err := req.Bind(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil))
 		if action == identityaccess.EmploymentActionNew {
 			require.Error(t, err)
@@ -439,7 +439,7 @@ func TestInvitationResetWireContract(t *testing.T) {
 func TestInvitationGenderWireContract(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ wire, want string }{{" female ", "female"}, {"male", "male"}, {"diverse", "diverse"}, {"", ""}, {"  ", ""}} {
-		req := CreateInvitationRequest{Email: "invitee@example.com", RoleID: 42, Gender: tc.wire}
+		req := CreateSchoolInvitationRequest{Email: "invitee@example.com", RoleID: 42, Gender: tc.wire}
 		require.NoError(t, req.Bind(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil)))
 		mapped := (&Resource{}).buildInvitationRequest(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil), &req, testutil.DefaultTestClaims())
 		if tc.want == "" {

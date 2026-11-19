@@ -1,11 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type {
-  BackendActivity,
-  BackendActivityCategory,
-  BackendActivitySchedule,
   BackendStudentEnrollment,
-  BackendActivitySupervisor,
-  BackendTimeframe,
   Activity,
   ActivitySupervisor,
 } from "./activity-helpers";
@@ -13,50 +8,57 @@ import {
   formatSupervisorList,
   mapActivityResponse,
   mapActivityCategoryResponse,
-  mapActivityScheduleResponse,
   mapStudentEnrollmentResponse,
   mapStudentEnrollmentsResponse,
   isActivityCreator,
-  mapSupervisorResponse,
-  mapTimeframeResponse,
+  mapSupervisorOption,
+  readActivity,
+  readActivityCategory,
   isSystemActivity,
 } from "./activity-helpers";
+import type {
+  ActivityCategoryResponse,
+  ActivityResponse,
+  ActivitySupervisorResponse,
+} from "./contract/activities.generated";
 
-// Sample data for tests
-const sampleBackendSupervisor: BackendActivitySupervisor = {
-  id: 1,
-  staff_id: 100,
+// Sample data for tests, in the contract's shape
+const sampleBackendSupervisor: ActivitySupervisorResponse = {
+  id: "1",
+  staff_id: "100",
   is_primary: true,
   first_name: "Maria",
   last_name: "Schmidt",
 };
 
-const sampleBackendActivity: BackendActivity = {
-  id: 1,
+const sampleBackendActivity: ActivityResponse = {
+  id: "1",
   name: "Football Club",
   max_participants: 20,
   is_open: true,
-  category_id: 5,
-  planned_room_id: 10,
-  supervisor_id: 100,
+  category_id: "5",
+  planned_room_id: "10",
+  created_by: null,
+  supervisor_id: "100",
   supervisors: [sampleBackendSupervisor],
   enrollment_count: 15,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-15T12:00:00Z",
   category: {
-    id: 5,
+    id: "5",
     name: "Sport",
     description: "Sports activities",
     color: "#0000FF",
+    is_system: false,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
   },
   schedules: [
     {
-      id: 1,
+      id: "1",
       weekday: 1,
-      timeframe_id: 2,
-      activity_group_id: 1,
+      timeframe_id: "2",
+      activity_group_id: "1",
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z",
     },
@@ -145,10 +147,10 @@ describe("mapActivityResponse", () => {
   });
 
   it("falls back to supervisor_id field when no supervisors array", () => {
-    const activityWithoutSupervisors: BackendActivity = {
+    const activityWithoutSupervisors: ActivityResponse = {
       ...sampleBackendActivity,
       supervisors: undefined,
-      supervisor_id: 200,
+      supervisor_id: "200",
     };
 
     const result = mapActivityResponse(activityWithoutSupervisors);
@@ -158,11 +160,11 @@ describe("mapActivityResponse", () => {
   });
 
   it("falls back to supervisor_ids array when no supervisors or supervisor_id", () => {
-    const activityWithIds: BackendActivity = {
+    const activityWithIds: ActivityResponse = {
       ...sampleBackendActivity,
       supervisors: undefined,
       supervisor_id: undefined,
-      supervisor_ids: [300, 301],
+      supervisor_ids: ["300", "301"],
     };
 
     const result = mapActivityResponse(activityWithIds);
@@ -179,7 +181,7 @@ describe("mapActivityResponse", () => {
   });
 
   it("defaults participant_count to 0 when undefined", () => {
-    const activityWithoutCount: BackendActivity = {
+    const activityWithoutCount: ActivityResponse = {
       ...sampleBackendActivity,
       enrollment_count: undefined,
     };
@@ -192,11 +194,12 @@ describe("mapActivityResponse", () => {
 
 describe("mapActivityCategoryResponse", () => {
   it("maps backend category to frontend structure", () => {
-    const backendCategory: BackendActivityCategory = {
-      id: 1,
+    const backendCategory: ActivityCategoryResponse = {
+      id: "1",
       name: "Sport",
       description: "Sports activities",
       color: "#0000FF",
+      is_system: false,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-15T12:00:00Z",
     };
@@ -214,49 +217,104 @@ describe("mapActivityCategoryResponse", () => {
 
   it("maps the optional shift_type_id to a string (#1837 follow-up)", () => {
     const result = mapActivityCategoryResponse({
-      id: 7,
+      id: "7",
       name: "Betreuung",
+      is_system: false,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-15T12:00:00Z",
-      shift_type_id: 42,
+      shift_type_id: "42",
     });
 
     expect(result.shiftTypeId).toBe("42");
   });
 });
 
-describe("mapActivityScheduleResponse", () => {
-  it("maps backend schedule to frontend structure", () => {
-    const backendSchedule: BackendActivitySchedule = {
-      id: 1,
-      weekday: 3,
-      timeframe_id: 5,
-      activity_group_id: 10,
-      created_at: "2024-01-01T00:00:00Z",
-      updated_at: "2024-01-15T12:00:00Z",
-    };
+// The schedules of an activity become its times (formerly pinned through the
+// schedule route files, #7563).
+describe("mapActivityResponse schedules", () => {
+  it("maps a schedule to a time of the activity", () => {
+    const result = mapActivityResponse({
+      ...sampleBackendActivity,
+      schedules: [
+        {
+          id: "1",
+          weekday: 3,
+          timeframe_id: "5",
+          activity_group_id: "10",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-15T12:00:00Z",
+        },
+      ],
+    });
 
-    const result = mapActivityScheduleResponse(backendSchedule);
-
-    expect(result.id).toBe("1");
-    expect(result.weekday).toBe("3");
-    expect(result.timeframe_id).toBe("5");
-    expect(result.activity_id).toBe("10"); // activity_group_id → activity_id
-    expect(result.created_at).toBeInstanceOf(Date);
+    const time = result.times?.[0];
+    expect(time?.id).toBe("1");
+    expect(time?.weekday).toBe("3");
+    expect(time?.timeframe_id).toBe("5");
+    expect(time?.activity_id).toBe("10"); // activity_group_id → activity_id
+    expect(time?.created_at).toBeInstanceOf(Date);
   });
 
   it("handles missing timeframe_id", () => {
-    const backendSchedule: BackendActivitySchedule = {
-      id: 1,
-      weekday: 1,
-      activity_group_id: 10,
-      created_at: "2024-01-01T00:00:00Z",
-      updated_at: "2024-01-01T00:00:00Z",
-    };
+    const result = mapActivityResponse({
+      ...sampleBackendActivity,
+      schedules: [
+        {
+          id: "1",
+          weekday: 1,
+          activity_group_id: "10",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+      ],
+    });
 
-    const result = mapActivityScheduleResponse(backendSchedule);
+    expect(result.times?.[0]?.weekday).toBe("1");
+    expect(result.times?.[0]?.timeframe_id).toBeUndefined();
+  });
+});
 
-    expect(result.timeframe_id).toBeUndefined();
+describe("readActivity", () => {
+  it("maps the contract's shape", () => {
+    const result = readActivity(sampleBackendActivity);
+
+    expect(result.id).toBe("1");
+    expect(result.is_open_ags).toBe(true);
+    expect(result.ag_category_id).toBe("5");
+    expect(result.created_at).toBeInstanceOf(Date);
+  });
+
+  it("takes the shape of the previous release's route file as it is", () => {
+    const mapped = mapActivityResponse(sampleBackendActivity);
+    const sent = JSON.parse(JSON.stringify(mapped)) as unknown;
+
+    expect(readActivity(sent)).toEqual(mapped);
+  });
+});
+
+describe("readActivityCategory", () => {
+  const category: ActivityCategoryResponse = {
+    id: "3",
+    name: "Kreativ",
+    shift_type_id: "8",
+    is_system: true,
+    archived_at: "2024-02-01T00:00:00Z",
+    usage_count: 4,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-15T12:00:00Z",
+  };
+
+  it("maps the contract's shape", () => {
+    expect(readActivityCategory(category)).toEqual(
+      mapActivityCategoryResponse(category),
+    );
+  });
+
+  it("takes the shape of the previous release's route file as it is", () => {
+    const mapped = mapActivityCategoryResponse(category);
+    const sent = JSON.parse(JSON.stringify(mapped)) as unknown;
+
+    expect(readActivityCategory(sent)).toEqual(mapped);
   });
 });
 
@@ -425,79 +483,20 @@ describe("isActivityCreator", () => {
   });
 });
 
-// ===== GENERIC SUPERVISOR RESPONSE =====
+// ===== AVAILABLE SUPERVISORS =====
 
-describe("mapSupervisorResponse", () => {
-  it("handles object with person nested structure", () => {
-    const result = mapSupervisorResponse({
-      id: 1,
-      person: { first_name: "Max", last_name: "Test" },
-    });
-
-    expect(result.id).toBe("1");
-    expect(result.name).toBe("Max Test");
-  });
-
-  it("handles object with direct first/last name", () => {
-    const result = mapSupervisorResponse({
-      id: 2,
-      first_name: "Anna",
-      last_name: "Schmidt",
-    });
-
-    expect(result.id).toBe("2");
-    expect(result.name).toBe("Anna Schmidt");
-  });
-
-  it("handles object with name property", () => {
-    const result = mapSupervisorResponse({
-      id: 3,
-      name: "Peter Mueller",
-    });
-
-    expect(result.id).toBe("3");
-    expect(result.name).toBe("Peter Mueller");
-  });
-
-  it("returns fallback for null/undefined input", () => {
-    expect(mapSupervisorResponse(null)).toEqual({
-      id: "0",
-      name: "Unknown Supervisor",
-    });
-    expect(mapSupervisorResponse(undefined)).toEqual({
-      id: "0",
-      name: "Unknown Supervisor",
+describe("mapSupervisorOption", () => {
+  it("names the staff member by first and last name", () => {
+    expect(mapSupervisorOption(sampleBackendSupervisor)).toEqual({
+      id: "1",
+      name: "Maria Schmidt",
     });
   });
 
-  it("returns supervisor ID fallback when no name found", () => {
-    const result = mapSupervisorResponse({ id: 999 });
-
-    expect(result.name).toBe("Supervisor 999");
-  });
-});
-
-// ===== TIMEFRAME =====
-
-describe("mapTimeframeResponse", () => {
-  it("maps backend timeframe to frontend structure", () => {
-    const backendTimeframe: BackendTimeframe = {
-      id: 1,
-      name: "Morning",
-      start_time: "08:00",
-      end_time: "12:00",
-      description: "Morning session",
-      display_name: "8:00 - 12:00",
-    };
-
-    const result = mapTimeframeResponse(backendTimeframe);
-
-    expect(result.id).toBe("1");
-    expect(result.name).toBe("Morning");
-    expect(result.start_time).toBe("08:00");
-    expect(result.end_time).toBe("12:00");
-    expect(result.description).toBe("Morning session");
-    expect(result.display_name).toBe("8:00 - 12:00");
+  it("falls back to the id when the names are missing", () => {
+    expect(
+      mapSupervisorOption({ id: "999", staff_id: "999", is_primary: false }),
+    ).toEqual({ id: "999", name: "Supervisor 999" });
   });
 });
 

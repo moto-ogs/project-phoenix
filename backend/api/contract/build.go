@@ -32,6 +32,7 @@ type builder struct {
 	identifiers  map[reflect.Type]string
 	readers      map[reflect.Type]string
 	dates        map[reflect.Type]bool
+	instants     map[reflect.Type]bool
 	used         map[string]bool
 	requestTypes map[string]bool
 }
@@ -44,10 +45,13 @@ func Build(routes []Registration, options Options) (Document, error) {
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
 		deprecated: map[string]bool{}, numericIDs: map[string]bool{}, used: map[string]bool{},
 		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
-		dates: map[reflect.Type]bool{dateType: true},
+		dates: map[reflect.Type]bool{dateType: true}, instants: map[reflect.Type]bool{timeType: true},
 	}
 	for _, t := range options.Dates {
 		b.dates[t] = true
+	}
+	for _, t := range options.Instants {
+		b.instants[t] = true
 	}
 	for _, key := range options.NumericIDs {
 		b.numericIDs[key] = true
@@ -232,7 +236,10 @@ func (b *builder) unused(options Options) error {
 	for _, t := range options.Dates {
 		registers["date:"] = append(registers["date:"], t.String())
 	}
-	labels := map[string]string{"date:": "day type ", "id:": "numeric id ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
+	for _, t := range options.Instants {
+		registers["instant:"] = append(registers["instant:"], t.String())
+	}
+	labels := map[string]string{"date:": "day type ", "instant:": "instant type ", "id:": "numeric id ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
 	var stale []string
 	for prefix, keys := range registers {
 		for _, key := range keys {
@@ -314,6 +321,25 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 	return Schema{}, fmt.Errorf("%s: unsupported type %s", where, t)
 }
 
+// timeSchema is the schema of an instant or day type: time.Time,
+// calendar.Date and the types the root names beside them.
+func (b *builder) timeSchema(t reflect.Type) (Schema, bool) {
+	if b.instants[t] {
+		if t != timeType {
+			b.used["instant:"+t.String()] = true
+		}
+		return Schema{Kind: KindInstant}, true
+	}
+	if b.dates[t] {
+		// A day type renders its zero value as null.
+		if t != dateType {
+			b.used["date:"+t.String()] = true
+		}
+		return Schema{Kind: KindDate, Nullable: true}, true
+	}
+	return Schema{}, false
+}
+
 // named decides the types whose Go type, not their kind, says what travels:
 // instants, days, identifiers and enums. It also stops at a type that writes
 // or reads itself without an entry.
@@ -323,15 +349,8 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 		// or, with omitempty, no key.
 		return Schema{Kind: KindJSON, Nullable: true}, true, nil
 	}
-	if t == timeType {
-		return Schema{Kind: KindInstant}, true, nil
-	}
-	if b.dates[t] {
-		// A day type renders its zero value as null.
-		if t != dateType {
-			b.used["date:"+t.String()] = true
-		}
-		return Schema{Kind: KindDate, Nullable: true}, true, nil
+	if schema, ok := b.timeSchema(t); ok {
+		return schema, true, nil
 	}
 	if kind, ok := b.identifiers[t]; ok {
 		return Schema{Kind: kind}, true, nil

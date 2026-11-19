@@ -18,6 +18,7 @@ GET /api/staff/dashboard-summary
 GET /api/staff/documents-directory
 GET /api/staff/documents-profile/{id}
 GET /api/staff/financial-profile/{id}
+GET /api/staff/former
 GET /api/staff/me/qualifications
 GET /api/staff/qualification-types
 GET /api/staff/qualifications

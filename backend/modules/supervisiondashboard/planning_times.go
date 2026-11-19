@@ -8,36 +8,36 @@ import (
 // The planning times (#2703): the effective pickup and arrival of each child
 // in the projection, behind the planning gate.
 
-// PickupTime / ArrivalTime keep the field names of the bulk endpoints they
+// DashboardPickupTime / ArrivalTime keep the field names of the bulk endpoints they
 // replace so the frontend mapping stays identical.
-type PickupTime struct {
-	StudentID   int64     `json:"student_id,string"`
-	Date        string    `json:"date"`
-	WeekdayName string    `json:"weekday_name"`
-	PickupTime  *string   `json:"pickup_time,omitempty"`
-	IsException bool      `json:"is_exception"`
-	Notes       string    `json:"notes,omitempty"`
-	DayNotes    []DayNote `json:"day_notes,omitempty"`
+type DashboardPickupTime struct {
+	StudentID   int64              `json:"student_id,string"`
+	Date        string             `json:"date"`
+	WeekdayName string             `json:"weekday_name"`
+	PickupTime  *string            `json:"pickup_time,omitempty"`
+	IsException bool               `json:"is_exception"`
+	Notes       string             `json:"notes,omitempty"`
+	DayNotes    []DashboardDayNote `json:"day_notes,omitempty"`
 
 	// DayDepartureMode is the Abholart set for this day only (#3946).
 	DayDepartureMode string `json:"day_departure_mode,omitempty"`
 }
 
 type ArrivalTime struct {
-	StudentID       int64     `json:"student_id,string"`
-	Date            string    `json:"date"`
-	WeekdayName     string    `json:"weekday_name"`
-	ExpectedArrival *string   `json:"expected_arrival,omitempty"`
-	IsException     bool      `json:"is_exception"`
-	Notes           string    `json:"notes,omitempty"`
-	DayNotes        []DayNote `json:"day_notes,omitempty"`
+	StudentID       int64              `json:"student_id,string"`
+	Date            string             `json:"date"`
+	WeekdayName     string             `json:"weekday_name"`
+	ExpectedArrival *string            `json:"expected_arrival,omitempty"`
+	IsException     bool               `json:"is_exception"`
+	Notes           string             `json:"notes,omitempty"`
+	DayNotes        []DashboardDayNote `json:"day_notes,omitempty"`
 }
 
 // loadPlanningTimes mirrors the former bulk pickup/arrival endpoints, which
 // were gated on users:read; without it the sections stay deterministically
 // empty. Times are additionally scoped to full-access callers, matching the
 // actual arrival/pickup gate on the visit rows.
-func (s *service) loadPlanningTimes(ctx context.Context, projection *Projection, caller Caller, studentIDs []int64, fullAccess bool, businessDay Date) error {
+func (s *service) loadPlanningTimes(ctx context.Context, projection *DashboardProjection, caller Caller, studentIDs []int64, fullAccess bool, businessDay Date) error {
 	if !planningVisible(caller, studentIDs, fullAccess) {
 		return nil
 	}
@@ -68,8 +68,8 @@ func planningVisible(caller Caller, studentIDs []int64, fullAccess bool) bool {
 	return len(studentIDs) > 0 && fullAccess && caller.CanReadStudents
 }
 
-func pickupTimeFromEffective(studentID int64, effective Pickup) PickupTime {
-	return PickupTime{
+func pickupTimeFromEffective(studentID int64, effective Pickup) DashboardPickupTime {
+	return DashboardPickupTime{
 		StudentID: studentID, Date: string(effective.Date), WeekdayName: effective.WeekdayName,
 		PickupTime: effective.PickupTime, IsException: effective.IsException, Notes: effective.Notes,
 		DayNotes: effective.DayNotes, DayDepartureMode: effective.DayDepartureMode,

@@ -1,4 +1,11 @@
 // app/api/activities/[id]/route.ts
+//
+// Temporary (#7563): the contract registers GET, PUT and DELETE /api/activities/{id}, and the
+// current client reads the contract's shape through the catalog proxy. An
+// installed bundle of the previous release reads the shape this file maps.
+// Delete this file after the next production deploy; the portal's catch-all
+// then answers the path.
+import type { ActivityResponse } from "~/lib/contract/activities.generated";
 import type { NextRequest } from "next/server";
 import { apiGet, apiPut, apiDelete } from "~/lib/api-helpers.server";
 import {
@@ -6,11 +13,7 @@ import {
   createPutHandler,
   createDeleteHandler,
 } from "~/lib/route-wrapper.server";
-import type {
-  Activity,
-  BackendActivity,
-  UpdateActivityRequest,
-} from "~/lib/activity-helpers";
+import type { Activity, UpdateActivityRequest } from "~/lib/activity-helpers";
 import { mapActivityResponse } from "~/lib/activity-helpers";
 
 /**
@@ -26,7 +29,7 @@ export const GET = createGetHandler(
     const id = params.id as string;
 
     const response = await apiGet<
-      BackendActivity | { status: string; data: BackendActivity }
+      ActivityResponse | { status: string; data: ActivityResponse }
     >(`/api/activities/${encodeURIComponent(id)}`, token);
 
     // Handle both response formats (raw object or wrapped in status/data)
@@ -36,10 +39,10 @@ export const GET = createGetHandler(
         response.status === "success" &&
         "data" in response
       ) {
-        // Handle wrapped response { status: "success", data: BackendActivity }
+        // Handle wrapped response { status: "success", data: ActivityResponse }
         return mapActivityResponse(response.data);
       } else if ("id" in response) {
-        // Handle direct response (BackendActivity)
+        // Handle direct response (ActivityResponse)
         return mapActivityResponse(response);
       }
     }
@@ -68,7 +71,7 @@ export const PUT = createPutHandler<Activity, UpdateActivityRequest>(
 
     // The body already matches the UpdateActivityRequest structure expected by backend
     const response = await apiPut<
-      BackendActivity | { status: string; data: BackendActivity },
+      ActivityResponse | { status: string; data: ActivityResponse },
       UpdateActivityRequest
     >(
       `/api/activities/${encodeURIComponent(id)}`,
@@ -83,10 +86,10 @@ export const PUT = createPutHandler<Activity, UpdateActivityRequest>(
         response.status === "success" &&
         "data" in response
       ) {
-        // Handle wrapped response { status: "success", data: BackendActivity }
+        // Handle wrapped response { status: "success", data: ActivityResponse }
         return mapActivityResponse(response.data);
       } else if ("id" in response) {
-        // Handle direct response (BackendActivity)
+        // Handle direct response (ActivityResponse)
         return mapActivityResponse(response);
       }
     }

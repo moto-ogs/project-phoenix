@@ -55,19 +55,13 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutate: vi.fn(() => vi.fn()),
 }));
 
-// Mock service factory
-const mockGetOne = vi.fn();
+// Mock the student client
 const mockCreate = vi.fn();
-const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
-vi.mock("@/lib/database/service-factory", () => ({
-  createCrudService: vi.fn(() => ({
-    getList: vi.fn(),
-    getOne: mockGetOne,
-    create: mockCreate,
-    update: mockUpdate,
-    remove: mockDelete,
-  })),
+const mockFetchStudents = vi.fn();
+vi.mock("~/lib/student-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/student-api")>()),
+  createStudent: (...args: unknown[]) => mockCreate(...args) as unknown,
+  fetchStudents: (...args: unknown[]) => mockFetchStudents(...args) as unknown,
 }));
 
 // Mock hooks
@@ -396,11 +390,6 @@ describe("StudentsPage", () => {
         mutate: vi.fn(),
       } as ReturnType<typeof useSWRAuth>;
     });
-
-    // Setup getOne to return the selected student
-    mockGetOne.mockImplementation((id: string) =>
-      Promise.resolve(mockStudents.find((s) => s.id === id)),
-    );
   });
 
   it("shows the database skeleton while the route suspends", () => {
@@ -855,18 +844,15 @@ describe("StudentsPage", () => {
 
   // Tests for SWR fetcher execution (new code coverage)
   describe("SWR fetcher execution", () => {
-    it("executes the students SWR fetcher and handles array response", async () => {
-      const mockGetList = vi.fn().mockResolvedValue({
-        data: [{ id: "1", first_name: "Test", second_name: "Student" }],
-      });
-
-      const serviceFactory = await import("@/lib/database/service-factory");
-      vi.mocked(serviceFactory.createCrudService).mockReturnValue({
-        getList: mockGetList,
-        getOne: mockGetOne,
-        create: mockCreate,
-        update: mockUpdate,
-        remove: mockDelete,
+    it("executes the students SWR fetcher and returns the listed children", async () => {
+      mockFetchStudents.mockResolvedValue({
+        students: [{ id: "1", first_name: "Test", second_name: "Student" }],
+        pagination: {
+          current_page: 1,
+          page_size: 1000,
+          total_pages: 1,
+          total_records: 1,
+        },
       });
 
       let capturedStudentsFetcher: (() => Promise<unknown>) | null = null;
@@ -910,51 +896,12 @@ describe("StudentsPage", () => {
       expect(result).toEqual([
         { id: "1", first_name: "Test", second_name: "Student" },
       ]);
-      expect(mockGetList).toHaveBeenCalledWith({
+      expect(mockFetchStudents).toHaveBeenCalledWith({
         page: 1,
         pageSize: 1000,
-        include_arrival_times: true,
-        include_pending_withdrawals: true,
+        includeArrivalTimes: true,
+        includePendingWithdrawals: true,
       });
-    });
-
-    it("handles non-array response from getList", async () => {
-      const mockGetList = vi.fn().mockResolvedValue({
-        data: "not an array",
-      });
-
-      const serviceFactory = await import("@/lib/database/service-factory");
-      vi.mocked(serviceFactory.createCrudService).mockReturnValue({
-        getList: mockGetList,
-        getOne: mockGetOne,
-        create: mockCreate,
-        update: mockUpdate,
-        remove: mockDelete,
-      });
-
-      let capturedStudentsFetcher: (() => Promise<unknown>) | null = null;
-
-      vi.mocked(useSWRAuth).mockImplementation((key, fetcher) => {
-        if (key === "database-students-list" && fetcher) {
-          capturedStudentsFetcher = fetcher as () => Promise<unknown>;
-        }
-        return {
-          data: [],
-          isLoading: false,
-          error: null,
-          isValidating: false,
-          mutate: vi.fn(),
-        } as ReturnType<typeof useSWRAuth>;
-      });
-
-      render(<StudentsPage />);
-
-      expect(capturedStudentsFetcher).not.toBeNull();
-      const result: unknown = await (
-        capturedStudentsFetcher as unknown as () => Promise<unknown>
-      )();
-      // Should return empty array when data is not an array
-      expect(result).toEqual([]);
     });
 
     it("executes the groups dropdown SWR fetcher with array response", async () => {
