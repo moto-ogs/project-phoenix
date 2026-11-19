@@ -42,13 +42,7 @@ export function openEnum<T extends string>() {
   return z.string() as unknown as z.ZodType<OpenEnum<T>, unknown>;
 }
 
-/** Narrows an open enum to the values this build knows. */
-export function knownEnum<T extends string>(
-  values: readonly T[],
-  value: string | undefined,
-): T | undefined {
-  return values.find((known) => known === value);
-}
+export { knownEnum } from "./known-enum";
 
 /**
  * The body a registered route binds. It carries no value: the route entry

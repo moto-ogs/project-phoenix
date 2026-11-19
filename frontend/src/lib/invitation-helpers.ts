@@ -3,7 +3,7 @@ import type {
   CreateSchoolInvitationRequest,
   SchoolInvitationResponse,
 } from "~/lib/contract/auth-invitations.generated";
-import { knownEnum } from "~/lib/contract/runtime";
+import { knownEnum } from "~/lib/contract/known-enum";
 import type {
   EmailAddressMark,
   MailProviderBlock,
