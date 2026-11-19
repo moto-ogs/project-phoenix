@@ -508,9 +508,12 @@ func TestMFAListTrustedDevices_EmptyOK(t *testing.T) {
 	rs.mfaListTrustedDevices(rr, r)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var devices []any
-	require.NoError(t, json.NewDecoder(rr.Body).Decode(&devices))
-	assert.Empty(t, devices, "no rows means an empty list, not null")
+	var envelope struct {
+		Data []any `json:"data"`
+	}
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&envelope))
+	require.NotNil(t, envelope.Data, "no rows means an empty list, not null")
+	assert.Empty(t, envelope.Data)
 }
 
 func TestMFAListTrustedDevices_RequiresClaim(t *testing.T) {

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { BrandTenantSwitcher } from "./tenant-switcher";
 
-/** Minimal shape returned by the backend's `/api/auth/account-tenants` endpoint. */
+/** Minimal shape returned by the backend's `/api/auth/account/tenants` endpoint. */
 interface AccountTenantBackendFixture {
   tenant_id: number;
   slug: string;
@@ -57,7 +57,7 @@ const multiOrgTenants: AccountTenantBackendFixture[] = [
 
 function mockAccountTenants(tenants: AccountTenantBackendFixture[]) {
   return installStorybookFetch(({ url }) => {
-    if (!url.includes("/api/auth/account-tenants")) return undefined;
+    if (!url.includes("/api/auth/account/tenants")) return undefined;
     return jsonResponse({ data: tenants });
   });
 }
@@ -69,7 +69,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Only renders once `/api/auth/account-tenants` resolves with more than one tenant — each story stubs `fetch` to simulate that response.",
+          "Only renders once `/api/auth/account/tenants` resolves with more than one tenant — each story stubs `fetch` to simulate that response.",
       },
     },
   },
@@ -117,7 +117,7 @@ export const MultipleOrganizationsOpen: Story = {
 export const MissingMFAProof: Story = {
   beforeEach: () =>
     installStorybookFetch(({ url }) => {
-      if (url.includes("/api/auth/account-tenants"))
+      if (url.includes("/api/auth/account/tenants"))
         return jsonResponse({ data: sameOrgTenants });
       if (url.includes("/api/auth/switch-tenant"))
         return jsonResponse(

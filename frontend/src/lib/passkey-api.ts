@@ -11,6 +11,7 @@ import type {
   PublicKeyCredentialRequestOptionsJSON,
   RegistrationResponseJSON,
 } from "@simplewebauthn/browser";
+import { dataOrBare } from "./envelope-or-bare";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession } from "./session-cache";
 
@@ -99,7 +100,9 @@ async function requestJson<T>(
     );
   }
 
-  return data as T;
+  // The staff portal's management answers in the envelope through its
+  // catalog proxy; the sign-in and the other portals answer bare.
+  return dataOrBare<T>(data);
 }
 
 export function isPasskeyCeremonyIncompleteError(error: unknown): boolean {

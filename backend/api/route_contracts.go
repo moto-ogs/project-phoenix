@@ -2,12 +2,13 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
 	groupsHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
 	gradeTransitionHTTP "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
-	"reflect"
-	"strings"
 
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
@@ -125,6 +126,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, rootContractMounts()...)
 	mounts = append(mounts, publicContractMounts()...)
 	mounts = append(mounts, staffPortalInvitationContractMounts()...)
+	mounts = append(mounts, secondFactorContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err

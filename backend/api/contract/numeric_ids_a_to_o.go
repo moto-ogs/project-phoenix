@@ -3,6 +3,11 @@ package contract
 // legacyNumericIDsAToO holds the numeric identifier fields of the packages a to o, as
 // "package.Type.GoField". See legacyNumericIDs.
 var legacyNumericIDsAToO = []string{
+	"account.AccountResponse.ID",
+	"account.AccountTenantResponse.OrganizationID",
+	"account.AccountTenantResponse.TenantID",
+	"account.LinkToTenantRequest.RoleID",
+	"account.RegisterRequest.RoleID",
 	"appointments.Appointment.ID",
 	"appointments.Appointment.OrganizerStaffID",
 	"appointments.Appointment.TenantID",
@@ -90,6 +95,7 @@ var legacyNumericIDsAToO = []string{
 	"classdayhttp.ClassHandoverRequest.PresentStudentIDs",
 	"classdayhttp.ClassTripRequest.StudentIDs",
 	"classdayhttp.MorningAttendanceMarkRequest.StudentID",
+	"common.TrustedDeviceDTO.ID",
 	"communication.AnnouncementStats.AnnouncementID",
 	"dataimport.SampleSchoolResult.SchoolID",
 	"domain.Group.ID",

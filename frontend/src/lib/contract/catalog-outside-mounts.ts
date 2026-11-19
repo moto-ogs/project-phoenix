@@ -4,12 +4,33 @@
  * `/api/school/analytics-policy` → `/analytics-policy`, and in the staff
  * portal `/api/analytics-consent` → `/analytics-consent/`. The list is fixed
  * on purpose: a route the contract registers outside the mount stays
- * unreachable until it is named here. The staff portal's invitation routes
- * live at `/auth/invitations` beside `/api`; only that prefix is named, not
- * `/auth`, so no sign-in route becomes reachable through the proxy.
+ * unreachable until it is named here.
+ *
+ * An entry is a head: it admits the paths that start with it. A `{name}`
+ * segment stands for any one segment, and an entry that ends in `/` admits
+ * only that path itself. The staff portal's account routes live below
+ * `/auth` beside `/api`; each prefix or path is named on its own, never
+ * `/auth`, `/auth/mfa` or `/auth/passkeys` as a whole, so no sign-in route
+ * becomes reachable through the proxy (`catalog-outside-mounts.test.ts`).
  */
 export const CATALOG_OUTSIDE_MOUNTS = {
-  tenant: ["/analytics-consent", "/auth/invitations"],
+  tenant: [
+    "/analytics-consent",
+    "/auth/invitations",
+    "/auth/roles",
+    "/auth/permissions",
+    "/auth/accounts",
+    "/auth/mfa/trusted-devices",
+    "/auth/passkeys/",
+    "/auth/passkeys/{passkeyId}/",
+    "/auth/passkeys/enrollment/challenge",
+    "/auth/passkeys/register/options",
+    "/auth/passkeys/register/verify",
+    "/auth/account/tenants",
+    "/auth/link-to-tenant",
+    "/auth/register",
+    "/auth/staff-preview/candidates",
+  ],
   parent: [
     "/analytics-consent",
     "/analytics-policy",
@@ -30,3 +51,26 @@ export const CATALOG_OUTSIDE_MOUNTS = {
 export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
   tenant: ["/public/care-contract-signing"],
 } as const satisfies Record<string, readonly string[]>;
+
+const isParam = (segment: string) =>
+  segment.startsWith("{") && segment.endsWith("}");
+
+/** A parameter never stands for an empty or a dot segment. */
+const UNSAFE_SEGMENTS = new Set(["", ".", ".."]);
+
+/**
+ * Whether a path's segments, or a route pattern's, lie under an entry of the
+ * lists above.
+ */
+export function underOutsideHead(
+  path: readonly string[],
+  head: string,
+): boolean {
+  const segments = head.split("/").filter(Boolean);
+  if (head.endsWith("/") && path.length !== segments.length) return false;
+  return segments.every((segment, index) => {
+    const at = path[index];
+    if (at === undefined) return false;
+    return isParam(segment) ? !UNSAFE_SEGMENTS.has(at) : at === segment;
+  });
+}

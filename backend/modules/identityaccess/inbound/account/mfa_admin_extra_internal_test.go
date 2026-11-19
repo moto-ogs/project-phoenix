@@ -129,8 +129,11 @@ func TestMFAAdminGetState_HappyPath(t *testing.T) {
 	rs.mfaAdminGetState(rr, r)
 
 	require.Equal(t, http.StatusOK, rr.Code)
-	var resp MFAAdminStateResponse
-	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+	var envelope struct {
+		Data AccountMFAAdminStateResponse `json:"data"`
+	}
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&envelope))
+	resp := envelope.Data
 	assert.True(t, resp.Enrolled)
 	assert.Equal(t, identityaccess.MFAAdminOverrideForceOff, resp.Override)
 }
@@ -236,7 +239,7 @@ func TestMFAAdminSetOverride_HappyPath(t *testing.T) {
 	}
 
 	r := reqWithAccountID(t, http.MethodPut, "200",
-		MFAAdminOverrideSetRequest{Override: identityaccess.MFAAdminOverrideForceOff, Reason: "Account compromised"},
+		AccountMFAAdminOverrideSetRequest{Override: identityaccess.MFAAdminOverrideForceOff, Reason: "Account compromised"},
 		7, []string{"users:manage"})
 	// The handler must forward the JWT tenant claim so the service-layer
 	// cross-tenant guard (#1430 Item #2) sees the actor's tenant.
@@ -260,7 +263,7 @@ func TestMFAAdminSetOverride_RequiresClaim(t *testing.T) {
 	}
 
 	r := reqWithAccountID(t, http.MethodPut, "200",
-		MFAAdminOverrideSetRequest{Override: identityaccess.MFAAdminOverrideForceOff, Reason: "ok ok"},
+		AccountMFAAdminOverrideSetRequest{Override: identityaccess.MFAAdminOverrideForceOff, Reason: "ok ok"},
 		0, nil) // no claims
 	rr := httptest.NewRecorder()
 	rs.mfaAdminSetOverride(rr, r)
@@ -278,7 +281,7 @@ func TestMFAAdminSetOverride_RejectsBadOverride(t *testing.T) {
 	}
 
 	r := reqWithAccountID(t, http.MethodPut, "200",
-		MFAAdminOverrideSetRequest{Override: "delete-everything", Reason: "ok ok"},
+		AccountMFAAdminOverrideSetRequest{Override: "delete-everything", Reason: "ok ok"},
 		7, []string{"users:manage"})
 	rr := httptest.NewRecorder()
 	rs.mfaAdminSetOverride(rr, r)
@@ -300,7 +303,7 @@ func TestMFAAdminSetOverride_PermissionDeniedMapsTo403(t *testing.T) {
 	}
 
 	r := reqWithAccountID(t, http.MethodPut, "200",
-		MFAAdminOverrideSetRequest{Override: identityaccess.MFAAdminOverrideForceOff, Reason: "ok ok"},
+		AccountMFAAdminOverrideSetRequest{Override: identityaccess.MFAAdminOverrideForceOff, Reason: "ok ok"},
 		7, nil) // no permission claim
 	rr := httptest.NewRecorder()
 	rs.mfaAdminSetOverride(rr, r)

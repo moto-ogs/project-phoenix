@@ -77,9 +77,9 @@ func (rs *Resource) resolveAdminOverrideContext(w http.ResponseWriter, r *http.R
 	}
 }
 
-// MFAAdminOverrideSetRequest is the body for PUT /auth/accounts/{id}/mfa/override.
+// AccountMFAAdminOverrideSetRequest is the body for PUT /auth/accounts/{id}/mfa/override.
 // The override allow-list mirrors identityaccess.IsValidMFAAdminOverride.
-type MFAAdminOverrideSetRequest struct {
+type AccountMFAAdminOverrideSetRequest struct {
 	Override string `json:"override"`
 	Reason   string `json:"reason"`
 }
@@ -87,7 +87,7 @@ type MFAAdminOverrideSetRequest struct {
 // Bind enforces a known override value + non-empty reason. Length floor on
 // reason matches MFAAdminOverrideRequest (3 chars) so the UI textarea
 // validation message stays consistent across both admin paths.
-func (req *MFAAdminOverrideSetRequest) Bind(_ *http.Request) error {
+func (req *AccountMFAAdminOverrideSetRequest) Bind(_ *http.Request) error {
 	req.Override = strings.TrimSpace(req.Override)
 	req.Reason = strings.TrimSpace(req.Reason)
 	if !identityaccess.IsValidMFAAdminOverride(req.Override) {
@@ -98,10 +98,10 @@ func (req *MFAAdminOverrideSetRequest) Bind(_ *http.Request) error {
 	)
 }
 
-// MFAAdminStateResponse is the read-side payload the modal uses to decide
+// AccountMFAAdminStateResponse is the read-side payload the modal uses to decide
 // which buttons to render. enrolled tells the modal whether a Reset is
 // even meaningful; override is the current per-account flag.
-type MFAAdminStateResponse struct {
+type AccountMFAAdminStateResponse struct {
 	Enrolled bool   `json:"enrolled"`
 	Override string `json:"override"`
 }
@@ -141,10 +141,10 @@ func (rs *Resource) mfaAdminGetState(w http.ResponseWriter, r *http.Request) {
 		mapMFAError(w, r, err)
 		return
 	}
-	render.JSON(w, r, MFAAdminStateResponse{
+	common.Respond(w, r, http.StatusOK, AccountMFAAdminStateResponse{
 		Enrolled: state.Enrolled,
 		Override: state.Override,
-	})
+	}, "MFA state retrieved")
 }
 
 // mfaAdminSetOverride flips the per-account override (force_off / force_on /
@@ -165,7 +165,7 @@ func (rs *Resource) mfaAdminSetOverride(w http.ResponseWriter, r *http.Request) 
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return
 	}
-	req := &MFAAdminOverrideSetRequest{}
+	req := &AccountMFAAdminOverrideSetRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -182,7 +182,7 @@ func (rs *Resource) mfaAdminSetOverride(w http.ResponseWriter, r *http.Request) 
 		mapMFAError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 // mfaAdminDisable wipes the target's MFA enrollment and trusted devices.
@@ -208,5 +208,5 @@ func (rs *Resource) mfaAdminDisable(w http.ResponseWriter, r *http.Request) {
 		mapMFAError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
