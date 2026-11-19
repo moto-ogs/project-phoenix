@@ -1,12 +1,14 @@
-import { apiGet } from "~/lib/api-helpers.server";
-import { createGetHandler } from "~/lib/route-wrapper.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-// The backend's class list is a Go slice, which a school without classes may
-// encode as null; the client always gets an array.
-export const GET = createGetHandler(async (_request, token) => {
-  const response = await apiGet<{ data: string[] | null }>(
-    "/api/students/school-classes",
-    token,
-  );
-  return response.data ?? [];
-});
+const get = catalogProxy(portalRoutes.tenant, "GET");
+
+// Without this literal route, Next selects students/[id], not the portal's
+// catch-all. Delegate with the path that the catch-all would receive.
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, {
+    params: Promise.resolve({ path: ["students", "school-classes"] }),
+  }),
+);

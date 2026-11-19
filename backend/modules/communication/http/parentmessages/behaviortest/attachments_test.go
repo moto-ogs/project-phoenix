@@ -42,6 +42,12 @@ type attachmentWire struct {
 // the way the server does.
 func attachmentFixture(t *testing.T) (chi.Router, testpkg.ParentChain) {
 	t.Helper()
+	return messagingFixture(t, owners.StaffStudentReads{})
+}
+
+// messagingFixture mounts the message routes over the given student reads.
+func messagingFixture(t *testing.T, reads owners.StaffStudentReads) (chi.Router, testpkg.ParentChain) {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	database := testpkg.NewDatabase(t, db)
 	repos := api.NewParentMessagingSuiteRepositories(database)
@@ -52,7 +58,7 @@ func attachmentFixture(t *testing.T) (chi.Router, testpkg.ParentChain) {
 	require.NoError(t, err)
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), "operations.parent_notes_enabled", true, nil, nil))
 	persons := owners.ParentMessagePeopleWithLeaders{ParentMessagePeople: owners.BindParentMessagePeople(directory), ParentMessageLeadership: owners.BindParentMessageLeadership(people.Staff, owners.NewPeopleIdentityAccess(database, nil))}
-	svc, groups, attachments, handling, _ := compose.NewParentMessaging(compose.ParentMessagingConfig{ThreadRepo: repos.ParentMessageThread, MessageRepo: parentStore.NewParentMessageRepository(db), ReadRepo: repos.ParentMessageRead, Persons: persons, UserContext: owners.StaffStudentReads{}, Session: api.CommunicationSession{}, Settings: settingsValues.NewParentMessagingValues(settings.Settings), Broadcaster: realtime.NewHub(slog.Default()), DB: db, Logger: slog.Default(), Observe: func(compose.Observation) {}, GroupAudience: owners.NewParentGroupAudience(database)}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
+	svc, groups, attachments, handling, _ := compose.NewParentMessaging(compose.ParentMessagingConfig{ThreadRepo: repos.ParentMessageThread, MessageRepo: parentStore.NewParentMessageRepository(db), ReadRepo: repos.ParentMessageRead, Persons: persons, UserContext: reads, Session: api.CommunicationSession{}, Settings: settingsValues.NewParentMessagingValues(settings.Settings), Broadcaster: realtime.NewHub(slog.Default()), DB: db, Logger: slog.Default(), Observe: func(compose.Observation) {}, GroupAudience: owners.NewParentGroupAudience(database)}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	routes := api.NewMessageAttachmentRoutesForTests(attachments, common.RequiresPermission(permissions.UsersRead))
 	return messaging.NewResource(svc, groups, handling, nil).Router(api.ProtectedTenantRoutesWith(routes.Register)), testpkg.CreateTestParentGuardianChain(t, db)
 }
@@ -109,7 +115,7 @@ func TestStaffSendPhotosToGuardiansAndReadThemWithTheMessages(t *testing.T) {
 	opened := post("/threads", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q,"body":"","attachment_ids":[%q]}`, fmt.Sprint(chain.StudentID), fmt.Sprint(chain.AccountID), photo.ID))
 	require.Equal(t, http.StatusCreated, opened.Code, opened.Body.String())
 	var thread struct {
-		Data messaging.ThreadDetailResponse
+		Data messaging.ParentChatThreadDetailResponse
 	}
 	require.NoError(t, json.Unmarshal(opened.Body.Bytes(), &thread))
 	require.Len(t, thread.Data.Messages, 1)

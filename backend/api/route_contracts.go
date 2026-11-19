@@ -2,8 +2,12 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
+	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
@@ -11,7 +15,6 @@ import (
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
-	"reflect"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
@@ -104,6 +107,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, staffPortalCalendarContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -111,6 +115,9 @@ func contractRegistrations() ([]contract.Registration, error) {
 	known := make(map[string]bool, len(catalog))
 	for _, route := range catalog {
 		known[route.Method+" "+route.Pattern] = true
+		// A router mounted at "/" shows as "/*/" in the catalog; a request
+		// reports the pattern without it, as chi's RoutePattern does.
+		known[route.Method+" "+strings.ReplaceAll(route.Pattern, "/*/", "/")] = true
 	}
 	var registrations []contract.Registration
 	for _, mount := range mounts {
@@ -395,6 +402,25 @@ func staffPortalContractMounts() []contractMount {
 		// answers no data.
 		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
 		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
+	}
+}
+
+// staffPortalCalendarContractMounts lists the staff calendar, the parent
+// messages inbox and the device pages of the staff portal that left their
+// pass-through route files in #2352.
+func staffPortalCalendarContractMounts() []contractMount {
+	portals := []common.PortalScope{common.PortalTenant}
+	// Device Fleet's http role may not import the contract types; the root
+	// names the history and the status body. The kiosk's device API is not
+	// part of this mount.
+	devices := []common.RouteContract{
+		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Response: []devicesAPI.LifecycleEventResponse{}},
+		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},
+	}
+	return []contractMount{
+		{"/api/calendar", calendarAPI.StaffRouteContracts()},
+		{"/api/messages", parentMessagingAPI.InboxRouteContracts()},
+		{"/api/iot", devices},
 	}
 }
 

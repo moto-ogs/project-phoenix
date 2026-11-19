@@ -36,6 +36,7 @@ const withBody =
 const portal = {
   get: noBody,
   del: noBody,
+  delWithBody: withBody,
   post: withBody,
   put: withBody,
   patch: withBody,
@@ -54,6 +55,13 @@ const routes: CatalogRoute[] = [
   },
   { method: "POST", pattern: "/parent/rows/", response: row },
   { method: "DELETE", pattern: "/parent/rows/{id}", response: row },
+  // A deletion that reads a confirmation from its body.
+  {
+    method: "DELETE",
+    pattern: "/parent/rows/{id}/confirmed",
+    request: {},
+    response: noData,
+  },
   { method: "PUT", pattern: "/parent/rows/{id}/seen", response: noData },
   // A legacy route with response variants has no single decoder.
   { method: "GET", pattern: "/parent/variants/", response: { full: row } },
@@ -176,6 +184,21 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce(undefined);
     expect(await data(await call("DELETE", ["rows", "1"]))).toBeNull();
     expect(sessionReads).toBe(1);
+  });
+
+  it("forwards the body of a DELETE whose route reads one", async () => {
+    api.mockResolvedValueOnce({ status: "success", message: "deleted" });
+    const response = await call("DELETE", ["rows", "1", "confirmed"], "", {
+      reason: "Abmeldung",
+    });
+    expect(await data(response)).toBeNull();
+    expect(api).toHaveBeenCalledExactlyOnceWith(
+      "DELETE",
+      "/parent/rows/1/confirmed",
+      "token",
+      { reason: "Abmeldung" },
+      { idempotencyKey: "key-1", request: expect.any(NextRequest) },
+    );
   });
 
   it.each([

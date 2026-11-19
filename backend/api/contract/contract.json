@@ -13,6 +13,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/calendar/appointments/{appointmentId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/class-list-entries/{id}",
       "portals": [
         "tenant"
@@ -193,6 +204,18 @@
       "portals": [
         "tenant"
       ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/students/care-withdrawals/{completionId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "studentDeleteRequest"
+      },
       "no_data": true
     },
     {
@@ -800,6 +823,98 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/calendar/appointments/{appointmentId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentDetail"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/calendar/appointments/{appointmentId}/mails",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentMails"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/calendar/appointments/{appointmentId}/overview",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "occurrence_date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentOverview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/calendar/feed",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffCalendarAccessResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/calendar/my",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffCalendarResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/calendar/recipient-options",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "limit",
+          "kind": "int"
+        },
+        {
+          "name": "q",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RecipientOptions"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/class-list-entries/",
       "portals": [
         "tenant"
@@ -985,6 +1100,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/iot/{id}/history",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "LifecycleEventResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-billing-months/",
       "portals": [
         "tenant"
@@ -1101,6 +1230,37 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/messages/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "unread",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ParentChatInboxThreadResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/count-scope",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CountScopeResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/messages/group-threads",
       "portals": [
         "tenant"
@@ -1192,6 +1352,31 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/messages/students/{studentId}/threads",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ParentChatInboxThreadResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/threads/{threadId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentChatThreadDetailResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/messages/threads/{threadId}/mails",
       "portals": [
         "tenant"
@@ -1199,6 +1384,17 @@
       "response": {
         "kind": "ref",
         "ref": "ThreadMailsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/unread-count",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentChatUnreadCountResponse"
       }
     },
     {
@@ -2525,6 +2721,19 @@
       "response": {
         "kind": "ref",
         "ref": "PrivacyConsentDefaultsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/school-classes",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "string"
+        }
       }
     },
     {
@@ -7064,6 +7273,18 @@
     },
     {
       "method": "PATCH",
+      "pattern": "/api/iot/{deviceId}/status",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "DeviceStatusRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PATCH",
       "pattern": "/api/timetable/instances/{instance_id}/students/{student_id}",
       "portals": [
         "tenant"
@@ -7120,6 +7341,69 @@
       "response": {
         "kind": "ref",
         "ref": "AbsenceTypeResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/calendar/appointments",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "createAppointmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentDetail"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/calendar/appointments/{appointmentId}/cancel",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentDetail"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/calendar/appointments/{appointmentId}/occurrences/{occurrenceDate}/cancel",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/calendar/feed/rotate",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffCalendarAccessResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/calendar/recipients/{recipientId}/response",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InvitationAnswer"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
       }
     },
     {
@@ -7351,6 +7635,70 @@
         "kind": "ref",
         "ref": "GroupThreadDetailResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/mark-all-read",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentChatUnreadCountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/threads/open",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OpenThreadRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ParentChatThreadDetailResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/threads/{threadId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ParentChatPostMessageRequest"
+      },
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ParentChatMessageResponse"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/threads/{threadId}/handled",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MarkHandledRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/threads/{threadId}/unread",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
     },
     {
       "method": "POST",
@@ -11036,6 +11384,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/calendar/appointments/{appointmentId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "updateAppointmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AppointmentDetail"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/class-list-entries/{id}",
       "portals": [
         "tenant"
@@ -11144,6 +11507,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/messages/count-scope",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CountScopeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CountScopeSavedResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/notifications/email-subscriptions/{type}",
       "portals": [
         "tenant"
@@ -11175,6 +11553,21 @@
       "request": {
         "kind": "ref",
         "ref": "announcementRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/parent-announcements/{announcementId}/reminder",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "reminderRequest"
       },
       "response": {
         "kind": "ref",
@@ -15169,6 +15562,40 @@
               "kind": "ref",
               "nullable": true,
               "ref": "AppointmentTarget"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AppointmentMails",
+      "go_type": "portal.AppointmentMails",
+      "fields": [
+        {
+          "name": "kinds",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "int"
+              }
+            }
+          }
+        },
+        {
+          "name": "not_arrived",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "string"
+              }
             }
           }
         }
@@ -28012,6 +28439,50 @@
       ]
     },
     {
+      "name": "CountScopeRequest",
+      "go_type": "messaging.CountScopeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "scope",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CountScopeResponse",
+      "go_type": "messaging.CountScopeResponse",
+      "fields": [
+        {
+          "name": "scope",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_own_groups",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CountScopeSavedResponse",
+      "go_type": "messaging.CountScopeSavedResponse",
+      "fields": [
+        {
+          "name": "scope",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Counts",
       "go_type": "studentdeletion.Counts",
       "fields": [
@@ -30318,6 +30789,20 @@
         },
         {
           "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceStatusRequest",
+      "go_type": "devices.DeviceStatusRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "status",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -32820,6 +33305,24 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupOption",
+      "go_type": "portal.GroupOption",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -40089,6 +40592,74 @@
       ]
     },
     {
+      "name": "LifecycleChange",
+      "go_type": "devicefleet.LifecycleChange",
+      "fields": [
+        {
+          "name": "before",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "LifecycleEventResponse",
+      "go_type": "devices.LifecycleEventResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actor_kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actor_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "LifecycleChange"
+            }
+          }
+        },
+        {
+          "name": "occurred_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Mailing",
       "go_type": "carecontract.Mailing",
       "fields": [
@@ -40162,6 +40733,20 @@
           "name": "occurrence_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MarkHandledRequest",
+      "go_type": "messaging.MarkHandledRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "handled_up_to_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -42909,6 +43494,34 @@
       ]
     },
     {
+      "name": "OpenThreadRequest",
+      "go_type": "messaging.OpenThreadRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_account_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperationHomeworkFeedback",
       "go_type": "timetable.OperationHomeworkFeedback",
       "fields": [
@@ -44915,6 +45528,365 @@
       ]
     },
     {
+      "name": "ParentChatInboxThreadResponse",
+      "go_type": "messaging.ParentChatInboxThreadResponse",
+      "fields": [
+        {
+          "name": "thread_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "readers",
+          "schema": {
+            "kind": "ref",
+            "ref": "ReadersResponse"
+          }
+        },
+        {
+          "name": "last_message_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "last_sender_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_message_body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "unread_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentChatMessageResponse",
+      "go_type": "messaging.ParentChatMessageResponse",
+      "fields": [
+        {
+          "name": "client_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sender_kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sender_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "event_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "event_actor_kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "request_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "request_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "payload",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ref_table",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ref_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "applied_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "decision_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "read_by_staff",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "read_by_guardian",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "group_thread_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_thread_title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentChatPostMessageRequest",
+      "go_type": "messaging.ParentChatPostMessageRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "client_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "handled_up_to_message_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attachment_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentChatThreadDetailResponse",
+      "go_type": "messaging.ParentChatThreadDetailResponse",
+      "fields": [
+        {
+          "name": "thread_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "readers",
+          "schema": {
+            "kind": "ref",
+            "ref": "ReadersResponse"
+          }
+        },
+        {
+          "name": "messages",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentChatMessageResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentChatUnreadCountResponse",
+      "go_type": "messaging.ParentChatUnreadCountResponse",
+      "fields": [
+        {
+          "name": "unread_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "ParentConferenceBreak",
       "go_type": "staffcalendarhttp.ParentConferenceBreak",
       "request": true,
@@ -45469,6 +46441,24 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentOption",
+      "go_type": "portal.ParentOption",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -49258,6 +50248,66 @@
       ]
     },
     {
+      "name": "RecipientOptions",
+      "go_type": "portal.RecipientOptions",
+      "fields": [
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffOption"
+            }
+          }
+        },
+        {
+          "name": "parents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentOption"
+            }
+          }
+        },
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupOption"
+            }
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "students",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentOption"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "RecipientRequest",
       "go_type": "exporttransferhttp.RecipientRequest",
       "request": true,
@@ -49341,6 +50391,65 @@
           "name": "role_kind",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RecurrenceRequest",
+      "go_type": "portal.RecurrenceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "frequency",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "interval_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "month_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "ends_on",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "occurrence_count",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
           }
         }
       ]
@@ -55918,6 +57027,87 @@
       ]
     },
     {
+      "name": "StaffCalDAVAccessResponse",
+      "go_type": "staffcalendarhttp.StaffCalDAVAccessResponse",
+      "fields": [
+        {
+          "name": "server_url",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "app_password",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffCalendarAccessResponse",
+      "go_type": "staffcalendarhttp.StaffCalendarAccessResponse",
+      "fields": [
+        {
+          "name": "url",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "webcal_url",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caldav",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "StaffCalDAVAccessResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffCalendarResponse",
+      "go_type": "staffcalendarhttp.StaffCalendarResponse",
+      "fields": [
+        {
+          "name": "from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "events",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Event"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffExcusedRequestResponse",
       "go_type": "requestreview.StaffExcusedRequestResponse",
       "fields": [
@@ -56233,6 +57423,24 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffOption",
+      "go_type": "portal.StaffOption",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -58231,6 +59439,38 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentOption",
+      "go_type": "portal.StudentOption",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -66459,6 +67699,36 @@
       ]
     },
     {
+      "name": "appointmentTargetRequest",
+      "go_type": "staffcalendarhttp.appointmentTargetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "arrivalSettingsResponse",
       "go_type": "careplanhttp.arrivalSettingsResponse",
       "fields": [
@@ -68710,6 +69980,115 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createAppointmentRequest",
+      "go_type": "staffcalendarhttp.createAppointmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "all_day",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "delivery_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "overview_visibility",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "recurrence",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "RecurrenceRequest"
+          }
+        },
+        {
+          "name": "targets",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "appointmentTargetRequest"
+            }
+          }
+        },
+        {
+          "name": "send_email",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -75565,6 +76944,29 @@
       ]
     },
     {
+      "name": "reminderRequest",
+      "go_type": "announcement.reminderRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reminder_at",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reminder_text",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "removeStudentTemplateDaysRequest",
       "go_type": "timetablehttp.removeStudentTemplateDaysRequest",
       "request": true,
@@ -77360,6 +78762,41 @@
         },
         {
           "name": "shared_instances",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentDeleteRequest",
+      "go_type": "studentdeletionhttp.studentDeleteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirmation_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "acknowledged",
+          "optional": true,
           "schema": {
             "kind": "bool"
           }
@@ -79352,6 +80789,97 @@
           "name": "unread_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "updateAppointmentRequest",
+      "go_type": "staffcalendarhttp.updateAppointmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "location",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "all_day",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "overview_visibility",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "recurrence",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "RecurrenceRequest"
+          }
+        },
+        {
+          "name": "send_email",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
           }
         }
       ]

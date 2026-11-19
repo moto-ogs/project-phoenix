@@ -42,6 +42,280 @@ export const AllowanceCarryResponseSchema: z.ZodType<AllowanceCarryResponse, unk
   expires_on: str,
 });
 
+/** Go: staffcalendarhttp.CalendarStatusResponse */
+export interface CalendarStatusResponse {
+  status: string;
+}
+
+export const CalendarStatusResponseSchema: z.ZodType<CalendarStatusResponse, unknown> = object<CalendarStatusResponse>({
+  status: str,
+});
+
+/** Go: appointments.Appointment */
+export interface Appointment {
+  id: string;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+  organizer_staff_id: string;
+  title: string;
+  description?: string;
+  location?: string;
+  start_date: string | null;
+  end_date: string | null;
+  start_time: string;
+  end_time: string;
+  all_day: boolean;
+  delivery_mode: string;
+  overview_visibility: string;
+  cancelled_at?: string;
+  deleted_at?: string;
+  notify_guardians: boolean;
+  school_event_type?: string;
+  revision: number;
+}
+
+export const AppointmentSchema: z.ZodType<Appointment, unknown> = object<Appointment>({
+  id: int64StringOrNumber,
+  tenant_id: int64StringOrNumber,
+  created_at: instant,
+  updated_at: instant,
+  organizer_staff_id: int64StringOrNumber,
+  title: str,
+  description: optional(str),
+  location: optional(str),
+  start_date: nullable(calendarDate),
+  end_date: nullable(calendarDate),
+  start_time: instant,
+  end_time: instant,
+  all_day: bool,
+  delivery_mode: str,
+  overview_visibility: str,
+  cancelled_at: optional(instant),
+  deleted_at: optional(instant),
+  notify_guardians: bool,
+  school_event_type: optional(str),
+  revision: safeInt,
+});
+
+/** Go: appointments.RecurrenceRule */
+export interface RecurrenceRule {
+  id: string;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+  appointment_id: string;
+  frequency: string;
+  interval_count: number;
+  weekdays?: string[];
+  month_days?: number[];
+  ends_on?: string;
+  occurrence_count?: number;
+}
+
+export const RecurrenceRuleSchema: z.ZodType<RecurrenceRule, unknown> = object<RecurrenceRule>({
+  id: int64StringOrNumber,
+  tenant_id: int64StringOrNumber,
+  created_at: instant,
+  updated_at: instant,
+  appointment_id: int64StringOrNumber,
+  frequency: str,
+  interval_count: safeInt,
+  weekdays: optional(arr(str)),
+  month_days: optional(arr(safeInt)),
+  ends_on: optional(calendarDate),
+  occurrence_count: optional(safeInt),
+});
+
+/** Go: appointments.AppointmentRecipient */
+export interface AppointmentRecipient {
+  id: string;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+  appointment_id: string;
+  recipient_type: string;
+  staff_id?: string;
+  guardian_profile_id?: string;
+  status: string;
+  responded_at?: string;
+  occurrence_responses?: Record<string, string>;
+}
+
+export const AppointmentRecipientSchema: z.ZodType<AppointmentRecipient, unknown> = object<AppointmentRecipient>({
+  id: int64StringOrNumber,
+  tenant_id: int64StringOrNumber,
+  created_at: instant,
+  updated_at: instant,
+  appointment_id: int64StringOrNumber,
+  recipient_type: str,
+  staff_id: optional(int64StringOrNumber),
+  guardian_profile_id: optional(int64StringOrNumber),
+  status: str,
+  responded_at: optional(instant),
+  occurrence_responses: optional(rec(str)),
+});
+
+/** Go: appointments.AppointmentTarget */
+export interface AppointmentTarget {
+  id: string;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+  appointment_id: string;
+  target_type: string;
+  target_id?: string;
+  target_value?: string;
+}
+
+export const AppointmentTargetSchema: z.ZodType<AppointmentTarget, unknown> = object<AppointmentTarget>({
+  id: int64StringOrNumber,
+  tenant_id: int64StringOrNumber,
+  created_at: instant,
+  updated_at: instant,
+  appointment_id: int64StringOrNumber,
+  target_type: str,
+  target_id: optional(int64StringOrNumber),
+  target_value: optional(str),
+});
+
+/** Go: portal.AppointmentDetail */
+export interface AppointmentDetail {
+  appointment: Appointment | null;
+  recurrence?: RecurrenceRule;
+  recipients: (AppointmentRecipient | null)[] | null;
+  targets: (AppointmentTarget | null)[] | null;
+}
+
+export const AppointmentDetailSchema: z.ZodType<AppointmentDetail, unknown> = object<AppointmentDetail>({
+  appointment: nullable(AppointmentSchema),
+  recurrence: optional(RecurrenceRuleSchema),
+  recipients: nullable(arr(nullable(AppointmentRecipientSchema))),
+  targets: nullable(arr(nullable(AppointmentTargetSchema))),
+});
+
+/** Go: portal.AppointmentResponseCounts */
+export interface AppointmentResponseCounts {
+  accepted: number;
+  declined: number;
+  pending: number;
+}
+
+export const AppointmentResponseCountsSchema: z.ZodType<AppointmentResponseCounts, unknown> = object<AppointmentResponseCounts>({
+  accepted: safeInt,
+  declined: safeInt,
+  pending: safeInt,
+});
+
+/** Go: portal.AppointmentAttendee */
+export interface AppointmentAttendee {
+  recipient_id: string;
+  recipient_type: string;
+  name: string;
+  status: string;
+  responded_at?: string;
+}
+
+export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = object<AppointmentAttendee>({
+  recipient_id: str,
+  recipient_type: str,
+  name: str,
+  status: str,
+  responded_at: optional(instant),
+});
+
+/** Go: portal.AppointmentOverview */
+export interface AppointmentOverview {
+  appointment_id: string;
+  occurrence_date?: string;
+  delivery_mode: string;
+  overview_visibility: string;
+  counts: AppointmentResponseCounts;
+  attendees: AppointmentAttendee[] | null;
+}
+
+export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = object<AppointmentOverview>({
+  appointment_id: str,
+  occurrence_date: optional(calendarDate),
+  delivery_mode: str,
+  overview_visibility: str,
+  counts: AppointmentResponseCountsSchema,
+  attendees: nullable(arr(AppointmentAttendeeSchema)),
+});
+
+/** Go: portal.Event */
+export interface Event {
+  id: string;
+  source: string;
+  appointment_id?: string;
+  occurrence_date?: string;
+  timetable_id?: string;
+  activity_type?: string;
+  student_id?: string;
+  student_name?: string;
+  tenant_id?: string;
+  school_name?: string;
+  title: string;
+  description?: string;
+  location?: string;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+  all_day: boolean;
+  cancelled: boolean;
+  recurring: boolean;
+  delivery_mode?: string;
+  response_status?: string;
+  series_response_status?: string;
+  has_occurrence_answers?: boolean;
+  recipient_id?: string;
+  organizer_staff_id?: string;
+  can_respond: boolean;
+  can_edit: boolean;
+  can_view_overview: boolean;
+  school_event_type?: string;
+}
+
+export const EventSchema: z.ZodType<Event, unknown> = object<Event>({
+  id: str,
+  source: str,
+  appointment_id: optional(str),
+  occurrence_date: optional(str),
+  timetable_id: optional(str),
+  activity_type: optional(str),
+  student_id: optional(str),
+  student_name: optional(str),
+  tenant_id: optional(str),
+  school_name: optional(str),
+  title: str,
+  description: optional(str),
+  location: optional(str),
+  start_date: str,
+  end_date: str,
+  start_time: str,
+  end_time: str,
+  all_day: bool,
+  cancelled: bool,
+  recurring: bool,
+  delivery_mode: optional(str),
+  response_status: optional(str),
+  series_response_status: optional(str),
+  has_occurrence_answers: optional(bool),
+  recipient_id: optional(str),
+  organizer_staff_id: optional(str),
+  can_respond: bool,
+  can_edit: bool,
+  can_view_overview: bool,
+  school_event_type: optional(str),
+});
+
+/** Go: portal.InvitationAnswer */
+export interface InvitationAnswer {
+  status?: string;
+  occurrence_date?: string | null;
+}
+
 /** Go: notifications.schoolFeedEntryResponse */
 export interface schoolFeedEntryResponse {
   id: string;
@@ -1012,73 +1286,6 @@ export const VisibilityConditionSchema: z.ZodType<VisibilityCondition, unknown> 
   value: optional(nullable(json)),
 });
 
-/** Go: portal.Event */
-export interface Event {
-  id: string;
-  source: string;
-  appointment_id?: string;
-  occurrence_date?: string;
-  timetable_id?: string;
-  activity_type?: string;
-  student_id?: string;
-  student_name?: string;
-  tenant_id?: string;
-  school_name?: string;
-  title: string;
-  description?: string;
-  location?: string;
-  start_date: string;
-  end_date: string;
-  start_time: string;
-  end_time: string;
-  all_day: boolean;
-  cancelled: boolean;
-  recurring: boolean;
-  delivery_mode?: string;
-  response_status?: string;
-  series_response_status?: string;
-  has_occurrence_answers?: boolean;
-  recipient_id?: string;
-  organizer_staff_id?: string;
-  can_respond: boolean;
-  can_edit: boolean;
-  can_view_overview: boolean;
-  school_event_type?: string;
-}
-
-export const EventSchema: z.ZodType<Event, unknown> = object<Event>({
-  id: str,
-  source: str,
-  appointment_id: optional(str),
-  occurrence_date: optional(str),
-  timetable_id: optional(str),
-  activity_type: optional(str),
-  student_id: optional(str),
-  student_name: optional(str),
-  tenant_id: optional(str),
-  school_name: optional(str),
-  title: str,
-  description: optional(str),
-  location: optional(str),
-  start_date: str,
-  end_date: str,
-  start_time: str,
-  end_time: str,
-  all_day: bool,
-  cancelled: bool,
-  recurring: bool,
-  delivery_mode: optional(str),
-  response_status: optional(str),
-  series_response_status: optional(str),
-  has_occurrence_answers: optional(bool),
-  recipient_id: optional(str),
-  organizer_staff_id: optional(str),
-  can_respond: bool,
-  can_edit: bool,
-  can_view_overview: bool,
-  school_event_type: optional(str),
-});
-
 /** Go: portal.ParentConferenceWindow */
 export interface ParentConferenceWindow {
   start_time: string;
@@ -1089,12 +1296,6 @@ export const ParentConferenceWindowSchema: z.ZodType<ParentConferenceWindow, unk
   start_time: str,
   end_time: str,
 });
-
-/** Go: portal.InvitationAnswer */
-export interface InvitationAnswer {
-  status?: string;
-  occurrence_date?: string | null;
-}
 
 /** Go: schoolsetuphttp.dismissalRequest */
 export interface dismissalRequest {

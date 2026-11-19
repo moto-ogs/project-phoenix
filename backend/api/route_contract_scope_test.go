@@ -41,6 +41,8 @@ func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
 		for _, line := range strings.Split(strings.TrimSpace(expandMiddlewareTable(t, string(golden))), "\n") {
 			if route, chain, ok := strings.Cut(line, " -> "); ok {
 				chains[route] = chain
+				// A router mounted at "/" is registered as its request reports it.
+				chains[strings.ReplaceAll(route, "/*/", "/")] = chain
 			}
 		}
 		return nil

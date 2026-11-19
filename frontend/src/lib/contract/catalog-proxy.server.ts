@@ -15,6 +15,8 @@ export interface CatalogRoute {
   readonly pattern: string;
   /** The query parameters the handler reads; nothing else is forwarded. */
   readonly query?: readonly string[];
+  /** Present when the route reads a body; a DELETE then forwards it. */
+  readonly request?: unknown;
   /** A decoder, or the decoders of a legacy route with response variants. */
   readonly response: unknown;
 }
@@ -23,7 +25,7 @@ export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 type PortalHandlers = Pick<
   ReturnType<typeof makePortalHandlers>,
-  "get" | "post" | "put" | "patch" | "del" | "api"
+  "get" | "post" | "put" | "patch" | "del" | "delWithBody" | "api"
 >;
 
 type Envelope = z.ZodType<{ data: unknown }>;
@@ -147,6 +149,7 @@ export function makeCatalogProxy(
       idempotencyKey: request.headers.get("Idempotency-Key"),
       request,
     });
+    if (method === "DELETE" && answer === undefined) return null;
     return decoded(route, answer);
   };
 
@@ -158,12 +161,19 @@ export function makeCatalogProxy(
     PATCH: () => portal.patch(write),
   } satisfies Record<CatalogMethod, () => unknown>;
   const handler = handlers[method]();
+  // A DELETE whose route reads a body (a deletion confirmation) forwards it.
+  const deleteWithBody =
+    method === "DELETE" ? portal.delWithBody(write) : undefined;
 
   return async (request: NextRequest, context: RouteContext) => {
-    if (!find((await context.params)?.path)) {
+    const found = find((await context.params)?.path);
+    if (!found) {
       const response = handleApiError(notFound(), request);
       applyPrivateNoStore(response.headers);
       return response;
+    }
+    if (deleteWithBody && found.route.request !== undefined) {
+      return deleteWithBody(request, context);
     }
     return handler(request, context);
   };

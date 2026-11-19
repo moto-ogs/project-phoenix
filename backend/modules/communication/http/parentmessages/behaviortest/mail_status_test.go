@@ -67,7 +67,7 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	}
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 
-	var thread messaging.ThreadDetailResponse
+	var thread messaging.ParentChatThreadDetailResponse
 	read("POST", "/threads", fmt.Sprintf(`{"student_id":"%d","guardian_account_id":"%d","body":"Bitte Turnbeutel mitgeben"}`, chain.StudentID, chain.AccountID), &thread)
 	require.Len(t, thread.Messages, 1)
 	messageID := thread.Messages[0].ID

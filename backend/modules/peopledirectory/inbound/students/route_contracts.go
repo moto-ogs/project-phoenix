@@ -8,6 +8,7 @@ func RouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/child-quota", Portals: portals, Response: childQuotaResponse{}},
+		{Method: "GET", Pattern: "/school-classes", Portals: portals, Response: []string{}},
 		{Method: "GET", Pattern: "/{id}/change-history", Portals: portals, Response: []changeHistoryEntry{}},
 		{
 			Method: "GET", Pattern: "/{id}/notes", Portals: portals,

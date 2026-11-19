@@ -129,6 +129,12 @@ export const pollResultsResponseSchema: z.ZodType<pollResultsResponse, unknown> 
   options: nullable(arr(pollOptionResultResponseSchema)),
 });
 
+/** Go: announcement.reminderRequest */
+export interface reminderRequest {
+  reminder_at?: unknown | null;
+  reminder_text?: string | null;
+}
+
 /** Query of GET /api/parent-announcements/ */
 export interface GetParentAnnouncementsQuery {
   include_inactive?: boolean;
@@ -245,6 +251,13 @@ export const routes = {
     pattern: "/api/parent-announcements/{announcementId}",
     portals: ["tenant"],
     request: requestBody<announcementRequest>(),
+    response: success(announcementResponseSchema),
+  },
+  "PUT /api/parent-announcements/{announcementId}/reminder": {
+    method: "PUT",
+    pattern: "/api/parent-announcements/{announcementId}/reminder",
+    portals: ["tenant"],
+    request: requestBody<reminderRequest>(),
     response: success(announcementResponseSchema),
   },
 } as const;
