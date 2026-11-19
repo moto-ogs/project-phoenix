@@ -28,6 +28,7 @@ import {
   type Event,
   type InvitationAnswer,
   type ParentConferenceWindow,
+  type SwitchOffRequest,
 } from "./shared.generated";
 
 export const ENROLLMENT_PHASE_AUDIENCE_VALUES = ["existing_students", "linked_parents", "new_students", "open"] as const;
@@ -3160,6 +3161,14 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<PostMessageRequest>(),
     response: success(ThreadViewResponseSchema),
+  },
+  "POST /parent/me/mfa/disable": {
+    method: "POST",
+    pattern: "/parent/me/mfa/disable",
+    portals: ["parent"],
+    noRetryAfterRenewal: "a renewed session would send the current password twice",
+    request: requestBody<SwitchOffRequest>(),
+    response: noData,
   },
   "POST /parent/me/mfa/start": {
     method: "POST",

@@ -1,6 +1,9 @@
 package traegerportal
 
-import "github.com/moto-ogs/project-phoenix/api/common"
+import (
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+)
 
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
@@ -37,16 +40,15 @@ func SchoolSessionRouteContracts() []common.RouteContract {
 	}
 }
 
-// StepUpRouteContracts registers the code step in the running Träger session
-// (#7068), with patterns relative to /traeger/auth. Starting it mails a code,
-// so the proxy does not send it again after a session renewal.
-func StepUpRouteContracts() []common.RouteContract {
-	return []common.RouteContract{
-		{
-			Method: "POST", Pattern: "/mfa/step-up", Portals: traegerPortal, Response: StepUpStartResponse{},
-			NoRetryAfterRenewal: "a renewed session would mail the code twice",
-		},
-	}
+// AuthRouteContracts registers the member's own remembered devices (#2352)
+// and the code step in the running Träger session (#7068), with patterns
+// relative to /traeger/auth. Starting the step mails a code, so the proxy
+// does not send it again after a session renewal.
+func AuthRouteContracts() []common.RouteContract {
+	return append(portalauth.TrustedDeviceRouteContracts(common.PortalTraeger), common.RouteContract{
+		Method: "POST", Pattern: "/mfa/step-up", Portals: traegerPortal, Response: StepUpStartResponse{},
+		NoRetryAfterRenewal: "a renewed session would mail the code twice",
+	})
 }
 
 // invitationAcceptBodyBytes bounds the accept body: a name and two passwords.

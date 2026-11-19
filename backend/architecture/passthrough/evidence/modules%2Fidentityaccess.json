@@ -65,14 +65,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *PasskeyResource) PasskeyEnrollmentChallenge(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tresult, err := rs.passkeyService.StartOperatorPasskeyEnrollment(r.Context(), int64(claims.ID), common.ParseClientIP(r))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\trender.JSON(w, r, result)\n}",
+      "evidence": "func (rs *PasskeyResource) PasskeyEnrollmentChallenge(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tresult, err := rs.passkeyService.StartOperatorPasskeyEnrollment(r.Context(), int64(claims.ID), common.ParseClientIP(r))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, result, \"Passkey enrollment code sent\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/inbound/operator/PasskeyResource.PasskeyEnrollmentChallenge",
       "owner": "modules/identityaccess"
     },
     {
       "build": "production",
-      "evidence": "func (rs *PasskeyResource) PasskeyList(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tcredentials, err := rs.passkeyService.ListOperatorPasskeyCredentials(r.Context(), int64(claims.ID))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\trender.JSON(w, r, credentials)\n}",
+      "evidence": "func (rs *PasskeyResource) PasskeyList(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tcredentials, err := rs.passkeyService.ListOperatorPasskeyCredentials(r.Context(), int64(claims.ID))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, credentials, \"Passkeys retrieved\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/inbound/operator/PasskeyResource.PasskeyList",
       "owner": "modules/identityaccess"

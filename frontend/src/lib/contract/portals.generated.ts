@@ -12,6 +12,8 @@ import { routes as authInvitations } from "./auth-invitations.generated";
 import { routes as authLinkToTenant } from "./auth-link-to-tenant.generated";
 import { routes as authMfa } from "./auth-mfa.generated";
 import { routes as authPasskeys } from "./auth-passkeys.generated";
+import { routes as authPassword } from "./auth-password.generated";
+import { routes as authPasswordReset } from "./auth-password-reset.generated";
 import { routes as authPermissions } from "./auth-permissions.generated";
 import { routes as authRegister } from "./auth-register.generated";
 import { routes as authRoles } from "./auth-roles.generated";
@@ -43,6 +45,7 @@ import { routes as messages } from "./messages.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorAccounts } from "./operator-accounts.generated";
 import { routes as operatorAnnouncements } from "./operator-announcements.generated";
+import { routes as operatorAuth } from "./operator-auth.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as operatorCaterers } from "./operator-caterers.generated";
 import { routes as operatorDevices } from "./operator-devices.generated";
@@ -57,6 +60,7 @@ import { routes as operatorStaffPersonMerges } from "./operator-staff-person-mer
 import { routes as operatorStats } from "./operator-stats.generated";
 import { routes as operatorUnregisteredTagScans } from "./operator-unregistered-tag-scans.generated";
 import { routes as parentAnnouncements } from "./parent-announcements.generated";
+import { routes as parentAuth } from "./parent-auth.generated";
 import { routes as parentEnrollments } from "./parent-enrollments.generated";
 import { routes as parentHolidayRegistrations } from "./parent-holiday-registrations.generated";
 import { routes as parentMe } from "./parent-me.generated";
@@ -67,6 +71,7 @@ import { routes as pwa } from "./pwa.generated";
 import { routes as reminders } from "./reminders.generated";
 import { routes as rooms } from "./rooms.generated";
 import { routes as schedules } from "./schedules.generated";
+import { routes as schoolAuth } from "./school-auth.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
 import { routes as schoolNotifications } from "./school-notifications.generated";
@@ -154,9 +159,16 @@ import { routes as workTimeModels } from "./work-time-models.generated";
 export const portalRoutes = {
   caterer: [
     catererAccount["GET /caterer/account/mfa"],
+    catererAccount["POST /caterer/account/mfa/disable"],
     catererAccount["POST /caterer/account/mfa/start"],
+    catererAccount["POST /caterer/account/password"],
     catererAuth["DELETE /caterer/auth/mfa/trusted-devices/{deviceId}"],
+    catererAuth["DELETE /caterer/auth/passkeys/{passkeyId}"],
     catererAuth["GET /caterer/auth/mfa/trusted-devices"],
+    catererAuth["GET /caterer/auth/passkeys"],
+    catererAuth["POST /caterer/auth/passkeys/enrollment/challenge"],
+    catererAuth["POST /caterer/auth/passkeys/register/options"],
+    catererAuth["POST /caterer/auth/passkeys/register/verify"],
     catererNotifications["GET /caterer/notifications/feed/"],
     catererNotifications["GET /caterer/notifications/feed/unread-count"],
     catererNotifications["POST /caterer/notifications/feed/read-all"],
@@ -178,6 +190,8 @@ export const portalRoutes = {
     traegerAccounts["POST /traeger/accounts/invitations"],
     traegerAccounts["PUT /traeger/accounts/{accountId}/name"],
     traegerAccounts["PUT /traeger/accounts/{accountId}/roles"],
+    traegerAuth["DELETE /traeger/auth/mfa/trusted-devices/{deviceId}"],
+    traegerAuth["GET /traeger/auth/mfa/trusted-devices"],
     traegerAuth["POST /traeger/auth/mfa/step-up"],
     traegerBillingDocumentKinds["GET /traeger/billing-document-kinds/"],
     traegerBillingDocumentKinds["PUT /traeger/billing-document-kinds/{service}"],
@@ -533,6 +547,7 @@ export const portalRoutes = {
     parentMe["POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke"],
     parentMe["POST /parent/me/documents/{organizationId}/contracts/{contractId}/sign"],
     parentMe["POST /parent/me/messages/children/{studentId}"],
+    parentMe["POST /parent/me/mfa/disable"],
     parentMe["POST /parent/me/mfa/start"],
     parentMe["POST /parent/me/news/{announcementId}/acknowledge"],
     parentMe["POST /parent/me/news/{announcementId}/declaration"],
@@ -578,6 +593,13 @@ export const portalRoutes = {
     operatorAnnouncements["POST /operator/announcements/"],
     operatorAnnouncements["POST /operator/announcements/{id}/publish"],
     operatorAnnouncements["PUT /operator/announcements/{id}"],
+    operatorAuth["DELETE /operator/auth/mfa/trusted-devices/{deviceId}"],
+    operatorAuth["DELETE /operator/auth/passkeys/{passkeyId}"],
+    operatorAuth["GET /operator/auth/mfa/trusted-devices"],
+    operatorAuth["GET /operator/auth/passkeys"],
+    operatorAuth["POST /operator/auth/passkeys/enrollment/challenge"],
+    operatorAuth["POST /operator/auth/passkeys/register/options"],
+    operatorAuth["POST /operator/auth/passkeys/register/verify"],
     operatorBilling["DELETE /operator/billing/key-day-overrides/organizations/{organizationId}"],
     operatorBilling["DELETE /operator/billing/key-day-overrides/schools/{schoolId}"],
     operatorBilling["GET /operator/billing/key-date-counts"],
@@ -639,6 +661,7 @@ export const portalRoutes = {
     operatorPersons["DELETE /operator/persons/{id}"],
     operatorProfile["GET /operator/profile/"],
     operatorProfile["POST /operator/profile/email-change"],
+    operatorProfile["POST /operator/profile/password"],
     operatorProfile["PUT /operator/profile/"],
     operatorRoles["GET /operator/roles"],
     operatorSchools["DELETE /operator/schools/{id}"],
@@ -671,6 +694,10 @@ export const portalRoutes = {
     operatorUnregisteredTagScans["POST /operator/unregistered-tag-scans/{id}/resolve"],
   ],
   public: [
+    authPasswordReset["POST /auth/password-reset"],
+    authPasswordReset["POST /auth/password-reset/confirm"],
+    catererAuth["POST /caterer/auth/password-reset"],
+    catererAuth["POST /caterer/auth/password-reset/confirm"],
     catererInvitations["GET /caterer/invitations/{schoolId}/{token}"],
     catererInvitations["POST /caterer/invitations/{schoolId}/{token}/accept"],
     enrollment["GET /api/enrollment/legal/{tenantSlug}"],
@@ -689,10 +716,17 @@ export const portalRoutes = {
     enrollment["POST /api/enrollment/{tenantSlug}/submit"],
     enrollment["PUT /api/enrollment/requests/{statusToken}"],
     enrollment["PUT /api/enrollment/requests/{statusToken}/family-children"],
+    operatorAuth["POST /operator/auth/email-confirm"],
+    parentAuth["POST /parent/auth/password-reset"],
+    parentAuth["POST /parent/auth/password-reset/confirm"],
     publicCareContractSigning["GET /public/care-contract-signing/{link}"],
     publicCareContractSigning["GET /public/care-contract-signing/{link}/family-children"],
     publicCareContractSigning["POST /public/care-contract-signing/{link}/sign"],
     publicCareContractSigning["PUT /public/care-contract-signing/{link}/family-children"],
+    schoolAuth["POST /school/auth/password-reset"],
+    schoolAuth["POST /school/auth/password-reset/confirm"],
+    traegerAuth["POST /traeger/auth/password-reset"],
+    traegerAuth["POST /traeger/auth/password-reset/confirm"],
     traegerHolidayQuotes["POST /traeger/holiday-quotes/{token}"],
     traegerHolidayRegistrations["GET /traeger/holiday-registrations/status/{statusToken}"],
     traegerHolidayRegistrations["GET /traeger/holiday-registrations/{token}"],
@@ -704,6 +738,8 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     analyticsPolicy["GET /analytics-policy"],
+    schoolAuth["DELETE /school/auth/mfa/trusted-devices/{deviceId}"],
+    schoolAuth["GET /school/auth/mfa/trusted-devices"],
     schoolCalendar["DELETE /school/calendar/appointments/{appointmentId}"],
     schoolCalendar["DELETE /school/calendar/parent-conferences/{conferenceId}"],
     schoolCalendar["GET /school/calendar/feed"],
@@ -857,6 +893,7 @@ export const portalRoutes = {
     authPasskeys["POST /auth/passkeys/enrollment/challenge"],
     authPasskeys["POST /auth/passkeys/register/options"],
     authPasskeys["POST /auth/passkeys/register/verify"],
+    authPassword["POST /auth/password"],
     authPermissions["GET /auth/permissions/"],
     authPermissions["GET /auth/permissions/{id}/"],
     authRegister["POST /auth/register"],

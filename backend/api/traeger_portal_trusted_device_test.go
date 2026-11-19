@@ -68,9 +68,11 @@ func traegerDevices(t *testing.T, router http.Handler, bearer string, counter *t
 	if rec.Code != http.StatusOK {
 		return rec.Code, nil
 	}
-	var devices []common.TrustedDeviceDTO
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &devices), rec.Body.String())
-	return rec.Code, devices
+	var answer struct {
+		Data []common.TrustedDeviceDTO `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &answer), rec.Body.String())
+	return rec.Code, answer.Data
 }
 
 func traegerRevokeDevice(t *testing.T, router http.Handler, bearer string, deviceID int64) *httptest.ResponseRecorder {

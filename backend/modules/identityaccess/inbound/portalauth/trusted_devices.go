@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/go-chi/render"
-
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 )
@@ -19,20 +17,8 @@ import (
 // TrustedDeviceIDParam is the path parameter of the revoke route.
 const TrustedDeviceIDParam = "deviceId"
 
-// ListTrustedDevices answers the signed-in account's remembered devices as
-// bare TrustedDeviceDTOs, the shape the school and Träger portals' route
-// files still read.
-func ListTrustedDevices(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]identityaccess.AccountTrustedDevice, error), refuse Refusal) {
-	devices, err := list(r.Context())
-	if err != nil {
-		refuse(w, r, err)
-		return
-	}
-	render.JSON(w, r, trustedDeviceDTOs(devices))
-}
-
-// RespondTrustedDevices answers the same list in the response envelope, the
-// shape a portal's catalog proxy reads (#2352).
+// RespondTrustedDevices answers the signed-in account's remembered devices in
+// the response envelope, the shape a portal's catalog proxy reads (#2352).
 func RespondTrustedDevices(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]identityaccess.AccountTrustedDevice, error), refuse Refusal) {
 	devices, err := list(r.Context())
 	if err != nil {
@@ -63,4 +49,13 @@ func RevokeTrustedDevice(w http.ResponseWriter, r *http.Request, revoke func(con
 		return
 	}
 	common.RespondNoContent(w, r)
+}
+
+// TrustedDeviceRouteContracts registers the list and the revoke for the
+// given portals (#2352), relative to the mount the portal names them under.
+func TrustedDeviceRouteContracts(portals ...common.PortalScope) []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/mfa/trusted-devices", Portals: portals, Response: []common.TrustedDeviceDTO{}},
+		{Method: "DELETE", Pattern: "/mfa/trusted-devices/{" + TrustedDeviceIDParam + "}", Portals: portals, NoData: true},
+	}
 }

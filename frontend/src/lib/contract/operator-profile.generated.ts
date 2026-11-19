@@ -28,6 +28,12 @@ export interface InitiateEmailChangeRequest {
   current_password?: string;
 }
 
+/** Go: operator.OperatorPasswordChangeRequest */
+export interface OperatorPasswordChangeRequest {
+  current_password?: string;
+  new_password?: string;
+}
+
 /** Go: operator.UpdateProfileRequest */
 export interface UpdateProfileRequest {
   display_name?: string;
@@ -46,6 +52,14 @@ export const routes = {
     portals: ["platform"],
     noRetryAfterRenewal: "a renewed session would send the current password twice",
     request: requestBody<InitiateEmailChangeRequest>(),
+    response: noData,
+  },
+  "POST /operator/profile/password": {
+    method: "POST",
+    pattern: "/operator/profile/password",
+    portals: ["platform"],
+    noRetryAfterRenewal: "a renewed session would send the current password twice",
+    request: requestBody<OperatorPasswordChangeRequest>(),
     response: noData,
   },
   "PUT /operator/profile/": {

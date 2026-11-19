@@ -2,10 +2,18 @@
 import { z } from "zod";
 import {
   noData,
+  requestBody,
   success,
 } from "./runtime";
 import {
+  PasskeyCeremonyOptionsSchema,
+  PasskeyCredentialSummarySchema,
+  PasskeyEnrollmentChallengeSchema,
   TrustedDeviceDTOSchema,
+  type PasskeyRegisterOptionsRequest,
+  type PasskeyRegisterVerifyRequest,
+  type PasswordResetConfirmRequest,
+  type PasswordResetRequest,
 } from "./shared.generated";
 
 export const routes = {
@@ -15,10 +23,60 @@ export const routes = {
     portals: ["caterer"],
     response: noData,
   },
+  "DELETE /caterer/auth/passkeys/{passkeyId}": {
+    method: "DELETE",
+    pattern: "/caterer/auth/passkeys/{passkeyId}",
+    portals: ["caterer"],
+    response: noData,
+  },
   "GET /caterer/auth/mfa/trusted-devices": {
     method: "GET",
     pattern: "/caterer/auth/mfa/trusted-devices",
     portals: ["caterer"],
     response: success(z.array(TrustedDeviceDTOSchema)),
+  },
+  "GET /caterer/auth/passkeys": {
+    method: "GET",
+    pattern: "/caterer/auth/passkeys",
+    portals: ["caterer"],
+    response: success(z.array(PasskeyCredentialSummarySchema)),
+  },
+  "POST /caterer/auth/passkeys/enrollment/challenge": {
+    method: "POST",
+    pattern: "/caterer/auth/passkeys/enrollment/challenge",
+    portals: ["caterer"],
+    noRetryAfterRenewal: "a renewed session would mail the code twice",
+    response: success(PasskeyEnrollmentChallengeSchema),
+  },
+  "POST /caterer/auth/passkeys/register/options": {
+    method: "POST",
+    pattern: "/caterer/auth/passkeys/register/options",
+    portals: ["caterer"],
+    noRetryAfterRenewal: "a renewed session would send the mailed code twice",
+    request: requestBody<PasskeyRegisterOptionsRequest>(),
+    response: success(PasskeyCeremonyOptionsSchema),
+  },
+  "POST /caterer/auth/passkeys/register/verify": {
+    method: "POST",
+    pattern: "/caterer/auth/passkeys/register/verify",
+    portals: ["caterer"],
+    request: requestBody<PasskeyRegisterVerifyRequest>(),
+    response: success(PasskeyCredentialSummarySchema),
+  },
+  "POST /caterer/auth/password-reset": {
+    method: "POST",
+    pattern: "/caterer/auth/password-reset",
+    portals: ["public"],
+    maxBodyBytes: 4096,
+    request: requestBody<PasswordResetRequest>(),
+    response: noData,
+  },
+  "POST /caterer/auth/password-reset/confirm": {
+    method: "POST",
+    pattern: "/caterer/auth/password-reset/confirm",
+    portals: ["public"],
+    maxBodyBytes: 4096,
+    request: requestBody<PasswordResetConfirmRequest>(),
+    response: noData,
   },
 } as const;

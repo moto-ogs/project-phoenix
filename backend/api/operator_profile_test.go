@@ -352,11 +352,11 @@ func TestUpdateProfileRequest_Bind(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestChangePasswordRequest_Bind(t *testing.T) {
+func TestOperatorPasswordChangeRequest_Bind(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodPost, "/profile/password", nil)
-	changeReq := &identityoperator.ChangePasswordRequest{}
+	changeReq := &identityoperator.OperatorPasswordChangeRequest{}
 
 	err := changeReq.Bind(req)
 	assert.NoError(t, err)

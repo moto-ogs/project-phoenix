@@ -44,11 +44,13 @@ var (
 	errResetMismatch     = errors.New("passwords do not match")
 )
 
-type passwordResetRequest struct {
+// PasswordResetRequest is the body of POST …/password-reset.
+type PasswordResetRequest struct {
 	Email string `json:"email"`
 }
 
-type passwordResetConfirmRequest struct {
+// PasswordResetConfirmRequest is the body of POST …/password-reset/confirm.
+type PasswordResetConfirmRequest struct {
 	Token           string `json:"token"`
 	NewPassword     string `json:"new_password"`
 	ConfirmPassword string `json:"confirm_password"`
@@ -59,7 +61,7 @@ type passwordResetConfirmRequest struct {
 // rate-limited one gets 429 with the Retry-After the frontend countdown
 // reads.
 func (routes PasswordResetRoutes) ServeInitiate(w http.ResponseWriter, r *http.Request) {
-	var request passwordResetRequest
+	var request PasswordResetRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	email := strings.ToLower(strings.TrimSpace(request.Email))
 	if err != nil || validation.Validate(email, validation.Required, is.Email) != nil {
@@ -86,7 +88,7 @@ func (routes PasswordResetRoutes) ServeInitiate(w http.ResponseWriter, r *http.R
 
 // ServeConfirm sets a new password through a reset link.
 func (routes PasswordResetRoutes) ServeConfirm(w http.ResponseWriter, r *http.Request) {
-	var request passwordResetConfirmRequest
+	var request PasswordResetConfirmRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Token == "" || request.NewPassword == "" {
 		RenderError(w, r, ErrorInvalidRequest(errors.New("token and new_password are required")))
 		return
@@ -111,4 +113,19 @@ func (routes PasswordResetRoutes) ServeConfirm(w http.ResponseWriter, r *http.Re
 		return
 	}
 	Respond(w, r, http.StatusOK, nil, "Password reset successfully")
+}
+
+// passwordResetBodyBytes bounds a reset body: an address, or a token and two
+// passwords.
+const passwordResetBodyBytes = 4 << 10
+
+// PasswordResetRouteContracts registers both reset routes as public (#2352),
+// relative to the portal's auth mount: the link and the request carry no
+// session.
+func PasswordResetRouteContracts() []RouteContract {
+	portals := []PortalScope{PortalPublic}
+	return []RouteContract{
+		{Method: "POST", Pattern: "/password-reset", Portals: portals, Request: PasswordResetRequest{}, NoData: true, MaxBodyBytes: passwordResetBodyBytes},
+		{Method: "POST", Pattern: "/password-reset/confirm", Portals: portals, Request: PasswordResetConfirmRequest{}, NoData: true, MaxBodyBytes: passwordResetBodyBytes},
+	}
 }

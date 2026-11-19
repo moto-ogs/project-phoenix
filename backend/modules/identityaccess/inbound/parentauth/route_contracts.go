@@ -7,8 +7,8 @@ import (
 
 // SecondFactorRouteContracts registers the parent's reading and starting of
 // its second factor and its remembered devices (#2352), relative to the
-// /parent mount. Confirming and switching off keep their route files: the
-// confirmation installs a session, the switch-off maps the request body.
+// /parent mount, and switching it off with the current password. Confirming
+// keeps its route file: the confirmation installs a session.
 func SecondFactorRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalParent}
 	return []common.RouteContract{
@@ -16,6 +16,10 @@ func SecondFactorRouteContracts() []common.RouteContract {
 		{
 			Method: "POST", Pattern: "/me/mfa/start", Portals: portals, Response: ParentMFAChallengeResponse{},
 			NoRetryAfterRenewal: "a renewed session would mail the code twice",
+		},
+		{
+			Method: "POST", Pattern: "/me/mfa/disable", Portals: portals, Request: portalauth.SwitchOffRequest{}, NoData: true,
+			NoRetryAfterRenewal: "a renewed session would send the current password twice",
 		},
 		{Method: "GET", Pattern: "/me/mfa/trusted-devices", Portals: portals, Response: []common.TrustedDeviceDTO{}},
 		{Method: "DELETE", Pattern: "/me/mfa/trusted-devices/{" + portalauth.TrustedDeviceIDParam + "}", Portals: portals, NoData: true},

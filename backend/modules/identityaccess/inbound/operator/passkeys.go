@@ -95,7 +95,7 @@ func (rs *PasskeyResource) PasskeyEnrollmentChallenge(w http.ResponseWriter, r *
 		mapOperatorPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, result)
+	common.Respond(w, r, http.StatusOK, result, "Passkey enrollment code sent")
 }
 
 func (rs *PasskeyResource) PasskeyRegisterOptions(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +123,7 @@ func (rs *PasskeyResource) PasskeyRegisterOptions(w http.ResponseWriter, r *http
 		mapOperatorPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, options)
+	common.Respond(w, r, http.StatusOK, options, "Passkey registration started")
 }
 
 func (rs *PasskeyResource) PasskeyRegisterVerify(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +146,7 @@ func (rs *PasskeyResource) PasskeyRegisterVerify(w http.ResponseWriter, r *http.
 		mapOperatorPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, credential)
+	common.Respond(w, r, http.StatusOK, credential, "Passkey registered")
 }
 
 func (rs *PasskeyResource) PasskeyList(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +159,7 @@ func (rs *PasskeyResource) PasskeyList(w http.ResponseWriter, r *http.Request) {
 		mapOperatorPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, credentials)
+	common.Respond(w, r, http.StatusOK, credentials, "Passkeys retrieved")
 }
 
 func (rs *PasskeyResource) PasskeyRevoke(w http.ResponseWriter, r *http.Request) {

@@ -393,7 +393,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/accounts", traegerPortalHTTP.AccountRouteContracts()},
 		{"/traeger/profile", traegerPortalHTTP.ProfileRouteContracts()},
 		{"/traeger/school-sessions", traegerPortalHTTP.SchoolSessionRouteContracts()},
-		{"/traeger/auth", traegerPortalHTTP.StepUpRouteContracts()},
+		{"/traeger/auth", traegerPortalHTTP.AuthRouteContracts()},
 		{"/traeger/schools", traegerViewHTTP.SchoolRouteContracts()},
 		{"/traeger/organization", traegerViewHTTP.OrganizationRouteContracts()},
 		{"/traeger/access-log", traegerViewHTTP.AccessLogRouteContracts()},
