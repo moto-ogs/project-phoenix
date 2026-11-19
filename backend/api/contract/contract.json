@@ -1639,6 +1639,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/settings/schema",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SettingsSchema"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/settings/school-contact-email",
       "portals": [
         "tenant"
@@ -1646,6 +1657,17 @@
       "response": {
         "kind": "ref",
         "ref": "schoolContactEmailResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/settings/values/{key}/reveal",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RevealedValueResponse"
       }
     },
     {
@@ -50852,6 +50874,19 @@
           "name": "created_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RevealedValueResponse",
+      "go_type": "settingshttp.RevealedValueResponse",
+      "fields": [
+        {
+          "name": "value",
+          "schema": {
+            "kind": "json",
+            "nullable": true
           }
         }
       ]

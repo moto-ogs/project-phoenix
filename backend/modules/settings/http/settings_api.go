@@ -171,7 +171,7 @@ func (rs *SettingsResource) revealValue(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	rs.runtime.Respond(w, r, http.StatusOK, map[string]any{"value": value}, "")
+	rs.runtime.Respond(w, r, http.StatusOK, RevealedValueResponse{Value: value}, "")
 }
 
 func (rs *SettingsResource) setValue(w http.ResponseWriter, r *http.Request) {

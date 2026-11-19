@@ -322,10 +322,9 @@ export async function revealSettingValue(key: string): Promise<string | null> {
     );
   }
 
-  // The Next.js proxy wraps the backend response, so the structure is:
-  // { status, data: { status, data: { value }, message } }
-  const json = await response.json();
-  const value = json?.data?.data?.value ?? json?.data?.value;
+  // The portal's catalog proxy answers { success, data: { value } } (#2352).
+  const json = (await response.json()) as { data?: { value?: unknown } };
+  const value = json?.data?.value;
   return typeof value === "string" ? value : null;
 }
 

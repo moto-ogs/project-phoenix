@@ -11,6 +11,7 @@ import (
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
 	"github.com/stretchr/testify/assert"
@@ -49,8 +50,9 @@ func setupSettingsModuleWithHook(t *testing.T, hook *settingsValueSetHook) *sett
 		RequestActor: func(context.Context) (int64, int64, []string) {
 			return testpkg.Tenant(t), 1, []string{"config:read", "config:update", "config:manage"}
 		},
-		Editable:  func(context.Context) bool { return true },
-		Success:   testutil.RespondSuccess,
+		Editable: func(context.Context) bool { return true },
+		// The production binding: every answer is held against the contract.
+		Success:   common.Respond,
 		NoContent: testutil.RespondNoContent,
 		Failure:   testutil.RespondError,
 	})
@@ -111,6 +113,24 @@ func TestSettingsSetValue_Success(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 	testutil.AssertSuccessResponse(t, rr, 200)
+}
+
+// The settings page reveals a stored value through its production path
+// (#2352): the answer carries the value the school saved.
+func TestSettingsRevealValue_AnswersTheStoredValue(t *testing.T) {
+	t.Parallel()
+
+	ctx := setupSettingsModule(t)
+	router := testpkg.MountedQueryBudgetRouter("/api/settings", ctx.resource.SettingsRouter())
+	key := "/values/operations.student_daily_checkout_time"
+
+	rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "PUT", key, map[string]any{"value": "17:45"}, testutil.WithTestTenant(t)))
+	testutil.AssertSuccessResponse(t, rr, 200)
+
+	rr = testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", key+"/reveal", nil, testutil.WithTestTenant(t)))
+	testutil.AssertSuccessResponse(t, rr, 200)
+	response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
+	assert.Equal(t, map[string]any{"value": "17:45"}, response["data"])
 }
 
 func TestSettingsSetHomeLayout_LegacyPayloadPreservesArrangement(t *testing.T) {

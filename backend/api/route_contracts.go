@@ -500,5 +500,6 @@ func staffPortalAdminContractMounts() []contractMount {
 		{"/api/admin/grade-transitions", gradeTransitionHTTP.RouteContracts()},
 		{"/api/staff-notices", timetableHTTP.StaffNoticeRouteContracts()},
 		{"/api/statistics", statisticsHTTP.RouteContracts()},
+		{"/api/settings", settingsAdminRouteContracts()},
 	}
 }
