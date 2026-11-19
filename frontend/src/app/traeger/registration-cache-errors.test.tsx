@@ -55,7 +55,10 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: HOLIDAY_PERIOD.id, registrationId: "7" }),
-  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => `/traeger/ferien/${HOLIDAY_PERIOD.id}/anmeldungen/7`,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  // The registration keeps its tab in the address (#7410).
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function Refresh() {
@@ -86,7 +89,8 @@ describe.each([
   {
     name: "detail",
     Page: RegistrationPage,
-    content: () => screen.queryByRole("heading", { name: "Eltern" }),
+    // The first tab of the registration opens with its status (#7410).
+    content: () => screen.queryByRole("heading", { name: "Status" }),
   },
 ])("registration $name metadata errors", ({ Page, content }) => {
   it.each([503, 401, 403, 404])(
@@ -118,4 +122,63 @@ describe.each([
       else await waitFor(() => expect(content()).not.toBeInTheDocument());
     },
   );
+});
+
+it("removes cached registration content after a refused school refresh", async () => {
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <ToastProvider>
+        <Refresh />
+        <RegistrationPage />
+      </ToastProvider>
+    </SWRConfig>,
+  );
+  await screen.findByRole("heading", { name: "Status" });
+
+  schools.mockRejectedValue(
+    new ApiError("schools forbidden", 403, { code: "general.permission" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+
+  expect(
+    await screen.findByText(
+      catalogText("general.permission", "die Liste der Schulen"),
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Status" }),
+  ).not.toBeInTheDocument();
+});
+
+it("keeps a refused period unavailable through a later transient refresh", async () => {
+  render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <ToastProvider>
+        <Refresh />
+        <RegistrationPage />
+      </ToastProvider>
+    </SWRConfig>,
+  );
+  // Anker: Anmeldung und Zeitraum waren vor der verweigerten Neuladung sichtbar.
+  expect(await screen.findByRole("heading", { name: "Status" })).toBeVisible();
+  expect(screen.getByText(HOLIDAY_PERIOD.name)).toBeVisible();
+
+  period.mockRejectedValueOnce(new ApiError("gone", 404));
+  fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+  await waitFor(() => expect(period).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("heading", { name: "Status" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(screen.queryByText(HOLIDAY_PERIOD.name)).not.toBeInTheDocument();
+
+  period.mockRejectedValueOnce(new ApiError("unavailable", 503));
+  fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+  await waitFor(() => expect(period).toHaveBeenCalledTimes(3));
+
+  expect(
+    screen.queryByRole("heading", { name: "Status" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(HOLIDAY_PERIOD.name)).not.toBeInTheDocument();
 });

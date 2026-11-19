@@ -249,7 +249,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
           }),
         ),
       });
-      fireEvent.click(screen.getByRole("button", { name: "Alle Schulen" }));
+      await openFilter("Schule");
       fireEvent.click(
         await screen.findByRole("option", { name: "Feriengäste" }),
       );
@@ -288,7 +288,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
         }),
       ),
     });
-    fireEvent.click(screen.getByRole("button", { name: "Alle Schulen" }));
+    await openFilter("Schule");
     fireEvent.click(await screen.findByRole("option", { name: "Feriengäste" }));
 
     const table = within(await screen.findByRole("table"));
@@ -337,7 +337,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
 
     // Die Filter stehen in der Filterzeile des Seitenkopfs (#5146); jeder
     // Auslöser nennt seinen aktuellen Wert.
-    fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+    await openFilter("Status");
     fireEvent.click(await screen.findByRole("option", { name: "Bestätigt" }));
     await waitFor(() =>
       expect(mockFetchList).toHaveBeenLastCalledWith(
@@ -346,7 +346,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Alle Schulen" }));
+    await openFilter("Schule");
     fireEvent.click(await screen.findByRole("option", { name: "Feriengäste" }));
     await waitFor(() =>
       expect(mockFetchList).toHaveBeenLastCalledWith(
@@ -355,13 +355,13 @@ describe("TraegerHolidayRegistrationsPage", () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Alle Wochen" }));
+    await openFilter("Woche");
     fireEvent.click(
       await screen.findByRole("option", {
         name: "11.01. bis 15.01.2027, OGS Süd",
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Alle Zeitmodelle" }));
+    await openFilter("Zeitmodell");
     fireEvent.click(await screen.findByRole("option", { name: "bis 13 Uhr" }));
     await waitFor(() =>
       expect(mockFetchList).toHaveBeenLastCalledWith("5", {
@@ -374,6 +374,29 @@ describe("TraegerHolidayRegistrationsPage", () => {
     );
     await within(await screen.findByRole("table")).findByText("Ben Muster");
     expect(mockFetchKnown).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers to reset the filters when they leave no registration (#7411)", async () => {
+    mockFetchList.mockImplementation(
+      async (_id: string, filter: HolidayRegistrationFilter) =>
+        filter.status === "cancelled"
+          ? { ...HOLIDAY_REGISTRATION_LIST, registrations: [] }
+          : HOLIDAY_REGISTRATION_LIST,
+    );
+    renderPage();
+    await within(await screen.findByRole("table")).findByText("Eva Muster");
+
+    await openFilter("Status");
+    fireEvent.click(await screen.findByRole("option", { name: "Storniert" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Filter zurücksetzen" }),
+    );
+
+    // Every filter is gone: the whole list shows again.
+    await within(await screen.findByRole("table")).findByText("Eva Muster");
+    expect(
+      screen.queryByRole("button", { name: "Filter zurücksetzen" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens a registration from the list", async () => {
@@ -394,10 +417,9 @@ describe("TraegerHolidayRegistrationsPage", () => {
     renderPage();
     await within(await screen.findByRole("table")).findByText("Eva Muster");
 
-    // Export als Menü im Seitenkopf (#5146).
-    fireEvent.click(
-      screen.getByRole("button", { name: "Anmeldungen herunterladen" }),
-    );
+    // Export im Drei-Punkte-Menü des Seitenkopfs, unter „Herunterladen“
+    // (#5146, #7411).
+    openPageMenu();
     fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
     await waitFor(() =>
       expect(mockDownloadBlob).toHaveBeenCalledWith(
@@ -411,9 +433,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
       "xlsx",
     );
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Anmeldungen herunterladen" }),
-    );
+    openPageMenu();
     fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
     await waitFor(() =>
       expect(mockDownload).toHaveBeenLastCalledWith(
@@ -478,9 +498,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
       ),
     ).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Anmeldungen herunterladen" }),
-    );
+    openPageMenu();
     // Without the right to see health information there is no such file.
     expect(
       screen.queryByRole("menuitem", { name: /Gesundheitsangaben/ }),
@@ -510,9 +528,7 @@ describe("TraegerHolidayRegistrationsPage", () => {
     renderPage();
     await within(await screen.findByRole("table")).findByText("Eva Muster");
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Anmeldungen herunterladen" }),
-    );
+    openPageMenu();
     fireEvent.click(
       await screen.findByRole("menuitem", {
         name: "Alle als PDF mit Gesundheitsangaben (ZIP)",
@@ -711,7 +727,7 @@ describe("TraegerHolidayRegistrationsPage siblings (#5628)", () => {
       mockFetchList
         .mockReturnValueOnce(filter.promise)
         .mockReturnValueOnce(refresh.promise);
-      fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+      await openFilter("Status");
       fireEvent.click(
         await screen.findByRole("option", { name: "Eingegangen" }),
       );
@@ -730,9 +746,13 @@ describe("TraegerHolidayRegistrationsPage siblings (#5628)", () => {
         else refresh.resolve(SIBLING_LIST);
       });
       expect(checkbox).toBeEnabled();
+      openPageMenu();
       expect(
-        screen.getByRole("button", { name: "Anmeldungen herunterladen" }),
-      ).toBeEnabled();
+        await screen.findByRole("menuitem", { name: "Excel" }),
+      ).not.toHaveAttribute("aria-disabled", "true");
+      fireEvent.keyDown(document.activeElement ?? document.body, {
+        key: "Escape",
+      });
       await act(async () =>
         filter.resolve({ ...SIBLING_LIST, registrations: [] }),
       );
@@ -762,7 +782,7 @@ describe("TraegerHolidayRegistrationsPage siblings (#5628)", () => {
         resolveList = resolve;
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+    await openFilter("Status");
     fireEvent.click(await screen.findByRole("option", { name: "Eingegangen" }));
 
     await waitFor(() =>
@@ -922,6 +942,25 @@ const BULK_LIST = {
     },
   ],
 };
+
+/**
+ * Opens one filter of the list. The filters stand in the filter panel of the
+ * head (TENANT-PAGE R5, #7411): the filter button opens it first.
+ */
+/** Opens the page menu (kebab) of the head. */
+function openPageMenu() {
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Weitere Aktionen" })[0]!,
+  );
+}
+
+async function openFilter(label: string) {
+  if (!screen.queryByRole("region", { name: "Filter" })) {
+    fireEvent.click(screen.getAllByRole("button", { name: /^Filter/ })[0]!);
+  }
+  const panel = within(await screen.findByRole("region", { name: "Filter" }));
+  fireEvent.click(panel.getByRole("combobox", { name: label }));
+}
 
 async function selectRows(names: readonly string[]) {
   const table = within(await screen.findByRole("table"));

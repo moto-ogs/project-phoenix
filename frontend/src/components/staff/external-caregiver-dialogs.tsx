@@ -110,6 +110,7 @@ export function ExternalCaregiverCreateModal({
           form={form}
           onKeyDown={handleKeyDown}
           autoFocus
+          withGender
         />
       </div>
     </FormModal>

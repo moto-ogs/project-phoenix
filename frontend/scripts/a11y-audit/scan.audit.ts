@@ -499,7 +499,6 @@ const TRAEGER = T("traeger", [
   "/einstellungen/zugriffsprotokoll",
   "/ferien",
   "/schliesstage",
-  "/stichtagszahlen",
   "/vertraege",
   "/zeitvergleich",
   "/konto",

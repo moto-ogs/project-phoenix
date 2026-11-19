@@ -27,7 +27,7 @@ export function activitiesCatalogTopic(): HelpTopic {
           "Trage bei `Name` die Bezeichnung des Angebots ein.",
           "Wähle eine `Kategorie`.",
           "Trage bei Bedarf `Maximale Teilnehmer` ein.",
-          "Wähle bei Bedarf einen `Hauptbetreuer`.",
+          "Wähle bei Bedarf einen `Hauptbetreuung`.",
           "Wähle `Erstellen`.",
         ],
       },

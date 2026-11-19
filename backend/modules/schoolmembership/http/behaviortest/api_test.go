@@ -165,6 +165,7 @@ type harness struct {
 	workStatus     map[int64]string
 	absence        map[int64]string
 	absenceLbl     map[int64]string
+	genders        map[int64]string // staffID -> stated gender
 
 	groups        []staffHTTP.Group
 	classes       []string
@@ -196,7 +197,7 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 		membership: membership, permitted: map[string]bool{},
 		persons: map[int64]staffHTTP.Person{}, accountRole: map[int64]string{},
 		emails: map[int64]string{}, avatars: map[int64]string{}, roles: map[int64]string{},
-		workStatus: map[int64]string{}, absence: map[int64]string{}, absenceLbl: map[int64]string{},
+		workStatus: map[int64]string{}, absence: map[int64]string{}, absenceLbl: map[int64]string{}, genders: map[int64]string{},
 		accountID: 7, username: "tester",
 	}
 	resource := staffHTTP.NewResource(membership, staffHTTP.Runtime{
@@ -291,6 +292,7 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 		WorkStatusMap:             func(context.Context) (map[int64]string, error) { return h.workStatus, nil },
 		AbsenceMap:                func(context.Context) (map[int64]string, error) { return h.absence, nil },
 		AbsenceLabelMap:           func(context.Context) (map[int64]string, error) { return h.absenceLbl, nil },
+		StaffGenders:              func(_ context.Context, ids []int64) (map[int64]string, error) { return pick(h.genders, ids), nil },
 		AccountRoles:              func(_ context.Context, ids []int64) (map[int64]string, error) { return pick(h.accountRole, ids), nil },
 		AccountEmails:             func(_ context.Context, ids []int64) (map[int64]string, error) { return pick(h.emails, ids), nil },
 		AccountAvatars:            func(_ context.Context, ids []int64) (map[int64]string, error) { return pick(h.avatars, ids), nil },
@@ -481,6 +483,36 @@ func TestListStaffAppliesFiltersAndTiers(t *testing.T) {
 
 	byLastName := h.do(t, http.MethodGet, "/staff?last_name=Nobody", nil)
 	assert.Equal(t, "[]", string(decode(t, byLastName).Data))
+}
+
+// The position („Betreuung“) carries the form the stated gender picks, for
+// every colleague, but never the gender itself; "diverse" and no gender send
+// no form, so the default form discloses nothing.
+func TestStaffResponsesCarryTheFormOfThePosition(t *testing.T) {
+	t.Parallel()
+	for gender, want := range map[string]string{"female": `"role_form":"feminine"`, "male": `"role_form":"masculine"`, "diverse": "", "": ""} {
+		h := withPersons(newHarness(t, directoryFixture()))
+		h.allow("users:read")
+		if gender != "" {
+			h.genders[1] = gender
+			h.genders[2] = gender
+		}
+		for _, path := range []string{"/staff", "/staff/2"} {
+			recorder := h.do(t, http.MethodGet, path, nil)
+			require.Equal(t, http.StatusOK, recorder.Code)
+			payload := string(decode(t, recorder).Data)
+			assert.Contains(t, payload, `"role":"Betreuung"`, "anchor: the position is listed")
+			assert.NotContains(t, payload, `"gender"`, "the gender itself stays inside the adapter")
+			if gender != "" {
+				assert.NotContains(t, payload, `"`+gender+`"`, "the stated gender is not on the wire")
+			}
+			if want == "" {
+				assert.NotContains(t, payload, "role_form", "%s: no form for %q", path, gender)
+				continue
+			}
+			assert.Equal(t, 1, strings.Count(payload, want), "%s: only the row with a position carries the form (%q)", path, gender)
+		}
+	}
 }
 
 func TestListStaffFiltersByAccountRole(t *testing.T) {

@@ -4418,6 +4418,14 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptSchoolInvitation",
+      "binding_digest": "e2a7fd0f0f0880452e5373f2f1da05d3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptSchoolInvitation",
       "binding_digest": "1755159185bc62f9f2fc5a6cee2c0a82",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
       "source_owner": "identity-access",
@@ -10818,6 +10826,14 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.InvitationCapability.AcceptSchoolInvitation",
+      "binding_digest": "e2a7fd0f0f0880452e5373f2f1da05d3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolInvitations.AcceptSchoolInvitation",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.InvitationCapability.AcceptSchoolInvitation",
       "binding_digest": "1755159185bc62f9f2fc5a6cee2c0a82",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolInvitations.AcceptSchoolInvitation",
       "source_owner": "identity-access",
@@ -10999,6 +11015,14 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Teacher.IsDeleted",
       "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
+      "binding_digest": "e2a7fd0f0f0880452e5373f2f1da05d3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolInvitations.AcceptSchoolInvitation",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
@@ -14503,6 +14527,14 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Teacher.IsDeleted",
       "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",
+      "binding_digest": "e2a7fd0f0f0880452e5373f2f1da05d3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.Invitations.AcceptSchoolInvitation",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "target_owner": "workforce"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptSchoolInvitation",

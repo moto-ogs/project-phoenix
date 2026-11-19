@@ -21,7 +21,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { employmentTypeLabels } from "~/lib/staff-helpers";
 import { staffQualificationKeys, staffKeys } from "~/lib/swr/staff-keys";
-import { useSWRAuth } from "~/lib/swr";
+import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { staffQualificationService } from "~/lib/staff-qualification-api";
 import {
   mergeQualificationEntries,
@@ -55,6 +55,7 @@ import {
 } from "./stammdaten-section-forms";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { STAFF_GENDER_LABELS } from "~/lib/staff-gender";
 
 // Stammdaten tab (#1417 Tranche 2b + #1423): the master-data home of one
 // staff member. Sections Person / Kontakt / Arbeitsvertrag / Qualifikationen
@@ -71,12 +72,6 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 // Vorgang, Fehler stehen oben im Bearbeiten-Bereich und am Feld (#2511).
 
 const logger = createLogger({ component: "StammdatenTab" });
-
-const genderLabels: Record<string, string> = {
-  female: "Weiblich",
-  male: "Männlich",
-  diverse: "Divers",
-};
 
 /** Ein Wert oder der Gedankenstrich für „nicht hinterlegt". */
 function Value({
@@ -203,6 +198,13 @@ export function StammdatenTab({
   // keine Formularaktion und meldet als Toast (#2511).
   const editAreaRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(editAreaRef);
+  // Name und Geschlecht stehen auch im Kopf der Seite und in der
+  // Personalliste (Form der Position); sie laden nach dem Speichern neu.
+  const refreshStaffViews = useTenantMutateMatching([
+    staffKeys.family,
+    staffKeys.profileKey(staffId),
+    staffKeys.recordKey(staffId),
+  ]);
   const actionErrors = useApiErrorDisplay();
   // Stand je Abschnitt, der in diesem Bearbeiten-Vorgang schon gespeichert
   // ist: ein erneutes Speichern schickt ihn nicht noch einmal (sonst doppelte
@@ -527,6 +529,7 @@ export function StammdatenTab({
     setSaving(false);
 
     void mutateStammdaten();
+    void refreshStaffViews();
     void mutateQualificationEntries();
     void mutatePayroll();
     void mutateFinancial();
@@ -605,7 +608,7 @@ export function StammdatenTab({
                       <Value
                         value={
                           stammdaten.person.gender
-                            ? (genderLabels[stammdaten.person.gender] ?? null)
+                            ? STAFF_GENDER_LABELS[stammdaten.person.gender]
                             : null
                         }
                       />

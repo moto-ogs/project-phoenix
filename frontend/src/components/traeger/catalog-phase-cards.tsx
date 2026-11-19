@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { ButtonLink } from "~/components/ui/button";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EmptyState } from "~/components/ui/empty-state";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -132,7 +133,7 @@ export function CatalogSchoolsCard({
 }
 
 /** The state of one offering of the phase. */
-function offeringStatus(offering: TraegerOffering): Badge {
+export function offeringStatus(offering: TraegerOffering): Badge {
   if (offering.withdrawnAt) return { label: "Zurückgezogen", tone: "gray" };
   if (offering.released === null) {
     return { label: "Noch nicht übertragen", tone: "warning" };
@@ -155,6 +156,40 @@ function priceSummary(offering: TraegerOffering): string {
       ? formatEuro(low)
       : `${formatEuro(low)} bis ${formatEuro(high)}`;
   return `${range} ${scale ? "nach Tagen je Woche" : "je Wochentag"}`;
+}
+
+/**
+ * An offering that can no longer change, read only: a withdrawn offering, or
+ * every offering of a withdrawn phase. The list opens it like every other row.
+ */
+export function CatalogOfferingSummary({
+  offering,
+  phaseWithdrawn,
+}: Readonly<{ offering: TraegerOffering; phaseWithdrawn: boolean }>) {
+  const { fields } = offering.draft;
+  return (
+    <SectionCard
+      title="Betreuungsangebot"
+      description={
+        phaseWithdrawn && !offering.withdrawnAt
+          ? "Die Anmeldephase ist zurückgezogen. Ihre Angebote lassen sich nicht mehr ändern."
+          : "Ein zurückgezogenes Angebot lässt sich nicht mehr ändern."
+      }
+    >
+      <DataGrid>
+        <DataField label="Tage">{weekdayList(fields.availableDays)}</DataField>
+        <DataField label="Monatspreis">{priceSummary(offering)}</DataField>
+        <DataField label="Plätze">
+          {fields.capacity === null ? "Ohne Grenze" : fields.capacity}
+        </DataField>
+        {fields.description ? (
+          <DataField label="Beschreibung" fullWidth>
+            {fields.description}
+          </DataField>
+        ) : null}
+      </DataGrid>
+    </SectionCard>
+  );
 }
 
 export function CatalogOfferingsCard({
@@ -230,24 +265,32 @@ export function CatalogOfferingsCard({
       stacked: "meta",
       render: (offering) =>
         editable && !offering.withdrawnAt ? (
-          <OverflowMenu
-            ariaLabel={`Aktionen für ${offering.draft.fields.name}`}
-            items={[
-              {
-                label: "Bearbeiten",
-                description: "Öffnet das Angebot zum Ändern",
-                href: traegerPath(`${base}/${offering.id}`),
-                onClick: () => undefined,
-              },
-              {
-                label: "Zurückziehen",
-                description:
-                  "Nimmt das Angebot aus der Anmeldephase. moto fragt vorher nach.",
-                destructive: true,
-                onClick: () => setTarget(offering),
-              },
-            ]}
-          />
+          // The row opens the offering; the menu must not open it too.
+          <span
+            data-row-control
+            role="presentation"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <OverflowMenu
+              ariaLabel={`Aktionen für ${offering.draft.fields.name}`}
+              items={[
+                {
+                  label: "Bearbeiten",
+                  description: "Öffnet das Angebot zum Ändern",
+                  href: traegerPath(`${base}/${offering.id}`),
+                  onClick: () => undefined,
+                },
+                {
+                  label: "Zurückziehen",
+                  description:
+                    "Nimmt das Angebot aus der Anmeldephase. moto fragt vorher nach.",
+                  destructive: true,
+                  onClick: () => setTarget(offering),
+                },
+              ]}
+            />
+          </span>
         ) : null,
     },
   ];
@@ -276,15 +319,11 @@ export function CatalogOfferingsCard({
         )}
         getRowKey={(offering) => offering.id}
         stackedOnMobile
-        rowHasInteractiveControls
-        onRowClick={
-          editable
-            ? (offering) => {
-                if (!offering.withdrawnAt) {
-                  router.push(traegerPath(`${base}/${offering.id}`));
-                }
-              }
-            : undefined
+        rowHasInteractiveControls={(offering) =>
+          editable && !offering.withdrawnAt
+        }
+        onRowClick={(offering) =>
+          router.push(traegerPath(`${base}/${offering.id}`))
         }
         emptyState={
           <EmptyState

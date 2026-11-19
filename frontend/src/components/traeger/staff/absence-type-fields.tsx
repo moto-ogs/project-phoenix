@@ -73,6 +73,7 @@ export function AbsenceTypeFields({
   return (
     <div className="space-y-4">
       <Input
+        controlSize="compact"
         id={`${idPrefix}-name`}
         name="name"
         label="Name"
@@ -93,6 +94,7 @@ export function AbsenceTypeFields({
       {draft.allowanceEnabled ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
+            controlSize="compact"
             id={`${idPrefix}-standard-days`}
             name="standard_days"
             type="number"

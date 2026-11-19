@@ -119,14 +119,18 @@ describe("TraegerStaffPoolPage", () => {
       filename: `vertretungspool-${MONDAY}.csv`,
     });
     renderPage();
-    const exportButton = await screen.findByRole("button", {
-      name: "Blockungen der Woche herunterladen",
-    });
-    expect(exportButton).toBeDisabled();
+    // #7415: der Download steht im Drei-Punkte-Menü des Kopfes, unter
+    // „Herunterladen“; bis die Woche geladen ist, wartet jedes Format.
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Weitere Aktionen" }),
+    );
+    const csv = await screen.findByRole("menuitem", { name: /CSV/ });
+    expect(csv).toBeDisabled();
     resolveWeek(WEEK);
-    await waitFor(() => expect(exportButton).toBeEnabled());
-    fireEvent.click(exportButton);
-    fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: /CSV/ }));
     await vi.waitFor(() =>
       expect(download).toHaveBeenCalledWith(
         expect.any(Blob),
@@ -143,10 +147,14 @@ describe("TraegerStaffPoolPage", () => {
       }),
     );
     renderPage();
+    // #7415: die Bauart „Funktion nicht eingeschaltet“ mit dem Satz der Seite.
     expect(
-      await screen.findByText(
-        "Personal beim Träger ist noch nicht freigeschaltet.",
-      ),
+      await screen.findByText("Diese Funktion ist nicht eingeschaltet"),
     ).toBeVisible();
+    expect(
+      screen.getByText(
+        /Bis zur Freischaltung plant jede Schule ihre Vertretungen selbst\. Das moto-Team schaltet/,
+      ),
+    ).toBeInTheDocument();
   });
 });

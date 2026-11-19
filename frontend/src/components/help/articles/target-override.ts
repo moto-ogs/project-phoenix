@@ -23,7 +23,7 @@ export function targetOverrideTopic(): HelpTopic {
     ],
     steps: [
       "Klappe in der Seitenleiste `Team` auf.",
-      "Öffne `Mitarbeiter`.",
+      "Öffne `Mitarbeitende`.",
       "Wähle die Person.",
       "Wähle oben `Arbeitszeitmodell`.",
       "Wähle `Sonderarbeitszeit anlegen`.",

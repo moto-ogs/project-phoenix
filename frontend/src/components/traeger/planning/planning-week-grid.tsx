@@ -4,24 +4,24 @@
 // Tage nebeneinander, in jeder Zelle die Schichten aller Einsatzorte in der
 // Farbe ihrer Schule. Ein Tag mit einem Hinweis trägt das Warnsymbol. Unter
 // lg zeigt die Fläche einen Tag mit allen Personen, wie der Dienstplan der
-// Schule. Das Raster lädt nichts; alles kommt als Props von der Seite.
+// Schule (`ResourceDayList`, wie der Vertretungspool). Das Raster lädt
+// nichts; alles kommt als Props von der Seite.
 
 import { WarningIcon } from "@phosphor-icons/react";
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { CoverageIndicator } from "~/components/ui/planning/coverage-indicator";
-import { PlanAddAffordance } from "~/components/ui/planning/plan-add-affordance";
+import { PlanAddButton } from "~/components/ui/planning/plan-add-affordance";
 import { PlanBlock } from "~/components/ui/planning/plan-block";
 import {
   PlanLegend,
   type PlanLegendEntry,
 } from "~/components/ui/planning/plan-legend";
-import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
+import { ResourceDayList } from "~/components/ui/planning/resource-day-list";
 import {
   ResourceGrid,
   type ResourceGridColumn,
 } from "~/components/ui/planning/resource-grid";
-import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { Tooltip } from "~/components/ui/tooltip";
 import { BELOW_LG, useMediaQuery } from "~/lib/hooks/use-media-query";
@@ -64,26 +64,6 @@ interface PlanningWeekGridProps {
     person: TraegerPlanningPerson,
     shift: TraegerPlanningShift,
   ) => void;
-}
-
-/** Die Anlege-Geste unter den Schichten einer Zelle, wie im Dienstplan. */
-function PlanAddButton({
-  label,
-  onClick,
-}: {
-  readonly label: string;
-  readonly onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none"
-    >
-      <PlanAddAffordance size="inline" />
-    </button>
-  );
 }
 
 const fullName = (person: TraegerPlanningPerson) =>
@@ -142,13 +122,7 @@ export function PlanningWeekGrid({
   onPlanSuggestion,
   onOpenShift,
 }: PlanningWeekGridProps) {
-  const scrollHintId = useId();
   const isCompact = useMediaQuery(BELOW_LG);
-  const todayIndex = days.findIndex((day) => day.date === todayIso);
-  const [mobileIndex, setMobileIndex] = useState(
-    todayIndex >= 0 ? todayIndex : 0,
-  );
-  const safeMobileIndex = Math.min(Math.max(mobileIndex, 0), days.length - 1);
 
   const columns: ResourceGridColumn[] = useMemo(
     () =>
@@ -342,65 +316,42 @@ export function PlanningWeekGrid({
     />
   );
 
-  const mobileColumn = columns[safeMobileIndex];
-  if (isCompact && mobileColumn) {
+  if (isCompact && columns.length > 0) {
     return (
-      <SectionCard padding="none">
-        <div className="flex gap-1 border-b border-gray-200 bg-white p-2">
-          {columns.map((column, index) => (
-            <PlanningDayChip
-              key={column.key}
-              stacked
-              weekdayLabel={column.label}
-              dateLabel={column.sublabel ?? ""}
-              selected={index === safeMobileIndex}
-              onClick={() => setMobileIndex(index)}
-              today={column.isCurrent}
-            />
-          ))}
-        </div>
-        <ul className="divide-y divide-gray-100">
-          {people.map((person) => (
-            <li key={person.recordId} className="px-3 py-2.5">
-              <RowHeader person={person} />
-              <div className="mt-1.5">
-                {renderCell(person, mobileColumn) ??
-                  (canPlan ? (
-                    <PlanAddButton
-                      label={planLabel(person, mobileColumn)}
-                      onClick={() => onPlan(person, mobileColumn.key)}
-                    />
-                  ) : null)}
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div className="border-t border-gray-200 px-3 py-2">{legend}</div>
-      </SectionCard>
-    );
-  }
-
-  return (
-    <div>
-      <p id={scrollHintId} className="mb-2 text-xs text-gray-600 sm:hidden">
-        Wische zur Seite, um weitere Tage zu sehen.
-      </p>
-      <ResourceGrid
+      <ResourceDayList
         columns={columns}
         rows={people}
         getRowKey={(person) => person.recordId}
         renderRowHeader={(person) => <RowHeader person={person} />}
-        renderCell={renderCell}
-        columnMode="days"
-        cornerHeader="Person"
-        scrollHintId={scrollHintId}
-        emptyCellLabel={canPlan ? planLabel : undefined}
-        onEmptyCellClick={
-          canPlan ? (person, column) => onPlan(person, column.key) : undefined
+        renderCell={(person, column) =>
+          renderCell(person, column) ??
+          (canPlan ? (
+            <PlanAddButton
+              label={planLabel(person, column)}
+              onClick={() => onPlan(person, column.key)}
+            />
+          ) : null)
         }
-        ariaLabel="Einsatzplanung, Woche aller Personen"
         legend={legend}
       />
-    </div>
+    );
+  }
+
+  return (
+    <ResourceGrid
+      columns={columns}
+      rows={people}
+      getRowKey={(person) => person.recordId}
+      renderRowHeader={(person) => <RowHeader person={person} />}
+      renderCell={renderCell}
+      columnMode="days"
+      cornerHeader="Person"
+      emptyCellLabel={canPlan ? planLabel : undefined}
+      onEmptyCellClick={
+        canPlan ? (person, column) => onPlan(person, column.key) : undefined
+      }
+      ariaLabel="Einsatzplanung, Woche aller Personen"
+      legend={legend}
+    />
   );
 }

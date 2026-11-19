@@ -21,7 +21,7 @@ export function leadTeacherAccessTopic(): HelpTopic {
       "Trage die `E-Mail-Adresse` ein.",
       "Wähle bei `Rolle` die Rolle `Lehrkraft`.",
       "Wähle `Einladung senden`.",
-      "Öffne danach `Mitarbeiter` und die Person.",
+      "Öffne danach `Mitarbeitende` und die Person.",
       "Wähle den Reiter `Klassen`.",
       "Trage die Klassen ein, zum Beispiel `1a`.",
     ],

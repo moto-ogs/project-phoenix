@@ -2,8 +2,10 @@ package application
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	identityPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
 )
 
 func (s *SchoolInvitation) requireInvitationSchool(txCtx context.Context, invitation domain.SchoolInvitation) error {
@@ -66,5 +68,25 @@ func (s *SchoolInvitation) provisionInvitationIdentity(ctx context.Context, invi
 	if err != nil {
 		return failed("provision school identity", err)
 	}
-	return finishReset(ctx, identity)
+	if err := finishReset(ctx, identity); err != nil {
+		return err
+	}
+	return s.applyInvitedGender(ctx, invitation, identity)
+}
+
+// applyInvitedGender writes the gender the school entered into the new or
+// resumed staff member's Stammdaten. It runs after a master-data reset, so
+// the reset never clears it again.
+func (s *SchoolInvitation) applyInvitedGender(ctx context.Context, invitation domain.SchoolInvitation, identity *domain.SchoolIdentity) error {
+	if invitation.Gender == nil || identity == nil || identity.StaffID <= 0 {
+		return nil
+	}
+	commands := s.employmentReset
+	if commands == nil || commands.ApplyGender == nil {
+		return failed("apply invited gender", fmt.Errorf("invitation stammdaten are not composed"))
+	}
+	if err := commands.ApplyGender(ctx, identityPorts.InvitedGender{StaffID: identity.StaffID, InvitationID: invitation.ID, Gender: *invitation.Gender}); err != nil {
+		return failed("apply invited gender", err)
+	}
+	return nil
 }

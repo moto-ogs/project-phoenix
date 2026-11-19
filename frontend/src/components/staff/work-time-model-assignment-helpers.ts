@@ -4,6 +4,7 @@
 // der Dialog den Grund an der Person zeigt, bevor jemand speichert.
 
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { positionForForm } from "~/lib/position-title";
 import type { Staff, StaffWorkTimeFact, WorkTimeModel } from "~/lib/staff-api";
 
 export interface AssignmentPerson {
@@ -46,7 +47,9 @@ export function assignmentPeople(
     const person: AssignmentPerson = {
       id: member.id,
       name: member.name || `${member.firstName} ${member.lastName}`.trim(),
-      role: member.role?.trim() ? member.role.trim() : null,
+      role: member.role?.trim()
+        ? positionForForm(member.role.trim(), member.roleForm)
+        : null,
       avatarUrl: member.avatarUrl ?? null,
       current: currentSoll(fact, modelName),
       hasSchedule: fact?.hasSchedule ?? false,

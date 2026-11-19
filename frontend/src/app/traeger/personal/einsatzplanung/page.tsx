@@ -7,8 +7,9 @@
 // Überschneidungen sind gesperrt, Verstöße gegen die Arbeitszeitregeln
 // brauchen eine Bestätigung mit Begründung.
 
-import { GearSixIcon, LockKeyIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { GearSixIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 
 import {
   PlanShiftModal,
@@ -23,13 +24,18 @@ import {
   schoolColors,
 } from "~/components/traeger/planning/planning-format";
 import { PlanningWeekGrid } from "~/components/traeger/planning/planning-week-grid";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { StaffNotReleasedPage } from "~/components/traeger/staff/staff-not-released-page";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
-import { ButtonLink } from "~/components/ui/button";
-import { EmptyState } from "~/components/ui/empty-state";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -39,11 +45,88 @@ import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   downloadTraegerPlanningWeek,
   fetchTraegerPlanningWeek,
+  type TraegerPlanningPerson,
 } from "~/lib/traeger-planning-api";
+import { traegerPath } from "~/lib/traeger-url";
 import { describeWorkingTimeWarning } from "~/lib/working-time";
 
 const NOT_RELEASED = "workforce.traeger_staff_not_released";
 const RULES_HREF = "/traeger/einstellungen?bereich=einsatzplanung";
+
+/** Mehr Personen mit Hinweis klappen ein (frontend-ui-kit, mehrere Hinweise). */
+const VISIBLE_WARNED = 5;
+
+/**
+ * Die Hinweise der Woche, eine Zeile je Person: das Muster „mehrere Hinweise
+ * derselben Art“ (frontend-ui-kit), wie „Das fehlt noch“ im Lohnexport.
+ */
+function WeekWarnings({
+  warned,
+  count,
+}: Readonly<{ warned: readonly TraegerPlanningPerson[]; count: number }>) {
+  const listId = useId();
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? warned : warned.slice(0, VISIBLE_WARNED);
+  const hidden = warned.length - VISIBLE_WARNED;
+  return (
+    <SectionCard
+      leading={
+        <WarningCircleIcon
+          className="text-moto-orange-strong mt-0.5 size-5 shrink-0"
+          aria-hidden="true"
+        />
+      }
+      title="Hinweise dieser Woche"
+      titleBadge={
+        <StatusBadge label={`${count} offen`} tone="warning" compact />
+      }
+      description="moto zählt alle Schulen der Person zusammen. Die Prüfung ist eine Hilfe; ob die Planung erlaubt ist, entscheidest du."
+    >
+      <ResponsiveActionList id={listId}>
+        {shown.map((person) => (
+          <ResponsiveActionRow key={person.recordId} align="start">
+            <div className="min-w-0 text-sm">
+              <p className="font-medium text-gray-900">
+                {person.lastName}, {person.firstName}
+              </p>
+              <ul className="mt-1 space-y-0.5 text-gray-700">
+                {person.warnings.map((warning) => (
+                  <li key={`${warning.kind}-${warning.date}`}>
+                    {describeWorkingTimeWarning(warning)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </ResponsiveActionRow>
+        ))}
+      </ResponsiveActionList>
+      {hidden > 0 ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="md"
+          className="mt-2 w-full"
+          aria-expanded={expanded}
+          aria-controls={listId}
+          noTooltip="Das Wort sagt alles: Die Liste klappt nur auf oder zu."
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? (
+            <>
+              Weniger anzeigen
+              <ChevronUp className="size-4" aria-hidden="true" />
+            </>
+          ) : (
+            <>
+              {hidden} weitere anzeigen
+              <ChevronDown className="size-4" aria-hidden="true" />
+            </>
+          )}
+        </Button>
+      ) : null}
+    </SectionCard>
+  );
+}
 
 const INFO = (
   <div className="space-y-2">
@@ -107,6 +190,23 @@ export default function TraegerStaffPlanningPage() {
   );
   const canPlan = shownWeek?.rules.enabled ?? false;
   const loading = !notReleased && !shownWeek && !loadError;
+  const exportItems = useTraegerListExportItems({
+    download: (format) => downloadTraegerPlanningWeek(weekStart, format),
+    scope:
+      "Alle Personen dieser Woche. Jeder Download steht im Zugriffsprotokoll der Schulen.",
+    fallbackName: `einsatzplanung-${weekStart}`,
+    errorObject: "die Einsatzplanung",
+    unavailable: !shownWeek || shownWeek.people.length === 0,
+  });
+
+  if (notReleased) {
+    return (
+      <StaffNotReleasedPage
+        title="Einsatzplanung"
+        description="Bis zur Freischaltung plant jede Schule ihren Dienstplan selbst."
+      />
+    );
+  }
 
   const contextBar = (
     <PlanningContextBar
@@ -121,31 +221,6 @@ export default function TraegerStaffPlanningPage() {
         weekStart === mondayOf(today)
           ? undefined
           : () => setWeekStart(mondayOf(today))
-      }
-      actions={
-        <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerPlanningWeek(weekStart, format)
-            }
-            scope="Alle Personen dieser Woche"
-            ariaLabel="Einsatzplanung herunterladen"
-            tooltip="Zeigt die Formate für die gezeigte Woche. Jeder Download steht im Zugriffsprotokoll der Schulen."
-            fallbackName={`einsatzplanung-${weekStart}`}
-            errorObject="die Einsatzplanung"
-            unavailable={!shownWeek || shownWeek.people.length === 0}
-          />
-          <ButtonLink
-            href={RULES_HREF}
-            variant="outline"
-            size="md"
-            className="gap-2"
-            tooltip="Öffnet die Arbeitszeitregeln in den Einstellungen."
-          >
-            <GearSixIcon className="h-4 w-4" aria-hidden="true" />
-            Regeln
-          </ButtonLink>
-        </>
       }
       contextRowWrap
     >
@@ -182,9 +257,35 @@ export default function TraegerStaffPlanningPage() {
         ) : null
       }
       statsLoading={loading}
-      searchSlot={notReleased ? undefined : contextBar}
+      actions={
+        <ButtonLink
+          href={traegerPath(RULES_HREF)}
+          variant="outline"
+          size="md"
+          className="gap-2"
+          tooltip="Öffnet die Arbeitszeitregeln in den Einstellungen."
+        >
+          <GearSixIcon className="h-4 w-4" aria-hidden="true" />
+          Regeln
+        </ButtonLink>
+      }
+      overflowMenu={exportItems}
+      searchSlot={contextBar}
       error={loadError}
       loading={loading}
+      empty={
+        // Fehlt eine Schule, ist die leere Woche kein Leerzustand: der
+        // Hinweis darauf bleibt stehen.
+        shownWeek &&
+        shownWeek.people.length === 0 &&
+        shownWeek.unreached.length === 0
+          ? {
+              title: "Noch niemand zu planen.",
+              description:
+                "Hier stehen Personen mit Personalakte, die an einer deiner Schulen arbeiten. Lege Personalakten unter „Personalakten“ an.",
+            }
+          : undefined
+      }
       overlays={
         <PlanShiftModal
           target={target}
@@ -199,23 +300,13 @@ export default function TraegerStaffPlanningPage() {
         />
       }
     >
-      {notReleased ? (
-        <SectionCard>
-          <EmptyState
-            icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
-            title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei. Bis dahin plant jede Schule ihren Dienstplan selbst."
-          />
-        </SectionCard>
-      ) : null}
-
       {shownWeek && !shownWeek.rules.enabled ? (
         <Alert
           type="warning"
           message="Einsatzplanung in moto ist aus. Neue Schichten sind in allen Schulen gesperrt. Geplante Schichten bleiben."
           action={
             <ButtonLink
-              href={RULES_HREF}
+              href={traegerPath(RULES_HREF)}
               variant="ghost_tone"
               size="compact"
               tooltip="Öffnet die Einstellungen der Einsatzplanung."
@@ -231,15 +322,6 @@ export default function TraegerStaffPlanningPage() {
           type="warning"
           message={`Diese Woche fehlt von: ${shownWeek.unreached.map((school) => school.name).join(", ")}. Bitte lade die Seite später neu.`}
         />
-      ) : null}
-
-      {shownWeek && shownWeek.people.length === 0 ? (
-        <SectionCard>
-          <EmptyState
-            title="Noch niemand zu planen."
-            description="Hier stehen Personen mit Personalakte, die an einer deiner Schulen arbeiten. Lege Personalakten unter „Personalakten“ an."
-          />
-        </SectionCard>
       ) : null}
 
       {shownWeek && shownWeek.people.length > 0 ? (
@@ -267,32 +349,7 @@ export default function TraegerStaffPlanningPage() {
       ) : null}
 
       {warned.length > 0 ? (
-        <SectionCard
-          title="Hinweise dieser Woche"
-          description="moto zählt alle Schulen der Person zusammen. Die Prüfung ist eine Hilfe; ob die Planung erlaubt ist, entscheidest du."
-          action={
-            <span className="text-sm font-medium text-gray-600 tabular-nums">
-              {warningCount} offen
-            </span>
-          }
-        >
-          <ul className="divide-y divide-gray-100">
-            {warned.map((person) => (
-              <li key={person.recordId} className="py-3 first:pt-0 last:pb-0">
-                <span className="block text-sm font-medium text-gray-900">
-                  {person.lastName}, {person.firstName}
-                </span>
-                <ul className="mt-1 space-y-0.5 text-sm text-gray-700">
-                  {person.warnings.map((warning) => (
-                    <li key={`${warning.kind}-${warning.date}`}>
-                      {describeWorkingTimeWarning(warning)}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
+        <WeekWarnings warned={warned} count={warningCount} />
       ) : null}
     </TenantPage>
   );

@@ -27,9 +27,6 @@ function onPage(page: string, path: string): boolean {
 export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   const page = pathname.replace(/^\/traeger(?=\/|$)/, "") || "/";
   if (onPage(page, "/uebersicht")) return HELP_TOPICS.traegerDashboard;
-  if (onPage(page, "/stichtagszahlen")) {
-    return HELP_TOPICS.traegerKeyDateCounts;
-  }
   if (onPage(page, "/belegung")) return HELP_TOPICS.traegerOccupancy;
   if (onPage(page, "/auslastung")) return HELP_TOPICS.traegerUtilization;
   if (onPage(page, "/ankunft-abholung")) {

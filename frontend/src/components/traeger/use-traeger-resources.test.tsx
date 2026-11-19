@@ -3,6 +3,7 @@ import { waitFor } from "~/test/wait-for-state";
 import type { Session } from "next-auth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import { SWRConfig } from "~/lib/swr/testing";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { resumeSWRSession } from "~/lib/swr/scope";
@@ -220,5 +221,60 @@ describe.each(resources)("Träger $name", (resource) => {
     await act(async () => undefined);
     expect(view.result.current.data ?? null).toBeNull();
     expect(resource.fetcher).not.toHaveBeenCalled();
+  });
+});
+
+const refusalResources = [
+  {
+    name: "schools",
+    fetcher: api.fetchTraegerSchools,
+    value: HOLIDAY_SCHOOLS,
+    read: () => {
+      const resource = useTraegerSchools();
+      return {
+        data: resource.schools,
+        failure: resource.fetchError,
+        refused: resource.refused,
+        mutate: resource.mutate,
+      };
+    },
+  },
+  {
+    name: "period detail",
+    fetcher: api.fetchHolidayPeriod,
+    value: HOLIDAY_PERIOD,
+    read: () => useTraegerHolidayPeriod(HOLIDAY_PERIOD.id),
+  },
+];
+
+describe.each(refusalResources)("refused Träger $name", (resource) => {
+  it("keeps a 404 refusal through a later transient failure until a fetch succeeds", async () => {
+    const view = renderHook(() => resource.read(), setup());
+    await waitFor(() =>
+      expect(view.result.current.data).toEqual(resource.value),
+    );
+
+    const refusal = new ApiError("gone", 404);
+    resource.fetcher.mockRejectedValueOnce(refusal);
+    await act(async () => {
+      await view.result.current.mutate().catch(() => undefined);
+    });
+    await waitFor(() => expect(view.result.current.refused).toBe(true));
+    expect(view.result.current.data ?? null).toBeNull();
+
+    resource.fetcher.mockRejectedValueOnce(new ApiError("unavailable", 503));
+    await act(async () => {
+      await view.result.current.mutate().catch(() => undefined);
+    });
+    await waitFor(() => expect(resource.fetcher).toHaveBeenCalledTimes(3));
+    expect(view.result.current.refused).toBe(true);
+    expect(view.result.current.failure).toBe(refusal);
+
+    resource.fetcher.mockResolvedValueOnce(resource.value);
+    await act(async () => {
+      await view.result.current.mutate();
+    });
+    await waitFor(() => expect(view.result.current.refused).toBe(false));
+    expect(view.result.current.data).toEqual(resource.value);
   });
 });

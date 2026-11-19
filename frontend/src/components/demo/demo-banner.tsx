@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import {
   ArrowCounterClockwiseIcon,
   CaretDownIcon,
@@ -40,6 +46,7 @@ import { useTenantSafe } from "~/lib/tenant-context";
 import { DemoBookingDialog } from "./demo-booking-dialog";
 import { DemoEveningRow } from "./demo-evening-notice";
 import { DemoWeekendNotice } from "./demo-weekend-notice";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 const logger = createLogger({ component: "DemoBanner" });
 
@@ -235,7 +242,7 @@ function ActiveDemoBanner() {
     <div
       role="region"
       aria-label="Demo"
-      className="fixed inset-x-0 top-0 z-50 flex h-12 items-center gap-2 border-b border-gray-200 bg-white px-4 shadow-sm"
+      className={`fixed inset-x-0 top-0 z-50 flex h-12 items-center gap-2 border-b border-gray-200 bg-white px-4 shadow-sm ${FIXED_LAYER_SHIFT}`}
     >
       <StatusBadge tone="orange" label="Demo" compact />
       {schoolName ? (
@@ -311,7 +318,7 @@ function ActiveDemoBanner() {
         // `compact`: Höhe des schmalen Streifens (#4346), dichte Leiste (#5529).
         size="compact"
         className="ml-auto shrink-0"
-        onClick={(event) => {
+        onClick={(event: MouseEvent<HTMLAnchorElement>) => {
           trackDemoEvent("demo_start_clicked", visit ?? null);
           // A modified click still opens the calendar in a new tab.
           if (

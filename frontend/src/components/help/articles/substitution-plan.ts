@@ -14,7 +14,7 @@ export function substitutionPlanTopic(): HelpTopic {
     steps: [
       "Klappe in der Seitenleiste `Planung` auf.",
       "Öffne `Vertretungsplan`.",
-      "Wähle oben den Tag. Die Zahl an einem Tag zeigt, wie viele Lücken dort offen sind.",
+      "Wähle oben den Tag. Ein Punkt an einem Tag heißt: dort sind Lücken offen. Wie viele, steht daneben. Für den gewählten Tag steht die Zahl ganz oben unter dem Titel.",
       "Wähle unter `Offene Lücken` bei dem Termin `Besetzen`.",
       "Wähle die Person, die übernimmt.",
       "Wähle `Vertretung speichern`.",

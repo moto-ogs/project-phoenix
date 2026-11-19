@@ -18,18 +18,12 @@ import {
   type QualificationType,
 } from "~/lib/staff-qualification-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { STAFF_GENDER_HINT, STAFF_GENDER_OPTIONS } from "~/lib/staff-gender";
 
 // Feldgruppen der Stammdaten (#1423). Sie sind reine Eingabeflächen ohne
 // eigenen Speichern-Knopf: der Reiter hat EINEN Bearbeiten-Zustand mit EINEM
 // Speichern (Bauart 2, Regeln 3 und 4). Vorher trug jede Gruppe ihr eigenes
 // Modal — fünf Dialoge für einen Datensatz.
-
-const genderOptions = [
-  { value: "", label: "Keine Angabe" },
-  { value: "female", label: "Weiblich" },
-  { value: "male", label: "Männlich" },
-  { value: "diverse", label: "Divers" },
-] as const;
 
 const employmentOptions = [
   { value: "", label: "Keine Angabe" },
@@ -187,16 +181,19 @@ function SelectField({
   value,
   options,
   onChange,
+  hint,
 }: {
   readonly id: string;
   readonly label: string;
   readonly value: string;
   readonly options: readonly { value: string; label: string }[];
   readonly onChange: (value: string) => void;
+  readonly hint?: string;
 }) {
   return (
     <CustomSelect
       label={label}
+      hint={hint}
       id={id}
       value={value}
       onChange={onChange}
@@ -253,7 +250,8 @@ export function PersonFields({
         id="stammdaten-gender"
         label="Geschlecht"
         value={draft.gender}
-        options={genderOptions}
+        options={STAFF_GENDER_OPTIONS}
+        hint={STAFF_GENDER_HINT}
         onChange={(value) => onChange({ gender: value })}
       />
     </div>

@@ -298,12 +298,12 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     expect(within(row).getByText("OGS Pforzheim")).toBeInTheDocument();
     fireEvent.click(actions);
     expect(
-      await screen.findByRole("menuitem", { name: "Ändern" }),
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("menuitem", { name: "Löschen" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("menuitem", { name: "Ändern" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
     expect(
       await screen.findByRole("dialog", { name: "Schließtag bearbeiten" }),
     ).toBeInTheDocument();
@@ -590,7 +590,9 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Aktionen für Brückentag" }),
     );
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Ändern" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
     const dialog = await screen.findByRole("dialog", {
       name: "Schließtag bearbeiten",
     });

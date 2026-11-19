@@ -4,7 +4,6 @@
 // Stammdaten, ohne die Träger-Navigation zu verlassen. Nur Zahlen, keine Namen.
 // Die Schul-App öffnet sich als eigene Aktion in einem neuen Tab.
 
-import { ExternalLink } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import {
@@ -12,8 +11,8 @@ import {
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
+import { TraegerOpenSchoolButton } from "~/components/traeger/traeger-open-school-button";
 import { useTraegerSchool } from "~/components/traeger/use-traeger-school";
-import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
@@ -27,10 +26,6 @@ import { sickConcept } from "~/lib/concepts/sick";
 import { staffConcept } from "~/lib/concepts/staff";
 import { supervisionConcept } from "~/lib/concepts/supervision";
 import type { TraegerSchoolView } from "~/lib/traeger-api";
-import {
-  TRAEGER_HANDOFF_OPEN,
-  TRAEGER_HANDOFF_OPEN_HINT,
-} from "~/lib/traeger-handoff";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
@@ -191,25 +186,12 @@ export default function TraegerSchoolPage() {
       error={error}
       actions={
         canOpen && school ? (
-          <Button
-            type="button"
-            variant="surface"
+          <TraegerOpenSchoolButton
+            school={school}
+            opening={opening}
             size="md"
-            className="gap-2"
-            aria-label={`${TRAEGER_HANDOFF_OPEN}: ${school.name}, neuer Tab`}
-            tooltip={TRAEGER_HANDOFF_OPEN_HINT}
-            disabled={opening !== null}
-            onClick={() => void open(school)}
-          >
-            {opening === null ? (
-              <>
-                {TRAEGER_HANDOFF_OPEN}
-                <ExternalLink className="h-4 w-4" aria-hidden="true" />
-              </>
-            ) : (
-              "Wird geöffnet …"
-            )}
-          </Button>
+            onOpen={() => void open(school)}
+          />
         ) : null
       }
       tabs={{

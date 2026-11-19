@@ -13,5 +13,10 @@
     "scenario": "api.enrollment.growth.public_schema",
     "route": "GET /api/enrollment/schema/public/{tenantSlug}/{phaseId}",
     "issue": 6116
+  },
+  {
+    "scenario": "api.traeger.key_date_counts",
+    "route": "GET /traeger/schools/key-date-counts",
+    "issue": 7301
   }
 ]

@@ -38,5 +38,8 @@ func BuildInvitationEmploymentReset(db transactionruntime.Database, env RootEnvi
 		Execute: func(ctx context.Context, in identityPorts.EmploymentReset) error {
 			return reset.ResetEmployment(ctx, workforce.EmploymentReset{StaffID: in.StaffID, ActorAccountID: in.AccountID, InvitationID: in.InvitationID, PreviousPersonnelNumber: in.PreviousPersonnelNumber, MasterData: in.MasterData, Qualifications: in.Qualifications, WorkTime: in.WorkTime})
 		},
+		ApplyGender: func(ctx context.Context, in identityPorts.InvitedGender) error {
+			return reset.ApplyInvitedGender(ctx, workforce.InvitedGender{StaffID: in.StaffID, InvitationID: in.InvitationID, Gender: in.Gender})
+		},
 	}, nil
 }

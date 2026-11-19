@@ -92,11 +92,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/organizationtenancy/inbound/operator/BillingResource.UpdateKeyDay",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.DeleteDevice",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

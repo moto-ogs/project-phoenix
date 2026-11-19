@@ -124,7 +124,6 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		Bureau: traegerBureauAddresses{roles: identity}, Now: now,
 		Rosters: schoolMembershipCompose.NewSchoolRosters(), Present: presence,
 		Sick: sick, OnSite: workforceCompose.NewOnSiteStaff(),
-		KeyDates:    traegerKeyDateCounts{organizations: organizations},
 		Enrollments: enrollmentCompose.NewOpenEnrollments(), Alerts: traegerAlertSettings{settings: settings},
 		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics, now),
 		Times: traegerArrivalPickupCounts{times: presence}, Daily: traegerDailyAttendancePorts(presence, sick, calendarSchools),
@@ -228,39 +227,6 @@ func (s traegerSchoolIDs) ListAccountTraeger(ctx context.Context, accountID int6
 	result := make([]traegerview.Traeger, 0, len(organizations))
 	for _, organization := range organizations {
 		result = append(result, traegerview.Traeger(organization))
-	}
-	return result, nil
-}
-
-// traegerKeyDateCounts binds the Träger projection's Stichtagszahlen to the
-// rows of the operator billing report at Organisation & Tenancy (#4673): it
-// translates an unavailable Träger and the calendar days into the
-// projection's contract.
-type traegerKeyDateCounts struct {
-	organizations organizationtenancy.TraegerMembershipQuery
-}
-
-func (c traegerKeyDateCounts) ListTraegerKeyDateCounts(ctx context.Context, organizationID int64) ([]traegerview.SchoolKeyDateCount, error) {
-	rows, err := c.organizations.ListTraegerBillingKeyDateCounts(ctx, organizationID)
-	if errors.Is(err, organizationtenancy.ErrOrganizationInactive) || errors.Is(err, organizationtenancy.ErrOrganizationNotFound) {
-		return nil, traegerview.ErrTraegerUnavailable
-	}
-	if err != nil {
-		return nil, err
-	}
-	result := make([]traegerview.SchoolKeyDateCount, 0, len(rows))
-	for _, row := range rows {
-		period, err := calendar.ParseDate(row.Period)
-		if err != nil {
-			return nil, err
-		}
-		keyDate, err := calendar.ParseDate(row.KeyDate)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, traegerview.SchoolKeyDateCount{SchoolID: row.SchoolID, KeyDateCount: traegerview.KeyDateCount{
-			Period: period, KeyDate: keyDate, ActiveStudents: row.ActiveStudents, ActiveTerminals: row.ActiveTerminals, RecordedAt: row.RecordedAt,
-		}})
 	}
 	return result, nil
 }

@@ -200,17 +200,16 @@ response and the staging delivery check:
 
 ## Encrypted daily backup
 
-`alerting/daily-backup.yml` is prepared, not deployed or delivery-verified.
-It monitors one journal stream per systemd instance,
-`{env="prod",service="daily-backup"}` for `moto-daily-backup@production` and
-`{env="staging",service="daily-backup"}` for `moto-daily-backup@staging`:
-no verified success in 26 hours, or a failure in 30 minutes. Staging rules use
-severity `warning`. Legacy cron backup
-rules in `infrastructure.yml` remain unchanged during the cutover. The operator
-must add the Alloy journal source, verify delivery via the existing default
-policy and complete a restore before retiring cron. No contact points or
-notification policies are provisioned. Configuration snippet, response and
-cutover steps: [daily backup runbook](../docs/operations/daily-backup.md).
+`alerting/daily-backup.yml` is deployed and delivery-verified (2026-11-18,
+Slack via the default policy). It monitors one journal stream per systemd
+instance, `{env="prod",service="daily-backup"}` for
+`moto-daily-backup@production` and `{env="staging",service="daily-backup"}` for
+`moto-daily-backup@staging`: no verified success in 26 hours, or a failure in
+30 minutes. Staging rules use severity `warning`. The legacy cron dump and its
+two rules (`dfsla2b54bgg0a`, `dfsla2b8noa2od`) were retired on 2026-11-18;
+`infrastructure.yml` deletes them through `deleteRules`. No contact points or
+notification policies are provisioned. Response steps:
+[daily backup runbook](../docs/operations/daily-backup.md).
 
 ## Student storage Contract observation
 

@@ -93,3 +93,24 @@ das Repo antwortet auch sonst bei fremden Mandantenobjekten mit 404
 (`iot.room_not_found`), und eine fremde und eine unbekannte Schule bleiben
 gleich, also verrät die Route weiter keine Schule. Ein fehlendes Recht bleibt
 403 mit eigenem Code. Fehlercode und Klasse bleiben gleich.
+
+## Nachtrag 18.11.2026: Stichtagszahlen nur noch im Operator-Portal ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301))
+
+Der Nachtrag vom 06.11.2026 gilt nicht mehr. Die Stichtagszahlen sind die
+Grundlage, nach der moto abrechnet. Für keine Aufgabe des Träger-Büros
+braucht es sie; sie zeigten ihm nur die Rechnung an moto. Deshalb hat der
+Product Owner am 18.11.2026 entschieden: Nur der Betreiber sieht sie.
+
+- Die Seite `/traeger/stichtagszahlen` und die Routen
+  `GET /traeger/schools/key-date-counts` und `…/export` entfallen. Ebenso
+  entfallen `TraegerMembershipQuery.ListTraegerBillingKeyDateCounts` und der
+  Port `traegerview.KeyDateCountReads`.
+- Will ein Träger eine Rechnung von moto prüfen, schickt ihm das moto-Team den
+  Export aus `/operator/billing`.
+- Die eigenen Stichtage des Trägers bleiben: der Stichtagsbericht für Kommune
+  und Jugendamt (ADR 0246) und der Standortvergleich (ADR 0245, Nachtrag dort).
+
+Nach `.claude/rules/information-flow.md` braucht eine Einschränkung einen
+fachlichen Grund. Hier ist es dieser: Die Zahl gehört zum Vertrag zwischen
+moto und dem Kunden. Für die Arbeit des Trägers mit Kindern und Schulen ist
+sie keine Information.

@@ -90,7 +90,9 @@ describe("HolidayWeekPlacesCard", () => {
       "/traeger/ferien/7/anmeldungen/14",
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /Plätze für die Woche .* ändern/ }),
+      screen.getByRole("button", {
+        name: /Plätze für die Woche .* bearbeiten/,
+      }),
     );
     expect(onEdit).toHaveBeenCalledTimes(1);
   });

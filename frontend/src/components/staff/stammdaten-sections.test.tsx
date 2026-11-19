@@ -36,6 +36,10 @@ const swrErrors = vi.hoisted(() => ({
   current: new Map<string, Error>(),
 }));
 
+const { refreshMatching } = vi.hoisted(() => ({
+  refreshMatching: vi.fn((_keys: readonly string[]) => Promise.resolve([])),
+}));
+
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null) => ({
     data: [...swrData.current.entries()].find(([prefix]) =>
@@ -48,6 +52,9 @@ vi.mock("~/lib/swr", () => ({
     isValidating: false,
     mutate,
   }),
+  useTenantMutateMatching:
+    (keys: readonly string[]) => (): Promise<unknown[]> =>
+      refreshMatching(keys),
 }));
 
 vi.mock("~/lib/staff-api", () => ({
@@ -265,6 +272,12 @@ describe("StammdatenTab Sektionen (#1423)", () => {
         "42",
         expect.objectContaining({ birthday: "1982-04-17" }),
         "",
+      ),
+    );
+    // Name und Geschlecht stehen auch im Kopf und in der Personalliste.
+    await waitFor(() =>
+      expect(refreshMatching).toHaveBeenCalledWith(
+        expect.arrayContaining(["staff-detail-42", "staff-record-42"]),
       ),
     );
   });

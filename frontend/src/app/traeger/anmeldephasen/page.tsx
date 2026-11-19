@@ -11,8 +11,8 @@ import {
   targetSchoolIds,
 } from "~/components/traeger/catalog-format";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerCatalogPhases } from "~/components/traeger/use-traeger-catalog";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
@@ -51,6 +51,14 @@ export default function TraegerCatalogPhasesPage() {
   const { schools } = useTraegerSchools();
   const phases = data ?? [];
   const allSchoolIds = (schools ?? []).map((school) => school.id);
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/catalog/phases/export", format),
+    scope: traegerExportScope(),
+    fallbackName: "anmeldephasen",
+    errorObject: "die Anmeldephasen",
+    unavailable: phases.length === 0,
+  });
 
   const columns: DataTableColumn<TraegerPhase>[] = [
     {
@@ -115,28 +123,17 @@ export default function TraegerCatalogPhasesPage() {
       }
       statsLoading={isLoading}
       error={loadError}
+      overflowMenu={exportItems}
       actions={
-        <>
-          <TraegerListExportMenu
-            download={(format) =>
-              downloadTraegerList("/api/traeger/catalog/phases/export", format)
-            }
-            scope={traegerExportScope()}
-            ariaLabel="Anmeldephasen herunterladen"
-            fallbackName="anmeldephasen"
-            errorObject="die Anmeldephasen"
-            unavailable={phases.length === 0}
-          />
-          <ButtonLink
-            href={traegerPath("/traeger/anmeldephasen/neu")}
-            variant="primary"
-            size="md"
-            tooltip="Öffnet eine neue Anmeldephase, die Schulen sehen sie erst nach der Freigabe."
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Anmeldephase anlegen
-          </ButtonLink>
-        </>
+        <ButtonLink
+          href={traegerPath("/traeger/anmeldephasen/neu")}
+          variant="primary"
+          size="md"
+          tooltip="Öffnet eine neue Anmeldephase, die Schulen sehen sie erst nach der Freigabe."
+        >
+          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+          Anmeldephase anlegen
+        </ButtonLink>
       }
     >
       <DataTable

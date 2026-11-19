@@ -1,11 +1,10 @@
 /**
  * What the allocation screen derives from the list of the backend (#4700):
  * where the proposal reaches the capacity, which decision differs from the
- * proposal, what „Vorschlag übernehmen“ sends and how the criteria show.
+ * proposal, what „Vorschlag übernehmen“ sends and how the criteria are named.
  * The order itself comes from the backend; this module never sorts.
  */
 
-import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import type {
   HolidayAllocationBoard,
   HolidayAllocationCriterion,
@@ -17,21 +16,12 @@ import type {
 } from "~/lib/traeger-holiday-allocation-api";
 
 /**
- * The colours of the criteria by priority; a sixth criterion and later ones
- * share the last. Purple stays free: it marks the open place (#4700).
+ * A criterion with its rank in front: „1. Geschwisterkind“. Colour means
+ * status only (BAUARTEN cross rule), so the rank number, not a colour,
+ * ties a chip at a child to its criterion (#7411).
  */
-const PRIORITY_TONES: readonly StatusBadgeTone[] = [
-  "blue",
-  "cyan",
-  "green",
-  "orange",
-  "gray",
-];
-
-/** The colour of a criterion by its place in the priority, from 1. */
-export function criterionTone(position: number): StatusBadgeTone {
-  const index = Math.min(Math.max(position, 1) - 1, PRIORITY_TONES.length - 1);
-  return PRIORITY_TONES[index] ?? "gray";
+export function criterionRankLabel(position: number, name: string): string {
+  return `${position}. ${name}`;
 }
 
 /** A criterion that shows at an open booking: met, or without an answer. */

@@ -139,6 +139,23 @@ async function openMenu(email: string) {
   fireEvent.click(menu!);
 }
 
+/**
+ * Opens the download menu of a list: the members' export sits in the page
+ * menu (#7416), the history's on its table head.
+ */
+async function openDownload(label: string) {
+  if (label === "Verlauf herunterladen") {
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    return;
+  }
+  expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
+  fireEvent.click(
+    (await screen.findAllByRole("button", { name: "Weitere Aktionen" })).at(
+      -1,
+    )!,
+  );
+}
+
 describe("TraegerAccountsPage", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
@@ -183,8 +200,8 @@ describe("TraegerAccountsPage", () => {
       const view = render(<View open />, { wrapper: Providers });
       expect(await screen.findByText("Lea Leitung")).toBeVisible();
       expect((await screen.findAllByText("Rollen geändert"))[0]).toBeVisible();
-      fireEvent.click(screen.getByRole("button", { name: downloadLabel }));
-      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      await openDownload(downloadLabel);
+      fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       expect(
         (
           await screen.findAllByText(
@@ -679,12 +696,8 @@ describe("TraegerAccountsPage", () => {
       renderPage();
       await screen.findAllByText("kasse@traeger.example");
       await screen.findAllByText("Rollen geändert");
-      fireEvent.click(
-        screen.getByRole("button", {
-          name: downloadLabel,
-        }),
-      );
-      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      await openDownload(downloadLabel);
+      fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       const closeToast = await screen.findByRole("button", {
         name: "Schließen",
       });

@@ -74,6 +74,23 @@ func TestStaffMasterDataAndFinancialRowsAreTenantIsolated(t *testing.T) {
 	_, err = capability.FindStaffMasterData(ctx, foreign.ID)
 	require.ErrorIs(t, err, workforce.ErrStaffMasterDataNotFound, "a foreign row is invisible")
 
+	// The batched gender read of the staff directory: one map for the listed
+	// staff, foreign rows invisible, rows without a gender absent.
+	foreignGender := workforce.GenderFemale
+	foreignRow.Gender = &foreignGender
+	foreignRow.Phone = nil
+	_, err = capability.UpdateStaffMasterData(foreignCtx, foreignRow)
+	require.NoError(t, err)
+	withoutGender := testpkg.CreateTestStaff(t, db, "Stammdaten", "Ohne")
+	_, err = capability.CreateStaffMasterData(ctx, workforce.StaffMasterData{StaffID: withoutGender.ID})
+	require.NoError(t, err)
+	genders, err := MustNewStaffEmployment(db).(workforce.StaffGenderReader).StaffGenders(ctx, []int64{local.ID, foreign.ID, withoutGender.ID})
+	require.NoError(t, err)
+	assert.Equal(t, map[int64]string{local.ID: workforce.GenderDiverse}, genders)
+	foreignGenders, err := MustNewStaffEmployment(db).(workforce.StaffGenderReader).StaffGenders(foreignCtx, []int64{foreign.ID})
+	require.NoError(t, err)
+	assert.Equal(t, map[int64]string{foreign.ID: workforce.GenderFemale}, foreignGenders, "anchor: the foreign gender is stored")
+
 	// --- financial data ---
 	_, err = capability.FindStaffFinancialData(ctx, local.ID)
 	require.ErrorIs(t, err, workforce.ErrStaffFinancialDataNotFound)

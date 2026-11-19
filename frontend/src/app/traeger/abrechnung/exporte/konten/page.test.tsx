@@ -222,7 +222,7 @@ it("saves the revenue account of a Leistung after checking it like the export", 
   renderPage();
   fireEvent.click(
     await screen.findByRole("button", {
-      name: "Erlöskonto für Monatsbeiträge ändern",
+      name: "Erlöskonto für Monatsbeiträge bearbeiten",
     }),
   );
   const field = screen.getByLabelText("Erlöskonto für Monatsbeiträge");

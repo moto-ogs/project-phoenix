@@ -12,7 +12,7 @@ export function findStaffTopic(presenceMode: HelpPresenceMode): HelpTopic {
     audience: ["caregiver", "lead"],
     icon: "UserRoundSearch",
     steps: [
-      "Klappe in der Seitenleiste `Team` auf und öffne `Mitarbeiter`.",
+      "Klappe in der Seitenleiste `Team` auf und öffne `Mitarbeitende`.",
       "Gib den Namen in das Suchfeld ein.",
       // Live geprueft: die Auswahl traegt ihren aktuellen Wert als
       // Beschriftung, anfangs `Alle`. Ein Knopf `Filter` existiert nicht.
