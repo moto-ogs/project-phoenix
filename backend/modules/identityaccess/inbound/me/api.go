@@ -24,7 +24,9 @@ type Rows interface {
 	ActivityGroupRows(ctx context.Context, ids []int64) (any, error)
 	SessionRows(ctx context.Context, ids []int64) (any, error)
 	StudentRows(ctx context.Context, ids []int64) (any, error)
-	NavigationRow(ctx context.Context, navigation identityaccess.CallerNavigation) (any, error)
+	// NavigationRow renders the navigation context with the school
+	// switches the route resolved; the root names its type in RouteContracts.
+	NavigationRow(ctx context.Context, navigation identityaccess.CallerNavigation, switches identityaccess.SchoolSwitches) (any, error)
 }
 
 // Resource handles the /api/me routes.
@@ -132,15 +134,11 @@ func (res *Resource) navigationRow(ctx context.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	row, err := res.rows.NavigationRow(ctx, navigation)
-	if err != nil {
-		return nil, err
-	}
 	switches, err := loadSchoolSwitches(ctx, res.settings)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errSchoolSwitchesUnavailable, err)
 	}
-	return withSchoolSwitches(row, switches)
+	return res.rows.NavigationRow(ctx, navigation, switches)
 }
 
 // getMyGroups renders the caller's educational groups. The substitution

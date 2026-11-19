@@ -152,12 +152,19 @@ async function browserApi(
           email: "fixture@example.invalid",
           settings: {},
         };
-      else if (path === "/api/user-context")
+      else if (path === "/api/me/navigation")
         data = {
-          educationalGroups: [],
-          supervisedGroups: [],
-          currentStaff: null,
-          isReady: true,
+          educational_groups: [],
+          supervised_groups: [],
+          current_staff: null,
+          incomplete: false,
+          unavailable_sections: [],
+          school_switches: {
+            parent_news_enabled: false,
+            parent_invite_mode: "direct",
+            timetable_day_start_time: "08:00",
+            timetable_day_end_time: "16:00",
+          },
         };
       else if (path === "/api/parent/me/profile")
         data = {

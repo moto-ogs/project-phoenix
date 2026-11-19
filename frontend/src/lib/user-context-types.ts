@@ -9,9 +9,9 @@ export interface EducationalGroup {
   viaSubstitution?: boolean;
 }
 
+/** A room session the caller supervises; its room names it. */
 export interface SupervisedGroup {
   id: string;
-  name: string;
   roomId?: string;
   room?: {
     id: string;

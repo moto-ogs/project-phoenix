@@ -91,15 +91,15 @@ func (rs *Resource) updateAdminChildOfferings(w http.ResponseWriter, r *http.Req
 		common.RenderError(w, r, updateAdminOfferingsErrorRenderer(err))
 		return
 	}
-	out := adminChildOfferingsResponse{AdminRequestChild: newAdminRequestChild(updated.Child), RosterImpact: newRosterImpactResponse(updated.RosterImpact)}
+	out := AdminChildOfferingsResponse{AdminRequestChild: newAdminRequestChild(updated.Child), RosterImpact: newRosterImpactResponse(updated.RosterImpact)}
 	out.CustomData = updated.Child.CustomData
 	rs.enrichUpdatedAdminOfferings(r, requestID, childID, &out.AdminRequestChild)
 	common.Respond(w, r, http.StatusOK, out, "Child offerings updated")
 }
 
-// adminChildOfferingsResponse is the corrected child with the effect of the
+// AdminChildOfferingsResponse is the corrected child with the effect of the
 // correction on the child's Regeltermine (#5102).
-type adminChildOfferingsResponse struct {
+type AdminChildOfferingsResponse struct {
 	AdminRequestChild
 	RosterImpact enrollmentRosterImpactResponse `json:"roster_impact"`
 }

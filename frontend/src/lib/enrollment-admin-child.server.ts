@@ -1,7 +1,12 @@
 import "server-only";
 import { bffError } from "./api-response-error.server";
 
-/** The request and child a flattened enrollment admin route names in its body. */
+/**
+ * The request and child a flattened enrollment admin route names in its body.
+ * Temporary (#7563): only the temporary route files under
+ * app/api/enrollment/admin (decide, offerings, data-correction) use it; delete
+ * it with them after the next production deploy.
+ */
 export function enrollmentChildPath(
   body: { request_id?: string | number; child_id?: string | number },
   action: string,

@@ -3,6 +3,11 @@ import type {
   EmailAddressMark,
   MailOutcome,
 } from "~/lib/email-delivery-status";
+import type {
+  AdminChildDataCorrectionRequest,
+  AdminDecideRequest,
+  AdminUpdateOfferingsRequest,
+} from "~/lib/contract/enrollment.generated";
 import type { RosterImpactWire } from "~/lib/roster-impact";
 import { announceEnrollmentReadChange } from "~/lib/enrollment-unread-api";
 import { createLogger } from "~/lib/logger";
@@ -426,6 +431,16 @@ export interface AdminRequestGuardian {
 }
 
 const BASE = "/api/enrollment/admin/requests";
+
+/**
+ * A child of a request on the backend's own path, served by the portal's
+ * catalog proxy (#7563). The flattened routes that carried both IDs in the
+ * body or the query were only a workaround for a Next dev bug with deep
+ * route files; the catch-all has none.
+ */
+function childPath(requestId: string, childId: string): string {
+  return `${BASE}/${encodeURIComponent(requestId)}/children/${encodeURIComponent(childId)}`;
+}
 const CHANGE_REQUEST_BASE = "/api/enrollment/admin/change-requests";
 const PHASE_BASE = "/api/enrollment/phases";
 
@@ -790,25 +805,23 @@ export async function decideAdminChild(
   existingChildChoice?: ExistingChildChoice,
   acceptOfferingChanges?: boolean,
 ): Promise<AdminRequestChild> {
-  // Flattened path: the proxy reads request_id/child_id from the body.
-  // The deep dynamic /requests/[id]/children/[childId]/decide path
-  // hits a Turbopack dev bug where the route disappears after cache
-  // compaction; this collapsed shape keeps Next dev stable.
-  const response = await sendEnrollmentRequest(`/api/enrollment/admin/decide`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      request_id: requestId,
-      child_id: childId,
-      status,
-      reason: reason ?? "",
-      ...existingChildChoiceFields(existingChildChoice),
-      // The office confirmed the offering changes since submission (#6837).
-      ...(acceptOfferingChanges === true
-        ? { accept_offering_changes: true }
-        : {}),
-    }),
-  });
+  const body: AdminDecideRequest = {
+    status,
+    reason: reason ?? "",
+    ...existingChildChoiceFields(existingChildChoice),
+    // The office confirmed the offering changes since submission (#6837).
+    ...(acceptOfferingChanges === true
+      ? { accept_offering_changes: true }
+      : {}),
+  };
+  const response = await sendEnrollmentRequest(
+    `${childPath(requestId, childId)}/decide`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
   if (!response.ok) {
     throw await readError(
       response,
@@ -828,19 +841,17 @@ export async function updateAdminChildOfferings(
   childId: string,
   input: UpdateAdminChildOfferingsInput,
 ): Promise<AdminChildOfferingsUpdate> {
+  const body: AdminUpdateOfferingsRequest = {
+    offerings: input.offerings,
+    reason: input.reason,
+    complete_withdrawal_confirmed: input.completeWithdrawalConfirmed === true,
+  };
   const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/offerings`,
+    `${childPath(requestId, childId)}/offerings`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: requestId,
-        child_id: childId,
-        offerings: input.offerings,
-        reason: input.reason,
-        complete_withdrawal_confirmed:
-          input.completeWithdrawalConfirmed === true,
-      }),
+      body: JSON.stringify(body),
     },
   );
   if (!response.ok) {
@@ -857,16 +868,13 @@ export async function correctAdminChildData(
   childId: string,
   input: CorrectAdminChildDataInput,
 ): Promise<AdminChildDataCorrectionResult> {
+  const body: AdminChildDataCorrectionRequest = input;
   const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/data-correction`,
+    `${childPath(requestId, childId)}/data-correction`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: requestId,
-        child_id: childId,
-        ...input,
-      }),
+      body: JSON.stringify(body),
     },
   );
   if (!response.ok) {
@@ -882,15 +890,10 @@ export async function listAdminChildOfferingAdjustments(
   requestId: string,
   childId: string,
 ): Promise<AdminOfferingAdjustment[]> {
-  const url = new URL(
-    "/api/enrollment/admin/offering-adjustments",
-    globalThis.window?.location.origin ?? "http://localhost",
+  const response = await sendEnrollmentRequest(
+    `${childPath(requestId, childId)}/offering-adjustments`,
+    { cache: "no-store" },
   );
-  url.searchParams.set("request_id", requestId);
-  url.searchParams.set("child_id", childId);
-  const response = await sendEnrollmentRequest(`${url.pathname}${url.search}`, {
-    cache: "no-store",
-  });
   if (!response.ok) {
     throw await readError(
       response,

@@ -20681,7 +20681,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -20691,7 +20691,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByID; modules/peopledirectory/internal/application/student_records_boundary.go:23. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByID; modules/peopledirectory/internal/application/student_records_boundary.go:23. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByID",
       "target_owner": "people-directory"
@@ -20701,7 +20701,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaff",
       "target_owner": "school-membership"
@@ -20711,7 +20711,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
       "target_owner": "school-membership"
@@ -20721,7 +20721,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.NavigationRow. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.NavigationRow. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
@@ -20731,7 +20731,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.SessionRecords.SessionRows; modules/studentpresence/session_records.go:39. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.SessionRecords.SessionRows; modules/studentpresence/session_records.go:39. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.SessionRecords.SessionRows",
       "target_owner": "student-presence"
@@ -20741,7 +20741,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/compose.SessionRecords.SessionRows; modules/studentpresence/compose.SessionRecords (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/compose.SessionRecords.SessionRows; modules/studentpresence/compose.SessionRecords (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose.SessionRecords.SessionRows",
       "target_owner": "student-presence"

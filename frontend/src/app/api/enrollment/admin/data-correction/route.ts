@@ -1,3 +1,8 @@
+// Temporary (#7563): the current client calls the backend's own path
+// /api/enrollment/admin/requests/{id}/children/{childId}/data-correction through the
+// portal's catalog proxy. An installed bundle of the previous release still
+// calls this flattened path with request_id and child_id in the body; this file
+// moves them into the path. Delete it after the next production deploy.
 import { enrollmentChildPath } from "~/lib/enrollment-admin-child.server";
 import { tenant } from "~/lib/route-wrapper.server";
 import { parseRequestBody } from "~/lib/route-wrapper-utils.server";

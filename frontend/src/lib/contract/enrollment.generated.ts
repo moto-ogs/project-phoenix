@@ -897,6 +897,37 @@ export const AdminRequestDetailSchema: z.ZodType<AdminRequestDetail, unknown> = 
   signature: optional(RequestSignatureResponseSchema),
 });
 
+/** Go: enrollmenthttp.AdminOfferingAdjustment */
+export interface AdminOfferingAdjustment {
+  id: string;
+  request_id: string;
+  request_child_id: string;
+  student_id: string;
+  actor_account_id: string;
+  actor_role: string;
+  actor_name_snapshot?: string;
+  actor_email_snapshot?: string;
+  reason: string;
+  before: unknown | null;
+  after: unknown | null;
+  changed_at: string;
+}
+
+export const AdminOfferingAdjustmentSchema: z.ZodType<AdminOfferingAdjustment, unknown> = object<AdminOfferingAdjustment>({
+  id: str,
+  request_id: str,
+  request_child_id: str,
+  student_id: str,
+  actor_account_id: str,
+  actor_role: str,
+  actor_name_snapshot: optional(str),
+  actor_email_snapshot: optional(str),
+  reason: str,
+  before: nullable(json),
+  after: nullable(json),
+  changed_at: instant,
+});
+
 /** Go: enrollmenthttp.FormLabelOption */
 export interface FormLabelOption {
   label: string;
@@ -1402,27 +1433,6 @@ export const RegistrationFamilyChildrenSchema: z.ZodType<RegistrationFamilyChild
   accepted: bool,
 });
 
-/** Go: enrollmenthttp.PublicCareOfferingsResponse */
-export interface PublicCareOfferingsResponse {
-  offerings: CareOfferingResponse[] | null;
-  care_offering_selection_mode: string;
-  care_required: boolean;
-  school_class: PublicSchoolClassConfig;
-  collect_grade_level: boolean;
-  care_offerings_enabled: boolean;
-  eligible_grade_levels: number[] | null;
-}
-
-export const PublicCareOfferingsResponseSchema: z.ZodType<PublicCareOfferingsResponse, unknown> = object<PublicCareOfferingsResponse>({
-  offerings: nullable(arr(CareOfferingResponseSchema)),
-  care_offering_selection_mode: str,
-  care_required: bool,
-  school_class: PublicSchoolClassConfigSchema,
-  collect_grade_level: bool,
-  care_offerings_enabled: bool,
-  eligible_grade_levels: nullable(arr(safeInt)),
-});
-
 /** Go: enrollmenthttp.FormSchemaResponse */
 export interface FormSchemaResponse {
   id: string;
@@ -1446,6 +1456,27 @@ export const FormSchemaResponseSchema: z.ZodType<FormSchemaResponse, unknown> = 
   legal_blocks: nullable(arr(FormLegalBlockSchema)),
   created_by: str,
   created_at: instant,
+});
+
+/** Go: enrollmenthttp.PublicCareOfferingsResponse */
+export interface PublicCareOfferingsResponse {
+  offerings: CareOfferingResponse[] | null;
+  care_offering_selection_mode: string;
+  care_required: boolean;
+  school_class: PublicSchoolClassConfig;
+  collect_grade_level: boolean;
+  care_offerings_enabled: boolean;
+  eligible_grade_levels: number[] | null;
+}
+
+export const PublicCareOfferingsResponseSchema: z.ZodType<PublicCareOfferingsResponse, unknown> = object<PublicCareOfferingsResponse>({
+  offerings: nullable(arr(CareOfferingResponseSchema)),
+  care_offering_selection_mode: str,
+  care_required: bool,
+  school_class: PublicSchoolClassConfigSchema,
+  collect_grade_level: bool,
+  care_offerings_enabled: bool,
+  eligible_grade_levels: nullable(arr(safeInt)),
 });
 
 /** Go: enrollmenthttp.SchemaPreviewBootstrapResponse */
@@ -1483,6 +1514,11 @@ export const EditPatchResponseSchema: z.ZodType<EditPatchResponse, unknown> = ob
   message: str,
 });
 
+/** Go: enrollmenthttp.RenameSchemaRequest */
+export interface RenameSchemaRequest {
+  name?: string;
+}
+
 /** Go: enrollmenthttp.ReviewChangeRequestRequest */
 export interface ReviewChangeRequestRequest {
   note?: string;
@@ -1507,6 +1543,16 @@ export interface RolloverReviewDecisionResponse {
 export const RolloverReviewDecisionResponseSchema: z.ZodType<RolloverReviewDecisionResponse, unknown> = object<RolloverReviewDecisionResponse>({
   status: str,
 });
+
+/** Go: enrollmenthttp.AdminDecideRequest */
+export interface AdminDecideRequest {
+  status?: string;
+  reason?: string;
+  existing_student_id?: string;
+  create_new_student?: boolean;
+  shown_existing_student_ids?: string[] | null;
+  accept_offering_changes?: boolean;
+}
 
 /** Go: enrollmenthttp.AdminRestoreResponse */
 export interface AdminRestoreResponse {
@@ -1750,6 +1796,85 @@ export interface WithdrawRequest {
   child_id?: string | null;
 }
 
+/** Go: enrollmenthttp.AdminChildDataCorrectionRequest */
+export interface AdminChildDataCorrectionRequest {
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  target_grade_level?: number | null;
+  target_school_class?: string | null;
+  reason?: string;
+}
+
+/** Go: enrollmenthttp.AdminUpdateOfferingSelection */
+export interface AdminUpdateOfferingSelection {
+  offering_id?: string;
+  selected_days?: string[] | null;
+}
+
+/** Go: enrollmenthttp.AdminUpdateOfferingsRequest */
+export interface AdminUpdateOfferingsRequest {
+  offerings?: AdminUpdateOfferingSelection[] | null;
+  reason?: string;
+  effective_from?: string;
+  complete_withdrawal_confirmed?: boolean;
+}
+
+/** Go: enrollmenthttp.AdminChildOfferingsResponse */
+export interface AdminChildOfferingsResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  target_grade_level?: number;
+  target_school_class?: string;
+  holiday_care_wish?: boolean;
+  status: string;
+  status_reason?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  activation_mode: string;
+  created_student_id?: string;
+  matched_student_id?: string;
+  possible_existing_children?: AdminExistingChildCandidate[];
+  existing_child_choice_required?: boolean;
+  existing_child_only?: boolean;
+  review_reason?: string;
+  weekly_plan_on?: string;
+  custom_data?: unknown | null;
+  offerings?: AdminRequestChildOffering[];
+  upcoming_offerings?: AdminRequestChildOffering[];
+  offerings_unavailable?: boolean;
+  roster_impact: enrollmentRosterImpactResponse;
+}
+
+export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsResponse, unknown> = object<AdminChildOfferingsResponse>({
+  id: str,
+  first_name: str,
+  last_name: str,
+  date_of_birth: str,
+  target_grade_level: optional(safeInt),
+  target_school_class: optional(str),
+  holiday_care_wish: optional(bool),
+  status: str,
+  status_reason: optional(str),
+  reviewed_at: optional(instant),
+  reviewed_by: optional(int64StringOrNumber),
+  activation_mode: str,
+  created_student_id: optional(str),
+  matched_student_id: optional(str),
+  possible_existing_children: optional(arr(AdminExistingChildCandidateSchema)),
+  existing_child_choice_required: optional(bool),
+  existing_child_only: optional(bool),
+  review_reason: optional(str),
+  weekly_plan_on: optional(str),
+  custom_data: optional(nullable(json)),
+  offerings: optional(arr(AdminRequestChildOfferingSchema)),
+  upcoming_offerings: optional(arr(AdminRequestChildOfferingSchema)),
+  offerings_unavailable: optional(bool),
+  roster_impact: enrollmentRosterImpactResponseSchema,
+});
+
 /** Go: enrollmenthttp.CareBeyondEndResponse */
 export interface CareBeyondEndResponse {
   student_id: string;
@@ -1947,6 +2072,12 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/enrollment/schema/{id}": {
+    method: "DELETE",
+    pattern: "/api/enrollment/schema/{id}",
+    portals: ["tenant"],
+    response: noData,
+  },
   "GET /api/enrollment/admin/change-requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/change-requests/",
@@ -2004,6 +2135,12 @@ export const routes = {
     pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/delete-impact",
     portals: ["tenant"],
     response: success(AdminEnrollmentDeletionImpactSchema),
+  },
+  "GET /api/enrollment/admin/requests/{id}/children/{childId}/offering-adjustments": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/offering-adjustments",
+    portals: ["tenant"],
+    response: success(z.array(AdminOfferingAdjustmentSchema)),
   },
   "GET /api/enrollment/admin/requests/{id}/delete-impact": {
     method: "GET",
@@ -2148,6 +2285,12 @@ export const routes = {
     portals: ["public"],
     response: success(FormLabelsResponseSchema),
   },
+  "GET /api/enrollment/schema/": {
+    method: "GET",
+    pattern: "/api/enrollment/schema/",
+    portals: ["tenant"],
+    response: success(FormSchemaResponseSchema),
+  },
   "GET /api/enrollment/schema/preview": {
     method: "GET",
     pattern: "/api/enrollment/schema/preview",
@@ -2161,6 +2304,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(FormSchemaResponseSchema)),
   },
+  "GET /api/enrollment/schema/{id}": {
+    method: "GET",
+    pattern: "/api/enrollment/schema/{id}",
+    portals: ["tenant"],
+    response: success(FormSchemaResponseSchema),
+  },
   "PATCH /api/enrollment/requests/{statusToken}": {
     method: "PATCH",
     pattern: "/api/enrollment/requests/{statusToken}",
@@ -2168,6 +2317,13 @@ export const routes = {
     maxBodyBytes: 2097152,
     request: requestBody<EditPatchRequest>(),
     response: success(EditPatchResponseSchema),
+  },
+  "PATCH /api/enrollment/schema/{id}": {
+    method: "PATCH",
+    pattern: "/api/enrollment/schema/{id}",
+    portals: ["tenant"],
+    request: requestBody<RenameSchemaRequest>(),
+    response: success(FormSchemaResponseSchema),
   },
   "POST /api/enrollment/admin/change-requests/{id}/approve": {
     method: "POST",
@@ -2202,6 +2358,13 @@ export const routes = {
     pattern: "/api/enrollment/admin/requests/mark-all-read",
     portals: ["tenant"],
     response: noData,
+  },
+  "POST /api/enrollment/admin/requests/{id}/children/{childId}/decide": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/decide",
+    portals: ["tenant"],
+    request: requestBody<AdminDecideRequest>(),
+    response: success(AdminRequestChildSchema),
   },
   "POST /api/enrollment/admin/requests/{id}/restore": {
     method: "POST",
@@ -2283,6 +2446,12 @@ export const routes = {
     request: requestBody<WithdrawRequest>(),
     response: noData,
   },
+  "POST /api/enrollment/schema/": {
+    method: "POST",
+    pattern: "/api/enrollment/schema/",
+    portals: ["tenant"],
+    response: success(FormSchemaResponseSchema),
+  },
   "POST /api/enrollment/{tenantSlug}/submit": {
     method: "POST",
     pattern: "/api/enrollment/{tenantSlug}/submit",
@@ -2291,6 +2460,20 @@ export const routes = {
     query: ["late_invite"],
     request: requestBody<SubmitEnrollmentRequest>(),
     response: success(SubmitEnrollmentResponseSchema),
+  },
+  "PUT /api/enrollment/admin/requests/{id}/children/{childId}/data-correction": {
+    method: "PUT",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/data-correction",
+    portals: ["tenant"],
+    request: requestBody<AdminChildDataCorrectionRequest>(),
+    response: success(ChangeRequestResponseSchema),
+  },
+  "PUT /api/enrollment/admin/requests/{id}/children/{childId}/offerings": {
+    method: "PUT",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/offerings",
+    portals: ["tenant"],
+    request: requestBody<AdminUpdateOfferingsRequest>(),
+    response: success(AdminChildOfferingsResponseSchema),
   },
   "PUT /api/enrollment/admin/requests/{id}/read": {
     method: "PUT",
@@ -2327,5 +2510,11 @@ export const routes = {
     maxBodyBytes: 4096,
     request: requestBody<StatusFamilyChildrenRequest>(),
     response: success(RegistrationFamilyChildrenSchema),
+  },
+  "PUT /api/enrollment/schema/{id}": {
+    method: "PUT",
+    pattern: "/api/enrollment/schema/{id}",
+    portals: ["tenant"],
+    response: success(FormSchemaResponseSchema),
   },
 } as const;
