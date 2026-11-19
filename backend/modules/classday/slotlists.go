@@ -355,8 +355,8 @@ type Slot struct {
 	RoomName string `json:"room_name,omitempty"`
 }
 
-// GroupOption is one selectable education group in the group filter.
-type GroupOption struct {
+// ClassdayGroupOption is one selectable education group in the group filter.
+type ClassdayGroupOption struct {
 	ID   int64  `json:"id,string"`
 	Name string `json:"name"`
 }
@@ -412,7 +412,7 @@ type Result struct {
 	GroupBy      GroupBy       `json:"group_by,omitempty"`
 	Provenance   string        `json:"provenance"`
 	Slots        []Slot        `json:"slots"`
-	Groups       []GroupOption `json:"groups"`
+	Groups       []ClassdayGroupOption `json:"groups"`
 	Classes      []string      `json:"classes"`
 	Counters     Counters      `json:"counters"`
 	Rows         []SlotListRow `json:"rows"`

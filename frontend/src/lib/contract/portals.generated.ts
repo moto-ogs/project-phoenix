@@ -4,6 +4,7 @@ import { routes as active } from "./active.generated";
 import { routes as analyticsConsent } from "./analytics-consent.generated";
 import { routes as analyticsPolicy } from "./analytics-policy.generated";
 import { routes as announcementAttachments } from "./announcement-attachments.generated";
+import { routes as calendar } from "./calendar.generated";
 import { routes as catererNotifications } from "./caterer-notifications.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
@@ -12,6 +13,7 @@ import { routes as enrollment } from "./enrollment.generated";
 import { routes as files } from "./files.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
+import { routes as iot } from "./iot.generated";
 import { routes as me } from "./me.generated";
 import { routes as mealBillingMonths } from "./meal-billing-months.generated";
 import { routes as mealCaterer } from "./meal-caterer.generated";
@@ -730,6 +732,19 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     announcementAttachments["DELETE /api/announcement-attachments/{announcementId}/{attachmentId}"],
+    calendar["DELETE /api/calendar/appointments/{appointmentId}"],
+    calendar["GET /api/calendar/appointments/{appointmentId}"],
+    calendar["GET /api/calendar/appointments/{appointmentId}/mails"],
+    calendar["GET /api/calendar/appointments/{appointmentId}/overview"],
+    calendar["GET /api/calendar/feed"],
+    calendar["GET /api/calendar/my"],
+    calendar["GET /api/calendar/recipient-options"],
+    calendar["POST /api/calendar/appointments"],
+    calendar["POST /api/calendar/appointments/{appointmentId}/cancel"],
+    calendar["POST /api/calendar/appointments/{appointmentId}/occurrences/{occurrenceDate}/cancel"],
+    calendar["POST /api/calendar/feed/rotate"],
+    calendar["POST /api/calendar/recipients/{recipientId}/response"],
+    calendar["PUT /api/calendar/appointments/{appointmentId}"],
     classListEntries["DELETE /api/class-list-entries/{id}"],
     classListEntries["GET /api/class-list-entries/"],
     classListEntries["POST /api/class-list-entries/"],
@@ -772,6 +787,8 @@ export const portalRoutes = {
     guardians["PUT /api/guardians/{id}/phone-numbers/{phoneId}"],
     holidayClosureNotices["GET /api/holiday-closure-notices/"],
     holidayClosureNotices["POST /api/holiday-closure-notices/{id}/notify"],
+    iot["GET /api/iot/{id}/history"],
+    iot["PATCH /api/iot/{deviceId}/status"],
     me["GET /api/me/groups/"],
     me["GET /api/me/groups/supervised"],
     me["GET /api/me/profile"],
@@ -794,16 +811,27 @@ export const portalRoutes = {
     mealPlan["PUT /api/meal-plan/participation/{studentId}/days/{date}"],
     mealPlan["PUT /api/meal-plan/participation/{studentId}/schedule"],
     mealPlan["PUT /api/meal-plan/{date}"],
+    messages["GET /api/messages/"],
+    messages["GET /api/messages/count-scope"],
     messages["GET /api/messages/group-threads"],
     messages["GET /api/messages/group-threads/audience"],
     messages["GET /api/messages/group-threads/{groupThreadId}"],
     messages["GET /api/messages/group-threads/{groupThreadId}/mails"],
     messages["GET /api/messages/reachable-students"],
     messages["GET /api/messages/students/{studentId}/guardians"],
+    messages["GET /api/messages/students/{studentId}/threads"],
+    messages["GET /api/messages/threads/{threadId}"],
     messages["GET /api/messages/threads/{threadId}/mails"],
+    messages["GET /api/messages/unread-count"],
     messages["POST /api/messages/group-threads"],
     messages["POST /api/messages/group-threads/{groupThreadId}/close"],
     messages["POST /api/messages/group-threads/{groupThreadId}/messages"],
+    messages["POST /api/messages/mark-all-read"],
+    messages["POST /api/messages/threads/open"],
+    messages["POST /api/messages/threads/{threadId}"],
+    messages["POST /api/messages/threads/{threadId}/handled"],
+    messages["POST /api/messages/threads/{threadId}/unread"],
+    messages["PUT /api/messages/count-scope"],
     notifications["DELETE /api/notifications/preferences/"],
     notifications["DELETE /api/notifications/push/subscriptions"],
     notifications["GET /api/notifications/email-subscriptions/{type}"],
@@ -835,6 +863,7 @@ export const portalRoutes = {
     parentAnnouncements["POST /api/parent-announcements/{announcementId}/resend-failed"],
     parentAnnouncements["POST /api/parent-announcements/{announcementId}/unpublish"],
     parentAnnouncements["PUT /api/parent-announcements/{announcementId}"],
+    parentAnnouncements["PUT /api/parent-announcements/{announcementId}/reminder"],
     platform["GET /api/platform/announcements/unread"],
     platform["POST /api/platform/announcements/{id}/dismiss"],
     pwa["POST /api/pwa/usage"],
@@ -932,6 +961,7 @@ export const portalRoutes = {
     staffShifts["PUT /api/staff-shifts/{id}"],
     staffShifts["PUT /api/staff-shifts/{id}/cancellation"],
     staffShifts["PUT /api/staff-shifts/{id}/move"],
+    students["DELETE /api/students/care-withdrawals/{completionId}"],
     students["DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}"],
     students["DELETE /api/students/{id}/arrival-exceptions/{exceptionId}"],
     students["DELETE /api/students/{id}/arrival-notes/{noteId}"],
@@ -959,6 +989,7 @@ export const portalRoutes = {
     students["GET /api/students/ended-care"],
     students["GET /api/students/pickup-change-notices"],
     students["GET /api/students/privacy-consent/defaults"],
+    students["GET /api/students/school-classes"],
     students["GET /api/students/status-days"],
     students["GET /api/students/team-notices"],
     students["GET /api/students/{id}"],

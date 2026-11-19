@@ -347,7 +347,7 @@ func addOrdinalSuffixes(suffix map[int64]string, ids []int64, used map[string]st
 
 // availableOptions derives the distinct education groups and school classes
 // present in the unfiltered rows, sorted for stable UI dropdowns.
-func availableOptions(rows []classday.SlotListRow) ([]classday.GroupOption, []string) {
+func availableOptions(rows []classday.SlotListRow) ([]classday.ClassdayGroupOption, []string) {
 	groupByID := map[int64]string{}
 	classSet := map[string]struct{}{}
 	for _, row := range rows {
@@ -358,9 +358,9 @@ func availableOptions(rows []classday.SlotListRow) ([]classday.GroupOption, []st
 			classSet[row.SchoolClass] = struct{}{}
 		}
 	}
-	groups := make([]classday.GroupOption, 0, len(groupByID))
+	groups := make([]classday.ClassdayGroupOption, 0, len(groupByID))
 	for id, name := range groupByID {
-		groups = append(groups, classday.GroupOption{ID: id, Name: name})
+		groups = append(groups, classday.ClassdayGroupOption{ID: id, Name: name})
 	}
 	sort.SliceStable(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name })
 	classes := make([]string, 0, len(classSet))

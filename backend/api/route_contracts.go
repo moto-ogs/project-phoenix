@@ -2,7 +2,9 @@ package api
 
 import (
 	"fmt"
+	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	"reflect"
+	"strings"
 
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
@@ -112,6 +114,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, staffPortalCalendarContractMounts()...)
 	mounts = append(mounts, staffPortalLiveContractMounts()...)
 	mounts = append(mounts, rootContractMounts()...)
 	catalog, err := RouteCatalog()
@@ -121,6 +124,9 @@ func contractRegistrations() ([]contract.Registration, error) {
 	known := make(map[string]bool, len(catalog))
 	for _, route := range catalog {
 		known[route.Method+" "+route.Pattern] = true
+		// A router mounted at "/" shows as "/*/" in the catalog; a request
+		// reports the pattern without it, as chi's RoutePattern does.
+		known[route.Method+" "+strings.ReplaceAll(route.Pattern, "/*/", "/")] = true
 	}
 	var registrations []contract.Registration
 	for _, mount := range mounts {
@@ -552,5 +558,24 @@ func requestFeedRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/", Portals: portals, Response: requestFeedHTTP.FeedStatus{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Response: requestFeedHTTP.FeedLink{}},
 		{Method: "POST", Pattern: "/rotate", Portals: portals, Response: requestFeedHTTP.FeedLink{}},
+	}
+}
+
+// staffPortalCalendarContractMounts lists the staff calendar, the parent
+// messages inbox and the device pages of the staff portal that left their
+// pass-through route files in #2352.
+func staffPortalCalendarContractMounts() []contractMount {
+	portals := []common.PortalScope{common.PortalTenant}
+	// Device Fleet's http role may not import the contract types; the root
+	// names the history and the status body. The kiosk's device API is not
+	// part of this mount.
+	devices := []common.RouteContract{
+		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Response: []devicesAPI.LifecycleEventResponse{}},
+		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},
+	}
+	return []contractMount{
+		{"/api/calendar", calendarAPI.StaffRouteContracts()},
+		{"/api/messages", parentMessagingAPI.InboxRouteContracts()},
+		{"/api/iot", devices},
 	}
 }

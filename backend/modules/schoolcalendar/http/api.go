@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -97,32 +96,10 @@ type updateAppointmentRequest struct {
 	SendEmail          *bool                              `json:"send_email"`
 }
 
-type requestID int64
-
-func (id *requestID) UnmarshalJSON(data []byte) error {
-	raw := strings.TrimSpace(string(data))
-	if raw == "" || raw == "null" {
-		return nil
-	}
-	if strings.HasPrefix(raw, `"`) && strings.HasSuffix(raw, `"`) {
-		unquoted, err := strconv.Unquote(raw)
-		if err != nil {
-			return err
-		}
-		raw = strings.TrimSpace(unquoted)
-	}
-	parsed, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid id %q", raw)
-	}
-	*id = requestID(parsed)
-	return nil
-}
-
 type appointmentTargetRequest struct {
-	Type  string     `json:"type"`
-	ID    *requestID `json:"id,omitempty"`
-	Value *string    `json:"value,omitempty"`
+	Type  string         `json:"type"`
+	ID    *common.JSONID `json:"id,omitempty"`
+	Value *string        `json:"value,omitempty"`
 }
 
 func (target appointmentTargetRequest) serviceTarget() calendarService.AppointmentTarget {
@@ -172,11 +149,7 @@ func (rs *Resource) listMy(w http.ResponseWriter, r *http.Request) {
 		renderCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"from":   from.String(),
-		"to":     to.String(),
-		"events": events,
-	}, "Calendar events retrieved")
+	common.Respond(w, r, http.StatusOK, StaffCalendarResponse{From: from, To: to, Events: events}, "Calendar events retrieved")
 }
 
 func (rs *Resource) calendarFeedURL(w http.ResponseWriter, r *http.Request) {
@@ -197,22 +170,6 @@ func (rs *Resource) rotateCalendarFeed(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	common.Respond(w, r, http.StatusOK, staffCalendarAccessResponse(access), "Calendar feed URL rotated")
-}
-
-func staffCalendarAccessResponse(access calendarService.StaffCalendarAccessInfo) map[string]any {
-	var calDAV map[string]string
-	if access.CalDAV != nil {
-		calDAV = map[string]string{
-			"server_url":   access.CalDAV.ServerURL,
-			"username":     access.CalDAV.Username,
-			"app_password": access.CalDAV.AppPassword,
-		}
-	}
-	return map[string]any{
-		"url":        access.URL,
-		"webcal_url": access.WebcalURL,
-		"caldav":     calDAV,
-	}
 }
 
 func (rs *Resource) createAppointment(w http.ResponseWriter, r *http.Request) {
@@ -342,7 +299,7 @@ func (rs *Resource) deleteAppointment(w http.ResponseWriter, r *http.Request) {
 		renderCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": "deleted"}, "Appointment deleted")
+	common.Respond(w, r, http.StatusOK, CalendarStatusResponse{Status: "deleted"}, "Appointment deleted")
 }
 
 func (rs *Resource) cancelOccurrence(w http.ResponseWriter, r *http.Request) {
@@ -359,7 +316,7 @@ func (rs *Resource) cancelOccurrence(w http.ResponseWriter, r *http.Request) {
 		renderCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": "cancelled"}, "Occurrence cancelled")
+	common.Respond(w, r, http.StatusOK, CalendarStatusResponse{Status: "cancelled"}, "Occurrence cancelled")
 }
 
 func (rs *Resource) appointmentOverview(w http.ResponseWriter, r *http.Request) {
@@ -414,7 +371,7 @@ func (rs *Resource) respond(w http.ResponseWriter, r *http.Request) {
 		renderCalendarError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": req.Status}, "Invitation response updated")
+	common.Respond(w, r, http.StatusOK, CalendarStatusResponse{Status: req.Status}, "Invitation response updated")
 }
 
 func (rs *Resource) recipientOptions(w http.ResponseWriter, r *http.Request) {

@@ -1828,13 +1828,13 @@ export interface slotListRequest {
   expected_signature?: string;
 }
 
-/** Go: classday.GroupOption */
-export interface GroupOption {
+/** Go: classday.ClassdayGroupOption */
+export interface ClassdayGroupOption {
   id: string;
   name: string;
 }
 
-export const GroupOptionSchema: z.ZodType<GroupOption, unknown> = object<GroupOption>({
+export const ClassdayGroupOptionSchema: z.ZodType<ClassdayGroupOption, unknown> = object<ClassdayGroupOption>({
   id: int64String,
   name: str,
 });
@@ -1904,7 +1904,7 @@ export interface Result {
   group_by?: string;
   provenance: string;
   slots: Slot[] | null;
-  groups: GroupOption[] | null;
+  groups: ClassdayGroupOption[] | null;
   classes: string[] | null;
   counters: Counters;
   rows: SlotListRow[] | null;
@@ -1921,7 +1921,7 @@ export const ResultSchema: z.ZodType<Result, unknown> = object<Result>({
   group_by: optional(str),
   provenance: str,
   slots: nullable(arr(SlotSchema)),
-  groups: nullable(arr(GroupOptionSchema)),
+  groups: nullable(arr(ClassdayGroupOptionSchema)),
   classes: nullable(arr(str)),
   counters: CountersSchema,
   rows: nullable(arr(SlotListRowSchema)),

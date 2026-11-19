@@ -20,6 +20,7 @@ import {
   type OpenEnum,
 } from "./runtime";
 import {
+  AppointmentOverviewSchema,
   EventSchema,
   ParentConferenceWindowSchema,
   type Event,
@@ -70,55 +71,6 @@ export const ParentCalendarResponseSchema: z.ZodType<ParentCalendarResponse, unk
   from: nullable(calendarDate),
   to: nullable(calendarDate),
   events: nullable(arr(EventSchema)),
-});
-
-/** Go: portal.AppointmentResponseCounts */
-export interface AppointmentResponseCounts {
-  accepted: number;
-  declined: number;
-  pending: number;
-}
-
-export const AppointmentResponseCountsSchema: z.ZodType<AppointmentResponseCounts, unknown> = object<AppointmentResponseCounts>({
-  accepted: safeInt,
-  declined: safeInt,
-  pending: safeInt,
-});
-
-/** Go: portal.AppointmentAttendee */
-export interface AppointmentAttendee {
-  recipient_id: string;
-  recipient_type: string;
-  name: string;
-  status: string;
-  responded_at?: string;
-}
-
-export const AppointmentAttendeeSchema: z.ZodType<AppointmentAttendee, unknown> = object<AppointmentAttendee>({
-  recipient_id: str,
-  recipient_type: str,
-  name: str,
-  status: str,
-  responded_at: optional(instant),
-});
-
-/** Go: portal.AppointmentOverview */
-export interface AppointmentOverview {
-  appointment_id: string;
-  occurrence_date?: string;
-  delivery_mode: string;
-  overview_visibility: string;
-  counts: AppointmentResponseCounts;
-  attendees: AppointmentAttendee[] | null;
-}
-
-export const AppointmentOverviewSchema: z.ZodType<AppointmentOverview, unknown> = object<AppointmentOverview>({
-  appointment_id: str,
-  occurrence_date: optional(calendarDate),
-  delivery_mode: str,
-  overview_visibility: str,
-  counts: AppointmentResponseCountsSchema,
-  attendees: nullable(arr(AppointmentAttendeeSchema)),
 });
 
 /** Go: parent.ParentCalendarFeedResponse */

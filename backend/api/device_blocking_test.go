@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,7 @@ func (f deviceRemovalFixture) setStatus(t *testing.T, deviceID, status string, p
 		// permissions.
 		claims.Roles, claims.Permissions, claims.IsAdmin = []string{"user"}, permissions, false
 	}
-	req := testutil.NewAuthenticatedRequest(t, http.MethodPatch, fmt.Sprintf("/devices/%s/status", deviceID),
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPatch, fmt.Sprintf("/api/iot/%s/status", deviceID),
 		map[string]string{"status": status},
 		testutil.WithClaims(t, claims),
 		testutil.WithPermissions(permissions...),
@@ -121,6 +122,23 @@ func TestDeviceUnblockingRestoresAccessWithTheSameKeyAndIsIdempotent(t *testing.
 	require.Len(t, entries, 2, "only effective changes are audited")
 	assert.Equal(t, "blocked", entries[0]["outcome"])
 	assert.Equal(t, "unblocked", entries[1]["outcome"])
+
+	// The device's history names both effective changes, newest first.
+	req := testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/api/iot/%d/history", device.ID), nil,
+		testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions("devices:read"))
+	historyRR := testutil.ExecuteRequest(f.router, req)
+	require.Equal(t, http.StatusOK, historyRR.Code, historyRR.Body.String())
+	var history struct {
+		Data []struct {
+			Action string `json:"action"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(historyRR.Body.Bytes(), &history))
+	actions := make([]string, 0, len(history.Data))
+	for _, entry := range history.Data {
+		actions = append(actions, entry.Action)
+	}
+	assert.Equal(t, []string{"unblocked", "blocked"}, actions)
 }
 
 // A hardware ID such as a MAC address reaches the route escaped
@@ -156,7 +174,7 @@ func TestDeviceEditWithAStatusChangeIsAudited(t *testing.T) {
 	t.Parallel()
 	f := newDeviceBlockingFixture(t)
 	device := testpkg.CreateTestDevice(t, f.db, "edit-status")
-	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/devices/%d", device.ID),
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/api/iot/%d", device.ID),
 		map[string]string{"device_id": device.DeviceID, "device_type": "terminal", "status": "inactive"},
 		testutil.WithClaims(t, testutil.DefaultTestClaims()),
 		testutil.WithPermissions("devices:manage"),

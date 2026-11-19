@@ -48,6 +48,14 @@ export type StudentConsentState = (typeof STUDENT_CONSENT_STATE_VALUES)[number];
 export const SUPERVISOR_ROLE_VALUES = ["teacher"] as const;
 export type SupervisorRole = (typeof SUPERVISOR_ROLE_VALUES)[number];
 
+/** Go: studentdeletionhttp.studentDeleteRequest */
+export interface studentDeleteRequest {
+  expected_fingerprint?: string;
+  confirmation_name?: string;
+  reason?: string;
+  acknowledged?: boolean;
+}
+
 /** Go: careplanhttp.studentDocumentDeletedResponse */
 export interface studentDocumentDeletedResponse {
   student_id: string;
@@ -3051,6 +3059,13 @@ export interface GetStudentsIdStatusDaysQuery {
 }
 
 export const routes = {
+  "DELETE /api/students/care-withdrawals/{completionId}": {
+    method: "DELETE",
+    pattern: "/api/students/care-withdrawals/{completionId}",
+    portals: ["tenant"],
+    request: requestBody<studentDeleteRequest>(),
+    response: noData,
+  },
   "DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}": {
     method: "DELETE",
     pattern: "/api/students/class-arrival-exceptions/{schoolClass}/{date}",
@@ -3225,6 +3240,12 @@ export const routes = {
     pattern: "/api/students/privacy-consent/defaults",
     portals: ["tenant"],
     response: success(PrivacyConsentDefaultsResponseSchema),
+  },
+  "GET /api/students/school-classes": {
+    method: "GET",
+    pattern: "/api/students/school-classes",
+    portals: ["tenant"],
+    response: success(z.array(z.string())),
   },
   "GET /api/students/status-days": {
     method: "GET",
