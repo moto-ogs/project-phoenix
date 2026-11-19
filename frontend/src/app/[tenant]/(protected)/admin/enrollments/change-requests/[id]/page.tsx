@@ -6,6 +6,9 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { canReviewEnrollmentChangeRequests } from "~/lib/change-request-access";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
+const CHANGE_REQUEST_INFO =
+  "Hier siehst du eine Änderung an einer Anmeldung und die Nachrichten dazu. Kommt sie von den Eltern, entscheidest du mit „Freigeben“ oder „Ablehnen“.";
+
 interface PageProps {
   readonly params: Promise<{ tenant: string; id: string }>;
 }
@@ -20,6 +23,7 @@ export default function AdminEnrollmentChangeRequestDetailPage({
     return (
       <TenantPage
         title="Änderungsanfrage"
+        info={CHANGE_REQUEST_INFO}
         back
         backHref="/admin/enrollments"
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -29,5 +33,10 @@ export default function AdminEnrollmentChangeRequestDetailPage({
     );
   }
 
-  return <AdminEnrollmentChangeRequestDetail changeRequestId={id} />;
+  return (
+    <AdminEnrollmentChangeRequestDetail
+      changeRequestId={id}
+      info={CHANGE_REQUEST_INFO}
+    />
+  );
 }

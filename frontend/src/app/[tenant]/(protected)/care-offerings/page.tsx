@@ -8,6 +8,9 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
+const CARE_OFFERINGS_INFO =
+  "Hier legst du fest, was Eltern bei der Anmeldung buchen können. Angebote gehören immer zu einer Anmeldephase. Wähle oben die Phase und dann „Neues Betreuungsangebot“.";
+
 export default function CareOfferingsPage() {
   const { isReady } = useRequirePermission("config:manage");
   // Statuszeile des Seitenkopfs: der Editor meldet die Zahlen seines
@@ -26,6 +29,7 @@ export default function CareOfferingsPage() {
   return (
     <TenantPage
       title="Angebote"
+      info={CARE_OFFERINGS_INFO}
       stats={
         summary && summary !== "unavailable" ? (
           <TenantPageStats

@@ -122,11 +122,13 @@ const DAY_COUNT_OPTIONS = [0, 1, 2, 3, 4, 5] as const;
 
 interface Props {
   readonly phaseId: string;
+  /** Erklärung hinter dem Info-Knopf am Seitentitel; die Seite liefert sie. */
+  readonly info?: string;
 }
 
 const ENROLLMENT_EXPORT_OPTIONS = exportFormatOptions(["pdf", "docx", "xlsx"]);
 
-export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
+export function AdminEnrollmentPhaseDetail({ phaseId, info }: Props) {
   const careOfferingsEnabled = useCareOfferingsEnabled();
   const tenantSlug = useTenantSlugSafe();
   const tenantPath = useTenantAwarePath();
@@ -872,6 +874,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     return (
       <TenantPage
         title="Anmeldephase"
+        info={info}
         back
         backHref={overviewPath}
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -885,6 +888,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     return (
       <TenantPage
         title="Anmeldephase"
+        info={info}
         back
         backHref={overviewPath}
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -897,6 +901,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     return (
       <TenantPage
         title="Anmeldephase"
+        info={info}
         back
         backHref={overviewPath}
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -913,6 +918,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
   return (
     <TenantPage
       title={phase.name}
+      info={info}
       back
       backHref={overviewPath}
       backLabel="Zurück zur Anmeldungs-Übersicht"

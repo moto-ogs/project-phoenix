@@ -101,6 +101,8 @@ interface Props {
    * (Anmeldephasen-Editor) und behält seinen eigenen Abschnittskopf.
    */
   readonly variant?: "page" | "embedded";
+  /** Erklärung hinter dem Info-Knopf; nur für `variant="page"`. */
+  readonly info?: string;
 }
 
 const ROLLOVER_DESCRIPTION =
@@ -112,6 +114,7 @@ export function RolloverForm({
   onSuccess,
   pending,
   variant = "embedded",
+  info,
 }: Props) {
   const [draft, setDraft] = useState<RolloverInput>(() =>
     prefillFromSource(source),
@@ -437,6 +440,7 @@ export function RolloverForm({
     return (
       <TenantPage
         title={title}
+        info={info}
         back
         backHref="/enrollment-phases"
         backLabel="Zurück zu den Anmeldephasen"

@@ -33,15 +33,7 @@ const PORTALS = [
 const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/absences",
   "/activities",
-  "/admin/change-requests",
-  "/admin/enrollments",
-  "/admin/enrollments/[id]",
-  "/admin/enrollments/change-requests",
-  "/admin/enrollments/change-requests/[id]",
-  "/admin/enrollments/phases/[phaseId]",
-  "/admin/guardian-approvals",
   "/calendar-periods",
-  "/care-offerings",
   "/dashboard",
   "/database/personal",
   "/database/personal/import",
@@ -53,12 +45,7 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/database/students/import",
   "/dateien",
   "/day-log",
-  "/eltern/bankverbindungen",
   "/emergency",
-  "/enrollment-form",
-  "/enrollment-phases",
-  "/enrollment-phases/[id]/review",
-  "/enrollment-phases/[id]/rollover",
   "/info-displays",
   "/lists",
   "/meal-plan",
@@ -86,6 +73,16 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "school:/einstellungen",
   "school:/elternbriefe/[id]",
 ];
+
+/**
+ * Seiten ohne eigenen Seitenkopf: Sie leiten nur weiter und zeigen nie einen
+ * Titel, an dem ein Info-Knopf stehen könnte. Sie fallen aus der Prüfung; der
+ * Test unten verlangt, dass sie weiterhin kein Seitengerüst rendern.
+ */
+const PAGES_WITHOUT_OWN_HEAD: Readonly<Record<string, string>> = {
+  "/admin/change-requests": "Leitet zu /anfragen weiter (#2429).",
+  "/admin/enrollments/change-requests": "Leitet zu /anfragen weiter (#2429).",
+};
 
 /** Die Einstiegsseiten der Betreuung, die #7565 erklärt. */
 const FIRST_WEEK_PAGES = [
@@ -490,6 +487,7 @@ const pages = PORTALS.flatMap(({ prefix, root, publicPages }) =>
     .map((file) => ({ id: `${prefix}${routeOf(root, file)}`, file }))
     .filter(({ id }) => !publicPages.has(id.slice(prefix.length))),
 );
+const checkedPages = pages.filter(({ id }) => !(id in PAGES_WITHOUT_OWN_HEAD));
 
 describe("Info-Knopf am Seitentitel (#7565)", () => {
   // Untergrenzen knapp unter dem Stand vom November 2026 (94 OGS-, 13
@@ -505,7 +503,7 @@ describe("Info-Knopf am Seitentitel (#7565)", () => {
   });
 
   it("hält die Seiten ohne Info-Knopf auf einer schrumpfenden Liste", () => {
-    const withoutInfo = pages
+    const withoutInfo = checkedPages
       .filter(({ file }) => pageInfoAvailability(file) === "none")
       .map(({ id }) => id)
       .sort();
@@ -514,12 +512,24 @@ describe("Info-Knopf am Seitentitel (#7565)", () => {
   });
 
   it("dokumentiert Zustände ohne Info-Knopf ausdrücklich", () => {
-    const conditionalInfo = pages
+    const conditionalInfo = checkedPages
       .filter(({ file }) => pageInfoAvailability(file) === "conditional")
       .map(({ id }) => id)
       .sort();
 
     expect(conditionalInfo).toEqual([...PAGES_WITH_CONDITIONAL_INFO].sort());
+  });
+
+  it("nimmt nur Seiten ohne eigenen Seitenkopf aus der Prüfung", () => {
+    for (const route of Object.keys(PAGES_WITHOUT_OWN_HEAD)) {
+      const page = pages.find(({ id }) => id === route);
+      expect(page, route).toBeDefined();
+      if (!page) continue;
+      expect(parseModule(page.file).rendersTenantPage, route).toBe(false);
+      expect(parseModule(page.file).imports, route).not.toContainEqual(
+        expect.stringContaining("/components/"),
+      );
+    }
   });
 
   it("erklärt die Einstiegsseiten der Betreuung", () => {
