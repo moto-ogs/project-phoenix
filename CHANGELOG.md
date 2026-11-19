@@ -1,5 +1,86 @@
 # Changelog
 
+## [1.15.0](https://github.com/moto-ogs/project-phoenix/compare/v1.14.0...v1.15.0) (2026-11-19)
+
+
+### Neue Funktionen
+
+* Bericht zuerst, Warnung nennt die betroffenen Schulen ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([c14438e](https://github.com/moto-ogs/project-phoenix/commit/c14438ef8cfb3177a6ef9b6f239b5f2292321ae6))
+* Eigener Stichtag der Abrechnung je Träger und Schule ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([1ad0320](https://github.com/moto-ogs/project-phoenix/commit/1ad0320b5bfdd696da1f50e3e116aa3e700b8881))
+* Eigener Stichtag der Abrechnung je Träger und Schule ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([7b76c84](https://github.com/moto-ogs/project-phoenix/commit/7b76c847d3ae6a55773da854217b8094bb55a9ae))
+* Fehlende Zahlen nach dem Stichtag als Hinweis markieren ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([3e58173](https://github.com/moto-ogs/project-phoenix/commit/3e58173e0511031cde48ac4874a7ed797856213d))
+* Ferien-Anmeldung mit Reitern und Aktionen im Seitenkopf ([8508b18](https://github.com/moto-ogs/project-phoenix/commit/8508b18facec88d2aeeeb698517a6e84215d028c))
+* Ferien-Seiten des Trägers mit einer Kopfaktion und neutralen Kriterien ([3ab8944](https://github.com/moto-ogs/project-phoenix/commit/3ab8944c85f9253dc9e8f1315cfa47c172afe8c0))
+* Ferien-Seiten des Trägers mit einer Kopfaktion und neutralen Kriterien ([#7411](https://github.com/moto-ogs/project-phoenix/issues/7411)) ([96591f7](https://github.com/moto-ogs/project-phoenix/commit/96591f7bab1ab62dfdebf5ecab915940ef6b3380))
+* Geschlecht auch beim Anlegen einer externen Person ([51041d5](https://github.com/moto-ogs/project-phoenix/commit/51041d57da4db6629c8f97bed2d2d2b7221154bf))
+* Offene Schulen des Monats in der Tabelle, Ladefehler in der Karte ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([29ce0fb](https://github.com/moto-ogs/project-phoenix/commit/29ce0fb35b4d2e741bed0f56b3802aeb5807697c))
+* Regeln für Träger-Kopfaktionen und „Ändern“-Zeilenknöpfe scharf schalten ([#7417](https://github.com/moto-ogs/project-phoenix/issues/7417)) ([876a392](https://github.com/moto-ogs/project-phoenix/commit/876a392f535d6dd96d6b9fa6e18f534cec0e7a82))
+* Stichtage in einer Karte, Erklärung im Info-Fenster ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([71425e1](https://github.com/moto-ogs/project-phoenix/commit/71425e1e5e93289a389553c7cf0297d614f81f3b))
+* Tageschip im Vertretungsplan zeigt am gewählten Tag nur den Lückenpunkt ([#7524](https://github.com/moto-ogs/project-phoenix/issues/7524)) ([5e025de](https://github.com/moto-ogs/project-phoenix/commit/5e025de84d77fdf034329db72c2639b4bfdbe015))
+* **traeger:** Abrechnungsläufe – Versand, Fälligkeiten, Kopf und Zustände vereinheitlichen ([#7406](https://github.com/moto-ogs/project-phoenix/issues/7406)) ([5774d86](https://github.com/moto-ogs/project-phoenix/commit/5774d86ecd9e8cba07a5fe86c1b4a5900e5c0c6b))
+* **traeger:** Anmeldephasen und Schließtage an das Seitengerüst angleichen ([#7413](https://github.com/moto-ogs/project-phoenix/issues/7413)) ([c7d6157](https://github.com/moto-ogs/project-phoenix/commit/c7d61575e87a32490c2305d1d6737e0588ce3480))
+* **traeger:** Anmeldephasen und Schließtage an das Seitengerüst angleichen ([#7413](https://github.com/moto-ogs/project-phoenix/issues/7413)) ([3da6f22](https://github.com/moto-ogs/project-phoenix/commit/3da6f22f517584f5cdbbcb5a47858448ce9bf473))
+* **traeger:** Personal-Liste mit Suche und Schulfilter, Einsatzplanung und Wizards ans Kit angleichen ([#7415](https://github.com/moto-ogs/project-phoenix/issues/7415)) ([cb25147](https://github.com/moto-ogs/project-phoenix/commit/cb251476c95cb46e00777a7bae71c0b5bd1d3ca7))
+* **traeger:** Personal-Liste, Unterseiten, Einsatzplanung und Wizards ans Kit angleichen ([#7415](https://github.com/moto-ogs/project-phoenix/issues/7415)) ([7a7e720](https://github.com/moto-ogs/project-phoenix/commit/7a7e72048ed76dbec508d2654d9feed98e9a4dd4))
+* **traeger:** Personalakte mit Reitern ([7daa455](https://github.com/moto-ogs/project-phoenix/commit/7daa455dcb92268b23e9a25938336bf0bf73ce78))
+* **traeger:** Personalakte mit Reitern ([#7414](https://github.com/moto-ogs/project-phoenix/issues/7414)) ([b5998ca](https://github.com/moto-ogs/project-phoenix/commit/b5998cafd5f0ee2578c7cf4cce68d681f39ff004))
+* **traeger:** Vertrags-Detailseite mit Reitern und Kit-Karten ([5cb9f08](https://github.com/moto-ogs/project-phoenix/commit/5cb9f08ef89dd4fb7cd34f589775d921bfb37a53))
+* Träger-Startseiten, Konto und Einstellungen auf OGS-Stand ([#7416](https://github.com/moto-ogs/project-phoenix/issues/7416)) ([cae2b10](https://github.com/moto-ogs/project-phoenix/commit/cae2b10ff73cfdddc81af533349619185cd1155d))
+* Träger-UI Start, Übersicht, Schulseite, Konto, Einstellungen, Einladung auf OGS-Stand ([2785e71](https://github.com/moto-ogs/project-phoenix/commit/2785e71e2c9808fa116758dfc3f9f5999af118a7))
+* Träger-UI-Regeln scharf schalten – Scaffold ohne Träger-Ausnahme, Lint erkennt „Ändern“ ([45e1cb5](https://github.com/moto-ogs/project-phoenix/commit/45e1cb5f84a509ee00db10374cc812a2857bdac7))
+* Vertretungsplan zeigt offene Lücken zuerst und nennt sie im Kopf einmal ([#7493](https://github.com/moto-ogs/project-phoenix/issues/7493)) ([#7515](https://github.com/moto-ogs/project-phoenix/issues/7515)) ([4ffdc98](https://github.com/moto-ogs/project-phoenix/commit/4ffdc98ed581ea8d0d8802d4f354b9000868d3de))
+
+
+### Fehlerbehebungen
+
+* A11y-Audit besucht die entfernte Träger-Seite nicht mehr ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([f1d9898](https://github.com/moto-ogs/project-phoenix/commit/f1d989805345fbb38d2007599efec97c0fddf2f6))
+* Allgemeine Warnung ohne doppelten Monat ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([2634778](https://github.com/moto-ogs/project-phoenix/commit/2634778bbcbb8439feeb44482c83ab1e06b88b66))
+* Bestätigung beim Aufheben nennt den Tag, der danach gilt ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([e2ded5c](https://github.com/moto-ogs/project-phoenix/commit/e2ded5cdd184a39ae715bd66f48bcf1c66d36498))
+* **contract:** Rückverweise in erzeugten Schemas über lazy, auch in Feldern ([#2352](https://github.com/moto-ogs/project-phoenix/issues/2352)) ([75ddefe](https://github.com/moto-ogs/project-phoenix/commit/75ddefe95afb1fafa820710c26bc76b1008e8841))
+* Debitorennummer-Felder wieder kompakt wie in [#7410](https://github.com/moto-ogs/project-phoenix/issues/7410) verlangt ([87920a6](https://github.com/moto-ogs/project-phoenix/commit/87920a6c527f402fba5931fea6fba3a48c00c6d3))
+* **elternportal:** Push-Geräte unabhängig von Schulen registrieren ([#7514](https://github.com/moto-ogs/project-phoenix/issues/7514)) ([fb0803b](https://github.com/moto-ogs/project-phoenix/commit/fb0803b41c078febf8db2771bd13e4dc60267a86))
+* **frontend:** type callback parameters ([e8057ce](https://github.com/moto-ogs/project-phoenix/commit/e8057ce5d1162ad823ec219acb77b1f2847fd0c6))
+* Ladefehler nennt die Liste der Stichtage ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([28093f2](https://github.com/moto-ogs/project-phoenix/commit/28093f26843925f57a35291218f02e7700d37f98))
+* Offene Schulen bleiben bei Ladefehler sichtbar, Beschreibung ohne doppelte Zahl ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([ffc03fc](https://github.com/moto-ogs/project-phoenix/commit/ffc03fc3b5068eac826ab52a3134339a03063490))
+* Position auch im Konto-Reiter, bei früherer Beschäftigung und in Arbeitszeitmodellen in passender Form ([668a1e1](https://github.com/moto-ogs/project-phoenix/commit/668a1e18adb2f5754ab867685190e10c71f26b99))
+* preserve refused holiday metadata ([e3b110f](https://github.com/moto-ogs/project-phoenix/commit/e3b110faa40c525b596d817d0d3919d1aa28c64c))
+* **proxy:** Literal-Routen vor dynamischen Nachbarn reichen an den Katalog-Proxy ([#2352](https://github.com/moto-ogs/project-phoenix/issues/2352)) ([4bc2442](https://github.com/moto-ogs/project-phoenix/commit/4bc2442e1f8287b1962dfd7757cc033ab86e207a))
+* **proxy:** Übergabe-Routen senden private, no-store ([#2352](https://github.com/moto-ogs/project-phoenix/issues/2352)) ([9276e02](https://github.com/moto-ogs/project-phoenix/commit/9276e021909427f326cb16257bd22be380a8a614))
+* recognize retired CI test secret ([38b8415](https://github.com/moto-ogs/project-phoenix/commit/38b8415b81dd17d57b1ff3d25b55899d8b483cef))
+* restore holiday registration touch actions ([e663a44](https://github.com/moto-ogs/project-phoenix/commit/e663a444fcbe8242d6ecf02155955b308f92f3c6))
+* Review-Befunde zu Konto, Verlauf und Hilfe ([#7416](https://github.com/moto-ogs/project-phoenix/issues/7416)) ([2ef475e](https://github.com/moto-ogs/project-phoenix/commit/2ef475ee7bd341f225bb8c77a73d47df3a0cc724))
+* Review-Befunde zur Ferien-Anmeldung nachträglich übernehmen ([#7410](https://github.com/moto-ogs/project-phoenix/issues/7410)) ([a71744f](https://github.com/moto-ogs/project-phoenix/commit/a71744f4103970c5128bb38a5ae29eaf5f5a0166))
+* Review-Befunde zur Ferien-Anmeldung nachträglich übernehmen ([#7410](https://github.com/moto-ogs/project-phoenix/issues/7410)) ([158c18f](https://github.com/moto-ogs/project-phoenix/commit/158c18f196e6e9fe01abf13cdaa695ca3b952ecd))
+* Seeder setzt eigene Stichtage, Träger per ID, ehrliche Vorschau ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([d32322e](https://github.com/moto-ogs/project-phoenix/commit/d32322edbde371c8acb422dcf2c55fddfcebd133))
+* Seitentitel trennt lange Wörter auf dem Handy nach Silben ([#7417](https://github.com/moto-ogs/project-phoenix/issues/7417)) ([5f99229](https://github.com/moto-ogs/project-phoenix/commit/5f99229774a653e737223fd6cf724cd6981cf0db))
+* **staff:** Kennungen der Abwesenheiten als Zeichenketten; Klartext-Test im Wurzelpaket ([#2352](https://github.com/moto-ogs/project-phoenix/issues/2352)) ([84a3860](https://github.com/moto-ogs/project-phoenix/commit/84a3860b762df6f3531d44808ecb0e008dd45681))
+* **staff:** Testdaten und Statistik-Abfrage nach dem Umzug in den Katalog-Proxy ([#2352](https://github.com/moto-ogs/project-phoenix/issues/2352)) ([af0aae4](https://github.com/moto-ogs/project-phoenix/commit/af0aae4d4c4fd89bddd79db3a49a5e297a213ab5))
+* sync holiday registration tab with URL ([9f879d0](https://github.com/moto-ogs/project-phoenix/commit/9f879d073fd917a969468649de215a90b35ced11))
+* **traeger:** Ablaufliste öffnet die Akte im Reiter Nachweise ([#7414](https://github.com/moto-ogs/project-phoenix/issues/7414)) ([51395a1](https://github.com/moto-ogs/project-phoenix/commit/51395a1141f2763b47b8033af09a39bd82b1312c))
+* **traeger:** Bedingungen öffnen auf dem Handy kein Angebot von selbst ([#7409](https://github.com/moto-ogs/project-phoenix/issues/7409)) ([a9ed7a0](https://github.com/moto-ogs/project-phoenix/commit/a9ed7a08d42bc18e661bef064d6ef61bf1cc8df8))
+* **traeger:** keep return link on locked staff pages ([fc36a1f](https://github.com/moto-ogs/project-phoenix/commit/fc36a1f1bb4e9b99c69b7b0057624caa704fc379))
+* **traeger:** leere Einsatzorte zeigen einen Strich, kürzerer Suchtext ([#7415](https://github.com/moto-ogs/project-phoenix/issues/7415)) ([0e929d1](https://github.com/moto-ogs/project-phoenix/commit/0e929d188722e59c7e80ae5a8efa299c629aa985))
+* **traeger:** Review-Befunde zu [#7413](https://github.com/moto-ogs/project-phoenix/issues/7413) ([f2a150c](https://github.com/moto-ogs/project-phoenix/commit/f2a150cfd12d824c2ac507c44aa6be4583bb6f25))
+* **traeger:** Schritt-Karte des Wizards wächst nicht bis zum Seitenende ([#7415](https://github.com/moto-ogs/project-phoenix/issues/7415)) ([b104bc5](https://github.com/moto-ogs/project-phoenix/commit/b104bc57c8e5889805f97a22a9744a192e4a32e0))
+* **traeger:** Tastaturnavigation für Angebotszeilen ([0598432](https://github.com/moto-ogs/project-phoenix/commit/0598432949767f51e90c43c891d653b3013842b0))
+* **traeger:** URL-Reiterzustand zurücksetzen ([58eb5c6](https://github.com/moto-ogs/project-phoenix/commit/58eb5c6c7ecc6d969075abdf8bc0c9a0aa77b8c2))
+* **traeger:** Zeilenmenü eines Angebots öffnet nicht mehr die Angebotsseite ([#7413](https://github.com/moto-ogs/project-phoenix/issues/7413)) ([dc3ca59](https://github.com/moto-ogs/project-phoenix/commit/dc3ca59a2fb59a1670e0e8e3244122a1f470e296))
+* **ui:** Abendzeile verschiebt sich nur einmal, Regel prüft Zweig und Handy-Varianten ([6348649](https://github.com/moto-ogs/project-phoenix/commit/634864976876ac4b6d5026700513796f83bf4588))
+* **ui:** Alle festen Ebenen folgen in der iPhone-App dem verschobenen Sichtbereich ([eda267b](https://github.com/moto-ogs/project-phoenix/commit/eda267baa279a45e0bcbcd8fdc00fa07e590ec1d))
+* **ui:** Alle festen Ebenen folgen in der iPhone-App dem verschobenen Sichtbereich ([bcdfdac](https://github.com/moto-ogs/project-phoenix/commit/bcdfdac28277af3cbf3ed42081757e1b5bfb2485))
+* **ui:** Korrektur nur nach unten, auch für Vollbild-Blatt und Hintergrund der Blätter ([f0440ed](https://github.com/moto-ogs/project-phoenix/commit/f0440edb3ad8f65381d592df265426d341632f55))
+* **ui:** Regel erkennt auch fixed mit Wichtig-Markierung ([211e25b](https://github.com/moto-ogs/project-phoenix/commit/211e25b6ab51f5d19907cadf88f7852f6cd13373))
+* **ui:** Untere Leiste bleibt in der iPhone-App nach dem Tippen am unteren Rand ([04b0406](https://github.com/moto-ogs/project-phoenix/commit/04b04067f59eec417fcd6fb393075941e67965d2))
+* **ui:** Untere Leiste bleibt in der iPhone-App nach der Tastatur am unteren Rand ([f835327](https://github.com/moto-ogs/project-phoenix/commit/f835327ca0bede6c6019cfe9b34a1d65eddee66a))
+* Unbenutzte Konstruktoren für Stichtagsänderungen entfernt ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([c3e9fca](https://github.com/moto-ogs/project-phoenix/commit/c3e9fcaba5160a138b3adc550a83506c5849452b))
+* Vorschau verlässt sich nur auf geladene Schullisten ([#7301](https://github.com/moto-ogs/project-phoenix/issues/7301)) ([0837f16](https://github.com/moto-ogs/project-phoenix/commit/0837f163b2cbbab2ba32e494208bea66d94ca4de))
+
+
+### Schneller
+
+* **contract:** Erzeugte Schemas ohne Typableitung, unbenutzten Sitzungstyp entfernt ([#2352](https://github.com/moto-ogs/project-phoenix/issues/2352)) ([38cd4c6](https://github.com/moto-ogs/project-phoenix/commit/38cd4c687cb3203d6f4b837f70cf00481dfaccd3))
+* **contract:** Felder der erzeugten Schemas ohne Typableitung ([#2352](https://github.com/moto-ogs/project-phoenix/issues/2352)) ([90855d4](https://github.com/moto-ogs/project-phoenix/commit/90855d4eb2256a520d3f511f1c4e933376f47f9c))
+
 ## [1.14.0](https://github.com/moto-ogs/project-phoenix/compare/v1.13.0...v1.14.0) (2026-11-18)
 
 
