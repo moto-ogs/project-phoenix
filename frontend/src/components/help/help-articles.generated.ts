@@ -11116,22 +11116,22 @@ export const traegerAccountsTopic = function traegerAccountsTopic(): HelpTopic {
         ],
       },
       {
-        title: "Namen eintragen oder ändern",
+        title: "Namen eintragen oder bearbeiten",
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
           "Öffne bei der Person das Menü mit den drei Punkten.",
-          "Wähle `Namen eintragen`. Hat die Person schon einen Namen, heißt der Eintrag `Namen ändern`.",
+          "Wähle `Namen eintragen`. Hat die Person schon einen Namen, heißt der Eintrag `Namen bearbeiten`.",
           "Trage den `Name` ein und wähle `Speichern`.",
         ],
       },
       {
-        title: "Rollen ändern",
+        title: "Rollen bearbeiten",
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
           "Öffne bei der Person das Menü mit den drei Punkten.",
-          "Wähle `Rollen ändern`.",
+          "Wähle `Rollen bearbeiten`.",
           "Wähle die Rollen und dann `Speichern`.",
         ],
       },
@@ -11307,7 +11307,7 @@ export const traegerBillingRunTopic =
             "Du bearbeitest gerade einen Ferienzeitraum und willst zu seinen Rechnungen.",
           steps: [
             "Öffne den Ferienzeitraum unter `Ferienbetreuung`.",
-            "Wähle oben rechts `Zur Abrechnung`. Der Knopf steht bei `Planung`, `Formular` und `Anmeldungen`.",
+            "Öffne oben rechts das Menü mit den drei Punkten und wähle `Zur Abrechnung`. Der Eintrag steht bei `Planung`, `Formular` und `Anmeldungen`.",
             "Hat der Zeitraum genau einen Lauf, öffnet sich dieser Lauf. Sonst siehst du die Abrechnung nur mit den Läufen dieses Zeitraums.",
             "Den Filter `Ferienzeitraum` entfernst du mit dem Kreuz. Dann siehst du wieder alle Läufe.",
             "Hat der Zeitraum noch keinen Lauf, wähle `Lauf starten`. Der Zeitraum ist schon gewählt.",

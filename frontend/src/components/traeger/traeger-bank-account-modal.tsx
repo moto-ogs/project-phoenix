@@ -115,8 +115,12 @@ export function TraegerBankAccountModal({
       pending={save}
       isBackdropDismissDisabled
       title={
+        // The window names its object, not the verb of the menu entry „Bearbeiten“
+        // (bauart/no-edit-overlay, #7417).
         edit?.kind === "change"
-          ? "Bankverbindung ändern"
+          ? edit.account.label
+            ? `Bankverbindung „${edit.account.label}“`
+            : "Bankverbindung"
           : "Bankverbindung hinzufügen"
       }
       size="md"

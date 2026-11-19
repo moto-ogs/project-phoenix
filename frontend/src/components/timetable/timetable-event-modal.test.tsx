@@ -4866,7 +4866,7 @@ describe("TimetableEventModal", () => {
     await goToStep(2);
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Alten Wochenendtag Sa zu Montag ändern",
+        name: "Alten Wochenendtag Sa auf Montag verlegen",
       }),
     );
     await clickSave();

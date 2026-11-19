@@ -379,13 +379,12 @@ function collectTsxFiles(directory: string): string[] {
   });
 }
 
-// Das Träger-Portal trägt noch mehrere Kopfaktionen; dieser Test gilt dem
-// Tenant-Portal (#5605). Seitenköpfe stehen auch in View-Komponenten.
+// Gilt dem Tenant- und dem Träger-Portal (#5605, #7417). Seitenköpfe stehen
+// auch in View-Komponenten.
 const tenantHeads = [
   ...collectTsxFiles(PROTECTED_DIR),
-  ...collectTsxFiles(path.join(SRC_DIR, "components")).filter(
-    (file) => !file.includes(`${path.sep}traeger${path.sep}`),
-  ),
+  ...collectTsxFiles(TRAEGER_DIR),
+  ...collectTsxFiles(path.join(SRC_DIR, "components")),
 ]
   .map((file) => ({
     id: path.relative(SRC_DIR, file).split(path.sep).join("/"),
@@ -393,7 +392,7 @@ const tenantHeads = [
   }))
   .filter((head) => /<(?:TenantPage|DatabasePageLayout)\b/.test(head.source));
 
-describe("Seitenkopf des Tenant-Portals (Spec R3 und R4)", () => {
+describe("Seitenkopf des Tenant- und Träger-Portals (Spec R3 und R4)", () => {
   it("meldet einen langen festen Text in stats, auch in einem Zweig", () => {
     expect(
       headViolations(
