@@ -332,12 +332,12 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	f := operatorProvisioningRoutes{router: router, ctx: ctx, operatorID: operatorID}
 	base := fmt.Sprintf("/operator/announcements/%d", announcement.ID)
 
+	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
 	f.call(t, http.MethodPost, base+"/publish", nil, nil)
 	var publishedAt *time.Time
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcements").Column("published_at").Where("id = ?", announcement.ID).Scan(testpkg.Ctx(t), &publishedAt))
 	assert.NotNil(t, publishedAt, "the announcement is published")
 
-	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
 	require.NoError(t, module.MarkSeen(ctx, announcementViewer(viewer.ID, testpkg.Tenant(t), tenantOrganizationID(t, db, testpkg.Tenant(t))), announcement.ID))
 	var stats struct {
 		AnnouncementID int64 `json:"announcement_id"`
