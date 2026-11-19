@@ -6,7 +6,7 @@ import type {
   SchoolSearchMatch,
   SchoolSearchMatchField,
   SchoolSearchResult,
-} from "~/lib/school-search";
+} from "~/lib/school-search-types";
 
 /**
  * The backend's search answer, the contract's SearchResult (snake_case, IDs
