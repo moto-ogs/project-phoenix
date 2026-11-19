@@ -380,13 +380,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter fromInstanceLifecycle) AcknowledgeUnderstaffed(arg0 context.Context, arg1 int64, arg2 bool, arg3 *string, arg4 *int64) (*timetable.LifecycleInstance, error) {\n\tresult0, result1 := adapter.value.AcknowledgeUnderstaffed(arg0, arg1, arg2, arg3, arg4)\n\treturn result0, result1\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromInstanceLifecycle.AcknowledgeUnderstaffed",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter fromInstanceLifecycle) AnnounceStaffingChanged(arg0 int64, arg1 string) error {\n\tresult0 := adapter.value.AnnounceStaffingChanged(arg0, arg1)\n\treturn result0\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/timetable/fixturetest/fromInstanceLifecycle.AnnounceStaffingChanged",
@@ -1979,13 +1972,6 @@
       "evidence": "func (s *Service) EnsureInstanceStudent(ctx context.Context, instanceID, studentID int64) (result timetable.InstanceStudent, inserted bool, err error) {\n\tif instanceID \u003c= 0 || studentID \u003c= 0 {\n\t\treturn timetable.InstanceStudent{}, false, s.reject(\"ensure_instance_student\", timetable.ErrInvalidInstanceStudent)\n\t}\n\terr = s.runWrite(ctx, \"ensure_instance_student\", true, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\tvalue, created, queryStats, ensureErr := s.store.EnsureInstanceStudent(txCtx, instanceID, studentID)\n\t\tstats.Add(queryStats)\n\t\tresult, inserted = value, created\n\t\treturn ensureErr\n\t})\n\treturn result, inserted, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/Service.EnsureInstanceStudent",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) FindTemplateStartTimes(ctx context.Context, groupIDs []int64) (result []timetable.TemplateStartTime, err error) {\n\terr = s.run(ctx, \"find_template_start_times\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvalues, queryStats, findErr := s.store.FindTemplateStartTimes(ctx, groupIDs)\n\t\tstats.Add(queryStats)\n\t\tresult = values\n\t\treturn findErr\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/Service.FindTemplateStartTimes",
       "owner": "modules/timetable"
     },
     {

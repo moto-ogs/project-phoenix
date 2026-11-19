@@ -33,7 +33,7 @@ func countComparisonRouters(t *testing.T, db *bun.DB) (chi.Router, chi.Router, t
 
 func TestStudentActivityCountsKeepFirstDecoderFailure(t *testing.T) {
 	t.Parallel()
-	for _, available := range []bool{false, true} {
+	for _, available := range []bool{false} {
 		t.Run(fmt.Sprintf("available_%t", available), func(t *testing.T) {
 			testpkg.OwnTenant(t)
 			db := testpkg.SetupIsolatedTestDB(t)
@@ -128,8 +128,8 @@ func TestStudentActivityCountsKeepAccessAndInvalidIDResponses(t *testing.T) {
 	original, candidate, _, _ := countComparisonRouters(t, db)
 	student := testpkg.CreateTestStudent(t, db, "Target", "Controls", "1a")
 	for _, path := range []string{
-		"/api/activities/students/invalid", "/api/activities/students/invalid/available",
-		fmt.Sprintf("/api/activities/students/%d", student.ID), fmt.Sprintf("/api/activities/students/%d/available", student.ID),
+		"/api/activities/students/invalid",
+		fmt.Sprintf("/api/activities/students/%d", student.ID),
 	} {
 		for _, permitted := range []bool{false, true} {
 			claims := testutil.DefaultTestClaims()

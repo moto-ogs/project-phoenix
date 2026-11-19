@@ -1732,6 +1732,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -1746,6 +1747,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ActivityScheduleResponse"
@@ -1821,6 +1823,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "TransitionResponse"
@@ -2314,6 +2317,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "CareOfferingResponse"
@@ -2584,6 +2588,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -8735,6 +8740,7 @@
       "portals": [
         "school"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ParentConferenceView"

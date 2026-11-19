@@ -16,10 +16,6 @@ import (
 const (
 	ConflictKindStaff   = "staff"
 	ConflictKindStudent = "student"
-	// The two exception-conflict kinds (WP-B13) between an activity exception
-	// and a student's arrival expectation.
-	ConflictKindCancelledArrivals = "cancelled_instance_with_scheduled_arrivals"
-	ConflictKindModifiedMismatch  = "modified_instance_time_mismatch"
 )
 
 // InstanceConflictWarning is a single soft warning surfaced on the start
@@ -115,23 +111,6 @@ type WindowConflictStudent struct {
 	Status    string
 }
 
-// ExceptionConflict is one planning conflict between an activity exception
-// and a student's arrival expectation. Optional string fields are populated
-// per kind and are empty otherwise.
-type ExceptionConflict struct {
-	Kind               string
-	Date               string
-	ActivityGroupID    int64
-	InstanceID         int64
-	ActivityTitle      string
-	StudentID          int64
-	ExpectedArrival    string
-	ArrivalSource      string
-	CancellationReason string
-	OriginalStartTime  string
-	ModifiedStartTime  string
-}
-
 // StartConflictQuery checks a planned block against the live layer before it
 // starts (WP-B9, #2139). Warnings are advisory; a failure to load the
 // expected students or their current presence is returned, because
@@ -151,9 +130,6 @@ type PlanningConflictQuery interface {
 	// DetectWindowConflicts returns the warnings keyed by instance ID. Every
 	// warning appears on both involved blocks with the same fingerprint.
 	DetectWindowConflicts([]WindowConflictBlock) map[int64][]InstanceConflictWarning
-	// DetectExceptionConflicts covers the inclusive [from, to] window and
-	// returns an unsorted slice.
-	DetectExceptionConflicts(ctx context.Context, from, to calendar.Date) ([]ExceptionConflict, error)
 }
 
 // StaffingQuery answers who could cover a block and whether the Dienstplan

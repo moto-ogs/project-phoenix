@@ -100,37 +100,6 @@ func (rs *Resource) getStudentEnrollments(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, http.StatusOK, responses, fmt.Sprintf("Activities for student ID %d retrieved successfully", studentID))
 }
 
-// getAvailableActivities handles getting activities available for a student to enroll in
-func (rs *Resource) getAvailableActivities(w http.ResponseWriter, r *http.Request) {
-	studentID, ok := rs.parseStudentID(w, r)
-	if !ok {
-		return
-	}
-
-	// Get available activities for student
-	availableGroups, err := rs.ActivityService.GetAvailableGroups(r.Context(), studentID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Build activity responses
-	counts, err := rs.ActivityService.GetEnrollmentCounts(r.Context(), activityGroupIDs(availableGroups))
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-	responses := make([]ActivityResponse, 0, len(availableGroups))
-	for _, group := range availableGroups {
-		if group == nil {
-			continue // Skip nil groups to prevent panic
-		}
-		responses = append(responses, newActivityResponse(group, counts[group.ID]))
-	}
-
-	common.Respond(w, r, http.StatusOK, responses, fmt.Sprintf("Available activities for student ID %d retrieved successfully", studentID))
-}
-
 // We already have the enrollStudent method, no need to modify it since it follows the standard
 
 // unenrollStudent handles removing a student from an activity
