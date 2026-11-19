@@ -25,6 +25,7 @@ import { TagesplanView } from "./tagesplan-view";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { MobilePageHelpPortal } from "~/components/help/mobile-page-help-portal";
+import { ModuleNotBookedSlots } from "~/components/tenant/module-not-booked-state";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
 
@@ -40,6 +41,10 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 // exact subpath the component imports so the day fetch is driven per test.
 vi.mock("~/lib/swr/hooks", () => ({
   useSWRAuth: vi.fn(),
+}));
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: { user: { roles: ["user"] } } }),
 }));
 
 vi.mock("~/lib/tenant-router", () => ({
@@ -626,6 +631,29 @@ describe("TagesplanView", () => {
     expect(screen.getByText("Basteln")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(reloadList).toHaveBeenCalled();
+  });
+
+  it("shows the module state when a refresh is refused", async () => {
+    setSWR({
+      data: [makeInstance({ id: "1", title: "Basteln" })],
+      isLoading: false,
+      error: new ApiError("module not booked", 403, {
+        code: "module.not_booked",
+        details: { module: "zeiterfassung" },
+      }),
+    });
+
+    render(
+      <ModuleNotBookedSlots>
+        <TagesplanView />
+      </ModuleNotBookedSlots>,
+    );
+
+    expect(
+      await screen.findByText("Zeiterfassung ist nicht gebucht"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Basteln")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("explains missing permission with the catalog text (403)", async () => {

@@ -644,7 +644,7 @@ export function TagesplanView() {
   const pageError =
     listLoadError && instances != null
       ? {
-          message: listLoadError.message,
+          ...listLoadError,
           action: errorAlertActions(listLoadError),
           keepContent: true,
         }
