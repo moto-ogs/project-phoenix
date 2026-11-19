@@ -29,6 +29,8 @@ func publicRoutesStandApart(routes []Route) error {
 			return fmt.Errorf("%s: a public write needs MaxBodyBytes", where)
 		case route.NoRetryAfterRenewal != "":
 			return fmt.Errorf("%s: a public route has no session to renew; drop NoRetryAfterRenewal", where)
+		case route.File || route.Multipart:
+			return fmt.Errorf("%s: the session-free proxy path answers JSON only; a public file or upload keeps its route file", where)
 		}
 		for _, other := range routes {
 			if other.Method == route.Method && !slices.Contains(other.Portals, PublicPortal) && patternsOverlap(route.Pattern, other.Pattern) {

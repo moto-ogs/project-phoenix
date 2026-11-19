@@ -16,6 +16,13 @@ export const DELIBERATE_LOGOUT_KEY = "deliberateLogout";
  */
 export const LOGOUT_NOT_REVOKED_KEY = "logoutNotRevoked";
 
+/**
+ * sessionStorage marker: the logout running now follows the person's own
+ * password change, which ended every session. The login page reads it once
+ * and asks for the new password.
+ */
+export const PASSWORD_CHANGED_KEY = "passwordChanged";
+
 import { getSession } from "next-auth/react";
 import { handleAuthFailure } from "./auth-failure";
 import type { ErrorCode } from "./error-codes.generated";

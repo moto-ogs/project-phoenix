@@ -24,6 +24,7 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { sessionFetch } from "~/lib/session-cache";
 import { useSWRAuth } from "~/lib/swr";
+import { markPasswordChanged } from "~/lib/login-session-notice";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { operatorKeys } from "~/lib/swr/operator-keys";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
@@ -237,6 +238,7 @@ function OperatorSettingsContent() {
               // revoked session still opens nothing (#5194).
               onSuccess={() => {
                 handleClosePasswordModal();
+                markPasswordChanged();
                 void logout().catch(() => undefined);
               }}
             />

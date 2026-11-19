@@ -26,6 +26,10 @@ import { fetchFamilyBillings } from "~/lib/traeger-billing-terms-api";
 import { fetchCareRun } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const RECIPIENT_PAYMENT_INFO =
+  "Hier legst du fest, an wen die Rechnungen dieser Familie gehen. Wähle zuerst bei „Rechnung an“ die Person. Bei Bedarf änderst du den „Zahlungsweg“.";
+
 export default function TraegerFamilyBillingPage() {
   const params = useParams<{ id: string; contractId: string }>();
   const router = useRouter();
@@ -77,6 +81,7 @@ export default function TraegerFamilyBillingPage() {
 
   return (
     <TenantPage
+      info={RECIPIENT_PAYMENT_INFO}
       title={
         childName
           ? `Empfänger und Zahlung: Familie von ${childName}`

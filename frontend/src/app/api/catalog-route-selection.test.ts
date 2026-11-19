@@ -10,6 +10,7 @@ import {
   underOutsideHead,
 } from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
+import { fileAnswer, multipart } from "~/lib/contract/runtime";
 
 /**
  * A registered route reaches its portal's catalog proxy only when no route
@@ -136,6 +137,13 @@ const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
     return {
       portal: name,
       pattern,
+      // A file answer or a multipart upload (ADR 0270, addendum 2026-11-19).
+      streamed: routes.some(
+        (route) =>
+          route.pattern === pattern &&
+          ((route as { response: unknown }).response === fileAnswer ||
+            (route as { request?: unknown }).request === multipart),
+      ),
       // Without a trailing slash, as the browser calls it.
       bff:
         portal === null
@@ -219,6 +227,32 @@ describe("route file in front of a portal's catalog proxy", () => {
 });
 
 /**
+ * A file or upload the contract registers streams through the catalog proxy,
+ * which answers it private and uncached (#2352). A route file of its own on
+ * the same path would win and keep the old helper alive beside the
+ * contract: the file goes once its route is registered.
+ */
+describe("registered file or upload route", () => {
+  const streamed = cases.filter((entry) => entry.streamed);
+
+  it("exists in the contract", () => {
+    expect(streamed.length).toBeGreaterThan(0);
+  });
+
+  it.each(streamed)(
+    "$portal $bff reaches the catalog proxy, not a route file",
+    ({ bff, catchAlls }) => {
+      const sample = bff!
+        .split("/")
+        .map((segment) => (isParam(segment) ? "1" : segment))
+        .join("/");
+      const selected = routeFiles.find(({ match }) => match(sample))?.route;
+      expect(catchAlls).toContain(selected);
+    },
+  );
+});
+
+/**
  * Paths whose own route file is gone (#2352, #7563): Next must hand them to
  * the portal's catch-all, not to a dynamic neighbour or Auth.js. Before,
  * `time-tracking/[id]` caught `time-tracking/current` and literal hand-off
@@ -284,6 +318,14 @@ describe("path freed from its own route file", () => {
     ],
     ["/api/parent/me/mfa", "/api/parent/[...path]"],
     ["/api/parent/me/children/1/sick-note", "/api/parent/[...path]"],
+    // Files and an upload of the contract (#2352).
+    ["/api/students/day-log/export", "/api/[...path]"],
+    ["/api/traeger/access-log/export", "/api/traeger/[...path]"],
+    ["/api/traeger/documents/1/file", "/api/traeger/[...path]"],
+    [
+      "/api/traeger/holiday-periods/1/registrations/2/proofs",
+      "/api/traeger/[...path]",
+    ],
   ])("%s goes to %s", (sample, expected) => {
     expect(routeFiles.find(({ match }) => match(sample))?.route).toBe(expected);
   });

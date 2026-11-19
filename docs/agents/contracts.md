@@ -506,7 +506,9 @@ rows match every scope), not expired. Otherwise the token counts as
 unverified, so every Authenticator answers 401 and public routes treat the
 request as anonymous; a failed read answers 503 `general.unavailable` and
 never lets the token through. Operator tokens keep their own family check
-(`RequiresActiveOperator`); device keys, refresh, MFA and enrollment tokens
+(`RequiresActiveOperator`): an ended family (missing, gone, expired, foreign)
+answers 401 like the other portals, only a deactivated operator 403
+`identity.account_inactive`; device keys, refresh, MFA and enrollment tokens
 are not access tokens and pass unchanged. The check reads the database each
 time (one indexed statement in its own administrative transaction, budget
 `identity.access_session.verify`) and caches nothing, so a confirmed
@@ -1044,8 +1046,10 @@ issues no session. An account's own password change (`POST /auth/password`,
 at every school and portal ends, its reset links are spent and its remembered
 devices revoked; only the family of the access token the change is made with
 stays signed in. The caterer's own change ends its current session too.
-An operator's password change revokes the operator's remembered devices as
-well. The account's credential generation
+An operator's password change revokes every operator session family, the
+current one included, and the operator's remembered devices. Both portals
+then sign out to their login, which asks once for the new password
+(`markPasswordChanged`, `frontend/src/lib/login-session-notice.ts`). The account's credential generation
 (`auth.accounts.mfa_reset_generation`) binds every artifact a password check
 hands out. Exactly one function writes the account credential
 (`Store.WriteAccountCredential`: password hash, one-time flag, generation;

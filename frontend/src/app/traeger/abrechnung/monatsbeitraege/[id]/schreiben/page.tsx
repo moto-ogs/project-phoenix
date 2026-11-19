@@ -80,6 +80,10 @@ function seriesMessage(series: CareLetterSeries): string {
   return parts.join(" ");
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const LETTERS_INFO =
+  "Hier sendest du die Schreiben zu den Rechnungen an die Familien. Das geht erst, wenn der Monatslauf freigegeben ist. Gibt es noch keine, wählst du „Schreiben erstellen“.";
+
 export default function TraegerCareRunLettersPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
@@ -287,6 +291,7 @@ export default function TraegerCareRunLettersPage() {
 
   return (
     <TenantPage
+      info={LETTERS_INFO}
       title={
         run ? `Schreiben für ${formatMonth(run.billingMonth)}` : "Schreiben"
       }

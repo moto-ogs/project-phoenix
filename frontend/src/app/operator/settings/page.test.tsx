@@ -38,7 +38,8 @@ vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
 }));
 
-vi.mock("~/lib/session-cache", () => ({
+vi.mock("~/lib/session-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
   sessionFetch: (...args: unknown[]) => mockSessionFetch(...args),
 }));
 
@@ -73,6 +74,7 @@ vi.mock("~/components/settings/trusted-devices-section", () => ({
   TrustedDevicesSection: () => null,
 }));
 
+import { PASSWORD_CHANGED_KEY } from "~/lib/session-cache";
 import OperatorSettingsPage from "./page";
 
 function renderPage() {
@@ -92,6 +94,7 @@ const defaultProfile = {
 describe("OperatorSettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     mockLogout.mockResolvedValue(undefined);
     mockUpdateSession.mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
@@ -748,6 +751,7 @@ describe("OperatorSettingsPage", () => {
     await act(async () => onSuccess());
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
+    expect(sessionStorage.getItem(PASSWORD_CHANGED_KEY)).toBe("1");
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 });

@@ -14,6 +14,7 @@ import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { emailCodeFactorApi } from "~/lib/email-code-factor-api";
+import { markPasswordChanged } from "~/lib/login-session-notice";
 import { useShellAuth } from "~/lib/shell-auth-context";
 
 const catererMFA = emailCodeFactorApi("/api/caterer/account/mfa");
@@ -66,7 +67,10 @@ export default function CatererAccountPage() {
         // The change ended every session of the account, this one too. If the
         // logout request itself fails, the revoked session still opens
         // nothing; its next request ends it (#5194).
-        onSuccess={() => void logout().catch(() => undefined)}
+        onSuccess={() => {
+          markPasswordChanged();
+          void logout().catch(() => undefined);
+        }}
       />
     </div>
   );

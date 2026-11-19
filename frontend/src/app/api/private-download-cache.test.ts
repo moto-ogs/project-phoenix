@@ -46,9 +46,10 @@ vi.mock("~/lib/server-api-url", () => ({
   getServerApiUrl: () => "http://localhost:8080",
 }));
 
+// Each route reads its own params; `never` takes every handler's context.
 type Route = (
   request: NextRequest,
-  context: { params: Promise<typeof downloadParams> },
+  context: { params: Promise<never> },
 ) => Promise<Response>;
 
 const downloadParams = {
@@ -59,7 +60,9 @@ const downloadParams = {
   token: "status-token",
 };
 
-const routes: Array<[string, string, () => Promise<Route>]> = [
+const routes: Array<
+  [string, string, () => Promise<Route>, Record<string, unknown>?]
+> = [
   [
     "student export",
     "POST",
@@ -109,10 +112,18 @@ const routes: Array<[string, string, () => Promise<Route>]> = [
     async () =>
       (await import("./operator/billing/key-date-counts/export/route")).GET,
   ],
+  // A file the contract registers runs through the portal's catalog proxy.
   [
     "Träger export",
     "GET",
-    async () => (await import("./traeger/access-log/export/route")).GET,
+    async () => (await import("./traeger/[...path]/route")).GET,
+    { path: ["access-log", "export"] },
+  ],
+  [
+    "staff export",
+    "GET",
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["students", "day-log", "export"] },
   ],
   [
     "token-bound proof",
@@ -122,15 +133,17 @@ const routes: Array<[string, string, () => Promise<Route>]> = [
   ],
 ];
 
-function call(route: Route, method: string) {
+function call(
+  route: Route,
+  method: string,
+  params: Record<string, unknown> = downloadParams,
+) {
   return route(
     new NextRequest("http://localhost:3000/api/export?format=pdf", {
       method,
       ...(method === "POST" ? { body: "{}" } : {}),
     }),
-    {
-      params: Promise.resolve(downloadParams),
-    },
+    { params: Promise.resolve(params) as Promise<never> },
   );
 }
 
@@ -145,7 +158,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("private file responses (#5119)", () => {
   it.each(routes)(
     "%s: protects real file bytes and download headers",
-    async (_name, method, load) => {
+    async (_name, method, load, params) => {
       const bytes = new Uint8Array([0, 255, 37, 80, 68, 70]);
       mockFetch.mockResolvedValue(
         new Response(bytes, {
@@ -159,7 +172,7 @@ describe("private file responses (#5119)", () => {
         }),
       );
 
-      const response = await call(await load(), method);
+      const response = await call(await load(), method, params);
 
       expect(response.status).toBe(200);
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -197,7 +210,7 @@ describe("private file responses (#5119)", () => {
 
   it.each(routes)(
     "%s: protects backend errors",
-    async (_name, method, load) => {
+    async (_name, method, load, params) => {
       for (const status of [401, 403, 503]) {
         // A 401 renews the session first; a refused renewal keeps it a 401.
         if (status === 401) {
@@ -216,7 +229,7 @@ describe("private file responses (#5119)", () => {
             }),
           ),
         );
-        const response = await call(await load(), method);
+        const response = await call(await load(), method, params);
         expect(response.status).toBe(status);
         expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       }

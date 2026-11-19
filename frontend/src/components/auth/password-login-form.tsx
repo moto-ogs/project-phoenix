@@ -35,6 +35,7 @@ import { errorStatus } from "~/lib/expected-failure";
 import { FORGOT_PASSWORD_PARAM } from "~/lib/login-params";
 import {
   useLogoutNotRevokedNotice,
+  usePasswordChangedNotice,
   useSessionExpiredNotice,
 } from "~/lib/login-session-notice";
 import { createLogger } from "~/lib/logger";
@@ -78,6 +79,8 @@ export interface PasswordLoginCopy {
    * to the German catalog text of identity.logout_not_revoked.
    */
   readonly logoutNotRevoked?: string;
+  /** The person changed their password, which signed them out. */
+  readonly passwordChanged?: string;
   readonly reset?: PasswordResetModalCopy;
 }
 
@@ -98,6 +101,8 @@ const DEFAULT_COPY = {
   missingCredentials: "Bitte gib E-Mail-Adresse und Passwort ein.",
   rateLimited: "Zu viele Anmeldeversuche. Bitte versuche es später erneut.",
   sessionExpired: "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+  passwordChanged:
+    "Dein Passwort ist geändert. Melde dich jetzt mit dem neuen Passwort an.",
 } as const satisfies PasswordLoginCopy &
   Required<Pick<PasswordLoginCopy, "passkey" | "passkeyErrorObject">>;
 
@@ -218,6 +223,7 @@ export function PasswordLoginForm({
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [sessionExpired, setSessionExpired] = useSessionExpiredNotice();
   const [logoutNotRevoked, setLogoutNotRevoked] = useLogoutNotRevokedNotice();
+  const [passwordChanged, setPasswordChanged] = usePasswordChangedNotice();
   const { formRef, errors, pending, passwordRefused, attempt } =
     useLoginAttempt(portal, copy.rateLimited);
   const latestSubmitRef = useRef<() => void>(() => undefined);
@@ -262,6 +268,7 @@ export function PasswordLoginForm({
     }
     setSessionExpired(false);
     setLogoutNotRevoked(false);
+    setPasswordChanged(false);
     await attempt(
       () => onSubmit({ email, password }),
       LOGIN_REFUSALS,
@@ -274,6 +281,7 @@ export function PasswordLoginForm({
     if (busy || !onPasskey) return;
     setSessionExpired(false);
     setLogoutNotRevoked(false);
+    setPasswordChanged(false);
     await attempt(
       onPasskey,
       PASSKEY_LOGIN_REFUSALS,
@@ -337,7 +345,14 @@ export function PasswordLoginForm({
             data-testid="logout-not-revoked-notice"
           />
         ) : null}
-        {!failed && sessionExpired ? (
+        {!failed && passwordChanged ? (
+          <Alert
+            type="success"
+            message={copy.passwordChanged ?? DEFAULT_COPY.passwordChanged}
+            data-testid="password-changed-notice"
+          />
+        ) : null}
+        {!failed && sessionExpired && !passwordChanged ? (
           <Alert type="info" message={copy.sessionExpired} />
         ) : null}
 
