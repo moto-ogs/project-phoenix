@@ -18,4 +18,7 @@ type Hub[C any] interface {
 	RegisterParent(C)
 	RegisterSchool(C, int64)
 	Unregister(C)
+	// Draining closes when the process stops serving; open streams then end
+	// so their clients reconnect to another replica (#7226).
+	Draining() <-chan struct{}
 }
