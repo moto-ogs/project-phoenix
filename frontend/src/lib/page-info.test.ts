@@ -30,19 +30,7 @@ const PORTALS = [
  * neue Seite braucht `info`, und eine Seite, die `info` bekommt, fliegt hier
  * heraus. Lehrer-Seiten tragen das Präfix `school:`.
  */
-const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
-  "/dateien",
-  "/info-displays",
-  "/lists",
-  "/messages",
-  "/messages/[threadId]",
-  "/messages/groups",
-  "/messages/groups/[groupThreadId]",
-  "/parent-announcements/[id]",
-  "/reminders",
-  "/umfragen/[id]",
-  "/wochenprotokolle/[protocolId]",
-];
+const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [];
 
 /**
  * Seiten ohne eigenen Seitenkopf: Sie leiten nur weiter und zeigen nie einen

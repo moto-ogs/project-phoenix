@@ -34,6 +34,10 @@ import { parentConversationsConcept } from "~/lib/concepts/parentConversations";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { foldForSearch } from "~/lib/search-fold";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const MESSAGES_INFO =
+  "Hier schreibst du mit den Eltern der Kinder. Jede Unterhaltung gehört zu einer Person und ihrem Kind. Tippe auf eine Unterhaltung, um sie zu öffnen.";
+
 const logger = createLogger({ component: "MessagesInboxPage" });
 
 const MARK_ALL_READ_LABEL = "Alle als gelesen markieren";
@@ -202,6 +206,7 @@ function MessagesInboxContent() {
 
   return (
     <TenantPage
+      info={MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("conversations")}
       stats={inboxSummary}

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { AnnouncementDetailSkeleton } from "~/components/announcements/announcement-detail";
 import { Skeleton } from "~/components/ui/skeleton";
 import { TenantPage } from "~/components/ui/tenant-page";
@@ -12,9 +13,16 @@ export function AnnouncementDetailLoadingPage({
   title = "Mitteilung",
   referrer = "/parent-announcements",
   backLabel = "Zurück zu den Mitteilungen",
-}: Readonly<{ title?: string; referrer?: string; backLabel?: string }>) {
+  info,
+}: Readonly<{
+  title?: string;
+  referrer?: string;
+  backLabel?: string;
+  info?: ReactNode;
+}>) {
   return (
     <TenantPage
+      info={info}
       title={title}
       back
       backHref={referrer}
