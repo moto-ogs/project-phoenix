@@ -33,7 +33,7 @@ func TestDashboardCarriesTheClassHandover(t *testing.T) {
 	at := time.Date(2026, time.August, 19, 11, 45, 0, 0, time.UTC)
 	absent := SupervisionClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft", Absent: true}
 	present := SupervisionClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft"}
-	projection := func() *Projection {
+	projection := func() *DashboardProjection {
 		p := emptyProjection()
 		p.Visits = []Visit{{StudentID: 1, SchoolClass: "1a"}, {StudentID: 2, SchoolClass: "2b"}}
 		p.OpenRooms = []OpenRoom{{Students: []OpenRoomStudent{{Visit: Visit{StudentID: 2, SchoolClass: "2b"}}}}}

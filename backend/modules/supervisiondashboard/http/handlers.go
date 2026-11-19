@@ -61,7 +61,7 @@ func DashboardRouteContracts() []common.RouteContract {
 	return []common.RouteContract{{
 		Method: "GET", Pattern: "/supervision-dashboard", Portals: []common.PortalScope{common.PortalTenant},
 		Query:    []common.QueryParam{{Name: "group_id", Kind: common.QueryID}},
-		Response: supervisionDashboardService.Projection{},
+		Response: supervisionDashboardService.DashboardProjection{},
 	}}
 }
 

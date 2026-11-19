@@ -6,9 +6,20 @@ import { routes as admin } from "./admin.generated";
 import { routes as analyticsConsent } from "./analytics-consent.generated";
 import { routes as analyticsPolicy } from "./analytics-policy.generated";
 import { routes as announcementAttachments } from "./announcement-attachments.generated";
+import { routes as authAccount } from "./auth-account.generated";
+import { routes as authAccounts } from "./auth-accounts.generated";
 import { routes as authInvitations } from "./auth-invitations.generated";
+import { routes as authLinkToTenant } from "./auth-link-to-tenant.generated";
+import { routes as authMfa } from "./auth-mfa.generated";
+import { routes as authPasskeys } from "./auth-passkeys.generated";
+import { routes as authPermissions } from "./auth-permissions.generated";
+import { routes as authRegister } from "./auth-register.generated";
+import { routes as authRoles } from "./auth-roles.generated";
+import { routes as authStaffPreview } from "./auth-staff-preview.generated";
 import { routes as birthdays } from "./birthdays.generated";
 import { routes as calendar } from "./calendar.generated";
+import { routes as catererAccount } from "./caterer-account.generated";
+import { routes as catererAuth } from "./caterer-auth.generated";
 import { routes as catererInvitations } from "./caterer-invitations.generated";
 import { routes as catererNotifications } from "./caterer-notifications.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
@@ -111,6 +122,8 @@ import { routes as traegerFinanceHandovers } from "./traeger-finance-handovers.g
 import { routes as traegerHolidayClosures } from "./traeger-holiday-closures.generated";
 import { routes as traegerHolidayContributions } from "./traeger-holiday-contributions.generated";
 import { routes as traegerHolidayPeriods } from "./traeger-holiday-periods.generated";
+import { routes as traegerHolidayQuotes } from "./traeger-holiday-quotes.generated";
+import { routes as traegerHolidayRegistrations } from "./traeger-holiday-registrations.generated";
 import { routes as traegerInvitations } from "./traeger-invitations.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
@@ -138,6 +151,10 @@ import { routes as workTimeModels } from "./work-time-models.generated";
 /** The registered routes of each portal, by the scope of its session token. */
 export const portalRoutes = {
   caterer: [
+    catererAccount["GET /caterer/account/mfa"],
+    catererAccount["POST /caterer/account/mfa/start"],
+    catererAuth["DELETE /caterer/auth/mfa/trusted-devices/{deviceId}"],
+    catererAuth["GET /caterer/auth/mfa/trusted-devices"],
     catererNotifications["GET /caterer/notifications/feed/"],
     catererNotifications["GET /caterer/notifications/feed/unread-count"],
     catererNotifications["POST /caterer/notifications/feed/read-all"],
@@ -438,6 +455,7 @@ export const portalRoutes = {
     parentMe["DELETE /parent/me/children/{studentId}/meal-participation/{date}"],
     parentMe["DELETE /parent/me/children/{studentId}/parent-conferences/{conferenceId}/booking"],
     parentMe["DELETE /parent/me/children/{studentId}/related-accounts/{guardianProfileId}"],
+    parentMe["DELETE /parent/me/mfa/trusted-devices/{deviceId}"],
     parentMe["DELETE /parent/me/notification-preferences/"],
     parentMe["DELETE /parent/me/push/subscriptions"],
     parentMe["GET /parent/me/calendar"],
@@ -464,6 +482,7 @@ export const portalRoutes = {
     parentMe["GET /parent/me/children/{studentId}/request-sharing-options"],
     parentMe["GET /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}"],
     parentMe["GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events"],
+    parentMe["GET /parent/me/children/{studentId}/sick-note"],
     parentMe["GET /parent/me/children/{studentId}/today"],
     parentMe["GET /parent/me/documents"],
     parentMe["GET /parent/me/documents/contracts"],
@@ -481,6 +500,8 @@ export const portalRoutes = {
     parentMe["GET /parent/me/messages/group-threads"],
     parentMe["GET /parent/me/messages/group-threads/{groupThreadId}"],
     parentMe["GET /parent/me/messages/unread-count"],
+    parentMe["GET /parent/me/mfa"],
+    parentMe["GET /parent/me/mfa/trusted-devices"],
     parentMe["GET /parent/me/news"],
     parentMe["GET /parent/me/news/unread-count"],
     parentMe["GET /parent/me/news/{announcementId}/declaration/proof"],
@@ -503,12 +524,14 @@ export const portalRoutes = {
     parentMe["POST /parent/me/children/{studentId}/master-data/requests"],
     parentMe["POST /parent/me/children/{studentId}/pickup-signature-statement"],
     parentMe["POST /parent/me/children/{studentId}/related-accounts"],
+    parentMe["POST /parent/me/children/{studentId}/sick-note"],
     parentMe["POST /parent/me/documents/{organizationId}/contracts/{contractId}/notice"],
     parentMe["POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate"],
     parentMe["POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview"],
     parentMe["POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke"],
     parentMe["POST /parent/me/documents/{organizationId}/contracts/{contractId}/sign"],
     parentMe["POST /parent/me/messages/children/{studentId}"],
+    parentMe["POST /parent/me/mfa/start"],
     parentMe["POST /parent/me/news/{announcementId}/acknowledge"],
     parentMe["POST /parent/me/news/{announcementId}/declaration"],
     parentMe["POST /parent/me/news/{announcementId}/read"],
@@ -613,6 +636,7 @@ export const portalRoutes = {
     operatorOrganizations["PUT /operator/organizations/{id}/traeger-settings/values/{key}"],
     operatorPersons["DELETE /operator/persons/{id}"],
     operatorProfile["GET /operator/profile/"],
+    operatorProfile["POST /operator/profile/email-change"],
     operatorProfile["PUT /operator/profile/"],
     operatorRoles["GET /operator/roles"],
     operatorSchools["DELETE /operator/schools/{id}"],
@@ -667,6 +691,10 @@ export const portalRoutes = {
     publicCareContractSigning["GET /public/care-contract-signing/{link}/family-children"],
     publicCareContractSigning["POST /public/care-contract-signing/{link}/sign"],
     publicCareContractSigning["PUT /public/care-contract-signing/{link}/family-children"],
+    traegerHolidayQuotes["POST /traeger/holiday-quotes/{token}"],
+    traegerHolidayRegistrations["GET /traeger/holiday-registrations/status/{statusToken}"],
+    traegerHolidayRegistrations["GET /traeger/holiday-registrations/{token}"],
+    traegerHolidayRegistrations["POST /traeger/holiday-registrations/{token}"],
     traegerInvitations["GET /traeger/invitations/{token}"],
     traegerInvitations["POST /traeger/invitations/{token}/accept"],
   ],
@@ -760,6 +788,7 @@ export const portalRoutes = {
     active["GET /api/active/groups/"],
     active["GET /api/active/groups/{id}/supervisors"],
     active["GET /api/active/schulhof/status"],
+    active["GET /api/active/supervision-dashboard"],
     active["GET /api/active/supervisors/all"],
     active["GET /api/active/supervisors/staff/{staffId}/active"],
     active["GET /api/active/visits/"],
@@ -801,11 +830,39 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     announcementAttachments["DELETE /api/announcement-attachments/{announcementId}/{attachmentId}"],
+    authAccount["GET /auth/account/tenants"],
+    authAccounts["DELETE /auth/accounts/{accountId}/caregiver-capability"],
+    authAccounts["DELETE /auth/accounts/{accountId}/mfa/"],
+    authAccounts["GET /auth/accounts/{accountId}/caregiver-capability"],
+    authAccounts["GET /auth/accounts/{accountId}/mfa/"],
+    authAccounts["GET /auth/accounts/{accountId}/roles/"],
+    authAccounts["POST /auth/accounts/{accountId}/caregiver-capability"],
+    authAccounts["PUT /auth/accounts/{accountId}/mfa/override"],
+    authAccounts["PUT /auth/accounts/{accountId}/roles/"],
     authInvitations["DELETE /auth/invitations/{id}/"],
     authInvitations["GET /auth/invitations/"],
     authInvitations["POST /auth/invitations/"],
     authInvitations["POST /auth/invitations/former-employment"],
     authInvitations["POST /auth/invitations/{id}/resend"],
+    authLinkToTenant["POST /auth/link-to-tenant"],
+    authMfa["DELETE /auth/mfa/trusted-devices/{deviceId}"],
+    authMfa["GET /auth/mfa/trusted-devices"],
+    authPasskeys["DELETE /auth/passkeys/{passkeyId}"],
+    authPasskeys["GET /auth/passkeys/"],
+    authPasskeys["POST /auth/passkeys/enrollment/challenge"],
+    authPasskeys["POST /auth/passkeys/register/options"],
+    authPasskeys["POST /auth/passkeys/register/verify"],
+    authPermissions["GET /auth/permissions/"],
+    authPermissions["GET /auth/permissions/{id}/"],
+    authRegister["POST /auth/register"],
+    authRoles["DELETE /auth/roles/{id}/"],
+    authRoles["GET /auth/roles/"],
+    authRoles["GET /auth/roles/{id}/"],
+    authRoles["GET /auth/roles/{roleId}/permissions/"],
+    authRoles["POST /auth/roles/"],
+    authRoles["PUT /auth/roles/{id}/"],
+    authRoles["PUT /auth/roles/{roleId}/permissions/"],
+    authStaffPreview["GET /auth/staff-preview/candidates"],
     birthdays["GET /api/birthdays/"],
     birthdays["GET /api/birthdays/opt-out"],
     birthdays["PUT /api/birthdays/opt-out"],
@@ -928,8 +985,14 @@ export const portalRoutes = {
     holidayWeeks["GET /api/holiday-weeks/{weekId}/own-children"],
     holidayWeeks["GET /api/holiday-weeks/{weekId}/participants"],
     holidayWeeks["PUT /api/holiday-weeks/{weekId}/guest-group"],
+    iot["DELETE /api/iot/{id}"],
+    iot["GET /api/iot/"],
+    iot["GET /api/iot/device-slots"],
+    iot["GET /api/iot/{id}"],
     iot["GET /api/iot/{id}/history"],
     iot["PATCH /api/iot/{deviceId}/status"],
+    iot["POST /api/iot/"],
+    iot["PUT /api/iot/{id}"],
     me["GET /api/me/groups/"],
     me["GET /api/me/groups/supervised"],
     me["GET /api/me/profile"],
@@ -1009,8 +1072,14 @@ export const portalRoutes = {
     platform["POST /api/platform/announcements/{id}/dismiss"],
     pwa["POST /api/pwa/usage"],
     reminders["GET /api/reminders/"],
+    rooms["DELETE /api/rooms/{id}"],
+    rooms["GET /api/rooms/"],
     rooms["GET /api/rooms/by-category"],
+    rooms["GET /api/rooms/{id}"],
+    rooms["GET /api/rooms/{id}/history"],
     rooms["GET /api/rooms/{id}/removal-impact"],
+    rooms["POST /api/rooms/"],
+    rooms["PUT /api/rooms/{id}"],
     schedules["GET /api/schedules/timeframes/"],
     schoolSetup["GET /api/school-setup/"],
     schoolSetup["POST /api/school-setup/complete"],
@@ -1140,9 +1209,11 @@ export const portalRoutes = {
     staffPool["DELETE /api/staff-pool/blocks/{id}"],
     staffPool["GET /api/staff-pool/"],
     staffPool["POST /api/staff-pool/blocks"],
+    staffShifts["DELETE /api/staff-shifts/series/{id}"],
     staffShifts["DELETE /api/staff-shifts/{id}"],
     staffShifts["GET /api/staff-shifts/"],
     staffShifts["GET /api/staff-shifts/overview"],
+    staffShifts["GET /api/staff-shifts/series/{id}"],
     staffShifts["POST /api/staff-shifts/"],
     staffShifts["POST /api/staff-shifts/series"],
     staffShifts["PUT /api/staff-shifts/series/{id}/split"],
@@ -1154,6 +1225,7 @@ export const portalRoutes = {
     statistics["GET /api/statistics/students/{id}/care-times"],
     students["DELETE /api/students/care-withdrawals/{completionId}"],
     students["DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}"],
+    students["DELETE /api/students/{id}"],
     students["DELETE /api/students/{id}/arrival-exceptions/{exceptionId}"],
     students["DELETE /api/students/{id}/arrival-notes/{noteId}"],
     students["DELETE /api/students/{id}/departure-exceptions/{date}"],
@@ -1178,6 +1250,7 @@ export const portalRoutes = {
     students["GET /api/students/class-arrival-times/{schoolClass}"],
     students["GET /api/students/day-log"],
     students["GET /api/students/ended-care"],
+    students["GET /api/students/ogs-group-live"],
     students["GET /api/students/pickup-change-notices"],
     students["GET /api/students/privacy-consent/defaults"],
     students["GET /api/students/school-classes"],

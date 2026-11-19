@@ -692,8 +692,8 @@ func (p supervisionPlanning) Pickups(ctx context.Context, studentIDs []int64, da
 			PickupTime:  supervisionWallClock(pickup.PickupTime),
 			IsException: pickup.IsException, DayDepartureMode: pickup.DayDepartureMode,
 			Notes: pickup.Notes,
-			DayNotes: owners.CalendarMapSlice(pickup.DayNotes, func(note careplan.NoteData) supervisiondashboard.DayNote {
-				return supervisiondashboard.DayNote{ID: note.ID, Content: note.Content}
+			DayNotes: owners.CalendarMapSlice(pickup.DayNotes, func(note careplan.NoteData) supervisiondashboard.DashboardDayNote {
+				return supervisiondashboard.DashboardDayNote{ID: note.ID, Content: note.Content}
 			}),
 		}
 	}
@@ -720,8 +720,8 @@ func (p supervisionPlanning) Arrivals(ctx context.Context, studentIDs []int64, d
 			ArrivalTime: supervisionWallClock(arrival.ArrivalTime),
 			IsException: arrival.IsException,
 			Notes:       arrival.Notes,
-			DayNotes: owners.CalendarMapSlice(arrival.DayNotes, func(note careplan.ArrivalNoteData) supervisiondashboard.DayNote {
-				return supervisiondashboard.DayNote{ID: note.ID, Content: note.Content}
+			DayNotes: owners.CalendarMapSlice(arrival.DayNotes, func(note careplan.ArrivalNoteData) supervisiondashboard.DashboardDayNote {
+				return supervisiondashboard.DashboardDayNote{ID: note.ID, Content: note.Content}
 			}),
 		}
 	}

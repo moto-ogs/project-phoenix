@@ -8,7 +8,7 @@ import (
 // loadTeacherHints attaches today's hints of the Lehrkraft (#4795). They are
 // notes about the child, so they stay behind the planning gate (users:read
 // and full access), like the planning times.
-func (s *service) loadTeacherHints(ctx context.Context, projection *Projection, caller Caller, studentIDs []int64, fullAccess bool, businessDay Date) error {
+func (s *service) loadTeacherHints(ctx context.Context, projection *DashboardProjection, caller Caller, studentIDs []int64, fullAccess bool, businessDay Date) error {
 	if s.deps.TeacherHints == nil || !planningVisible(caller, studentIDs, fullAccess) {
 		return nil
 	}

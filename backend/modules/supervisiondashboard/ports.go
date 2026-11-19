@@ -213,7 +213,7 @@ type Pickup struct {
 	PickupTime  *string
 	IsException bool
 	Notes       string
-	DayNotes    []DayNote
+	DayNotes    []DashboardDayNote
 
 	// DayDepartureMode is the Abholart set for this day only (#3946).
 	DayDepartureMode string
@@ -227,7 +227,7 @@ type Arrival struct {
 	ArrivalTime *string
 	IsException bool
 	Notes       string
-	DayNotes    []DayNote
+	DayNotes    []DashboardDayNote
 }
 
 // SupervisionTeacherHint is a Lehrkraft's hint for the OGS for today (#4795), written in

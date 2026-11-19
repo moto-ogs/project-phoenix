@@ -41,7 +41,7 @@ const (
 
 // Query is the single public capability of the projection.
 type Query interface {
-	Dashboard(ctx context.Context, requestedGroupID int64) (*Projection, error)
+	Dashboard(ctx context.Context, requestedGroupID int64) (*DashboardProjection, error)
 }
 
 // Dependencies are the consumer-owned ports the projection reads through.
@@ -85,10 +85,10 @@ type SpontaneousStartAvailability struct {
 	BlockedReason string `json:"blocked_reason,omitempty"`
 }
 
-// Group is one supervised (or, under admin overview / open care, any active)
+// DashboardGroup is one supervised (or, under admin overview / open care, any active)
 // session tab. The wire shape carries only what the page renders: the session
 // label, room label, color, and ids for selection.
-type Group struct {
+type DashboardGroup struct {
 	ID                       int64   `json:"id,string"`
 	Name                     string  `json:"name"`
 	RoomID                   *int64  `json:"room_id,string,omitempty"`
@@ -271,12 +271,12 @@ type Visit struct {
 	ClassHandover *SupervisionClassHandover `json:"class_handover,omitempty"`
 }
 
-type TrackingIndicators struct {
+type DashboardTrackingIndicators struct {
 	Labels  []string         `json:"labels"`
 	Results map[int64][]bool `json:"results"`
 }
 
-type DayNote struct {
+type DashboardDayNote struct {
 	ID      int64  `json:"id,string"`
 	Content string `json:"content"`
 }
@@ -285,10 +285,10 @@ type Capabilities struct {
 	WebSpontaneousActivitiesEnabled bool `json:"web_spontaneous_activities_enabled"`
 }
 
-type Projection struct {
+type DashboardProjection struct {
 	BusinessDay                  Date                         `json:"business_day"`
 	SpontaneousStartAvailability SpontaneousStartAvailability `json:"spontaneous_start_availability"`
-	Groups                       []Group                      `json:"groups"`
+	Groups                       []DashboardGroup                      `json:"groups"`
 	SelectedGroupID              *int64                       `json:"selected_group_id,string,omitempty"`
 	UnclaimedGroups              []UnclaimedGroup             `json:"unclaimed_groups"`
 	CurrentStaffID               *int64                       `json:"current_staff_id,string,omitempty"`
@@ -301,25 +301,25 @@ type Projection struct {
 	ActiveSessions     []ActiveSession    `json:"active_sessions"`
 	PlannedNow         []PlannedInstance  `json:"planned_now"`
 	Visits             []Visit            `json:"visits"`
-	TrackingIndicators TrackingIndicators `json:"tracking_indicators"`
-	PickupTimes        []PickupTime       `json:"pickup_times"`
+	TrackingIndicators DashboardTrackingIndicators `json:"tracking_indicators"`
+	PickupTimes        []DashboardPickupTime       `json:"pickup_times"`
 	ArrivalTimes       []ArrivalTime      `json:"arrival_times"`
 	// TeacherHints are today's hints of the Lehrkraft (#4795) for the
 	// children in the projection, oldest first; with users:read only.
 	TeacherHints []SupervisionTeacherHint `json:"teacher_hints"`
 }
 
-func emptyProjection() *Projection {
-	return &Projection{
-		Groups:             []Group{},
+func emptyProjection() *DashboardProjection {
+	return &DashboardProjection{
+		Groups:             []DashboardGroup{},
 		OpenRooms:          []OpenRoom{},
 		UnclaimedGroups:    []UnclaimedGroup{},
 		EducationalGroups:  []EducationalGroup{},
 		ActiveSessions:     []ActiveSession{},
 		PlannedNow:         []PlannedInstance{},
 		Visits:             []Visit{},
-		TrackingIndicators: TrackingIndicators{Labels: []string{}, Results: map[int64][]bool{}},
-		PickupTimes:        []PickupTime{},
+		TrackingIndicators: DashboardTrackingIndicators{Labels: []string{}, Results: map[int64][]bool{}},
+		PickupTimes:        []DashboardPickupTime{},
 		ArrivalTimes:       []ArrivalTime{},
 		TeacherHints:       []SupervisionTeacherHint{},
 	}
@@ -375,7 +375,7 @@ func weekendSpontaneousStart(ctx context.Context, availability SpontaneousStartA
 	return availability, nil
 }
 
-func (s *service) Dashboard(ctx context.Context, requestedGroupID int64) (*Projection, error) {
+func (s *service) Dashboard(ctx context.Context, requestedGroupID int64) (*DashboardProjection, error) {
 	if !s.deps.complete() {
 		return nil, ErrIncompleteDependencies
 	}
@@ -439,7 +439,7 @@ func (s *service) Dashboard(ctx context.Context, requestedGroupID int64) (*Proje
 // by the school-wide overview scope (#2380) see all running sessions,
 // otherwise their own supervised sessions. Errors propagate — the former BFF's
 // silent 403→fallback chain is replaced by one deterministic decision here.
-func (s *service) resolveGroups(ctx context.Context, caller Caller, staffID *int64) ([]Group, error) {
+func (s *service) resolveGroups(ctx context.Context, caller Caller, staffID *int64) ([]DashboardGroup, error) {
 	var (
 		sessions []Session
 		err      error
@@ -460,9 +460,9 @@ func (s *service) resolveGroups(ctx context.Context, caller Caller, staffID *int
 		return nil, err
 	}
 
-	result := make([]Group, 0, len(sessions))
+	result := make([]DashboardGroup, 0, len(sessions))
 	for _, session := range sessions {
-		item := Group{
+		item := DashboardGroup{
 			ID:                       session.ID,
 			Name:                     session.Name,
 			RoomID:                   session.RoomID,
@@ -502,7 +502,7 @@ func (s *service) ownedGroupIDs(ctx context.Context, broad bool, staffID *int64)
 // back to the first visible one, so an overview caller does not land on a
 // foreign session (#5035). An unknown id is a hard 403 (ErrForbiddenGroup) —
 // the caller retries without group_id when its selection went stale.
-func selectGroup(groups []Group, schulhof *SchulhofStatus, requestedGroupID int64) (*int64, error) {
+func selectGroup(groups []DashboardGroup, schulhof *SchulhofStatus, requestedGroupID int64) (*int64, error) {
 	if requestedGroupID <= 0 {
 		if len(groups) == 0 {
 			return nil, nil
@@ -530,7 +530,7 @@ func selectGroup(groups []Group, schulhof *SchulhofStatus, requestedGroupID int6
 	return nil, ErrForbiddenGroup
 }
 
-func (s *service) loadStaticSections(ctx context.Context, projection *Projection) error {
+func (s *service) loadStaticSections(ctx context.Context, projection *DashboardProjection) error {
 	unclaimed, err := s.deps.Sessions.Unclaimed(ctx)
 	if err != nil {
 		return fmt.Errorf("load unclaimed groups: %w", err)
@@ -549,7 +549,7 @@ func (s *service) loadStaticSections(ctx context.Context, projection *Projection
 // These mirror the former /timetable/operations/* endpoints, which were gated
 // on schedules:read — a caller without it gets them deterministically empty
 // (permission-based redaction), never a swallowed error.
-func (s *service) loadScheduleSections(ctx context.Context, projection *Projection, caller Caller, snapshot daySnapshot) error {
+func (s *service) loadScheduleSections(ctx context.Context, projection *DashboardProjection, caller Caller, snapshot daySnapshot) error {
 	if !caller.CanReadSchedules {
 		return nil
 	}
@@ -590,7 +590,7 @@ func (s *service) loadScheduleSections(ctx context.Context, projection *Projecti
 
 // loadPresenceSections projects the selected session and every released room
 // together. Student-specific reads therefore run once over their union.
-func (s *service) loadPresenceSections(ctx context.Context, projection *Projection, caller Caller, selectedGroupID *int64, openRooms openRoomInputs, staffID *int64, businessDay Date) error {
+func (s *service) loadPresenceSections(ctx context.Context, projection *DashboardProjection, caller Caller, selectedGroupID *int64, openRooms openRoomInputs, staffID *int64, businessDay Date) error {
 	selectedRows, err := s.selectedGroupVisits(ctx, selectedGroupID, openRooms)
 	if err != nil {
 		return err
@@ -709,8 +709,8 @@ func buildPhotoURL(studentID int64, storedURL string) string {
 	return fmt.Sprintf("/api/students/%d/photo/%s", studentID, strings.TrimPrefix(storedURL, studentPhotoStoredURLPrefix))
 }
 
-func (s *service) loadTracking(ctx context.Context, studentIDs []int64) (TrackingIndicators, error) {
-	empty := TrackingIndicators{Labels: []string{}, Results: map[int64][]bool{}}
+func (s *service) loadTracking(ctx context.Context, studentIDs []int64) (DashboardTrackingIndicators, error) {
+	empty := DashboardTrackingIndicators{Labels: []string{}, Results: map[int64][]bool{}}
 	if len(studentIDs) == 0 {
 		return empty, nil
 	}
@@ -725,7 +725,7 @@ func (s *service) loadTracking(ctx context.Context, studentIDs []int64) (Trackin
 	if err != nil {
 		return empty, err
 	}
-	return TrackingIndicators{Labels: labels, Results: results}, nil
+	return DashboardTrackingIndicators{Labels: labels, Results: results}, nil
 }
 
 func (s *service) selectedGroupVisits(ctx context.Context, selectedGroupID *int64, openRooms openRoomInputs) ([]VisitRecord, error) {

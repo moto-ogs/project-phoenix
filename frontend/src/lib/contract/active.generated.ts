@@ -162,8 +162,8 @@ export const SessionSupervisorSchema: z.ZodType<SessionSupervisor, unknown> = ob
   name: str,
 });
 
-/** Go: supervisiondashboard.Group */
-export interface Group {
+/** Go: supervisiondashboard.DashboardGroup */
+export interface DashboardGroup {
   id: string;
   name: string;
   room_id?: string;
@@ -175,7 +175,7 @@ export interface Group {
   supervisors?: SessionSupervisor[];
 }
 
-export const GroupSchema: z.ZodType<Group, unknown> = object<Group>({
+export const DashboardGroupSchema: z.ZodType<DashboardGroup, unknown> = object<DashboardGroup>({
   id: int64String,
   name: str,
   room_id: optional(int64String),
@@ -629,48 +629,48 @@ export const VisitSchema: z.ZodType<Visit, unknown> = object<Visit>({
   class_handover: optional(SupervisionClassHandoverSchema),
 });
 
-/** Go: supervisiondashboard.TrackingIndicators */
-export interface TrackingIndicators {
+/** Go: supervisiondashboard.DashboardTrackingIndicators */
+export interface DashboardTrackingIndicators {
   labels: string[] | null;
   results: Record<string, boolean[] | null> | null;
 }
 
-export const TrackingIndicatorsSchema: z.ZodType<TrackingIndicators, unknown> = object<TrackingIndicators>({
+export const DashboardTrackingIndicatorsSchema: z.ZodType<DashboardTrackingIndicators, unknown> = object<DashboardTrackingIndicators>({
   labels: nullable(arr(str)),
   results: nullable(rec(nullable(arr(bool)))),
 });
 
-/** Go: supervisiondashboard.DayNote */
-export interface DayNote {
+/** Go: supervisiondashboard.DashboardDayNote */
+export interface DashboardDayNote {
   id: string;
   content: string;
 }
 
-export const DayNoteSchema: z.ZodType<DayNote, unknown> = object<DayNote>({
+export const DashboardDayNoteSchema: z.ZodType<DashboardDayNote, unknown> = object<DashboardDayNote>({
   id: int64String,
   content: str,
 });
 
-/** Go: supervisiondashboard.PickupTime */
-export interface PickupTime {
+/** Go: supervisiondashboard.DashboardPickupTime */
+export interface DashboardPickupTime {
   student_id: string;
   date: string;
   weekday_name: string;
   pickup_time?: string;
   is_exception: boolean;
   notes?: string;
-  day_notes?: DayNote[];
+  day_notes?: DashboardDayNote[];
   day_departure_mode?: string;
 }
 
-export const PickupTimeSchema: z.ZodType<PickupTime, unknown> = object<PickupTime>({
+export const DashboardPickupTimeSchema: z.ZodType<DashboardPickupTime, unknown> = object<DashboardPickupTime>({
   student_id: int64String,
   date: str,
   weekday_name: str,
   pickup_time: optional(str),
   is_exception: bool,
   notes: optional(str),
-  day_notes: optional(arr(DayNoteSchema)),
+  day_notes: optional(arr(DashboardDayNoteSchema)),
   day_departure_mode: optional(str),
 });
 
@@ -682,7 +682,7 @@ export interface ArrivalTime {
   expected_arrival?: string;
   is_exception: boolean;
   notes?: string;
-  day_notes?: DayNote[];
+  day_notes?: DashboardDayNote[];
 }
 
 export const ArrivalTimeSchema: z.ZodType<ArrivalTime, unknown> = object<ArrivalTime>({
@@ -692,7 +692,7 @@ export const ArrivalTimeSchema: z.ZodType<ArrivalTime, unknown> = object<Arrival
   expected_arrival: optional(str),
   is_exception: bool,
   notes: optional(str),
-  day_notes: optional(arr(DayNoteSchema)),
+  day_notes: optional(arr(DashboardDayNoteSchema)),
 });
 
 /** Go: supervisiondashboard.SupervisionTeacherHint */
@@ -710,11 +710,11 @@ export const SupervisionTeacherHintSchema: z.ZodType<SupervisionTeacherHint, unk
   school_class: optional(str),
 });
 
-/** Go: supervisiondashboard.Projection */
-export interface Projection {
+/** Go: supervisiondashboard.DashboardProjection */
+export interface DashboardProjection {
   business_day: string;
   spontaneous_start_availability: SpontaneousStartAvailability;
-  groups: Group[] | null;
+  groups: DashboardGroup[] | null;
   selected_group_id?: string;
   unclaimed_groups: UnclaimedGroup[] | null;
   current_staff_id?: string;
@@ -725,16 +725,16 @@ export interface Projection {
   active_sessions: ActiveSession[] | null;
   planned_now: PlannedInstance[] | null;
   visits: Visit[] | null;
-  tracking_indicators: TrackingIndicators;
-  pickup_times: PickupTime[] | null;
+  tracking_indicators: DashboardTrackingIndicators;
+  pickup_times: DashboardPickupTime[] | null;
   arrival_times: ArrivalTime[] | null;
   teacher_hints: SupervisionTeacherHint[] | null;
 }
 
-export const ProjectionSchema: z.ZodType<Projection, unknown> = object<Projection>({
+export const DashboardProjectionSchema: z.ZodType<DashboardProjection, unknown> = object<DashboardProjection>({
   business_day: str,
   spontaneous_start_availability: SpontaneousStartAvailabilitySchema,
-  groups: nullable(arr(GroupSchema)),
+  groups: nullable(arr(DashboardGroupSchema)),
   selected_group_id: optional(int64String),
   unclaimed_groups: nullable(arr(UnclaimedGroupSchema)),
   current_staff_id: optional(int64String),
@@ -745,8 +745,8 @@ export const ProjectionSchema: z.ZodType<Projection, unknown> = object<Projectio
   active_sessions: nullable(arr(ActiveSessionSchema)),
   planned_now: nullable(arr(PlannedInstanceSchema)),
   visits: nullable(arr(VisitSchema)),
-  tracking_indicators: TrackingIndicatorsSchema,
-  pickup_times: nullable(arr(PickupTimeSchema)),
+  tracking_indicators: DashboardTrackingIndicatorsSchema,
+  pickup_times: nullable(arr(DashboardPickupTimeSchema)),
   arrival_times: nullable(arr(ArrivalTimeSchema)),
   teacher_hints: nullable(arr(SupervisionTeacherHintSchema)),
 });
@@ -947,7 +947,7 @@ export const routes = {
     pattern: "/api/active/supervision-dashboard",
     portals: ["tenant"],
     query: ["group_id"],
-    response: success(ProjectionSchema),
+    response: success(DashboardProjectionSchema),
   },
   "GET /api/active/supervisors/all": {
     method: "GET",

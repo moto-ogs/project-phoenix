@@ -18,7 +18,7 @@ type SessionSupervisor struct {
 // nameSupervisors names the supervisors of every session tab and of every
 // session in a released room. The tabs' supervisors come in one bulk read,
 // the open rooms already carry theirs, and one name read serves both.
-func (s *service) nameSupervisors(ctx context.Context, projection *Projection, openRooms openRoomInputs) error {
+func (s *service) nameSupervisors(ctx context.Context, projection *DashboardProjection, openRooms openRoomInputs) error {
 	groupSupervisors, err := s.groupSupervisorIDs(ctx, projection.Groups)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (s *service) nameSupervisors(ctx context.Context, projection *Projection, o
 }
 
 // groupSupervisorIDs reads the current supervisors of the session tabs.
-func (s *service) groupSupervisorIDs(ctx context.Context, groups []Group) (map[int64][]int64, error) {
+func (s *service) groupSupervisorIDs(ctx context.Context, groups []DashboardGroup) (map[int64][]int64, error) {
 	if len(groups) == 0 {
 		return map[int64][]int64{}, nil
 	}
