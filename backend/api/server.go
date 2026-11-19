@@ -198,19 +198,27 @@ func newRuntime(config ServeConfig) (*Runtime, error) {
 		handler: handler, db: db, realtimeTransport: transport, worker: runtimeWorker(worker), capacityLogger: capacity, tracker: tracker, logger: config.Logger,
 		streams: hub, drainDelay: config.DrainDelay,
 	}
-	runtime.server = &http.Server{
-		Addr:    resolveListenAddr(config.Port),
-		Handler: drainingProbes(&runtime.draining, processHandler(config.Process, handler, worker, metricsToken)),
+	runtime.server = runtime.newHTTPServer(config.Port, drainingProbes(&runtime.draining, processHandler(config.Process, handler, worker, metricsToken)))
+	return runtime, nil
+}
+
+// newHTTPServer builds the listener's server. Every shutdown path ends the
+// open realtime streams; otherwise Shutdown waits for them until its
+// deadline (#7226).
+func (runtime *Runtime) newHTTPServer(port string, handler http.Handler) *http.Server {
+	server := &http.Server{
+		Addr:    resolveListenAddr(port),
+		Handler: handler,
 		// ReadTimeout stays modest to protect against slowloris attacks,
 		// but WriteTimeout must be disabled to allow long-lived SSE streams.
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 0,
 		IdleTimeout:  0,
 	}
-	// Every shutdown path ends the open streams; otherwise Shutdown waits
-	// for them until its deadline (#7226).
-	runtime.server.RegisterOnShutdown(hub.Drain)
-	return runtime, nil
+	if runtime.streams != nil {
+		server.RegisterOnShutdown(runtime.streams.Drain)
+	}
+	return server
 }
 
 // runtimeWorker keeps a missing Worker a nil interface, so an API-only
