@@ -66,6 +66,18 @@ func newStaffFixture(t *testing.T) *staffFixture {
 	return fixture
 }
 
+func requireStaffStepState(t *testing.T, fixture *staffFixture, step, state string) {
+	t.Helper()
+	_, err := fixture.service.SetStaffStepState(t.Context(), setupTenant, setupColleague, step, state)
+	require.NoError(t, err)
+}
+
+func requireStaffDismissed(t *testing.T, fixture *staffFixture, dismissed bool) {
+	t.Helper()
+	_, err := fixture.service.SetStaffDismissed(t.Context(), setupTenant, setupColleague, dismissed)
+	require.NoError(t, err)
+}
+
 func TestNewStaffOnboardingRequiresEveryDependency(t *testing.T) {
 	t.Parallel()
 
@@ -125,8 +137,8 @@ func TestSetStaffStepStateMovesAStepBetweenStates(t *testing.T) {
 	f := newStaffFixture(t)
 	ctx := t.Context()
 
-	require.NoError(t, f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "students", schoolsetup.StaffStepStateDone))
-	require.NoError(t, f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "work_time", schoolsetup.StaffStepStateSkipped))
+	requireStaffStepState(t, f, "students", schoolsetup.StaffStepStateDone)
+	requireStaffStepState(t, f, "work_time", schoolsetup.StaffStepStateSkipped)
 
 	status, err := f.service.StaffStatus(ctx, setupTenant, setupColleague)
 	require.NoError(t, err)
@@ -134,9 +146,9 @@ func TestSetStaffStepStateMovesAStepBetweenStates(t *testing.T) {
 	assert.Equal(t, []string{"work_time"}, status.SkippedSteps)
 
 	// A skipped step the person later finishes is done, not both.
-	require.NoError(t, f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "work_time", schoolsetup.StaffStepStateDone))
+	requireStaffStepState(t, f, "work_time", schoolsetup.StaffStepStateDone)
 	// Open takes a step back entirely.
-	require.NoError(t, f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "students", schoolsetup.StaffStepStateOpen))
+	requireStaffStepState(t, f, "students", schoolsetup.StaffStepStateOpen)
 
 	status, err = f.service.StaffStatus(ctx, setupTenant, setupColleague)
 	require.NoError(t, err)
@@ -149,13 +161,35 @@ func TestSetStaffStepStateMovesAStepBetweenStates(t *testing.T) {
 	assert.Equal(t, 4, f.store.locks, "every state change locks before reading and replacing the shared state")
 }
 
+func TestStaffOnboardingReportsOnlyActualStateChanges(t *testing.T) {
+	t.Parallel()
+	f := newStaffFixture(t)
+	ctx := t.Context()
+
+	changed, err := f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "students", schoolsetup.StaffStepStateDone)
+	require.NoError(t, err)
+	assert.True(t, changed)
+
+	changed, err = f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "students", schoolsetup.StaffStepStateDone)
+	require.NoError(t, err)
+	assert.False(t, changed, "repeating a step state changes no checklist state")
+
+	changed, err = f.service.SetStaffDismissed(ctx, setupTenant, setupColleague, true)
+	require.NoError(t, err)
+	assert.True(t, changed)
+
+	changed, err = f.service.SetStaffDismissed(ctx, setupTenant, setupColleague, true)
+	require.NoError(t, err)
+	assert.False(t, changed, "hiding an already hidden checklist changes no checklist state")
+}
+
 func TestStaffProgressIsPersonal(t *testing.T) {
 	t.Parallel()
 	f := newStaffFixture(t)
 	ctx := t.Context()
 
-	require.NoError(t, f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "calendar", schoolsetup.StaffStepStateDone))
-	require.NoError(t, f.service.SetStaffDismissed(ctx, setupTenant, setupColleague, true))
+	requireStaffStepState(t, f, "calendar", schoolsetup.StaffStepStateDone)
+	requireStaffDismissed(t, f, true)
 
 	other, err := f.service.StaffStatus(ctx, setupTenant, setupAdmin)
 	require.NoError(t, err)
@@ -168,10 +202,10 @@ func TestSetStaffStepStateRejectsUnknownStepsAndStates(t *testing.T) {
 	f := newStaffFixture(t)
 	ctx := t.Context()
 
-	err := f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "team", schoolsetup.StaffStepStateDone)
+	_, err := f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "team", schoolsetup.StaffStepStateDone)
 	require.ErrorIs(t, err, schoolsetup.ErrUnknownStep, "the school wizard's steps are not the staff steps")
 
-	err = f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "students", "finished")
+	_, err = f.service.SetStaffStepState(ctx, setupTenant, setupColleague, "students", "finished")
 	require.ErrorIs(t, err, schoolsetup.ErrUnknownStepState)
 
 	assert.Zero(t, f.store.writes)
@@ -183,7 +217,7 @@ func TestStaffDismissalHidesTheChecklistWithoutAProgressRead(t *testing.T) {
 	f.progress.facts = schoolsetup.Facts{GroupCreated: true}
 	ctx := t.Context()
 
-	require.NoError(t, f.service.SetStaffDismissed(ctx, setupTenant, setupColleague, true))
+	requireStaffDismissed(t, f, true)
 	status, err := f.service.StaffStatus(ctx, setupTenant, setupColleague)
 	require.NoError(t, err)
 
@@ -199,12 +233,12 @@ func TestStaffDismissalKeepsTheFirstTimeAndCanBeUndone(t *testing.T) {
 	ctx := t.Context()
 	first := f.now
 
-	require.NoError(t, f.service.SetStaffDismissed(ctx, setupTenant, setupColleague, true))
+	requireStaffDismissed(t, f, true)
 	f.now = first.Add(time.Hour)
-	require.NoError(t, f.service.SetStaffDismissed(ctx, setupTenant, setupColleague, true))
+	requireStaffDismissed(t, f, true)
 	assert.Equal(t, first, *f.store.states[setupColleague].DismissedAt, "hiding twice keeps the first time")
 
-	require.NoError(t, f.service.SetStaffDismissed(ctx, setupTenant, setupColleague, false))
+	requireStaffDismissed(t, f, false)
 	status, err := f.service.StaffStatus(ctx, setupTenant, setupColleague)
 	require.NoError(t, err)
 	assert.False(t, status.Dismissed)

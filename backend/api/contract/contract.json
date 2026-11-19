@@ -17328,7 +17328,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StaffStatus"
+        "ref": "StaffWriteStatus"
       }
     },
     {
@@ -17343,7 +17343,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StaffStatus"
+        "ref": "StaffWriteStatus"
       }
     },
     {
@@ -81670,6 +81670,50 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffWriteStatus",
+      "go_type": "schoolsetup.StaffWriteStatus",
+      "fields": [
+        {
+          "name": "dismissed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_ready",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "done_steps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "skipped_steps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

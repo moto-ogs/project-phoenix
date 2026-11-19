@@ -55,7 +55,7 @@ func firstStepsStatus(dismissed bool, done, skipped string) string {
 	if dismissed {
 		dismissedJSON = "true"
 	}
-	return `{"status":"success","data":{"dismissed":` + dismissedJSON +
+	return `{"status":"success","data":{"changed":true,"dismissed":` + dismissedJSON +
 		`,"school_ready":true,"done_steps":[` + done + `],"skipped_steps":[` + skipped + `]}}`
 }
 
@@ -119,6 +119,20 @@ func TestStaffFirstStepsCountTheirHiding(t *testing.T) {
 			assert.Equal(t, map[string]any{"surface": SurfaceOGS, "role": RoleStaff, "school_id": "42"}, events[0].props,
 				"the query value never leaves as a property")
 		})
+	}
+}
+
+func TestStaffFirstStepsCountOnlyChangedResponses(t *testing.T) {
+	t.Parallel()
+
+	body := `{"status":"success","data":{"changed":false,"dismissed":true,"done_steps":["groups"],"skipped_steps":[]}}`
+	for _, target := range []string{
+		"/api/staff-onboarding/steps/groups",
+		"/api/staff-onboarding/dismissal?outcome=completed",
+	} {
+		tracker := &recordingTracker{}
+		serve(newFirstStepsRouter(tracker, defaultFirstStepsWorld(body)), http.MethodPut, target, `{}`, nil)
+		assert.Empty(t, tracker.captured(), "an idempotent response counts no onboarding transition: %s", target)
 	}
 }
 

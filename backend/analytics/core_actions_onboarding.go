@@ -43,6 +43,7 @@ const (
 // staffFirstStepsStatus is the part of the first steps' response
 // (schoolsetup.StaffStatus) the events read.
 type staffFirstStepsStatus struct {
+	Changed      bool     `json:"changed"`
 	Dismissed    bool     `json:"dismissed"`
 	DoneSteps    []string `json:"done_steps"`
 	SkippedSteps []string `json:"skipped_steps"`
@@ -68,9 +69,10 @@ func staffFirstStepsStatusOf(body []byte) (staffFirstStepsStatus, bool) {
 	if json.Unmarshal(raw, &shape) != nil || json.Unmarshal(raw, &status) != nil {
 		return staffFirstStepsStatus{}, false
 	}
+	_, changed := shape["changed"]
 	_, done := shape["done_steps"]
 	_, skipped := shape["skipped_steps"]
-	return status, done && skipped
+	return status, changed && status.Changed && done && skipped
 }
 
 // staffFirstStepChanged names a step's new state (PUT .../steps/{step}): the

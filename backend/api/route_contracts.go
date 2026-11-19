@@ -547,10 +547,10 @@ func schoolSetupRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/school-setup/complete", Portals: portals, Response: schoolsetup.Status{}},
 		{Method: "PUT", Pattern: "/school-setup/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.Status{}},
 		{Method: "GET", Pattern: "/staff-onboarding/", Portals: portals, Response: schoolsetup.StaffStatus{}},
-		{Method: "PUT", Pattern: "/staff-onboarding/steps/{step}", Portals: portals, Request: types.StepState, Response: schoolsetup.StaffStatus{}},
+		{Method: "PUT", Pattern: "/staff-onboarding/steps/{step}", Portals: portals, Request: types.StepState, Response: schoolsetup.StaffWriteStatus{}},
 		// The outcome tells „Abschließen“ from „Ausblenden“; only the usage
 		// analytics reads it (#7553).
-		{Method: "PUT", Pattern: "/staff-onboarding/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.StaffStatus{},
+		{Method: "PUT", Pattern: "/staff-onboarding/dismissal", Portals: portals, Request: types.Dismissal, Response: schoolsetup.StaffWriteStatus{},
 			Query: []common.QueryParam{{Name: analytics.StaffFirstStepsOutcomeQuery, Kind: common.QueryString, Values: []string{analytics.StaffFirstStepsOutcomeCompleted}}}},
 	}
 }
