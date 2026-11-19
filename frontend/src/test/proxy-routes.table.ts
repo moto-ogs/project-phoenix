@@ -1,15 +1,19 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 
 /** Reviewed targets, never generated from the handlers being tested.
  * Each capability owns a JSON fragment below proxy-routes/. New fragments are
  * discovered independently of the production-route discovery in the table test.
+ * The register is empty since the last pass-through route file left (#2352):
+ * without the directory the table has no row, and the table test then fails
+ * every pure proxy route file.
  */
 export function readProxyRouteExpectations(directory: string) {
   const routes: Record<string, readonly string[]> = Object.create(
     null,
   ) as Record<string, readonly string[]>;
+  if (!existsSync(directory)) return routes;
   const files = readdirSync(directory, {
     recursive: true,
     withFileTypes: true,
@@ -52,8 +56,6 @@ export function readProxyRouteExpectations(directory: string) {
       routes[route] = calls as string[];
     }
   }
-  if (Object.keys(routes).length === 0)
-    throw new Error("No proxy expectations");
   return routes;
 }
 

@@ -85,6 +85,11 @@ export interface ReleaseRequest {
   group_id?: number | null;
 }
 
+/** Query of GET /traeger/documents/export */
+export interface GetTraegerDocumentsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/documents/{id}": {
     method: "DELETE",
@@ -109,6 +114,13 @@ export const routes = {
     pattern: "/traeger/documents/audiences",
     portals: ["org"],
     response: success(z.array(TraegerDocumentSchoolSchema)),
+  },
+  "GET /traeger/documents/export": {
+    method: "GET",
+    pattern: "/traeger/documents/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/documents/{id}/file": {
     method: "GET",

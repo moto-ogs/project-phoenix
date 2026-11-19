@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   int64StringOrNumber,
   nullable,
   object,
@@ -238,6 +239,16 @@ export const FamilyDebtorNumberSchema: z.ZodType<FamilyDebtorNumber, unknown> = 
   debtor_number: str,
 });
 
+/** Query of GET /traeger/billing-families/export */
+export interface GetTraegerBillingFamiliesExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
+/** Query of GET /traeger/billing-families/{id}/export */
+export interface GetTraegerBillingFamiliesIdExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "GET /traeger/billing-families/": {
     method: "GET",
@@ -257,11 +268,25 @@ export const routes = {
     portals: ["org"],
     response: success(debtorNumberSettingsSchema),
   },
+  "GET /traeger/billing-families/export": {
+    method: "GET",
+    pattern: "/traeger/billing-families/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
   "GET /traeger/billing-families/{id}": {
     method: "GET",
     pattern: "/traeger/billing-families/{id}",
     portals: ["org"],
     response: success(BillingFamilyDetailSchema),
+  },
+  "GET /traeger/billing-families/{id}/export": {
+    method: "GET",
+    pattern: "/traeger/billing-families/{id}/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "PUT /traeger/billing-families/child-debtor-number": {
     method: "PUT",

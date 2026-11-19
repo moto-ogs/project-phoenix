@@ -83,11 +83,14 @@ describe("substitutionService", () => {
       ok: true,
       json: async () => ({
         data: {
-          instance_id: 42,
-          cancelled: false,
-          understaffed_ack: false,
-          affected_instances: [],
-          warnings: [],
+          type: "schedule_substitution",
+          schedule_substitution: {
+            instance_id: 42,
+            cancelled: false,
+            understaffed_ack: false,
+            affected_instances: [],
+            warnings: [],
+          },
         },
       }),
     });
@@ -123,7 +126,10 @@ describe("substitutionService", () => {
     sessionFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
-        data: { days: [], total_affected: 0 },
+        data: {
+          type: "schedule_substitution",
+          schedule_substitution: { days: [], total_affected: 0 },
+        },
       }),
     });
 
@@ -222,15 +228,14 @@ describe("substitutionService", () => {
   });
 
   // The catalog proxy hands over the backend's answer, which names its
-  // shape in `type` (#2352); a bare result maps the same way.
-  it.each([
-    [
-      "the named shape of the proxy",
-      { type: "group_handover", group_handover: handover },
-    ],
-    ["a bare result", handover],
-  ])("maps a group handover from %s", async (_label, data) => {
-    sessionFetch.mockResolvedValue({ ok: true, json: async () => ({ data }) });
+  // shape in `type` (#2352).
+  it("maps a group handover from the named shape of the proxy", async () => {
+    sessionFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: { type: "group_handover", group_handover: handover },
+      }),
+    });
 
     const result = await substitutionService.createSubstitution(
       "12",
@@ -240,6 +245,22 @@ describe("substitutionService", () => {
     );
 
     expect(result).toMatchObject({ id: "5", groupId: "12" });
+  });
+
+  it("rejects an assignment answer without its named member", async () => {
+    sessionFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: handover }),
+    });
+
+    await expect(
+      substitutionService.createSubstitution(
+        "12",
+        "34",
+        "2026-08-29",
+        "2026-08-30",
+      ),
+    ).rejects.toThrow("Ungültige Antwort");
   });
 
   it("maps an added supervisor from the named shape", async () => {
@@ -365,7 +386,9 @@ describe("substitutionService", () => {
   it("assigns and maps a typed group handover", async () => {
     sessionFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ data: handover }),
+      json: async () => ({
+        data: { type: "group_handover", group_handover: handover },
+      }),
     });
 
     const result = await substitutionService.createSubstitution(
@@ -522,10 +545,13 @@ describe("substitutionService", () => {
   it("adds a supervisor with only the two allowed ids", async () => {
     const json = vi.fn(async () => ({
       data: {
-        id: "91",
         type: "additional_supervision",
-        active_group_id: "41",
-        target: { id: "73", full_name: "Toni Test" },
+        additional_supervision: {
+          id: "91",
+          type: "additional_supervision",
+          active_group_id: "41",
+          target: { id: "73", full_name: "Toni Test" },
+        },
       },
     }));
     sessionFetch.mockResolvedValue({

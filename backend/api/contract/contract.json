@@ -9246,6 +9246,25 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/accounts/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/accounts/history",
       "portals": [
         "org"
@@ -9260,6 +9279,25 @@
         "kind": "ref",
         "ref": "TraegerHistoryResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/accounts/history/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9327,6 +9365,25 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/billing-families/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/billing-families/{id}",
       "portals": [
         "org"
@@ -9335,6 +9392,25 @@
         "kind": "ref",
         "ref": "BillingFamilyDetail"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/billing-families/{id}/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9349,6 +9425,29 @@
           "ref": "BillingRun"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/billing-runs/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "holiday_period_id",
+          "kind": "id"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9374,6 +9473,60 @@
         "kind": "ref",
         "ref": "BillingRunDetail"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/billing-runs/{id}/documents/{documentID}/letter",
+      "portals": [
+        "org"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/billing-runs/{id}/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/billing-runs/{id}/letters/print",
+      "portals": [
+        "org"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9410,6 +9563,25 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/care-billing-runs/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/care-billing-runs/schools",
       "portals": [
         "org"
@@ -9441,6 +9613,58 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-billing-runs/{id}/invoices/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "kind",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/care-billing-runs/{id}/letters",
       "portals": [
         "org"
@@ -9449,6 +9673,42 @@
         "kind": "ref",
         "ref": "CareLetters"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-billing-runs/{id}/letters/print",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "only",
+          "kind": "string",
+          "values": [
+            "without_email"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-billing-runs/{id}/review-export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9463,6 +9723,25 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/care-cost-shares/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/care-evidences/",
       "portals": [
         "org"
@@ -9471,6 +9750,25 @@
         "kind": "ref",
         "ref": "CareEvidenceSet"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-evidences/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9496,6 +9794,25 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/care-notice-runs/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/care-notice-runs/{id}",
       "portals": [
         "org"
@@ -9504,6 +9821,25 @@
         "kind": "ref",
         "ref": "CareNoticeRunDetail"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-notice-runs/{id}/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9518,6 +9854,42 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/care-notice-runs/{id}/letters/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-notice-runs/{id}/letters/print",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "only",
+          "kind": "string",
+          "values": [
+            "without_email"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/care-notice-runs/{id}/notices/{contractID}/letter",
       "portals": [
         "org"
@@ -9526,6 +9898,14 @@
         "kind": "ref",
         "ref": "CareNoticeLetter"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-notice-runs/{id}/notices/{contractID}/pdf",
+      "portals": [
+        "org"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9601,6 +9981,68 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/care-time-overruns/children/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/care-time-overruns/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/catalog/phases",
       "portals": [
         "org"
@@ -9612,6 +10054,25 @@
           "ref": "TraegerPhase"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/catalog/phases/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9644,6 +10105,33 @@
         "kind": "ref",
         "ref": "Calendar"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/closing-days/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9762,6 +10250,37 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/contracts/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/contracts/{id}",
       "portals": [
         "org"
@@ -9770,6 +10289,22 @@
         "kind": "ref",
         "ref": "ContractDetail"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/contracts/{id}/document",
+      "portals": [
+        "org"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/contracts/{id}/versions/{number}/document",
+      "portals": [
+        "org"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9812,6 +10347,25 @@
           "ref": "TraegerDocumentSchool"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/documents/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9867,6 +10421,25 @@
         "kind": "ref",
         "ref": "FamilyChildrenSet"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/family-children/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -9927,6 +10500,33 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/finance-exports/files/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "run_id",
+          "kind": "id"
+        },
+        {
+          "name": "run_kind",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/finance-exports/invoice-history/{kind}/{id}",
       "portals": [
         "org"
@@ -9952,6 +10552,55 @@
         "kind": "ref",
         "ref": "ExportRunPage"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/finance-exports/runs/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/finance-exports/runs/{kind}/{id}/datev",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "fiscal_year",
+          "kind": "date"
+        },
+        {
+          "name": "mode",
+          "kind": "string",
+          "values": [
+            "all",
+            "new"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/finance-exports/runs/{kind}/{id}/sollstellung",
+      "portals": [
+        "org"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10059,6 +10708,25 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/holiday-periods/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/holiday-periods/{id}",
       "portals": [
         "org"
@@ -10078,6 +10746,25 @@
         "kind": "ref",
         "ref": "HolidayAllocationBoard"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-periods/{id}/allocation/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10103,6 +10790,25 @@
           "ref": "HolidayWeekPlaces"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-periods/{id}/places/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10139,6 +10845,45 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/holiday-periods/{id}/registrations/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "school",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        },
+        {
+          "name": "time_model",
+          "kind": "string"
+        },
+        {
+          "name": "week_id",
+          "kind": "id"
+        },
+        {
+          "name": "wish",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/holiday-periods/{id}/registrations/known-children",
       "portals": [
         "org"
@@ -10167,6 +10912,40 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/holiday-periods/{id}/registrations/pdf",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "health",
+          "kind": "bool"
+        },
+        {
+          "name": "school",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        },
+        {
+          "name": "time_model",
+          "kind": "string"
+        },
+        {
+          "name": "week_id",
+          "kind": "id"
+        },
+        {
+          "name": "wish",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}",
       "portals": [
         "org"
@@ -10186,6 +10965,28 @@
         "kind": "ref",
         "ref": "HolidayRegistrationHealthDetail"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}/pdf",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "health",
+          "kind": "bool"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}",
+      "portals": [
+        "org"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10244,6 +11045,25 @@
           "ref": "TraegerDocumentTemplateSummary"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/master-data/document-templates/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10361,6 +11181,33 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/reports/key-date/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "key_date",
+          "kind": "date"
+        },
+        {
+          "name": "template",
+          "kind": "id"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/required-details/",
       "portals": [
         "org"
@@ -10397,6 +11244,29 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/schools/alerts/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "school",
+          "kind": "id"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/arrival-pickup-times",
       "portals": [
         "org"
@@ -10415,6 +11285,37 @@
         "kind": "ref",
         "ref": "ArrivalPickupTimes"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/arrival-pickup-times/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "school",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10443,6 +11344,41 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/schools/comparison/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "metrics",
+          "kind": "string"
+        },
+        {
+          "name": "schools",
+          "kind": "string"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/daily-attendance",
       "portals": [
         "org"
@@ -10464,6 +11400,52 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/schools/daily-attendance/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/occupancy",
       "portals": [
         "org"
@@ -10472,6 +11454,29 @@
         "kind": "ref",
         "ref": "Occupancy"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/occupancy/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "school",
+          "kind": "id"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10493,6 +11498,37 @@
         "kind": "ref",
         "ref": "Utilization"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/utilization/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "school",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10550,6 +11586,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/sepa-debits/{kind}/{id}/file",
+      "portals": [
+        "org"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/sepa-mandates/",
       "portals": [
         "org"
@@ -10567,6 +11611,25 @@
           "ref": "SEPAMandate"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/sepa-mandates/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10634,6 +11697,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/staff-exports/payroll/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string"
+        },
+        {
+          "name": "month",
+          "kind": "int"
+        },
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/staff-exports/times",
       "portals": [
         "org"
@@ -10659,6 +11744,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/staff-exports/times/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string"
+        },
+        {
+          "name": "month",
+          "kind": "int"
+        },
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/staff-planning/",
       "portals": [
         "org"
@@ -10673,6 +11780,29 @@
         "kind": "ref",
         "ref": "TraegerPlanningWeek"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/staff-planning/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "week",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10707,6 +11837,29 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/staff-pool/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "week",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/staff-proofs/",
       "portals": [
         "org"
@@ -10715,6 +11868,25 @@
         "kind": "ref",
         "ref": "TraegerStaffProofList"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/staff-proofs/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -10754,6 +11926,25 @@
         "kind": "ref",
         "ref": "TraegerStaffOverview"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/staff-records/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -15699,6 +16890,19 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/billing-runs/{id}/letters/preview",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "BillingLettersRequest"
+      },
+      "max_body_bytes": 65536,
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/billing-runs/{id}/mailings",
       "portals": [
         "org"
@@ -15851,6 +17055,19 @@
         "kind": "ref",
         "ref": "BillingLetterSeries"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/care-billing-runs/{id}/letters/preview",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CareLetterRequest"
+      },
+      "max_body_bytes": 65536,
+      "file": true
     },
     {
       "method": "POST",
@@ -17405,13 +18622,22 @@
       "portals": [
         "tenant"
       ],
+      "query": [
+        {
+          "name": "outcome",
+          "kind": "string",
+          "values": [
+            "completed"
+          ]
+        }
+      ],
       "request": {
         "kind": "ref",
         "ref": "dismissalRequest"
       },
       "response": {
         "kind": "ref",
-        "ref": "StaffStatus"
+        "ref": "StaffWriteStatus"
       }
     },
     {
@@ -17426,7 +18652,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StaffStatus"
+        "ref": "StaffWriteStatus"
       }
     },
     {
@@ -20355,7 +21581,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -81753,6 +82979,50 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffWriteStatus",
+      "go_type": "schoolsetup.StaffWriteStatus",
+      "fields": [
+        {
+          "name": "dismissed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_ready",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "done_steps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "skipped_steps",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

@@ -111,6 +111,10 @@ func CoreActionMiddleware(cfg CoreActionConfig) func(http.Handler) http.Handler 
 }
 
 func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction, body *cappedBuffer, extra map[string]any) {
+	action, ok := action.detailed(r, body)
+	if !ok {
+		return
+	}
 	actor, ok := resolveActor(cfg, r, action, body)
 	if !ok {
 		return
@@ -214,6 +218,11 @@ func (action CoreAction) properties(actor Actor) map[string]any {
 	}
 	if action.ExportType != "" {
 		props["export_type"] = action.ExportType
+	}
+	for key, value := range action.details {
+		if _, taken := props[key]; !taken {
+			props[key] = value
+		}
 	}
 	return props
 }

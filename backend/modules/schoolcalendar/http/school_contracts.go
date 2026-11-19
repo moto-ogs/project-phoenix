@@ -53,13 +53,14 @@ func SchoolRouteContracts() []common.RouteContract {
 // TraegerClosingDayRouteContracts registers the Träger's closing-day
 // calendar (#4702), with patterns relative to /traeger/closing-days. The
 // change and the delete of one day keep their route file: the delete
-// forwards the holiday bookings token of the query; the export answers a
-// file.
+// forwards the holiday bookings token of the query. The export answers a
+// file (#2352).
 func TraegerClosingDayRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTraeger}
 	days := []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: portals, Query: days, Response: traegercalendar.Calendar{}},
+		{Method: "GET", Pattern: "/export", Portals: portals, Query: append([]common.QueryParam{common.ListFormatQuery}, days...), File: true},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: TraegerClosingDayRequest{}, Response: traegercalendar.ClosingDay{}},
 		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: TraegerClosingDayRequest{}, Response: traegercalendar.ClosingDay{}},
 		{

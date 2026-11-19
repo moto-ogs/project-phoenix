@@ -33,10 +33,10 @@ test('nightly cleanup LogQL alerts per school and job and ends with the recovery
   const now = Date.now();
   const hour = 3600000;
   const stamp = ms => String(BigInt(ms) * 1000000n);
-  const push = (ms, record, env = 'prod') => {
+  const push = (ms, record, env = 'prod', service = 'worker') => {
     const line = JSON.stringify({ time: new Date(ms).toISOString(), ...record });
     const result = request('/loki/api/v1/push', { streams: [
-      { stream: { env, service: 'server' }, values: [[stamp(ms), line]] },
+      { stream: { env, service }, values: [[stamp(ms), line]] },
     ] });
     assert.equal(result.status, 0, 'synthetic log ingestion failed');
   };
@@ -65,7 +65,7 @@ test('nightly cleanup LogQL alerts per school and job and ends with the recovery
   push(now - 31 * hour, failing(7, 'visit-cleanup', 9));
   assert.deepEqual(firing(), [], 'a line older than 30 hours does not alert');
 
-  push(now - 27 * hour, failing(7, 'visit-cleanup', 6));
+  push(now - 27 * hour, failing(7, 'visit-cleanup', 6), 'prod', 'server');
   push(now - 5 * hour, failing(8, 'visit-cleanup', 3));
   push(now - 4 * hour, failing(7, 'timetable-cleanup', 4));
   assert.deepEqual(firing(), ['7/timetable-cleanup', '7/visit-cleanup', '8/visit-cleanup'],

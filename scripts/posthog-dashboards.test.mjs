@@ -10,6 +10,8 @@ import {
   POSTHOG_HOST,
   SCHOOL_BREAKDOWN,
   SETUP_CHECKLIST_STEP_LABELS,
+  STAFF_FIRST_STEPS_EVENTS,
+  STAFF_FIRST_STEP_LABELS,
   check,
   dashboards,
   featureExpression,
@@ -232,6 +234,39 @@ test('the entry dashboard counts self-opening surfaces from consenting browsers 
     assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
     const byPrefix = event.startsWith('onboarding_') && noFeature.includes("startsWith(event, 'onboarding_')");
     assert.ok(byPrefix || noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard counts the care worker\'s first steps from the server, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const hiding = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Betreuung abgeschlossen oder ausgeblendet (vom Server)');
+  const perStep = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Betreuung je Schritt (vom Server)');
+  assert.ok(hiding && perStep, 'both tiles exist');
+  for (const tile of [hiding, perStep]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /auch ohne Einwilligung/, tile.name);
+    assert.doesNotMatch(tile.query.source.query, /distinct_id|\$session_id|person/, `${tile.name} counts no people`);
+  }
+  assert.match(hiding.query.source.query, /'staff_first_steps_completed'/);
+  assert.match(hiding.query.source.query, /'staff_first_steps_dismissed'/);
+  for (const action of ['done', 'skipped', 'reopened']) {
+    assert.match(perStep.query.source.query, new RegExp(`properties\\.action = '${action}'`), action);
+  }
+
+  // Every step of the checklist has a German name on the tile.
+  const api = readFileSync(new URL('../frontend/src/lib/staff-onboarding-api.ts', import.meta.url), 'utf8');
+  const keys = api.match(/STAFF_ONBOARDING_STEP_KEYS[^=]*=\s*\[([^\]]*)\]/)?.[1].match(/"[a-z_]+"/g).map((key) => key.slice(1, -1));
+  assert.deepEqual(Object.keys(STAFF_FIRST_STEP_LABELS), keys);
+  for (const [value, label] of Object.entries(STAFF_FIRST_STEP_LABELS)) {
+    assert.ok(perStep.query.source.query.includes(`'${value}'`) && perStep.query.source.query.includes(`'${label}'`), value);
+  }
+
+  // The server events fall outside „Sonstiges“.
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of STAFF_FIRST_STEPS_EVENTS) {
+    assert.ok(FEATURES.every((f) => !f.events?.includes(event)), event);
+    assert.ok(noFeature.includes(`'${event}'`), `${event} is no feature use`);
   }
 });
 

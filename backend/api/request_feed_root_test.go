@@ -28,7 +28,7 @@ func checkRequestFeedControls(t *testing.T, graph *goldenRuntime) {
 	_, err := db.ExecContext(testpkg.Ctx(t), `INSERT INTO auth.account_roles (tenant_id, account_id, role_id) VALUES (?, ?, ?)`, tenantID, account.ID, admin.ID)
 	require.NoError(t, err)
 	token := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(account.ID), tenantID))
-	const path = "/api/students/change-requests/rss-feed"
+	const path = "/api/students/change-requests/rss-feed/"
 
 	status := func() bool {
 		t.Helper()
@@ -64,7 +64,7 @@ func checkRequestFeedControls(t *testing.T, graph *goldenRuntime) {
 	assert.False(t, status(), "no feed before it is created")
 	created := feedURL(http.MethodPost, path, http.StatusCreated)
 	assert.True(t, status(), "the created feed is active")
-	rotated := feedURL(http.MethodPost, path+"/rotate", http.StatusOK)
+	rotated := feedURL(http.MethodPost, path+"rotate", http.StatusOK)
 	assert.NotEqual(t, created, rotated, "rotating replaces the link")
 	assert.True(t, status(), "the replaced link keeps the feed active")
 }

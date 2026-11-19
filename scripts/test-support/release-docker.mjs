@@ -13,6 +13,8 @@ const stack = existsSync('docker-compose.yml') ? readFileSync('docker-compose.ym
 const sidecar = stack.includes('demo-runtime');
 // A maintenance-profile job that is only ever run by hand has no container.
 const rekey = stack.includes('bank-data-rekey');
+// Staging and production run a standalone worker (#7226).
+const worker = /^  worker:$/m.test(stack);
 if ((fail === 'stop' && isCompose && args.includes('stop')) ||
     (fail === 'pull' && (args[0] === 'pull' || args.includes('pull'))) ||
     (fail === 'tag' && args[0] === 'tag') ||
@@ -32,12 +34,26 @@ if ((fail === 'stop' && isCompose && args.includes('stop')) ||
     (fail === 'bucket-copy' && args[0] === 'run' && args.includes('copy')) ||
     (fail === 'acl-disabled' && args.includes('sync') && args.some(arg => /^RCLONE_CONFIG_UPLOADS_ACL=.+/.test(arg))) ||
     (fail === 'restore-uploads' && args.includes('-c'))) exit();
-if (isCompose && args.includes('ps')) { if (args.at(-1) !== 'bank-data-rekey') console.log(args.at(-1)); }
+if (isCompose && args.includes('ps')) {
+  const service = args.at(-1);
+  // Two frontend replicas, the second from another image (#7226).
+  if (fail === 'replica-mismatch' && service === 'frontend') console.log('frontend\nfrontend-stale');
+  else if (process.env.RELEASE_TEST_REPLICAS === '2' && ['server', 'frontend', 'worker'].includes(service)) console.log(`${service}\n${service}-2`);
+  else if (service !== 'bank-data-rekey') console.log(service);
+}
 // One container runs the image sha256:1…; sha256:3… is used by none.
 else if (args[0] === 'ps') console.log('container-1');
 else if (args[0] === 'images') console.log(`sha256:${'1'.repeat(64)}\nsha256:${'3'.repeat(64)}`);
 else if (args[0] === 'inspect') {
+  // Docker treats a quoted list of IDs as one nonexistent container.
+  if (args.some(arg => arg.includes('\n'))) exit();
   const format = args[2];
+  const container = args.at(-1);
+  const service = container.replace(/-2$/, '');
+  if (format.includes('.Config.Env') && fail === 'replica-env' && container === 'server-2') {
+    console.log('UPLOADS_BACKEND=s3');
+    process.exit(0);
+  }
   // RELEASE_TEST_BUCKET puts the server in S3 mode with that bucket.
   if (format.includes('.Config.Env') && process.env.RELEASE_TEST_BUCKET) {
     console.log(['UPLOADS_BACKEND=s3', `UPLOADS_S3_ENDPOINT=${process.env.RELEASE_TEST_ENDPOINT || 'https://s3.example.test'}`, 'UPLOADS_S3_REGION=test',
@@ -45,13 +61,13 @@ else if (args[0] === 'inspect') {
     process.exit(0);
   }
   console.log(format.includes('.State.Running') ? (fail === 'running' || (fail === 'running-sidecar' && args.at(-1) === 'demo-runtime') ? 'true' : 'false') :
-    format.includes('.Mounts') ? 'test-uploads' :
+    format.includes('.Mounts') ? (fail === 'replica-volume' && container === 'server-2' ? 'other-uploads' : 'test-uploads') :
     // Tag-created containers, and a frontend a rollback created from a digest.
     format.includes('.Config.Image') ? ({ postgres: 'postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f',
-      frontend: `ghcr.io/moto-ogs/phoenix-frontend@sha256:${'2'.repeat(64)}` }[args.at(-1)] ?? 'ghcr.io/moto-ogs/phoenix-server:aaaaaaa') :
-    `sha256:${'1'.repeat(64)}`);
+      frontend: `ghcr.io/moto-ogs/phoenix-frontend@sha256:${'2'.repeat(64)}` }[service] ?? 'ghcr.io/moto-ogs/phoenix-server:aaaaaaa') :
+    args.at(-1) === 'frontend-stale' ? `sha256:${'4'.repeat(64)}` : `sha256:${'1'.repeat(64)}`);
 } else if (args[0] === 'image' && args.includes('--format')) console.log(`postgres@sha256:${'1'.repeat(64)}`);
-else if (isCompose && args.includes('--services')) console.log(`postgres\nserver\nfrontend\nmigrate${sidecar ? '\ndemo-runtime' : ''}${rekey ? '\nbank-data-rekey' : ''}`);
+else if (isCompose && args.includes('--services')) console.log(`postgres\nserver\nfrontend\nmigrate${worker ? '\nworker' : ''}${sidecar ? '\ndemo-runtime' : ''}${rekey ? '\nbank-data-rekey' : ''}`);
 else if (isCompose && args.includes('--no-interpolate')) console.log(`services:\n  postgres:\n    image: postgres:test${sidecar ? '\n  demo-runtime:\n    image: server:test' : ''}`);
 else if (isCompose && args.includes('pg_dumpall')) console.log('CREATE ROLE phoenix_auth;');
 else if (isCompose && args.includes('pg_dump')) console.log('database snapshot');

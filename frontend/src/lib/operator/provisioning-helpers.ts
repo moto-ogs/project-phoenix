@@ -1016,9 +1016,8 @@ export function isBackendTraegerErasureOrder(
   return (
     typeof data === "object" &&
     data !== null &&
-    // The catalog proxy delivers the id as a string (#2352); the old
-    // route answered a number.
-    ["number", "string"].includes(typeof (data as { id?: unknown }).id)
+    // The catalog proxy delivers the id as a string (#2352).
+    typeof (data as { id?: unknown }).id === "string"
   );
 }
 

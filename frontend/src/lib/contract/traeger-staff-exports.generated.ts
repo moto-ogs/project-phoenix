@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   int64String,
   nullable,
   object,
@@ -111,8 +112,22 @@ export interface GetTraegerStaffExportsPayrollQuery {
   year?: number;
 }
 
+/** Query of GET /traeger/staff-exports/payroll/export */
+export interface GetTraegerStaffExportsPayrollExportQuery {
+  format?: string;
+  month?: number;
+  year?: number;
+}
+
 /** Query of GET /traeger/staff-exports/times */
 export interface GetTraegerStaffExportsTimesQuery {
+  format?: string;
+  month?: number;
+  year?: number;
+}
+
+/** Query of GET /traeger/staff-exports/times/export */
+export interface GetTraegerStaffExportsTimesExportQuery {
   format?: string;
   month?: number;
   year?: number;
@@ -126,11 +141,25 @@ export const routes = {
     query: ["format", "month", "year"],
     response: success(TraegerPayrollReportSchema),
   },
+  "GET /traeger/staff-exports/payroll/export": {
+    method: "GET",
+    pattern: "/traeger/staff-exports/payroll/export",
+    portals: ["org"],
+    query: ["format", "month", "year"],
+    response: fileAnswer,
+  },
   "GET /traeger/staff-exports/times": {
     method: "GET",
     pattern: "/traeger/staff-exports/times",
     portals: ["org"],
     query: ["format", "month", "year"],
     response: success(TraegerTimeReportSchema),
+  },
+  "GET /traeger/staff-exports/times/export": {
+    method: "GET",
+    pattern: "/traeger/staff-exports/times/export",
+    portals: ["org"],
+    query: ["format", "month", "year"],
+    response: fileAnswer,
   },
 } as const;

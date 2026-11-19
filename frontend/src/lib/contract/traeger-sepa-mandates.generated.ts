@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -112,6 +113,11 @@ export interface GetTraegerSepaMandatesQuery {
   contract_id?: string;
 }
 
+/** Query of GET /traeger/sepa-mandates/export */
+export interface GetTraegerSepaMandatesExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "GET /traeger/sepa-mandates/": {
     method: "GET",
@@ -119,6 +125,13 @@ export const routes = {
     portals: ["org"],
     query: ["contract_id"],
     response: success(z.array(SEPAMandateSchema)),
+  },
+  "GET /traeger/sepa-mandates/export": {
+    method: "GET",
+    pattern: "/traeger/sepa-mandates/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/sepa-mandates/{id}/collections": {
     method: "GET",

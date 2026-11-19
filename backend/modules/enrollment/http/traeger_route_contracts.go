@@ -2,6 +2,7 @@ package enrollmenthttp
 
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
 
@@ -9,9 +10,9 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // HolidayPeriodRouteContracts registers the Träger's holiday periods and
 // their registrations (ADR 0270), with patterns relative to
-// /traeger/holiday-periods. The office's proof upload streams through the
-// catalog (#2352); the other files, uploads and exports keep their route
-// files.
+// /traeger/holiday-periods. The exports, the PDFs and the proofs answer
+// files and the proof upload is multipart (#2352); the form documents keep
+// their route files.
 func HolidayPeriodRouteContracts() []common.RouteContract {
 	registration := "/{id}/registrations/{registrationId}"
 	filter := []common.QueryParam{
@@ -19,10 +20,15 @@ func HolidayPeriodRouteContracts() []common.RouteContract {
 		{Name: "time_model", Kind: common.QueryString}, {Name: "wish", Kind: common.QueryString},
 		{Name: "week_id", Kind: common.QueryID},
 	}
+	format := []common.QueryParam{common.ListFormatQuery}
+	health := common.QueryParam{Name: "health", Kind: common.QueryBool}
+	registrationExport := append([]common.QueryParam{{Name: "format", Kind: common.QueryString,
+		Values: []string{string(lists.FormatPDF), string(lists.FormatXLSX), string(lists.FormatCSV)}}}, filter...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/criteria", Portals: traegerPortal, Response: capability.HolidayCriteriaCatalog{}},
 		{Method: "PUT", Pattern: "/criteria", Portals: traegerPortal, Request: HolidayCriteriaRequest{}, Response: capability.HolidayCriteriaCatalog{}},
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.HolidayPeriod{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: format, File: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: HolidayPeriodRequest{}, Response: capability.HolidayPeriod{}},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: capability.HolidayPeriod{}},
 		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: HolidayPeriodRequest{}, Response: capability.HolidayPeriod{}},
@@ -34,14 +40,20 @@ func HolidayPeriodRouteContracts() []common.RouteContract {
 		// stays unregistered here.
 		{Method: "PUT", Pattern: "/{id}/form", Portals: traegerPortal, Response: capability.HolidayFormEditor{}},
 		{Method: "GET", Pattern: "/{id}/places", Portals: traegerPortal, Response: []capability.HolidayWeekPlaces{}},
+		{Method: "GET", Pattern: "/{id}/places/export", Portals: traegerPortal, Query: format, File: true},
 		{Method: "GET", Pattern: "/{id}/allocation", Portals: traegerPortal, Response: capability.HolidayAllocationBoard{}},
+		{Method: "GET", Pattern: "/{id}/allocation/export", Portals: traegerPortal, Query: format, File: true},
 		{Method: "POST", Pattern: "/{id}/allocation/decisions", Portals: traegerPortal, Request: HolidayAllocationRequest{}, Response: capability.HolidayAllocationBoard{}},
 		{Method: "GET", Pattern: "/{id}/registrations", Portals: traegerPortal, Query: filter, Response: capability.HolidayRegistrationList{}},
+		{Method: "GET", Pattern: "/{id}/registrations/export", Portals: traegerPortal, Query: registrationExport, File: true},
+		{Method: "GET", Pattern: "/{id}/registrations/pdf", Portals: traegerPortal, Query: append([]common.QueryParam{health}, filter...), File: true},
 		{Method: "GET", Pattern: "/{id}/registrations/known-children", Portals: traegerPortal,
 			Query: []common.QueryParam{{Name: "registration_id", Kind: common.QueryID}}, Response: HolidayKnownChildrenResponse{}},
 		{Method: "GET", Pattern: "/{id}/registrations/mail-problems", Portals: traegerPortal, Response: HolidayMailProblemsResponse{}},
 		{Method: "GET", Pattern: registration, Portals: traegerPortal, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "GET", Pattern: registration + "/health", Portals: traegerPortal, Response: capability.HolidayRegistrationHealthDetail{}},
+		{Method: "GET", Pattern: registration + "/pdf", Portals: traegerPortal, Query: []common.QueryParam{health}, File: true},
+		{Method: "GET", Pattern: registration + "/proofs/{proofId}", Portals: traegerPortal, File: true},
 		{Method: "POST", Pattern: registration + "/freeze", Portals: traegerPortal, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "POST", Pattern: registration + "/reopen", Portals: traegerPortal, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "PUT", Pattern: registration + "/children/{childId}/holiday-wish", Portals: traegerPortal, Request: HolidayWishRequest{}, Response: capability.HolidayRegistrationDetail{}},

@@ -51,6 +51,13 @@ type CoreAction struct {
 	// `schoolId`. Only a 2xx reaches capture, so the handler has accepted
 	// that school for the caterer; the school's switch then gates the event.
 	SchoolFromRoute bool
+	// Detail derives the event's fixed values from a 2xx response, its route
+	// and its query (#7553): the event name from a closed set and properties
+	// whose values come from closed lists, never a free value or an ID. It
+	// returns false when the response completed nothing worth counting.
+	Detail func(r *http.Request, body []byte) (event string, props map[string]string, ok bool)
+	// details are the properties Detail derived for one request.
+	details map[string]string
 }
 
 var notCaptured = CoreAction{}
@@ -130,4 +137,22 @@ func skippedStep(body []byte, step string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// detailed applies Detail to one 2xx response. A cut body is never parsed,
+// so it counts nothing.
+func (action CoreAction) detailed(r *http.Request, body *cappedBuffer) (CoreAction, bool) {
+	if action.Detail == nil {
+		return action, true
+	}
+	if body.overflow {
+		return action, false
+	}
+	event, details, ok := action.Detail(r, body.Bytes())
+	if !ok || event == "" {
+		return action, false
+	}
+	action.Event = event
+	action.details = details
+	return action, true
 }

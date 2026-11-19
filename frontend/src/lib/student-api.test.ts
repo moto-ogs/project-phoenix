@@ -10,7 +10,6 @@ vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
 import { ApiError } from "./api-error";
 import { buildBackendStudent } from "~/test/fixtures/students";
 import type { StudentDetailResponse } from "./contract/students.generated";
-import { CONTRACT_WIRE_HEADER } from "./contract/wire";
 import { subscribeStudentCompanionsChanged } from "./student-companion-api";
 import {
   createStudent,
@@ -59,12 +58,6 @@ function problem(status: number, body: unknown): Response {
 /** A paginated answer of the catalog proxy: the page beside the data. */
 function pageOf(data: unknown[], pagination: unknown): Response {
   return Response.json({ success: true, message: "Success", data, pagination });
-}
-
-/** Whether a call asked the temporary route for the contract's shape. */
-function askedForContract(index = 0): boolean {
-  const headers = new Headers(calledInit(index).headers);
-  return headers.get(CONTRACT_WIRE_HEADER) === "contract";
 }
 
 function calledUrl(index = 0): string {
@@ -124,7 +117,6 @@ describe("fetchStudents", () => {
         page_size: "500",
         view: "names",
       });
-      expect(askedForContract(index)).toBe(true);
     }
   });
 
@@ -151,7 +143,6 @@ describe("fetchStudents", () => {
       pagination: page,
     });
     expect(calledUrl()).toBe("/api/students");
-    expect(askedForContract()).toBe(true);
   });
 
   it("maps a slim row as the slim projection", async () => {
@@ -319,7 +310,6 @@ describe("single reads", () => {
       "/api/students/7%2Fx?include_privacy_consent=true",
     );
     expect(mockSessionFetch).toHaveBeenCalledOnce();
-    expect(askedForContract()).toBe(true);
   });
 
   it("reads the enrollment extra fields of a child", async () => {
@@ -357,7 +347,6 @@ describe("createStudent", () => {
 
     expect(calledUrl(0)).toBe("/api/students");
     expect(calledInit(0)).toMatchObject({ method: "POST" });
-    expect(askedForContract(0)).toBe(true);
     expect(JSON.parse(String(calledInit(0).body))).toMatchObject({
       first_name: "Mia",
       last_name: "Muster",
@@ -478,7 +467,6 @@ describe("updateStudent", () => {
     });
     expect(calledUrl()).toBe("/api/students/1");
     expect(calledInit()).toMatchObject({ method: "PUT" });
-    expect(askedForContract()).toBe(true);
     expect(JSON.parse(String(calledInit().body))).toEqual({ sick: true });
   });
 
@@ -742,7 +730,6 @@ describe("guarded student deletion", () => {
       method: "DELETE",
       body: JSON.stringify(input),
     });
-    expect(askedForContract()).toBe(true);
   });
 
   it("keeps the conflict code and diagnostics of a stale preview", async () => {
