@@ -49,6 +49,35 @@ describe("scrubEvent", () => {
     expect(scrubClientEvent(other)).toBe(other);
     expect(scrubEvent(network)).toBe(network);
   });
+  it("groups every client chunk load failure into one issue", () => {
+    const chunkFailure = (chunk: string) =>
+      makeEvent({
+        exception: {
+          values: [
+            {
+              type: "ChunkLoadError",
+              value: `Failed to load chunk /_next/static/chunks/${chunk}.js from module 621186`,
+            },
+          ],
+        },
+      });
+
+    expect(
+      scrubClientEvent(chunkFailure("0ub6smytks-74"))?.fingerprint,
+    ).toEqual(["ChunkLoadError"]);
+    expect(
+      scrubClientEvent(chunkFailure("1abcdefghi-12"))?.fingerprint,
+    ).toEqual(["ChunkLoadError"]);
+    expect(
+      scrubClientEvent(
+        makeEvent({
+          exception: {
+            values: [{ type: "TypeError", value: "x is undefined" }],
+          },
+        }),
+      )?.fingerprint,
+    ).toBeUndefined();
+  });
   it("strips Authorization and Cookie headers (case-sensitive variants)", () => {
     const event = makeEvent({
       request: {
