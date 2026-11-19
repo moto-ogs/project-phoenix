@@ -11,6 +11,10 @@ import { ForbiddenPage } from "~/components/ui/forbidden-page";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { hasPermission } from "~/lib/auth-utils";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const GRADE_TRANSITIONS_INFO =
+  "Zum neuen Schuljahr übernimmst du hier alle Kinder in ihre nächste Klasse. Wähle dafür „Neuer Schuljahreswechsel“. moto schlägt für jede Klasse die nächste vor, du prüfst nur.";
+
 export default function GradeTransitionsPage() {
   const { data: session, status } = useSession();
 
@@ -63,6 +67,7 @@ export default function GradeTransitionsPage() {
   return (
     <TenantPage
       title="Schuljahreswechsel"
+      info={GRADE_TRANSITIONS_INFO}
       stats={statusLine}
       statsLoading={statusLine === null}
       loading={status === "loading"}

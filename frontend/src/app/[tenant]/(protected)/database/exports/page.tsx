@@ -50,6 +50,10 @@ import { presentConcept } from "~/lib/concepts/present";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const EXPORTS_INFO =
+  "Hier lädst du fertige Listen aus moto als Datei herunter. Wähle bei der passenden Liste „Liste erstellen“. Welche Listen du siehst, hängt von deinen Rechten ab.";
+
 const logger = createLogger({ component: "DatabaseExportsPage" });
 
 const ROOM_EXPORT_OPTIONS = exportFormatOptions(["pdf", "docx", "xlsx"]);
@@ -194,7 +198,7 @@ export default function DatabaseExportsPage() {
   };
 
   return (
-    <TenantPage title="Exporte" stats={statusLine} back>
+    <TenantPage title="Exporte" info={EXPORTS_INFO} stats={statusLine} back>
       <div className="min-h-[60vh] space-y-6">
         {/* Der Hinweis steht auf einer Fläche, nicht auf dem Grund
             (BAUARTEN-SPEC, Teil 3). Eine Karte ohne Titel ist die reine

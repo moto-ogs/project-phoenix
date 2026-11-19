@@ -44,6 +44,10 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { rolesConcept } from "~/lib/concepts/roles";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const ROLES_INFO =
+  "Jede Person hat eine Rolle. Die Rolle legt fest, was die Person in moto sehen und tun darf. Rollen vom System kannst du nicht ändern, lege dafür mit „+ Rolle“ eine eigene an.";
+
 const NO_ROLES: Role[] = [];
 
 export default function RolesPage() {
@@ -394,6 +398,7 @@ function RolesPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Rollen",
+        info: ROLES_INFO,
         description: statusLine,
         actions: accessRefused ? null : (
           <DatabaseCreateAction

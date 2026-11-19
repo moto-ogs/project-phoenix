@@ -49,6 +49,10 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const SHIFT_TYPES_INFO =
+  "Hier legst du fest, welche Dienstarten es im Dienstplan gibt. Mit „Beispiele hinzufügen“ bekommst du typische Dienstarten auf einmal. Eigene Dienstarten legst du mit „+ Dienstart“ an.";
+
 const logger = createLogger({ component: "DatabaseShiftTypesPage" });
 
 const CACHE_KEY = tenantAdminKeys.shiftTypes();
@@ -421,6 +425,7 @@ function ShiftTypesPageContent() {
 
   return (
     <CatalogPage
+      info={SHIFT_TYPES_INFO}
       config={config}
       items={items}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett
@@ -459,7 +464,7 @@ function BookedShiftTypesPage() {
   // antworten und erst recht keine Katalogdaten laden. Ist das Modul sicher
   // nicht gebucht, ersetzt TenantPage diesen Ladezustand durch die Erklärung.
   if (!dienstplanBooked) {
-    return <TenantPage title="Dienstarten" loading />;
+    return <TenantPage title="Dienstarten" info={SHIFT_TYPES_INFO} loading />;
   }
 
   return <ShiftTypesPageContent />;
@@ -468,7 +473,11 @@ function BookedShiftTypesPage() {
 export default function ShiftTypesPage() {
   return (
     <Suspense fallback={null}>
-      <ModuleRouteGuard module="dienstplan" title="Dienstarten">
+      <ModuleRouteGuard
+        module="dienstplan"
+        title="Dienstarten"
+        info={SHIFT_TYPES_INFO}
+      >
         <BookedShiftTypesPage />
       </ModuleRouteGuard>
     </Suspense>

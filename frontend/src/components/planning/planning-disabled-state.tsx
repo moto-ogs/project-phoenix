@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
@@ -7,6 +8,8 @@ interface PlanningDisabledStateProps {
   readonly heading: string;
   readonly description: string;
   readonly testId: string;
+  /** Info-Knopf am Titel, wie auf der eingeschalteten Seite. */
+  readonly info?: ReactNode;
 }
 
 /**
@@ -20,10 +23,12 @@ export function PlanningDisabledState({
   heading,
   description,
   testId,
+  info,
 }: PlanningDisabledStateProps) {
   return (
     <TenantPage
       title={pageTitle}
+      info={info}
       testId={testId}
       empty={{
         title: heading,

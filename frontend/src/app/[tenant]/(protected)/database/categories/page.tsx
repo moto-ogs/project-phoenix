@@ -30,6 +30,10 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const CATEGORIES_INFO =
+  "Hier pflegst du die Liste der Terminkategorien. Bei Aktivitäten und Terminen wählst du dann eine davon aus. Unter jeder Kategorie steht, wie oft sie schon verwendet wird.";
+
 const CACHE_KEY = tenantAdminKeys.categories();
 const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
 /** Spiegelt maxCategoryNameLength / maxCategoryDescriptionLength in Go. */
@@ -196,6 +200,7 @@ function CategoriesPageContent() {
 
   return (
     <CatalogPage
+      info={CATEGORIES_INFO}
       config={config}
       items={items}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett
