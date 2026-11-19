@@ -120,7 +120,9 @@ func TestRequiresActiveOperatorRefusalsOnTheDatabase(t *testing.T) {
 	read, session := firstIndex(queries, isOperatorRead), firstIndex(queries, isOperatorSessionRead)
 	require.True(t, read >= 0 && read < session, "operator before its session: %q", queries)
 
-	// Unknown, expired and foreign families look alike from outside.
+	// An ended session (unknown, expired, foreign or missing family) is 401,
+	// so the portal renews and, with the family gone, signs out; the four
+	// look alike from outside. Only a deactivated account is 403 inactive.
 	_, _, ended := operatorWire(t, func() *httptest.ResponseRecorder {
 		r, _ := rig.serve(t, operatorClaims(operator, "keine-familie"))
 		return r
@@ -131,21 +133,22 @@ func TestRequiresActiveOperatorRefusalsOnTheDatabase(t *testing.T) {
 		status      int
 		code        string
 		sessionRead bool
+		sessionEnd  bool
 	}{
-		{"unknown family", operatorClaims(operator, "keine-familie"), http.StatusForbidden, "identity.account_inactive", true},
-		{"another operator's family", operatorClaims(operator, otherFamily), http.StatusForbidden, "identity.account_inactive", true},
-		{"expired session", operatorClaims(expired, expiredFamily), http.StatusForbidden, "identity.account_inactive", true},
-		{"inactive operator", operatorClaims(inactive, inactiveFamily), http.StatusForbidden, "identity.account_inactive", false},
-		{"no family in the token", operatorClaims(operator, ""), http.StatusForbidden, "identity.account_inactive", false},
-		{"unknown operator", operatorClaims(removed, family), http.StatusUnauthorized, "identity.invalid_credentials", false},
+		{"unknown family", operatorClaims(operator, "keine-familie"), http.StatusUnauthorized, "general.permission", true, true},
+		{"another operator's family", operatorClaims(operator, otherFamily), http.StatusUnauthorized, "general.permission", true, true},
+		{"expired session", operatorClaims(expired, expiredFamily), http.StatusUnauthorized, "general.permission", true, true},
+		{"no family in the token", operatorClaims(operator, ""), http.StatusUnauthorized, "general.permission", false, true},
+		{"inactive operator", operatorClaims(inactive, inactiveFamily), http.StatusForbidden, "identity.account_inactive", false, false},
+		{"unknown operator", operatorClaims(removed, family), http.StatusUnauthorized, "identity.invalid_credentials", false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			response, queries := rig.serve(t, tc.claims)
 			status, code, wire := operatorWire(t, response)
 			require.Equal(t, tc.status, status, wire)
 			require.Equal(t, tc.code, code, wire)
-			if tc.status == http.StatusForbidden {
-				require.Equal(t, ended, wire, "refusals are indistinguishable")
+			if tc.sessionEnd {
+				require.Equal(t, ended, wire, "ended sessions are indistinguishable")
 			}
 			require.GreaterOrEqual(t, firstIndex(queries, isOperatorRead), 0, "%q", queries)
 			require.Equal(t, tc.sessionRead, firstIndex(queries, isOperatorSessionRead) >= 0, "%q", queries)
@@ -172,6 +175,29 @@ func TestRequiresActiveOperatorRefusalsOnTheDatabase(t *testing.T) {
 	for _, wire := range wires[1:] {
 		require.Equal(t, wires[0], wire)
 	}
+}
+
+// TestRequiresActiveOperatorAfterPasswordChange: the operator's own password
+// change ends every session family, the current one too. The next request
+// with the old access token is an ended session (401), not an inactive
+// account (403), so the portal renews, fails, and signs out.
+func TestRequiresActiveOperatorAfterPasswordChange(t *testing.T) {
+	t.Parallel()
+	rig := newOperatorLivenessRig(t)
+	password := testpkg.NewTestPassword()
+	email := fmt.Sprintf("liveness-%d@example.test", testpkg.UniqueSuffix())
+	operator := testpkg.CreateTestOperatorWithPassword(t, rig.db, email, password).ID
+	family := rig.session(t, operator)
+
+	response, _ := rig.serve(t, operatorClaims(operator, family))
+	require.Equal(t, http.StatusNoContent, response.Code, response.Body.String())
+
+	require.NoError(t, rig.identity.ChangeOperatorPassword(provisioningContext(t, rig.db), operator, password, testpkg.NewTestPassword()))
+
+	response, _ = rig.serve(t, operatorClaims(operator, family))
+	status, code, wire := operatorWire(t, response)
+	require.Equal(t, http.StatusUnauthorized, status, wire)
+	require.Equal(t, "general.permission", code, wire)
 }
 
 // TestRequiresActiveOperatorDatabaseFaults fails each read for real. Both
@@ -283,6 +309,7 @@ func TestRequiresActiveOperatorJoinsAnOpenTransaction(t *testing.T) {
 			t.Logf("school frame: verdict=%v tx=%v statements=%q", verdict, txErr, queries)
 			require.Error(t, verdict, "a school frame never confirms an operator")
 			require.NotErrorIs(t, verdict, identityaccess.ErrOperatorInactive)
+			require.NotErrorIs(t, verdict, identityaccess.ErrOperatorSessionEnded)
 			require.Equal(t, -1, firstIndex(queries, func(q string) bool { return q == "BEGIN" || q == "SET LOCAL ROLE phoenix_admin" }), "joins the school frame: %q", queries)
 			verdicts = append(verdicts, fmt.Sprintf("%v|%v|%d", verdict, txErr, len(queries)))
 		})
