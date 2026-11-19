@@ -27,7 +27,7 @@ function SchoolSettingsContent() {
       // Info-Knopf am Titel (#7579): je Bereich, was er regelt.
       info={
         section.key === "notifications"
-          ? "Hier legst du fest, worüber moto dich benachrichtigt. Die Themen gelten für dein Konto. Unter „Benachrichtigungen auf diesem Gerät“ erlaubst du die Mitteilungen für jedes Gerät einzeln."
+          ? "Hier legst du fest, worüber moto dich benachrichtigt. Die Themen gelten für dein Konto, nicht nur für dieses Gerät."
           : section.key === "devices"
             ? "Hier stehen die Geräte, die du dir beim Anmelden gemerkt hast. Dort fragt moto nicht nach dem Code. Nutzt du ein Gerät nicht mehr, entferne es hier."
             : "Hier entscheidest du über die Nutzungsanalyse. Du kannst deine Wahl jederzeit hier ändern."
