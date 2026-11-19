@@ -11,15 +11,13 @@ import type {
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { CareDayStatus } from "~/lib/timetable-types";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
-import type { BFFDashboardResponse } from "./supervision-dashboard-resource";
 
-type SupervisionVisit = BFFDashboardResponse["firstRoomVisits"][number];
 type RosterRow = PlannedTimetableInstance["rosterPreview"][number];
 
 // A visit as the page renders it — the same shape for a session roster and
 // for a released room's occupancy. `isActive` is a constant here: the backend
 // only ever ships open visits in these sections.
-function toSupervisionVisit(v: Visit | OpenRoomStudent): SupervisionVisit {
+function toSupervisionVisit(v: Visit | OpenRoomStudent) {
   return {
     studentId: v.student_id,
     studentName: v.student_name,
@@ -45,9 +43,7 @@ function supervisorNames(
   return (supervisors ?? []).map((supervisor) => supervisor.name);
 }
 
-export function mapSupervisionDashboard(
-  wire: DashboardProjection,
-): BFFDashboardResponse {
+export function mapSupervisionDashboard(wire: DashboardProjection) {
   const schulhof = wire.schulhof_status;
   return {
     businessDay: wire.business_day,

@@ -6,7 +6,7 @@ import type { DepartureMode } from "~/lib/departure-plan";
 import type { TeacherHint } from "~/lib/student-helpers";
 import type { ClassHandover } from "~/lib/class-handover";
 import type { DashboardProjection } from "~/lib/contract/active.generated";
-import { mapSupervisionDashboard } from "./supervision-dashboard-wire";
+import { mapSupervisionDashboard } from "~/lib/supervision-dashboard-wire";
 import type { OpenRoomView, SchulhofStatusResponse } from "./view-model";
 const logger = createLogger({ component: "useSupervisionDashboard" });
 

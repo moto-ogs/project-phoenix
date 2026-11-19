@@ -6,8 +6,7 @@ import type { NextRequest } from "next/server";
 import { routes } from "~/lib/contract/active.generated";
 import { contractGet } from "~/lib/contract/client.server";
 import { createGetHandler } from "~/lib/route-wrapper.server";
-import type { BFFDashboardResponse } from "~/components/active-supervisions/supervision-dashboard-resource";
-import { mapSupervisionDashboard } from "~/components/active-supervisions/supervision-dashboard-wire";
+import { mapSupervisionDashboard } from "~/lib/supervision-dashboard-wire";
 
 const DASHBOARD = routes["GET /api/active/supervision-dashboard"];
 
@@ -17,7 +16,7 @@ const DASHBOARD = routes["GET /api/active/supervision-dashboard"];
  * One backend request; an invalid group_id is dropped as before, an unknown
  * one is a backend 403.
  */
-export const GET = createGetHandler<BFFDashboardResponse>(
+export const GET = createGetHandler(
   async (request: NextRequest, token: string) => {
     const groupId = request.nextUrl.searchParams.get("group_id");
     const query =

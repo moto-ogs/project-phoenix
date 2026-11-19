@@ -10,7 +10,7 @@ import {
   buildRosterRowWire,
   buildSupervisionDashboardWire,
 } from "~/test/fixtures/supervision-dashboard";
-import { mapSupervisionDashboard } from "./supervision-dashboard-wire";
+import { mapSupervisionDashboard } from "~/lib/supervision-dashboard-wire";
 
 describe("mapSupervisionDashboard", () => {
   it("maps the wire projection to the camelCase dashboard shape", () => {

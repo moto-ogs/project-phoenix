@@ -1,9 +1,7 @@
-import type { Teacher } from "./teacher-api";
-import {
-  EXTERNAL_ACCOUNT_STATUS_VALUES,
-  type StaffRecordResponse,
-} from "./contract/staff.generated";
-import { knownEnum } from "./contract/runtime";
+import type { Teacher } from "./teacher-types";
+import type { StaffRecordResponse } from "./contract/staff.generated";
+import { EXTERNAL_ACCOUNT_STATUS_VALUES } from "./staff-wire-enums";
+import { knownEnum } from "./contract/known-enum";
 
 /**
  * Maps a staff record of the contract (GET /api/staff, /api/staff/{id}) to

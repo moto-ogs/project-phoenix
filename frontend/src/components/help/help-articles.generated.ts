@@ -36,6 +36,8 @@ import type { correctWorkTimeTopic as authored_correctWorkTimeTopic } from "./ar
 
 import type { createStudentTopic as authored_createStudentTopic } from "./articles/create-student";
 
+import type { dailyHandoversTopic as authored_dailyHandoversTopic } from "./articles/daily-handovers";
+
 import type { dataManagementTopic as authored_dataManagementTopic } from "./articles/data-management";
 
 import type { dayListsTopic as authored_dayListsTopic } from "./articles/day-lists";
@@ -156,6 +158,8 @@ import type { ownAbsenceTopic as authored_ownAbsenceTopic } from "./articles/own
 
 import type { ownGroupsTopic as authored_ownGroupsTopic } from "./articles/own-groups";
 
+import type { ownProfileTopic as authored_ownProfileTopic } from "./articles/own-profile";
+
 import type { ownShiftPlanTopic as authored_ownShiftPlanTopic } from "./articles/own-shift-plan";
 
 import type { parentAccountProblemTopic as authored_parentAccountProblemTopic } from "./articles/parent-account-problem";
@@ -257,6 +261,8 @@ import type { staffPermissionsTopic as authored_staffPermissionsTopic } from "./
 import type { staffQualificationsTopic as authored_staffQualificationsTopic } from "./articles/staff-qualifications";
 
 import type { staffRecordTopic as authored_staffRecordTopic } from "./articles/staff-record";
+
+import type { staffRemindersTopic as authored_staffRemindersTopic } from "./articles/staff-reminders";
 
 import type { staffSurveysTopic as authored_staffSurveysTopic } from "./articles/staff-surveys";
 
@@ -1028,7 +1034,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         title: "Hilfe öffnen",
         steps: [
           "Siehst du oben rechts ein Fragezeichen? Es öffnet die passende Anleitung.",
-          "Am Handy oder Tablet steht es rechts im Seitenkopf.",
+          "Am Handy oder Tablet steht es rechts neben dem Seitennamen. Es steht vor den Knöpfen der Seite.",
           "Oder wähle `Hilfe`: am Computer unten in der Seitenleiste, auf dem Handy unter `Mehr`.",
         ],
       },
@@ -1819,6 +1825,41 @@ export const createStudentTopic = function createStudentTopic(): HelpTopic {
     ],
   };
 } satisfies typeof authored_createStudentTopic;
+
+/**
+ * `/substitutions`, in der Seitenleiste `Übergaben` (#7568): laufende
+ * Betreuungen, die Vertretungen von heute und die Gruppenübergaben auf einer
+ * Seite. Den Vertretungsplan der Leitung beschreibt `substitution-plan.ts`.
+ */
+export const dailyHandoversTopic = function dailyHandoversTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.dailyHandovers,
+    title: "Übergaben von heute",
+    question: "Wer übernimmt heute welche Gruppe oder Aufsicht?",
+    summary:
+      "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt.",
+    group: "gruppen",
+    audience: ["caregiver", "lead"],
+    icon: "Repeat",
+    steps: [
+      "Klappe in der Seitenleiste `Tagesbetrieb` auf und öffne `Übergaben`.",
+      "Unter `Laufende Betreuungen` wählst du `Betreuer hinzufügen`. So kommt eine weitere Person in die Aufsicht.",
+      "Unter `Vertretungen heute` siehst du, wer heute einen Termin übernimmt.",
+      "Unter `Gruppen` wählst du `Gruppe übergeben`. Wähle die Gruppe und die Betreuungskraft. Dann wähle `Zuweisen`.",
+      "Mit `Beenden` hörst du eine Übergabe vorzeitig auf. moto fragt vorher nach.",
+    ],
+    differences: [
+      "Steht unter `Gruppen` `Keine Gruppenübergabe nötig`? Dann arbeitet deine OGS ohne feste Gruppen.",
+      "Steht bei `Vertretungen heute` `Keine Vertretungen verfügbar`? Dann darfst du die Vertretungen nicht ansehen. Frage deine Leitung.",
+      "Fehlt `Betreuer hinzufügen`? Dann bist du für diese Aufsicht nicht zuständig.",
+      "Fehlt `Beenden` an einer Übergabe? Dann darfst du sie nicht beenden. Frage deine Leitung.",
+    ],
+    notes: [
+      "Vertretungen für andere Tage plant die Leitung im `Vertretungsplan`.",
+    ],
+    related: [HELP_TOPICS.transferGroup, HELP_TOPICS.activeSupervision],
+  };
+} satisfies typeof authored_dailyHandoversTopic;
 
 /**
  * Uebersichtsseite `/database`. Die Kacheln blenden sich nach Rechten,
@@ -5746,6 +5787,39 @@ export const ownGroupsTopic = function ownGroupsTopic(
   };
 } satisfies typeof authored_ownGroupsTopic;
 
+/**
+ * `/profile`: die eigene Seite jeder Person im Team (#7568). Abschnitte aus
+ * `profile/page.tsx` und `components/settings/*-section.tsx`.
+ */
+export const ownProfileTopic = function ownProfileTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.ownProfile,
+    title: "Dein Profil",
+    question: "Wo ändere ich meine eigenen Angaben?",
+    summary:
+      "Im Profil stehen deine Angaben, dein Passwort und deine Benachrichtigungen.",
+    group: "einstieg",
+    audience: ["caregiver", "lead"],
+    icon: "NotePencil",
+    steps: [
+      "Am Computer öffnest du oben rechts dein Profil. Auf dem Handy wählst du unten `Mehr` und dann `Profil`.",
+      "Unter `Persönliche Daten` wählst du `Bearbeiten`, um deinen Namen zu ändern. Dann wähle `Speichern`.",
+      "Unter `Passwort` wählst du `Ändern`.",
+      "Mit `Profilbild ändern` oben wählst du ein neues Bild.",
+      "Unter `Benachrichtigungen` legst du fest, worüber moto dich informiert.",
+    ],
+    notes: [
+      "Weiter unten stehen auch deine Nachweise, deine Passkeys und deine vertrauten Geräte.",
+      "Deine E-Mail-Adresse änderst du hier nicht. Frage dafür deine Leitung.",
+    ],
+    related: [
+      HELP_TOPICS.staffNotifications,
+      HELP_TOPICS.analyticsConsent,
+      HELP_TOPICS.login,
+    ],
+  };
+} satisfies typeof authored_ownProfileTopic;
+
 // Eigener Dienstplan (#3821): eigene Seite unter `Team`, nur lesend.
 export const ownShiftPlanTopic = function ownShiftPlanTopic(): HelpTopic {
   return {
@@ -9036,6 +9110,31 @@ export const staffRecordTopic = function staffRecordTopic(): HelpTopic {
     ],
   };
 } satisfies typeof authored_staffRecordTopic;
+
+/** Die ganze Liste der Erinnerungen unter `/reminders` (#7568). */
+export const staffRemindersTopic = function staffRemindersTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.staffReminders,
+    title: "Erinnerungen ansehen",
+    question: "Was steht heute noch an?",
+    summary:
+      "Hier siehst du anstehende und überfällige Abholungen und Aktivitäten.",
+    group: "tagesplanung",
+    audience: ["caregiver", "lead"],
+    icon: "Bell",
+    steps: [
+      "Die Überschrift zeigt, worum es geht. Zum Beispiel `Anstehende Abholung`.",
+      "Die Uhrzeit rechts zeigt, wann etwas ansteht.",
+      "`Überfällige` heißt: Die Zeit ist schon vorbei.",
+      "Unter `AG dauert länger` stehen Aktivitäten, die noch laufen.",
+    ],
+    notes: [
+      "Am Computer öffnest du die Liste in der Glocke mit `Alle ansehen`.",
+      "Auf dem Handy wählst du `Mehr`, `Benachrichtigungen` und `Alle ansehen`.",
+    ],
+    related: [HELP_TOPICS.staffNotifications, HELP_TOPICS.dayPlan],
+  };
+} satisfies typeof authored_staffRemindersTopic;
 
 /**
  * `/umfragen`: Umfragen der Schule an das Team beantworten (#4781). Ob die

@@ -9,14 +9,16 @@ import {
   apiErrorFromText,
 } from "~/lib/api-error";
 import type { MailOutcome } from "~/lib/email-delivery-status";
+import type {
+  ExternalStaffResponse,
+  FormerStaffResponse,
+  StaffRecordResponse,
+} from "~/lib/contract/staff.generated";
 import {
   EXTERNAL_ACCOUNT_STATUS_VALUES,
-  type ExternalStaffResponse,
-  type FormerStaffResponse,
   ROLE_FORM_VALUES,
-  type StaffRecordResponse,
-} from "~/lib/contract/staff.generated";
-import { knownEnum } from "~/lib/contract/runtime";
+} from "~/lib/staff-wire-enums";
+import { knownEnum } from "~/lib/contract/known-enum";
 
 const logger = createLogger({ component: "StaffAPI" });
 
