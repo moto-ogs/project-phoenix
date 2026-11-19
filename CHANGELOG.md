@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.15.1](https://github.com/moto-ogs/project-phoenix/compare/v1.15.0...v1.15.1) (2026-11-19)
+
+
+### Fehlerbehebungen
+
+* Elternanfragen wieder laden (Release development nach main) ([b0da2c4](https://github.com/moto-ogs/project-phoenix/commit/b0da2c41471e00b74cbb0209abda92eb84f9f4af))
+* **proxy:** Anfragenliste und Zähler korrekt zuordnen ([117ba4d](https://github.com/moto-ogs/project-phoenix/commit/117ba4deacf73ca69fd9ca755180641b3353b59b))
+* **proxy:** resolve literal routes before parameters ([abef772](https://github.com/moto-ogs/project-phoenix/commit/abef7721e5ce59cfc58baba6beff19cbaf220450))
+
 ## [1.15.0](https://github.com/moto-ogs/project-phoenix/compare/v1.14.0...v1.15.0) (2026-11-19)
 
 
