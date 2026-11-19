@@ -1139,7 +1139,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
       insights: [
         {
           name: 'Einstieg: Ankündigung gesehen und geschlossen',
-          description: 'Letzte 30 Tage, auch ohne Einwilligung: der Server zählt jede Ankündigung, die im OGS-Portal erschien (gesehen), und jede, die die Person mit „Verstanden“ oder dem X schloss (geschlossen), für ihre Schule. Ohne Bezug zu Person oder Sitzung, daher Anzeigen statt Personen. Eine nicht geschlossene Ankündigung erscheint beim nächsten Laden wieder und zählt dann erneut als gesehen.',
+          description: 'Letzte 30 Tage, auch ohne Einwilligung, je Schule gezählt, ohne Person oder Sitzung. Gesehen: eine Ankündigung erschien im OGS-Portal. Geschlossen: per „Verstanden“ oder X; das X schließt alle wartenden auf einmal. Zählt Anzeigen, nicht Personen: eine nicht geschlossene erscheint beim nächsten Laden wieder.',
           ...hogql('production', (where) => `
 select
   coalesce(properties.role, 'unbekannt') as Rolle,
