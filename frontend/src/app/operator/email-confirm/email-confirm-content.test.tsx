@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   render as renderPlain,
+  act,
   screen,
   fireEvent,
   waitFor,
@@ -465,4 +466,38 @@ describe("EmailConfirmContent", () => {
     ).toBeInTheDocument();
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
+
+  it.each(["/operator/settings?tab=profile#email", "/operator/email-confirm"])(
+    "leaves the destination entry unchanged after navigating to %s",
+    async (url) => {
+      replaceStateSpy.mockRestore();
+      replaceStateSpy = vi.spyOn(window.history, "replaceState");
+      let resolveResponse!: (value: Response) => void;
+      mockFetch.mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveResponse = resolve;
+        }),
+      );
+      setQueryToken("pending-token");
+
+      const page = render(<EmailConfirmContent />);
+      fireEvent.click(await screen.findByText("Jetzt bestätigen"));
+      // Anker: confirmation is pending before navigation and unmount.
+      expect(screen.getByText("E-Mail wird bestätigt...")).toBeInTheDocument();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      page.unmount();
+      window.history.pushState({}, "", url);
+      const destinationUrl = window.location.href;
+      const destinationState: unknown = window.history.state;
+      replaceStateSpy.mockClear();
+
+      await act(async () => {
+        resolveResponse(new Response(null, { status: 200 }));
+      });
+
+      expect(window.location.href).toBe(destinationUrl);
+      expect(window.history.state).toBe(destinationState);
+      expect(replaceStateSpy).not.toHaveBeenCalled();
+    },
+  );
 });

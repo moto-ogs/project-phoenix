@@ -35,8 +35,11 @@ function extractToken(): string | null {
  */
 const CONFIRMED_STATE_KEY = "operatorEmailConfirmed";
 
-function markEntryConfirmed() {
+function markEntryConfirmed(entryUrl: string, entryState: unknown) {
   const current: unknown = window.history.state;
+  // A late response must not mark another entry, even one at the same URL.
+  if (window.location.href !== entryUrl || current !== entryState) return;
+
   const state =
     current && typeof current === "object"
       ? (current as Record<string, unknown>)
@@ -44,7 +47,7 @@ function markEntryConfirmed() {
   window.history.replaceState(
     { ...state, [CONFIRMED_STATE_KEY]: true },
     "",
-    window.location.pathname,
+    entryUrl,
   );
 }
 
@@ -118,6 +121,8 @@ export function EmailConfirmContent() {
 
     confirmRef.current = "running";
     setState("confirming");
+    const entryUrl = window.location.href;
+    const entryState: unknown = window.history.state;
     try {
       const response = await transportFetch(
         "/api/operator/auth/email-confirm",
@@ -136,7 +141,7 @@ export function EmailConfirmContent() {
       }
 
       confirmRef.current = "done";
-      markEntryConfirmed();
+      markEntryConfirmed(entryUrl, entryState);
       setState("success");
       // If the user has an active session, force-expire the access token
       // so the next JWT callback triggers a proactive refresh — picking up
