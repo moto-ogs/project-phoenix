@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
@@ -11,7 +13,6 @@ import (
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
-	"reflect"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
@@ -104,6 +105,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, staffPortalEnrollmentContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -206,6 +208,9 @@ func ContractDocument() (contract.Document, error) {
 	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,
 		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
+		// The answers of an enrollment form: an object of the form's own
+		// fields, whatever the school's schema asks for.
+		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
 	})
 	// Both student bodies only refuse retired keys before the plain decode;
 	// CompanionEntry takes its companion id as a number or a decimal string.
@@ -227,6 +232,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():  contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStringSlice](): contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStr]():         contract.ReadsValue,
+		// A phase body tells an absent calendar_period_id from null.
+		reflect.TypeFor[enrollmentHTTP.EnrollmentPhaseRequest](): contract.ReadsFields,
 	}
 	// Appointments keeps its own day type.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
@@ -484,5 +491,25 @@ func mealPlanRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/meal-billing-months/", Portals: portals, Response: types.BillingMonths},
 		{Method: "GET", Pattern: "/meal-billing-months/{month}", Portals: portals, Response: types.BillingMonth},
 		{Method: "POST", Pattern: "/meal-billing-months/{month}/release", Portals: portals, Request: types.BillingMonthRelease, Response: types.BillingMonth},
+	}
+}
+
+// staffPortalEnrollmentContractMounts lists the staff portal's enrollment,
+// holiday week and holiday guest routes and the guardian invitation
+// decisions that left their pass-through route files in #2352.
+func staffPortalEnrollmentContractMounts() []contractMount {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []contractMount{
+		{"/api/enrollment", enrollmentHTTP.ConfigRouteContracts()},
+		{"/api/enrollment", enrollmentHTTP.AdminRequestRouteContracts()},
+		{"/api/enrollment", enrollmentHTTP.AdminReviewRouteContracts()},
+		{"/api/holiday-weeks", enrollmentHTTP.HolidayHostRouteContracts()},
+		{"/api/holiday-guests", enrollmentHTTP.HolidayGuestRouteContracts()},
+		// People Directory's http role may not import the contract types;
+		// both decisions answer no data.
+		{"/api/guardians", []common.RouteContract{
+			{Method: "POST", Pattern: "/invitations/{invitationId}/approve", Portals: portals, NoData: true},
+			{Method: "POST", Pattern: "/invitations/{invitationId}/reject", Portals: portals, NoData: true},
+		}},
 	}
 }

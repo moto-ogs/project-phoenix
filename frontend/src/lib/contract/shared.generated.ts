@@ -91,6 +91,467 @@ export const feedCountResponseSchema: z.ZodType<feedCountResponse, unknown> = ob
   unread_count: safeInt,
 });
 
+/** Go: enrollment.FormAttachment */
+export interface FormAttachment {
+  document_id?: string;
+  label: string;
+  document_url: string;
+}
+
+export const FormAttachmentSchema: z.ZodType<FormAttachment, unknown> = object<FormAttachment>({
+  document_id: optional(str),
+  label: str,
+  document_url: str,
+});
+
+/** Go: enrollment.TranslatedText */
+export interface TranslatedText {
+  text: string;
+  source?: string;
+}
+
+export const TranslatedTextSchema: z.ZodType<TranslatedText, unknown> = object<TranslatedText>({
+  text: str,
+  source: optional(str),
+});
+
+/** Go: enrollment.RequestMailOutcome */
+export interface RequestMailOutcome {
+  kind: string;
+  outcome: string;
+  address_mark?: string;
+  stopped?: boolean;
+  outcome_at?: string;
+  created_at?: string;
+}
+
+export const RequestMailOutcomeSchema: z.ZodType<RequestMailOutcome, unknown> = object<RequestMailOutcome>({
+  kind: str,
+  outcome: str,
+  address_mark: optional(str),
+  stopped: optional(bool),
+  outcome_at: optional(instant),
+  created_at: optional(instant),
+});
+
+/** Go: enrollmenthttp.CareOfferingAvailabilityCondition */
+export interface CareOfferingAvailabilityCondition {
+  source: string;
+  operator: string;
+  value: number[] | null;
+}
+
+export const CareOfferingAvailabilityConditionSchema: z.ZodType<CareOfferingAvailabilityCondition, unknown> = object<CareOfferingAvailabilityCondition>({
+  source: str,
+  operator: str,
+  value: nullable(arr(safeInt)),
+});
+
+/** Go: enrollmenthttp.CareOfferingAvailabilityRule */
+export interface CareOfferingAvailabilityRule {
+  match: string;
+  conditions: CareOfferingAvailabilityCondition[] | null;
+}
+
+export const CareOfferingAvailabilityRuleSchema: z.ZodType<CareOfferingAvailabilityRule, unknown> = object<CareOfferingAvailabilityRule>({
+  match: str,
+  conditions: nullable(arr(CareOfferingAvailabilityConditionSchema)),
+});
+
+/** Go: enrollmenthttp.CareOfferingResponse */
+export interface CareOfferingResponse {
+  id: string;
+  phase_id: string;
+  activity_group_id?: string;
+  name: string;
+  description?: string;
+  days_of_week_mode: string;
+  available_days: string[] | null;
+  includes_holiday_care: boolean;
+  includes_lunch: boolean;
+  capacity?: number;
+  price_cents?: number;
+  is_active: boolean;
+  is_required: boolean;
+  counts_as_care: boolean;
+  auto_add_grade_levels: number[] | null;
+  availability_rule?: CareOfferingAvailabilityRule;
+  auto_add_trigger_offering_ids: string[] | null;
+  sort_order: number;
+  selection_group?: string;
+  selection_rule: string;
+  pickup_times?: Record<string, string>;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  created_at: string;
+  updated_at: string;
+}
+
+export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown> = object<CareOfferingResponse>({
+  id: str,
+  phase_id: str,
+  activity_group_id: optional(str),
+  name: str,
+  description: optional(str),
+  days_of_week_mode: str,
+  available_days: nullable(arr(str)),
+  includes_holiday_care: bool,
+  includes_lunch: bool,
+  capacity: optional(safeInt),
+  price_cents: optional(safeInt),
+  is_active: bool,
+  is_required: bool,
+  counts_as_care: bool,
+  auto_add_grade_levels: nullable(arr(safeInt)),
+  availability_rule: optional(CareOfferingAvailabilityRuleSchema),
+  auto_add_trigger_offering_ids: nullable(arr(str)),
+  sort_order: safeInt,
+  selection_group: optional(str),
+  selection_rule: str,
+  pickup_times: optional(rec(str)),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+  created_at: instant,
+  updated_at: instant,
+});
+
+/** Go: enrollmenthttp.PublicPhase */
+export interface PublicPhase {
+  id: string;
+  name: string;
+  kind: string;
+  service_start_date: string;
+  service_end_date: string;
+  enrollment_open_at?: string;
+  enrollment_close_at?: string;
+  show_status_reason_to_parent: boolean;
+  care_offering_selection_mode: string;
+  audience: string;
+  eligible_grade_levels: number[] | null;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+}
+
+export const PublicPhaseSchema: z.ZodType<PublicPhase, unknown> = object<PublicPhase>({
+  id: str,
+  name: str,
+  kind: str,
+  service_start_date: str,
+  service_end_date: str,
+  enrollment_open_at: optional(str),
+  enrollment_close_at: optional(str),
+  show_status_reason_to_parent: bool,
+  care_offering_selection_mode: str,
+  audience: str,
+  eligible_grade_levels: nullable(arr(safeInt)),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+});
+
+/** Go: enrollment.FormFieldOption */
+export interface FormFieldOption {
+  label: string;
+  value: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+}
+
+export const FormFieldOptionSchema: z.ZodType<FormFieldOption, unknown> = object<FormFieldOption>({
+  label: str,
+  value: str,
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+});
+
+/** Go: enrollment.FormFieldValidation */
+export interface FormFieldValidation {
+  min?: number;
+  max?: number;
+  pattern?: string;
+}
+
+export const FormFieldValidationSchema: z.ZodType<FormFieldValidation, unknown> = object<FormFieldValidation>({
+  min: optional(num),
+  max: optional(num),
+  pattern: optional(str),
+});
+
+/** Go: enrollment.FormFileOptions */
+export interface FormFileOptions {
+  allowed_types: string[] | null;
+  max_size_mb: number;
+  multiple?: boolean;
+}
+
+export const FormFileOptionsSchema: z.ZodType<FormFileOptions, unknown> = object<FormFileOptions>({
+  allowed_types: nullable(arr(str)),
+  max_size_mb: safeInt,
+  multiple: optional(bool),
+});
+
+/** Go: enrollment.VisibilityCondition */
+export interface VisibilityCondition {
+  source: string;
+  field?: string;
+  operator: string;
+  value?: unknown | null;
+}
+
+export const VisibilityConditionSchema: z.ZodType<VisibilityCondition, unknown> = object<VisibilityCondition>({
+  source: str,
+  field: optional(str),
+  operator: str,
+  value: optional(nullable(json)),
+});
+
+/** Go: enrollment.FormField */
+export interface FormField {
+  attachments?: FormAttachment[];
+  key: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  help_text?: string;
+  content?: string;
+  options?: FormFieldOption[];
+  allowed_times?: string[];
+  single_mode_grades?: number[];
+  validation?: FormFieldValidation;
+  file_options?: FormFileOptions;
+  sort_order: number;
+  applies_to_child?: boolean;
+  target?: string;
+  visible_when?: VisibilityCondition;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+}
+
+export const FormFieldSchema: z.ZodType<FormField, unknown> = object<FormField>({
+  attachments: optional(arr(FormAttachmentSchema)),
+  key: str,
+  label: str,
+  type: str,
+  required: optional(bool),
+  help_text: optional(str),
+  content: optional(str),
+  options: optional(arr(FormFieldOptionSchema)),
+  allowed_times: optional(arr(str)),
+  single_mode_grades: optional(arr(safeInt)),
+  validation: optional(FormFieldValidationSchema),
+  file_options: optional(FormFileOptionsSchema),
+  sort_order: safeInt,
+  applies_to_child: optional(bool),
+  target: optional(str),
+  visible_when: optional(VisibilityConditionSchema),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+});
+
+/** Go: enrollmenthttp.PublicFormSchemaResponse */
+export interface PublicFormSchemaResponse {
+  id: string;
+  version: number;
+  fields: FormField[] | null;
+  core_requirements: Record<string, boolean> | null;
+}
+
+export const PublicFormSchemaResponseSchema: z.ZodType<PublicFormSchemaResponse, unknown> = object<PublicFormSchemaResponse>({
+  id: str,
+  version: safeInt,
+  fields: nullable(arr(FormFieldSchema)),
+  core_requirements: nullable(rec(bool)),
+});
+
+/** Go: enrollmenthttp.PublicSchoolClassConfig */
+export interface PublicSchoolClassConfig {
+  collect: boolean;
+  available_classes: string[] | null;
+  require: boolean;
+  collect_grade_1: boolean;
+}
+
+export const PublicSchoolClassConfigSchema: z.ZodType<PublicSchoolClassConfig, unknown> = object<PublicSchoolClassConfig>({
+  collect: bool,
+  available_classes: nullable(arr(str)),
+  require: bool,
+  collect_grade_1: bool,
+});
+
+/** Go: enrollmenthttp.PublicCaptchaConfigResponse */
+export interface PublicCaptchaConfigResponse {
+  enabled: boolean;
+  site_key: string;
+}
+
+export const PublicCaptchaConfigResponseSchema: z.ZodType<PublicCaptchaConfigResponse, unknown> = object<PublicCaptchaConfigResponse>({
+  enabled: bool,
+  site_key: str,
+});
+
+/** Go: enrollment.LegalBlock */
+export interface LegalBlock {
+  attachments?: FormAttachment[];
+  key: string;
+  kind: string;
+  title: string;
+  label: string;
+  text: string;
+  required: boolean;
+  sort_order?: number;
+  source?: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  guardian_agreement?: boolean;
+}
+
+export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
+  attachments: optional(arr(FormAttachmentSchema)),
+  key: str,
+  kind: str,
+  title: str,
+  label: str,
+  text: str,
+  required: bool,
+  sort_order: optional(safeInt),
+  source: optional(str),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+  guardian_agreement: optional(bool),
+});
+
+/** Go: enrollmenthttp.PublicLegalTextsResponse */
+export interface PublicLegalTextsResponse {
+  agb: string;
+  agb_document_url: string;
+  agb_display_mode: string;
+  dsgvo: string;
+  email_contact: string;
+  photo: string;
+  terms_enabled: boolean;
+  dsgvo_enabled: boolean;
+  email_contact_enabled: boolean;
+  photo_enabled: boolean;
+  blocks: LegalBlock[] | null;
+  health_consent?: LegalBlock;
+}
+
+export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
+  agb: str,
+  agb_document_url: str,
+  agb_display_mode: str,
+  dsgvo: str,
+  email_contact: str,
+  photo: str,
+  terms_enabled: bool,
+  dsgvo_enabled: bool,
+  email_contact_enabled: bool,
+  photo_enabled: bool,
+  blocks: nullable(arr(LegalBlockSchema)),
+  health_consent: optional(LegalBlockSchema),
+});
+
+/** Go: enrollmenthttp.PublicLateInvitePrefill */
+export interface PublicLateInvitePrefill {
+  guardian_email: string;
+  guardian_first_name?: string;
+  guardian_last_name?: string;
+}
+
+export const PublicLateInvitePrefillSchema: z.ZodType<PublicLateInvitePrefill, unknown> = object<PublicLateInvitePrefill>({
+  guardian_email: str,
+  guardian_first_name: optional(str),
+  guardian_last_name: optional(str),
+});
+
+/** Go: enrollmenthttp.PublicEnrollmentFormBootstrapResponse */
+export interface PublicEnrollmentFormBootstrapResponse {
+  phase: PublicPhase;
+  schema: PublicFormSchemaResponse | null;
+  offerings: CareOfferingResponse[] | null;
+  care_offering_selection_mode: string;
+  care_required: boolean;
+  school_class: PublicSchoolClassConfig;
+  collect_grade_level: boolean;
+  care_offerings_enabled: boolean;
+  captcha_config: PublicCaptchaConfigResponse;
+  legal_texts: PublicLegalTextsResponse;
+  late_invite?: PublicLateInvitePrefill;
+}
+
+export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnrollmentFormBootstrapResponse, unknown> = object<PublicEnrollmentFormBootstrapResponse>({
+  phase: PublicPhaseSchema,
+  schema: nullable(PublicFormSchemaResponseSchema),
+  offerings: nullable(arr(CareOfferingResponseSchema)),
+  care_offering_selection_mode: str,
+  care_required: bool,
+  school_class: PublicSchoolClassConfigSchema,
+  collect_grade_level: bool,
+  care_offerings_enabled: bool,
+  captcha_config: PublicCaptchaConfigResponseSchema,
+  legal_texts: PublicLegalTextsResponseSchema,
+  late_invite: optional(PublicLateInvitePrefillSchema),
+});
+
+/** Go: enrollment.FormLegalBlock */
+export interface FormLegalBlock {
+  attachments?: FormAttachment[];
+  key: string;
+  kind: string;
+  title: string;
+  label: string;
+  text: string;
+  required: boolean;
+  enabled: boolean;
+  sort_order: number;
+  source?: string;
+  display_mode?: string;
+  document_url?: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  guardian_agreement?: boolean;
+}
+
+export const FormLegalBlockSchema: z.ZodType<FormLegalBlock, unknown> = object<FormLegalBlock>({
+  attachments: optional(arr(FormAttachmentSchema)),
+  key: str,
+  kind: str,
+  title: str,
+  label: str,
+  text: str,
+  required: bool,
+  enabled: bool,
+  sort_order: safeInt,
+  source: optional(str),
+  display_mode: optional(str),
+  document_url: optional(str),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+  guardian_agreement: optional(bool),
+});
+
+/** Go: enrollmenthttp.SubmitGuardianRequest */
+export interface SubmitGuardianRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  phone?: string | null;
+}
+
+/** Go: enrollmenthttp.SubmitOfferingDaysRow */
+export interface SubmitOfferingDaysRow {
+  offering_id?: number;
+  selected_days?: string[] | null;
+}
+
+/** Go: enrollmenthttp.SubmitChildRequest */
+export interface SubmitChildRequest {
+  id?: string | null;
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  target_grade_level?: number | null;
+  target_school_class?: string | null;
+  holiday_care_wish?: boolean | null;
+  custom_data?: Record<string, unknown | null> | null;
+  offering_ids?: number[] | null;
+  offering_days?: SubmitOfferingDaysRow[] | null;
+}
+
+/** Go: enrollmenthttp.SubmitSignatureRequest */
+export interface SubmitSignatureRequest {
+  method?: string;
+  image_png?: string;
+  typed_name?: string;
+}
+
 /** Go: peopledirectory.NewGuardianPhone */
 export interface NewGuardianPhone {
   phone_number?: string;
@@ -137,6 +598,49 @@ export interface NotifyRequest {
   token?: string;
   revision?: number;
 }
+
+/** Go: enrollment.HolidayGuestContact */
+export interface HolidayGuestContact {
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
+export const HolidayGuestContactSchema: z.ZodType<HolidayGuestContact, unknown> = object<HolidayGuestContact>({
+  name: str,
+  phone: str,
+  relationship: str,
+});
+
+/** Go: enrollment.HolidayHostAnswer */
+export interface HolidayHostAnswer {
+  key: string;
+  label: string;
+  type: string;
+  value: unknown | null;
+}
+
+export const HolidayHostAnswerSchema: z.ZodType<HolidayHostAnswer, unknown> = object<HolidayHostAnswer>({
+  key: str,
+  label: str,
+  type: str,
+  value: nullable(json),
+});
+
+/** Go: enrollment.HolidayHostHealth */
+export interface HolidayHostHealth {
+  allergies: string;
+  medication: string;
+  health_notes: string;
+  answers: HolidayHostAnswer[] | null;
+}
+
+export const HolidayHostHealthSchema: z.ZodType<HolidayHostHealth, unknown> = object<HolidayHostHealth>({
+  allergies: str,
+  medication: str,
+  health_notes: str,
+  answers: nullable(arr(HolidayHostAnswerSchema)),
+});
 
 /** Go: notifications.feedEntryResponse */
 export interface feedEntryResponse {
@@ -932,84 +1436,6 @@ export interface resentResponse {
 
 export const resentResponseSchema: z.ZodType<resentResponse, unknown> = object<resentResponse>({
   resent_count: safeInt,
-});
-
-/** Go: enrollment.TranslatedText */
-export interface TranslatedText {
-  text: string;
-  source?: string;
-}
-
-export const TranslatedTextSchema: z.ZodType<TranslatedText, unknown> = object<TranslatedText>({
-  text: str,
-  source: optional(str),
-});
-
-/** Go: enrollment.FormAttachment */
-export interface FormAttachment {
-  document_id?: string;
-  label: string;
-  document_url: string;
-}
-
-export const FormAttachmentSchema: z.ZodType<FormAttachment, unknown> = object<FormAttachment>({
-  document_id: optional(str),
-  label: str,
-  document_url: str,
-});
-
-/** Go: enrollment.FormFieldOption */
-export interface FormFieldOption {
-  label: string;
-  value: string;
-  translations?: Record<string, Record<string, TranslatedText> | null>;
-}
-
-export const FormFieldOptionSchema: z.ZodType<FormFieldOption, unknown> = object<FormFieldOption>({
-  label: str,
-  value: str,
-  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
-});
-
-/** Go: enrollment.FormFieldValidation */
-export interface FormFieldValidation {
-  min?: number;
-  max?: number;
-  pattern?: string;
-}
-
-export const FormFieldValidationSchema: z.ZodType<FormFieldValidation, unknown> = object<FormFieldValidation>({
-  min: optional(num),
-  max: optional(num),
-  pattern: optional(str),
-});
-
-/** Go: enrollment.FormFileOptions */
-export interface FormFileOptions {
-  allowed_types: string[] | null;
-  max_size_mb: number;
-  multiple?: boolean;
-}
-
-export const FormFileOptionsSchema: z.ZodType<FormFileOptions, unknown> = object<FormFileOptions>({
-  allowed_types: nullable(arr(str)),
-  max_size_mb: safeInt,
-  multiple: optional(bool),
-});
-
-/** Go: enrollment.VisibilityCondition */
-export interface VisibilityCondition {
-  source: string;
-  field?: string;
-  operator: string;
-  value?: unknown | null;
-}
-
-export const VisibilityConditionSchema: z.ZodType<VisibilityCondition, unknown> = object<VisibilityCondition>({
-  source: str,
-  field: optional(str),
-  operator: str,
-  value: optional(nullable(json)),
 });
 
 /** Go: portal.Event */
@@ -2375,41 +2801,6 @@ export const HolidayGuardianInputSchema: z.ZodType<HolidayGuardianInput, unknown
   phone: str,
 });
 
-/** Go: enrollment.FormLegalBlock */
-export interface FormLegalBlock {
-  attachments?: FormAttachment[];
-  key: string;
-  kind: string;
-  title: string;
-  label: string;
-  text: string;
-  required: boolean;
-  enabled: boolean;
-  sort_order: number;
-  source?: string;
-  display_mode?: string;
-  document_url?: string;
-  translations?: Record<string, Record<string, TranslatedText> | null>;
-  guardian_agreement?: boolean;
-}
-
-export const FormLegalBlockSchema: z.ZodType<FormLegalBlock, unknown> = object<FormLegalBlock>({
-  attachments: optional(arr(FormAttachmentSchema)),
-  key: str,
-  kind: str,
-  title: str,
-  label: str,
-  text: str,
-  required: bool,
-  enabled: bool,
-  sort_order: safeInt,
-  source: optional(str),
-  display_mode: optional(str),
-  document_url: optional(str),
-  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
-  guardian_agreement: optional(bool),
-});
-
 /** Go: enrollment.HolidayFormField */
 export interface HolidayFormField {
   attachments?: FormAttachment[];
@@ -2650,25 +3041,6 @@ export const HolidayRegistrationCriterionSchema: z.ZodType<HolidayRegistrationCr
   stated: str,
   checked: nullable(str),
   checked_at: nullable(instant),
-});
-
-/** Go: enrollment.RequestMailOutcome */
-export interface RequestMailOutcome {
-  kind: string;
-  outcome: string;
-  address_mark?: string;
-  stopped?: boolean;
-  outcome_at?: string;
-  created_at?: string;
-}
-
-export const RequestMailOutcomeSchema: z.ZodType<RequestMailOutcome, unknown> = object<RequestMailOutcome>({
-  kind: str,
-  outcome: str,
-  address_mark: optional(str),
-  stopped: optional(bool),
-  outcome_at: optional(instant),
-  created_at: optional(instant),
 });
 
 /** Go: enrollment.HolidayPromotion */

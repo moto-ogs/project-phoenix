@@ -665,9 +665,9 @@ func (rs *Resource) restoreAdminRequest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"restored_children":   len(outcome.RestoredChildIDs),
-		"waitlisted_children": len(outcome.WaitlistedChildIDs),
+	common.Respond(w, r, http.StatusOK, AdminRestoreResponse{
+		RestoredChildren:   len(outcome.RestoredChildIDs),
+		WaitlistedChildren: len(outcome.WaitlistedChildIDs),
 	}, "Request restored")
 }
 
@@ -749,4 +749,11 @@ func actorRoleFromClaims(roles []string) string {
 		}
 	}
 	return "admin"
+}
+
+// AdminRestoreResponse counts the children a restore brought back and the
+// ones it put on the waiting list.
+type AdminRestoreResponse struct {
+	RestoredChildren   int `json:"restored_children"`
+	WaitlistedChildren int `json:"waitlisted_children"`
 }

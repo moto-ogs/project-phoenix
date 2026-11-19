@@ -69,7 +69,7 @@ type careUsageExportFiltersRequest struct {
 	Search          string   `json:"search,omitempty"`
 }
 
-type careUsageReportResponse struct {
+type CareUsageReportResponse struct {
 	Phase         careUsagePhaseResponse          `json:"phase"`
 	Filters       careUsageAppliedFiltersResponse `json:"filters"`
 	Totals        capability.CareUsageTotals      `json:"totals"`
@@ -496,11 +496,11 @@ func parseRequiredPositiveInt64(raw, field string) (int64, error) {
 	return id, nil
 }
 
-func toCareUsageReportResponse(report *capability.CareUsageReport) *careUsageReportResponse {
+func toCareUsageReportResponse(report *capability.CareUsageReport) *CareUsageReportResponse {
 	if report == nil {
 		return nil
 	}
-	out := &careUsageReportResponse{
+	out := &CareUsageReportResponse{
 		Phase: careUsagePhaseResponse{
 			ID:   strconv.FormatInt(report.Phase.ID, 10),
 			Name: report.Phase.Name,

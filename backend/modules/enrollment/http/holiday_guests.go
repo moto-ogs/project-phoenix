@@ -35,11 +35,11 @@ func NewHolidayHostGuestResource(participants *HolidayHostResource, guests capab
 	return &resource
 }
 
-type holidayGuestGroupRequest struct {
+type HolidayGuestGroupRequest struct {
 	GroupID int64 `json:"group_id,string"`
 }
 
-func (req *holidayGuestGroupRequest) Bind(*http.Request) error {
+func (req *HolidayGuestGroupRequest) Bind(*http.Request) error {
 	if req.GroupID <= 0 {
 		return errors.New("group_id is required")
 	}
@@ -51,7 +51,7 @@ func (rs *HolidayHostResource) assignGuestGroup(w http.ResponseWriter, r *http.R
 	if !ok {
 		return
 	}
-	request := &holidayGuestGroupRequest{}
+	request := &HolidayGuestGroupRequest{}
 	if err := render.Bind(r, request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

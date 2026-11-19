@@ -267,7 +267,7 @@ func (rs *Resource) decideRolloverReview(w http.ResponseWriter, r *http.Request)
 		rs.mapRolloverError(w, r, txErr)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": "ok"}, "Decision applied")
+	common.Respond(w, r, http.StatusOK, RolloverReviewDecisionResponse{Status: "ok"}, "Decision applied")
 }
 
 // --- helpers ---
@@ -388,4 +388,9 @@ func (rs *Resource) mapRolloverError(w http.ResponseWriter, r *http.Request, err
 // logger today. Kept as a helper so swapping later is one edit.
 func (rs *Resource) logger() *slog.Logger {
 	return slog.Default()
+}
+
+// RolloverReviewDecisionResponse confirms a rollover review decision.
+type RolloverReviewDecisionResponse struct {
+	Status string `json:"status"`
 }

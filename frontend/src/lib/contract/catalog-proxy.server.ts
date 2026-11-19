@@ -23,7 +23,7 @@ export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 type PortalHandlers = Pick<
   ReturnType<typeof makePortalHandlers>,
-  "get" | "post" | "put" | "patch" | "del" | "api"
+  "get" | "post" | "put" | "patch" | "delWithBody" | "api"
 >;
 
 type Envelope = z.ZodType<{ data: unknown }>;
@@ -35,6 +35,14 @@ const isParam = (segment: string) =>
 
 /** A parameter never stands for an empty or a dot segment. */
 const UNSAFE_SEGMENTS = new Set(["", ".", ".."]);
+
+/** No body, or the empty object an empty body parses to. */
+const isEmptyBody = (body: unknown) =>
+  body === undefined ||
+  (typeof body === "object" &&
+    body !== null &&
+    !Array.isArray(body) &&
+    Object.keys(body).length === 0);
 
 /** A route this proxy can serve: one decoder for its one response shape. */
 function hasOneDecoder(
@@ -131,8 +139,24 @@ export function makeCatalogProxy(
     const answer = await portal.api(method, endpoint, token, undefined, {
       request,
     });
+    return decoded(route, answer);
+  };
+
+  // A DELETE may carry a JSON body (a reason, #2352); an empty one travels
+  // as no body at all.
+  const remove = async (
+    request: NextRequest,
+    body: unknown,
+    token: string,
+    params: Record<string, unknown>,
+  ) => {
+    const { route, endpoint } = target(request, params.path);
+    const sent = isEmptyBody(body) ? undefined : body;
+    const answer = await portal.api(method, endpoint, token, sent, {
+      request,
+    });
     // A DELETE may answer 204; every other empty answer breaks the contract.
-    if (method === "DELETE" && answer === undefined) return null;
+    if (answer === undefined) return null;
     return decoded(route, answer);
   };
 
@@ -152,7 +176,7 @@ export function makeCatalogProxy(
 
   const handlers = {
     GET: () => portal.get(read),
-    DELETE: () => portal.del(read),
+    DELETE: () => portal.delWithBody(remove),
     POST: () => portal.post(write),
     PUT: () => portal.put(write),
     PATCH: () => portal.patch(write),

@@ -483,6 +483,18 @@ export const routes = {
     request: requestBody<bulkInviteRequest>(),
     response: success(bulkInviteResponseSchema),
   },
+  "POST /api/guardians/invitations/{invitationId}/approve": {
+    method: "POST",
+    pattern: "/api/guardians/invitations/{invitationId}/approve",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "POST /api/guardians/invitations/{invitationId}/reject": {
+    method: "POST",
+    pattern: "/api/guardians/invitations/{invitationId}/reject",
+    portals: ["tenant"],
+    response: noData,
+  },
   "POST /api/guardians/students/{studentId}/guardians": {
     method: "POST",
     pattern: "/api/guardians/students/{studentId}/guardians",

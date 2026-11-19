@@ -33,9 +33,20 @@ const withBody =
       data: await handler(request, body, "token", await context.params),
     });
   };
+// parseRequestBody reads an empty body as {}.
+const withOptionalBody =
+  (handler: Handler) =>
+  async (request: NextRequest, context: { params: Promise<unknown> }) => {
+    sessionReads++;
+    const text = await request.text();
+    const body: unknown = text ? JSON.parse(text) : {};
+    return Response.json({
+      data: await handler(request, body, "token", await context.params),
+    });
+  };
 const portal = {
   get: noBody,
-  del: noBody,
+  delWithBody: withOptionalBody,
   post: withBody,
   put: withBody,
   patch: withBody,
@@ -176,6 +187,27 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce(undefined);
     expect(await data(await call("DELETE", ["rows", "1"]))).toBeNull();
     expect(sessionReads).toBe(1);
+  });
+
+  it("sends a DELETE without a body as no body", async () => {
+    api.mockResolvedValueOnce(undefined);
+    await call("DELETE", ["rows", "1"]);
+    expect(api).toHaveBeenCalledExactlyOnceWith(
+      "DELETE",
+      "/parent/rows/1",
+      "token",
+      undefined,
+      { request: expect.any(NextRequest) },
+    );
+  });
+
+  it("forwards the body of a DELETE and answers its decoded data", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    const response = await call("DELETE", ["rows", "1"], "", {
+      reason: "Doppelt",
+    });
+    expect(await data(response)).toEqual({ name: "Ada" });
+    expect(api.mock.calls[0]?.[3]).toEqual({ reason: "Doppelt" });
   });
 
   it.each([

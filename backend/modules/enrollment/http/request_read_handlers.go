@@ -30,9 +30,7 @@ func (rs *Resource) unreadAdminRequestCount(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{
-		"unread_count": unread,
-	}, "Unread enrollment count retrieved")
+	common.Respond(w, r, http.StatusOK, AdminUnreadRequestCountResponse{UnreadCount: unread}, "Unread enrollment count retrieved")
 }
 
 // markAdminRequestRead serves PUT /admin/requests/{id}/read.
@@ -63,7 +61,7 @@ func (rs *Resource) writeReadState(w http.ResponseWriter, r *http.Request, write
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 // markAllAdminRequestsRead serves POST /admin/requests/mark-all-read.
@@ -79,5 +77,11 @@ func (rs *Resource) markAllAdminRequestsRead(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
+}
+
+// AdminUnreadRequestCountResponse is the badge of the requests the caller
+// has not opened yet.
+type AdminUnreadRequestCountResponse struct {
+	UnreadCount int `json:"unread_count"`
 }
