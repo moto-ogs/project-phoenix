@@ -3,6 +3,7 @@ package presenceprojectionhttp
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	lists "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -38,6 +39,14 @@ func StudentRouteContracts() []common.RouteContract {
 			Query:    []common.QueryParam{{Name: "start", Kind: common.QueryString}, {Name: "end", Kind: common.QueryString}},
 			Response: attendanceHistoryResponse{},
 		},
+		{
+			Method: "GET", Pattern: "/{id}/attendance-history/export", Portals: tenant, File: true,
+			Query: []common.QueryParam{
+				{Name: "format", Kind: common.QueryString, Values: []string{string(lists.FormatPDF), string(lists.FormatDOCX), string(lists.FormatXLSX)}},
+				{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
+			},
+		},
+		{Method: "POST", Pattern: "/export", Portals: tenant, Request: studentExportRequest{}, File: true},
 		{
 			Method: "GET", Pattern: "/day-log", Portals: tenant,
 			Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID}},

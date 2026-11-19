@@ -58,7 +58,23 @@ func (rs *Resource) uploadChildMessageAttachment(w http.ResponseWriter, r *http.
 		common.RenderError(w, r, common.ErrorInternalServer(fmt.Errorf("write message attachment: %w", err)))
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, stored.Attachment, "Attachment stored")
+	common.Respond(w, r, http.StatusCreated, messageAttachmentResponse{
+		ID: common.ID(stored.Attachment.ID), Filename: stored.Attachment.Filename,
+		// A file is at most maxMessageAttachmentBytes, so its size fits an int.
+		SizeBytes: int(stored.Attachment.SizeBytes), ContentType: stored.Attachment.ContentType,
+		Width: stored.Attachment.Width, Height: stored.Attachment.Height,
+	}, "Attachment stored")
+}
+
+// messageAttachmentResponse is a stored attachment as the upload answers it:
+// the attachment the guardian's next message names by its ID.
+type messageAttachmentResponse struct {
+	ID          common.ID `json:"id"`
+	Filename    string    `json:"filename"`
+	SizeBytes   int       `json:"size_bytes"`
+	ContentType string    `json:"content_type"`
+	Width       int       `json:"width,omitempty"`
+	Height      int       `json:"height,omitempty"`
 }
 
 // downloadChildMessageAttachment streams one file of the guardian's

@@ -77,6 +77,8 @@ func AdminRequestRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/admin/requests/{id}/", Portals: portals, Response: AdminRequestDetail{}},
 		{Method: "DELETE", Pattern: "/admin/requests/{id}/", Portals: portals, Request: AdminEnrollmentDeleteRequest{}, Response: AdminEnrollmentDeletionImpact{}},
 		{Method: "GET", Pattern: "/admin/requests/{id}/form-labels", Portals: portals, Response: FormLabelsResponse{}},
+		// One proof file of the request (#4783), through the portal's proxy (#2352).
+		{Method: "GET", Pattern: "/admin/requests/{id}/uploads/{uploadId}", Portals: portals, File: true},
 		{Method: "PUT", Pattern: "/admin/requests/{id}/read", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/admin/requests/{id}/read", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/admin/requests/{id}/delete-impact", Portals: portals, Response: AdminEnrollmentDeletionImpact{}},

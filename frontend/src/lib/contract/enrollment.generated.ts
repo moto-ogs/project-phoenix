@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   json,
@@ -2159,6 +2160,12 @@ export const routes = {
     pattern: "/api/enrollment/admin/requests/{id}/mails",
     portals: ["tenant"],
     response: success(z.array(RequestMailOutcomeSchema)),
+  },
+  "GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/enrollment/admin/students/{studentId}/requests/": {
     method: "GET",

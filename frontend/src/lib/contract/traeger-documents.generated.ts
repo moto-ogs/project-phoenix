@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   arr,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   noData,
@@ -102,6 +103,12 @@ export const routes = {
     pattern: "/api/traeger-documents/",
     portals: ["tenant"],
     response: success(z.array(SharedDocumentSchema)),
+  },
+  "GET /api/traeger-documents/{id}/file": {
+    method: "GET",
+    pattern: "/api/traeger-documents/{id}/file",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /traeger/documents/audiences": {
     method: "GET",

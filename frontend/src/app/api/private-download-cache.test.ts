@@ -46,9 +46,10 @@ vi.mock("~/lib/server-api-url", () => ({
   getServerApiUrl: () => "http://localhost:8080",
 }));
 
+// Each route reads its own params; `never` takes every handler's context.
 type Route = (
   request: NextRequest,
-  context: { params: Promise<typeof downloadParams> },
+  context: { params: Promise<never> },
 ) => Promise<Response>;
 
 const downloadParams = {
@@ -59,11 +60,15 @@ const downloadParams = {
   token: "status-token",
 };
 
-const routes: Array<[string, string, () => Promise<Route>]> = [
+const routes: Array<
+  [string, string, () => Promise<Route>, Record<string, unknown>?]
+> = [
+  // A file the contract registers runs through the portal's catalog proxy.
   [
     "student export",
     "POST",
     async () => (await import("./students/export/route")).POST,
+    {},
   ],
   [
     "planning export",
@@ -73,14 +78,14 @@ const routes: Array<[string, string, () => Promise<Route>]> = [
   [
     "staff streaming export",
     "GET",
-    async () => (await import("./staff/time-tracking/export/route")).GET,
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["staff", "time-tracking", "export"] },
   ],
   [
     "student document",
     "GET",
-    async () =>
-      (await import("./students/[id]/documents/[documentId]/download/route"))
-        .GET,
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["students", "1", "documents", "2", "download"] },
   ],
   [
     "parent document",
@@ -106,8 +111,8 @@ const routes: Array<[string, string, () => Promise<Route>]> = [
   [
     "operator export",
     "GET",
-    async () =>
-      (await import("./operator/billing/key-date-counts/export/route")).GET,
+    async () => (await import("./operator/[...path]/route")).GET,
+    { path: ["billing", "key-date-counts", "export"] },
   ],
   [
     "Träger export",
@@ -122,15 +127,17 @@ const routes: Array<[string, string, () => Promise<Route>]> = [
   ],
 ];
 
-function call(route: Route, method: string) {
+function call(
+  route: Route,
+  method: string,
+  params: Record<string, unknown> = downloadParams,
+) {
   return route(
     new NextRequest("http://localhost:3000/api/export?format=pdf", {
       method,
       ...(method === "POST" ? { body: "{}" } : {}),
     }),
-    {
-      params: Promise.resolve(downloadParams),
-    },
+    { params: Promise.resolve(params) as Promise<never> },
   );
 }
 
@@ -145,7 +152,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("private file responses (#5119)", () => {
   it.each(routes)(
     "%s: protects real file bytes and download headers",
-    async (_name, method, load) => {
+    async (_name, method, load, params) => {
       const bytes = new Uint8Array([0, 255, 37, 80, 68, 70]);
       mockFetch.mockResolvedValue(
         new Response(bytes, {
@@ -159,7 +166,7 @@ describe("private file responses (#5119)", () => {
         }),
       );
 
-      const response = await call(await load(), method);
+      const response = await call(await load(), method, params);
 
       expect(response.status).toBe(200);
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -187,7 +194,7 @@ describe("private file responses (#5119)", () => {
       }),
     );
     const { POST } = await import("./students/export/route");
-    const response = await call(POST, "POST");
+    const response = await call(POST, "POST", {});
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(response.headers.get("Content-Type")).toBe(contentType);
@@ -197,7 +204,7 @@ describe("private file responses (#5119)", () => {
 
   it.each(routes)(
     "%s: protects backend errors",
-    async (_name, method, load) => {
+    async (_name, method, load, params) => {
       for (const status of [401, 403, 503]) {
         // A 401 renews the session first; a refused renewal keeps it a 401.
         if (status === 401) {
@@ -216,7 +223,7 @@ describe("private file responses (#5119)", () => {
             }),
           ),
         );
-        const response = await call(await load(), method);
+        const response = await call(await load(), method, params);
         expect(response.status).toBe(status);
         expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       }
@@ -235,8 +242,10 @@ describe("private file responses (#5119)", () => {
         headers: { "Content-Type": "application/pdf", "Content-Length": "4" },
       }),
     );
-    const { GET } = await import("./staff/time-tracking/export/route");
-    const response = await call(GET, "GET");
+    const { GET } = await import("./[...path]/route");
+    const response = await call(GET, "GET", {
+      path: ["staff", "time-tracking", "export"],
+    });
     expect(response.status).toBe(200);
     // Taken over at once (forwardedBody), so a collected upstream Response
     // cannot cancel it; the reads below prove it still streams unbuffered.

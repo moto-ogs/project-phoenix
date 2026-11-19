@@ -10,6 +10,7 @@ import {
   underOutsideHead,
 } from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
+import { fileAnswer, multipart } from "~/lib/contract/runtime";
 
 /**
  * A registered route reaches its portal's catalog proxy only when no route
@@ -51,6 +52,8 @@ const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/register/[[...path]]": "tenant",
   "/api/auth/staff-preview/[...path]": "tenant",
   "/api/auth/password-reset/[[...path]]": "tenant",
+  // students/[id] would answer the child list export (#2352).
+  "/api/students/export": "tenant",
   "/api/caterer/auth/mfa/trusted-devices/[...path]": "caterer",
   "/api/caterer/auth/passkeys/[...path]": "caterer",
   "/api/caterer/auth/password-reset/[[...path]]": "caterer",
@@ -135,6 +138,13 @@ const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
     return {
       portal: name,
       pattern,
+      // A file answer or a multipart upload (ADR 0270, addendum 2026-11-19).
+      streamed: routes.some(
+        (route) =>
+          route.pattern === pattern &&
+          ((route as { response: unknown }).response === fileAnswer ||
+            (route as { request?: unknown }).request === multipart),
+      ),
       // Without a trailing slash, as the browser calls it.
       bff:
         portal === null
@@ -213,6 +223,32 @@ describe("route file in front of a portal's catalog proxy", () => {
             isParam(segment) && !isParam(pattern[index] ?? ""),
         );
       expect(shadowing, `${selected} answers ${sample}`).toEqual([]);
+    },
+  );
+});
+
+/**
+ * A file or upload the contract registers streams through the catalog proxy,
+ * which answers it private and uncached (#2352). A route file of its own on
+ * the same path would win and keep the old helper alive beside the
+ * contract: the file goes once its route is registered.
+ */
+describe("registered file or upload route", () => {
+  const streamed = cases.filter((entry) => entry.streamed);
+
+  it("exists in the contract", () => {
+    expect(streamed.length).toBeGreaterThan(0);
+  });
+
+  it.each(streamed)(
+    "$portal $bff reaches the catalog proxy, not a route file",
+    ({ bff, catchAlls }) => {
+      const sample = bff!
+        .split("/")
+        .map((segment) => (isParam(segment) ? "1" : segment))
+        .join("/");
+      const selected = routeFiles.find(({ match }) => match(sample))?.route;
+      expect(catchAlls).toContain(selected);
     },
   );
 });

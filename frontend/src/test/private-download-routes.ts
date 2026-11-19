@@ -1,6 +1,11 @@
-/** Private, session- or token-bound file routes. Audited for #5119. */
+/**
+ * Private, session- or token-bound file routes. Audited for #5119. A file
+ * route the contract registers (`response: fileAnswer`) has no route file:
+ * the portal's catalog proxy answers it private and uncached
+ * (catalog-proxy.server.ts, #2352), and `route-cache-policy.test.ts` keeps
+ * it out of this list.
+ */
 export const PRIVATE_DOWNLOAD_ROUTES = [
-  ["announcement-attachments/[announcementId]/[attachmentId]/download", "GET"],
   ["birthdays/staff-export", "POST"],
   ["calendar/appointments/[appointmentId]/ics", "GET"],
   ["caterer/orders/export", "GET"],
@@ -8,11 +13,9 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["enrollment/admin/reports/care-usage/export", "POST"],
   ["enrollment/admin/reports/class-roster/export", "POST"],
   ["enrollment/admin/requests/[id]/signature-proof", "GET"],
-  ["enrollment/admin/requests/[id]/uploads/[uploadId]", "GET"],
   ["enrollment/admin/students/[studentId]/requests/export", "POST"],
   ["enrollment/phases/[id]/export", "POST"],
   ["enrollment/requests/[token]/signature-proof", "GET"],
-  ["files/folders/[folderId]/files/[fileId]/download", "GET"],
   ["guardians/payment-overview/export", "POST"],
   ["holiday-registrations/[token]/documents/[documentId]", "GET"],
   ["holiday-weeks/[weekId]/participants/export/[format]", "GET"],
@@ -24,8 +27,6 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["meal-plan/orders/month/export", "GET"],
   ["meal-plan/participants/export", "GET"],
   ["meal-plan/participants/week/export", "GET"],
-  ["messages/attachments/[attachmentId]/download", "GET"],
-  ["operator/billing/key-date-counts/export", "GET"],
   ["parent-announcements/[announcementId]/declaration-export", "GET"],
   ["parent-announcements/[announcementId]/letters-pdf", "GET"],
   ["parent/calendar/appointments/[appointmentId]/ics", "GET"],
@@ -36,10 +37,6 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["parent/me/documents/[organizationId]/[documentId]/pdf", "GET"],
   ["parent/me/documents/[organizationId]/contracts/[contractId]/pdf", "GET"],
   ["parent/me/documents/[organizationId]/shared/[documentId]/file", "GET"],
-  [
-    "parent/me/messages/children/[studentId]/attachments/[attachmentId]/download",
-    "GET",
-  ],
   [
     "parent/me/news/[announcementId]/attachments/[attachmentId]/download",
     "GET",
@@ -52,23 +49,15 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["school/parent-letters/[announcementId]/declaration-export", "GET"],
   ["school/parent-letters/[announcementId]/letters-pdf", "GET"],
   ["school/staff-messages/attachments/[attachmentId]/download", "GET"],
-  ["staff-messages/attachments/[attachmentId]/download", "GET"],
   ["staff-shifts/export", "POST"],
-  ["staff/[id]/documents/[documentId]/download", "GET"],
   ["staff/[id]/time-tracking/export", "GET"],
-  ["staff/time-tracking/export", "GET"],
   ["statistics/care-time-overruns/export", "GET"],
   ["statistics/export", "GET"],
-  ["students/[id]/accident-reports/[documentId]/pdf", "GET"],
-  ["students/[id]/attendance-history/export", "GET"],
-  ["students/[id]/documents/[documentId]/download", "GET"],
-  ["students/care-schedule-change-requests/[requestId]/proof", "GET"],
   ["students/day-log/export", "GET"],
   ["students/export", "POST"],
   ["surveys/[surveyId]/results/export", "GET"],
   ["timetable/betreuungsplan/export", "POST"],
   ["timetable/lists/export", "POST"],
-  ["traeger-documents/[id]/file", "GET"],
   ["traeger/access-log/export", "GET"],
   ["traeger/billing-families/[id]/export", "GET"],
   ["traeger/billing-families/export", "GET"],
