@@ -284,7 +284,7 @@ export async function fetchCareOfferingOptions(): Promise<
 }
 
 /** A filter question of the contract, without the type the list needs not. */
-export function mapEnrollmentAnswerFilter(
+function mapEnrollmentAnswerFilter(
   filter: EnrollmentAnswerFilterResponse,
 ): EnrollmentAnswerFilter {
   return {
