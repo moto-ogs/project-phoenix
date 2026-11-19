@@ -46,11 +46,11 @@ func TestTeacherHintBindings(t *testing.T) {
 		got, err := groupLiveTeacherHintReader{hints: hints}.TeacherHints(context.Background(), []int64{7, 8}, grouplive.Date(day))
 		require.NoError(t, err)
 		assert.Equal(t, day, hints.day)
-		assert.Equal(t, []grouplive.TeacherHint{
+		assert.Equal(t, []grouplive.GroupLiveTeacherHint{
 			{Body: "Heute Sportfest", AuthorName: "Lena Lehrerin", SchoolClass: "3b"},
 			{Body: "Sportzeug fehlt", AuthorName: "Tom Lehrer"},
 		}, got[7])
-		assert.Equal(t, []grouplive.TeacherHint{{Body: "Hat Bauchweh", AuthorName: "Lena Lehrerin"}}, got[8])
+		assert.Equal(t, []grouplive.GroupLiveTeacherHint{{Body: "Hat Bauchweh", AuthorName: "Lena Lehrerin"}}, got[8])
 	})
 
 	t.Run("supervision as a list with the child", func(t *testing.T) {

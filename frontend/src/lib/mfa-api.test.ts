@@ -120,6 +120,32 @@ describe("caterer second factor (#4497)", () => {
       "/api/caterer/auth/mfa/trusted-devices/7",
     ]);
   });
+
+  it("reads the parents' devices at the backend path, bare or in the envelope", async () => {
+    const device = {
+      id: 3,
+      created_at: "2026-09-01T10:00:00Z",
+      expires_at: "2026-12-01T10:00:00Z",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ success: true, message: "Success", data: [device] }),
+      )
+      .mockResolvedValueOnce(Response.json([device]))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    global.fetch = fetchMock as unknown as typeof global.fetch;
+
+    await expect(listTrustedDevices("parent")).resolves.toEqual([device]);
+    await expect(listTrustedDevices("parent")).resolves.toEqual([device]);
+    await revokeTrustedDevice("parent", 3);
+
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "/api/parent/me/mfa/trusted-devices",
+      "/api/parent/me/mfa/trusted-devices",
+      "/api/parent/me/mfa/trusted-devices/3",
+    ]);
+  });
 });
 
 it("all portal MFA results exclude completed session credentials", () => {

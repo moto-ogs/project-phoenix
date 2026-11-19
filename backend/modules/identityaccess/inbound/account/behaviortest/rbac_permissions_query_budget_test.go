@@ -3,11 +3,14 @@
 package account_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -75,6 +78,15 @@ func TestRBACPermissionsListQueryBudget(t *testing.T) {
 	// using it. A properly permitted second school reads the exact same rows.
 	rr, _ := f.get(t, "/auth/permissions/?resource="+resource, foreignToken)
 	rbacBudgetCollection(t, rr, "Permissions retrieved successfully", want)
+	// One permission of the catalogue, as the staff portal's proxy reads it
+	// (#2352).
+	rr, _ = f.get(t, fmt.Sprintf("/auth/permissions/%d/", decoy.ID), f.token)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var one struct {
+		Data map[string]any `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &one))
+	assert.Equal(t, decoyDTO, one.Data)
 	for _, queries := range measurements {
 		querybudgets.AssertQueryBudget(t, "api.auth.permissions.list", queries)
 	}

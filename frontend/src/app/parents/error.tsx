@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ButtonLink } from "~/components/ui/button";
 import { logDisplayedCrash } from "~/lib/error-log";
+import { reloadAfterChunkLoadError } from "~/lib/chunk-load-recovery";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { parentPath } from "~/lib/parent-url";
 
@@ -27,6 +28,10 @@ export default function ParentError({
   const catalog = useTranslations("errorCatalog.actions");
 
   useEffect(() => {
+    // A chunk that failed to load usually loads after a fresh page load
+    // (weak network, or a deploy replaced the build); only a repeat failure
+    // is reported.
+    if (reloadAfterChunkLoadError(error)) return;
     Sentry.captureException(error);
     logDisplayedCrash(error);
   }, [error]);

@@ -8,8 +8,8 @@ import (
 
 // childWriteRouteContracts registers the guardian's writes for one child
 // (#2352): one-day care changes, photo consent, meal participation,
-// parent conference bookings and removing a connected account.
-// Submitting a sick note stays outside: its answer shape follows the query.
+// parent conference bookings, removing a connected account and the sick
+// note, whose create answers the status days with the pending request.
 func childWriteRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalParent}
 	child := "/me/children/{studentId}"
@@ -23,6 +23,8 @@ func childWriteRouteContracts() []common.RouteContract {
 			Method: "DELETE", Pattern: child + "/care-exception", Portals: portals,
 			Query: []common.QueryParam{{Name: "date", Kind: common.QueryDate}}, NoData: true,
 		},
+		{Method: "GET", Pattern: child + "/sick-note", Portals: portals, Query: dayRange, Response: []StatusDayResponse{}},
+		{Method: "POST", Pattern: child + "/sick-note", Portals: portals, Request: SubmitSickNoteRequest{}, Response: SickNoteEnvelopeResponse{}},
 		{Method: "PUT", Pattern: child + "/consents/photo", Portals: portals, Response: []ChildConsentResponse{}},
 		{Method: "DELETE", Pattern: child + "/consents/photo", Portals: portals, Response: []ChildConsentResponse{}},
 		{Method: "GET", Pattern: meals, Portals: portals, Query: dayRange, Response: MealParticipationResponse{}},

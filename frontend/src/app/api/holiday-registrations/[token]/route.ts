@@ -6,6 +6,12 @@ import { canonicalForwardedFor } from "~/lib/client-headers.server";
 // Public holiday registration (#4661): the one link of a holiday period, no
 // session. The backend counts attempts per client IP, so the canonical
 // address travels along.
+//
+// Temporary (#2352): the client reads and sends the link at
+// /api/traeger/holiday-registrations/{token} through the Träger proxy's
+// public routes since this release. This path stays for an open form or an
+// installed app with an older bundle; delete it with its test after the next
+// production deploy. The uploads and documents below stay files.
 const path = (
   request: Request,
   params: Record<string, string | string[] | undefined>,

@@ -708,9 +708,17 @@ function TenantPageView({
               )}
             </div>
           </div>
-          {/* Eine Bedienhöhe und eine gemeinsame Mitte für Seitenaktionen
-              und Hilfe. Symbolhüllen sind flex, damit die Text-Grundlinie
-              keinen zusätzlichen Abstand unter dem Knopf erzeugt. */}
+          {/* Unter lg setzt die Portalhülle hier das „?“ der Seitenhilfe ein:
+              als erstes Element rechts neben dem Titel, vor Aktionen und
+              Kebab. Es steht außerhalb der Aktionsgruppe und bricht deshalb
+              nicht mit ihr in eine eigene Zeile um. So steht es auf jeder
+              Seite an derselben Stelle (#7568, WCAG 3.2.6). */}
+          <div className={cn("contents", HEAD_CONTROL_HEIGHT)}>
+            <MobilePageHelpTarget />
+          </div>
+          {/* Eine Bedienhöhe und eine gemeinsame Mitte für Seitenaktionen.
+              Symbolhüllen sind flex, damit die Text-Grundlinie keinen
+              zusätzlichen Abstand unter dem Knopf erzeugt. */}
           <div
             className={cn(
               // Die Aktionen stehen neben dem Titel, solange sie neben
@@ -734,7 +742,6 @@ function TenantPageView({
             {kebabInTitleRow && overflowMenu && (
               <OverflowMenu items={overflowMenu} />
             )}
-            <MobilePageHelpTarget />
           </div>
         </div>
 

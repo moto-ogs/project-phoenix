@@ -12,14 +12,14 @@ import (
 
 // handoverFake answers the class handover port (#4794).
 type handoverFake struct {
-	handovers map[int64]ClassHandover
+	handovers map[int64]GroupLiveClassHandover
 	err       error
 	calls     int
 	asked     []int64
 	day       Date
 }
 
-func (h *handoverFake) ClassHandovers(_ context.Context, ids []int64, day Date) (map[int64]ClassHandover, error) {
+func (h *handoverFake) ClassHandovers(_ context.Context, ids []int64, day Date) (map[int64]GroupLiveClassHandover, error) {
 	h.calls++
 	h.asked, h.day = ids, day
 	return h.handovers, h.err
@@ -50,7 +50,7 @@ func TestLiveGroupCarriesTheClassHandover(t *testing.T) {
 		}
 	}
 
-	handovers := &handoverFake{handovers: map[int64]ClassHandover{
+	handovers := &handoverFake{handovers: map[int64]GroupLiveClassHandover{
 		11: {SchoolClass: "2a", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft"},
 		12: {SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft", Absent: true},
 	}}
@@ -59,8 +59,8 @@ func TestLiveGroupCarriesTheClassHandover(t *testing.T) {
 	assert.Equal(t, []int64{11, 12, 13}, handovers.asked)
 	assert.Equal(t, today, handovers.day, "today's handover")
 	require.Len(t, got.Students, 3)
-	assert.Equal(t, &ClassHandover{SchoolClass: "2a", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft"}, got.Students[0].ClassHandover, "handed over and there")
-	assert.Equal(t, &ClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft", Absent: true}, got.Students[1].ClassHandover)
+	assert.Equal(t, &GroupLiveClassHandover{SchoolClass: "2a", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft"}, got.Students[0].ClassHandover, "handed over and there")
+	assert.Equal(t, &GroupLiveClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft", Absent: true}, got.Students[1].ClassHandover)
 	assert.Nil(t, got.Students[2].ClassHandover, "not handed over")
 
 	restricted := &handoverFake{handovers: handovers.handovers}

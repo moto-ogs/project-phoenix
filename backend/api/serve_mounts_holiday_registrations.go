@@ -72,7 +72,11 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, now)
 	mountHolidayClosureNotificationRoutes(root, tenant, organizations, closureMail, holidayCalendar, closureHolidays, logger, now)
 	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, today, now, logger)
-	mountCareContractRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, audit.Log,
+	signingLink := root
+	if limit := careContractSigningRateLimit(limiters.enabled(), demoLoopbackExempt(), limiters.newLimiter); limit != nil {
+		signingLink = root.With(limit)
+	}
+	mountCareContractRoutes(root, signingLink, organizations, settings, schoolSettings, delivery, outcomes, audit.Log,
 		owners.NewCareContractNoticeAddressees(persons, identity), contractHolidays, parentsURL, today, now)
 	mountCareTimeOverrunRoutes(root, organizations, statistics, audit.Log, today)
 	// The office decides the parents' changes through Care Plan's review of

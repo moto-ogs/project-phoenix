@@ -110,16 +110,16 @@ type Student struct {
 	PendingExcusedNote *string    `json:"pending_excused_note,omitempty"`
 	// ClassHandover is set when the Lehrkraft handed the child over to the
 	// OGS today (#4794), with whether she marked it "nicht da".
-	ClassHandover      *ClassHandover `json:"class_handover,omitempty"`
-	ArrivalTime        *string        `json:"arrival_time,omitempty"`
-	ArrivalIsException bool           `json:"arrival_is_exception,omitempty"`
-	ArrivalNotes       string         `json:"arrival_notes,omitempty"`
-	ActualArrivalTime  *string        `json:"actual_arrival_time,omitempty"`
-	ActualPickupTime   *string        `json:"actual_pickup_time,omitempty"`
-	PhotoURL           string         `json:"photo_url,omitempty"`
+	ClassHandover      *GroupLiveClassHandover `json:"class_handover,omitempty"`
+	ArrivalTime        *string                 `json:"arrival_time,omitempty"`
+	ArrivalIsException bool                    `json:"arrival_is_exception,omitempty"`
+	ArrivalNotes       string                  `json:"arrival_notes,omitempty"`
+	ActualArrivalTime  *string                 `json:"actual_arrival_time,omitempty"`
+	ActualPickupTime   *string                 `json:"actual_pickup_time,omitempty"`
+	PhotoURL           string                  `json:"photo_url,omitempty"`
 	// TeacherHints are today's hints of the Lehrkraft for this child or its
 	// class (#4795), oldest first; only with planning access.
-	TeacherHints []TeacherHint `json:"teacher_hints,omitempty"`
+	TeacherHints []GroupLiveTeacherHint `json:"teacher_hints,omitempty"`
 	// PlannedActivities are today's offerings of the child (#6487); only
 	// with planning access and when the school shows them on the card.
 	PlannedActivities []PlannedActivity `json:"planned_activities,omitempty"`

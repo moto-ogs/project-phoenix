@@ -150,6 +150,24 @@ type envelope struct {
 	Data   json.RawMessage `json:"data"`
 }
 
+// sickNoteResult is the data of a sick-note create: the written status days
+// and the request the school gated the absence into, if any (#2267, #2352).
+type sickNoteResult struct {
+	StatusDays     []map[string]any `json:"status_days"`
+	PendingRequest map[string]any   `json:"pending_request"`
+}
+
+// readSickNoteResult decodes the answer of a sick-note create.
+func readSickNoteResult(t *testing.T, body []byte) sickNoteResult {
+	t.Helper()
+	var env envelope
+	require.NoError(t, json.Unmarshal(body, &env))
+	var result sickNoteResult
+	require.NoError(t, json.Unmarshal(env.Data, &result))
+	require.NotNil(t, result.StatusDays, "status_days is a list, never null")
+	return result
+}
+
 func TestSickNoteEndpoint_SubmitAndList(t *testing.T) {
 	t.Parallel()
 
@@ -163,13 +181,10 @@ func TestSickNoteEndpoint_SubmitAndList(t *testing.T) {
 	rr := doRequest(t, router, http.MethodPost, "/me/children/"+sid+"/sick-note", token,
 		map[string]any{"dates": []string{nowISO(), futureISO(3)}, "reason": "Fieber"})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
-	var env envelope
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
-	// A direct write responds with the bare status-day array (pre-#1845 shape),
-	// not the {status_days, pending_request} envelope — see submitSickNote.
-	var days []map[string]any
-	require.NoError(t, json.Unmarshal(env.Data, &days))
-	assert.Len(t, days, 2)
+	// A direct write answers the written days and no pending request.
+	result := readSickNoteResult(t, rr.Body.Bytes())
+	assert.Len(t, result.StatusDays, 2)
+	assert.Nil(t, result.PendingRequest)
 
 	// List.
 	rr = doRequest(t, router, http.MethodGet, "/me/children/"+sid+"/sick-note", token, nil)
@@ -328,11 +343,10 @@ func TestSickNoteEndpoint_SubmitExcused(t *testing.T) {
 		map[string]any{"dates": []string{nowISO()}, "reason": "Zahnarzttermin", "status": "excused"})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 
-	var env envelope
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
-	// Direct write (approval gate off) → bare status-day array, not the envelope.
-	var days []map[string]any
-	require.NoError(t, json.Unmarshal(env.Data, &days))
+	// Direct write (approval gate off): the day, no pending request.
+	result := readSickNoteResult(t, rr.Body.Bytes())
+	assert.Nil(t, result.PendingRequest)
+	days := result.StatusDays
 	require.Len(t, days, 1)
 	assert.Equal(t, "excused", days[0]["status"], "an excused submission must store an excused status day")
 	assert.Equal(t, "Zahnarzttermin", days[0]["note"])
@@ -341,11 +355,8 @@ func TestSickNoteEndpoint_SubmitExcused(t *testing.T) {
 // TestSickNoteEndpoint_ExcusedApprovalPending covers the #1845 approval gate at
 // the HTTP boundary: with the setting on, an excused submission creates a pending
 // request and writes NO status day (the child stays expected). The submit
-// response is the bare status-day array (empty) — the same shape every other
-// path returns — so an already-open #1735-era tab, which has the "excused" option
-// but expects an array and calls .map() on the response, never crashes on the
-// gated path (#1845 review). The freshly created request is discovered via the
-// excused-requests list endpoint the parent UI refetches after a submit.
+// answers no status day and names the pending request (#2267); the
+// excused-requests list the parent UI refetches after a submit lists it too.
 func TestSickNoteEndpoint_ExcusedApprovalPending(t *testing.T) {
 	t.Parallel()
 
@@ -359,17 +370,11 @@ func TestSickNoteEndpoint_ExcusedApprovalPending(t *testing.T) {
 		map[string]any{"dates": []string{futureISO(3)}, "reason": "Familienfeier", "status": "excused"})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 
+	result := readSickNoteResult(t, rr.Body.Bytes())
+	assert.Empty(t, result.StatusDays, "no status day is written while the request is pending")
+	require.NotNil(t, result.PendingRequest, "the answer names the request the school gated the absence into")
+	assert.Equal(t, "pending", result.PendingRequest["status"])
 	var env envelope
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
-	// The gated path returns a bare (empty) status-day ARRAY, never the
-	// {status_days, pending_request} object — the crash an old tab's .map() would hit.
-	var days []map[string]any
-	require.NoError(t, json.Unmarshal(env.Data, &days),
-		"the gated excused path must return a bare status-day array, not an envelope object")
-	assert.Empty(t, days, "no status day is written while the request is pending")
-	var asObject map[string]any
-	assert.Error(t, json.Unmarshal(env.Data, &asObject),
-		"data must be a JSON array, never the {status_days} object, for older clients")
 
 	// The child's excused-requests endpoint lists the pending request the submit
 	// created (this is how a new client discovers it).
@@ -397,11 +402,10 @@ func TestSickNoteEndpoint_SickApprovalPending(t *testing.T) {
 		map[string]any{"dates": []string{futureISO(3)}, "reason": "Fieber", "status": "sick"})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 
+	result := readSickNoteResult(t, rr.Body.Bytes())
+	assert.Empty(t, result.StatusDays, "no status day is written while the sickness request is pending")
+	require.NotNil(t, result.PendingRequest)
 	var env envelope
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
-	var days []map[string]any
-	require.NoError(t, json.Unmarshal(env.Data, &days))
-	assert.Empty(t, days, "no status day is written while the sickness request is pending")
 
 	rr = doRequest(t, router, http.MethodGet, "/me/children/"+sid+"/excused-requests", token, nil)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -444,20 +448,17 @@ func TestSickNoteEndpoint_DefaultsToSickWhenStatusOmitted(t *testing.T) {
 		map[string]any{"dates": []string{nowISO()}, "reason": "Fieber"})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 
-	var env envelope
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
-	// A client that omits status hits the direct-write path → bare array.
-	var days []map[string]any
-	require.NoError(t, json.Unmarshal(env.Data, &days))
+	// A client that omits status hits the direct-write path.
+	days := readSickNoteResult(t, rr.Body.Bytes()).StatusDays
 	require.Len(t, days, 1)
 	assert.Equal(t, "sick", days[0]["status"], "an omitted status must default to a Krankmeldung")
 }
 
-// TestSickNoteEndpoint_DirectWriteReturnsArray pins the #1845 backward-compat
-// contract: a direct write responds with a JSON ARRAY at data, not the
-// {status_days, ...} object. A parent tab loaded before this deploy calls .map()
-// on the response, so an object here would crash it.
-func TestSickNoteEndpoint_DirectWriteReturnsArray(t *testing.T) {
+// TestSickNoteEndpoint_DirectWriteAnswersTheEnvelope pins the one answer
+// shape of #2352: a direct write answers {status_days, pending_request} as an
+// object, also without the former ?envelope=1 opt-in, with the written days
+// and pending_request null.
+func TestSickNoteEndpoint_DirectWriteAnswersTheEnvelope(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -472,15 +473,10 @@ func TestSickNoteEndpoint_DirectWriteReturnsArray(t *testing.T) {
 
 	var env envelope
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
-	// Decodes into a slice; would error if data were an object.
-	var days []map[string]any
-	require.NoError(t, json.Unmarshal(env.Data, &days),
-		"a direct write must return a bare status-day array, not an envelope object")
-	require.Len(t, days, 1)
-	// And explicitly NOT the envelope object shape.
-	var asObject map[string]any
-	assert.Error(t, json.Unmarshal(env.Data, &asObject),
-		"data must be a JSON array, never the {status_days} object, for older clients")
+	var fields map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(env.Data, &fields), "data is the envelope object")
+	assert.JSONEq(t, "null", string(fields["pending_request"]), "a direct write gates nothing")
+	require.Len(t, readSickNoteResult(t, rr.Body.Bytes()).StatusDays, 1)
 }
 
 // TestSickNoteEndpoint_RejectsInvalidStatus covers the ErrInvalidStatus arm of

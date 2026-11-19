@@ -1,10 +1,8 @@
-// app/api/ogs-group-live/route.ts
-// Proxy for the aggregated OGS group live projection (#2056).
-// One backend request returns groups, students, room status, pickup times,
-// tracking indicators, and transfers for one supervised group — replacing the
-// former /api/ogs-dashboard BFF fan-out (5 backend calls) and the per-group
-// client fan-out (4 more). Errors are forwarded as-is: the backend fails the
-// whole request instead of degrading sections to empty arrays.
+// Temporary (#2352): the client reads the OGS group live projection (#2056)
+// from /api/students/ogs-group-live through the staff portal's catalog proxy
+// since this release; the answer is unchanged. This path stays for an open
+// tab or an installed app with an older bundle. Delete this file after the
+// next production deploy.
 import type { NextRequest } from "next/server";
 import { apiGet } from "~/lib/api-helpers.server";
 import { createGetHandler } from "~/lib/route-wrapper.server";

@@ -13,6 +13,10 @@ func RouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		route("GET", "/profile/", nil, OperatorResponse{}),
 		route("PUT", "/profile/", UpdateProfileRequest{}, OperatorResponse{}),
+		{
+			Method: "POST", Pattern: "/profile/email-change", Portals: operator, Request: InitiateEmailChangeRequest{}, NoData: true,
+			NoRetryAfterRenewal: "a renewed session would send the current password twice",
+		},
 		route("GET", "/caterers", nil, []CatererSecurityResponse{}),
 		route("DELETE", "/caterers/{id}/accounts/{accountId}/mfa", MFAAdminResetRequest{}, nil),
 		route("GET", "/invitations/", nil, InvitationsListResponse{}),

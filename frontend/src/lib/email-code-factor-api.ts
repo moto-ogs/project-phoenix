@@ -4,11 +4,16 @@
 // with the portal's session.
 
 import { authFetch } from "./api-helpers";
+import { dataOrBare } from "./envelope-or-bare";
 
 /** The second factor as the account settings show it. */
 interface EmailCodeFactorStatus {
   enabled: boolean;
-  /** False when the factor cannot be switched on for this account. */
+  /**
+   * False when the factor cannot be switched on for this account. Only the
+   * parents portal sends it (an account that is a parent at no school); the
+   * caterer's factor is always available, so a missing value reads as true.
+   */
   available: boolean;
   maskedEmail: string;
 }
@@ -36,11 +41,13 @@ export interface EmailCodeFactorApi {
 export function emailCodeFactorApi(base: string): EmailCodeFactorApi {
   return {
     async status() {
-      const data = await authFetch<{
+      // Bare from the temporary route files, in the envelope through the
+      // portal's catalog proxy (#2352).
+      const data = dataOrBare<{
         enabled: boolean;
         available?: boolean;
         masked_email?: string;
-      }>(base);
+      }>(await authFetch<unknown>(base));
       return {
         enabled: data.enabled,
         available: data.available ?? true,
@@ -48,10 +55,12 @@ export function emailCodeFactorApi(base: string): EmailCodeFactorApi {
       };
     },
     async start() {
-      const data = await authFetch<{
+      const data = dataOrBare<{
         challenge_token: string;
         masked_email?: string;
-      }>(`${base}/start`, { method: "POST", body: {} });
+      }>(
+        await authFetch<unknown>(`${base}/start`, { method: "POST", body: {} }),
+      );
       return {
         challengeToken: data.challenge_token,
         maskedEmail: data.masked_email ?? "",
