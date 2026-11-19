@@ -9,6 +9,7 @@ import {
   ON_WORKDAY,
   POSTHOG_HOST,
   SCHOOL_BREAKDOWN,
+  SETUP_CHECKLIST_STEP_LABELS,
   STAFF_FIRST_STEPS_EVENTS,
   STAFF_FIRST_STEP_LABELS,
   check,
@@ -320,6 +321,42 @@ test('the entry dashboard shows the parents\' first steps from consenting browse
   for (const event of ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed']) {
     assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
     assert.ok(noFeature.includes("startsWith(event, 'onboarding_')") || noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard shows the setup checklist from the server: completed, dismissed and skipped steps', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const outcome = dashboard.insights.find((insight) => insight.name === 'Einrichtungs-Checkliste: abgeschlossen und ausgeblendet');
+  const skipped = dashboard.insights.find((insight) => insight.name === 'Einrichtungs-Checkliste: übersprungene Schritte');
+  assert.ok(outcome && skipped, 'both tiles exist');
+  for (const tile of [outcome, skipped]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /auch ohne Einwilligung/, tile.name);
+  }
+  assert.match(outcome.query.source.query, /'onboarding_setup_checklist_completed'/);
+  assert.match(outcome.query.source.query, /'onboarding_setup_checklist_dismissed'/);
+  assert.match(outcome.query.source.query, /group by Schule_ID/, 'a rate per school, never per person');
+  assert.match(outcome.query.source.query, /countIf\(HatAbgeschlossen = 1\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /countIf\(HatAusgeblendet = 1 and HatAbgeschlossen = 0\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /as HatAbgeschlossen/, 'the inner flag differs from the visible aggregate');
+  assert.match(skipped.query.source.query, /'onboarding_setup_checklist_step_skipped'/);
+
+  // Every step of the wizard (schoolsetup.StepKeys) has its German name on the tile.
+  const wizard = readFileSync(new URL('../backend/modules/schoolsetup/schoolsetup.go', import.meta.url), 'utf8');
+  const steps = [...wizard.matchAll(/^\s*Step\w+ StepKey = "(\w+)"/gm)].map((match) => match[1]);
+  assert.ok(steps.length > 0, 'reads the step keys');
+  assert.deepEqual(Object.keys(SETUP_CHECKLIST_STEP_LABELS).sort(), steps.sort());
+  for (const [value, label] of Object.entries(SETUP_CHECKLIST_STEP_LABELS)) {
+    assert.ok(skipped.query.source.query.includes(`'${value}'`) && skipped.query.source.query.includes(`'${label}'`), value);
+  }
+
+  // The server's checklist events are no feature use and stay out of „Sonstiges“.
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  assert.ok(noFeature.includes("startsWith(event, 'onboarding_')"));
+  for (const event of ['onboarding_setup_checklist_completed', 'onboarding_setup_checklist_dismissed', 'onboarding_setup_checklist_step_skipped']) {
+    assert.ok(event.startsWith('onboarding_'), `${event} is no feature use`);
+    assert.ok(FEATURES.every((feature) => !feature.events?.includes(event)), event);
   }
 });
 

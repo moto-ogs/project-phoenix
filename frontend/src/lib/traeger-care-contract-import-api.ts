@@ -174,7 +174,7 @@ interface BackendRow {
   party_email: string;
   problems: ContractImportProblem[] | null;
   hints?: string[] | null;
-  contract_id?: number;
+  contract_id?: string;
   repeats_line?: number;
   debtor_number?: string;
   debtor_number_status?: ContractDebtorNumberStatus;
@@ -186,11 +186,11 @@ interface BackendResult {
   encoding: string;
   delimiter: string;
   headers: string[] | null;
-  mapping: BackendMapping;
+  mapping: Omit<BackendMapping, "school_id"> & { school_id: string };
   unmapped: ContractImportField[] | null;
   schools:
     | {
-        id: number;
+        id: string;
         name: string;
         modules:
           | { name: string; phase_name: string; has_conditions: boolean }[]
@@ -216,7 +216,7 @@ interface BackendResult {
 
 interface BackendLogEntry {
   file: string;
-  account_id: number | null;
+  account_id: string | null;
   imported_at: string;
   contracts: number;
 }
@@ -255,6 +255,9 @@ function mapRow(row: BackendRow): ContractImportRow {
   };
 }
 
+/** The school of a mapping as the catalog proxy sends it; "0" names none. */
+const mappedSchoolId = (id: string): string => (id === "0" ? "" : id);
+
 function mapImportResult(result: BackendResult): ContractImportResult {
   return {
     encoding: result.encoding,
@@ -262,9 +265,7 @@ function mapImportResult(result: BackendResult): ContractImportResult {
     headers: result.headers ?? [],
     mapping: {
       columns: result.mapping.columns,
-      schoolId: result.mapping.school_id
-        ? String(result.mapping.school_id)
-        : "",
+      schoolId: mappedSchoolId(result.mapping.school_id),
       moduleName: result.mapping.module_name ?? "",
       effectiveFrom: result.mapping.effective_from ?? "",
     },

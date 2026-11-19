@@ -29,11 +29,14 @@ func MasterDataRouteContracts() []common.RouteContract {
 }
 
 // DocumentRouteContracts registers the typed contract of the Träger's
-// documents, with patterns relative to /traeger/documents. The list shares
-// its route file with the upload; the export and the file of a document
-// answer files (#2352).
+// documents, with patterns relative to /traeger/documents. The upload is
+// multipart; the export and document files stream through the catalog (#2352).
 func DocumentRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []organizationtenancy.TraegerDocument{}},
+		{Method: "POST", Pattern: "/", Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: maxDocumentBody, TooLargeCode: common.CodeFilesFileTooLarge,
+			Response: organizationtenancy.TraegerDocument{}},
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "GET", Pattern: "/{id}/file", Portals: traegerPortal, File: true},
 		{Method: "GET", Pattern: "/audiences", Portals: traegerPortal, Response: []organizationtenancy.TraegerDocumentSchool{}},

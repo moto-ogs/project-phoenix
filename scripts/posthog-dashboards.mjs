@@ -497,6 +497,31 @@ const staffStepLabel = `transform(toString(properties.step), ${sqlArray(Object.k
 const parentStepLabel = `transform(toString(properties.checklist_step), ${sqlArray(Object.keys(PARENT_FIRST_STEP_LABELS))}, ${sqlArray(Object.values(PARENT_FIRST_STEP_LABELS))}, toString(properties.checklist_step))`;
 const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlArray(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlArray(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
 
+/**
+ * Core actions of the leadership's setup checklist (#7554), sent by the
+ * server for every school that allows the usage analytics, with or without
+ * the person's consent. A done step has no event: the server derives it.
+ */
+const SETUP_CHECKLIST_EVENTS = {
+  completed: 'onboarding_setup_checklist_completed',
+  dismissed: 'onboarding_setup_checklist_dismissed',
+  stepSkipped: 'onboarding_setup_checklist_step_skipped',
+};
+
+/**
+ * German names of the setup checklist's steps (schoolsetup.StepKeys), short
+ * forms of the checklist's titles (a query naming a person fails the guard).
+ */
+export const SETUP_CHECKLIST_STEP_LABELS = Object.freeze({
+  team: 'Team einladen',
+  rooms: 'Raum anlegen',
+  groups: 'Gruppe anlegen',
+  students: 'Kind anlegen',
+  guardians: 'Eltern einladen',
+  worktime: 'Arbeitszeitmodelle eintragen',
+});
+const setupStepLabel = `transform(toString(properties.step), ${sqlArray(Object.keys(SETUP_CHECKLIST_STEP_LABELS))}, ${sqlArray(Object.values(SETUP_CHECKLIST_STEP_LABELS))}, toString(properties.step))`;
+
 /** HogQL: the product name of a school portal (`surface`). */
 const portalLabel = (surface) => `multiIf(${surface} = 'ogs', 'OGS-App', ${surface} = 'school', 'Schul-App', ${surface} = 'parents', 'Eltern-App', 'unbekannt')`;
 
@@ -1308,6 +1333,45 @@ where ${where}
   and timestamp > now() - interval 30 day
 group by Ereignis, Schritt
 order by Ereignis, Anzahl desc`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: abgeschlossen und ausgeblendet',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Schulen, deren Leitung in der Checkliste etwas tat: abschließen, Schritt überspringen oder ausblenden. Abschließen gilt für die Schule, Ausblenden für eine Person; die Schule zählt als ausgeblendet, sobald jemand ausblendet. Nur angesehene Checklisten fehlen; sie stehen in der Kachel je Fläche.',
+          ...hogql('production', (where) => `
+select
+  count() as ${quoted('Schulen mit Checkliste')},
+  countIf(HatAbgeschlossen = 1) as ${quoted('Abgeschlossen')},
+  countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) as ${quoted('Ausgeblendet ohne Abschluss')},
+  round(100 * countIf(HatAbgeschlossen = 1) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
+  round(100 * countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
+from (
+  select
+    toString(properties.school_id) as Schule_ID,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.completed)}) > 0 as HatAbgeschlossen,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.dismissed)}) > 0 as HatAusgeblendet
+  from events
+  where ${where}
+    and event in ${sqlList(Object.values(SETUP_CHECKLIST_EVENTS))}
+    and ${SCHOOL_EVENT}
+    and timestamp > now() - interval 30 day
+  group by Schule_ID
+)`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: übersprungene Schritte',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Welche Schritte die Leitung überspringt, und in wie vielen Schulen. Wer einen Sprung zurücknimmt und neu überspringt, zählt bei „Übersprungen“ doppelt, bei „Schulen“ nicht.',
+          ...hogql('production', (where) => `
+select
+  ${setupStepLabel} as Schritt,
+  count() as ${quoted('Übersprungen')},
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and event = ${sqlString(SETUP_CHECKLIST_EVENTS.stepSkipped)}
+  and ${SCHOOL_EVENT}
+  and timestamp > now() - interval 30 day
+group by Schritt
+order by Schulen desc`),
         },
         {
           name: 'Einstieg: Benachrichtigungs-Einrichtung je Portal (nur mit Einwilligung)',

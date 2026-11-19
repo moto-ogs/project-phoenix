@@ -118,6 +118,7 @@ import { routes as traegerCareTimeOverruns } from "./traeger-care-time-overruns.
 import { routes as traegerCatalog } from "./traeger-catalog.generated";
 import { routes as traegerClosingDays } from "./traeger-closing-days.generated";
 import { routes as traegerContractChanges } from "./traeger-contract-changes.generated";
+import { routes as traegerContractImports } from "./traeger-contract-imports.generated";
 import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
 import { routes as traegerContractTemplates } from "./traeger-contract-templates.generated";
 import { routes as traegerContracts } from "./traeger-contracts.generated";
@@ -153,6 +154,7 @@ import { routes as traegerStaffExports } from "./traeger-staff-exports.generated
 import { routes as traegerStaffPlanning } from "./traeger-staff-planning.generated";
 import { routes as traegerStaffPool } from "./traeger-staff-pool.generated";
 import { routes as traegerStaffProofs } from "./traeger-staff-proofs.generated";
+import { routes as traegerStaffRecordImports } from "./traeger-staff-record-imports.generated";
 import { routes as traegerStaffRecords } from "./traeger-staff-records.generated";
 import { routes as users } from "./users.generated";
 import { routes as weekProtocols } from "./week-protocols.generated";
@@ -313,6 +315,9 @@ export const portalRoutes = {
     traegerClosingDays["PUT /traeger/closing-days/{id}"],
     traegerContractChanges["GET /traeger/contract-changes/{id}"],
     traegerContractChanges["POST /traeger/contract-changes/{id}/requests/{requestId}/decide"],
+    traegerContractImports["GET /traeger/contract-imports/"],
+    traegerContractImports["POST /traeger/contract-imports/"],
+    traegerContractImports["POST /traeger/contract-imports/preview"],
     traegerContractNotices["GET /traeger/contract-notices/{id}"],
     traegerContractNotices["POST /traeger/contract-notices/{id}"],
     traegerContractNotices["POST /traeger/contract-notices/{id}/reason-rejection"],
@@ -326,9 +331,11 @@ export const portalRoutes = {
     traegerContracts["GET /traeger/contracts/export"],
     traegerContracts["GET /traeger/contracts/{id}"],
     traegerContracts["GET /traeger/contracts/{id}/document"],
+    traegerContracts["GET /traeger/contracts/{id}/paper-signature"],
     traegerContracts["GET /traeger/contracts/{id}/versions/{number}/document"],
     traegerContracts["POST /traeger/contracts/"],
     traegerContracts["POST /traeger/contracts/send"],
+    traegerContracts["POST /traeger/contracts/{id}/paper-signature"],
     traegerContributionRules["DELETE /traeger/contribution-rules/{id}"],
     traegerContributionRules["GET /traeger/contribution-rules/"],
     traegerContributionRules["POST /traeger/contribution-rules/"],
@@ -339,9 +346,11 @@ export const portalRoutes = {
     traegerCostBearers["PUT /traeger/cost-bearers/{id}"],
     traegerDocuments["DELETE /traeger/documents/{id}"],
     traegerDocuments["DELETE /traeger/documents/{id}/releases/{releaseId}"],
+    traegerDocuments["GET /traeger/documents/"],
     traegerDocuments["GET /traeger/documents/audiences"],
     traegerDocuments["GET /traeger/documents/export"],
     traegerDocuments["GET /traeger/documents/{id}/file"],
+    traegerDocuments["POST /traeger/documents/"],
     traegerDocuments["POST /traeger/documents/{id}/releases"],
     traegerExportRecipient["DELETE /traeger/export-recipient/{id}"],
     traegerExportRecipient["GET /traeger/export-recipient/"],
@@ -354,6 +363,8 @@ export const portalRoutes = {
     traegerFamilyChildren["DELETE /traeger/family-children/{contractId}"],
     traegerFamilyChildren["GET /traeger/family-children/"],
     traegerFamilyChildren["GET /traeger/family-children/export"],
+    traegerFamilyChildren["POST /traeger/family-children/imports"],
+    traegerFamilyChildren["POST /traeger/family-children/imports/preview"],
     traegerFamilyChildren["PUT /traeger/family-children/"],
     traegerFinanceExports["DELETE /traeger/finance-exports/booking-accounts/cost-centers/{id}"],
     traegerFinanceExports["DELETE /traeger/finance-exports/settings/sollstellung"],
@@ -390,6 +401,7 @@ export const portalRoutes = {
     traegerHolidayContributions["PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/children/{childId}/bookings"],
     traegerHolidayContributions["PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/debtor-number"],
     traegerHolidayContributions["PUT /traeger/holiday-contributions/{periodId}/weeks/{weekId}/capacity"],
+    traegerHolidayPeriods["DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/criteria"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/export"],
@@ -397,6 +409,7 @@ export const portalRoutes = {
     traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/allocation"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/allocation/export"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/form"],
+    traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/form/documents/{documentId}"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/places"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/places/export"],
     traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/registrations"],
@@ -410,6 +423,7 @@ export const portalRoutes = {
     traegerHolidayPeriods["GET /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}"],
     traegerHolidayPeriods["POST /traeger/holiday-periods/"],
     traegerHolidayPeriods["POST /traeger/holiday-periods/{id}/allocation/decisions"],
+    traegerHolidayPeriods["POST /traeger/holiday-periods/{id}/form/documents"],
     traegerHolidayPeriods["POST /traeger/holiday-periods/{id}/publish"],
     traegerHolidayPeriods["POST /traeger/holiday-periods/{id}/registrations/{registrationId}/freeze"],
     traegerHolidayPeriods["POST /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs"],
@@ -472,9 +486,12 @@ export const portalRoutes = {
     traegerSepaDebits["POST /traeger/sepa-debits/{kind}/{id}/submission"],
     traegerSepaMandates["GET /traeger/sepa-mandates/"],
     traegerSepaMandates["GET /traeger/sepa-mandates/export"],
+    traegerSepaMandates["GET /traeger/sepa-mandates/imports"],
     traegerSepaMandates["GET /traeger/sepa-mandates/{id}/collections"],
     traegerSepaMandates["GET /traeger/sepa-mandates/{id}/history"],
     traegerSepaMandates["POST /traeger/sepa-mandates/"],
+    traegerSepaMandates["POST /traeger/sepa-mandates/imports"],
+    traegerSepaMandates["POST /traeger/sepa-mandates/imports/preview"],
     traegerSepaMandates["POST /traeger/sepa-mandates/{id}/revoke"],
     traegerSettings["DELETE /traeger/settings/values/{key}"],
     traegerSettings["GET /traeger/settings/schema"],
@@ -501,6 +518,9 @@ export const portalRoutes = {
     traegerStaffProofs["PUT /traeger/staff-proofs/records/{id}/{typeId}"],
     traegerStaffProofs["PUT /traeger/staff-proofs/school-kinds"],
     traegerStaffProofs["PUT /traeger/staff-proofs/types/{id}"],
+    traegerStaffRecordImports["GET /traeger/staff-record-imports/"],
+    traegerStaffRecordImports["POST /traeger/staff-record-imports/"],
+    traegerStaffRecordImports["POST /traeger/staff-record-imports/preview"],
     traegerStaffRecords["DELETE /traeger/staff-records/{id}"],
     traegerStaffRecords["DELETE /traeger/staff-records/{id}/contracts/{contractId}"],
     traegerStaffRecords["DELETE /traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}"],

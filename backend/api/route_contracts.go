@@ -114,6 +114,7 @@ func traegerBillingContractMounts() []contractMount {
 		{"/traeger/contract-notices", careContractHTTP.NoticeRouteContracts()},
 		{"/traeger/contract-changes", careContractHTTP.ChangeRouteContracts()},
 		{"/traeger/care-time-overruns", careContractHTTP.OverrunRouteContracts()},
+		{"/traeger/contract-imports", careContractHTTP.ImportRouteContracts()},
 	}
 }
 
@@ -204,6 +205,7 @@ func contractMounts() []contractMount {
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
 		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
 		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
+		{"/traeger/staff-record-imports", workforceTraegerStaff.ImportRouteContracts()},
 		{"/caterer", catererPortalHTTP.RouteContracts()},
 		{"/caterer/notifications", schoolFeedRouteContracts(common.PortalCaterer)},
 	}
