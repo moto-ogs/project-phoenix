@@ -1,33 +1,22 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { metadataLoadError } from "./metadata-load-error";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useTraegerResource } from "./use-traeger-resource";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchTraegerSchools } from "~/lib/traeger-api";
 
 /** Shared school metadata, never school sessions or person data. */
 export function useTraegerSchools() {
-  const { data: session } = useSession();
-  const response = useSWRAuth(
-    session?.user.scope === "org" ? traegerKeys.schools() : null,
+  const resource = useTraegerResource(
+    traegerKeys.schools(),
     fetchTraegerSchools,
+    "die Liste der Schulen",
     { keepPreviousData: false, revalidateIfStale: false },
   );
-  const error = useSwrLoadError(
-    response.error,
-    "die Liste der Schulen",
-    response.mutate,
-  );
   return {
-    schools: response.data ?? null,
-    error: metadataLoadError(
-      error,
-      response.data !== undefined,
-      response.error,
-    ),
-    fetchError: response.error,
-    mutate: response.mutate,
+    schools: resource.data,
+    error: resource.error,
+    fetchError: resource.failure,
+    refused: resource.refused,
+    mutate: resource.mutate,
   };
 }
