@@ -125,6 +125,9 @@ func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *
 	unread, _, err := fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
 	assert.NotContains(t, announcementIDs(unread), fix.ownAnnouncement, "a historical seen announcement stays closed")
+	canSee, _, err := fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.False(t, canSee, "a historical seen announcement stays closed")
 
 	_, err = db.ExecContext(ctx, `UPDATE platform.announcement_views
 		SET shown_at = seen_at
@@ -134,6 +137,9 @@ func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *
 	unread, _, err = fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
 	assert.Contains(t, announcementIDs(unread), fix.ownAnnouncement, "a newly shown announcement stays open until dismissal")
+	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.True(t, canSee)
 
 	count, _, err := fix.projection.CountUnread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
@@ -147,6 +153,9 @@ func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *
 	unread, _, err = fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
 	assert.NotContains(t, announcementIDs(unread), fix.ownAnnouncement, "a dismissed announcement stays closed")
+	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.False(t, canSee, "a dismissed announcement is not actionable")
 }
 
 func TestProjection_CanSeeOnlyTheCurrentAudience(t *testing.T) {

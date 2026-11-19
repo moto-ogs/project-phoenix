@@ -145,7 +145,7 @@ func (p *Projection) CanSee(ctx context.Context, userID int64, roles []string, t
 	stats := contract.Stats{Queries: 1}
 	started := time.Now()
 	var id int64
-	err = db.NewRaw(`SELECT a.id`+audienceFrom+audienceWhere+`
+	err = db.NewRaw(`SELECT a.id`+unreadFrom+unreadWhere+`
 		AND a.id = ? FOR SHARE OF a`, append(unreadArgs(userID, roles, tenantID, orgID), announcementID)...).Scan(ctx, &id)
 	stats.StatementDuration = time.Since(started)
 	if errors.Is(err, sql.ErrNoRows) {

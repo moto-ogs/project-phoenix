@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	recordports "github.com/moto-ogs/project-phoenix/modules/communication/ports"
 
@@ -164,6 +165,41 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
 	assert.Zero(t, count, "dismissing an announcement closes it")
+}
+
+func TestMarkSeenDoesNotReopenHistoricalAnnouncement(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	module := buildCommunication(t, db, &auditRecorder{})
+	operator := testpkg.CreateTestOperator(t, db)
+	ownAnnouncementsByOperator(t, db, operator.ID)
+	account := testpkg.CreateTestAccount(t, db, "historical-announcement-reader")
+	tenantID := testpkg.Tenant(t)
+	organizationID := tenantOrganizationID(t, db, tenantID)
+	announcement := newAnnouncement("Historical read", tenantID)
+
+	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	_, err := db.ExecContext(ctx, `INSERT INTO platform.announcement_views (user_id, announcement_id)
+		VALUES (?, ?)`, account.ID, announcement.ID)
+	require.NoError(t, err)
+
+	err = module.MarkSeen(ctx, announcementViewer(account.ID, tenantID, organizationID), announcement.ID)
+	assert.ErrorIs(t, err, communication.ErrAnnouncementNotFound)
+
+	var view struct {
+		ShownAt   *time.Time `bun:"shown_at"`
+		Dismissed bool       `bun:"dismissed"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT shown_at, dismissed FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &view))
+	assert.Nil(t, view.ShownAt)
+	assert.False(t, view.Dismissed)
+
+	unread, err := module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
+	require.NoError(t, err)
+	assert.Empty(t, unread)
 }
 
 func TestAnnouncementWritesRollBackAfterAuditFailureAndRetryOnce(t *testing.T) {
