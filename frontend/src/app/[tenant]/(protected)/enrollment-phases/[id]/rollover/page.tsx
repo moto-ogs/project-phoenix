@@ -12,7 +12,7 @@ import { useTenantRouter } from "~/lib/tenant-router";
 import { useRefreshPhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
 
 const ROLLOVER_INFO =
-  "Mit einer Anschlussphase laufen bestätigte Anmeldungen in einem neuen Zeitraum weiter, zum Beispiel im nächsten Halbjahr. Prüfe zuerst die Vorschau. Danach trägst du Zeitraum, Modus und Frist ein.";
+  "Mit einer Anschlussphase laufen bestätigte Anmeldungen in einem neuen Zeitraum weiter. Prüfe zuerst die Vorschau. Danach trägst du Zeitraum, Modus und Frist ein.";
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
