@@ -1179,6 +1179,26 @@ from (
 group by Portal, Flaechen
 order by Portal, Flaechen`),
         },
+        {
+          name: 'Einstieg: Benachrichtigungs-Einrichtung je Portal (nur mit Einwilligung)',
+          description: 'Nur mit Einwilligung, letzte 30 Tage. Der Benachrichtigungs-Dialog, der sich nach dem Login von selbst öffnet, je Portal: wie oft er erschien, eingeschaltet wurde (fertig) und auf später geschoben (Später erinnern, Verstanden, Anleitung schließen, X). Ein Neustart aus den Einstellungen zählt nicht. Vorher-Wert für #7542.',
+          ...hogql('production', (where) => `
+select
+  ${portalLabel('properties.surface')} as Portal,
+  countIf(event = 'onboarding_surface_shown') as Angezeigt,
+  countIf(event = 'onboarding_surface_accepted') as Eingeschaltet,
+  countIf(event = 'onboarding_surface_dismissed') as ${quoted('Auf später')},
+  round(100 * countIf(event = 'onboarding_surface_accepted') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Eingeschaltet in Prozent')},
+  round(100 * countIf(event = 'onboarding_surface_dismissed') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Auf später in Prozent')}
+from events
+where ${where}
+  and event in ${sqlList(ONBOARDING_SURFACE_EVENTS)}
+  and properties.onboarding_surface = 'notification_setup'
+  and ${portalCondition}
+  and timestamp > now() - interval 30 day
+group by Portal
+order by Angezeigt desc`),
+        },
       ],
     },
     {

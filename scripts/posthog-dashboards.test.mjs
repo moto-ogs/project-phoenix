@@ -177,6 +177,24 @@ test('the Alle Kinder tile counts tab changes per tab kind, and browser clicks a
   }
 });
 
+test('the entry dashboard shows the notification setup per portal, marked as consent-only', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Benachrichtigungs-Einrichtung je Portal (nur mit Einwilligung)');
+  assert.ok(tile, 'the notification setup tile exists');
+  assert.equal(tile.deployment, 'production');
+  assert.match(tile.description, /nur mit Einwilligung/i);
+  const query = tile.query.source.query;
+  assert.match(query, /properties\.onboarding_surface = 'notification_setup'/);
+  assert.match(query, /group by Portal\b/);
+  for (const action of ['shown', 'accepted', 'dismissed']) {
+    assert.match(query, new RegExp(`'onboarding_surface_${action}'`), action);
+  }
+  for (const [surface, label] of [['ogs', 'OGS-App'], ['school', 'Schul-App'], ['parents', 'Eltern-App']]) {
+    assert.ok(query.includes(`'${surface}', '${label}'`), surface);
+  }
+  assert.ok(readOnboardingSurfaces().includes('notification_setup'), 'the browser filter allows the surface');
+});
+
 test('the entry dashboard counts self-opening surfaces from consenting browsers only, never as feature use', () => {
   const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
   assert.match(dashboard.description, /nur mit Einwilligung/);
