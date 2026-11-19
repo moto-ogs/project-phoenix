@@ -86,6 +86,63 @@ describe("mobile page help", () => {
     },
   );
 
+  // Das „?“ steht auf jeder Seite an derselben Stelle: als erstes Element
+  // rechts im Kopf, vor Aktionen und Kebab, und nicht in der Aktionsgruppe,
+  // die als Ganzes in eine eigene Zeile umbricht (#7568, WCAG 3.2.6).
+  it.each([
+    { name: "no actions", actions: [] as string[], kebab: false },
+    { name: "one action", actions: ["Anlegen"], kebab: false },
+    {
+      name: "many actions and the kebab",
+      actions: ["Anlegen", "Exportieren", "Drucken"],
+      kebab: true,
+    },
+  ])("puts the help first in the title row with $name", async (setup) => {
+    render(
+      <MobilePageHelpPortal>
+        <TenantPage
+          title="Kinder"
+          actions={
+            setup.actions.length > 0 ? (
+              <>
+                {setup.actions.map((label) => (
+                  <button key={label} type="button">
+                    {label}
+                  </button>
+                ))}
+              </>
+            ) : undefined
+          }
+          overflowMenu={
+            setup.kebab
+              ? [{ label: "Archiv", onClick: vi.fn(), noDescription: "Test" }]
+              : undefined
+          }
+        />
+      </MobilePageHelpPortal>,
+    );
+    const link = await screen.findByRole("link", {
+      name: "Hilfe zu dieser Seite",
+    });
+    // Die nächste umbrechende Zeile des Links ist die Titelzeile, nicht
+    // die Aktionsgruppe.
+    expect(link.closest(".flex-wrap")).toContainElement(
+      screen.getByRole("heading", { name: "Kinder" }),
+    );
+    const controls = [
+      ...setup.actions.map((name) => screen.getByRole("button", { name })),
+      ...(setup.kebab
+        ? [screen.getByRole("button", { name: "Weitere Aktionen" })]
+        : []),
+    ];
+    for (const control of controls) {
+      expect(
+        link.compareDocumentPosition(control) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+  });
+
   it.each(["/parents/children/12", "/children/12"])(
     "opens parent help in the parent page header for %s",
     async (pathname) => {
