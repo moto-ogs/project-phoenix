@@ -4,12 +4,27 @@ import apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 
 // RouteContracts registers the typed contract of the room routes the staff
 // portal reaches through its proxy (ADR 0270), with patterns relative to
-// /api/rooms.
+// /api/rooms. The export writes a file and stays outside the contract.
 func RouteContracts() []apiCommon.RouteContract {
 	portals := []apiCommon.PortalScope{apiCommon.PortalTenant}
 	category := []apiCommon.QueryParam{{Name: "category", Kind: apiCommon.QueryString}}
+	list := []apiCommon.QueryParam{
+		{Name: "building", Kind: apiCommon.QueryString},
+		{Name: "category", Kind: apiCommon.QueryString},
+		{Name: "is_open_room", Kind: apiCommon.QueryString},
+		{Name: "include_system", Kind: apiCommon.QueryString},
+		{Name: "page", Kind: apiCommon.QueryInt},
+		{Name: "page_size", Kind: apiCommon.QueryInt},
+	}
+	window := []apiCommon.QueryParam{{Name: "start", Kind: apiCommon.QueryString}, {Name: "end", Kind: apiCommon.QueryString}}
 	return []apiCommon.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Query: list, Paginated: true, Response: []RoomResponse{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: RoomRequest{}, Response: RoomResponse{}},
 		{Method: "GET", Pattern: "/by-category", Portals: portals, Query: category, Response: []RoomResponse{}},
+		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: RoomResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: RoomRequest{}, Response: RoomResponse{}},
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Response: RoomRemovalResponse{}},
+		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Query: window, Response: []RoomSessionEntry{}},
 		{Method: "GET", Pattern: "/{id}/removal-impact", Portals: portals, Response: RoomRemovalImpactResponse{}},
 	}
 }

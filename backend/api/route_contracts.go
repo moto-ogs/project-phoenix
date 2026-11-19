@@ -240,6 +240,8 @@ func ContractDocument() (contract.Document, error) {
 	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,
 		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
+		// The device management renders its instants in whole seconds.
+		reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
 		// The answers of an enrollment form: an object of the form's own
 		// fields, whatever the school's schema asks for.
 		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
@@ -584,9 +586,21 @@ func requestFeedRouteContracts() []common.RouteContract {
 func staffPortalCalendarContractMounts() []contractMount {
 	portals := []common.PortalScope{common.PortalTenant}
 	// Device Fleet's http role may not import the contract types; the root
-	// names the history and the status body. The kiosk's device API is not
-	// part of this mount.
+	// names the device management's answers and bodies. The kiosk's device
+	// API (PyrePortal) is not part of this mount and stays unregistered.
+	list := []common.QueryParam{
+		{Name: "device_type", Kind: common.QueryString},
+		{Name: "status", Kind: common.QueryString},
+		{Name: "registered_by_id", Kind: common.QueryString},
+		{Name: "search", Kind: common.QueryString},
+	}
 	devices := []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Query: list, Response: []devicesAPI.DeviceResponse{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: devicesAPI.DeviceRequest{}, Response: devicesAPI.DeviceCreationResponse{}},
+		{Method: "GET", Pattern: "/device-slots", Portals: portals, Response: devicesAPI.DeviceSlotsResponse{}},
+		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: devicesAPI.DeviceResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: devicesAPI.DeviceRequest{}, Response: devicesAPI.DeviceResponse{}},
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Response: []devicesAPI.LifecycleEventResponse{}},
 		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},
 	}

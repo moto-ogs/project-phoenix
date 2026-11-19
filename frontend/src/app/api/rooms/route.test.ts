@@ -116,14 +116,13 @@ describe("GET /api/rooms", () => {
     expect(response.status).toBe(200);
   });
 
-  it("returns empty data when API returns null", async () => {
+  it("does not turn an empty backend answer into an empty room list (#7563)", async () => {
     mockApiGet.mockResolvedValueOnce(null);
 
     const request = createMockRequest("/api/rooms");
     const response = await GET(request, createMockContext());
 
-    const json = await parseJsonResponse<unknown[]>(response);
-    expect(json).toEqual([]);
+    expect(response.status).toBe(500);
   });
 
   it("does not turn a failed backend request into an empty room list", async () => {

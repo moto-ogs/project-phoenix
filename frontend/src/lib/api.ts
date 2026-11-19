@@ -13,7 +13,7 @@ import { mapGroupsResponse } from "./group-helpers";
 import type { BackendGroup, Group as ImportedGroup } from "./group-helpers";
 import { mapRoomsResponse } from "./room-helpers";
 
-import type { BackendRoom } from "./room-helpers";
+import type { RoomResponse } from "./contract/rooms.generated";
 import { handleAuthFailure } from "./auth-failure";
 
 // Logger instance for API client
@@ -99,14 +99,14 @@ function buildRoomQueryParams(filters?: {
  * Parse rooms response, handling null, non-array, and valid array formats.
  * Returns empty array for invalid formats with warning.
  */
-function parseRoomsResponse(responseData: unknown): BackendRoom[] {
+function parseRoomsResponse(responseData: unknown): RoomResponse[] {
   if (
     responseData &&
     typeof responseData === "object" &&
     "data" in responseData &&
     Array.isArray((responseData as { data?: unknown }).data)
   ) {
-    return (responseData as { data: BackendRoom[] }).data;
+    return (responseData as { data: RoomResponse[] }).data;
   }
 
   if (!responseData || !Array.isArray(responseData)) {
@@ -116,7 +116,7 @@ function parseRoomsResponse(responseData: unknown): BackendRoom[] {
     });
     return [];
   }
-  return responseData as BackendRoom[];
+  return responseData as RoomResponse[];
 }
 
 /**

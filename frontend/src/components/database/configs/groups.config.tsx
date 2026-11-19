@@ -57,7 +57,7 @@ export const groupsConfig = defineEntityConfig<Group>({
             optionsResource: "group-room-choice",
             options: async () => {
               const result = (await fetchOptionsJson("/api/rooms")) as {
-                data?: Array<{ id: number; name: string }>;
+                data?: Array<{ id: number | string; name: string }>;
               };
               const rooms = result.data ?? [];
               return [

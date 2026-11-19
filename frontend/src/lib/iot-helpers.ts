@@ -3,6 +3,11 @@
  * Type definitions and mapping functions for IoT device management
  */
 
+import type {
+  DeviceCreationResponse,
+  DeviceRequest,
+  DeviceResponse,
+} from "~/lib/contract/iot.generated";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 
 // Device interface matching backend structure
@@ -14,50 +19,23 @@ export interface Device {
   status: "active" | "inactive" | "maintenance" | "offline";
   last_seen?: string;
   registered_by_id?: string;
-  room_id?: string;
   room_name?: string;
   is_online: boolean;
   created_at: string;
   updated_at: string;
   api_key?: string; // Only present during creation
-}
-
-// Backend device type for API responses (matches DeviceResponse from backend)
-export interface BackendDevice {
-  id: number;
-  device_id: string;
-  device_type: string;
-  name?: string;
-  status: string;
-  last_seen?: string;
-  registered_by_id?: number;
-  room_id?: number;
-  room_name?: string;
-  is_online: boolean;
-  created_at: string;
-  updated_at: string;
-  api_key?: string; // Only present during creation
-}
-
-// Device creation request
-interface CreateDeviceRequest {
-  device_id: string;
-  device_type: string;
-  name?: string;
-  registered_by_id?: number;
-}
-
-// Device update request
-interface UpdateDeviceRequest {
-  device_id?: string;
-  device_type?: string;
-  name?: string;
 }
 
 /**
- * Map backend device response to frontend Device interface
+ * Maps a device of the contract (`DeviceResponse`; at creation
+ * `DeviceCreationResponse` with the one-time key) onto the frontend device.
+ * Identifiers arrive as decimal strings through the catalog proxy; the
+ * temporary route files of #7563 hand on an already mapped device, which
+ * passes unchanged.
  */
-export function mapDeviceResponse(data: BackendDevice): Device {
+export function mapDeviceResponse(
+  data: DeviceResponse | DeviceCreationResponse,
+): Device {
   if (!data || typeof data !== "object") {
     throw new Error("Invalid device data provided to mapper");
   }
@@ -67,19 +45,21 @@ export function mapDeviceResponse(data: BackendDevice): Device {
   }
 
   return {
-    id: data.id.toString(),
+    id: String(data.id),
     device_id: data.device_id,
     device_type: data.device_type,
     name: data.name,
     status: data.status as Device["status"],
     last_seen: data.last_seen,
-    registered_by_id: data.registered_by_id?.toString(),
-    room_id: data.room_id?.toString(),
+    registered_by_id:
+      data.registered_by_id === undefined
+        ? undefined
+        : String(data.registered_by_id),
     room_name: data.room_name,
     is_online: data.is_online ?? false,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    api_key: data.api_key,
+    api_key: "api_key" in data ? data.api_key : undefined,
   };
 }
 
@@ -88,9 +68,7 @@ export function mapDeviceResponse(data: BackendDevice): Device {
  * a new device starts active, and only Sperren/Entsperren change it
  * (#2317), so a form opened before a block cannot undo it on save.
  */
-export function prepareDeviceForBackend(
-  data: Partial<Device>,
-): CreateDeviceRequest | UpdateDeviceRequest {
+export function prepareDeviceForBackend(data: Partial<Device>): DeviceRequest {
   return {
     device_id: data.device_id!,
     device_type: data.device_type!,

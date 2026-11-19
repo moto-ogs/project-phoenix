@@ -3,7 +3,8 @@
 import { defineEntityConfig } from "@/lib/database/types";
 import { CatalogColorField } from "@/components/database/catalog-color-field";
 import { mapRoomResponse, prepareRoomForBackend } from "@/lib/room-helpers";
-import type { Room, BackendRoom } from "@/lib/room-helpers";
+import type { Room } from "@/lib/room-helpers";
+import type { RoomResponse } from "~/lib/contract/rooms.generated";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
 export const roomsConfig = defineEntityConfig<Room>({
@@ -227,8 +228,9 @@ export const roomsConfig = defineEntityConfig<Room>({
   },
 
   service: {
-    mapResponse: (data: unknown) => mapRoomResponse(data as BackendRoom),
-    mapRequest: prepareRoomForBackend,
+    mapResponse: (data: unknown) => mapRoomResponse(data as RoomResponse),
+    mapRequest: (data: Partial<Room>) =>
+      prepareRoomForBackend(data) as Record<string, unknown>,
   },
 
   labels: {

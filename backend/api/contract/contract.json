@@ -182,6 +182,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/iot/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/meal-caterer/invitations/{invitationId}",
       "portals": [
         "tenant"
@@ -246,6 +254,17 @@
       "response": {
         "kind": "ref",
         "ref": "deletedResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/rooms/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RoomRemovalResponse"
       }
     },
     {
@@ -2524,6 +2543,60 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/iot/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "device_type",
+          "kind": "string"
+        },
+        {
+          "name": "registered_by_id",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "DeviceResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/device-slots",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DeviceSlotsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DeviceResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/iot/{id}/history",
       "portals": [
         "tenant"
@@ -3112,6 +3185,47 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/rooms/",
+      "portals": [
+        "tenant"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "building",
+          "kind": "string"
+        },
+        {
+          "name": "category",
+          "kind": "string"
+        },
+        {
+          "name": "include_system",
+          "kind": "string"
+        },
+        {
+          "name": "is_open_room",
+          "kind": "string"
+        },
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "page_size",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoomResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/rooms/by-category",
       "portals": [
         "tenant"
@@ -3127,6 +3241,41 @@
         "elem": {
           "kind": "ref",
           "ref": "RoomResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/rooms/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RoomResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/rooms/{id}/history",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "end",
+          "kind": "string"
+        },
+        {
+          "name": "start",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoomSessionEntry"
         }
       }
     },
@@ -10365,6 +10514,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/iot/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "DeviceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "DeviceCreationResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/meal-billing-months/{month}/release",
       "portals": [
         "tenant"
@@ -10629,6 +10793,21 @@
         "tenant"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/rooms/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RoomRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoomResponse"
+      }
     },
     {
       "method": "POST",
@@ -15079,6 +15258,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/iot/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "DeviceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "DeviceResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/me/profile",
       "portals": [
         "tenant"
@@ -15198,6 +15392,21 @@
       "response": {
         "kind": "ref",
         "ref": "announcementResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/rooms/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RoomRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoomResponse"
       }
     },
     {
@@ -38601,6 +38810,88 @@
       ]
     },
     {
+      "name": "DeviceCreationResponse",
+      "go_type": "devices.DeviceCreationResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "device_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_seen",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "registered_by_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_online",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "api_key",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DevicePINStatus",
       "go_type": "records.DevicePINStatus",
       "fields": [
@@ -38615,6 +38906,152 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceRequest",
+      "go_type": "devices.DeviceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "device_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "registered_by_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceResponse",
+      "go_type": "devices.DeviceResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "device_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_seen",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "registered_by_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_online",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceSlotsResponse",
+      "go_type": "devices.DeviceSlotsResponse",
+      "fields": [
+        {
+          "name": "device_slots",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "occupied",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "free",
+          "schema": {
+            "kind": "int",
+            "nullable": true
           }
         }
       ]
@@ -64921,6 +65358,79 @@
       ]
     },
     {
+      "name": "RoomRemovalResponse",
+      "go_type": "httpadapter.RoomRemovalResponse",
+      "fields": [
+        {
+          "name": "outcome",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomRequest",
+      "go_type": "httpadapter.RoomRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "building",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "floor",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_open_room",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "RoomResponse",
       "go_type": "httpadapter.RoomResponse",
       "fields": [
@@ -65033,6 +65543,56 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomSessionEntry",
+      "go_type": "httpadapter.RoomSessionEntry",
+      "fields": [
+        {
+          "name": "session_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "ended_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "duration_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "supervisor_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
