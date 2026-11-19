@@ -15,8 +15,8 @@ type AttachmentRemovedResponse struct {
 }
 
 // RouteContracts registers the typed contract of the school's file storage
-// (ADR 0270), with patterns relative to /api/files. Upload and download
-// answer files and keep their route files.
+// (ADR 0270), with patterns relative to /api/files. The upload streams
+// through the catalog (#2352); the download keeps its route file.
 func RouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
@@ -26,17 +26,23 @@ func RouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/folders/{folderId}", Portals: portals, Request: FolderRequest{}, Response: FolderResponse{}},
 		{Method: "DELETE", Pattern: "/folders/{folderId}", Portals: portals, Response: FolderRemovedResponse{}},
 		{Method: "DELETE", Pattern: "/folders/{folderId}/files/{fileId}", Portals: portals, Response: FolderRemovedResponse{}},
+		{Method: "GET", Pattern: "/folders/{folderId}/files", Portals: portals, Response: FileListResponse{}},
+		{Method: "POST", Pattern: "/folders/{folderId}/files", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: FileResponse{}},
 	}
 }
 
-// AnnouncementAttachmentRouteContracts registers the attachment delete of
-// the parent announcements, with patterns relative to
-// /api/announcement-attachments. List, upload and download keep their route
-// files.
+// AnnouncementAttachmentRouteContracts registers the attachments of the
+// parent announcements, with patterns relative to
+// /api/announcement-attachments. List and upload go through the catalog
+// (#2352); the download keeps its route file.
 func AnnouncementAttachmentRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
 		{Method: "DELETE", Pattern: "/{announcementId}/{attachmentId}", Portals: portals, Response: AttachmentRemovedResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: AnnouncementAttachmentListResponse{}},
+		{Method: "POST", Pattern: "/{announcementId}", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: AnnouncementAttachmentResponse{}},
 	}
 }
 

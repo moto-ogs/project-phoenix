@@ -283,7 +283,7 @@ describe("path freed from its own route file", () => {
     ["/api/students/change-requests", "/api/[...path]"],
     ["/api/students/day-log", "/api/[...path]"],
     ["/api/students/ogs-group-live", "/api/[...path]"],
-    ["/api/students/1/documents", "/api/students/[id]/documents"],
+    ["/api/students/1/documents", "/api/[...path]"],
     ["/api/staff/1", "/api/[...path]"],
     ["/api/staff/by-role", "/api/[...path]"],
     ["/api/staff/qualification-types", "/api/[...path]"],
@@ -326,6 +326,15 @@ describe("path freed from its own route file", () => {
       "/api/traeger/holiday-periods/1/registrations/2/proofs",
       "/api/traeger/[...path]",
     ],
+    // Uploads the backend checks like the frontend server did (#2352).
+    ["/api/announcement-attachments/1", "/api/[...path]"],
+    ["/api/enrollment/legal-documents", "/api/[...path]"],
+    ["/api/files/folders/1/files", "/api/[...path]"],
+    ["/api/me/profile/avatar", "/api/[...path]"],
+    ["/api/settings/enrollment/legal-agb-document", "/api/[...path]"],
+    ["/api/staff/1/documents", "/api/[...path]"],
+    ["/api/students/1/accident-reports/2/paper-copy", "/api/[...path]"],
+    ["/api/students/1/photo", "/api/[...path]"],
   ])("%s goes to %s", (sample, expected) => {
     expect(routeFiles.find(({ match }) => match(sample))?.route).toBe(expected);
   });

@@ -7,7 +7,6 @@ import {
   unwrapEnvelope,
 } from "./backend-client.server";
 import type { ErrorCode } from "./error-codes.generated";
-import type { ProxyEndpoint } from "./portal-handlers.server";
 import {
   readBoundedBody,
   wrapInApiResponse,
@@ -21,40 +20,6 @@ interface FileUploadOptions {
 }
 
 const MULTIPART_OVERHEAD_BYTES = 2 * 1024 * 1024;
-
-/**
- * A scanned or photographed paper document. An empty or generic MIME type is
- * what some browsers send for a valid PDF; the extension gate and the
- * backend's content check still apply.
- */
-export const SCAN_UPLOAD: FileUploadOptions = {
-  maxSizeInMB: 10,
-  allowedMimeTypes: [
-    "",
-    "application/octet-stream",
-    "application/pdf",
-    "image/png",
-    "image/jpeg",
-    "image/jpg",
-  ],
-  allowedExtensions: [".pdf", ".png", ".jpg", ".jpeg"],
-};
-
-/**
- * A scan or a Word document. DOCX is an OOXML ZIP container, so browsers
- * without the OOXML mapping label a valid .docx as a plain ZIP; the backend
- * rejects an archive that lacks the OOXML parts (api/common/upload_documents.go).
- */
-export const DOCUMENT_UPLOAD: FileUploadOptions = {
-  maxSizeInMB: 10,
-  allowedMimeTypes: [
-    ...(SCAN_UPLOAD.allowedMimeTypes ?? []),
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/zip",
-    "application/x-zip-compressed",
-  ],
-  allowedExtensions: [...(SCAN_UPLOAD.allowedExtensions ?? []), ".docx"],
-};
 
 /** Error thrown by file validation with the appropriate HTTP status code. */
 export class FileValidationError extends Error {
@@ -221,64 +186,6 @@ export function createFileUploadHandler<T>(
       throw error;
     }
   });
-}
-
-interface FileForwardOptions extends FileUploadOptions {
-  /** The form field carrying the file. */
-  readonly file: string;
-  /** Text fields the backend requires; a missing one answers 400. */
-  readonly fields?: readonly string[];
-  /** Text fields forwarded only when present. */
-  readonly optionalFields?: readonly string[];
-  /** Content check on the file bytes; throws FileValidationError. */
-  readonly verify?: (bytes: ArrayBuffer) => void;
-}
-
-/**
- * Tenant upload proxy: validates the file and forwards it with the listed
- * fields and the client identity. Answers the backend's `data`.
- */
-export function proxyFileUpload(
-  endpoint: ProxyEndpoint,
-  options: FileForwardOptions,
-) {
-  return createFileUploadHandler<unknown>(
-    async (request, formData, token, params) => {
-      const file = formData.get(options.file);
-      if (!(file instanceof File)) {
-        throw new FileValidationError(
-          `No ${options.file} file provided`,
-          400,
-          "files.file_missing",
-        );
-      }
-      options.verify?.(await file.arrayBuffer());
-
-      const forwarded = new FormData();
-      forwarded.append(options.file, file);
-      for (const name of options.fields ?? []) {
-        const value = formData.get(name);
-        if (typeof value !== "string" || value === "") {
-          throw new FileValidationError(
-            `No ${name} provided`,
-            400,
-            "general.input",
-          );
-        }
-        forwarded.append(name, value);
-      }
-      for (const name of options.optionalFields ?? []) {
-        const value = formData.get(name);
-        if (typeof value === "string" && value !== "") {
-          forwarded.append(name, value);
-        }
-      }
-
-      const path = typeof endpoint === "string" ? endpoint : endpoint(params);
-      return postForm(request, path, token, forwarded);
-    },
-    options,
-  );
 }
 
 export function fileValidationProblemResponse(

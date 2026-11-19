@@ -12,6 +12,9 @@ func RouteContracts(staff, groups, sessions, navigation any) []common.RouteContr
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/profile", Portals: portals, Response: ProfileResponse{}},
 		{Method: "PUT", Pattern: "/profile", Portals: portals, Request: ProfileUpdateRequest{}, Response: ProfileResponse{}},
+		{Method: "POST", Pattern: "/profile/avatar", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxUploadBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: ProfileResponse{}},
+		{Method: "DELETE", Pattern: "/profile/avatar", Portals: portals, Response: ProfileResponse{}},
 		{Method: "GET", Pattern: "/staff", Portals: portals, Response: staff},
 		{Method: "GET", Pattern: "/groups/", Portals: portals, Response: groups},
 		{Method: "GET", Pattern: "/groups/supervised", Portals: portals, Response: sessions},

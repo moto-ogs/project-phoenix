@@ -40,8 +40,8 @@ const mockedGetSession = vi.mocked(getCachedSession);
 
 function backendDocument(overrides: Record<string, unknown> = {}) {
   return {
-    id: 42,
-    staff_id: 7,
+    id: "42",
+    staff_id: "7",
     category: "arbeitsvertrag" as StaffDocumentCategory,
     filename: "Vertrag.pdf",
     size_bytes: 2048,
@@ -77,7 +77,7 @@ describe("staff-documents-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              staff_id: 7,
+              staff_id: "7",
               documents: [backendDocument()],
               visible_categories: ["arbeitsvertrag", "zeugnis"],
             },
@@ -119,15 +119,15 @@ describe("staff-documents-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              staff_id: 7,
+              staff_id: "7",
               documents: [
                 backendDocument({
-                  id: 1,
+                  id: "1",
                   retain_until: null,
                   review_due: null,
                 }),
                 backendDocument({
-                  id: 2,
+                  id: "2",
                   retain_until: undefined,
                   review_due: undefined,
                 }),

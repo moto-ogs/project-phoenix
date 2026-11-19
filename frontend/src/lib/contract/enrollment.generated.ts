@@ -7,6 +7,7 @@ import {
   instant,
   int64StringOrNumber,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -1608,6 +1609,15 @@ export interface CloneCareOfferingRequest {
   target_phase_id?: number;
 }
 
+/** Go: enrollmenthttp.enrollmentLegalDocumentResponse */
+export interface enrollmentLegalDocumentResponse {
+  document_url: string;
+}
+
+export const enrollmentLegalDocumentResponseSchema: z.ZodType<enrollmentLegalDocumentResponse, unknown> = object<enrollmentLegalDocumentResponse>({
+  document_url: str,
+});
+
 /** Go: enrollmenthttp.PhaseTranslatedTextRequest */
 export interface PhaseTranslatedTextRequest {
   text?: string;
@@ -2385,6 +2395,15 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<CloneCareOfferingRequest>(),
     response: success(CareOfferingResponseSchema),
+  },
+  "POST /api/enrollment/legal-documents": {
+    method: "POST",
+    pattern: "/api/enrollment/legal-documents",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "enrollment.legal_document_invalid",
+    request: multipart,
+    response: success(enrollmentLegalDocumentResponseSchema),
   },
   "POST /api/enrollment/phases/": {
     method: "POST",

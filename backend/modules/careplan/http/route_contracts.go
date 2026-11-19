@@ -19,7 +19,8 @@ type DecisionResponses struct {
 
 // StudentRouteContracts registers the typed contract of Care Plan's student
 // routes besides the create and update (ADR 0270), with patterns relative to
-// /api/students. Uploads and downloads keep their own BFF routes.
+// /api/students. Downloads keep their own BFF routes; the uploads stream
+// through the catalog (#2352).
 func StudentRouteContracts(decisions DecisionResponses) []common.RouteContract {
 	routes := reviewRouteContracts(decisions)
 	routes = append(routes, careExitRouteContracts()...)
@@ -35,6 +36,11 @@ func reviewRouteContracts(decisions DecisionResponses) []common.RouteContract {
 		{Method: "POST", Pattern: "/{id}/accident-reports/{documentId}/corrections", Portals: portals, Request: AccidentReportRequest{}, Response: StudentDocumentResponse{}},
 		{Method: "POST", Pattern: "/{id}/accident-reports/{documentId}/signature", Portals: portals, Request: AccidentSignatureRequest{}, Response: StudentDocumentResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/documents/{documentId}", Portals: portals, Response: studentDocumentDeletedResponse{}},
+		{Method: "GET", Pattern: "/{id}/documents", Portals: portals, Response: StudentDocumentListResponse{}},
+		{Method: "POST", Pattern: "/{id}/documents", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxStudentDocumentBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: StudentDocumentResponse{}},
+		{Method: "POST", Pattern: "/{id}/accident-reports/{documentId}/paper-copy", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxStudentDocumentBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: StudentDocumentResponse{}},
 		{Method: "POST", Pattern: "/master-data-change-requests/{requestId}/decide", Portals: portals, Request: DecideMasterDataChangeRequestBody{}, Response: decisions.MasterDataDecision},
 		{Method: "POST", Pattern: "/care-schedule-change-requests/{requestId}/decide", Portals: portals, Request: DecideCareRequestBody{}, Response: decisions.CareDecision},
 		{Method: "GET", Pattern: "/care-schedule-change-requests/{requestId}", Portals: portals, Response: decisions.CareDetail},

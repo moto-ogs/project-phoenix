@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -138,6 +139,15 @@ export const RevealedValueResponseSchema: z.ZodType<RevealedValueResponse, unkno
   value: nullable(json),
 });
 
+/** Go: settingshttp.legalAGBDocumentResponse */
+export interface legalAGBDocumentResponse {
+  document_url: string;
+}
+
+export const legalAGBDocumentResponseSchema: z.ZodType<legalAGBDocumentResponse, unknown> = object<legalAGBDocumentResponse>({
+  document_url: str,
+});
+
 /** Go: settingshttp.homeLayoutBlockRequest */
 export interface homeLayoutBlockRequest {
   key?: string;
@@ -158,6 +168,12 @@ export interface homeBlockPoliciesRequest {
 }
 
 export const routes = {
+  "DELETE /api/settings/enrollment/legal-agb-document": {
+    method: "DELETE",
+    pattern: "/api/settings/enrollment/legal-agb-document",
+    portals: ["tenant"],
+    response: noData,
+  },
   "DELETE /api/settings/home-layout": {
     method: "DELETE",
     pattern: "/api/settings/home-layout",
@@ -199,6 +215,15 @@ export const routes = {
     pattern: "/api/settings/values/{key}/reveal",
     portals: ["tenant"],
     response: success(RevealedValueResponseSchema),
+  },
+  "POST /api/settings/enrollment/legal-agb-document": {
+    method: "POST",
+    pattern: "/api/settings/enrollment/legal-agb-document",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(legalAGBDocumentResponseSchema),
   },
   "PUT /api/settings/home-layout": {
     method: "PUT",

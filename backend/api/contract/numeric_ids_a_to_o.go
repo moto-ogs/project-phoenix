@@ -85,6 +85,7 @@ var legacyNumericIDsAToO = []string{
 	"careplanhttp.StudentArrivalExceptionResponse.CreatedBy",
 	"careplanhttp.StudentArrivalExceptionResponse.ID",
 	"careplanhttp.StudentArrivalExceptionResponse.StudentID",
+	"careplanhttp.StudentDocumentListResponse.StudentID",
 	"careplanhttp.StudentDocumentResponse.ID",
 	"careplanhttp.StudentDocumentResponse.StudentID",
 	"careplanhttp.StudentRequest.GroupID",

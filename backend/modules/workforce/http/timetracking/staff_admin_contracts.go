@@ -115,6 +115,9 @@ func StaffAdminRouteContracts() []common.RouteContract {
 		route("DELETE", "/{id}/absences/{absenceId}", nil, nil),
 		route("GET", "/absences/mails", nil, AbsenceDecisionMailsResponse{}, common.QueryParam{Name: "ids", Kind: common.QueryString}),
 		route("DELETE", "/{id}/documents/{documentId}", nil, StammdatenAck{}),
+		route("GET", "/{id}/documents", nil, StaffDocumentListResponse{}),
+		{Method: "POST", Pattern: "/{id}/documents", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxStaffDocumentBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: StaffDocumentResponse{}},
 	}
 	routes = append(routes, staffAdminPersonnelContracts(route)...)
 	routes = append(routes, staffAdminCrossStaffContracts(route)...)

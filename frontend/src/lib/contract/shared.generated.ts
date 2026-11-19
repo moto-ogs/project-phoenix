@@ -42,6 +42,38 @@ export const AllowanceCarryResponseSchema: z.ZodType<AllowanceCarryResponse, unk
   expires_on: str,
 });
 
+/** Go: files.AnnouncementAttachmentResponse */
+export interface AnnouncementAttachmentResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+}
+
+export const AnnouncementAttachmentResponseSchema: z.ZodType<AnnouncementAttachmentResponse, unknown> = object<AnnouncementAttachmentResponse>({
+  id: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  uploaded_at: instant,
+});
+
+/** Go: files.AnnouncementAttachmentListResponse */
+export interface AnnouncementAttachmentListResponse {
+  attachments: AnnouncementAttachmentResponse[] | null;
+  max_count: number;
+  max_bytes: number;
+  editable: boolean;
+}
+
+export const AnnouncementAttachmentListResponseSchema: z.ZodType<AnnouncementAttachmentListResponse, unknown> = object<AnnouncementAttachmentListResponse>({
+  attachments: nullable(arr(AnnouncementAttachmentResponseSchema)),
+  max_count: safeInt,
+  max_bytes: safeInt,
+  editable: bool,
+});
+
 /** Go: account.RoleResponse */
 export interface RoleResponse {
   id: string;
