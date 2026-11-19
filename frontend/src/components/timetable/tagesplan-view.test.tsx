@@ -214,6 +214,12 @@ describe("TagesplanView", () => {
     expect(url.pathname).toBe("/help/tagesplan-ansehen");
     expect(url.searchParams.get("return_to")).toBe("/tagesplan?d=2026-07-15");
     expect(help).toHaveClass("lg:hidden");
+    // Wie im Kopf jeder Seite steht das „?“ vor den Aktionen (#7568).
+    expect(
+      help.compareDocumentPosition(
+        screen.getByRole("button", { name: "Vorheriger Tag" }),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("steps over a weekend of another week although the weekend follows Friday's plan (#5028)", () => {

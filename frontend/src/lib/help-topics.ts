@@ -108,6 +108,10 @@ export const HELP_TOPICS = {
   analyticsConsent: "nutzungsanalyse-erlauben-oder-ablehnen",
   // Glocke mit Erinnerungen und Hinweisen im Staff-Portal (#7148).
   staffNotifications: "hinweise-und-erinnerungen-in-der-glocke",
+  // Eigene Angaben und Benachrichtigungen unter `/profile` (#7568).
+  ownProfile: "dein-profil",
+  // Seite `Übergaben` (`/substitutions`) im Tagesbetrieb (#7568).
+  dailyHandovers: "uebergaben-von-heute",
   dataManagement: "datenverwaltung",
   enrollments: "anmeldungen-pruefen",
   settings: "einstellungen-ueberblick",
@@ -331,6 +335,10 @@ const EXACT_HELP_TOPICS: Readonly<Record<string, HelpTopicId>> = {
   "/umfragen": HELP_TOPICS.staffSurveys,
   "/time-tracking": HELP_TOPICS.trackWorkTime,
   "/mein-dienstplan": HELP_TOPICS.ownShiftPlan,
+  "/profile": HELP_TOPICS.ownProfile,
+  // Die Erinnerungen sind die ganze Liste aus der Glocke.
+  "/reminders": HELP_TOPICS.staffNotifications,
+  "/substitutions": HELP_TOPICS.dailyHandovers,
   "/settings": HELP_TOPICS.settings,
 
   // Leitungsseiten. Sie zeigen heute auf Entwürfe: die Kontexthilfe rendert

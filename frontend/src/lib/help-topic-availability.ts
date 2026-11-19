@@ -157,6 +157,8 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.errorMessages]: "all",
   [HELP_TOPICS.analyticsConsent]: ["caregiver", "lead", "parent", "teacher"],
   [HELP_TOPICS.staffNotifications]: ["caregiver", "lead"],
+  [HELP_TOPICS.ownProfile]: ["caregiver", "lead"],
+  [HELP_TOPICS.dailyHandovers]: ["caregiver", "lead"],
   [HELP_TOPICS.dataManagement]: "lead",
   [HELP_TOPICS.enrollments]: "lead",
   [HELP_TOPICS.settings]: "lead",

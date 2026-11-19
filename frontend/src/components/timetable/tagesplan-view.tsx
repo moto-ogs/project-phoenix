@@ -640,6 +640,8 @@ export function TagesplanView() {
         headingLevel={1}
         actions={
           <div className="flex items-center gap-1">
+            {/* Das „?“ steht wie im Kopf jeder Seite vor den Aktionen (#7568). */}
+            <MobilePageHelpTarget />
             <Button
               type="button"
               variant="ghost"
@@ -673,7 +675,6 @@ export function TagesplanView() {
             >
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <MobilePageHelpTarget />
           </div>
         }
       >

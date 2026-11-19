@@ -358,6 +358,8 @@ export function getHelpTopics(
     articles.errorMessagesTopic(),
     articles.analyticsConsentTopic(),
     articles.staffNotificationsTopic(),
+    articles.ownProfileTopic(),
+    articles.dailyHandoversTopic(),
   ];
 
   const hidden = hiddenHelpTopicIds(presenceMode, groupMode, nfcEnabled);
