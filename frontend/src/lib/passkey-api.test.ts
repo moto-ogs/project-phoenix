@@ -273,6 +273,20 @@ describe("passkey-api", () => {
     );
   });
 
+  it("reads the staff portal's passkey list in the catalog proxy's envelope (#2352)", async () => {
+    mockAuthenticatedSession();
+    const passkey = {
+      id: "7",
+      name: "Phone",
+      created_at: "2026-06-15T10:00:00Z",
+    };
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      jsonResponse(200, { success: true, message: "Success", data: [passkey] }),
+    );
+
+    await expect(listPasskeys("tenant")).resolves.toEqual([passkey]);
+  });
+
   it("lists and revokes passkeys with authenticated requests", async () => {
     mockAuthenticatedSession();
     vi.mocked(global.fetch)

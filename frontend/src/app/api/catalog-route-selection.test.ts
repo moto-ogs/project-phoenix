@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   CATALOG_OUTSIDE_MOUNTS,
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
+  underOutsideHead,
 } from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
 
@@ -37,6 +38,16 @@ const BFF_PREFIX: Record<SessionPortal, [string, string]> = {
  */
 const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/invitations/[...path]": "tenant",
+  "/api/auth/roles/[[...path]]": "tenant",
+  "/api/auth/permissions/[[...path]]": "tenant",
+  "/api/auth/accounts/[accountId]/[...path]": "tenant",
+  "/api/auth/mfa/trusted-devices/[...path]": "tenant",
+  "/api/auth/passkeys/[...path]": "tenant",
+  "/api/auth/account/[...path]": "tenant",
+  "/api/auth/link-to-tenant/[[...path]]": "tenant",
+  "/api/auth/register/[[...path]]": "tenant",
+  "/api/auth/staff-preview/[...path]": "tenant",
+  "/api/caterer/auth/mfa/trusted-devices/[...path]": "caterer",
 };
 
 const apiDir = path.dirname(new URL(import.meta.url).pathname);
@@ -55,6 +66,8 @@ const isParam = (segment: string) => /^[[{]/.test(segment);
 const startsWithHead = (pattern: string, head: string) =>
   pattern === head || pattern.startsWith(`${head}/`);
 
+const segmentsOf = (pattern: string) => pattern.split("/").filter(Boolean);
+
 /**
  * The BFF path of a pattern: `/parent/me/x/{id}` → `/api/parent/me/x/{id}`;
  * a pattern beside the mount that the portal's outside list names keeps its
@@ -70,7 +83,7 @@ function bffPath(
   if (startsWithHead(pattern, mount)) {
     return prefix + pattern.slice(mount.length);
   }
-  return outside.some((head) => startsWithHead(pattern, head))
+  return outside.some((head) => underOutsideHead(segmentsOf(pattern), head))
     ? prefix + pattern
     : null;
 }
@@ -88,7 +101,7 @@ function publicPortalOf(pattern: string): SessionPortal | null {
     portals.find((portal) => startsWithHead(pattern, BFF_PREFIX[portal][0])) ??
     portals.find((portal) =>
       (publicOutside[portal] ?? []).some((head) =>
-        startsWithHead(pattern, head),
+        underOutsideHead(segmentsOf(pattern), head),
       ),
     ) ??
     null
@@ -127,10 +140,19 @@ const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
 );
 
 describe("registered route beside a portal's mount", () => {
-  it.each(cases)("$portal $pattern has a BFF path", ({ bff }) => {
-    // A pattern outside the mount needs an entry in CATALOG_OUTSIDE_MOUNTS
-    // (lib/contract/catalog-outside-mounts.ts), or the proxy never reaches it.
-    expect(bff).not.toBeNull();
+  it.each(cases)("$portal $pattern has a BFF path", ({ portal, bff }) => {
+    // A pattern outside the mount needs an entry in
+    // lib/contract/catalog-outside-mounts.ts, or the proxy never reaches it:
+    // a public route in CATALOG_PUBLIC_OUTSIDE_MOUNTS, a session route in
+    // CATALOG_OUTSIDE_MOUNTS.
+    const list =
+      portal === "public"
+        ? "CATALOG_PUBLIC_OUTSIDE_MOUNTS"
+        : "CATALOG_OUTSIDE_MOUNTS";
+    expect(
+      bff,
+      `no portal's proxy reaches this route; name its head in ${list}`,
+    ).not.toBeNull();
   });
 
   it("names only heads the contract registers for the portal", () => {
@@ -146,7 +168,9 @@ describe("registered route beside a portal's mount", () => {
       );
       for (const head of heads) {
         expect(
-          patterns.some((pattern) => startsWithHead(pattern, head)),
+          patterns.some((pattern) =>
+            underOutsideHead(segmentsOf(pattern), head),
+          ),
           `${name} ${head}`,
         ).toBe(true);
       }

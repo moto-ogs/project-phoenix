@@ -335,6 +335,10 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       "/api/invitations/accept",
       "/api/guardian-invitations/",
       "/api/holiday-registrations/",
+      // The holiday link and its summary through the Träger proxy's public
+      // routes (#2352); every other /api/traeger/ path stays off this host.
+      "/api/traeger/holiday-registrations/",
+      "/api/traeger/holiday-quotes/",
       "/api/holiday-parent-setups/",
       "/api/enrollment/requests/",
       /^\/api\/enrollment\/[^/]+\/uploads$/,

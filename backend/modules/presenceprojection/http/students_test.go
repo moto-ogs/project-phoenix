@@ -1138,6 +1138,24 @@ func TestListSchoolClasses(t *testing.T) {
 	assert.Equal(t, 1, countString(resp.Data, "DistinctClass1"))
 }
 
+// A school without classes answers an empty list, never null: the contract
+// decodes the list as an array, and null made the class filter fail (#2352).
+func TestListSchoolClassesOfASchoolWithoutClassesIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	// The test's own tenant holds no child and no class list entry.
+	tc := setupStudentsRoute(t)
+
+	rr := authExec(t, tc, testutil.NewRequest("GET", "/school-classes", nil), testutil.AdminTestClaims(1), []string{"admin:*"})
+
+	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
+	var resp struct {
+		Data json.RawMessage `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
+	assert.JSONEq(t, `[]`, string(resp.Data))
+}
+
 func countString(values []string, needle string) int {
 	count := 0
 	for _, value := range values {

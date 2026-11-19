@@ -801,7 +801,7 @@ describe("tenant-api", () => {
       const result = await listAvailableTenants();
 
       expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/auth/account-tenants",
+        "/api/auth/account/tenants",
       );
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({

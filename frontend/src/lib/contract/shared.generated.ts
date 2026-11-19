@@ -42,6 +42,84 @@ export const AllowanceCarryResponseSchema: z.ZodType<AllowanceCarryResponse, unk
   expires_on: str,
 });
 
+/** Go: account.RoleResponse */
+export interface RoleResponse {
+  id: string;
+  name: string;
+  description: string;
+  is_system: boolean;
+  base_role?: string;
+  school_portal: boolean;
+  created_at: string;
+  updated_at: string;
+  permissions?: string[];
+}
+
+export const RoleResponseSchema: z.ZodType<RoleResponse, unknown> = object<RoleResponse>({
+  id: int64String,
+  name: str,
+  description: str,
+  is_system: bool,
+  base_role: optional(str),
+  school_portal: bool,
+  created_at: str,
+  updated_at: str,
+  permissions: optional(arr(str)),
+});
+
+/** Go: account.SchoolIdentityResponse */
+export interface SchoolIdentityResponse {
+  person_id: string;
+  staff_id: string;
+  teacher_id?: string;
+}
+
+export const SchoolIdentityResponseSchema: z.ZodType<SchoolIdentityResponse, unknown> = object<SchoolIdentityResponse>({
+  person_id: int64String,
+  staff_id: int64String,
+  teacher_id: optional(int64String),
+});
+
+/** Go: common.TrustedDeviceDTO */
+export interface TrustedDeviceDTO {
+  id: string;
+  user_agent?: string;
+  ip_address?: string;
+  created_at: string;
+  expires_at: string;
+  last_used_at?: string;
+}
+
+export const TrustedDeviceDTOSchema: z.ZodType<TrustedDeviceDTO, unknown> = object<TrustedDeviceDTO>({
+  id: int64StringOrNumber,
+  user_agent: optional(str),
+  ip_address: optional(str),
+  created_at: str,
+  expires_at: str,
+  last_used_at: optional(str),
+});
+
+/** Go: account.PermissionResponse */
+export interface PermissionResponse {
+  id: string;
+  name: string;
+  description: string;
+  resource: string;
+  action: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PermissionResponseSchema: z.ZodType<PermissionResponse, unknown> = object<PermissionResponse>({
+  id: int64String,
+  name: str,
+  description: str,
+  resource: str,
+  action: str,
+  created_at: str,
+  updated_at: str,
+});
+
 /** Go: staffcalendarhttp.CalendarStatusResponse */
 export interface CalendarStatusResponse {
   status: string;
@@ -3464,6 +3542,32 @@ export const CareModuleSchema: z.ZodType<CareModule, unknown> = object<CareModul
   contract_count: safeInt,
 });
 
+/** Go: parentbilling.HolidaySiblingChild */
+export interface HolidaySiblingChild {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
+  id: int64StringOrNumber,
+  first_name: str,
+  last_name: str,
+});
+
+/** Go: parentbilling.HolidaySibling */
+export interface HolidaySibling {
+  registration_id: string;
+  status: string;
+  children: HolidaySiblingChild[] | null;
+}
+
+export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
+  registration_id: int64StringOrNumber,
+  status: str,
+  children: nullable(arr(HolidaySiblingChildSchema)),
+});
+
 /** Go: enrollment.HolidayRegistrationBooking */
 export interface HolidayRegistrationBooking {
   week_id: string;
@@ -3896,6 +4000,41 @@ export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetai
   mails: optional(arr(RequestMailOutcomeSchema)),
   promotions: optional(arr(HolidayPromotionSchema)),
 });
+
+/** Go: enrollment.HolidayNoCareDay */
+export interface HolidayNoCareDay {
+  date: string | null;
+  kind: string;
+  name: string;
+}
+
+export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
+  date: nullable(calendarDate),
+  kind: str,
+  name: str,
+});
+
+/** Go: enrollmenthttp.holidayGuardianRequest */
+export interface holidayGuardianRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+}
+
+/** Go: enrollmenthttp.holidayAddressRequest */
+export interface holidayAddressRequest {
+  street?: string;
+  postal_code?: string;
+  city?: string;
+}
+
+/** Go: enrollmenthttp.holidayContactRequest */
+export interface holidayContactRequest {
+  name?: string;
+  phone?: string;
+  relationship?: string;
+}
 
 /** Go: parentbilling.SEPADebit */
 export interface SEPADebit {

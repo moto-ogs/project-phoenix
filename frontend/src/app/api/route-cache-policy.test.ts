@@ -56,7 +56,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createDeleteHandler",
     "createDeleteWithBodyHandler",
     "createTenantJsonProxy",
-    "createOptionalTenantJsonProxy",
     "catalogProxy",
     "catalogProxyUnder",
     "proxyFile",
@@ -106,6 +105,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "proxyPost",
     "createCatererJsonProxy",
     "catalogProxy",
+    "catalogProxyUnder",
     "caterer.proxyFile",
   ],
   "~/lib/traeger/route-wrapper.server": [

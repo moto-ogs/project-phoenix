@@ -324,6 +324,15 @@ type AccountResponse struct {
 	SchoolIdentity *SchoolIdentityResponse `json:"school_identity,omitempty"`
 }
 
+// LinkedAccountResponse is the answer of linking an existing account to the
+// caller's school: only its id, its address and what was provisioned at this
+// school, never its roles, username or state at other schools.
+type LinkedAccountResponse struct {
+	ID             common.ID               `json:"id"`
+	Email          string                  `json:"email"`
+	SchoolIdentity *SchoolIdentityResponse `json:"school_identity"`
+}
+
 // SchoolIdentityResponse carries the ids of the person/staff chain provisioned
 // for an account at the caller's school.
 //

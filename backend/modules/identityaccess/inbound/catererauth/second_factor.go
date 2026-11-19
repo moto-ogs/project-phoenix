@@ -19,14 +19,14 @@ import (
 
 var errInvalidPasskeyID = errors.New("invalid passkey id")
 
-// MFAStatusResponse is whether the caterer switched its second factor on.
-type MFAStatusResponse struct {
+// CatererMFAStatusResponse is whether the caterer switched its second factor on.
+type CatererMFAStatusResponse struct {
 	Enabled     bool   `json:"enabled"`
 	MaskedEmail string `json:"masked_email"`
 }
 
-// MFAChallengeResponse names the code mailed to switch the factor on.
-type MFAChallengeResponse struct {
+// CatererMFAChallengeResponse names the code mailed to switch the factor on.
+type CatererMFAChallengeResponse struct {
 	ChallengeToken string `json:"challenge_token"`
 	MaskedEmail    string `json:"masked_email"`
 }
@@ -47,7 +47,7 @@ func (rs *Resource) mfaStatus(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, MFAStatusResponse(state))
+	common.Respond(w, r, http.StatusOK, CatererMFAStatusResponse(state), "MFA status retrieved")
 }
 
 // startMFA mails the code that switches the second factor on.
@@ -57,7 +57,7 @@ func (rs *Resource) startMFA(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, MFAChallengeResponse(challenge))
+	common.Respond(w, r, http.StatusOK, CatererMFAChallengeResponse(challenge), "MFA code sent")
 }
 
 // confirmMFA switches the second factor on and answers with a session
@@ -91,7 +91,7 @@ func (rs *Resource) disableMFA(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs *Resource) listTrustedDevices(w http.ResponseWriter, r *http.Request) {
-	portalauth.ListTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
+	portalauth.RespondTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
 		return rs.secondFactor.ListCatererTrustedDevices(ctx, currentAccountID(ctx))
 	}, renderFailure)
 }

@@ -20,19 +20,35 @@ import (
 const TrustedDeviceIDParam = "deviceId"
 
 // ListTrustedDevices answers the signed-in account's remembered devices as
-// TrustedDeviceDTOs.
+// bare TrustedDeviceDTOs, the shape the school and Träger portals' route
+// files still read.
 func ListTrustedDevices(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]identityaccess.AccountTrustedDevice, error), refuse Refusal) {
 	devices, err := list(r.Context())
 	if err != nil {
 		refuse(w, r, err)
 		return
 	}
-	render.JSON(w, r, common.MapTrustedDevices(devices, func(d identityaccess.AccountTrustedDevice) common.TrustedDeviceRow {
+	render.JSON(w, r, trustedDeviceDTOs(devices))
+}
+
+// RespondTrustedDevices answers the same list in the response envelope, the
+// shape a portal's catalog proxy reads (#2352).
+func RespondTrustedDevices(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]identityaccess.AccountTrustedDevice, error), refuse Refusal) {
+	devices, err := list(r.Context())
+	if err != nil {
+		refuse(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, trustedDeviceDTOs(devices), "Trusted devices retrieved")
+}
+
+func trustedDeviceDTOs(devices []identityaccess.AccountTrustedDevice) []common.TrustedDeviceDTO {
+	return common.MapTrustedDevices(devices, func(d identityaccess.AccountTrustedDevice) common.TrustedDeviceRow {
 		return common.TrustedDeviceRow{
 			ID: d.ID, UserAgent: d.UserAgent, IPAddress: d.IPAddress,
 			CreatedAt: d.CreatedAt, ExpiresAt: d.ExpiresAt, LastUsedAt: d.LastUsedAt,
 		}
-	}))
+	})
 }
 
 // RevokeTrustedDevice forgets the remembered device the path names and
@@ -46,5 +62,5 @@ func RevokeTrustedDevice(w http.ResponseWriter, r *http.Request, revoke func(con
 		refuse(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }

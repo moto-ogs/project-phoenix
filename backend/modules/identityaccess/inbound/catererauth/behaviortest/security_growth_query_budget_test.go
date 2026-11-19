@@ -100,8 +100,18 @@ func TestIdentityCatererSecurityPositiveGrowthQueryBudget(t *testing.T) {
 			for _, op := range []string{"INSERT", "UPDATE", "DELETE", "MERGE"} {
 				require.Empty(t, counter.Operation(op))
 			}
+			// The device list answers in the envelope the catalog proxy reads
+			// (#2352); the passkey list still answers bare.
 			var got []map[string]any
-			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+			if path == "/caterer/auth/passkeys" {
+				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+			} else {
+				var envelope struct {
+					Data []map[string]any `json:"data"`
+				}
+				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
+				got = envelope.Data
+			}
 			t.Logf("CATERER %s N%d count=%d body=%s", path, n, counter.Total(), rr.Body.String())
 			if path == "/caterer/auth/passkeys" {
 				require.Equal(t, keys, got)

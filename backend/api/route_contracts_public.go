@@ -4,6 +4,10 @@ import (
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	accountHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
+	catererAuthHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/catererauth"
+	parentAuthHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/parentauth"
+	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 )
@@ -16,14 +20,30 @@ func publicContractMounts() []contractMount {
 		{"/api/enrollment", enrollmentHTTP.PublicRouteContracts()},
 		{"/caterer", catererPortalHTTP.PublicRouteContracts()},
 		{"/traeger/invitations", traegerPortalHTTP.InvitationRouteContracts()},
+		{holidayRegistrationPath, enrollmentHTTP.PublicHolidayRegistrationRouteContracts()},
+		{holidayQuoteMount, parentBillingHTTP.HolidayQuoteRouteContracts()},
 		{"/public/care-contract-signing", careContractHTTP.SigningRouteContracts()},
 	}
 }
 
-// staffPortalInvitationContractMounts lists the staff portal's invitation
-// routes the root mounts beside /api, at /auth/invitations (#2352).
+// staffPortalInvitationContractMounts lists the staff portal's routes the
+// root mounts beside /api, below /auth (#2352): the invitations, the role,
+// permission and account administration and the account's own settings.
+// People Directory owns the caregiver capability's answer, so its type is
+// named here.
 func staffPortalInvitationContractMounts() []contractMount {
 	return []contractMount{
 		{"/auth/invitations", accountHTTP.InvitationRouteContracts()},
+		{"/auth", accountHTTP.AdminRouteContracts(peopledirectory.CaregiverCapabilityState{})},
+		{"/auth", accountHTTP.SelfServiceRouteContracts()},
+	}
+}
+
+// secondFactorContractMounts lists the caterer's and the parents' reading and
+// starting of their second factor and their remembered devices (#2352).
+func secondFactorContractMounts() []contractMount {
+	return []contractMount{
+		{"/caterer", catererAuthHTTP.SecondFactorRouteContracts()},
+		{"/parent", parentAuthHTTP.SecondFactorRouteContracts()},
 	}
 }

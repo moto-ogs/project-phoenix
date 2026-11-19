@@ -12,6 +12,7 @@ import {
   wrapInApiResponse,
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
+import { underOutsideHead } from "./catalog-outside-mounts";
 import { decodeContract } from "./client.server";
 
 /** A generated route entry, as `portalRoutes` lists it. */
@@ -66,9 +67,6 @@ function matches(pattern: readonly string[], path: readonly string[]) {
   );
 }
 
-const startsWith = (path: readonly string[], head: readonly string[]) =>
-  head.every((segment, index) => path[index] === segment);
-
 /** Compare path segments lexicographically, with parameters after literals. */
 function literalFirst(a: readonly string[], b: readonly string[]) {
   for (let index = 0; index < Math.min(a.length, b.length); index++) {
@@ -119,25 +117,27 @@ export function makeCatalogProxy(
   publics: PublicCatalog = { routes: [] },
 ) {
   const prefix = segmentsOf(mount);
-  const heads = [prefix, ...outside.map(segmentsOf)];
-  const publicHeads = [prefix, ...(publics.outside ?? []).map(segmentsOf)];
+  const mountHead = mount.replace(/\/$/, "");
+  const publicOutside = publics.outside ?? [];
   const entries = (
     list: readonly CatalogRoute[],
-    under: readonly (readonly string[])[],
+    under: readonly string[],
     isPublic: boolean,
   ) =>
     list
       .filter((route) => route.method === method)
       .filter(hasOneDecoder)
       .map((route) => ({ route, pattern: segmentsOf(route.pattern), isPublic }))
-      .filter(({ pattern }) => under.some((head) => startsWith(pattern, head)));
+      .filter(({ pattern }) =>
+        under.some((head) => underOutsideHead(pattern, head)),
+      );
   // One table for both lists: a literal segment wins over a parameter in the
   // same place, whichever list the route comes from.
   const served = [
-    ...entries(routes, heads, false),
-    ...entries(publics.routes, publicHeads, true),
+    ...entries(routes, [mountHead, ...outside], false),
+    ...entries(publics.routes, [mountHead, ...publicOutside], true),
   ].sort((a, b) => literalFirst(a.pattern, b.pattern));
-  const outsideHeads = [...heads.slice(1), ...publicHeads.slice(1)];
+  const besideMount = [...outside, ...publicOutside];
 
   function lookup(full: string[]) {
     const hit = served.find(({ pattern }) => matches(pattern, full));
@@ -152,7 +152,7 @@ export function makeCatalogProxy(
     const segments = tail as string[];
     const underMount = lookup([...prefix, ...segments]);
     if (underMount) return underMount;
-    return outsideHeads.some((head) => startsWith(segments, head))
+    return besideMount.some((head) => underOutsideHead(segments, head))
       ? lookup(segments)
       : null;
   }
@@ -309,4 +309,38 @@ export function makeCatalogProxy(
     applyPrivateNoStore(response.headers);
     return response;
   };
+}
+
+/**
+ * The head of a route file below a portal's BFF prefix that Next would give
+ * another file (Auth.js's `auth/[...nextauth]`, or a sibling with a dynamic
+ * segment): literal segments, and for a dynamic folder above the file a
+ * function of the route's params.
+ */
+export type HandOffHead =
+  | readonly string[]
+  | ((
+      params: Record<string, string | string[] | undefined>,
+    ) => readonly string[] | null);
+
+/**
+ * Hands a request to a portal's catalog proxy with the path its catch-all
+ * would receive: the file's own catch-all `path`, the tail after the head,
+ * gets the head in front again. A head the params cannot name is answered
+ * by the proxy's 404, as an unknown path is.
+ */
+export function handOffUnder(
+  head: HandOffHead,
+  handler: (request: NextRequest, context: RouteContext) => Promise<Response>,
+) {
+  return (request: NextRequest, context: RouteContext) =>
+    handler(request, {
+      params: context.params.then((params) => {
+        const tail = params.path;
+        const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
+        const lead = typeof head === "function" ? head(params) : head;
+        // An empty segment matches no route: the proxy answers 404.
+        return { ...params, path: lead ? [...lead, ...rest] : [""] };
+      }),
+    });
 }

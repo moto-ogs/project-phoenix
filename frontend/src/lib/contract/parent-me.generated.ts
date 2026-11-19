@@ -24,6 +24,7 @@ import {
   EventSchema,
   ParentConferenceWindowSchema,
   SigningViewSchema,
+  TrustedDeviceDTOSchema,
   type Event,
   type InvitationAnswer,
   type ParentConferenceWindow,
@@ -926,6 +927,27 @@ export const ParentRequestEventResponseSchema: z.ZodType<ParentRequestEventRespo
   version: str,
 });
 
+/** Go: parent.StatusDayResponse */
+export interface StatusDayResponse {
+  id: string;
+  student_id: string;
+  date: string;
+  status: string;
+  reported_at: string;
+  source: string;
+  note?: string;
+}
+
+export const StatusDayResponseSchema: z.ZodType<StatusDayResponse, unknown> = object<StatusDayResponse>({
+  id: str,
+  student_id: str,
+  date: str,
+  status: str,
+  reported_at: instant,
+  source: str,
+  note: optional(str),
+});
+
 /** Go: parent.TodayStatusResponse */
 export interface TodayStatusResponse {
   at_ogs: boolean | null;
@@ -1593,6 +1615,19 @@ export const UnreadCountResponseSchema: z.ZodType<UnreadCountResponse, unknown> 
   unread_count: safeInt,
 });
 
+/** Go: parentauth.ParentMFAStatusResponse */
+export interface ParentMFAStatusResponse {
+  enabled: boolean;
+  available: boolean;
+  masked_email: string;
+}
+
+export const ParentMFAStatusResponseSchema: z.ZodType<ParentMFAStatusResponse, unknown> = object<ParentMFAStatusResponse>({
+  enabled: bool,
+  available: bool,
+  masked_email: str,
+});
+
 /** Go: parent.AnnouncementOption */
 export interface AnnouncementOption {
   id: string;
@@ -2236,6 +2271,25 @@ export const inviteRelatedAccountResponseSchema: z.ZodType<inviteRelatedAccountR
   existing_role: optional(str),
 });
 
+/** Go: parent.SubmitSickNoteRequest */
+export interface SubmitSickNoteRequest {
+  dates?: string[] | null;
+  reason?: string;
+  status?: string;
+  recipient_guardian_profile_ids?: string[] | null;
+}
+
+/** Go: parent.SickNoteEnvelopeResponse */
+export interface SickNoteEnvelopeResponse {
+  status_days: StatusDayResponse[] | null;
+  pending_request: ParentExcusedRequestResponse | null;
+}
+
+export const SickNoteEnvelopeResponseSchema: z.ZodType<SickNoteEnvelopeResponse, unknown> = object<SickNoteEnvelopeResponse>({
+  status_days: nullable(arr(StatusDayResponseSchema)),
+  pending_request: nullable(ParentExcusedRequestResponseSchema),
+});
+
 /** Go: care.ContractNoticeInput */
 export interface ContractNoticeInput {
   expected_ends_on?: string | null;
@@ -2292,6 +2346,17 @@ export interface PostMessageRequest {
   group_thread_id?: string;
   audience?: string;
 }
+
+/** Go: parentauth.ParentMFAChallengeResponse */
+export interface ParentMFAChallengeResponse {
+  challenge_token: string;
+  masked_email: string;
+}
+
+export const ParentMFAChallengeResponseSchema: z.ZodType<ParentMFAChallengeResponse, unknown> = object<ParentMFAChallengeResponse>({
+  challenge_token: str,
+  masked_email: str,
+});
 
 /** Go: parent.stampRequest */
 export interface stampRequest {
@@ -2558,6 +2623,12 @@ export interface GetParentMeChildrenStudentIdMealPlanQuery {
   week_start?: string;
 }
 
+/** Query of GET /parent/me/children/{studentId}/sick-note */
+export interface GetParentMeChildrenStudentIdSickNoteQuery {
+  from?: string;
+  to?: string;
+}
+
 /** Query of GET /parent/me/messages/children/{studentId} */
 export interface GetParentMeMessagesChildrenStudentIdQuery {
   audience?: string;
@@ -2603,6 +2674,12 @@ export const routes = {
   "DELETE /parent/me/children/{studentId}/related-accounts/{guardianProfileId}": {
     method: "DELETE",
     pattern: "/parent/me/children/{studentId}/related-accounts/{guardianProfileId}",
+    portals: ["parent"],
+    response: noData,
+  },
+  "DELETE /parent/me/mfa/trusted-devices/{deviceId}": {
+    method: "DELETE",
+    pattern: "/parent/me/mfa/trusted-devices/{deviceId}",
     portals: ["parent"],
     response: noData,
   },
@@ -2769,6 +2846,13 @@ export const routes = {
     portals: ["parent"],
     response: success(z.array(ParentRequestEventResponseSchema)),
   },
+  "GET /parent/me/children/{studentId}/sick-note": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/sick-note",
+    portals: ["parent"],
+    query: ["from", "to"],
+    response: success(z.array(StatusDayResponseSchema)),
+  },
   "GET /parent/me/children/{studentId}/today": {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/today",
@@ -2871,6 +2955,18 @@ export const routes = {
     pattern: "/parent/me/messages/unread-count",
     portals: ["parent"],
     response: success(UnreadCountResponseSchema),
+  },
+  "GET /parent/me/mfa": {
+    method: "GET",
+    pattern: "/parent/me/mfa",
+    portals: ["parent"],
+    response: success(ParentMFAStatusResponseSchema),
+  },
+  "GET /parent/me/mfa/trusted-devices": {
+    method: "GET",
+    pattern: "/parent/me/mfa/trusted-devices",
+    portals: ["parent"],
+    response: success(z.array(TrustedDeviceDTOSchema)),
   },
   "GET /parent/me/news": {
     method: "GET",
@@ -3017,6 +3113,13 @@ export const routes = {
     request: requestBody<inviteRelatedAccountRequest>(),
     response: success(inviteRelatedAccountResponseSchema),
   },
+  "POST /parent/me/children/{studentId}/sick-note": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/sick-note",
+    portals: ["parent"],
+    request: requestBody<SubmitSickNoteRequest>(),
+    response: success(SickNoteEnvelopeResponseSchema),
+  },
   "POST /parent/me/documents/{organizationId}/contracts/{contractId}/notice": {
     method: "POST",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/notice",
@@ -3057,6 +3160,13 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<PostMessageRequest>(),
     response: success(ThreadViewResponseSchema),
+  },
+  "POST /parent/me/mfa/start": {
+    method: "POST",
+    pattern: "/parent/me/mfa/start",
+    portals: ["parent"],
+    noRetryAfterRenewal: "a renewed session would mail the code twice",
+    response: success(ParentMFAChallengeResponseSchema),
   },
   "POST /parent/me/news/{announcementId}/acknowledge": {
     method: "POST",

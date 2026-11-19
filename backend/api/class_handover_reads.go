@@ -108,14 +108,14 @@ func matchClassHandovers(handovers []studentpresence.ClassHandover, studentIDs [
 // groupLiveHandovers serves the live group view's handover port.
 type groupLiveHandovers struct{ reads classHandoverReads }
 
-func (h groupLiveHandovers) ClassHandovers(ctx context.Context, studentIDs []int64, day grouplive.Date) (map[int64]grouplive.ClassHandover, error) {
+func (h groupLiveHandovers) ClassHandovers(ctx context.Context, studentIDs []int64, day grouplive.Date) (map[int64]grouplive.GroupLiveClassHandover, error) {
 	loaded, err := loadClassHandovers(ctx, h.reads, studentIDs, calendar.Date(day))
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[int64]grouplive.ClassHandover, len(loaded))
+	result := make(map[int64]grouplive.GroupLiveClassHandover, len(loaded))
 	for id, c := range loaded {
-		result[id] = grouplive.ClassHandover{SchoolClass: c.schoolClass, HandedOverAt: c.handedOverAt, HandedOverBy: c.handedOverBy, Absent: c.absent}
+		result[id] = grouplive.GroupLiveClassHandover{SchoolClass: c.schoolClass, HandedOverAt: c.handedOverAt, HandedOverBy: c.handedOverBy, Absent: c.absent}
 	}
 	return result, nil
 }

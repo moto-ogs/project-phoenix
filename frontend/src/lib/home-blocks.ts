@@ -207,7 +207,7 @@ const PERMISSION = {
   /** GET /api/active/analytics/dashboard */
   analytics: "groups:read",
   /**
-   * GET /api/birthdays, GET /api/staff-notices/today, GET /api/ogs-group-live
+   * GET /api/birthdays, GET /api/staff-notices/today, GET /api/students/ogs-group-live
    * und GET /api/staff/dashboard-summary.
    */
   usersRead: "users:read",

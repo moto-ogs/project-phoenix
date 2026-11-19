@@ -51,3 +51,27 @@ func TestHolidayRegistrationRateLimitLetsItsBurstThrough(t *testing.T) {
 	assert.Equal(t, http.StatusOK, send(http.MethodPost), "writes have a budget of their own")
 	assert.Nil(t, holidayRegistrationRateLimit(false, false, customMiddleware.NewRateLimiter), "no limiter while rate limiting is off")
 }
+
+// The signing link of a contract mail has the shared limit of the public
+// links too, with buckets of its own: a family that opens the link and signs
+// does not spend the budget of the holiday link.
+func TestCareContractSigningRateLimitLetsItsBurstThrough(t *testing.T) {
+	t.Parallel()
+	limited := careContractSigningRateLimit(true, false, customMiddleware.NewRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	send := func(method string) int {
+		rec := httptest.NewRecorder()
+		limited.ServeHTTP(rec, httptest.NewRequest(method, careContractSigningPath+"/link", nil))
+		return rec.Code
+	}
+	_, burst := publicLinkLimits(generalRateLimitFromEnv())
+	for i := range burst {
+		if code := send(http.MethodGet); code != http.StatusOK {
+			t.Fatalf("read %d of the burst of %d: status %d", i+1, burst, code)
+		}
+	}
+	assert.Equal(t, http.StatusTooManyRequests, send(http.MethodGet), "the read past the burst")
+	assert.Equal(t, http.StatusOK, send(http.MethodPost), "writes have a budget of their own")
+	assert.Nil(t, careContractSigningRateLimit(false, false, customMiddleware.NewRateLimiter), "no limiter while rate limiting is off")
+}

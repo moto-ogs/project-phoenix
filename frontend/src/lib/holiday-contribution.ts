@@ -104,10 +104,23 @@ interface BackendLine {
   booked_days?: number | null;
 }
 
+/**
+ * An identifier as the backend sends it: a number, or a string where the
+ * catalog proxy's contract decoder turned it into one (#2352).
+ */
+type WireId = number | string;
+
+/** The identifier as a string, "" for an absent one (0 or null). */
+function presentId(value: WireId | null | undefined): string {
+  return value === undefined || value === null || String(value) === "0"
+    ? ""
+    : String(value);
+}
+
 export interface BackendContribution {
   children?:
     | {
-        child_id: number;
+        child_id: WireId;
         position: number;
         lines?: BackendLine[] | null;
         total_cents: number;
@@ -116,7 +129,7 @@ export interface BackendContribution {
   total_cents: number;
   exemption_available: boolean;
   benefits_exemption: boolean;
-  cost_bearer_id?: number | null;
+  cost_bearer_id?: WireId | null;
   cost_bearer_name?: string;
   frozen: boolean;
   confirmed_at: string | null;
@@ -140,7 +153,7 @@ export function contributionFromBackend(
 ): HolidayContribution {
   return {
     children: (contribution.children ?? []).map((child) => ({
-      childId: child.child_id ? String(child.child_id) : "",
+      childId: presentId(child.child_id),
       position: child.position,
       totalCents: child.total_cents,
       // A meal line without lunches only records the selection of a week
@@ -164,9 +177,7 @@ export function contributionFromBackend(
     totalCents: contribution.total_cents,
     exemptionAvailable: contribution.exemption_available,
     benefitsExemption: contribution.benefits_exemption,
-    costBearerId: contribution.cost_bearer_id
-      ? String(contribution.cost_bearer_id)
-      : null,
+    costBearerId: presentId(contribution.cost_bearer_id) || null,
     costBearerName: contribution.cost_bearer_name ?? "",
     frozen: contribution.frozen,
     confirmedAt: contribution.confirmed_at,

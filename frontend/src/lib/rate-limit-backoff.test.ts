@@ -52,8 +52,8 @@ describe("rate-limit fetch guard", () => {
       );
     await loadGuard(backendFetch);
 
-    await fetch("/api/holiday-registrations/token", { method: "POST" });
-    const blocked = await fetch("/api/holiday-registrations/token", {
+    await fetch("/api/traeger/holiday-registrations/token", { method: "POST" });
+    const blocked = await fetch("/api/traeger/holiday-registrations/token", {
       method: "POST",
     });
 
@@ -84,7 +84,7 @@ describe("rate-limit fetch guard", () => {
       const refused = await fetch("/api/holiday-registrations/token/uploads", {
         method: "POST",
       });
-      const submit = await fetch("/api/holiday-registrations/token", {
+      const submit = await fetch("/api/traeger/holiday-registrations/token", {
         method: "POST",
       });
 

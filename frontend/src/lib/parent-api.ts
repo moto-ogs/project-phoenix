@@ -833,8 +833,8 @@ export async function submitParentEnrollment(
  * Reports the child absent for one or more dates (YYYY-MM-DD) with the chosen
  * status: "sick" (Krankmeldung, flips the live sick flag when effective) or
  * "excused" (Termin/Abwesenheit, no live flag). Direct submissions return the
- * recorded days; approval-gated submissions return an empty status-day array
- * and are discovered by refetching the absence-request list. The backend
+ * recorded days; approval-gated submissions return no day and the pending
+ * request. The backend
  * verifies the caller is a guardian of the child and that the school has the
  * feature enabled. A trimmed reason is required for both absence types; a
  * disabled school surfaces as a thrown error.
@@ -847,7 +847,7 @@ export async function submitSickNote(
   recipientGuardianProfileIds: string[] = [],
 ): Promise<SickNoteSubmitResult> {
   const res = await postJson<SickNoteSubmitResult | StatusDay[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/sick-note?envelope=1`,
+    `/api/parent/me/children/${encodeURIComponent(studentId)}/sick-note`,
     {
       dates,
       reason,
@@ -855,9 +855,9 @@ export async function submitSickNote(
       recipient_guardian_profile_ids: recipientGuardianProfileIds,
     },
   );
-  // With ?envelope=1 the backend answers {status_days, pending_request}. An
-  // older backend still answers the bare array; keep accepting both so a
-  // rolling deployment presents one stable shape to callers.
+  // The backend answers {status_days, pending_request} (#2352). Until the
+  // temporary sick-note route file is gone, a bare array from a backend of an
+  // older release is still read, so callers see one stable shape.
   return Array.isArray(res)
     ? { status_days: res, pending_request: undefined }
     : res;

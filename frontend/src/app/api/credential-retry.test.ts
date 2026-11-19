@@ -58,8 +58,6 @@ const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
   "auth/password": () => import("./auth/password/route"),
   "operator/profile/password": () =>
     import("./operator/profile/password/route"),
-  "operator/profile/email-change": () =>
-    import("./operator/profile/email-change/route"),
   "caterer/account/password": () => import("./caterer/account/password/route"),
   // Hands the request to the Träger catalog proxy, whose contract switches
   // the retry off.
@@ -70,6 +68,9 @@ const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
     import("./caterer/account/mfa/confirm/route"),
   "parent/me/mfa/disable": () => import("./parent/me/mfa/disable/route"),
   "parent/me/mfa/confirm": () => import("./parent/me/mfa/confirm/route"),
+  "caterer/account/mfa/start": () =>
+    import("./caterer/account/mfa/start/route"),
+  "parent/me/mfa/start": () => import("./parent/me/mfa/start/route"),
   "parent/me/children/[studentId]/sick-note": () =>
     import("./parent/me/children/[studentId]/sick-note/route"),
 };
@@ -85,6 +86,10 @@ const CATALOG: Record<
   "parent/me/news/[announcementId]/declaration": {
     load: () => import("./parent/[...path]/route"),
     path: ["me", "news", "1", "declaration"],
+  },
+  "operator/profile/email-change": {
+    load: () => import("./operator/[...path]/route"),
+    path: ["profile", "email-change"],
   },
 };
 
@@ -181,6 +186,16 @@ describe("routes that carry the current password or a code", () => {
       "traeger.localhost:3000",
       {},
     );
+
+    expect(response.status).toBe(401);
+    expect(backend).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["caterer/account/mfa/start", "caterer.localhost:3000"],
+    ["parent/me/mfa/start", "parents.localhost:3000"],
+  ])("%s mails once after a 401", async (route, host) => {
+    const response = await post(route, host, {});
 
     expect(response.status).toBe(401);
     expect(backend).toHaveBeenCalledOnce();

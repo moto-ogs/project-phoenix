@@ -108,9 +108,9 @@ type HolidayRegistrationWeek struct {
 	LunchDays       int  `json:"lunch_days"`
 }
 
-// HolidayRegistrationOfferResponse is the body of GET
+// PublicHolidayRegistrationOfferResponse is the body of GET
 // /traeger/holiday-registrations/{token}.
-type HolidayRegistrationOfferResponse struct {
+type PublicHolidayRegistrationOfferResponse struct {
 	TraegerName          string                    `json:"traeger_name"`
 	Name                 string                    `json:"name"`
 	RegistrationOpensOn  calendar.Date             `json:"registration_opens_on"`
@@ -304,27 +304,29 @@ type HolidayRegistrationReceiptResponse struct {
 	StatusToken string `json:"status_token"`
 }
 
-// seedHolidayReceiptResponse is the answer the local seeder alone receives:
-// the receipt with a setup link for the parent account the registration
-// offered (ADR 0216), issued for this answer only, so the seed redeems it
-// without waiting for the mail.
-type seedHolidayReceiptResponse struct {
+// HolidayRegistrationSubmitResponse is the answer of POST
+// /traeger/holiday-registrations/{token}: the receipt, and for the local
+// seeder alone a setup link for the parent account the registration offered
+// (ADR 0216), issued for this answer only, so the seed redeems it without
+// waiting for the mail. Every other caller gets the receipt without the key,
+// whether or not an offer went out.
+type HolidayRegistrationSubmitResponse struct {
 	HolidayRegistrationReceiptResponse
-	ParentAccountSetupURL string `json:"parent_account_setup_url"`
+	ParentAccountSetupURL string `json:"parent_account_setup_url,omitempty"`
 }
 
-// holidayReceiptBody is the answer of a stored registration. Every caller
-// but the local seeder gets the same body, whether or not an offer went out.
-func (rs *HolidayRegistrationResource) holidayReceiptBody(r *http.Request, receipt capability.HolidayRegistrationReceipt, organizationID int64, email string) (any, error) {
-	response := HolidayRegistrationReceiptResponse(receipt)
+// holidayReceiptBody is the answer of a stored registration.
+func (rs *HolidayRegistrationResource) holidayReceiptBody(r *http.Request, receipt capability.HolidayRegistrationReceipt, organizationID int64, email string) (HolidayRegistrationSubmitResponse, error) {
+	response := HolidayRegistrationSubmitResponse{HolidayRegistrationReceiptResponse: HolidayRegistrationReceiptResponse(receipt)}
 	if !response.ParentAccountOffered || !rs.exposeSeed(r) {
 		return response, nil
 	}
 	link, err := rs.seedLinks.HolidayParentAccountLink(strings.TrimSpace(email), organizationID)
 	if err != nil {
-		return nil, err
+		return HolidayRegistrationSubmitResponse{}, err
 	}
-	return seedHolidayReceiptResponse{HolidayRegistrationReceiptResponse: response, ParentAccountSetupURL: link.SetupURL}, nil
+	response.ParentAccountSetupURL = link.SetupURL
+	return response, nil
 }
 
 // resolveLink resolves the link in the administrative transaction.
@@ -362,7 +364,7 @@ func (rs *HolidayRegistrationResource) offer(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, http.StatusOK, holidayOfferResponse(link, offer, siteKey), "Holiday registration retrieved")
 }
 
-func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capability.HolidayRegistrationOffer, siteKey string) HolidayRegistrationOfferResponse {
+func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capability.HolidayRegistrationOffer, siteKey string) PublicHolidayRegistrationOfferResponse {
 	names := map[int64]string{}
 	schools := make([]HolidayRegistrationSchool, 0, len(link.Traeger.Schools))
 	for _, school := range link.Traeger.Schools {
@@ -389,7 +391,7 @@ func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capabil
 			LunchPriceCents: week.LunchPriceCents, LunchDays: week.LunchDays,
 		})
 	}
-	return HolidayRegistrationOfferResponse{
+	return PublicHolidayRegistrationOfferResponse{
 		TraegerName: link.Traeger.Name, Name: offer.Name, RegistrationOpensOn: offer.RegistrationOpensOn,
 		RegistrationClosesOn: offer.RegistrationClosesOn, Binding: offer.Binding, Notes: offer.Notes, Open: offer.Open,
 		Weeks: weeks, Schools: schools, CaptchaSiteKey: siteKey, MaxDaysPerChild: offer.MaxDaysPerChild,

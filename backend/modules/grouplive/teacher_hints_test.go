@@ -12,13 +12,13 @@ import (
 // teacherHintReader answers the Lehrkraft's day hints (#4795) from a map and
 // records which children it was asked for.
 type teacherHintReader struct {
-	hints map[int64][]TeacherHint
+	hints map[int64][]GroupLiveTeacherHint
 	err   error
 	asked [][]int64
 	dates []Date
 }
 
-func (r *teacherHintReader) TeacherHints(_ context.Context, ids []int64, date Date) (map[int64][]TeacherHint, error) {
+func (r *teacherHintReader) TeacherHints(_ context.Context, ids []int64, date Date) (map[int64][]GroupLiveTeacherHint, error) {
 	r.asked = append(r.asked, ids)
 	r.dates = append(r.dates, date)
 	return r.hints, r.err
@@ -47,13 +47,13 @@ func teacherHintService(f *fakes, reader TeacherHintReader) Query {
 // (staff eligibility plus users:read), like every other note of a child.
 func TestLiveGroupAttachesTeacherHints(t *testing.T) {
 	t.Parallel()
-	hint := TeacherHint{Body: "Heute Sportfest", AuthorName: "Frau Kurz", SchoolClass: "2a"}
+	hint := GroupLiveTeacherHint{Body: "Heute Sportfest", AuthorName: "Frau Kurz", SchoolClass: "2a"}
 
-	reader := &teacherHintReader{hints: map[int64][]TeacherHint{11: {hint}}}
+	reader := &teacherHintReader{hints: map[int64][]GroupLiveTeacherHint{11: {hint}}}
 	got, err := teacherHintService(teacherHintFakes(fullCaller, false), reader).LiveGroup(context.Background(), 1)
 	require.NoError(t, err)
 	require.Len(t, got.Students, 2)
-	assert.Equal(t, []TeacherHint{hint}, got.Students[0].TeacherHints)
+	assert.Equal(t, []GroupLiveTeacherHint{hint}, got.Students[0].TeacherHints)
 	assert.Empty(t, got.Students[1].TeacherHints)
 	assert.Equal(t, [][]int64{{11, 12}}, reader.asked)
 	assert.Equal(t, []Date{today}, reader.dates, "the hints are today's")
@@ -62,7 +62,7 @@ func TestLiveGroupAttachesTeacherHints(t *testing.T) {
 		"without users:read":        teacherHintFakes(func(context.Context) (Caller, error) { return Caller{CanReadGroups: true}, nil }, false),
 		"without staff eligibility": teacherHintFakes(fullCaller, true),
 	} {
-		reader := &teacherHintReader{hints: map[int64][]TeacherHint{11: {hint}}}
+		reader := &teacherHintReader{hints: map[int64][]GroupLiveTeacherHint{11: {hint}}}
 		got, err := teacherHintService(f, reader).LiveGroup(context.Background(), 1)
 		require.NoError(t, err, name)
 		for _, student := range got.Students {
