@@ -22,7 +22,7 @@
 //                               list item (inside a `.map(…)` callback or a
 //                               DataTable column `render`) whose accessible
 //                               name is an object action: bearbeiten,
-//                               löschen, entfernen, archivieren,
+//                               ändern (#7417), löschen, entfernen, archivieren,
 //                               wiederherstellen, duplizieren, umbenennen,
 //                               veröffentlichen, kopieren. Reorder arrows
 //                               („nach oben“) are list actions and pass; an
@@ -294,9 +294,11 @@ function fileKey(context) {
 
 // Object actions that belong in the row's kebab. Word-bounded incl. umlauts
 // (see DELETE_LABEL_RE): „Jahrgang 1 archivieren“, „Löscht…“ does NOT match
-// (different word), „Endgültig löschen“ and „Link kopieren“ do.
+// (different word), „Endgültig löschen“ and „Link kopieren“ do. „Ändern“ is
+// the old label for Bearbeiten (#7417); „nicht ändern“ keeps a value as it is
+// and is no object action.
 const ROW_ACTION_LABEL_RE =
-  /(?:^|\P{L})(?:bearbeiten|löschen|entfernen|archivieren|wiederherstellen|duplizieren|umbenennen|veröffentlichen|kopieren)(?:\P{L}|$)/iu;
+  /(?:^|\P{L})(?:bearbeiten|(?<!(?:^|\P{L})nicht\s+)ändern|löschen|entfernen|archivieren|wiederherstellen|duplizieren|umbenennen|veröffentlichen|kopieren)(?:\P{L}|$)/iu;
 const CHIP_REMOVE_RE = /(?:^|\P{L})entfernen(?:\P{L}|$)/iu;
 
 // Shrink-only per-match tolerance. Each key identifies the exact location of

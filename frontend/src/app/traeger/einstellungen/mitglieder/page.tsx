@@ -229,14 +229,14 @@ export default function TraegerAccountsPage() {
           items={[
             {
               icon: <UserPen className="size-4" aria-hidden />,
-              label: member.name ? "Namen ändern" : "Namen eintragen",
-              description: "Öffnet den Namen der Person zum Ändern.",
+              label: member.name ? "Namen bearbeiten" : "Namen eintragen",
+              description: "Öffnet den Namen der Person zum Bearbeiten.",
               onClick: () => setNaming(member),
             },
             {
               icon: <Pencil className="size-4" aria-hidden />,
-              label: "Rollen ändern",
-              description: "Öffnet die Rollen der Person zum Ändern.",
+              label: "Rollen bearbeiten",
+              description: "Öffnet die Rollen der Person zum Bearbeiten.",
               onClick: () => setEditing(member),
             },
             ...(isLastLeader(member)

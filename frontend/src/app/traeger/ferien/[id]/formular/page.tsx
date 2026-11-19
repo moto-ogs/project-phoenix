@@ -16,9 +16,6 @@ import {
   HOLIDAY_BILLING_HINT,
   useHolidayPeriodBillingHref,
 } from "~/components/traeger/use-holiday-period-billing-href";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { billingConcept } from "~/lib/concepts/billing";
-import { ButtonLink } from "~/components/ui/button";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
@@ -80,26 +77,19 @@ export default function TraegerHolidayFormPage() {
         period?.registrationCount,
         period?.allocationMode,
       )}
-      actions={
-        <>
-          {period ? <HolidayPeriodStatusBadge period={period} /> : null}
-          {billingHref ? (
-            <ButtonLink
-              href={billingHref}
-              variant="outline"
-              size="md"
-              tooltip={HOLIDAY_BILLING_HINT}
-            >
-              <MotoConceptIcon
-                concept={billingConcept}
-                size={18}
-                className="mr-2"
-              />
-              Zur Abrechnung
-            </ButtonLink>
-          ) : null}
-        </>
+      overflowMenu={
+        billingHref
+          ? [
+              {
+                label: "Zur Abrechnung",
+                description: HOLIDAY_BILLING_HINT,
+                href: billingHref,
+                onClick: () => undefined,
+              },
+            ]
+          : undefined
       }
+      actions={period ? <HolidayPeriodStatusBadge period={period} /> : null}
       error={loadError}
       loading={!loadError && !(period && form)}
     >

@@ -231,7 +231,7 @@ export function StepWiederholung({
                   size="compact"
                   className="min-w-[44px]"
                   onClick={() => normalizeLegacyWeekend(iso)}
-                  aria-label={`Alten Wochenendtag ${weekdayLabel(iso)} zu Montag ändern`}
+                  aria-label={`Alten Wochenendtag ${weekdayLabel(iso)} auf Montag verlegen`}
                   tooltip="Verlegt die Serie von diesem Tag auf Montag, sobald du speicherst."
                 >
                   {weekdayLabel(iso)} zu Mo
