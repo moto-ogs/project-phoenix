@@ -45,7 +45,7 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const WEEK_PROTOCOL_INFO =
-  "Hier siehst du, was moto in dieser Woche festgehalten hat. Mit „Ergänzen“ schreibst du dazu, was wichtig war. Danach wählst du „Abschließen“.";
+  "Hier siehst du, was moto in dieser Woche festgehalten hat. Bei einem Entwurf kannst du mit „Ergänzen“ etwas dazuschreiben und es abschließen. Ein abgeschlossenes Protokoll lädst du als PDF herunter.";
 
 // Wochenprotokoll (#4769): eine Woche einer Gruppe. Jeder Tag zeigt, was der
 // Abend festgehalten hat. Im Entwurf ergänzt die Gruppenleitung die Tage und

@@ -671,4 +671,4 @@ function FolderFilesPanel({
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const FILES_INFO =
-  "Hier liegen gemeinsame Dateien, sortiert in Ordnern. Wähle zuerst den passenden Ordner. Über das Menü mit den drei Punkten öffnest du eine Datei oder lädst sie herunter.";
+  "Hier liegen gemeinsame Dateien, sortiert in Ordnern. Der erste Ordner ist schon ausgewählt. Wähle einen anderen Ordner, wenn du eine andere Datei suchst. Über das Menü mit den drei Punkten öffnest du eine Datei oder lädst sie herunter.";

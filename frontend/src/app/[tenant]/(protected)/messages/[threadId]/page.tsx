@@ -90,7 +90,7 @@ import { childrenConcept } from "~/lib/concepts/children";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const THREAD_INFO =
-  "Hier liest du die Unterhaltung mit den Eltern eines Kindes. Die neueste Nachricht steht unten. Darunter schreibst du deine Antwort.";
+  "Hier liest du die Unterhaltung mit den Eltern eines Kindes. Die neueste Nachricht steht unten. Wenn Eltern-Nachrichten eingeschaltet sind, kannst du darunter antworten.";
 
 const logger = createLogger({ component: "MessageThreadPage" });
 

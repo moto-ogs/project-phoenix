@@ -91,7 +91,11 @@ function editPath(
 
 export default function AnnouncementDetailPage() {
   return (
-    <Suspense fallback={<AnnouncementDetailLoadingPage />}>
+    <Suspense
+      fallback={
+        <AnnouncementDetailLoadingPage info={ANNOUNCEMENT_DETAIL_INFO} />
+      }
+    >
       <AnnouncementDetailPageContent />
     </Suspense>
   );
@@ -214,6 +218,7 @@ function AnnouncementDetailPageContent() {
   if ((isLoading && !announcement) || awaitingErrorText) {
     return (
       <AnnouncementDetailLoadingPage
+        info={ANNOUNCEMENT_DETAIL_INFO}
         referrer={referrer}
         backLabel={backLabel}
         title={preview?.name}

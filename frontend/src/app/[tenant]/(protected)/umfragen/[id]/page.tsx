@@ -77,7 +77,7 @@ import { pollsConcept } from "~/lib/concepts/polls";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const SURVEY_DETAIL_INFO =
-  "Hier siehst du eine Umfrage mit ihren Fragen. Einen Entwurf veröffentlichst du über das Menü mit den drei Punkten. Danach stehen die Antworten unter „Auswertung“.";
+  "Hier siehst du eine Umfrage mit ihren Fragen. Einen Entwurf veröffentlichst du über das Menü mit den drei Punkten. Unter „Auswertung“ siehst du die Antworten, sobald genug Personen geantwortet haben. Bei anonymen Umfragen erst nach dem Ende.";
 
 const logger = createLogger({ component: "SurveyDetailPage" });
 

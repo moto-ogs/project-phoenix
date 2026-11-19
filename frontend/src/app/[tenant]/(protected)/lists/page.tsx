@@ -1842,6 +1842,7 @@ export default function SlotListsPage() {
     return (
       <PlanningDisabledState
         pageTitle="Tageslisten"
+        info={LISTS_INFO}
         heading="Tageslisten sind deaktiviert"
         description="Tageslisten gehören zum Betreuungsplan, der für diese Schule ausgeschaltet ist. Er kann in den Einstellungen unter „Betrieb“ wieder aktiviert werden."
         testId="slot-lists-disabled-state"

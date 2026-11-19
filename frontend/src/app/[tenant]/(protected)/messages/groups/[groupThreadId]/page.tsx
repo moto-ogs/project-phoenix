@@ -51,7 +51,7 @@ import { useTenant } from "~/lib/tenant-context";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const GROUP_THREAD_INFO =
-  "Hier schreibst du allen Eltern dieser Gruppennachricht. Unter „Gelesen“ siehst du je Kind, ob die Eltern die neueste Nachricht gelesen haben.";
+  "Hier liest du die Nachricht an alle Eltern dieser Gruppe. Solange sie offen ist und Eltern-Nachrichten eingeschaltet sind, kannst du etwas dazuschreiben. Unter „Gelesen“ siehst du je Kind, ob ein Elternteil die neueste Nachricht gelesen hat.";
 
 const logger = createLogger({ component: "GroupMessagePage" });
 

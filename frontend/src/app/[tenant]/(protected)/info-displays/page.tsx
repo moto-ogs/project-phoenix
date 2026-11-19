@@ -47,7 +47,7 @@ import { foldForSearch } from "~/lib/search-fold";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const INFO_DISPLAYS_INFO =
-  "Ein Info-Display zeigt auf einem Bildschirm in der Schule Raumbelegung, Angebote und Abholzeiten. Namen von Kindern stehen dort nicht. Jedes Display hat einen eigenen Link, den du auf dem Bildschirm öffnest.";
+  "Ein Info-Display zeigt auf einem Bildschirm in der Schule die Anwesenheit, Raumbelegung, Aktivitäten und Abholzeiten. Namen von Kindern stehen dort nicht. Jedes Display hat einen eigenen Link, den du auf dem Bildschirm öffnest.";
 
 const logger = createLogger({ component: "InfoDisplaysPage" });
 
