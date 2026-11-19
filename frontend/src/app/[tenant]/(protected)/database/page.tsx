@@ -282,7 +282,7 @@ function DatabaseContent() {
     mutate: mutateCounts,
   } = useSWRAuth(
     session?.user ? databaseKeys.counts() : null,
-    () => fetchDatabaseCounts("/api/database/counts"),
+    () => fetchDatabaseCounts("/api/database/stats"),
     {
       keepPreviousData: false,
       onError: (error: unknown) => {

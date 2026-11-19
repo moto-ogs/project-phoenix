@@ -443,6 +443,8 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("meal plan read query budgets", func(t *testing.T) { checkMealPlanReadQueryBudgets(t, api) })
 			t.Run("meal plan allergens", func(t *testing.T) { checkMealPlanAllergens(t, api) })
 			t.Run("class list entry administration", func(t *testing.T) { checkClassListEntryAdministration(t, api) })
+			t.Run("request feed controls", func(t *testing.T) { checkRequestFeedControls(t, api) })
+			t.Run("substitution routes", func(t *testing.T) { checkSubstitutionRoutes(t, api) })
 			t.Run("enrollment submission", func(t *testing.T) { checkEnrollmentSubmissionGolden(t, api) })
 			t.Run("open room kiosk booking", func(t *testing.T) { checkOpenRoomKioskBooking(t, api) })
 			t.Run("move bypass authorization", func(t *testing.T) { checkMoveBypassAuthorization(t, api) })

@@ -188,7 +188,7 @@ func (rs *WeekProtocolResource) list(w http.ResponseWriter, r *http.Request) {
 	for _, protocol := range protocols {
 		out = append(out, weekProtocolResponseOf(protocol, false))
 	}
-	render.JSON(w, r, map[string]any{"data": out})
+	common.Respond(w, r, http.StatusOK, out, "Week protocols retrieved")
 }
 
 func (rs *WeekProtocolResource) get(w http.ResponseWriter, r *http.Request) {
@@ -200,7 +200,7 @@ func (rs *WeekProtocolResource) get(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to record audit trail", err))
 		return
 	}
-	render.JSON(w, r, map[string]any{"data": weekProtocolResponseOf(protocol, true)})
+	common.Respond(w, r, http.StatusOK, weekProtocolResponseOf(protocol, true), "Week protocol retrieved")
 }
 
 func (rs *WeekProtocolResource) saveNotes(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +229,7 @@ func (rs *WeekProtocolResource) saveNotes(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to record audit trail", err))
 		return
 	}
-	render.JSON(w, r, map[string]any{"data": weekProtocolResponseOf(protocol, true)})
+	common.Respond(w, r, http.StatusOK, weekProtocolResponseOf(protocol, true), "Week protocol notes saved")
 }
 
 func (rs *WeekProtocolResource) close(w http.ResponseWriter, r *http.Request) {
@@ -258,7 +258,7 @@ func (rs *WeekProtocolResource) close(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to record audit trail", err))
 		return
 	}
-	render.JSON(w, r, map[string]any{"data": weekProtocolResponseOf(protocol, true)})
+	common.Respond(w, r, http.StatusOK, weekProtocolResponseOf(protocol, true), "Week protocol closed")
 }
 
 // pdf serves the PDF stored when the protocol was closed (#4769), byte for
@@ -364,11 +364,14 @@ func weekProtocolFilterOf(r *http.Request) (timetable.WeekProtocolFilter, error)
 }
 
 type weekProtocolNotesRequest struct {
-	WeekNote string `json:"week_note"`
-	Days     []struct {
-		Date string `json:"date"`
-		Note string `json:"note"`
-	} `json:"days"`
+	WeekNote string                     `json:"week_note"`
+	Days     []weekProtocolDayNoteInput `json:"days"`
+}
+
+// weekProtocolDayNoteInput is the note of one day; Date is YYYY-MM-DD.
+type weekProtocolDayNoteInput struct {
+	Date string `json:"date"`
+	Note string `json:"note"`
 }
 
 func decodeWeekProtocolNotes(r *http.Request) (timetable.WeekProtocolNotes, error) {

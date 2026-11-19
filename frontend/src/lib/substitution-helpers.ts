@@ -90,7 +90,8 @@ export interface SubstitutionOverview {
 }
 
 interface BackendScheduleAppointment {
-  id: number;
+  /** A number from the route file kept one release, a string via the proxy. */
+  id: number | string;
   type: "schedule_substitution";
   date: string;
   start_time: string;
@@ -98,7 +99,7 @@ interface BackendScheduleAppointment {
   title: string;
   status: string;
   staff: Array<{
-    assignment_id: number;
+    assignment_id: number | string;
     staff: { id: string; full_name: string };
     is_absent: boolean;
     is_substitute: boolean;
@@ -137,6 +138,27 @@ export function unwrapSubstitutionProxyEnvelope<T>(
     throw new Error("Ungültige Antwort für Gruppenübergaben.");
   }
   return envelope.data;
+}
+
+/** The kinds of assignment POST /api/substitutions answers (#2352). */
+export type SubstitutionAssignmentKind =
+  "group_handover" | "additional_supervision" | "schedule_substitution";
+
+/**
+ * The result of an assignment. The backend names its shape in `type` and
+ * carries the result under the member of that name (#2352); the route file
+ * kept for one release answers the bare result, as it did before. Both
+ * shapes land here at the bare result of the kind the caller asked for.
+ */
+export function substitutionAssignmentResult<T>(
+  data: unknown,
+  kind: SubstitutionAssignmentKind,
+): T {
+  if (typeof data === "object" && data !== null && kind in data) {
+    const member = (data as Record<string, unknown>)[kind];
+    if (member !== undefined && member !== null) return member as T;
+  }
+  return data as T;
 }
 
 // Frontend types

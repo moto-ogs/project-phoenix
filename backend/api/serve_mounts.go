@@ -68,6 +68,7 @@ func mountRequestFeed(root, tenant chi.Router, db transactionruntime.Database, l
 		CurrentTenantID:  func(r *http.Request) int64 { return sessiontoken.ClaimsFromCtx(r.Context()).TenantID },
 		CurrentAccountID: func(r *http.Request) int64 { return int64(sessiontoken.ClaimsFromCtx(r.Context()).ID) },
 		Logger:           logger.With("handler", "request-feed"),
+		Success:          apiCommon.Respond,
 	})
 	root.Mount("/public/request-feed", resource.PublicRouter())
 	tenant.Mount("/students/change-requests/rss-feed", resource.TenantRouter())

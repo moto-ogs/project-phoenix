@@ -152,9 +152,8 @@ export function createStaffNoticesReadApi(base: string): StaffNoticesReadApi {
         undefined,
         "Tagesinformationen konnten nicht geladen werden",
       );
-      // Der Schul-Proxy reicht die Backend-Antwort `{ data: [...] }` als
-      // Ganzes in seiner Hülle weiter, der OGS-Proxy packt sie vorher aus.
-      // Beide Formen landen hier bei derselben Liste.
+      // Beide Proxys liefern die Liste ausgepackt; die verschachtelte Form
+      // `{ data: [...] }` bleibt als Rückfall lesbar.
       if (Array.isArray(data)) return data;
       return data?.data ?? [];
     },

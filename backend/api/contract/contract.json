@@ -143,6 +143,18 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/staff-messages/threads/{threadID}/members/{accountID}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "nullable": true,
+        "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/staff-pool/blocks/{id}",
       "portals": [
         "tenant"
@@ -857,6 +869,17 @@
           "kind": "ref",
           "ref": "ClassListEntryResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/database/stats",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StatsResponse"
       }
     },
     {
@@ -2457,6 +2480,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/change-requests/rss-feed/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FeedStatus"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/child-quota",
       "portals": [
         "tenant"
@@ -2882,6 +2916,39 @@
           "kind": "ref",
           "ref": "StudentStatusDayResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/substitutions/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "active_group_id",
+          "kind": "id"
+        },
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "group_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SubstitutionOverviewResult"
       }
     },
     {
@@ -3940,6 +4007,37 @@
           "kind": "ref",
           "ref": "SharedDocument"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/week-protocols/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "group_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "weekProtocolResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/week-protocols/{protocolId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "weekProtocolResponse"
       }
     },
     {
@@ -5471,6 +5569,20 @@
       "response": {
         "kind": "ref",
         "ref": "unreadCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/staff-notices/today",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "noticeResponse"
+        }
       }
     },
     {
@@ -7944,6 +8056,28 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/students/change-requests/rss-feed/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FeedLink"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/students/change-requests/rss-feed/rotate",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FeedLink"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/students/change-requests/{kind}/{requestId}/correct",
       "portals": [
         "tenant"
@@ -8351,6 +8485,36 @@
           "kind": "ref",
           "ref": "studentNoteTeamNoticeResponse"
         }
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/substitutions/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "assignmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SubstitutionAssignmentResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/substitutions/end",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "endRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SubstitutionEndResponse"
       }
     },
     {
@@ -8955,6 +9119,17 @@
       "response": {
         "kind": "ref",
         "ref": "removeStudentTemplateDaysResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/week-protocols/{protocolId}/close",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "weekProtocolResponse"
       }
     },
     {
@@ -9889,6 +10064,14 @@
     {
       "method": "POST",
       "pattern": "/school/staff-messages/threads/{threadID}/leave",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/staff-notices/{noticeId}/acknowledge",
       "portals": [
         "school"
       ],
@@ -12072,6 +12255,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/week-protocols/{protocolId}/notes",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "weekProtocolNotesRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "weekProtocolResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/work-time-models/{id}",
       "portals": [
         "tenant"
@@ -13398,6 +13596,14 @@
         "granted",
         "not_recorded",
         "withdrawn"
+      ]
+    },
+    {
+      "name": "SubstitutionAnswerKind",
+      "values": [
+        "additional_supervision",
+        "group_handover",
+        "schedule_substitution"
       ]
     },
     {
@@ -32268,6 +32474,30 @@
       ]
     },
     {
+      "name": "FeedLink",
+      "go_type": "requestfeedhttp.FeedLink",
+      "fields": [
+        {
+          "name": "url",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FeedStatus",
+      "go_type": "requestfeedhttp.FeedStatus",
+      "fields": [
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "FileNumberStartRequest",
       "go_type": "parentbillinghttp.FileNumberStartRequest",
       "request": true,
@@ -32989,6 +33219,51 @@
       ]
     },
     {
+      "name": "GroupHandover",
+      "go_type": "workforce.GroupHandover",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group",
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupRef"
+          }
+        },
+        {
+          "name": "target",
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffRef"
+          }
+        },
+        {
+          "name": "period",
+          "schema": {
+            "kind": "ref",
+            "ref": "Period"
+          }
+        },
+        {
+          "name": "can_end",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "GroupMessageRequest",
       "go_type": "messaging.GroupMessageRequest",
       "request": true,
@@ -33072,6 +33347,24 @@
           "name": "recipient_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupRef",
+      "go_type": "workforce.GroupRef",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -46619,6 +46912,24 @@
       ]
     },
     {
+      "name": "Period",
+      "go_type": "workforce.Period",
+      "fields": [
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PeriodWarning",
       "go_type": "timetablehttp.PeriodWarning",
       "fields": [
@@ -50520,6 +50831,71 @@
       ]
     },
     {
+      "name": "RunningSupervision",
+      "go_type": "workforce.RunningSupervision",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "supervisors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffRef"
+            }
+          }
+        },
+        {
+          "name": "available_targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffRef"
+            }
+          }
+        },
+        {
+          "name": "is_current_user_supervising",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_assign",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "SEPACreditor",
       "go_type": "parentbilling.SEPACreditor",
       "fields": [
@@ -51620,6 +51996,165 @@
       ]
     },
     {
+      "name": "ScheduleAbsenceChange",
+      "go_type": "workforce.ScheduleAbsenceChange",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleAffectedAppointment",
+      "go_type": "workforce.ScheduleAffectedAppointment",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleAppointmentOverview",
+      "go_type": "workforce.ScheduleAppointmentOverview",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleAppointmentStaff"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleAppointmentStaff",
+      "go_type": "workforce.ScheduleAppointmentStaff",
+      "fields": [
+        {
+          "name": "assignment_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff",
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffRef"
+          }
+        },
+        {
+          "name": "is_absent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_substitute",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_end",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "ScheduleChangedResponse",
       "go_type": "mealplan.ScheduleChangedResponse",
       "fields": [
@@ -51729,6 +52264,31 @@
       ]
     },
     {
+      "name": "SchedulePresenceChange",
+      "go_type": "workforce.SchedulePresenceChange",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ScheduleResponse",
       "go_type": "timetracking.ScheduleResponse",
       "fields": [
@@ -51790,6 +52350,198 @@
           "name": "kept_by_traeger",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleSubstitutionChange",
+      "go_type": "workforce.ScheduleSubstitutionChange",
+      "request": true,
+      "fields": [
+        {
+          "name": "absent_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "substitute_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleSubstitutionDayResult",
+      "go_type": "workforce.ScheduleSubstitutionDayResult",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "affected_instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleAffectedAppointment"
+            }
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleTimeConflict"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleSubstitutionRemoval",
+      "go_type": "workforce.ScheduleSubstitutionRemoval",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "instance_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleSubstitutionResult",
+      "go_type": "workforce.ScheduleSubstitutionResult",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "affected_instances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleAffectedAppointment"
+            }
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleTimeConflict"
+            }
+          }
+        },
+        {
+          "name": "days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleSubstitutionDayResult"
+            }
+          }
+        },
+        {
+          "name": "total_affected",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleTimeConflict",
+      "go_type": "workforce.ScheduleTimeConflict",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "other_instance_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -56480,6 +57232,45 @@
       ]
     },
     {
+      "name": "StaffRef",
+      "go_type": "workforce.StaffRef",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "full_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_external",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "external_account_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "external_organization",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffStatus",
       "go_type": "schoolsetup.StaffStatus",
       "fields": [
@@ -57221,6 +58012,133 @@
               "kind": "ref",
               "ref": "InstanceConflictWarning"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StatsPermissions",
+      "go_type": "stats.StatsPermissions",
+      "fields": [
+        {
+          "name": "canViewStudents",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewTeachers",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewRooms",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewActivities",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewGroups",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewRoles",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewDevices",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewPermissions",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewTimetables",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "canViewGradeTransitions",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StatsResponse",
+      "go_type": "stats.StatsResponse",
+      "fields": [
+        {
+          "name": "students",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "teachers",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rooms",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "activities",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "devices",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "permissionCount",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "permissions",
+          "schema": {
+            "kind": "ref",
+            "ref": "StatsPermissions"
           }
         }
       ]
@@ -59552,6 +60470,190 @@
           "name": "message",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SubstitutionAssignmentResponse",
+      "go_type": "substitutions.SubstitutionAssignmentResponse",
+      "fields": [
+        {
+          "name": "type",
+          "schema": {
+            "kind": "enum",
+            "ref": "SubstitutionAnswerKind"
+          }
+        },
+        {
+          "name": "group_handover",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SubstitutionAssignmentResult"
+          }
+        },
+        {
+          "name": "additional_supervision",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SubstitutionAssignmentResult"
+          }
+        },
+        {
+          "name": "schedule_substitution",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ScheduleSubstitutionResult"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SubstitutionAssignmentResult",
+      "go_type": "workforce.SubstitutionAssignmentResult",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupRef"
+          }
+        },
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "target",
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffRef"
+          }
+        },
+        {
+          "name": "period",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "Period"
+          }
+        },
+        {
+          "name": "can_end",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "schedule_substitution",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ScheduleSubstitutionResult"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SubstitutionEndResponse",
+      "go_type": "substitutions.SubstitutionEndResponse",
+      "fields": [
+        {
+          "name": "ended",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SubstitutionOverviewResult",
+      "go_type": "workforce.SubstitutionOverviewResult",
+      "fields": [
+        {
+          "name": "group_handovers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupHandover"
+            }
+          }
+        },
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupRef"
+            }
+          }
+        },
+        {
+          "name": "targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffRef"
+            }
+          }
+        },
+        {
+          "name": "schedule_appointments",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleAppointmentOverview"
+            }
+          }
+        },
+        {
+          "name": "schedule_targets",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffRef"
+            }
+          }
+        },
+        {
+          "name": "running_supervisions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RunningSupervision"
+            }
           }
         }
       ]
@@ -65654,6 +66756,62 @@
       ]
     },
     {
+      "name": "WeekProtocolBlock",
+      "go_type": "timetable.WeekProtocolBlock",
+      "fields": [
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancel_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "WeekProtocolNotice",
+      "go_type": "timetable.WeekProtocolNotice",
+      "fields": [
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "WeekdayPickupNotesRequest",
       "go_type": "careplanhttp.WeekdayPickupNotesRequest",
       "request": true,
@@ -66061,6 +67219,34 @@
         },
         {
           "name": "is_over_weekly_max",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "additionalSupervisionRequest",
+      "go_type": "substitutions.additionalSupervisionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "active_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "target_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "hand_over",
+          "optional": true,
           "schema": {
             "kind": "bool"
           }
@@ -66624,6 +67810,47 @@
           "name": "default_pickup_time",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "assignmentRequest",
+      "go_type": "substitutions.assignmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_handover",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "groupHandoverRequest"
+          }
+        },
+        {
+          "name": "additional_supervision",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "additionalSupervisionRequest"
+          }
+        },
+        {
+          "name": "schedule_substitution",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "scheduleAssignmentRequest"
           }
         }
       ]
@@ -70932,6 +72159,27 @@
       ]
     },
     {
+      "name": "endRequest",
+      "go_type": "substitutions.endRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        }
+      ]
+    },
+    {
       "name": "endTemplateRequest",
       "go_type": "timetablehttp.endTemplateRequest",
       "request": true,
@@ -71500,6 +72748,41 @@
       "fields": [
         {
           "name": "representation",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "groupHandoverRequest",
+      "go_type": "substitutions.groupHandoverRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "target_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -73024,6 +74307,97 @@
               "kind": "ref",
               "ref": "noteSubjectActivity"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "noticeResponse",
+      "go_type": "timetablehttp.noticeResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "week_pattern",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "acknowledged_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -76558,6 +77932,93 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "scheduleAssignmentRequest",
+      "go_type": "substitutions.scheduleAssignmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "understaffed_note",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "absences",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleAbsenceChange"
+            }
+          }
+        },
+        {
+          "name": "substitutions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleSubstitutionChange"
+            }
+          }
+        },
+        {
+          "name": "substitution_removals",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleSubstitutionRemoval"
+            }
+          }
+        },
+        {
+          "name": "presences",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchedulePresenceChange"
+            }
+          }
+        },
+        {
+          "name": "whole_days",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "wholeDaysRequest"
           }
         }
       ]
@@ -80305,6 +81766,289 @@
       ]
     },
     {
+      "name": "weekProtocolDayNoteInput",
+      "go_type": "timetablehttp.weekProtocolDayNoteInput",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "weekProtocolDayResponse",
+      "go_type": "timetablehttp.weekProtocolDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "captured",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "captured_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "present",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "sick",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "class_trip",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "absent",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "weekProtocolMissingChildResponse"
+            }
+          }
+        },
+        {
+          "name": "blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WeekProtocolBlock"
+            }
+          }
+        },
+        {
+          "name": "notices",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WeekProtocolNotice"
+            }
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "weekProtocolMissingChildResponse",
+      "go_type": "timetablehttp.weekProtocolMissingChildResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "weekProtocolNotesRequest",
+      "go_type": "timetablehttp.weekProtocolNotesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "week_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "weekProtocolDayNoteInput"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "weekProtocolResponse",
+      "go_type": "timetablehttp.weekProtocolResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "scope",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_end",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "draft_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "auto_close_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_note",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "drafted_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closed_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closed_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closed_automatically",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "weekProtocolDayResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "weekdayAssignmentRequest",
       "go_type": "timetablehttp.weekdayAssignmentRequest",
       "request": true,
@@ -80373,6 +82117,48 @@
               "kind": "ref",
               "ref": "enrichedInstance"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wholeDaysRequest",
+      "go_type": "substitutions.wholeDaysRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "absent_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "substitute_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "dates",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]

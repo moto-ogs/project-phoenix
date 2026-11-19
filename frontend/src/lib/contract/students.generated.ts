@@ -634,6 +634,15 @@ export const ChangeRequestPendingCountResponseSchema: z.ZodType<ChangeRequestPen
   pending_count: safeInt,
 });
 
+/** Go: requestfeedhttp.FeedStatus */
+export interface FeedStatus {
+  active: boolean;
+}
+
+export const FeedStatusSchema: z.ZodType<FeedStatus, unknown> = object<FeedStatus>({
+  active: bool,
+});
+
 /** Go: students.childQuotaResponse */
 export interface childQuotaResponse {
   limited: boolean;
@@ -2074,6 +2083,15 @@ export const parentRequestConflictResolvedResponseSchema: z.ZodType<parentReques
   resolved_count: safeInt,
 });
 
+/** Go: requestfeedhttp.FeedLink */
+export interface FeedLink {
+  url: string;
+}
+
+export const FeedLinkSchema: z.ZodType<FeedLink, unknown> = object<FeedLink>({
+  url: str,
+});
+
 /** Go: careplanhttp.correctRequestBody */
 export interface correctRequestBody {
   approve?: boolean | null;
@@ -3157,6 +3175,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(ChangeRequestPendingCountResponseSchema),
   },
+  "GET /api/students/change-requests/rss-feed/": {
+    method: "GET",
+    pattern: "/api/students/change-requests/rss-feed/",
+    portals: ["tenant"],
+    response: success(FeedStatusSchema),
+  },
   "GET /api/students/child-quota": {
     method: "GET",
     pattern: "/api/students/child-quota",
@@ -3389,6 +3413,18 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<resolveConflictBody>(),
     response: success(parentRequestConflictResolvedResponseSchema),
+  },
+  "POST /api/students/change-requests/rss-feed/": {
+    method: "POST",
+    pattern: "/api/students/change-requests/rss-feed/",
+    portals: ["tenant"],
+    response: success(FeedLinkSchema),
+  },
+  "POST /api/students/change-requests/rss-feed/rotate": {
+    method: "POST",
+    pattern: "/api/students/change-requests/rss-feed/rotate",
+    portals: ["tenant"],
+    response: success(FeedLinkSchema),
   },
   "POST /api/students/change-requests/{kind}/{requestId}/correct": {
     method: "POST",

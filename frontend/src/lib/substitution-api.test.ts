@@ -221,6 +221,129 @@ describe("substitutionService", () => {
     );
   });
 
+  // The catalog proxy hands over the backend's answer, which names its
+  // shape in `type` (#2352); the route file kept for one release answers
+  // the bare result. Both reach the same mapped result.
+  it.each([
+    [
+      "the named shape of the proxy",
+      { type: "group_handover", group_handover: handover },
+    ],
+    ["the bare result of the kept route file", handover],
+  ])("maps a group handover from %s", async (_label, data) => {
+    sessionFetch.mockResolvedValue({ ok: true, json: async () => ({ data }) });
+
+    const result = await substitutionService.createSubstitution(
+      "12",
+      "34",
+      "2026-08-29",
+      "2026-08-30",
+    );
+
+    expect(result).toMatchObject({ id: "5", groupId: "12" });
+  });
+
+  it("maps an added supervisor from the named shape", async () => {
+    sessionFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          type: "additional_supervision",
+          additional_supervision: {
+            id: "41",
+            type: "additional_supervision",
+            active_group_id: "41",
+            target: { id: "73", full_name: "Nora Neu" },
+          },
+        },
+      }),
+    });
+
+    await expect(
+      substitutionService.addSupervisor("41", "73"),
+    ).resolves.toEqual({ id: "41", targetName: "Nora Neu" });
+  });
+
+  it("maps a schedule substitution from the named shape with string ids", async () => {
+    sessionFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          type: "schedule_substitution",
+          schedule_substitution: {
+            instance_id: "42",
+            cancelled: false,
+            understaffed_ack: false,
+            affected_instances: [
+              {
+                instance_id: "43",
+                title: "Mensa",
+                start_time: "12:00",
+                action: "absent",
+              },
+            ],
+            warnings: [],
+            total_affected: 1,
+          },
+        },
+      }),
+    });
+
+    const result = await substitutionService.applyScheduleSubstitution("42", {
+      substitutions: [
+        { absentStaffId: "7", substituteStaffId: "8", instanceIds: ["42"] },
+      ],
+    });
+
+    expect(result.instanceId).toBe("42");
+    expect(result.affectedInstances[0]?.instanceId).toBe("43");
+  });
+
+  it("reads appointment ids the proxy sends as strings", async () => {
+    sessionFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          group_handovers: [],
+          targets: [],
+          running_supervisions: [],
+          schedule_appointments: [
+            {
+              id: "42",
+              type: "schedule_substitution",
+              date: "2026-08-31",
+              start_time: "12:00",
+              end_time: "13:00",
+              title: "Mensa",
+              status: "planned",
+              staff: [
+                {
+                  assignment_id: "9",
+                  staff: { id: "7", full_name: "Ada Alt" },
+                  is_absent: true,
+                  is_substitute: false,
+                  can_end: false,
+                },
+              ],
+            },
+          ],
+          schedule_targets: [],
+        },
+      }),
+    });
+
+    const result = await substitutionService.fetchScheduleOverview(
+      "2026-08-31",
+      "2026-09-04",
+    );
+
+    expect(result.appointments[0]).toMatchObject({ id: "42" });
+    expect(result.appointments[0]?.staff[0]).toMatchObject({
+      assignmentId: "9",
+      id: "7",
+    });
+  });
+
   it("marks forbidden group-overview access for the page guard", async () => {
     sessionFetch.mockResolvedValue(
       new Response(

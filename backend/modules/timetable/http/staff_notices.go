@@ -222,7 +222,7 @@ func (rs *StaffNoticeResource) todayFor(reader string) http.HandlerFunc {
 		for _, view := range views {
 			out = append(out, toNoticeResponse(noticeViewFields(view), false))
 		}
-		render.JSON(w, r, map[string]any{"data": out})
+		common.Respond(w, r, http.StatusOK, out, "Staff notices of today retrieved")
 	}
 }
 
@@ -325,7 +325,7 @@ func (rs *StaffNoticeResource) acknowledgeFor(reader string) http.HandlerFunc {
 			renderNoticeServiceError(w, r, err)
 			return
 		}
-		render.JSON(w, r, map[string]any{"status": "ok"})
+		common.Respond(w, r, http.StatusOK, nil, "Staff notice acknowledged")
 	}
 }
 

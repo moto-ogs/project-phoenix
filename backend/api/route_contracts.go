@@ -21,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
@@ -48,9 +49,11 @@ import (
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
 	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
+	statsContract "github.com/moto-ogs/project-phoenix/modules/transactionruntime/stats"
 	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	absencetypesHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/absencetypes"
 	staffShiftsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/staffshifts"
+	substitutionsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/substitutions"
 	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
@@ -164,6 +167,8 @@ func contractMounts() []contractMount {
 		// Class Day owns the child sheet the supervision route answers with.
 		{"/school/calendar", calendarAPI.SchoolRouteContracts()},
 		{"/api/timetable", timetableHTTP.RouteContracts()},
+		{"/api/week-protocols", timetableHTTP.WeekProtocolRouteContracts()},
+		{"/school/staff-notices", timetableHTTP.SchoolStaffNoticeRouteContracts()},
 		{"/school/supervisions", timetableHTTP.SchoolSupervisionRouteContracts(classday.SupervisionStudentSheet{})},
 		{"/school/staff-messages", staffMessagingAPI.RouteContracts(common.PortalSchool)},
 		{"/operator/schools", provisioningOperatorAPI.SchoolDeviceSlotRouteContracts()},
@@ -207,9 +212,12 @@ func ContractDocument() (contract.Document, error) {
 	if err != nil {
 		return contract.Document{}, err
 	}
+	substitutions := substitutionsHTTP.RouteContractTypes()
 	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,
 		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
+		// The substitution bodies take an id as a number or a decimal string.
+		reflect.TypeOf(substitutions.LaxID): contract.KindLaxID,
 	})
 	// Both student bodies only refuse retired keys before the plain decode;
 	// CompanionEntry takes its companion id as a number or a decimal string.
@@ -232,8 +240,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[timetableHTTP.NullableStringSlice](): contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStr]():         contract.ReadsValue,
 	}
-	// Appointments keeps its own day type.
-	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date]()}
+	// Appointments and the whole-day substitution keep their own day types.
+	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
 	return contract.Build(registrations, options)
 }
 
@@ -401,6 +409,10 @@ func staffPortalContractMounts() []contractMount {
 		// answers no data.
 		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
 		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
+		{"/api/students/change-requests/rss-feed", requestFeedRouteContracts()},
+		{"/api/substitutions", substitutionRouteContracts()},
+		// The Datenverwaltung hub's counts (#4013), served by the root.
+		{"/api/database", []common.RouteContract{{Method: "GET", Pattern: "/stats", Portals: []common.PortalScope{common.PortalTenant}, Response: statsContract.StatsResponse{}}}},
 	}
 }
 
@@ -506,5 +518,18 @@ func mealPlanRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/meal-billing-months/", Portals: portals, Response: types.BillingMonths},
 		{Method: "GET", Pattern: "/meal-billing-months/{month}", Portals: portals, Response: types.BillingMonth},
 		{Method: "POST", Pattern: "/meal-billing-months/{month}/release", Portals: portals, Request: types.BillingMonthRelease, Response: types.BillingMonth},
+	}
+}
+
+// requestFeedRouteContracts registers the staff's controls of the parent
+// request feed, with patterns relative to their mount. Care Plan's feed http
+// role may not import the contract types; the public feed document is XML
+// and stays outside the contract.
+func requestFeedRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Response: requestFeedHTTP.FeedStatus{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Response: requestFeedHTTP.FeedLink{}},
+		{Method: "POST", Pattern: "/rotate", Portals: portals, Response: requestFeedHTTP.FeedLink{}},
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -182,4 +183,30 @@ func renderErrorResponse(t *testing.T, err error) renderedError {
 	response.body.Detail = failure.Message
 	response.body.Code = failure.Code
 	return response
+}
+
+// The assignment answer names its shape (#2352): exactly the member the type
+// names carries the result, whatever the request asked for.
+func TestAssignmentResponseNamesItsShape(t *testing.T) {
+	t.Parallel()
+	schedule := &workforce.SubstitutionAssignmentResult{ScheduleSubstitution: &workforce.ScheduleSubstitutionResult{InstanceID: 7}}
+	handover := &workforce.SubstitutionAssignmentResult{ID: 8, Type: workforce.TargetGroupHandover}
+	supervision := &workforce.SubstitutionAssignmentResult{ID: 9, Type: workforce.TargetAdditionalSupervision, ActiveGroupID: 3}
+
+	cases := []struct {
+		requested workforce.SubstitutionTargetType
+		created   *workforce.SubstitutionAssignmentResult
+		want      string
+	}{
+		{workforce.TargetScheduleSubstitution, schedule, `{"type":"schedule_substitution","schedule_substitution":{"instance_id":7,"cancelled":false,"understaffed_ack":false,"affected_instances":null,"warnings":null,"total_affected":0}}`},
+		{workforce.TargetGroupHandover, handover, `{"type":"group_handover","group_handover":{"id":"8","type":"group_handover","target":{"id":"0","full_name":""}}}`},
+		{workforce.TargetAdditionalSupervision, supervision, `{"type":"additional_supervision","additional_supervision":{"id":"9","type":"additional_supervision","active_group_id":"3","target":{"id":"0","full_name":""}}}`},
+	}
+	for _, tc := range cases {
+		answer, message := assignmentResponseOf(tc.requested, tc.created)
+		assert.NotEmpty(t, message)
+		body, err := json.Marshal(answer)
+		require.NoError(t, err)
+		assert.JSONEq(t, tc.want, string(body))
+	}
 }
