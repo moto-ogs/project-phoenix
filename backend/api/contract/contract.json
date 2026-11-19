@@ -2949,6 +2949,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/me/navigation",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CallerNavigationRow"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/me/profile",
       "portals": [
         "tenant"
@@ -28413,6 +28424,67 @@
           "name": "via_substitution",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CallerNavigationRow",
+      "go_type": "owners.CallerNavigationRow",
+      "fields": [
+        {
+          "name": "current_staff",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Staff"
+          }
+        },
+        {
+          "name": "educational_groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "CallerGroupRow"
+            }
+          }
+        },
+        {
+          "name": "incomplete",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_switches",
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolSwitches"
+          }
+        },
+        {
+          "name": "supervised_groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "ActiveGroup"
+            }
+          }
+        },
+        {
+          "name": "unavailable_sections",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -74745,6 +74817,36 @@
               "kind": "ref",
               "ref": "OperationPlannedInstance"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolSwitches",
+      "go_type": "identityaccess.SchoolSwitches",
+      "fields": [
+        {
+          "name": "parent_news_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "parent_invite_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "timetable_day_start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "timetable_day_end_time",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

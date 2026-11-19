@@ -328,37 +328,6 @@ export const ActiveGroupSchema: z.ZodType<ActiveGroup, unknown> = object<ActiveG
   supervisors: optional(arr(nullable(GroupSupervisorSchema))),
 });
 
-/** Go: me.ProfileResponse */
-export interface ProfileResponse {
-  email: string;
-  username: string | null;
-  last_login: string | null;
-  avatar?: string;
-  id: string;
-  first_name: string;
-  last_name: string;
-  created_at: string;
-  updated_at: string;
-  rfid_card?: string;
-  bio?: string;
-  settings?: string;
-}
-
-export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object<ProfileResponse>({
-  email: str,
-  username: nullable(str),
-  last_login: nullable(instant),
-  avatar: optional(str),
-  id: int64StringOrNumber,
-  first_name: str,
-  last_name: str,
-  created_at: instant,
-  updated_at: instant,
-  rfid_card: optional(str),
-  bio: optional(str),
-  settings: optional(str),
-});
-
 /** Go: peopledirectory.PersonAccountSnapshot */
 export interface PersonAccountSnapshot {
   id: string;
@@ -459,6 +428,71 @@ export const StaffSchema: z.ZodType<Staff, unknown> = object<Staff>({
   person: optional(DirectoryPersonSnapshotSchema),
 });
 
+/** Go: identityaccess.SchoolSwitches */
+export interface SchoolSwitches {
+  parent_news_enabled: boolean;
+  parent_invite_mode: string;
+  timetable_day_start_time: string;
+  timetable_day_end_time: string;
+}
+
+export const SchoolSwitchesSchema: z.ZodType<SchoolSwitches, unknown> = object<SchoolSwitches>({
+  parent_news_enabled: bool,
+  parent_invite_mode: str,
+  timetable_day_start_time: str,
+  timetable_day_end_time: str,
+});
+
+/** Go: owners.CallerNavigationRow */
+export interface CallerNavigationRow {
+  current_staff: Staff | null;
+  educational_groups: (CallerGroupRow | null)[] | null;
+  incomplete: boolean;
+  school_switches: SchoolSwitches;
+  supervised_groups: (ActiveGroup | null)[] | null;
+  unavailable_sections: string[] | null;
+}
+
+export const CallerNavigationRowSchema: z.ZodType<CallerNavigationRow, unknown> = object<CallerNavigationRow>({
+  current_staff: nullable(StaffSchema),
+  educational_groups: nullable(arr(nullable(CallerGroupRowSchema))),
+  incomplete: bool,
+  school_switches: SchoolSwitchesSchema,
+  supervised_groups: nullable(arr(nullable(ActiveGroupSchema))),
+  unavailable_sections: nullable(arr(str)),
+});
+
+/** Go: me.ProfileResponse */
+export interface ProfileResponse {
+  email: string;
+  username: string | null;
+  last_login: string | null;
+  avatar?: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+  updated_at: string;
+  rfid_card?: string;
+  bio?: string;
+  settings?: string;
+}
+
+export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object<ProfileResponse>({
+  email: str,
+  username: nullable(str),
+  last_login: nullable(instant),
+  avatar: optional(str),
+  id: int64StringOrNumber,
+  first_name: str,
+  last_name: str,
+  created_at: instant,
+  updated_at: instant,
+  rfid_card: optional(str),
+  bio: optional(str),
+  settings: optional(str),
+});
+
 /** Go: me.ProfileUpdateRequest */
 export interface ProfileUpdateRequest {
   first_name?: string | null;
@@ -479,6 +513,12 @@ export const routes = {
     pattern: "/api/me/groups/supervised",
     portals: ["tenant"],
     response: success(z.array(ActiveGroupSchema)),
+  },
+  "GET /api/me/navigation": {
+    method: "GET",
+    pattern: "/api/me/navigation",
+    portals: ["tenant"],
+    response: success(CallerNavigationRowSchema),
   },
   "GET /api/me/profile": {
     method: "GET",

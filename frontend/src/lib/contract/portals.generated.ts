@@ -1005,6 +1005,7 @@ export const portalRoutes = {
     iot["PUT /api/iot/{id}"],
     me["GET /api/me/groups/"],
     me["GET /api/me/groups/supervised"],
+    me["GET /api/me/navigation"],
     me["GET /api/me/profile"],
     me["GET /api/me/staff"],
     me["PUT /api/me/profile"],

@@ -1,6 +1,8 @@
-// app/api/user-context/route.ts
-// BFF (Backend-for-Frontend) endpoint for shared user context data
-// Consolidates 3 API calls into 1 to eliminate redundant auth() overhead
+// Temporary (#7563): the current client reads GET /api/me/navigation through
+// the portal's catalog proxy and maps the contract's shape itself
+// (lib/user-context-map). An installed bundle of the previous release still
+// calls this path and reads the mapped user context. Delete this file and its
+// test after the next production deploy.
 import type { NextRequest } from "next/server";
 import { createGetHandler } from "~/lib/route-wrapper.server";
 import type { UserContextResponse } from "~/lib/user-context-types";

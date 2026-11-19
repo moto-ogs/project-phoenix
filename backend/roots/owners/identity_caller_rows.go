@@ -11,6 +11,7 @@ import (
 
 	educationRepo "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 )
 
 // CallerRows serves the Identity & Access caller context (#3501) to the
@@ -289,22 +290,29 @@ func (r *CallerRows) StudentRows(ctx context.Context, ids []int64) (any, error) 
 	return result, nil
 }
 
-// callerNavigationRow is the /api/me/navigation wire shape. The supervised
-// groups and the current staff member carry the rows SessionRows and
-// StaffRow load, like the routes that render them alone.
-type callerNavigationRow struct {
-	EducationalGroups   []*CallerGroupRow `json:"educational_groups"`
-	SupervisedGroups    any               `json:"supervised_groups"`
-	CurrentStaff        any               `json:"current_staff"`
-	Incomplete          bool              `json:"incomplete"`
-	UnavailableSections []string          `json:"unavailable_sections"`
+// CallerNavigationRow is the /api/me/navigation wire shape (#7563). The
+// supervised groups and the current staff member carry the rows SessionRows
+// and StaffRow load, like the routes that render them alone. The fields stand
+// in the order of their keys: the route rendered the row as a JSON object with
+// sorted keys before it had a type, and keeps those bytes.
+type CallerNavigationRow struct {
+	CurrentStaff        *peopleValues.Staff           `json:"current_staff"`
+	EducationalGroups   []*CallerGroupRow             `json:"educational_groups"`
+	Incomplete          bool                          `json:"incomplete"`
+	SchoolSwitches      identityaccess.SchoolSwitches `json:"school_switches"`
+	SupervisedGroups    []*presenceCompose.SessionRow `json:"supervised_groups"`
+	UnavailableSections []string                      `json:"unavailable_sections"`
 }
 
 // NavigationRow loads the rows of the caller's navigation context. A group
 // section whose rows fail to load is reported unavailable, like a section
 // whose IDs failed to resolve.
-func (r *CallerRows) NavigationRow(ctx context.Context, navigation identityaccess.CallerNavigation) (any, error) {
-	row := &callerNavigationRow{UnavailableSections: navigation.UnavailableSections}
+func (r *CallerRows) NavigationRow(ctx context.Context, navigation identityaccess.CallerNavigation, switches identityaccess.SchoolSwitches) (any, error) {
+	return r.navigationRow(ctx, navigation, switches)
+}
+
+func (r *CallerRows) navigationRow(ctx context.Context, navigation identityaccess.CallerNavigation, switches identityaccess.SchoolSwitches) (*CallerNavigationRow, error) {
+	row := &CallerNavigationRow{UnavailableSections: navigation.UnavailableSections, SchoolSwitches: switches}
 	groups, err := r.educationalGroupRows(ctx, navigation.Groups)
 	if err != nil {
 		r.logger.Warn("navigation context groups unavailable", slog.String("error", err.Error()))
@@ -312,10 +320,10 @@ func (r *CallerRows) NavigationRow(ctx context.Context, navigation identityacces
 		row.UnavailableSections = append(row.UnavailableSections, "educational_groups")
 	}
 	row.EducationalGroups = groups
-	sessions, err := r.sessions.SessionRows(ctx, navigation.SupervisedSessionIDs)
+	sessions, err := presenceCompose.SessionRowList(ctx, r.sessions, navigation.SupervisedSessionIDs)
 	if err != nil {
 		r.logger.Warn("navigation context supervision unavailable", slog.String("error", err.Error()))
-		sessions = []any{}
+		sessions = []*presenceCompose.SessionRow{}
 		row.UnavailableSections = append(row.UnavailableSections, "supervised_groups")
 	}
 	row.SupervisedGroups = sessions

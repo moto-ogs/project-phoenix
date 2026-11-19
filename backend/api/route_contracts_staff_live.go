@@ -21,6 +21,6 @@ func staffPortalLiveContractMounts() []contractMount {
 		{"/api/active", supervisionDashboardHTTP.DashboardRouteContracts()},
 		{"/api/timetable", classdayHTTP.SlotListRouteContracts()},
 		// The root loads the caller's rows; it names their types.
-		{"/api/me", meAPI.RouteContracts(&peopleValues.Staff{}, []owners.CallerGroupRow{}, []presenceCompose.SessionRow{})},
+		{"/api/me", meAPI.RouteContracts(&peopleValues.Staff{}, []owners.CallerGroupRow{}, []presenceCompose.SessionRow{}, owners.CallerNavigationRow{})},
 	}
 }

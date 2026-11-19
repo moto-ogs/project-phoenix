@@ -25,6 +25,27 @@ import {
   useUserContext,
 } from "../use-user-context";
 import { useImmutableSWR } from "~/lib/swr";
+import type { CallerNavigationRow } from "~/lib/contract/me.generated";
+
+// The navigation row as the catalog proxy hands it on (#7563).
+function navigationRow(
+  overrides: Partial<CallerNavigationRow> = {},
+): CallerNavigationRow {
+  return {
+    current_staff: null,
+    educational_groups: [],
+    incomplete: false,
+    school_switches: {
+      parent_news_enabled: false,
+      parent_invite_mode: "direct",
+      timetable_day_start_time: "08:00",
+      timetable_day_end_time: "16:00",
+    },
+    supervised_groups: [],
+    unavailable_sections: [],
+    ...overrides,
+  };
+}
 
 describe("useUserContext", () => {
   beforeEach(() => {
@@ -136,14 +157,7 @@ describe("useUserContext", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            data: {
-              educationalGroups: [],
-              supervisedGroups: [],
-              currentStaff: null,
-              educationalGroupIds: [],
-              educationalGroupRoomNames: [],
-              supervisedRoomNames: [],
-            },
+            data: navigationRow(),
           }),
       } as Response);
 
@@ -151,11 +165,13 @@ describe("useUserContext", () => {
       renderHook(() => useUserContext());
       const fetcher = vi.mocked(useImmutableSWR).mock.calls[0]?.[1];
 
-      if (fetcher) {
-        await fetcher();
-      }
+      expect(await fetcher?.()).toMatchObject({
+        educationalGroupIds: [],
+        currentStaff: null,
+        schoolSwitches: { parentInviteMode: "direct" },
+      });
 
-      expect(fetchMock).toHaveBeenCalledWith("/api/user-context", {
+      expect(fetchMock).toHaveBeenCalledWith("/api/me/navigation", {
         credentials: "include",
       });
 
@@ -210,16 +226,10 @@ describe("useUserContext", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            data: {
-              educationalGroups: [],
-              supervisedGroups: [],
-              currentStaff: null,
-              educationalGroupIds: [],
-              educationalGroupRoomNames: [],
-              supervisedRoomNames: [],
+            data: navigationRow({
               incomplete: true,
-              unavailableSections: ["supervised_groups"],
-            },
+              unavailable_sections: ["supervised_groups"],
+            }),
           }),
       } as Response);
 

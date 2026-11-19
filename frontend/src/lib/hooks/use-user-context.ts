@@ -20,15 +20,11 @@
 "use client";
 
 import { apiErrorFromResponse } from "~/lib/api-error";
+import type { CallerNavigationRow } from "~/lib/contract/me.generated";
 import { useImmutableSWR } from "~/lib/swr";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
+import { mapUserContext } from "~/lib/user-context-map";
 import type { UserContextResponse } from "~/lib/user-context-types";
-
-interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-  message: string;
-}
 
 export class IncompleteUserContextError extends Error {
   constructor(readonly userContext: UserContextResponse) {
@@ -52,7 +48,8 @@ interface UseUserContextReturn {
 }
 
 /**
- * Fetches and caches user context from the BFF endpoint.
+ * Fetches the navigation context through the portal's catalog proxy
+ * (GET /api/me/navigation, #7563), maps it once and caches it.
  *
  * Features:
  * - Automatic request deduplication (SWR)
@@ -66,7 +63,7 @@ export function useUserContext(enabled = true): UseUserContextReturn {
   const { data, isLoading, error } = useImmutableSWR<UserContextResponse>(
     enabled ? shellResourceKeys.userContext() : null,
     async () => {
-      const response = await fetch("/api/user-context", {
+      const response = await fetch("/api/me/navigation", {
         credentials: "include",
       });
 
@@ -77,11 +74,12 @@ export function useUserContext(enabled = true): UseUserContextReturn {
         );
       }
 
-      const json = (await response.json()) as ApiResponse<UserContextResponse>;
-      if (json.data.incomplete) {
-        throw new IncompleteUserContextError(json.data);
+      const json = (await response.json()) as { data: CallerNavigationRow };
+      const userContext = mapUserContext(json.data);
+      if (userContext.incomplete) {
+        throw new IncompleteUserContextError(userContext);
       }
-      return json.data;
+      return userContext;
     },
   );
 

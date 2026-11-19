@@ -42,6 +42,32 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
+// The backend's rows as GET /api/me/navigation sends them: numbers for IDs,
+// every field the contract requires.
+const AT = "2026-09-01T08:00:00Z";
+const SWITCHES = {
+  parent_news_enabled: false,
+  parent_invite_mode: "direct",
+  timetable_day_start_time: "08:00",
+  timetable_day_end_time: "16:00",
+};
+
+function navigation(overrides: Record<string, unknown> = {}) {
+  return {
+    status: "success",
+    message: "Navigation context retrieved successfully",
+    data: {
+      educational_groups: [],
+      supervised_groups: [],
+      current_staff: null,
+      incomplete: false,
+      unavailable_sections: [],
+      school_switches: SWITCHES,
+      ...overrides,
+    },
+  };
+}
+
 describe("GET /api/user-context", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,31 +78,55 @@ describe("GET /api/user-context", () => {
     const groups = [
       {
         id: 1,
+        created_at: AT,
+        updated_at: AT,
+        tenant_id: 3,
         name: "Group A",
         room_id: 10,
-        room: { id: 10, name: "Room 10" },
+        room: { id: 10, created_at: AT, updated_at: AT, name: "Room 10" },
         via_substitution: true,
       },
     ];
     const supervised = [
       {
         id: 2,
-        name: "Group B",
+        created_at: AT,
+        updated_at: AT,
+        tenant_id: 3,
+        start_time: AT,
+        last_activity: AT,
+        timeout_minutes: 30,
+        group_id: null,
         room_id: 11,
-        room: { id: 11, name: "Room 11" },
+        room: {
+          id: 11,
+          tenant_id: 3,
+          created_at: AT,
+          updated_at: AT,
+          name: "Room 11",
+          is_system: false,
+          is_open_room: false,
+        },
       },
     ];
-    const staff = { id: 5, person_id: 7 };
+    const staff = {
+      id: 5,
+      created_at: AT,
+      updated_at: AT,
+      tenant_id: 3,
+      person_id: 7,
+      birthday_display_opt_out: false,
+    };
 
-    mockApiGet.mockResolvedValueOnce({
-      data: {
+    mockApiGet.mockResolvedValueOnce(
+      navigation({
         educational_groups: groups,
         supervised_groups: supervised,
         current_staff: staff,
         incomplete: true,
         unavailable_sections: ["supervised_groups"],
-      },
-    });
+      }),
+    );
 
     const request = createMockRequest("/api/user-context");
     const response = await GET(request, createMockContext());
@@ -95,7 +145,6 @@ describe("GET /api/user-context", () => {
         }>;
         supervisedGroups: Array<{
           id: string;
-          name: string;
           roomId?: string;
           room?: { id: string; name: string };
         }>;
@@ -121,7 +170,6 @@ describe("GET /api/user-context", () => {
     expect(json.data.supervisedGroups).toEqual([
       {
         id: "2",
-        name: "Group B",
         roomId: "11",
         room: { id: "11", name: "Room 11" },
       },
@@ -135,15 +183,7 @@ describe("GET /api/user-context", () => {
   });
 
   it("maps a null supervised group list to an empty response list", async () => {
-    mockApiGet.mockResolvedValueOnce({
-      data: {
-        educational_groups: [],
-        supervised_groups: null,
-        current_staff: null,
-        incomplete: false,
-        unavailable_sections: [],
-      },
-    });
+    mockApiGet.mockResolvedValueOnce(navigation({ supervised_groups: null }));
 
     const response = await GET(
       createMockRequest("/api/user-context"),
@@ -158,51 +198,8 @@ describe("GET /api/user-context", () => {
     expect(json.data.supervisedGroups).toEqual([]);
   });
 
-  // The signed-in app shell reads these school switches here instead of the
-  // settings schema (#4996).
-  it.each([
-    {
-      name: "maps the school switches",
-      wire: {
-        parent_news_enabled: true,
-        parent_invite_mode: "staff_approval",
-        timetable_day_start_time: "07:30",
-        timetable_day_end_time: "16:15",
-      },
-      expected: {
-        parentNewsEnabled: true,
-        parentInviteMode: "staff_approval",
-        timetableDayStartTime: "07:30",
-        timetableDayEndTime: "16:15",
-      },
-    },
-    {
-      name: "keeps an unknown invite mode undefined instead of guessing",
-      wire: {
-        parent_news_enabled: false,
-        parent_invite_mode: "nonsense_from_a_newer_backend",
-        timetable_day_start_time: "09:00",
-        timetable_day_end_time: "17:00",
-      },
-      expected: {
-        parentNewsEnabled: false,
-        parentInviteMode: undefined,
-        timetableDayStartTime: "09:00",
-        timetableDayEndTime: "17:00",
-      },
-    },
-    { name: "maps missing switches to null", wire: undefined, expected: null },
-  ])("$name", async ({ wire, expected }) => {
-    mockApiGet.mockResolvedValueOnce({
-      data: {
-        educational_groups: [],
-        supervised_groups: [],
-        current_staff: null,
-        incomplete: false,
-        unavailable_sections: [],
-        ...(wire ? { school_switches: wire } : {}),
-      },
-    });
+  it("maps the school switches", async () => {
+    mockApiGet.mockResolvedValueOnce(navigation());
 
     const response = await GET(
       createMockRequest("/api/user-context"),
@@ -214,7 +211,28 @@ describe("GET /api/user-context", () => {
       );
 
     expect(response.status).toBe(200);
-    expect(json.data.schoolSwitches).toEqual(expected);
+    expect(json.data.schoolSwitches).toEqual({
+      parentNewsEnabled: false,
+      parentInviteMode: "direct",
+      timetableDayStartTime: "08:00",
+      timetableDayEndTime: "16:00",
+    });
+  });
+
+  it("answers 502 when the backend breaks the contract", async () => {
+    const { school_switches: _missing, ...withoutSwitches } =
+      navigation().data;
+    mockApiGet.mockResolvedValueOnce({
+      ...navigation(),
+      data: withoutSwitches,
+    });
+
+    const response = await GET(
+      createMockRequest("/api/user-context"),
+      createMockContext(),
+    );
+
+    expect(response.status).toBe(502);
   });
 
   it("surfaces an aggregate failure instead of returning partial empty data", async () => {
