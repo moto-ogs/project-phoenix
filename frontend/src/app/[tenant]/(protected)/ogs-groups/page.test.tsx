@@ -429,6 +429,8 @@ vi.mock("~/components/students/student-card", () => ({
 vi.mock("lucide-react", () => ({
   // Die Gruppenreiter (TenantPage-Reiterleiste) zeichnen den Pfeil des Menüs.
   ChevronDown: () => null,
+  // Info-Knopf am Seitentitel (#7565).
+  Info: () => null,
   Clock: ({ className }: { className?: string }) => (
     <span data-testid="lucide-clock" className={className}>
       clock
@@ -726,6 +728,15 @@ describe("OGSGroupPage", () => {
         screen.getByText("Keine OGS-Gruppe zugeordnet"),
       ).toBeInTheDocument();
     });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Gruppen" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier siehst du die Kinder deiner Gruppe und wer gerade da ist. Oben steht, wie viele Kinder da, krank oder entschuldigt sind. Tippe auf ein Kind, um seine Angaben zu öffnen.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows permission error when 403 response received", async () => {

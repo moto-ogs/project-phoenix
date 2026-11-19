@@ -474,18 +474,22 @@ export function TenantBackLink({
 /**
  * Jede Seite der Mitarbeiter-Oberfläche rendert dieses Gerüst. Gehört die
  * Seite zu einem Modul, das die Schule nicht gebucht hat (#4894), behält
- * das Gerüst nur Titel und Rückweg; den erklärenden Zustand darunter rendert
- * `PageBody` aus demselben Slot (`NotBookedSlots.pageModule`, #6577).
+ * das Gerüst Titel, Rückweg und den Info-Knopf; den erklärenden Zustand
+ * darunter rendert `PageBody` aus demselben Slot
+ * (`NotBookedSlots.pageModule`, #6577).
  */
 export function TenantPage(props: TenantPageProps) {
   if (useNotBookedPageModule()) {
     // Bewusst nur der Kopf: Inhalt, Zustände und `overlays` der Seite
-    // entfallen, wie vor #6577. Eine gesperrte Seite öffnet keine Dialoge.
+    // entfallen, wie vor #6577. Der Info-Knopf erklärt weiter, wofür die
+    // Seite bei gebuchtem Modul da ist; eine gesperrte Seite öffnet keine
+    // Dialoge.
     // Den Rumpf rendert `TenantPageView` trotzdem: `PageBody` zeigt dort
     // die Erklärung aus dem Slot, auch ohne `children`.
     return (
       <TenantPageView
         title={props.title}
+        info={props.info}
         back={props.back}
         backHref={props.backHref}
         backLabel={props.backLabel}

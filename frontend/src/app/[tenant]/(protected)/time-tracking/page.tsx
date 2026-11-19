@@ -3145,6 +3145,9 @@ function CreateAbsenceModal({
 
 const NO_BREAKS: WorkSessionBreak[] = [];
 
+const TIME_TRACKING_INFO =
+  "Hier erfasst du deine Arbeitszeit und deine Pausen. Wähle zuerst unter „Stempeluhr“ deinen Arbeitsort und dann „Einstempeln“. Oben siehst du deinen Stand, darunter deine erfassten Zeiten.";
+
 function TimeTrackingContent() {
   const { data: authSession, status: authStatus } = useSession({
     required: true,
@@ -3992,12 +3995,19 @@ function TimeTrackingContent() {
   // Lehnt der Server die eigene Zeiterfassung ohne Personalprofil ab, steht
   // der Hinweis statt der Seite (#7306).
   if (noOwnStaff) {
-    return <TenantPage title="Zeiterfassung" empty={noOwnStaff} />;
+    return (
+      <TenantPage
+        title="Zeiterfassung"
+        info={TIME_TRACKING_INFO}
+        empty={noOwnStaff}
+      />
+    );
   }
 
   return (
     <TenantPage
       title="Zeiterfassung"
+      info={TIME_TRACKING_INFO}
       statsLoading={metricsLoading}
       // Laden kommt aus dem Gerüst (Bauart 3, Regel 5) — kein eigenes
       // Seiten-Skelett neben den Zuständen der TenantPage.
@@ -4328,6 +4338,7 @@ function TimeTrackingPageSkeleton() {
   return (
     <TenantPage
       title="Zeiterfassung"
+      info={TIME_TRACKING_INFO}
       statsLoading
       loading
       loadingLabel="Zeiterfassung wird geladen…"
@@ -4347,7 +4358,13 @@ function TimeTrackingGate() {
     hasPermission(session, "time_tracking:own"),
   );
   if (noOwnStaff) {
-    return <TenantPage title="Zeiterfassung" empty={noOwnStaff} />;
+    return (
+      <TenantPage
+        title="Zeiterfassung"
+        info={TIME_TRACKING_INFO}
+        empty={noOwnStaff}
+      />
+    );
   }
   return <TimeTrackingContent />;
 }

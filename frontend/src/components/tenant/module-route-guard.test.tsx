@@ -37,7 +37,11 @@ describe("ModuleRouteGuard", () => {
     );
 
     render(
-      <ModuleRouteGuard module="nfc_anwesenheit" title="Geräte">
+      <ModuleRouteGuard
+        module="nfc_anwesenheit"
+        title="Geräte"
+        info="Hier stehen die Geräte."
+      >
         <DataPage />
       </ModuleRouteGuard>,
     );
@@ -46,6 +50,9 @@ describe("ModuleRouteGuard", () => {
     expect(screen.getByText("NFC-Anwesenheit ist nicht gebucht")).toBeVisible();
     expect(childRender).not.toHaveBeenCalled();
     expect(screen.queryByText("Daten der Seite")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Erklärung zu Geräte" }),
+    ).toBeInTheDocument();
   });
 
   it("renders the page after the module booking is known", () => {

@@ -72,6 +72,8 @@ interface Room {
 /** Die Sammlung dieser Seite, für den Rückweg aus der Raumseite (`?from=`). */
 const COLLECTION_PATH = "/rooms";
 const TRANSIT_PATH = "/rooms/unterwegs";
+const ROOMS_INFO =
+  "Hier siehst du, welche Räume frei oder belegt sind. Wähle einen Raum, um zu sehen, welche Kinder dort sind.";
 
 function RoomTile({
   room,
@@ -576,6 +578,7 @@ function RoomsPageContent() {
   return (
     <TenantPage
       title="Räume"
+      info={ROOMS_INFO}
       stats={roomSummary}
       statsLoading={showSkeleton}
       // Das Exportmenü ist eine Aktion der Seite und sitzt deshalb im Kopf,
@@ -640,12 +643,12 @@ function RoomsPageContent() {
   );
 }
 
-// Main component with Suspense wrapper + binary-mode 404 guard.
+// Main component with Suspense wrapper + binary-mode feature-off guard.
 // Binary-mode tenants don't track room occupancy, so the concepts this page
-// surfaces don't apply. Guard triggers Next.js notFound() for direct URL entry.
+// surfaces don't apply. The guard handles direct URL entry.
 export default function RoomsPage() {
   return (
-    <BinaryModeGuard title="Räume">
+    <BinaryModeGuard title="Räume" info={ROOMS_INFO}>
       <Suspense fallback={<RoomsGridSkeleton />}>
         <RoomsPageContent />
       </Suspense>

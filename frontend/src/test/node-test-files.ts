@@ -338,6 +338,7 @@ export const nodeLogicTestFiles = [
   "src/lib/modules.test.ts",
   "src/lib/offering-gap.test.ts",
   "src/lib/operator/billing-api.test.ts",
+  "src/lib/page-info.test.ts",
   "src/lib/parent-announcements-api.declaration.test.ts",
   "src/lib/parent/route-wrapper.test.ts",
   "src/lib/payroll-download-api.test.ts",

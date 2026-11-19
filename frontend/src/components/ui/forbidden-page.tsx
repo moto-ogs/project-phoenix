@@ -1,11 +1,14 @@
 "use client";
 
 import { LockKeyIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage } from "~/components/ui/tenant-page";
 
 interface ForbiddenPageProps {
   readonly title?: string;
+  /** Erklärung der Seite, auch wenn ihr Inhalt gerade nicht zugänglich ist. */
+  readonly info?: ReactNode;
   readonly message?: string;
   /**
    * Die Seite bringt ihren eigenen Kopf schon mit und zeigt die Sperre nur für
@@ -26,6 +29,7 @@ const HEADLINE = "Dir fehlt eine Berechtigung";
 
 export function ForbiddenPage({
   title = "Kein Zugriff",
+  info,
   message = "Bitte wende dich an deine Leitung.",
   embedded = false,
 }: ForbiddenPageProps) {
@@ -41,6 +45,7 @@ export function ForbiddenPage({
   return (
     <TenantPage
       title={title}
+      info={info}
       empty={{ title: HEADLINE, description: message, icon }}
     />
   );

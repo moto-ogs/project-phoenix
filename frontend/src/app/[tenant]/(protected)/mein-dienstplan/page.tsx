@@ -7,11 +7,18 @@ import { Suspense } from "react";
 
 import { DienstplanPageSkeleton } from "~/components/staff/dienstplan-skeleton";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
-import { OwnDienstplanView } from "~/components/time-tracking/own-dienstplan-view";
+import {
+  OWN_DIENSTPLAN_INFO,
+  OwnDienstplanView,
+} from "~/components/time-tracking/own-dienstplan-view";
 
 export default function OwnDienstplanPage() {
   return (
-    <ModuleRouteGuard module="dienstplan" title="Mein Dienstplan">
+    <ModuleRouteGuard
+      module="dienstplan"
+      title="Mein Dienstplan"
+      info={OWN_DIENSTPLAN_INFO}
+    >
       <Suspense fallback={<DienstplanPageSkeleton />}>
         <OwnDienstplanView />
       </Suspense>

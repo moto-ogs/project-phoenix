@@ -815,6 +815,14 @@ describe("StudentDetailPage", () => {
       expect(
         screen.getByRole("heading", { level: 1, name: "Kindakte" }),
       ).toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Erklärung zu Kindakte" }),
+      );
+      expect(
+        screen.getByText(
+          "Hier stehen alle Angaben zu diesem Kind. Oben siehst du, wo es gerade ist. Wähle darunter den Bereich, den du brauchst.",
+        ),
+      ).toBeInTheDocument();
       expect(screen.getByTestId("back-button")).toHaveAttribute(
         "data-referrer",
         "/test-tenant/students/search",
@@ -848,6 +856,14 @@ describe("StudentDetailPage", () => {
       expect(await screen.findByTestId("alert-error")).toHaveTextContent(
         "Die Kindakte konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Erklärung zu Kindakte" }),
+      );
+      expect(
+        screen.getByText(
+          "Hier stehen alle Angaben zu diesem Kind. Oben siehst du, wo es gerade ist. Wähle darunter den Bereich, den du brauchst.",
+        ),
+      ).toBeInTheDocument();
     });
 
     it("says the child was not found for a 404", () => {
@@ -871,6 +887,9 @@ describe("StudentDetailPage", () => {
       expect(screen.getByTestId("alert-error")).toHaveTextContent(
         "Kind nicht gefunden",
       );
+      expect(
+        screen.getByRole("button", { name: "Erklärung zu Kindakte" }),
+      ).toBeInTheDocument();
     });
 
     it("shows error when student is null", () => {
@@ -3337,6 +3356,9 @@ describe("StudentDetailPage", () => {
       );
       expect(
         screen.queryByRole("tablist", { name: "Bereiche der Kindakte" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Erklärung zu Max Mustermann" }),
       ).not.toBeInTheDocument();
     });
 
