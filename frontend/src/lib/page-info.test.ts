@@ -222,10 +222,15 @@ function parseModule(file: string): ParsedModule {
  * `TenantPage` rendert, und fragt nur diese Module nach `info`. Tiefer liegende
  * Gerüste gehören zu anderen Seiten.
  */
+// Tiefste Importebene, auf der ein Seitengerüst gesucht wird. Heute rendert
+// jede Seite es selbst (Ebene 0) oder in ihrer View (Ebene 1). Liegt es
+// tiefer, zählt die Seite als „ohne Info-Knopf“ und steht auf der Liste.
+const MAX_IMPORT_DEPTH = 4;
+
 function pageHasInfo(pageFile: string): boolean {
   const seen = new Set([pageFile]);
   let level = [pageFile];
-  for (let depth = 0; depth < 4 && level.length > 0; depth++) {
+  for (let depth = 0; depth < MAX_IMPORT_DEPTH && level.length > 0; depth++) {
     const renderers = level.filter(
       (file) => parseModule(file).rendersTenantPage,
     );
@@ -250,6 +255,9 @@ const pages = PORTALS.flatMap(({ prefix, root, publicPages }) =>
 );
 
 describe("Info-Knopf am Seitentitel (#7565)", () => {
+  // Untergrenzen knapp unter dem Stand vom November 2026 (94 OGS-, 13
+  // Lehrer-Seiten): Findet der Test plötzlich kaum Seiten, ist die Suche
+  // kaputt und die Liste prüfte nichts mehr.
   it("findet OGS- und Lehrer-Seiten", () => {
     expect(
       pages.filter(({ id }) => !id.startsWith("school:")).length,

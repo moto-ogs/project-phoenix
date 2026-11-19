@@ -265,7 +265,7 @@ function OwnDienstplanContent() {
     <TenantPage
       title="Mein Dienstplan"
       testId="own-dienstplan-page"
-      info="Hier siehst du deine Schichten der Woche und deine Stunden. Die Leitung plant sie im Dienstplan. Fragen zu einer Schicht klärst du mit ihr."
+      info="Hier siehst du deine Schichten und Stunden, mit den Pfeilen auch für andere Wochen. Die Leitung plant die Schichten. Fragen zu einer Schicht klärst du mit ihr."
       stats={hasShiftData ? <TenantPageStats items={statsItems} /> : undefined}
       statsLoading={loading}
       loading={loading ? <DienstplanGridSkeleton /> : false}

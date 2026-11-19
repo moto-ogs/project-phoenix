@@ -32,7 +32,6 @@ import {
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Button } from "~/components/ui/button";
-import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
@@ -615,12 +614,9 @@ export function TagesplanView() {
 
   // Die Liste erklärt sich selbst (Chevron am laufenden Block, Starten-Knopf
   // am eigenen). Nur die eingeschränkte Sicht (#2380) muss jeden Tag sichtbar
-  // sein, sonst fehlen scheinbar Termine; sie steht deshalb in der
-  // Statuszeile und nicht hinter dem Info-Knopf.
-  const scopeHint =
-    overviewScope === "all_staff"
-      ? null
-      : "Du siehst nur Termine, für die du eingeteilt bist.";
+  // sein, sonst fehlen scheinbar Termine. Sie steht als Zustand in der
+  // Statuszeile, nicht als Erklärsatz und nicht hinter dem Info-Knopf.
+  const scopeHint = overviewScope === "all_staff" ? null : "Nur deine Einsätze";
   // Welcher Tag „Heute“ ist, steht direkt unter dem Titel (#4348). Ein
   // anderer Tag trägt sein Datum schon im Titel.
   const statsItems = [
@@ -647,9 +643,7 @@ export function TagesplanView() {
         ) : undefined
       }
       actions={
-        // Als reines Symbol-Element (`ICON_ONLY`) bleibt die Tagesnavigation
-        // auf dem Handy in der Titelzeile, statt eine eigene Zeile zu füllen.
-        <div {...ICON_ONLY} className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
           <Button
             type="button"
             variant="ghost"

@@ -1453,7 +1453,7 @@ function StudentDetailPageContent() {
       info={
         isHolidayGuest
           ? undefined
-          : "Hier stehen alle Angaben zu diesem Kind. Die Reiter teilen sie in Bereiche. Kontakte und Abholberechtigte findest du unter „Erziehungsberechtigte“."
+          : "Hier stehen alle Angaben zu diesem Kind. Oben siehst du, wo es gerade ist. Wähle darunter den Bereich, den du brauchst."
       }
       actions={
         canManageRecord ? (

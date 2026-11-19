@@ -565,7 +565,9 @@ describe("TagesplanView", () => {
     expect(
       // Das Gerüst setzt Titel und Beschreibung des Leerzustands zu einem
       // Satz zusammen.
-      screen.getByText(/^Heute ist keine Betreuung geplant\./),
+      screen.getByText(
+        "Heute ist keine Betreuung geplant. Sobald für diesen Tag Termine im Betreuungsplan stehen, siehst du sie hier.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -667,9 +669,7 @@ describe("TagesplanView", () => {
 
     render(<TagesplanView />);
 
-    expect(
-      screen.getByText(/Du siehst nur Termine, für die du eingeteilt bist/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Nur deine Einsätze")).toBeInTheDocument();
   });
 
   it("honours the ?d= day parameter for back navigation to a chosen day", () => {
