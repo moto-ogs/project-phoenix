@@ -12,7 +12,7 @@
 // stream) is no pass-through, has no row and is not affected.
 //   node scripts/check-proxy-routes.mjs [base-revision]
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,7 +46,9 @@ function main(argv) {
   git("rev-parse", "--verify", "--quiet", `${base}^{commit}`);
   const baseFiles = git("ls-tree", "-r", "--name-only", base, "--", REGISTER_PATH).split("\n").filter((file) => file.endsWith(".json"));
   const baseRows = mergeFragments(baseFiles.map((file) => git("show", `${base}:${file}`)));
-  const headFiles = readdirSync(join(root, REGISTER_PATH), { recursive: true, encoding: "utf8" }).filter((file) => file.endsWith(".json"));
+  // The register is empty since the last pass-through file left (#2352); git keeps no empty directory.
+  const register = join(root, REGISTER_PATH);
+  const headFiles = existsSync(register) ? readdirSync(register, { recursive: true, encoding: "utf8" }).filter((file) => file.endsWith(".json")) : [];
   const headRows = mergeFragments(headFiles.map((file) => readFileSync(join(root, REGISTER_PATH, file), "utf8")));
   const added = addedPassThroughs(baseRows, headRows);
   if (added.length > 0) {
