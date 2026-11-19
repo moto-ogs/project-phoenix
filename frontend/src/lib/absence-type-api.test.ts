@@ -163,6 +163,41 @@ describe("absenceTypeService allowances", () => {
     );
   });
 
+  it("reads a yearly account through the catalog proxy", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "success",
+          data: {
+            staff_id: "42",
+            absence_type_id: "12",
+            year: 2026,
+            entitled_days: 5,
+            taken_days: 1,
+            reserved_days: 0,
+            remaining_days: 4,
+            expires_on: "2027-03-31",
+            expired_days: 0,
+            booking_days: 0,
+            carried_in: null,
+            kept_by_traeger: false,
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const result = await absenceTypeService.getAllowance("12", "42", 2026);
+
+    expect(result).toEqual(
+      expect.objectContaining({ staffId: "42", remainingDays: 4 }),
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/absence-types/12/allowances/42?year=2026",
+      expect.anything(),
+    );
+  });
+
   it("saves a yearly claim with its reason", async () => {
     global.fetch = vi.fn().mockResolvedValue(
       new Response(
@@ -195,7 +230,7 @@ describe("absenceTypeService allowances", () => {
       }),
     );
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/staff/absence-types/12/allowances/42",
+      "/api/absence-types/12/allowances/42",
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({

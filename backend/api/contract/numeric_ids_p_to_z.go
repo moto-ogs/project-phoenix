@@ -275,6 +275,7 @@ var legacyNumericIDsPToZ = []string{
 	"schoolstructurehttp.Room.ID",
 	"schoolstructurehttp.TeacherResponse.ID",
 	"schoolstructurehttp.TeacherResponse.StaffID",
+	"shifttypes.ShiftTypeDeleteResponse.ID",
 	"shifttypes.ShiftTypeRequest.CategoryIDs",
 	"shifttypes.ShiftTypeResponse.ID",
 	"staff.DocumentDirectoryEntry.ID",

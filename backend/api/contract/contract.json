@@ -81,6 +81,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/display/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/enrollment/admin/requests/{id}/",
       "portals": [
         "tenant"
@@ -315,6 +323,17 @@
         "tenant"
       ],
       "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/shift-types/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ShiftTypeDeleteResponse"
+      }
     },
     {
       "method": "DELETE",
@@ -1407,6 +1426,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/absence-types/{id}/allowances/{staffId}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AllowanceSummaryResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/absence-types/{id}/allowances/{staffId}/preview",
       "portals": [
         "tenant"
@@ -1899,6 +1935,20 @@
       "response": {
         "kind": "ref",
         "ref": "StatsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/display/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "InfoDisplayResponse"
+        }
       }
     },
     {
@@ -10415,6 +10465,21 @@
     },
     {
       "method": "PATCH",
+      "pattern": "/api/display/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InfoDisplayWriteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "InfoDisplayResponse"
+      }
+    },
+    {
+      "method": "PATCH",
       "pattern": "/api/enrollment/requests/{statusToken}",
       "portals": [
         "public"
@@ -10815,6 +10880,32 @@
         "ref": "ClassListAssignRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/display/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InfoDisplayWriteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "InfoDisplayCreatedResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/display/{id}/regenerate",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InfoDisplayTokenResponse"
+      }
     },
     {
       "method": "POST",
@@ -15983,6 +16074,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/absence-types/{id}/allowances/{staffId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SetAllowanceRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AllowanceSummaryResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/activities/categories/{categoryId}",
       "portals": [
         "tenant"
@@ -16458,6 +16564,21 @@
         "ref": "homeBlockPoliciesRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/shift-types/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ShiftTypeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ShiftTypeResponse"
+      }
     },
     {
       "method": "PUT",
@@ -18893,6 +19014,13 @@
       "values": [
         "feminine",
         "masculine"
+      ]
+    },
+    {
+      "name": "ShiftTypeRemovalOutcome",
+      "values": [
+        "archived",
+        "deleted"
       ]
     },
     {
@@ -53653,6 +53781,102 @@
       ]
     },
     {
+      "name": "InfoDisplayCreatedResponse",
+      "go_type": "display.InfoDisplayCreatedResponse",
+      "fields": [
+        {
+          "name": "display",
+          "schema": {
+            "kind": "ref",
+            "ref": "InfoDisplayResponse"
+          }
+        },
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InfoDisplayResponse",
+      "go_type": "display.InfoDisplayResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InfoDisplayTokenResponse",
+      "go_type": "display.InfoDisplayTokenResponse",
+      "fields": [
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InfoDisplayWriteRequest",
+      "go_type": "display.InfoDisplayWriteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_active",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "InitiateEmailChangeRequest",
       "go_type": "operator.InitiateEmailChangeRequest",
       "request": true,
@@ -75626,6 +75850,34 @@
       ]
     },
     {
+      "name": "SetAllowanceRequest",
+      "go_type": "absencetypes.SetAllowanceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "year",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "entitled_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SetDayRequest",
       "go_type": "mealplan.SetDayRequest",
       "request": true,
@@ -76132,6 +76384,25 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftTypeDeleteResponse",
+      "go_type": "shifttypes.ShiftTypeDeleteResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "outcome",
+          "schema": {
+            "kind": "enum",
+            "ref": "ShiftTypeRemovalOutcome"
           }
         }
       ]

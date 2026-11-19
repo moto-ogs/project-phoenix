@@ -103,6 +103,8 @@ var legacyNumericIDsAToO = []string{
 	"devices.DeviceRequest.RegisteredByID",
 	"devices.DeviceResponse.ID",
 	"devices.DeviceResponse.RegisteredByID",
+	"display.InfoDisplayResponse.ID",
+	"display.InfoDisplayResponse.TenantID",
 	"domain.Group.ID",
 	"domain.Group.RoomID",
 	"domain.Group.TenantID",

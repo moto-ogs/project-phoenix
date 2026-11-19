@@ -103,7 +103,7 @@ describe("shiftTypeService requests", () => {
       }),
     ).resolves.toEqual(mappedShiftType);
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shift-types/12", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/12", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -128,7 +128,7 @@ describe("shiftTypeService requests", () => {
       categoryIds: ["3", "7"],
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shift-types/12", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/12", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -186,7 +186,7 @@ describe("shiftTypeService requests", () => {
     await expect(shiftTypeService.deleteShiftType("12")).resolves.toBe(
       "deleted",
     );
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shift-types/12", {
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/12", {
       method: "DELETE",
     });
   });

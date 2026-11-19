@@ -67,6 +67,11 @@ func absenceTypeRouteContracts() []common.RouteContract {
 		tenantRoute("GET", "/{id}/allowances/{staffId}/preview", nil, absencetypesHTTP.AllowancePreviewResponse{},
 			common.QueryParam{Name: "date_start", Kind: common.QueryDate}, common.QueryParam{Name: "date_end", Kind: common.QueryDate},
 			common.QueryParam{Name: "half_day", Kind: common.QueryBool}),
+		// The yearly Kontingent of one staff member left its reshaping route
+		// file in #7563.
+		tenantRoute("GET", "/{id}/allowances/{staffId}", nil, absencetypesHTTP.AllowanceSummaryResponse{},
+			common.QueryParam{Name: "year", Kind: common.QueryInt}),
+		tenantRoute("PUT", "/{id}/allowances/{staffId}", absencetypesHTTP.SetAllowanceRequest{}, absencetypesHTTP.AllowanceSummaryResponse{}),
 	}
 }
 
@@ -77,7 +82,19 @@ func shiftTypeRouteContracts() []common.RouteContract {
 			common.QueryParam{Name: "include_archived", Kind: common.QueryBool}, common.QueryParam{Name: "with_usage", Kind: common.QueryBool}),
 		tenantRoute("POST", "/", shifttypesHTTP.ShiftTypeRequest{}, shifttypesHTTP.ShiftTypeResponse{}),
 		tenantRoute("POST", "/defaults", nil, []shifttypesHTTP.ShiftTypeResponse{}),
+		// Update and removal left their route file in #7563. A removal names
+		// whether the type is gone or archived for the shifts that carry it.
+		tenantRoute("PUT", "/{id}", shifttypesHTTP.ShiftTypeRequest{}, shifttypesHTTP.ShiftTypeResponse{}),
+		shiftTypeRemovalRoute(tenantRoute("DELETE", "/{id}", nil, shifttypesHTTP.ShiftTypeDeleteResponse{})),
 	}
+}
+
+// shiftTypeRemovalRoute names the two outcomes of removing a shift type.
+func shiftTypeRemovalRoute(route common.RouteContract) common.RouteContract {
+	route.Enums = []common.EnumContract{
+		{Name: "ShiftTypeRemovalOutcome", Fields: []string{"ShiftTypeDeleteResponse.outcome"}, Values: []string{"archived", "deleted"}},
+	}
+	return route
 }
 
 // staffShiftRouteContracts registers /api/staff-shifts.

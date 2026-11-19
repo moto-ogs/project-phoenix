@@ -10,6 +10,7 @@ import (
 	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
 	gradeTransitionHTTP "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
 
+	displayHTTP "github.com/moto-ogs/project-phoenix/api/display"
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
@@ -612,10 +613,20 @@ func staffPortalCalendarContractMounts() []contractMount {
 		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Response: []devicesAPI.LifecycleEventResponse{}},
 		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},
 	}
+	// The info-point display management (#7563). The screens' own dashboard
+	// read authenticates with its display token and stays unregistered.
+	displays := []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Response: []displayHTTP.InfoDisplayResponse{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: displayHTTP.InfoDisplayWriteRequest{}, Response: displayHTTP.InfoDisplayCreatedResponse{}},
+		{Method: "PATCH", Pattern: "/{id}", Portals: portals, Request: displayHTTP.InfoDisplayWriteRequest{}, Response: displayHTTP.InfoDisplayResponse{}},
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/{id}/regenerate", Portals: portals, Response: displayHTTP.InfoDisplayTokenResponse{}},
+	}
 	return []contractMount{
 		{"/api/calendar", calendarAPI.StaffRouteContracts()},
 		{"/api/messages", parentMessagingAPI.InboxRouteContracts()},
 		{"/api/iot", devices},
+		{"/api/display", displays},
 	}
 }
 

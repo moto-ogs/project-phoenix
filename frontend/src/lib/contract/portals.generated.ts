@@ -25,6 +25,7 @@ import { routes as catererNotifications } from "./caterer-notifications.generate
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
 import { routes as database } from "./database.generated";
+import { routes as display } from "./display.generated";
 import { routes as enrollment } from "./enrollment.generated";
 import { routes as feedback } from "./feedback.generated";
 import { routes as files } from "./files.generated";
@@ -782,9 +783,11 @@ export const portalRoutes = {
   ],
   tenant: [
     absenceTypes["GET /api/absence-types/"],
+    absenceTypes["GET /api/absence-types/{id}/allowances/{staffId}"],
     absenceTypes["GET /api/absence-types/{id}/allowances/{staffId}/preview"],
     absenceTypes["POST /api/absence-types/"],
     absenceTypes["PUT /api/absence-types/{id}"],
+    absenceTypes["PUT /api/absence-types/{id}/allowances/{staffId}"],
     active["GET /api/active/groups/"],
     active["GET /api/active/groups/{id}/supervisors"],
     active["GET /api/active/schulhof/status"],
@@ -885,6 +888,11 @@ export const portalRoutes = {
     classListEntries["POST /api/class-list-entries/{id}/assign"],
     classListEntries["PUT /api/class-list-entries/{id}"],
     database["GET /api/database/stats"],
+    display["DELETE /api/display/{id}"],
+    display["GET /api/display/"],
+    display["PATCH /api/display/{id}"],
+    display["POST /api/display/"],
+    display["POST /api/display/{id}/regenerate"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/children/{childId}"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/read"],
@@ -1094,9 +1102,11 @@ export const portalRoutes = {
     settings["GET /api/settings/values/{key}/reveal"],
     settings["PUT /api/settings/home-layout"],
     settings["PUT /api/settings/home-layout/policies"],
+    shiftTypes["DELETE /api/shift-types/{id}"],
     shiftTypes["GET /api/shift-types/"],
     shiftTypes["POST /api/shift-types/"],
     shiftTypes["POST /api/shift-types/defaults"],
+    shiftTypes["PUT /api/shift-types/{id}"],
     staff["DELETE /api/staff/time-tracking/payroll-rules/surcharge-rules/{ruleId}"],
     staff["DELETE /api/staff/time-tracking/payroll-rules/wage-types/{wageTypeId}"],
     staff["DELETE /api/staff/{id}"],
