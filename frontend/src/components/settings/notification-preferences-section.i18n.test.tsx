@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "~/i18n/messages/en.generated";
-import { NotificationPreferencesSection } from "./notification-preferences-section";
+import { messageLoaders } from "~/i18n/messages/loaders.generated";
+import {
+  NotificationPreferencesSection,
+  PARENT_TYPES,
+} from "./notification-preferences-section";
 import type { ReactNode } from "react";
 import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -86,4 +90,27 @@ describe("parent notification preference translations", () => {
       screen.queryByText("Neue Nachricht der OGS"),
     ).not.toBeInTheDocument();
   });
+});
+
+// A parent type without its texts shows a raw key in the parents' settings
+// (parent_class_timetable_changed, #7142).
+describe("every parent notification type has its texts in every language", () => {
+  it.each(Object.keys(messageLoaders) as Array<keyof typeof messageLoaders>)(
+    "%s",
+    async (locale) => {
+      const { default: messages } = await messageLoaders[locale]();
+      const types = (
+        messages.notificationPreferences as {
+          types: Record<string, { label?: string; description?: string }>;
+        }
+      ).types;
+      for (const key of PARENT_TYPES) {
+        expect(types[key]?.label, `${locale} ${key}.label`).toBeTruthy();
+        expect(
+          types[key]?.description,
+          `${locale} ${key}.description`,
+        ).toBeTruthy();
+      }
+    },
+  );
 });

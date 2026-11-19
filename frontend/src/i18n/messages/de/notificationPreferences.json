@@ -41,6 +41,10 @@
       "label": "Betreuung fällt aus",
       "description": "Wenn die {careTerm} einen Betreuungstermin deines Kindes absagt."
     },
+    "parent_class_timetable_changed": {
+      "label": "Stundenplan der Klasse",
+      "description": "Wenn sich der Unterrichtsschluss in der Klasse deines Kindes ändert. Der Hinweis in moto kommt immer. Schaltest du das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy."
+    },
     "parent_school_closing_day_changed": {
       "label": "Schließtage",
       "description": "Wenn die {careTerm} einen Schließtag einträgt, ändert oder löscht. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen."

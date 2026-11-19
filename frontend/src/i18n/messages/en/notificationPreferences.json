@@ -41,6 +41,10 @@
       "label": "Care cancelled",
       "description": "When the {careTerm} cancels one of your child's care sessions."
     },
+    "parent_class_timetable_changed": {
+      "label": "Class timetable",
+      "description": "When the end of lessons changes in your child's class. The notice in moto always comes. If you switch this on, you also get a phone notification for changes within the next 14 days."
+    },
     "parent_school_closing_day_changed": {
       "label": "Closing days",
       "description": "When the {careTerm} adds, changes or removes a closing day. The notice in moto always comes; a phone notification only for closing days within the next 14 days."

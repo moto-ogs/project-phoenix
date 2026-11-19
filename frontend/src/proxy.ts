@@ -742,17 +742,17 @@ export function proxy(request: NextRequest): NextResponse {
   // next.config.js sets skipTrailingSlashRedirect so the PostHog proxy
   // keeps the trailing slash its endpoints need (/ingest/e/). A path the
   // routing would serve as it is keeps the Next.js default and loses its
-  // trailing slash; routing redirects such as old bookmarks win. Relative
-  // Location: the browser resolves it against the host it asked.
+  // trailing slash; routing redirects such as old bookmarks win. The Location
+  // is absolute: Next.js parses it without a base (a relative one answered
+  // 500) and turns a same-host target back into a relative Location itself.
   const servedAsIs =
     !pathname.startsWith("/_next") &&
     (response.headers.has("x-middleware-next") ||
       response.headers.has("x-middleware-rewrite"));
   if (servedAsIs && pathname.length > 1 && pathname.endsWith("/")) {
-    const target = `${pathname.replace(/\/+$/, "") || "/"}${request.nextUrl.search}`;
-    return withSecurityHeaders(
-      new NextResponse(null, { status: 308, headers: { Location: target } }),
-    );
+    const target = new URL(request.url);
+    target.pathname = pathname.replace(/\/+$/, "") || "/";
+    return withSecurityHeaders(NextResponse.redirect(target, 308));
   }
   const pagePath = new URL(
     response.headers.get("x-middleware-rewrite") ?? request.url,
