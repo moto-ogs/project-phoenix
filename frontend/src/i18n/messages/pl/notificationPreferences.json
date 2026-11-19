@@ -41,6 +41,10 @@
       "label": "Opieka odwołana",
       "description": "Gdy {careTerm} odwoła termin opieki Państwa dziecka."
     },
+    "parent_class_timetable_changed": {
+      "label": "Plan lekcji klasy",
+      "description": "Gdy zmienia się godzina zakończenia lekcji w klasie Twojego dziecka. Informacja w moto pojawia się zawsze. Jeśli to włączysz, przy zmianach w ciągu najbliższych 14 dni dostaniesz też powiadomienie na telefon."
+    },
     "parent_school_closing_day_changed": {
       "label": "Dni zamknięcia",
       "description": "Gdy {careTerm} doda, zmieni lub usunie dzień zamknięcia. Informacja w moto pojawia się zawsze, powiadomienie na telefon tylko dla dni zamknięcia w ciągu najbliższych 14 dni."

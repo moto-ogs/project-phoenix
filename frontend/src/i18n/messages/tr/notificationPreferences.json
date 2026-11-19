@@ -41,6 +41,10 @@
       "label": "Bakım iptal edildi",
       "description": "{careTerm} çocuğunuzun bir bakım gününü iptal ettiğinde."
     },
+    "parent_class_timetable_changed": {
+      "label": "Sınıfın ders programı",
+      "description": "Çocuğunuzun sınıfında derslerin bitiş saati değiştiğinde. moto'daki bildirim her zaman gelir. Bunu açarsanız, önümüzdeki 14 gün içindeki değişikliklerde telefonunuza da bildirim gelir."
+    },
     "parent_school_closing_day_changed": {
       "label": "Kapalı günler",
       "description": "{careTerm} bir kapalı gün eklediğinde, değiştirdiğinde veya sildiğinde. moto'daki bildirim her zaman gelir, telefona bildirim yalnızca önümüzdeki 14 gün içindeki kapalı günler için gelir."
