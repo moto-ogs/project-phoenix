@@ -19,13 +19,18 @@ import {
 import {
   FormLegalBlockSchema,
   HolidayFormFieldSchema,
+  HolidayNoCareDaySchema,
   HolidayRegistrationChildSchema,
   HolidayRegistrationDetailSchema,
   HolidayRegistrationMailProblemSchema,
   type FormLegalBlock,
   type HolidayFormField,
+  type HolidayNoCareDay,
   type HolidayRegistrationChild,
   type HolidayRegistrationMailProblem,
+  type holidayAddressRequest,
+  type holidayContactRequest,
+  type holidayGuardianRequest,
 } from "./shared.generated";
 
 /** Go: enrollment.HolidayTimeModel */
@@ -47,19 +52,6 @@ export const HolidayTimeModelSchema: z.ZodType<HolidayTimeModel, unknown> = obje
   price_cents: safeInt,
   archived: bool,
   protected: bool,
-});
-
-/** Go: enrollment.HolidayNoCareDay */
-export interface HolidayNoCareDay {
-  date: string | null;
-  kind: string;
-  name: string;
-}
-
-export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
-  date: nullable(calendarDate),
-  kind: str,
-  name: str,
 });
 
 /** Go: enrollment.HolidayWeek */
@@ -592,21 +584,6 @@ export interface HolidayCriteriaCheckRequest {
   checks?: HolidayCriterionCheckRequest[] | null;
 }
 
-/** Go: enrollmenthttp.holidayGuardianRequest */
-export interface holidayGuardianRequest {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  phone?: string;
-}
-
-/** Go: enrollmenthttp.holidayAddressRequest */
-export interface holidayAddressRequest {
-  street?: string;
-  postal_code?: string;
-  city?: string;
-}
-
 /** Go: enrollmenthttp.holidayChildEditRequest */
 export interface holidayChildEditRequest {
   id?: number;
@@ -616,13 +593,6 @@ export interface holidayChildEditRequest {
   home_school_id?: number;
   guest_school_name?: string;
   custom_data?: Record<string, unknown | null> | null;
-}
-
-/** Go: enrollmenthttp.holidayContactRequest */
-export interface holidayContactRequest {
-  name?: string;
-  phone?: string;
-  relationship?: string;
 }
 
 /** Go: enrollmenthttp.HolidayRegistrationEditRequest */

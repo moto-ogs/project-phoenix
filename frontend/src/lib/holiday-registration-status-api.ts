@@ -124,7 +124,7 @@ export async function fetchHolidayRegistrationStatus(
   let response: Response;
   try {
     response = await fetch(
-      `/api/holiday-registrations/status/${encodeURIComponent(token)}`,
+      `/api/traeger/holiday-registrations/status/${encodeURIComponent(token)}`,
       { cache: "no-store" },
     );
   } catch (cause) {

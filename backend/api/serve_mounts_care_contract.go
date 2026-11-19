@@ -28,12 +28,18 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
+// careContractSigningPath is the one-time link of a contract mail (#4679).
+// The general request limiter leaves it to the shared limit of the public
+// links, which signingLink carries.
+const careContractSigningPath = "/public/care-contract-signing"
+
 // mountCareContractRoutes serves the Betreuungsvertrag (ADR 0088, ADR 0153,
 // #4678) behind the right "Verträge verwalten": the contracts at
 // /traeger/contracts, the templates of the offerings at
 // /traeger/contract-templates and withdrawal and termination at
-// /traeger/contract-notices (#4682).
-func mountCareContractRoutes(root chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
+// /traeger/contract-notices (#4682). signingLink is root behind the limit of
+// the signing link.
+func mountCareContractRoutes(root, signingLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
 	addressees carecontract.NoticeAddressees, holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date, now func() time.Time) {
 	resource := NewCareContractHTTP(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, today, now)
@@ -43,7 +49,7 @@ func mountCareContractRoutes(root chi.Router, organizations HolidayOrganizations
 	mountCareContractImportRoutes(root, organizations, settings, accessLog, today, now)
 	// The one-time link of a contract mail (#4679), without an account.
 	signing := careContractCompose.NewSigning(careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL), now)
-	root.Mount("/public/care-contract-signing", careContractHTTP.NewSigningResource(signing).PublicRouter())
+	signingLink.Mount(careContractSigningPath, careContractHTTP.NewSigningResource(signing).PublicRouter())
 }
 
 // careContractSignaturePorts binds the signature of a contract (#4679): the

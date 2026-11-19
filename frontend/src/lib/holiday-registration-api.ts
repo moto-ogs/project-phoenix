@@ -136,14 +136,14 @@ interface BackendOffer {
   open: boolean;
   weeks?:
     | {
-        id: number;
+        id: WireId;
         starts_on: string;
         ends_on: string;
         host_school_name: string;
         no_care_days?: { date: string; name: string }[] | null;
         time_models?:
           | {
-              id: number;
+              id: WireId;
               name: string;
               starts_at: string;
               ends_at: string;
@@ -158,7 +158,7 @@ interface BackendOffer {
       }[]
     | null;
   max_days_per_child?: number | null;
-  schools?: { id: number; name: string }[] | null;
+  schools?: { id: WireId; name: string }[] | null;
   captcha_site_key: string;
   form?: {
     version: number;
@@ -171,8 +171,14 @@ interface BackendOffer {
   holiday_wish_mode?: HolidayWishMode;
   allocation_mode?: "arrival" | "criteria";
   criteria?:
-    { id: number; question: string; scope: "family" | "child" }[] | null;
+    { id: WireId; question: string; scope: "family" | "child" }[] | null;
 }
+
+/**
+ * An identifier of the offer as the backend sends it: a number, or a string
+ * since the catalog proxy's contract decoder serves the link (#2352).
+ */
+type WireId = number | string;
 
 /** The registration as the backend reads it; IDs travel as numbers. */
 export interface HolidayRegistrationPayload {
@@ -317,8 +323,14 @@ function offerFromBackend(offer: BackendOffer): HolidayRegistrationOffer {
   };
 }
 
+// The link and its summary run through the Träger proxy's public routes
+// (#2352); the proof upload and the form documents keep their own files.
 function registrationPath(token: string): string {
-  return `/api/holiday-registrations/${encodeURIComponent(token)}`;
+  return `/api/traeger/holiday-registrations/${encodeURIComponent(token)}`;
+}
+
+function uploadPath(token: string): string {
+  return `/api/holiday-registrations/${encodeURIComponent(token)}/uploads`;
 }
 
 async function request(input: string, init?: RequestInit): Promise<Response> {
@@ -366,7 +378,7 @@ export function uploadHolidayProof(
 ): Promise<NewUploadValue> {
   const body = new FormData();
   body.append("file", file);
-  return postUpload(`${registrationPath(token)}/uploads`, body, file, signal);
+  return postUpload(uploadPath(token), body, file, signal);
 }
 
 /**
@@ -413,7 +425,7 @@ export async function submitHolidayRegistration(
   const body = (await response.json().catch(() => null)) as {
     data?: {
       placements?:
-        { child_position: number; week_id: number; placement: string }[] | null;
+        { child_position: number; week_id: WireId; placement: string }[] | null;
       status_token?: string | null;
     };
   } | null;
@@ -447,17 +459,20 @@ export async function quoteHolidayContribution(
   benefitsDeclared: boolean,
   ageRanks: readonly number[] = [],
 ): Promise<HolidayContribution> {
-  const response = await request(`${registrationPath(token)}/contribution`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      children: children.map((bookings, index) => ({
-        bookings,
-        age_rank: ageRanks[index] ?? 0,
-      })),
-      benefits_declared: benefitsDeclared,
-    }),
-  });
+  const response = await request(
+    `/api/traeger/holiday-quotes/${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        children: children.map((bookings, index) => ({
+          bookings,
+          age_rank: ageRanks[index] ?? 0,
+        })),
+        benefits_declared: benefitsDeclared,
+      }),
+    },
+  );
   if (!response.ok) {
     throw await readError(
       response,

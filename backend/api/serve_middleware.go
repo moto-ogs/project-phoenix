@@ -223,6 +223,7 @@ func setupRateLimiting(router chi.Router, securityLogger *customMiddleware.Secur
 	generalRateLimiter.ExemptPathPrefix(emailWebhookPath + "/")
 	generalRateLimiter.ExemptPathPrefix(holidayRegistrationPath + "/")
 	generalRateLimiter.ExemptPathPrefix(holidayQuoteMount + "/")
+	generalRateLimiter.ExemptPathPrefix(careContractSigningPath + "/")
 	generalRateLimiter.ExemptRequest(isPublicEnrollmentRequest)
 	generalRateLimiter.SetBucketFunc(func(r *http.Request) string {
 		switch r.Method {
@@ -467,6 +468,15 @@ func holidayRegistrationRateLimit(enabled, exemptLoopback bool, newLimiter rateL
 		return nil
 	}
 	return publicLinkRateLimit("holiday-link", exemptLoopback, newLimiter)
+}
+
+// careContractSigningRateLimit is the limit of the signing link of a care
+// contract mail (#4679), nil when rate limiting is disabled.
+func careContractSigningRateLimit(enabled, exemptLoopback bool, newLimiter rateLimiterFactory) func(http.Handler) http.Handler {
+	if !enabled {
+		return nil
+	}
+	return publicLinkRateLimit("care-contract-link", exemptLoopback, newLimiter)
 }
 
 // dataReturnRateLimit is nil when rate limiting is disabled.

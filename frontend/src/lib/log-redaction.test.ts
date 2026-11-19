@@ -183,6 +183,16 @@ describe("redactSensitiveLogData", () => {
     );
   });
 
+  it("redacts the status link token on the Träger proxy's public path (#2352)", () => {
+    expect(
+      redactSensitiveLogString(
+        "GET /api/traeger/holiday-registrations/status/bff-secret?x=1 period=/api/traeger/holiday-registrations/period-link",
+      ),
+    ).toBe(
+      "GET /api/traeger/holiday-registrations/status/[REDACTED]?x=1 period=/api/traeger/holiday-registrations/period-link",
+    );
+  });
+
   it("redacts complete quoted credential values with spaces and escapes", () => {
     expect(
       redactSensitiveLogString(

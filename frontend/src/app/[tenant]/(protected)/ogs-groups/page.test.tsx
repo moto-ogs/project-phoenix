@@ -1249,7 +1249,7 @@ describe("OGSGroupPage", () => {
     });
   });
 
-  it("invokes fetchOgsGroupLive (GET /api/ogs-group-live) via the SWR fetcher", async () => {
+  it("invokes fetchOgsGroupLive (GET /api/students/ogs-group-live) via the SWR fetcher", async () => {
     // Captures and directly invokes the fetcher function passed to
     // useSWRAuth, covering the SWR fetcher body that is normally never
     // executed because useSWRAuth is mocked. The wire→view mapping itself
@@ -1298,7 +1298,7 @@ describe("OGSGroupPage", () => {
     await capturedFetcher!();
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/ogs-group-live"),
+      expect.stringContaining("/api/students/ogs-group-live"),
       expect.any(Object),
     );
   });

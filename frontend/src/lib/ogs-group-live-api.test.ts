@@ -301,7 +301,7 @@ describe("fetchOgsGroupLive", () => {
   });
 
   // The route reads the session cookie; the browser holds no token (#5005).
-  it("GETs /api/ogs-group-live with the cookie and group_id query param", async () => {
+  it("GETs /api/students/ogs-group-live with the cookie and group_id query param", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, data: wireResponse() }),
@@ -311,7 +311,7 @@ describe("fetchOgsGroupLive", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/ogs-group-live?group_id=5");
+    expect(url).toBe("/api/students/ogs-group-live?group_id=5");
     expect(init).toMatchObject({
       credentials: "include",
       headers: {
@@ -330,7 +330,7 @@ describe("fetchOgsGroupLive", () => {
     await fetchOgsGroupLive(null);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/ogs-group-live",
+      "/api/students/ogs-group-live",
       expect.any(Object),
     );
   });
@@ -347,7 +347,7 @@ describe("fetchOgsGroupLive", () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledWith(
-        "/api/ogs-group-live",
+        "/api/students/ogs-group-live",
         expect.any(Object),
       );
     },
@@ -368,9 +368,9 @@ describe("fetchOgsGroupLive", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "/api/ogs-group-live?group_id=999",
+      "/api/students/ogs-group-live?group_id=999",
     );
-    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/ogs-group-live");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/students/ogs-group-live");
     expect(result.groupId).toBe("1");
   });
 

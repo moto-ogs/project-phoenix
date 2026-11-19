@@ -47,6 +47,13 @@ export const CATALOG_OUTSIDE_MOUNTS = {
  * one-time link of a care contract mail lives at
  * `/public/care-contract-signing`, and the staff portal's proxy serves it as
  * `/api/public/care-contract-signing/…`, the path the link's page calls.
+ *
+ * The link's page lives under `/parents/…` on the parents host, yet the staff
+ * portal's proxy (`app/api/[...path]`) serves it on purpose: its public path
+ * reads no session and sends no bearer, so which portal's proxy answers does
+ * not matter, and `/api/public/` is already open on the parents host
+ * (`HOST_RULES.parent` in `src/proxy.ts`). The parent portal's proxy would
+ * have to name the head as well, for no gain.
  */
 export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
   tenant: ["/public/care-contract-signing"],

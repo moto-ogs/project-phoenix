@@ -818,6 +818,8 @@ describe("submitSickNote", () => {
     expect(out.pending_request).toBeUndefined();
     expect(seenMethod).toBe("POST");
     expect(seenURL).toContain("/api/parent/me/children/84/sick-note");
+    // The backend answers the envelope without the former opt-in (#2352).
+    expect(seenURL).not.toContain("envelope");
     expect(seenBody).toContain('"dates":["2026-06-02"]');
     expect(seenBody).toContain('"reason":"Fieber"');
   });

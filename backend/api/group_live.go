@@ -183,7 +183,7 @@ type groupLiveTeacherHintReader struct {
 	hints peopledirectory.SchoolDayHintQuery
 }
 
-func (b groupLiveTeacherHintReader) TeacherHints(ctx context.Context, studentIDs []int64, date grouplive.Date) (map[int64][]grouplive.TeacherHint, error) {
+func (b groupLiveTeacherHintReader) TeacherHints(ctx context.Context, studentIDs []int64, date grouplive.Date) (map[int64][]grouplive.GroupLiveTeacherHint, error) {
 	day, err := groupLiveDay(date)
 	if err != nil {
 		return nil, err
@@ -192,9 +192,9 @@ func (b groupLiveTeacherHintReader) TeacherHints(ctx context.Context, studentIDs
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[int64][]grouplive.TeacherHint)
+	result := make(map[int64][]grouplive.GroupLiveTeacherHint)
 	for _, hint := range rows {
-		result[hint.StudentID] = append(result[hint.StudentID], grouplive.TeacherHint{
+		result[hint.StudentID] = append(result[hint.StudentID], grouplive.GroupLiveTeacherHint{
 			Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
 		})
 	}

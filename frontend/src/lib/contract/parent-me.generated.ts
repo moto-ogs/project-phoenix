@@ -927,6 +927,27 @@ export const ParentRequestEventResponseSchema: z.ZodType<ParentRequestEventRespo
   version: str,
 });
 
+/** Go: parent.StatusDayResponse */
+export interface StatusDayResponse {
+  id: string;
+  student_id: string;
+  date: string;
+  status: string;
+  reported_at: string;
+  source: string;
+  note?: string;
+}
+
+export const StatusDayResponseSchema: z.ZodType<StatusDayResponse, unknown> = object<StatusDayResponse>({
+  id: str,
+  student_id: str,
+  date: str,
+  status: str,
+  reported_at: instant,
+  source: str,
+  note: optional(str),
+});
+
 /** Go: parent.TodayStatusResponse */
 export interface TodayStatusResponse {
   at_ogs: boolean | null;
@@ -2250,6 +2271,25 @@ export const inviteRelatedAccountResponseSchema: z.ZodType<inviteRelatedAccountR
   existing_role: optional(str),
 });
 
+/** Go: parent.SubmitSickNoteRequest */
+export interface SubmitSickNoteRequest {
+  dates?: string[] | null;
+  reason?: string;
+  status?: string;
+  recipient_guardian_profile_ids?: string[] | null;
+}
+
+/** Go: parent.SickNoteEnvelopeResponse */
+export interface SickNoteEnvelopeResponse {
+  status_days: StatusDayResponse[] | null;
+  pending_request: ParentExcusedRequestResponse | null;
+}
+
+export const SickNoteEnvelopeResponseSchema: z.ZodType<SickNoteEnvelopeResponse, unknown> = object<SickNoteEnvelopeResponse>({
+  status_days: nullable(arr(StatusDayResponseSchema)),
+  pending_request: nullable(ParentExcusedRequestResponseSchema),
+});
+
 /** Go: care.ContractNoticeInput */
 export interface ContractNoticeInput {
   expected_ends_on?: string | null;
@@ -2583,6 +2623,12 @@ export interface GetParentMeChildrenStudentIdMealPlanQuery {
   week_start?: string;
 }
 
+/** Query of GET /parent/me/children/{studentId}/sick-note */
+export interface GetParentMeChildrenStudentIdSickNoteQuery {
+  from?: string;
+  to?: string;
+}
+
 /** Query of GET /parent/me/messages/children/{studentId} */
 export interface GetParentMeMessagesChildrenStudentIdQuery {
   audience?: string;
@@ -2799,6 +2845,13 @@ export const routes = {
     pattern: "/parent/me/children/{studentId}/requests/{requestType}/{requestId}/events",
     portals: ["parent"],
     response: success(z.array(ParentRequestEventResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/sick-note": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/sick-note",
+    portals: ["parent"],
+    query: ["from", "to"],
+    response: success(z.array(StatusDayResponseSchema)),
   },
   "GET /parent/me/children/{studentId}/today": {
     method: "GET",
@@ -3059,6 +3112,13 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<inviteRelatedAccountRequest>(),
     response: success(inviteRelatedAccountResponseSchema),
+  },
+  "POST /parent/me/children/{studentId}/sick-note": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/sick-note",
+    portals: ["parent"],
+    request: requestBody<SubmitSickNoteRequest>(),
+    response: success(SickNoteEnvelopeResponseSchema),
   },
   "POST /parent/me/documents/{organizationId}/contracts/{contractId}/notice": {
     method: "POST",

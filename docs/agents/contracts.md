@@ -409,8 +409,9 @@ Legacy plaintext counters are moved to hashed keys on their next request,
 without resetting the active quota. Rotating the signing secret starts new
 hashed windows, as it invalidates existing authentication material.
 The public routes retain their separate IP-based abuse limit. Auth,
-email confirmation, invitations, public enrollment and holiday links, and
-data-return retrieval share their IP-based quotas across API replicas. The
+email confirmation, invitations, public enrollment and holiday links, the
+signing link of a care contract mail, and data-return retrieval share their
+IP-based quotas across API replicas. The
 kiosk error-report quota is shared per device. The general request limiter
 remains per replica. See [replica runtime state](operations.md#replica-runtime-state).
 
@@ -1414,6 +1415,11 @@ answer holds the state, the period and per child the first name with weeks,
 time models, host schools and placements; no health information, address,
 contact, last name or date of birth. The token lives in the registration row,
 so the link ends when the retention deletes the registration. Logs redact it.
+
+The browser reaches the link, its summary (`POST /traeger/holiday-quotes/{token}`)
+and the status at `/api/traeger/…` through the Träger proxy's public routes
+(#2352), which read no session; the parents host opens exactly
+`/api/traeger/holiday-registrations/` and `/api/traeger/holiday-quotes/`.
 
 The start page of the parents app reads
 `GET /parent/me/holiday-registrations` (#6671, ADR 0207): the published

@@ -4,6 +4,8 @@ import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
+import { CATALOG_PUBLIC_OUTSIDE_MOUNTS } from "~/lib/contract/catalog-outside-mounts";
+import { portalRoutes } from "~/lib/contract/portals.generated";
 
 const OPERATOR_HOSTNAME = "operator.localhost:3000";
 const PARENTS_HOSTNAME = "parents.localhost:3000";
@@ -1933,6 +1935,83 @@ describe("proxy", () => {
       ]) {
         expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(200);
       }
+    });
+
+    // The holiday link and its summary run through the Träger proxy's public
+    // routes (#2352): exactly these two prefixes of /api/traeger/ open on the
+    // parents host.
+    const holidayLinkPrefixes = [
+      "/traeger/holiday-registrations/",
+      "/traeger/holiday-quotes/",
+    ];
+    const samplePath = (pattern: string) =>
+      `/api${pattern.replace(/\{[^}]+\}/g, "tok")}`;
+
+    it("serves every public route of the holiday link on the parents host", () => {
+      const holidayRoutes = portalRoutes.public.filter((route) =>
+        holidayLinkPrefixes.some((prefix) => route.pattern.startsWith(prefix)),
+      );
+      expect(holidayRoutes.map((route) => route.pattern)).toEqual(
+        expect.arrayContaining([
+          "/traeger/holiday-registrations/{token}",
+          "/traeger/holiday-registrations/status/{statusToken}",
+          "/traeger/holiday-quotes/{token}",
+        ]),
+      );
+      for (const route of holidayRoutes) {
+        const apiPath = samplePath(route.pattern);
+        expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(200);
+      }
+    });
+
+    it("keeps every other Träger route off the parents host", () => {
+      const traegerPaths = portalRoutes.org
+        .map((route) => samplePath(route.pattern))
+        .filter((apiPath) => apiPath.startsWith("/api/traeger/"));
+      expect(traegerPaths.length).toBeGreaterThan(100);
+      for (const apiPath of [
+        ...traegerPaths,
+        "/api/traeger/auth/session",
+        "/api/traeger/holiday-periods/1/registrations",
+        "/api/traeger/holiday-registrations",
+        "/api/traeger/holiday-quotes",
+      ]) {
+        expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(404);
+      }
+    });
+
+    it("opens no session route under the holiday link's prefixes", () => {
+      // The Träger proxy would serve a session route there with whatever
+      // session the request carries; the parents host has none, so a session
+      // route under these prefixes would be dead or, worse, a second door.
+      const { public: publicRoutes, ...sessionPortals } = portalRoutes;
+      const underHolidayLink = Object.entries(sessionPortals).flatMap(
+        ([portal, routes]) =>
+          routes
+            .filter((route) =>
+              holidayLinkPrefixes.some((prefix) =>
+                `${route.pattern}/`.startsWith(prefix),
+              ),
+            )
+            .map((route) => `${portal} ${route.method} ${route.pattern}`),
+      );
+      expect(publicRoutes.length).toBeGreaterThan(0);
+      expect(underHolidayLink).toEqual([]);
+    });
+
+    it("serves the care contract signing link on the parents host", () => {
+      // The link's page lives under /parents/…, and the staff portal's proxy
+      // serves its public routes (CATALOG_PUBLIC_OUTSIDE_MOUNTS).
+      const [mount] = CATALOG_PUBLIC_OUTSIDE_MOUNTS.tenant;
+      const signingRoutes = portalRoutes.public.filter((route) =>
+        route.pattern.startsWith(`${mount}/`),
+      );
+      expect(signingRoutes.length).toBeGreaterThanOrEqual(4);
+      for (const route of signingRoutes) {
+        const apiPath = samplePath(route.pattern);
+        expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(200);
+      }
+      expect(status(PARENTS_HOSTNAME, `/api${mount}/tok/document`)).toBe(200);
     });
 
     it("refuses tenant and other portals' routes on the parents host", () => {

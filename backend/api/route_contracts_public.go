@@ -6,6 +6,7 @@ import (
 	accountHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
 	catererAuthHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/catererauth"
 	parentAuthHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/parentauth"
+	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
@@ -19,6 +20,8 @@ func publicContractMounts() []contractMount {
 		{"/api/enrollment", enrollmentHTTP.PublicRouteContracts()},
 		{"/caterer", catererPortalHTTP.PublicRouteContracts()},
 		{"/traeger/invitations", traegerPortalHTTP.InvitationRouteContracts()},
+		{holidayRegistrationPath, enrollmentHTTP.PublicHolidayRegistrationRouteContracts()},
+		{holidayQuoteMount, parentBillingHTTP.HolidayQuoteRouteContracts()},
 		{"/public/care-contract-signing", careContractHTTP.SigningRouteContracts()},
 	}
 }

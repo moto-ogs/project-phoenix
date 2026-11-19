@@ -140,10 +140,19 @@ const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
 );
 
 describe("registered route beside a portal's mount", () => {
-  it.each(cases)("$portal $pattern has a BFF path", ({ bff }) => {
-    // A pattern outside the mount needs an entry in CATALOG_OUTSIDE_MOUNTS
-    // (lib/contract/catalog-outside-mounts.ts), or the proxy never reaches it.
-    expect(bff).not.toBeNull();
+  it.each(cases)("$portal $pattern has a BFF path", ({ portal, bff }) => {
+    // A pattern outside the mount needs an entry in
+    // lib/contract/catalog-outside-mounts.ts, or the proxy never reaches it:
+    // a public route in CATALOG_PUBLIC_OUTSIDE_MOUNTS, a session route in
+    // CATALOG_OUTSIDE_MOUNTS.
+    const list =
+      portal === "public"
+        ? "CATALOG_PUBLIC_OUTSIDE_MOUNTS"
+        : "CATALOG_OUTSIDE_MOUNTS";
+    expect(
+      bff,
+      `no portal's proxy reaches this route; name its head in ${list}`,
+    ).not.toBeNull();
   });
 
   it("names only heads the contract registers for the portal", () => {
