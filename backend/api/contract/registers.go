@@ -28,6 +28,9 @@ type Options struct {
 	// Dates names the day types beside calendar.Date that travel as
 	// "YYYY-MM-DD" and render their zero value as null. The root names them.
 	Dates []reflect.Type
+	// Instants names the instant types beside time.Time that write
+	// themselves as RFC 3339 with an offset. The root names them.
+	Instants []reflect.Type
 }
 
 const (

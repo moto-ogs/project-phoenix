@@ -1,4 +1,7 @@
-import type { ActivityCategory } from "./activity-helpers";
+import {
+  readActivityCategory,
+  type ActivityCategory,
+} from "./activity-helpers";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 
 export interface PlannerRoomReference {
@@ -65,9 +68,9 @@ export async function fetchPlannerActivityCategories(): Promise<
     credentials: "include",
   });
   const body = await readReferenceResponse<
-    ReferenceEnvelope<ActivityCategory> | ActivityCategory[]
+    ReferenceEnvelope<unknown> | unknown[]
   >(response);
-  return unwrapReferences(body);
+  return unwrapReferences(body).map(readActivityCategory);
 }
 
 export async function fetchPlannerGroups(): Promise<PlannerGroupReference[]> {

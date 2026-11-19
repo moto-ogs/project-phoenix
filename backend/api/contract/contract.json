@@ -2,6 +2,47 @@
   "routes": [
     {
       "method": "DELETE",
+      "pattern": "/api/activities/categories/{categoryId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/activities/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/activities/{id}/students/{studentId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/activities/{id}/supervisors/{supervisorId}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "replacement_staff_id",
+          "kind": "id"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/admin/grade-transitions/{id}/",
       "portals": [
         "tenant"
@@ -182,14 +223,6 @@
     },
     {
       "method": "DELETE",
-      "pattern": "/api/iot/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "no_data": true
-    },
-    {
-      "method": "DELETE",
       "pattern": "/api/meal-caterer/invitations/{invitationId}",
       "portals": [
         "tenant"
@@ -254,17 +287,6 @@
       "response": {
         "kind": "ref",
         "ref": "deletedResponse"
-      }
-    },
-    {
-      "method": "DELETE",
-      "pattern": "/api/rooms/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "ref",
-        "ref": "RoomRemovalResponse"
       }
     },
     {
@@ -1340,23 +1362,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/active/supervision-dashboard",
-      "portals": [
-        "tenant"
-      ],
-      "query": [
-        {
-          "name": "group_id",
-          "kind": "id"
-        }
-      ],
-      "response": {
-        "kind": "ref",
-        "ref": "Projection"
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/active/supervisors/all",
       "portals": [
         "tenant"
@@ -1405,6 +1410,114 @@
           "kind": "ref",
           "ref": "VisitResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "category_id",
+          "kind": "id"
+        },
+        {
+          "name": "include_system",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivityResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/categories",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "include_archived",
+          "kind": "bool"
+        },
+        {
+          "name": "include_system",
+          "kind": "bool"
+        },
+        {
+          "name": "with_usage",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivityCategoryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/supervisors/available",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "specialization",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivitySupervisorResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/{id}/schedules",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivityScheduleResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/{id}/schedules/{scheduleId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityScheduleResponse"
       }
     },
     {
@@ -2543,60 +2656,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/iot/",
-      "portals": [
-        "tenant"
-      ],
-      "query": [
-        {
-          "name": "device_type",
-          "kind": "string"
-        },
-        {
-          "name": "registered_by_id",
-          "kind": "string"
-        },
-        {
-          "name": "search",
-          "kind": "string"
-        },
-        {
-          "name": "status",
-          "kind": "string"
-        }
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "DeviceResponse"
-        }
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/iot/device-slots",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "ref",
-        "ref": "DeviceSlotsResponse"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/iot/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "ref",
-        "ref": "DeviceResponse"
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/iot/{id}/history",
       "portals": [
         "tenant"
@@ -3185,47 +3244,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/rooms/",
-      "portals": [
-        "tenant"
-      ],
-      "paginated": true,
-      "query": [
-        {
-          "name": "building",
-          "kind": "string"
-        },
-        {
-          "name": "category",
-          "kind": "string"
-        },
-        {
-          "name": "include_system",
-          "kind": "string"
-        },
-        {
-          "name": "is_open_room",
-          "kind": "string"
-        },
-        {
-          "name": "page",
-          "kind": "int"
-        },
-        {
-          "name": "page_size",
-          "kind": "int"
-        }
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "RoomResponse"
-        }
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/rooms/by-category",
       "portals": [
         "tenant"
@@ -3246,41 +3264,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/rooms/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "ref",
-        "ref": "RoomResponse"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/rooms/{id}/history",
-      "portals": [
-        "tenant"
-      ],
-      "query": [
-        {
-          "name": "end",
-          "kind": "string"
-        },
-        {
-          "name": "start",
-          "kind": "string"
-        }
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "RoomSessionEntry"
-        }
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/rooms/{id}/removal-impact",
       "portals": [
         "tenant"
@@ -3288,6 +3271,35 @@
       "response": {
         "kind": "ref",
         "ref": "RoomRemovalImpactResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/schedules/timeframes/",
+      "portals": [
+        "tenant"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "description",
+          "kind": "string"
+        },
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "page_size",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TimeframeResponse"
+        }
       }
     },
     {
@@ -9968,6 +9980,62 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/activities/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/activities/categories",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityCategoryRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/activities/categories/{categoryId}/restore",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/activities/quick-create",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "QuickActivityRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "QuickActivityResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/admin/grade-transitions/",
       "portals": [
         "tenant"
@@ -10514,21 +10582,6 @@
     },
     {
       "method": "POST",
-      "pattern": "/api/iot/",
-      "portals": [
-        "tenant"
-      ],
-      "request": {
-        "kind": "ref",
-        "ref": "DeviceRequest"
-      },
-      "response": {
-        "kind": "ref",
-        "ref": "DeviceCreationResponse"
-      }
-    },
-    {
-      "method": "POST",
       "pattern": "/api/meal-billing-months/{month}/release",
       "portals": [
         "tenant"
@@ -10793,21 +10846,6 @@
         "tenant"
       ],
       "no_data": true
-    },
-    {
-      "method": "POST",
-      "pattern": "/api/rooms/",
-      "portals": [
-        "tenant"
-      ],
-      "request": {
-        "kind": "ref",
-        "ref": "RoomRequest"
-      },
-      "response": {
-        "kind": "ref",
-        "ref": "RoomResponse"
-      }
     },
     {
       "method": "POST",
@@ -15017,6 +15055,36 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/activities/categories/{categoryId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityCategoryRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/activities/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/admin/grade-transitions/{id}/",
       "portals": [
         "tenant"
@@ -15258,21 +15326,6 @@
     },
     {
       "method": "PUT",
-      "pattern": "/api/iot/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "request": {
-        "kind": "ref",
-        "ref": "DeviceRequest"
-      },
-      "response": {
-        "kind": "ref",
-        "ref": "DeviceResponse"
-      }
-    },
-    {
-      "method": "PUT",
       "pattern": "/api/me/profile",
       "portals": [
         "tenant"
@@ -15392,21 +15445,6 @@
       "response": {
         "kind": "ref",
         "ref": "announcementResponse"
-      }
-    },
-    {
-      "method": "PUT",
-      "pattern": "/api/rooms/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "request": {
-        "kind": "ref",
-        "ref": "RoomRequest"
-      },
-      "response": {
-        "kind": "ref",
-        "ref": "RoomResponse"
       }
     },
     {
@@ -19032,35 +19070,370 @@
       ]
     },
     {
-      "name": "ActiveSession",
-      "go_type": "supervisiondashboard.ActiveSession",
+      "name": "ActivityCategoryRequest",
+      "go_type": "httpadapter.ActivityCategoryRequest",
+      "request": true,
       "fields": [
         {
-          "name": "active_group_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "instance_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "title",
+          "name": "name",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
         },
         {
-          "name": "start_time",
+          "name": "description",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
         },
         {
-          "name": "end_time",
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityCategoryResponse",
+      "go_type": "httpadapter.ActivityCategoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "usage_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityRequest",
+      "go_type": "httpadapter.ActivityRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_open",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planned_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleRequest"
+            }
+          }
+        },
+        {
+          "name": "supervisor_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityResponse",
+      "go_type": "httpadapter.ActivityResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_open",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "category_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planned_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "created_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ActivityCategoryResponse"
+          }
+        },
+        {
+          "name": "supervisor_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "supervisor_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "supervisors",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ActivitySupervisorResponse"
+            }
+          }
+        },
+        {
+          "name": "schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ActivityScheduleResponse"
+            }
+          }
+        },
+        {
+          "name": "enrollment_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityScheduleResponse",
+      "go_type": "httpadapter.ActivityScheduleResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "timeframe_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivitySupervisorResponse",
+      "go_type": "httpadapter.ActivitySupervisorResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -22476,61 +22849,6 @@
             "nullable": true,
             "elem": {
               "kind": "legacy_id"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "ArrivalTime",
-      "go_type": "supervisiondashboard.ArrivalTime",
-      "fields": [
-        {
-          "name": "student_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "date",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "weekday_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "expected_arrival",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_exception",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "notes",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "day_notes",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "ref",
-              "ref": "DayNote"
             }
           }
         }
@@ -26603,18 +26921,6 @@
           "optional": true,
           "schema": {
             "kind": "legacy_id"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Capabilities",
-      "go_type": "supervisiondashboard.Capabilities",
-      "fields": [
-        {
-          "name": "web_spontaneous_activities_enabled",
-          "schema": {
-            "kind": "bool"
           }
         }
       ]
@@ -34639,71 +34945,6 @@
       ]
     },
     {
-      "name": "ConflictWarning",
-      "go_type": "supervisiondashboard.ConflictWarning",
-      "fields": [
-        {
-          "name": "kind",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "resource_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "message",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "can_override",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "fingerprint",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "conflicting_instance_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "conflicting_title",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "overlap_start",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "overlap_end",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
       "name": "ContactRequest",
       "go_type": "traeger.ContactRequest",
       "request": true,
@@ -37902,24 +38143,6 @@
       ]
     },
     {
-      "name": "DayNote",
-      "go_type": "supervisiondashboard.DayNote",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "content",
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
       "name": "DayReport",
       "go_type": "classday.DayReport",
       "fields": [
@@ -38810,88 +39033,6 @@
       ]
     },
     {
-      "name": "DeviceCreationResponse",
-      "go_type": "devices.DeviceCreationResponse",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "device_id",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "device_type",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "last_seen",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "registered_by_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "room_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_online",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "created_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "updated_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "api_key",
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
       "name": "DevicePINStatus",
       "go_type": "records.DevicePINStatus",
       "fields": [
@@ -38906,152 +39047,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "DeviceRequest",
-      "go_type": "devices.DeviceRequest",
-      "request": true,
-      "fields": [
-        {
-          "name": "device_id",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "device_type",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "name",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "status",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "registered_by_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id",
-            "nullable": true
-          }
-        }
-      ]
-    },
-    {
-      "name": "DeviceResponse",
-      "go_type": "devices.DeviceResponse",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "device_id",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "device_type",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "last_seen",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "registered_by_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "room_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_online",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "created_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "updated_at",
-          "schema": {
-            "kind": "instant"
-          }
-        }
-      ]
-    },
-    {
-      "name": "DeviceSlotsResponse",
-      "go_type": "devices.DeviceSlotsResponse",
-      "fields": [
-        {
-          "name": "device_slots",
-          "schema": {
-            "kind": "int",
-            "nullable": true
-          }
-        },
-        {
-          "name": "occupied",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "free",
-          "schema": {
-            "kind": "int",
-            "nullable": true
           }
         }
       ]
@@ -39981,31 +39976,6 @@
             "kind": "ref",
             "nullable": true,
             "ref": "declarationSignatureRequest"
-          }
-        }
-      ]
-    },
-    {
-      "name": "EducationalGroup",
-      "go_type": "supervisiondashboard.EducationalGroup",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "room_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
           }
         }
       ]
@@ -42675,75 +42645,6 @@
             "elem": {
               "kind": "ref",
               "ref": "GapInstance"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Group",
-      "go_type": "supervisiondashboard.Group",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "room_id",
-          "optional": true,
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "room_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "room_color",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_current_user_supervising",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "can_assign",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "participant_limit",
-          "optional": true,
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "supervisors",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "ref",
-              "ref": "SessionSupervisor"
             }
           }
         }
@@ -54710,294 +54611,6 @@
       ]
     },
     {
-      "name": "OpenRoom",
-      "go_type": "supervisiondashboard.OpenRoom",
-      "fields": [
-        {
-          "name": "room_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_user_supervising",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "active_group_ids",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
-          }
-        },
-        {
-          "name": "has_occupying_session",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "student_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "students",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "OpenRoomStudent"
-            }
-          }
-        },
-        {
-          "name": "sessions",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "OpenRoomSession"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "OpenRoomBlock",
-      "go_type": "supervisiondashboard.OpenRoomBlock",
-      "fields": [
-        {
-          "name": "instance_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "start_time",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "end_time",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_spontaneous",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "is_user_assigned",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "can_operate",
-          "schema": {
-            "kind": "bool"
-          }
-        }
-      ]
-    },
-    {
-      "name": "OpenRoomSession",
-      "go_type": "supervisiondashboard.OpenRoomSession",
-      "fields": [
-        {
-          "name": "active_group_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "title",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "independent",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "is_user_supervising",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "can_assign",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "student_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "participant_limit",
-          "optional": true,
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "supervisors",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "ref",
-              "ref": "SessionSupervisor"
-            }
-          }
-        },
-        {
-          "name": "block",
-          "schema": {
-            "kind": "ref",
-            "nullable": true,
-            "ref": "OpenRoomBlock"
-          }
-        }
-      ]
-    },
-    {
-      "name": "OpenRoomStudent",
-      "go_type": "supervisiondashboard.OpenRoomStudent",
-      "fields": [
-        {
-          "name": "student_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "student_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "school_class",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "group_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "active_group_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "check_in_time",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "actual_arrival_time",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "actual_pickup_time",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sick",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "sick_since",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "excused",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "excused_since",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "photo_url",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "class_handover",
-          "optional": true,
-          "schema": {
-            "kind": "ref",
-            "ref": "SupervisionClassHandover"
-          }
-        },
-        {
-          "name": "activity_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "independent",
-          "schema": {
-            "kind": "bool"
-          }
-        }
-      ]
-    },
-    {
       "name": "OpenThreadRequest",
       "go_type": "messaging.OpenThreadRequest",
       "request": true,
@@ -57056,36 +56669,6 @@
         {
           "name": "review_access",
           "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "ParallelPresence",
-      "go_type": "supervisiondashboard.ParallelPresence",
-      "fields": [
-        {
-          "name": "instance_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "title",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "start_time",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "end_time",
           "schema": {
             "kind": "string"
           }
@@ -61183,68 +60766,6 @@
       ]
     },
     {
-      "name": "PickupTime",
-      "go_type": "supervisiondashboard.PickupTime",
-      "fields": [
-        {
-          "name": "student_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "date",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "weekday_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "pickup_time",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_exception",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "notes",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "day_notes",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "ref",
-              "ref": "DayNote"
-            }
-          }
-        },
-        {
-          "name": "day_departure_mode",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
       "name": "Placeholder",
       "go_type": "templates.Placeholder",
       "fields": [
@@ -61425,242 +60946,6 @@
           "schema": {
             "kind": "date",
             "nullable": true
-          }
-        }
-      ]
-    },
-    {
-      "name": "PlannedInstance",
-      "go_type": "supervisiondashboard.PlannedInstance",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "title",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "date",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "start_time",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "end_time",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "room_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "room_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "status",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_overdue",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "minutes_until_start",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "expected_students_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "present_students_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "not_scheduled_students_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "current_students_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "planned_students_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "is_spontaneous",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "assigned_staff_ids",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "legacy_id"
-            }
-          }
-        },
-        {
-          "name": "is_assigned",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "is_primary",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "is_substitute",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "is_absent",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "roster_preview",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "ref",
-              "ref": "RosterRow"
-            }
-          }
-        },
-        {
-          "name": "pickup_times_loaded",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "pickup_times_redacted",
-          "optional": true,
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "warnings",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "ConflictWarning"
-            }
-          }
-        },
-        {
-          "name": "can_start",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "start_available_at",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "start_expires_at",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "active_group_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "cancel_reason",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "planning_track_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "planning_track_color",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "group_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "staff_names",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "ref",
-              "ref": "StaffName"
-            }
           }
         }
       ]
@@ -62523,171 +61808,6 @@
       ]
     },
     {
-      "name": "Projection",
-      "go_type": "supervisiondashboard.Projection",
-      "fields": [
-        {
-          "name": "business_day",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "spontaneous_start_availability",
-          "schema": {
-            "kind": "ref",
-            "ref": "SpontaneousStartAvailability"
-          }
-        },
-        {
-          "name": "groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "Group"
-            }
-          }
-        },
-        {
-          "name": "selected_group_id",
-          "optional": true,
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "unclaimed_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "UnclaimedGroup"
-            }
-          }
-        },
-        {
-          "name": "current_staff_id",
-          "optional": true,
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "educational_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "EducationalGroup"
-            }
-          }
-        },
-        {
-          "name": "schulhof_status",
-          "schema": {
-            "kind": "ref",
-            "nullable": true,
-            "ref": "SchulhofStatus"
-          }
-        },
-        {
-          "name": "open_rooms",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "OpenRoom"
-            }
-          }
-        },
-        {
-          "name": "capabilities",
-          "schema": {
-            "kind": "ref",
-            "ref": "Capabilities"
-          }
-        },
-        {
-          "name": "active_sessions",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "ActiveSession"
-            }
-          }
-        },
-        {
-          "name": "planned_now",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "PlannedInstance"
-            }
-          }
-        },
-        {
-          "name": "visits",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "Visit"
-            }
-          }
-        },
-        {
-          "name": "tracking_indicators",
-          "schema": {
-            "kind": "ref",
-            "ref": "TrackingIndicators"
-          }
-        },
-        {
-          "name": "pickup_times",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "PickupTime"
-            }
-          }
-        },
-        {
-          "name": "arrival_times",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "ArrivalTime"
-            }
-          }
-        },
-        {
-          "name": "teacher_hints",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "SupervisionTeacherHint"
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "ProofMappingRequest",
       "go_type": "traegerstaff.ProofMappingRequest",
       "request": true,
@@ -63511,6 +62631,98 @@
           "name": "archived",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "QuickActivityRequest",
+      "go_type": "httpadapter.QuickActivityRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "QuickActivityResponse",
+      "go_type": "httpadapter.QuickActivityResponse",
+      "fields": [
+        {
+          "name": "activity_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "supervisor_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -65358,79 +64570,6 @@
       ]
     },
     {
-      "name": "RoomRemovalResponse",
-      "go_type": "httpadapter.RoomRemovalResponse",
-      "fields": [
-        {
-          "name": "outcome",
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "RoomRequest",
-      "go_type": "httpadapter.RoomRequest",
-      "request": true,
-      "fields": [
-        {
-          "name": "name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "building",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "floor",
-          "optional": true,
-          "schema": {
-            "kind": "int",
-            "nullable": true
-          }
-        },
-        {
-          "name": "capacity",
-          "optional": true,
-          "schema": {
-            "kind": "int",
-            "nullable": true
-          }
-        },
-        {
-          "name": "category",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "color",
-          "optional": true,
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "is_open_room",
-          "optional": true,
-          "schema": {
-            "kind": "bool",
-            "nullable": true
-          }
-        }
-      ]
-    },
-    {
       "name": "RoomResponse",
       "go_type": "httpadapter.RoomResponse",
       "fields": [
@@ -65548,56 +64687,6 @@
       ]
     },
     {
-      "name": "RoomSessionEntry",
-      "go_type": "httpadapter.RoomSessionEntry",
-      "fields": [
-        {
-          "name": "session_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "started_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "ended_at",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "duration_minutes",
-          "optional": true,
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "activity_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "supervisor_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "student_count",
-          "schema": {
-            "kind": "int"
-          }
-        }
-      ]
-    },
-    {
       "name": "RoomSimple",
       "go_type": "presence.RoomSimple",
       "fields": [
@@ -65618,195 +64707,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "RosterRow",
-      "go_type": "supervisiondashboard.RosterRow",
-      "fields": [
-        {
-          "name": "student_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "student_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "school_class",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "group_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "planned",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "is_unplanned",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "currently_present",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "visit_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "status",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "substatus",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "note",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "checked_in_at",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "checked_out_at",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "visit_entry_time",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "pickup_time",
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
-          "name": "warnings",
-          "optional": true,
-          "schema": {
-            "kind": "array",
-            "elem": {
-              "kind": "ref",
-              "ref": "RosterWarning"
-            }
-          }
-        },
-        {
-          "name": "parallel_present_in",
-          "optional": true,
-          "schema": {
-            "kind": "ref",
-            "ref": "ParallelPresence"
-          }
-        },
-        {
-          "name": "care_day_status",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "class_handover",
-          "optional": true,
-          "schema": {
-            "kind": "ref",
-            "ref": "SupervisionClassHandover"
-          }
-        }
-      ]
-    },
-    {
-      "name": "RosterWarning",
-      "go_type": "supervisiondashboard.RosterWarning",
-      "fields": [
-        {
-          "name": "kind",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "message",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "expected_arrival",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "slot_start",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "expected_group_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "expected_group_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "current_education_group_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
           }
         }
       ]
@@ -67366,6 +66266,28 @@
             "elem": {
               "kind": "legacy_id"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleRequest",
+      "go_type": "httpadapter.ScheduleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "timeframe_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
           }
         }
       ]
@@ -69932,81 +68854,6 @@
       ]
     },
     {
-      "name": "SchulhofStatus",
-      "go_type": "supervisiondashboard.SchulhofStatus",
-      "fields": [
-        {
-          "name": "exists",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "room_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "room_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "activity_group_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "active_group_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "is_user_supervising",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "supervision_id",
-          "optional": true,
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "supervisor_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "student_count",
-          "schema": {
-            "kind": "int"
-          }
-        },
-        {
-          "name": "supervisors",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "ref": "Supervisor"
-            }
-          }
-        }
-      ]
-    },
-    {
       "name": "SchulhofStatusResponse",
       "go_type": "supervisiondashboardhttp.SchulhofStatusResponse",
       "fields": [
@@ -71050,24 +69897,6 @@
           "optional": true,
           "schema": {
             "kind": "legacy_id"
-          }
-        }
-      ]
-    },
-    {
-      "name": "SessionSupervisor",
-      "go_type": "supervisiondashboard.SessionSupervisor",
-      "fields": [
-        {
-          "name": "staff_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "name",
-          "schema": {
-            "kind": "string"
           }
         }
       ]
@@ -72810,25 +71639,6 @@
       ]
     },
     {
-      "name": "SpontaneousStartAvailability",
-      "go_type": "supervisiondashboard.SpontaneousStartAvailability",
-      "fields": [
-        {
-          "name": "available",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "blocked_reason",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
       "name": "Staff",
       "go_type": "peopledirectory.Staff",
       "fields": [
@@ -73657,30 +72467,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "StaffName",
-      "go_type": "supervisiondashboard.StaffName",
-      "fields": [
-        {
-          "name": "staff_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "display_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_substitute",
-          "schema": {
-            "kind": "bool"
           }
         }
       ]
@@ -77968,37 +76754,6 @@
       ]
     },
     {
-      "name": "SupervisionClassHandover",
-      "go_type": "supervisiondashboard.SupervisionClassHandover",
-      "fields": [
-        {
-          "name": "school_class",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "handed_over_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "handed_over_by",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "absent",
-          "schema": {
-            "kind": "bool"
-          }
-        }
-      ]
-    },
-    {
       "name": "SupervisionContact",
       "go_type": "classday.SupervisionContact",
       "fields": [
@@ -78117,68 +76872,6 @@
               "kind": "ref",
               "ref": "SupervisionContact"
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "SupervisionTeacherHint",
-      "go_type": "supervisiondashboard.SupervisionTeacherHint",
-      "fields": [
-        {
-          "name": "student_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "body",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "author_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "school_class",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Supervisor",
-      "go_type": "supervisiondashboard.Supervisor",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "staff_id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "is_current_user",
-          "schema": {
-            "kind": "bool"
           }
         }
       ]
@@ -79123,6 +77816,56 @@
       ]
     },
     {
+      "name": "TimeframeResponse",
+      "go_type": "httpadapter.TimeframeResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "TodayStatusResponse",
       "go_type": "parent.TodayStatusResponse",
       "fields": [
@@ -79165,36 +77908,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "TrackingIndicators",
-      "go_type": "supervisiondashboard.TrackingIndicators",
-      "fields": [
-        {
-          "name": "labels",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
-          }
-        },
-        {
-          "name": "results",
-          "schema": {
-            "kind": "map",
-            "nullable": true,
-            "elem": {
-              "kind": "array",
-              "nullable": true,
-              "elem": {
-                "kind": "bool"
-              }
-            }
           }
         }
       ]
@@ -84055,25 +82768,6 @@
       ]
     },
     {
-      "name": "UnclaimedGroup",
-      "go_type": "supervisiondashboard.UnclaimedGroup",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "room_name",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        }
-      ]
-    },
-    {
       "name": "UnreadCountResponse",
       "go_type": "parent.UnreadCountResponse",
       "fields": [
@@ -85083,103 +83777,6 @@
           "schema": {
             "kind": "json",
             "nullable": true
-          }
-        }
-      ]
-    },
-    {
-      "name": "Visit",
-      "go_type": "supervisiondashboard.Visit",
-      "fields": [
-        {
-          "name": "student_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "student_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "school_class",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "group_name",
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "active_group_id",
-          "schema": {
-            "kind": "id"
-          }
-        },
-        {
-          "name": "check_in_time",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "actual_arrival_time",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "actual_pickup_time",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "sick",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "sick_since",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "excused",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "excused_since",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "photo_url",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "class_handover",
-          "optional": true,
-          "schema": {
-            "kind": "ref",
-            "ref": "SupervisionClassHandover"
           }
         }
       ]

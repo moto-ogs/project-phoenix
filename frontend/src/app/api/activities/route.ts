@@ -1,4 +1,11 @@
 // app/api/activities/route.ts
+//
+// Temporary (#7563): the contract registers GET and POST /api/activities/, and the
+// current client reads the contract's shape through the catalog proxy. An
+// installed bundle of the previous release reads the shape this file maps.
+// Delete this file after the next production deploy; the portal's catch-all
+// then answers the path.
+import type { ActivityResponse } from "~/lib/contract/activities.generated";
 import type { NextRequest } from "next/server";
 import { apiGet, apiPost } from "~/lib/api-helpers.server";
 import {
@@ -8,11 +15,7 @@ import {
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "ActivitiesRoute" });
-import type {
-  Activity,
-  BackendActivity,
-  CreateActivityRequest,
-} from "~/lib/activity-helpers";
+import type { Activity, CreateActivityRequest } from "~/lib/activity-helpers";
 import { mapActivityResponse } from "~/lib/activity-helpers";
 
 interface ApiResponse<T> {
@@ -22,7 +25,7 @@ interface ApiResponse<T> {
 
 interface BackendResponse {
   status?: string;
-  data?: BackendActivity[];
+  data?: ActivityResponse[];
   message?: string;
 }
 
@@ -82,7 +85,7 @@ export const GET = createGetHandler(
 
       // Check if response is directly an array of activities
       if (Array.isArray(response)) {
-        const mappedData = (response as unknown as BackendActivity[]).map(
+        const mappedData = (response as unknown as ActivityResponse[]).map(
           mapActivityResponse,
         );
 
@@ -116,13 +119,13 @@ export const GET = createGetHandler(
   },
 );
 
-/** Extract BackendActivity from various response formats */
-function extractBackendActivity(
-  response: ApiResponse<BackendActivity> | BackendActivity | null,
-): BackendActivity | null {
+/** Extract ActivityResponse from various response formats */
+function extractActivityResponse(
+  response: ApiResponse<ActivityResponse> | ActivityResponse | null,
+): ActivityResponse | null {
   if (!response) return null;
 
-  // Handle wrapped response { status: "success", data: BackendActivity }
+  // Handle wrapped response { status: "success", data: ActivityResponse }
   if (
     "status" in response &&
     response.status === "success" &&
@@ -132,7 +135,7 @@ function extractBackendActivity(
     if (data && "id" in data) return data;
   }
 
-  // Handle direct response (BackendActivity)
+  // Handle direct response (ActivityResponse)
   if ("id" in response) return response;
 
   return null;
@@ -169,12 +172,12 @@ export const POST = createPostHandler<Activity, CreateActivityRequest>(
     if (!body.category_id) throw new Error("Category is required");
 
     const response = await apiPost<
-      ApiResponse<BackendActivity> | BackendActivity,
+      ApiResponse<ActivityResponse> | ActivityResponse,
       CreateActivityRequest
     >(`/api/activities`, token, body);
 
     // Try to extract and map the backend activity
-    const backendActivity = extractBackendActivity(response);
+    const backendActivity = extractActivityResponse(response);
     if (backendActivity) return mapActivityResponse(backendActivity);
 
     // Fallback: return safe activity from request data
