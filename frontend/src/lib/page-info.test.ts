@@ -4,8 +4,9 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 // Wächter für den Info-Knopf am Seitentitel (#7565, Träger-Portal seit
-// #7595). Eine OGS-, Lehrer- oder Träger-Seite erklärt sich über die `info`-Eigenschaft von `TenantPage`:
-// wofür sie da ist und was man dort zuerst tut. Der Test liest Quelltext,
+// #7595). Eine OGS-, Lehrer- oder Träger-Seite erklärt sich über die
+// `info`-Eigenschaft von `TenantPage`: wofür sie da ist und was man dort
+// zuerst tut. Der Test liest Quelltext,
 // nicht das DOM, wie die Baseline der Hilfe-Zuordnung (help-topics.test.ts).
 
 const SRC_ROOT = resolve(process.cwd(), "src");
