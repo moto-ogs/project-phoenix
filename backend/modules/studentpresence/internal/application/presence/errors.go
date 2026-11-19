@@ -8,8 +8,6 @@ var (
 	ErrActiveGroupNotFound     = studentpresence.ErrGroupNotFound
 	ErrVisitNotFound           = studentpresence.ErrVisitNotFound
 	ErrGroupSupervisorNotFound = studentpresence.ErrGroupSupervisorNotFound
-	ErrCombinedGroupNotFound   = studentpresence.ErrCombinedGroupNotFound
-	ErrGroupMappingNotFound    = studentpresence.ErrGroupMappingNotFound
 	ErrStaffNotFound           = studentpresence.ErrStaffNotFound
 	ErrStudentNotFound         = studentpresence.ErrStudentNotFound
 	// ErrStudentGraduated guards the check-in write path against a graduated
@@ -27,9 +25,7 @@ var (
 	ErrActiveGroupAlreadyEnded          = studentpresence.ErrGroupAlreadyEnded
 	ErrVisitAlreadyEnded                = studentpresence.ErrVisitAlreadyEnded
 	ErrSupervisionAlreadyEnded          = studentpresence.ErrSupervisionAlreadyEnded
-	ErrCombinedGroupAlreadyEnded        = studentpresence.ErrCombinedGroupAlreadyEnded
 	ErrStudentAlreadyInGroup            = studentpresence.ErrStudentAlreadyInGroup
-	ErrGroupAlreadyInCombination        = studentpresence.ErrGroupAlreadyInCombination
 	ErrInvalidTimeRange                 = studentpresence.ErrInvalidTimeRange
 	ErrCannotDeleteActiveGroup          = studentpresence.ErrCannotDeleteActiveGroup
 	ErrStudentAlreadyActive             = studentpresence.ErrStudentAlreadyActive

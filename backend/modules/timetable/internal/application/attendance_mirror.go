@@ -363,57 +363,6 @@ func (s *attendanceMirror) MirrorCheckOutForVisit(
 	return snapshotFromRow(row), nil
 }
 
-// MirrorVisitRevision updates the interval represented by a slot after staff
-// edit or reopen a visit. The repository compares the previous check-in first,
-// so an older visit cannot overwrite a later re-entry in the same slot. It may
-// also repair a missing checkout left by an older completed-visit write.
-func (s *attendanceMirror) MirrorVisitRevision(
-	ctx context.Context, previous, updated timetable.AttendanceVisit,
-) (err error) {
-	defer s.recoverMirrorPanic(ctx, "attendance visit revision mirror panic", "attendance visit revision panic", &err)
-
-	if previous.StudentID != updated.StudentID ||
-		previous.ActiveGroupID <= 0 ||
-		previous.ActiveGroupID != updated.ActiveGroupID {
-		return nil
-	}
-	instance, err := s.instanceRepo.FindByActiveGroupID(ctx, previous.ActiveGroupID)
-	if err != nil {
-		s.getLogger().Warn("attendance visit revision: find instance failed",
-			slog.Int64("active_group_id", previous.ActiveGroupID),
-			slog.String("error", err.Error()),
-		)
-		return fmt.Errorf("attendance visit revision: find instance: %w", err)
-	}
-	if instance == nil {
-		return nil
-	}
-	changed, err := s.instanceStudentRepo.ReconcileAttendanceInterval(
-		ctx,
-		instance.ID,
-		previous.StudentID,
-		previous.EntryTime,
-		previous.ExitTime,
-		updated.EntryTime,
-		updated.ExitTime,
-	)
-	if err != nil {
-		s.getLogger().Error("attendance visit revision: reconcile slot interval failed",
-			slog.Int64("instance_id", instance.ID),
-			slog.Int64("student_id", previous.StudentID),
-			slog.String("error", err.Error()),
-		)
-		return fmt.Errorf("attendance visit revision: reconcile interval: %w", err)
-	}
-	if changed {
-		s.getLogger().Info("attendance visit revision synced",
-			slog.Int64("instance_id", instance.ID),
-			slog.Int64("student_id", previous.StudentID),
-		)
-	}
-	return nil
-}
-
 // snapshotFromRow is the common projection. Substatus and Note already
 // pointer-typed in the model, so we reuse the same pointers — no need to
 // dereference + re-address.

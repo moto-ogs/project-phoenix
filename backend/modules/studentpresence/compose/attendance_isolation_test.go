@@ -54,15 +54,6 @@ func TestAttendanceFacadeRejectsForeignReferencesAndCannotModifyForeignRows(t *t
 		require.NoError(t, module.DeleteAttendance(txCtx, foreign.ID))
 		return nil
 	}))
-	attempted = foreign
-	attempted.TenantID = testpkg.Tenant(t)
-	attempted.CheckOutTime = &at
-	_, err = module.ReviseAttendance(ctx, attempted)
-	require.Error(t, err, "a caller cannot transfer a foreign row into its own tenant")
-	stored, err := module.FindAttendance(foreignCtx, foreign.ID)
-	require.NoError(t, err)
-	assert.Nil(t, stored.CheckOutTime)
-	assert.Equal(t, foreign.TenantID, stored.TenantID)
 }
 
 func TestAttendanceFacadeConcurrentEnsureHasOneWinner(t *testing.T) {

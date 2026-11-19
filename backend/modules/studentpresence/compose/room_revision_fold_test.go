@@ -114,9 +114,7 @@ func TestRoomFoldUnderConcurrentWriters(t *testing.T) {
 		}},
 		{"closed visit revised open", func(t *testing.T, _ *testpkg.ActiveGroupRow, _, closed studentpresence.Visit) func(context.Context) error {
 			return func(txCtx context.Context) error {
-				closed.ExitTime = nil
-				_, err := module.ReviseVisit(txCtx, closed)
-				return err
+				return module.RestoreVisits(txCtx, []int64{closed.ID})
 			}
 		}},
 	} {

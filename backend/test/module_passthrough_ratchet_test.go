@@ -287,7 +287,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
 	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
-	"modules/studentpresence": 124,
+	"modules/studentpresence": 98,
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	"modules/timetable": 204,

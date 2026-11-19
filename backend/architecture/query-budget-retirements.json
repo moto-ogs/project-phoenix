@@ -18,5 +18,125 @@
     "scenario": "api.traeger.key_date_counts",
     "route": "GET /traeger/schools/key-date-counts",
     "issue": 7301
+  },
+  {
+    "scenario": "api.active.combination_groups.reads",
+    "route": "GET /api/active/combined/{id}/groups",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.combined.active",
+    "route": "GET /api/active/combined/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.combined.list",
+    "route": "GET /api/active/combined/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.groups.by_activity",
+    "route": "GET /api/active/groups/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.groups.by_room",
+    "route": "GET /api/active/groups/room/{roomId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.mappings.combined",
+    "route": "GET /api/active/mappings/combined/{combinedId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.mappings.group",
+    "route": "GET /api/active/mappings/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.detail.n3",
+    "route": "GET /api/active/groups/{id}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.detail.n8",
+    "route": "GET /api/active/groups/{id}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.student_visits.n3",
+    "route": "GET /api/active/visits/student/{studentId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.student_visits.n8",
+    "route": "GET /api/active/visits/student/{studentId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.unclaimed.n3",
+    "route": "GET /api/active/groups/unclaimed",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.unclaimed.n8",
+    "route": "GET /api/active/groups/unclaimed",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.display.n3",
+    "route": "GET /api/active/groups/{id}/visits/display",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.display.n8",
+    "route": "GET /api/active/groups/{id}/visits/display",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.group.n3",
+    "route": "GET /api/active/visits/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.group.n8",
+    "route": "GET /api/active/visits/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.session.n3",
+    "route": "GET /api/active/groups/{id}/visits",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.session.n8",
+    "route": "GET /api/active/groups/{id}/visits",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.group",
+    "route": "GET /api/active/supervisors/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.list",
+    "route": "GET /api/active/supervisors/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.list.active",
+    "route": "GET /api/active/supervisors/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.list.ended",
+    "route": "GET /api/active/supervisors/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.staff",
+    "route": "GET /api/active/supervisors/staff/{staffId}",
+    "issue": 2352
   }
 ]
