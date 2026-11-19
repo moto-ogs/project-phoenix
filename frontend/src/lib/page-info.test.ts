@@ -31,14 +31,6 @@ const PORTALS = [
  * heraus. Lehrer-Seiten tragen das Präfix `school:`.
  */
 const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
-  "/database/personal",
-  "/database/personal/import",
-  "/database/personal/opening-balances",
-  "/database/students",
-  "/database/students/class-list",
-  "/database/students/class-list/import",
-  "/database/students/ended-care",
-  "/database/students/import",
   "/dateien",
   "/info-displays",
   "/lists",
