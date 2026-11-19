@@ -89,7 +89,7 @@ describe("getHelpTopicForPath", () => {
     ["/dateien", HELP_TOPICS.sharedFiles],
     ["/time-tracking", HELP_TOPICS.trackWorkTime],
     ["/profile", HELP_TOPICS.ownProfile],
-    ["/reminders", HELP_TOPICS.staffNotifications],
+    ["/reminders", HELP_TOPICS.staffReminders],
     ["/substitutions", HELP_TOPICS.dailyHandovers],
   ])("maps %s to %s", (pathname, expectedTopic) => {
     expect(getHelpTopicForPath(pathname)).toBe(expectedTopic);
@@ -360,8 +360,9 @@ describe("getParentHelpTopicForPath", () => {
     // 50 seit #4769 („Das Wochenprotokoll ergänzen“, Betreuung und Leitung).
     // 51 seit #6954 („Mit der Suche finden“, Betreuung und Leitung).
     // 52 seit #7148 („Hinweise und Erinnerungen in der Glocke“).
-    // 54 seit #7568 („Dein Profil“, „Übergaben von heute“).
-    expect(caregiverTopics).toHaveLength(54);
+    // 55 seit #7568 („Dein Profil“, „Übergaben von heute“,
+    // „Erinnerungen ansehen“).
+    expect(caregiverTopics).toHaveLength(55);
     expect([...new Set(caregiverTopics.map((topic) => topic.group))]).toEqual([
       "einstieg",
       "tagesplanung",
@@ -570,7 +571,7 @@ describe("getParentHelpTopicForPath", () => {
           // unter die NFC- und die Anwesenheitsregel, wird also nur
           // einmal abgezogen.
           const expectedLength =
-            54 -
+            55 -
             (nfcEnabled ? 0 : 7) -
             (presenceMode === "binary" ? (nfcEnabled ? 6 : 5) : 0) -
             (groupMode === "open_care" ? 2 : 0);
@@ -628,8 +629,8 @@ describe("getParentHelpTopicForPath", () => {
     // 108 seit #7148: Hinweise und Erinnerungen in der Glocke.
     // 109 seit #4813: Elternbrief mit den Angaben jedes Kindes.
     // 110 seit #4709: Springer des Trägers blocken.
-    // 112 seit #7568: Dein Profil, Übergaben von heute.
-    expect(leadTopics).toHaveLength(112);
+    // 113 seit #7568: Dein Profil, Übergaben von heute, Erinnerungen ansehen.
+    expect(leadTopics).toHaveLength(113);
     expect(
       leadTopics.every(
         (topic) =>

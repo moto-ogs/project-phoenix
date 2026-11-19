@@ -630,18 +630,21 @@ export function TagesplanView() {
         // Welcher Tag „Heute“ ist, steht direkt daneben (#4348). Ein anderer
         // Tag trägt sein Datum schon im Titel.
         titleBadge={
-          isToday ? (
-            <span className="text-sm text-gray-500 tabular-nums">
-              {formatStatusDate(day)}
-            </span>
-          ) : undefined
+          <>
+            {isToday ? (
+              <span className="text-sm text-gray-500 tabular-nums">
+                {formatStatusDate(day)}
+              </span>
+            ) : undefined}
+            {/* Der Hilfeplatz gehört in die Titelzeile, nicht zu den Aktionen:
+                diese brechen auf dem Telefon als eigene Zeile um. */}
+            <MobilePageHelpTarget />
+          </>
         }
         description={description}
         headingLevel={1}
         actions={
           <div className="flex items-center gap-1">
-            {/* Das „?“ steht wie im Kopf jeder Seite vor den Aktionen (#7568). */}
-            <MobilePageHelpTarget />
             <Button
               type="button"
               variant="ghost"

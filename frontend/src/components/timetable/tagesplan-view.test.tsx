@@ -214,6 +214,13 @@ describe("TagesplanView", () => {
     expect(url.pathname).toBe("/help/tagesplan-ansehen");
     expect(url.searchParams.get("return_to")).toBe("/tagesplan?d=2026-07-15");
     expect(help).toHaveClass("lg:hidden");
+    // Der Hilfeplatz ist in der Titelzeile, nicht in der Aktionsgruppe:
+    // diese bricht auf dem Telefon als eigene Zeile um.
+    expect(
+      help.closest("div.flex.flex-wrap.items-center.gap-2"),
+    ).toContainElement(
+      screen.getByRole("heading", { level: 1, name: "15.07.2026" }),
+    );
     // Wie im Kopf jeder Seite steht das „?“ vor den Aktionen (#7568).
     expect(
       help.compareDocumentPosition(

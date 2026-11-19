@@ -358,6 +358,7 @@ export function getHelpTopics(
     articles.errorMessagesTopic(),
     articles.analyticsConsentTopic(),
     articles.staffNotificationsTopic(),
+    articles.staffRemindersTopic(),
     articles.ownProfileTopic(),
     articles.dailyHandoversTopic(),
   ];
