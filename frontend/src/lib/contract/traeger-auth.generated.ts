@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   object,
+  str,
   success,
 } from "./runtime";
 
@@ -12,8 +13,8 @@ export interface StepUpStartResponse {
 }
 
 export const StepUpStartResponseSchema: z.ZodType<StepUpStartResponse, unknown> = object<StepUpStartResponse>({
-  challenge_token: z.string(),
-  masked_email: z.string(),
+  challenge_token: str,
+  masked_email: str,
 });
 
 export const routes = {

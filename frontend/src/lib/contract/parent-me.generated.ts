@@ -2172,13 +2172,13 @@ export interface parentDeclarationSubmissionResponse {
 }
 
 export const parentDeclarationSubmissionResponseSchema: z.ZodType<parentDeclarationSubmissionResponse, unknown> = object<parentDeclarationSubmissionResponse>({
-  id: z.string(),
-  action: z.string(),
+  id: str,
+  action: str,
   submitted_at: instant,
   version_no: safeInt,
-  content_hash: z.string(),
-  record_hash: z.string(),
-  password_confirmed: z.boolean(),
+  content_hash: str,
+  record_hash: str,
+  password_confirmed: bool,
 });
 
 /** Go: parent.DeclarationRecordedResponse */
@@ -2188,7 +2188,7 @@ export interface DeclarationRecordedResponse {
 }
 
 export const DeclarationRecordedResponseSchema: z.ZodType<DeclarationRecordedResponse, unknown> = object<DeclarationRecordedResponse>({
-  created: z.boolean(),
+  created: bool,
   submission: parentDeclarationSubmissionResponseSchema,
 });
 

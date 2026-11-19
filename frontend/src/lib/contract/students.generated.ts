@@ -2343,12 +2343,12 @@ export interface schoolCheckinBatchResult {
 }
 
 export const schoolCheckinBatchResultSchema: z.ZodType<schoolCheckinBatchResult, unknown> = object<schoolCheckinBatchResult>({
-  student_id: z.string(),
-  ok: z.boolean(),
-  changed: z.boolean(),
-  status: z.string().optional(),
-  location: z.string().optional(),
-  error: z.string().optional(),
+  student_id: str,
+  ok: bool,
+  changed: bool,
+  status: optional(str),
+  location: optional(str),
+  error: optional(str),
 });
 
 /** Go: studentpresencehttp.schoolCheckinBatchResponse */
@@ -2360,8 +2360,8 @@ export interface schoolCheckinBatchResponse {
 }
 
 export const schoolCheckinBatchResponseSchema: z.ZodType<schoolCheckinBatchResponse, unknown> = object<schoolCheckinBatchResponse>({
-  action: z.string(),
-  results: z.array(schoolCheckinBatchResultSchema).nullable(),
+  action: str,
+  results: nullable(arr(schoolCheckinBatchResultSchema)),
   succeeded: safeInt,
   failed: safeInt,
 });
