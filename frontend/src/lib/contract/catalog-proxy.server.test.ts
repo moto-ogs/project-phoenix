@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { suppressConsole } from "~/test/helpers/console";
 import {
   makeCatalogProxy,
@@ -8,6 +9,11 @@ import {
   type CatalogRoute,
 } from "./catalog-proxy.server";
 import { noData, success } from "./runtime";
+import {
+  CATALOG_OUTSIDE_MOUNTS,
+  CATALOG_PUBLIC_OUTSIDE_MOUNTS,
+} from "./catalog-outside-mounts";
+import { portalRoutes } from "./portals.generated";
 
 const api = vi.fn();
 let sessionReads = 0;
@@ -118,6 +124,24 @@ function call(
 const data = async (response: Response) =>
   ((await response.json()) as { data: unknown }).data;
 
+function callTenant(path: string, query = "") {
+  const handler = makeCatalogProxy(
+    portal,
+    "/api",
+    portalRoutes.tenant,
+    "GET",
+    CATALOG_OUTSIDE_MOUNTS.tenant,
+    {
+      routes: portalRoutes.public,
+      outside: CATALOG_PUBLIC_OUTSIDE_MOUNTS.tenant,
+    },
+  );
+  return handler(
+    new NextRequest(`http://school-a.localhost/api/${path}${query}`),
+    { params: Promise.resolve({ path: path.split("/") }) },
+  );
+}
+
 describe("makeCatalogProxy", () => {
   suppressConsole("error");
 
@@ -160,6 +184,64 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
     await call("GET", ["rows", "mine"]);
     expect(api.mock.calls[0]?.[1]).toBe("/parent/rows/mine");
+  });
+
+  it.each(["open", "history"])(
+    "loads the %s enrollment review list through the full tenant catalog",
+    async (view) => {
+      const page = { items: [], next_cursor: "next-page" };
+      api.mockResolvedValueOnce({ status: "success", data: page });
+      const response = await callTenant(
+        "enrollment/admin/change-requests/list",
+        `?view=${view}&search=Kind&cursor=previous-page&debug=1`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(await data(response)).toEqual(page);
+      expect(api.mock.calls[0]?.[1]).toBe(
+        `/api/enrollment/admin/change-requests/list?cursor=previous-page&search=Kind&view=${view}`,
+      );
+    },
+  );
+
+  it.each([
+    ["enrollment/admin/change-requests/pending-count", { pending_count: 3 }],
+    ["enrollment/admin/requests/unread-count", { unread_count: 2 }],
+  ])(
+    "loads the counter at %s through the full tenant catalog",
+    async (path, count) => {
+      api.mockResolvedValueOnce({ status: "success", data: count });
+      const response = await callTenant(path);
+      expect(response.status).toBe(200);
+      expect(await data(response)).toEqual(count);
+    },
+  );
+
+  it("still loads an individual enrollment change request", async () => {
+    const request = {
+      id: "change-1",
+      request_id: "request-1",
+      origin: "parent",
+      status: "pending",
+      base_snapshot: null,
+      proposed_snapshot: null,
+      diff: null,
+      created_at: TEST_CLOCK_INSTANT.toISOString(),
+      updated_at: TEST_CLOCK_INSTANT.toISOString(),
+    };
+    api.mockResolvedValueOnce({ status: "success", data: request });
+    const response = await callTenant(
+      "enrollment/admin/change-requests/change-1",
+    );
+    expect(await data(response)).toEqual(request);
+  });
+
+  it.each([
+    ["enrollment/admin/change-requests/list", { items: [{}] }],
+    ["enrollment/admin/change-requests/pending-count", { pending_count: "3" }],
+  ])("rejects an invalid backend answer at %s", async (path, answer) => {
+    api.mockResolvedValueOnce({ status: "success", data: answer });
+    await expect(callTenant(path)).rejects.toMatchObject({ status: 502 });
   });
 
   it("keeps a decoded slash or question mark inside its one segment", async () => {
