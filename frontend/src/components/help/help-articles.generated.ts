@@ -1032,7 +1032,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         title: "Hilfe öffnen",
         steps: [
           "Siehst du oben rechts ein Fragezeichen? Es öffnet die passende Anleitung.",
-          "Am Handy oder Tablet steht es auf jeder Seite rechts neben dem Seitennamen, vor den Knöpfen der Seite.",
+          "Am Handy oder Tablet steht es rechts neben dem Seitennamen. Es steht vor den Knöpfen der Seite.",
           "Oder wähle `Hilfe`: am Computer unten in der Seitenleiste, auf dem Handy unter `Mehr`.",
         ],
       },
@@ -1835,13 +1835,13 @@ export const dailyHandoversTopic = function dailyHandoversTopic(): HelpTopic {
     title: "Übergaben von heute",
     question: "Wer übernimmt heute welche Gruppe oder Aufsicht?",
     summary:
-      "Unter `Übergaben` siehst du laufende Betreuungen, die Vertretungen von heute und übergebene Gruppen.",
+      "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "Repeat",
     steps: [
       "Klappe in der Seitenleiste `Tagesbetrieb` auf und öffne `Übergaben`.",
-      "Unter `Laufende Betreuungen` holst du mit `Betreuer hinzufügen` eine weitere Person in eine Aufsicht.",
+      "Unter `Laufende Betreuungen` wählst du `Betreuer hinzufügen`. So kommt eine weitere Person in die Aufsicht.",
       "Unter `Vertretungen heute` siehst du, wer heute einen Termin übernimmt.",
       "Unter `Gruppen` wählst du `Gruppe übergeben`. Wähle die Gruppe und die Betreuungskraft. Dann wähle `Zuweisen`.",
       "Mit `Beenden` hörst du eine Übergabe vorzeitig auf. moto fragt vorher nach.",
@@ -1849,6 +1849,8 @@ export const dailyHandoversTopic = function dailyHandoversTopic(): HelpTopic {
     differences: [
       "Steht unter `Gruppen` `Keine Gruppenübergabe nötig`? Dann arbeitet deine OGS ohne feste Gruppen.",
       "Steht bei `Vertretungen heute` `Keine Vertretungen verfügbar`? Dann darfst du die Vertretungen nicht ansehen. Frage deine Leitung.",
+      "Fehlt `Betreuer hinzufügen`? Dann bist du für diese Aufsicht nicht zuständig.",
+      "Fehlt `Beenden` an einer Übergabe? Dann darfst du sie nicht beenden. Frage deine Leitung.",
     ],
     notes: [
       "Vertretungen für andere Tage plant die Leitung im `Vertretungsplan`.",

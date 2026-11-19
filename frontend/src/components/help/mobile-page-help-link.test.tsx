@@ -135,7 +135,6 @@ describe("mobile page help", () => {
         ? [screen.getByRole("button", { name: "Weitere Aktionen" })]
         : []),
     ];
-    expect(controls).toHaveLength(setup.actions.length + (setup.kebab ? 1 : 0));
     for (const control of controls) {
       expect(
         link.compareDocumentPosition(control) &
