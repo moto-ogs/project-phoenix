@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   DEPLOYMENTS,
   FEATURES,
+  ONBOARDING_SURFACE_LABELS,
   ON_WORKDAY,
   POSTHOG_HOST,
   SCHOOL_BREAKDOWN,
@@ -15,6 +16,7 @@ import {
   posthogClient,
   publicHolidays,
   readBrowserEvents,
+  readOnboardingSurfaces,
   readPageNames,
   readRouteTemplates,
   sync,
@@ -23,7 +25,7 @@ import {
 const definitions = dashboards({ projectId: '1' });
 const insights = definitions.flatMap((dashboard) => dashboard.insights);
 
-test('defines one dashboard per product surface plus the two across schools', () => {
+test('defines one dashboard per product surface plus the two across schools and the entry', () => {
   assert.deepEqual(definitions.map((dashboard) => dashboard.name), [
     'Nutzungsanalyse: Nutzung je Standort',
     'Nutzungsanalyse: OGS-App',
@@ -31,6 +33,7 @@ test('defines one dashboard per product surface plus the two across schools', ()
     'Nutzungsanalyse: Schul-App',
     'Nutzungsanalyse: Caterer-Portal',
     'Nutzungsanalyse: Schule im Verlauf',
+    'Nutzungsanalyse: Einstieg',
     'Nutzungsanalyse: Demo',
   ]);
   const names = insights.map((insight) => insight.name);
@@ -171,6 +174,42 @@ test('the Alle Kinder tile counts tab changes per tab kind, and browser clicks a
   const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
   for (const event of ['child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read']) {
     assert.match(noFeature, new RegExp(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard counts self-opening surfaces from consenting browsers only, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  assert.match(dashboard.description, /nur mit Einwilligung/);
+  const perSurface = dashboard.insights.find((insight) => insight.name === 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)');
+  const perSession = dashboard.insights.find((insight) => insight.name === 'Einstieg: Flächen pro erfasster Sitzung (nur mit Einwilligung)');
+  assert.ok(perSurface && perSession, 'both tiles exist');
+  for (const tile of [perSurface, perSession]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /nur mit Einwilligung/i, tile.name);
+  }
+  for (const action of ['shown', 'accepted', 'dismissed']) {
+    assert.match(perSurface.query.source.query, new RegExp(`'onboarding_surface_${action}'`), action);
+  }
+  assert.match(perSession.query.source.query, /group by Sitzung/);
+  assert.match(perSession.query.source.query, /uniq\(toString\(properties\.onboarding_surface\)\)/);
+
+  // Every allowed surface of the browser filter has a German name on the tile.
+  assert.deepEqual(Object.keys(ONBOARDING_SURFACE_LABELS).sort(), readOnboardingSurfaces().sort());
+  assert.throws(() => readOnboardingSurfaces('const OTHER = 1;'), /ONBOARDING_SURFACES/);
+  const query = perSurface.query.source.query;
+  assert.match(query, /transform\(toString\(properties\.onboarding_surface\), \['/, 'transform takes arrays, not tuples');
+  for (const [value, label] of Object.entries(ONBOARDING_SURFACE_LABELS)) {
+    assert.ok(query.includes(`'${value}'`) && query.includes(`'${label}'`), value);
+  }
+
+  // Surface events and the install dialog's answers fall outside „Sonstiges“.
+  const browserEvents = readBrowserEvents();
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['onboarding_surface_shown', 'onboarding_surface_accepted', 'onboarding_surface_dismissed', 'pwa_install_prompt_shown', 'pwa_install_prompt_accepted', 'pwa_install_prompt_dismissed']) {
+    assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
+    const byPrefix = event.startsWith('onboarding_') && noFeature.includes("startsWith(event, 'onboarding_')");
+    assert.ok(byPrefix || noFeature.includes(`'${event}'`), `${event} is no feature use`);
   }
 });
 

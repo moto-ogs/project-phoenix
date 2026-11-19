@@ -8,7 +8,11 @@
 
 import type { Properties } from "posthog-js";
 import { analyticsDeployment } from "~/lib/analytics-deployment";
-import type { AnalyticsRole, AnalyticsSurface } from "~/lib/analytics-policy";
+import type {
+  AnalyticsRole,
+  AnalyticsSurface,
+  OnboardingSurface,
+} from "~/lib/analytics-policy";
 import type { DemoVisit } from "~/lib/demo-access";
 import {
   capturePostHog,
@@ -32,7 +36,12 @@ export type AnalyticsEvent =
   | "notification_feed_all_read"
   // Reiterwechsel auf „Alle Kinder“ (#5046): child_scope = all, groups oder
   // room, ohne Raum oder Gruppe.
-  | "child_scope_tab_selected";
+  | "child_scope_tab_selected"
+  // Selbstöffnende Flächen des Einstiegs (#7541), nur über
+  // trackOnboardingSurface mit einer festen Fläche.
+  | "onboarding_surface_shown"
+  | "onboarding_surface_accepted"
+  | "onboarding_surface_dismissed";
 
 function captureEvent(event: AnalyticsEvent, props?: Properties): void {
   capturePostHog(event, props);
@@ -43,6 +52,20 @@ export function trackEvent(
   props?: Record<string, string | number | boolean>,
 ): void {
   captureEvent(event, props);
+}
+
+/**
+ * Eine selbstöffnende Fläche des Einstiegs (#7541) wurde angezeigt, von der
+ * Person angenommen oder geschlossen. Nur die feste Fläche geht mit; das
+ * Portal setzt der Filter als `surface` aus dem Kontext.
+ */
+export function trackOnboardingSurface(
+  action: "shown" | "accepted" | "dismissed",
+  surface: OnboardingSurface,
+): void {
+  captureEvent(`onboarding_surface_${action}`, {
+    onboarding_surface: surface,
+  });
 }
 
 export function trackTenantEvent(

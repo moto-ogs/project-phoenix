@@ -4,7 +4,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { Download, EllipsisVertical, Share, X } from "lucide-react";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { trackEvent } from "~/lib/analytics";
+import { trackEvent, trackOnboardingSurface } from "~/lib/analytics";
+import type { OnboardingSurface } from "~/lib/analytics-policy";
 import { GROUP_ROOM_SHADES } from "~/lib/location-helper";
 import { createLogger } from "~/lib/logger";
 import {
@@ -39,6 +40,11 @@ export function isIosSafari(nav: Navigator): boolean {
   );
 }
 
+/** Der Samsung-Hinweis ist eine eigene Fläche des Einstiegs (#7552). */
+function onboardingSurfaceOf(platform: InstallPlatform): OnboardingSurface {
+  return platform === "samsung" ? "samsung_hint" : "install_hint";
+}
+
 /** True when running inside an installed PWA (standalone display mode). */
 export function isStandaloneDisplay(win: Window): boolean {
   if (win.matchMedia("(display-mode: standalone)").matches) return true;
@@ -48,7 +54,8 @@ export function isStandaloneDisplay(win: Window): boolean {
 
 export function SamsungChromeInstructions({
   pageUrl,
-}: Readonly<{ pageUrl: URL }>) {
+  onOpenInChrome,
+}: Readonly<{ pageUrl: URL; onOpenInChrome?: () => void }>) {
   const t = useTranslations("pwaInstallHint");
   return (
     <>
@@ -61,6 +68,7 @@ export function SamsungChromeInstructions({
         size="md"
         className="mt-3"
         tooltip={t("openInChromeTooltip")}
+        onClick={onOpenInChrome}
       >
         {t("openInChrome")}
       </ButtonLink>
@@ -140,16 +148,31 @@ export function PwaInstallHint({
   useEffect(() => {
     if (!platform) return;
     trackEvent("pwa_install_prompt_shown");
+    // Einstieg (#7552): Installations- und Samsung-Hinweis sind getrennte
+    // Flächen, obwohl es dieselbe Karte ist.
+    trackOnboardingSurface("shown", onboardingSurfaceOf(platform));
   }, [platform]);
 
   if (!platform || installationCompleted) return null;
+
+  const surface = onboardingSurfaceOf(platform);
 
   const dismiss = () => {
     setPlatform(null);
     dismissInstallHint(window);
   };
 
+  // Schließen über das X: die Person lehnt den Hinweis ab. Eine angenommene
+  // Installation schließt die Karte ebenfalls, zählt aber nicht als Schließen.
+  const close = () => {
+    trackOnboardingSurface("dismissed", surface);
+    dismiss();
+  };
+
   const install = () => {
+    // Angenommen heißt: die Person tippt auf das Angebot der Karte. Was sie
+    // im Browser-Dialog wählt, melden weiter die pwa_install_prompt_*.
+    trackOnboardingSurface("accepted", surface);
     void triggerInstallPrompt()
       .then((outcome) => {
         logger.info("pwa_install_prompt_answered", { outcome });
@@ -213,6 +236,7 @@ export function PwaInstallHint({
           {platform === "samsung" ? (
             <SamsungChromeInstructions
               pageUrl={new URL(window.location.href)}
+              onOpenInChrome={() => trackOnboardingSurface("accepted", surface)}
             />
           ) : showOneTapInstall ? (
             <p className="mt-1">{t("oneTapDescription")}</p>
@@ -249,7 +273,7 @@ export function PwaInstallHint({
           size="icon"
           aria-label={t("close")}
           tooltip={t("closeTooltip")}
-          onClick={dismiss}
+          onClick={close}
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </Button>
