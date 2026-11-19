@@ -15,7 +15,7 @@ import (
 func TestPersonRequestReportsEveryBlankNameAsField(t *testing.T) {
 	t.Parallel()
 
-	err := (&usersHTTP.PersonRequest{}).Bind(nil)
+	err := (&usersHTTP.DirectoryPersonRequest{}).Bind(nil)
 
 	require.Error(t, err)
 	fields, ok := errors.AsType[validation.Errors](err)
@@ -28,7 +28,7 @@ func TestPersonRequestReportsEveryBlankNameAsField(t *testing.T) {
 func TestPersonRequestReportsOnlyTheMissingLastName(t *testing.T) {
 	t.Parallel()
 
-	err := (&usersHTTP.PersonRequest{FirstName: "Ada"}).Bind(nil)
+	err := (&usersHTTP.DirectoryPersonRequest{FirstName: "Ada"}).Bind(nil)
 
 	require.Error(t, err)
 	fields, ok := errors.AsType[validation.Errors](err)
@@ -40,5 +40,5 @@ func TestPersonRequestReportsOnlyTheMissingLastName(t *testing.T) {
 func TestPersonRequestAcceptsBothNames(t *testing.T) {
 	t.Parallel()
 
-	assert.NoError(t, (&usersHTTP.PersonRequest{FirstName: "Ada", LastName: "Lovelace"}).Bind(nil))
+	assert.NoError(t, (&usersHTTP.DirectoryPersonRequest{FirstName: "Ada", LastName: "Lovelace"}).Bind(nil))
 }

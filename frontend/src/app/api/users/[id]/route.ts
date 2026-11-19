@@ -1,4 +1,11 @@
 // app/api/users/[id]/route.ts
+//
+// Temporary (#2352): the contract registers GET and PUT /api/users/{id}, and
+// the current client no longer echoes account_id. An installed bundle of the
+// previous release reads account_id from this GET and sends it back in the
+// PUT; through the catalog proxy it would arrive as a string and the backend
+// would refuse the PUT. Delete this file after the next production deploy;
+// the portal's catch-all then answers the path.
 import type { NextRequest } from "next/server";
 import { apiGet, apiPut } from "~/lib/api-helpers.server";
 import { ApiResponseError } from "~/lib/api-response-error.server";

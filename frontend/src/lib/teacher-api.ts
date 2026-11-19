@@ -429,27 +429,9 @@ class TeacherService {
       throw new Error("Cannot update person fields - invalid person_id");
     }
 
-    // Fetch current person to get account_id
-    const personResponse = await sessionFetch(`/api/users/${personId}`, {
-      method: "GET",
-      credentials: "include",
-    });
-
-    if (!personResponse.ok) {
-      throw apiErrorFromText(
-        "Failed to fetch person data",
-        personResponse.status,
-        await personResponse.text().catch(() => ""),
-      );
-    }
-
-    const personInfo = (await personResponse.json()) as {
-      data?: { account_id?: number };
-      account_id?: number;
-    };
-
-    // Build person update payload
-    const personData = this.buildPersonUpdateData(teacherData, personInfo);
+    // The backend keeps the stored account link when account_id is omitted,
+    // so the update names only the person fields (#2352).
+    const personData = this.buildPersonUpdateData(teacherData);
 
     const updateResponse = await sessionFetch(`/api/users/${personId}`, {
       method: "PUT",
@@ -468,20 +450,15 @@ class TeacherService {
   }
 
   /** Builds person update payload from teacher data */
-  private buildPersonUpdateData(
-    teacherData: Partial<Teacher>,
-    personInfo: { data?: { account_id?: number }; account_id?: number },
-  ): {
+  private buildPersonUpdateData(teacherData: Partial<Teacher>): {
     first_name?: string;
     last_name?: string;
     tag_id?: string | null;
-    account_id?: number;
   } {
     const personData: {
       first_name?: string;
       last_name?: string;
       tag_id?: string | null;
-      account_id?: number;
     } = {};
 
     if (teacherData.first_name !== undefined) {
@@ -492,11 +469,6 @@ class TeacherService {
     }
     if (teacherData.tag_id !== undefined) {
       personData.tag_id = teacherData.tag_id ?? null;
-    }
-
-    const accountId = personInfo.data?.account_id ?? personInfo.account_id;
-    if (accountId) {
-      personData.account_id = accountId;
     }
 
     return personData;

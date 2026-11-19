@@ -4562,6 +4562,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/users/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PersonResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/work-time-models/",
       "portals": [
         "tenant"
@@ -12952,6 +12963,21 @@
       "response": {
         "kind": "ref",
         "ref": "keptStudentTemplateDaysResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/users/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "DirectoryPersonRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PersonResponse"
       }
     },
     {
@@ -31437,6 +31463,41 @@
       ]
     },
     {
+      "name": "DirectoryPersonRequest",
+      "go_type": "users.DirectoryPersonRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
       "name": "DocumentDirectoryEntry",
       "go_type": "staff.DocumentDirectoryEntry",
       "fields": [
@@ -47865,6 +47926,63 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PersonResponse",
+      "go_type": "users.PersonResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]

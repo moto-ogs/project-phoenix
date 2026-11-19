@@ -108,6 +108,7 @@ import { routes as traegerStaffPlanning } from "./traeger-staff-planning.generat
 import { routes as traegerStaffPool } from "./traeger-staff-pool.generated";
 import { routes as traegerStaffProofs } from "./traeger-staff-proofs.generated";
 import { routes as traegerStaffRecords } from "./traeger-staff-records.generated";
+import { routes as users } from "./users.generated";
 import { routes as workTimeModels } from "./work-time-models.generated";
 
 /** The registered routes of each portal, by the scope of its session token. */
@@ -1086,6 +1087,8 @@ export const portalRoutes = {
     timetable["PUT /api/timetable/templates/{id}/manual-roster"],
     timetable["PUT /api/timetable/templates/{id}/students/{studentId}/kept-days"],
     traegerDocuments["GET /api/traeger-documents/"],
+    users["GET /api/users/{id}"],
+    users["PUT /api/users/{id}"],
     workTimeModels["DELETE /api/work-time-models/{id}"],
     workTimeModels["GET /api/work-time-models/"],
     workTimeModels["GET /api/work-time-models/staff-facts"],

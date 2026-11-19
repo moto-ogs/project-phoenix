@@ -508,5 +508,6 @@ func staffPortalAdminContractMounts() []contractMount {
 		{"/api/reminders", reminderRouteContracts()},
 		{"/api/staff", staffDirectoryRouteContracts()},
 		{"/api/groups", groupsHTTP.RouteContracts()},
+		{"/api/users", userRouteContracts()},
 	}
 }
