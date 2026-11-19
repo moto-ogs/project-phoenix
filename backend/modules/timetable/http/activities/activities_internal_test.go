@@ -59,13 +59,13 @@ func TestQuickActivityRequest_Fields(t *testing.T) {
 		Name:            "Test Activity",
 		CategoryID:      5,
 		RoomID:          &roomID,
-		MaxParticipants: 20,
+		MaxParticipants: new(20),
 	}
 
 	assert.Equal(t, "Test Activity", req.Name)
 	assert.Equal(t, int64(5), req.CategoryID)
 	assert.Equal(t, int64(10), *req.RoomID)
-	assert.Equal(t, 20, req.MaxParticipants)
+	assert.Equal(t, 20, *req.MaxParticipants)
 }
 
 func TestQuickActivityRequest_NilRoomID(t *testing.T) {
@@ -75,7 +75,7 @@ func TestQuickActivityRequest_NilRoomID(t *testing.T) {
 		Name:            "Test Activity",
 		CategoryID:      5,
 		RoomID:          nil,
-		MaxParticipants: 15,
+		MaxParticipants: new(15),
 	}
 
 	assert.Equal(t, "Test Activity", req.Name)
@@ -88,7 +88,7 @@ func TestActivityRequest_Fields(t *testing.T) {
 	roomID := int64(20)
 	req := httpadapter.ActivityRequest{
 		Name:            "Test Activity",
-		MaxParticipants: 30,
+		MaxParticipants: new(30),
 		IsOpen:          true,
 		CategoryID:      10,
 		PlannedRoomID:   &roomID,
@@ -96,7 +96,7 @@ func TestActivityRequest_Fields(t *testing.T) {
 	}
 
 	assert.Equal(t, "Test Activity", req.Name)
-	assert.Equal(t, 30, req.MaxParticipants)
+	assert.Equal(t, 30, *req.MaxParticipants)
 	assert.True(t, req.IsOpen)
 	assert.Equal(t, int64(10), req.CategoryID)
 	assert.Equal(t, int64(20), *req.PlannedRoomID)
@@ -237,7 +237,7 @@ func TestAddSupervisorsToResponse_NoPrimarySupervisor(t *testing.T) {
 func TestAddSchedulesToResponse_EmptyList(t *testing.T) {
 	t.Parallel()
 
-	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ScheduleResponse{}}
+	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ActivityScheduleResponse{}}
 	httpadapter.AddSchedulesToResponseForTest(response, []*activityContract.Schedule{})
 	assert.Empty(t, response.Schedules)
 }
@@ -245,7 +245,7 @@ func TestAddSchedulesToResponse_EmptyList(t *testing.T) {
 func TestAddSchedulesToResponse_NilList(t *testing.T) {
 	t.Parallel()
 
-	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ScheduleResponse{}}
+	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ActivityScheduleResponse{}}
 	httpadapter.AddSchedulesToResponseForTest(response, nil)
 	assert.Empty(t, response.Schedules)
 }
@@ -253,7 +253,7 @@ func TestAddSchedulesToResponse_NilList(t *testing.T) {
 func TestAddSchedulesToResponse_WithNilScheduleInList(t *testing.T) {
 	t.Parallel()
 
-	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ScheduleResponse{}}
+	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ActivityScheduleResponse{}}
 	sch := &activityContract.Schedule{
 		ID:      1,
 		Weekday: 1,
@@ -271,7 +271,7 @@ func TestAddSchedulesToResponse_WithNilScheduleInList(t *testing.T) {
 func TestAddSchedulesToResponse_WithMultipleSchedules(t *testing.T) {
 	t.Parallel()
 
-	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ScheduleResponse{}}
+	response := &httpadapter.ActivityResponse{Schedules: []httpadapter.ActivityScheduleResponse{}}
 	timeframeID := int64(5)
 	schedules := []*activityContract.Schedule{
 		{ID: 1, Weekday: 1, TimeframeID: &timeframeID},
@@ -379,7 +379,7 @@ func TestUpdateGroupFields_AllFields(t *testing.T) {
 	group := &activityContract.Group{}
 	req := &httpadapter.ActivityRequest{
 		Name:            "Updated Name",
-		MaxParticipants: 50,
+		MaxParticipants: new(50),
 		IsOpen:          true,
 		CategoryID:      10,
 		PlannedRoomID:   &roomID,
@@ -574,7 +574,7 @@ func TestActivityResponse_DefaultSchedules(t *testing.T) {
 	assert.Nil(t, response.Schedules)
 
 	// After init with empty slice
-	response.Schedules = []httpadapter.ScheduleResponse{}
+	response.Schedules = []httpadapter.ActivityScheduleResponse{}
 	assert.NotNil(t, response.Schedules)
 	assert.Empty(t, response.Schedules)
 }
@@ -582,7 +582,7 @@ func TestActivityResponse_DefaultSchedules(t *testing.T) {
 func TestCategoryResponse_Fields(t *testing.T) {
 	t.Parallel()
 
-	response := httpadapter.CategoryResponse{
+	response := httpadapter.ActivityCategoryResponse{
 		ID:          1,
 		Name:        "Test",
 		Description: "Description",

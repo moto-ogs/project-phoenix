@@ -36,14 +36,14 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 	expectedGroup := func(g *testpkg.ActivityGroup) activitiesHTTP.ActivityResponse {
 		var category testpkg.ActivityCategory
 		require.NoError(t, db.NewSelect().Model(&category).Where("id = ?", g.CategoryID).Scan(testpkg.Ctx(t)))
-		return activitiesHTTP.ActivityResponse{ID: g.ID, Name: g.Name, MaxParticipants: &g.MaxParticipants, IsOpen: g.IsOpen, CategoryID: g.CategoryID, CreatedBy: g.CreatedBy, CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC(), Category: &activitiesHTTP.CategoryResponse{ID: category.ID, Name: category.Name, Color: category.Color, CreatedAt: category.CreatedAt.UTC(), UpdatedAt: category.UpdatedAt.UTC()}}
+		return activitiesHTTP.ActivityResponse{ID: g.ID, Name: g.Name, MaxParticipants: &g.MaxParticipants, IsOpen: g.IsOpen, CategoryID: g.CategoryID, CreatedBy: g.CreatedBy, CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC(), Category: &activitiesHTTP.ActivityCategoryResponse{ID: category.ID, Name: category.Name, Color: category.Color, CreatedAt: category.CreatedAt.UTC(), UpdatedAt: category.UpdatedAt.UTC()}}
 	}
 	expectedGroups := map[int64]activitiesHTTP.ActivityResponse{group.ID: expectedGroup(group)}
 	var groups []int64
 	groups = append(groups, group.ID)
 	var students []activitiesHTTP.StudentResponse
-	var supervisors []activitiesHTTP.SupervisorResponse
-	var schedules []activitiesHTTP.ScheduleResponse
+	var supervisors []activitiesHTTP.ActivitySupervisorResponse
+	var schedules []activitiesHTTP.ActivityScheduleResponse
 	counter := testpkg.CaptureQueries(t, db)
 	counter.Stop()
 	type sample struct {
@@ -62,13 +62,13 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			staff := testpkg.CreateTestStaff(t, db, "Activities20", fmt.Sprintf("Staff%02d", i))
 			supervisor, err := module.Timetable.CreatePlannedSupervisor(testpkg.Ctx(t), timetable.PlannedSupervisorInput{StaffID: staff.ID, GroupID: group.ID, ValidFrom: "2026-01-01"})
 			require.NoError(t, err)
-			supervisors = append(supervisors, activitiesHTTP.SupervisorResponse{ID: supervisor.ID, StaffID: staff.ID, FirstName: "Activities20", LastName: fmt.Sprintf("Staff%02d", i)})
+			supervisors = append(supervisors, activitiesHTTP.ActivitySupervisorResponse{ID: supervisor.ID, StaffID: staff.ID, FirstName: "Activities20", LastName: fmt.Sprintf("Staff%02d", i)})
 			end := fmt.Sprintf("%02d:45:00", 8+i)
 			timeframe, err := module.Timetable.CreateTimeframe(testpkg.Ctx(t), timetable.TimeframeInput{StartTime: fmt.Sprintf("%02d:15:00", 8+i), EndTime: &end, IsActive: true})
 			require.NoError(t, err)
 			schedule, err := module.Timetable.CreateSchedule(testpkg.Ctx(t), timetable.ScheduleInput{Weekday: i%5 + 1, ActivityGroupID: group.ID, TimeframeID: &timeframe.ID})
 			require.NoError(t, err)
-			schedules = append(schedules, activitiesHTTP.ScheduleResponse{ID: schedule.ID, Weekday: schedule.Weekday, ActivityGroupID: group.ID, TimeframeID: &timeframe.ID, CreatedAt: schedule.CreatedAt.UTC(), UpdatedAt: schedule.UpdatedAt.UTC()})
+			schedules = append(schedules, activitiesHTTP.ActivityScheduleResponse{ID: schedule.ID, Weekday: schedule.Weekday, ActivityGroupID: group.ID, TimeframeID: &timeframe.ID, CreatedAt: schedule.CreatedAt.UTC(), UpdatedAt: schedule.UpdatedAt.UTC()})
 		}
 		for len(groups) < n {
 			g := testpkg.CreateTestActivityGroup(t, db, fmt.Sprintf("Activities20List%02d", len(groups)))
@@ -106,11 +106,11 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				require.Equal(t, students, rows)
 			case "supervisors":
-				var rows []activitiesHTTP.SupervisorResponse
+				var rows []activitiesHTTP.ActivitySupervisorResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				require.Equal(t, supervisors, rows)
 			case "schedules":
-				var rows []activitiesHTTP.ScheduleResponse
+				var rows []activitiesHTTP.ActivityScheduleResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				for i := range rows {
 					rows[i].CreatedAt = rows[i].CreatedAt.UTC()

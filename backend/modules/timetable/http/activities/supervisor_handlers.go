@@ -38,7 +38,7 @@ func (rs *Resource) checkSupervisorOwnership(w http.ResponseWriter, r *http.Requ
 }
 
 // fetchSupervisorsBySpecialization retrieves supervisors filtered by specialization.
-func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specialization string) ([]SupervisorResponse, error) {
+func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specialization string) ([]ActivitySupervisorResponse, error) {
 	teachers, err := rs.UserService.GetTeachersBySpecialization(ctx, specialization)
 	if err != nil {
 		return nil, err
@@ -52,11 +52,11 @@ func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specia
 	if err != nil {
 		return nil, err
 	}
-	supervisors := make([]SupervisorResponse, 0, len(teachers))
+	supervisors := make([]ActivitySupervisorResponse, 0, len(teachers))
 	for _, teacher := range teachers {
 		staff := staffByID[teacher.StaffID]
 		if staff != nil && staff.Person != nil {
-			supervisors = append(supervisors, SupervisorResponse{
+			supervisors = append(supervisors, ActivitySupervisorResponse{
 				// Available supervisor selections are persisted back as supervisor_ids,
 				// so this identifier must remain the staff ID for safe round-tripping.
 				ID:        staff.ID,
@@ -72,21 +72,21 @@ func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specia
 }
 
 // fetchAllSupervisors retrieves all staff members as potential supervisors.
-func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]SupervisorResponse, error) {
+func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]ActivitySupervisorResponse, error) {
 	// Use batch query to avoid N+1 (fetches staff with person in single query).
 	staffMembers, err := rs.UserService.ListStaffWithPerson(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	supervisors := make([]SupervisorResponse, 0, len(staffMembers))
+	supervisors := make([]ActivitySupervisorResponse, 0, len(staffMembers))
 	for _, staffMember := range staffMembers {
 		if staffMember.Person == nil {
 			slog.Default().Warn("Staff has no associated person", slog.Int64("staff_id", staffMember.ID))
 			continue
 		}
 
-		supervisors = append(supervisors, SupervisorResponse{
+		supervisors = append(supervisors, ActivitySupervisorResponse{
 			// Keep the public ID aligned with the staff ID expected by activity writes.
 			ID:        staffMember.ID,
 			StaffID:   staffMember.ID,
@@ -116,7 +116,7 @@ func (rs *Resource) getActivitySupervisors(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Convert to response objects
-	responses := make([]SupervisorResponse, 0, len(supervisors))
+	responses := make([]ActivitySupervisorResponse, 0, len(supervisors))
 	for _, supervisor := range supervisors {
 		if supervisor == nil {
 			continue // Skip nil supervisors to prevent panic
@@ -132,7 +132,7 @@ func (rs *Resource) getAvailableSupervisors(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 	specialization := r.URL.Query().Get("specialization")
 
-	var supervisors []SupervisorResponse
+	var supervisors []ActivitySupervisorResponse
 	var err error
 
 	if specialization != "" {

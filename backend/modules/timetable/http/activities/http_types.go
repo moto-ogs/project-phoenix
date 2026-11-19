@@ -3,6 +3,7 @@ package httpadapter
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
@@ -14,8 +15,8 @@ const (
 	msgActivityUpdatedSuccess = "Activity updated successfully"
 )
 
-// CategoryResponse represents a category API response
-type CategoryResponse struct {
+// ActivityCategoryResponse represents a category API response
+type ActivityCategoryResponse struct {
 	ID          int64  `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
@@ -37,8 +38,8 @@ type CategoryResponse struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// SupervisorResponse represents a supervisor in activity response
-type SupervisorResponse struct {
+// ActivitySupervisorResponse represents a supervisor in activity response
+type ActivitySupervisorResponse struct {
 	ID        int64  `json:"id"`
 	StaffID   int64  `json:"staff_id"`
 	IsPrimary bool   `json:"is_primary"`
@@ -48,26 +49,26 @@ type SupervisorResponse struct {
 
 // ActivityResponse represents an activity group API response
 type ActivityResponse struct {
-	ID              int64                `json:"id"`
-	Name            string               `json:"name"`
-	MaxParticipants *int                 `json:"max_participants"`
-	IsOpen          bool                 `json:"is_open"`
-	CategoryID      int64                `json:"category_id"`
-	PlannedRoomID   *int64               `json:"planned_room_id,omitempty"`
-	CreatedBy       *int64               `json:"created_by"`
-	CreatedByName   string               `json:"created_by_name,omitempty"`
-	Category        *CategoryResponse    `json:"category,omitempty"`
-	SupervisorID    *int64               `json:"supervisor_id,omitempty"`  // Primary supervisor
-	SupervisorIDs   []int64              `json:"supervisor_ids,omitempty"` // All supervisors
-	Supervisors     []SupervisorResponse `json:"supervisors,omitempty"`    // Detailed supervisor info
-	Schedules       []ScheduleResponse   `json:"schedules,omitempty"`
-	EnrollmentCount int                  `json:"enrollment_count,omitempty"`
-	CreatedAt       time.Time            `json:"created_at"`
-	UpdatedAt       time.Time            `json:"updated_at"`
+	ID              int64                        `json:"id"`
+	Name            string                       `json:"name"`
+	MaxParticipants *int                         `json:"max_participants"`
+	IsOpen          bool                         `json:"is_open"`
+	CategoryID      int64                        `json:"category_id"`
+	PlannedRoomID   *int64                       `json:"planned_room_id,omitempty"`
+	CreatedBy       *int64                       `json:"created_by"`
+	CreatedByName   string                       `json:"created_by_name,omitempty"`
+	Category        *ActivityCategoryResponse    `json:"category,omitempty"`
+	SupervisorID    *int64                       `json:"supervisor_id,omitempty"`  // Primary supervisor
+	SupervisorIDs   []int64                      `json:"supervisor_ids,omitempty"` // All supervisors
+	Supervisors     []ActivitySupervisorResponse `json:"supervisors,omitempty"`    // Detailed supervisor info
+	Schedules       []ActivityScheduleResponse   `json:"schedules,omitempty"`
+	EnrollmentCount int                          `json:"enrollment_count,omitempty"`
+	CreatedAt       time.Time                    `json:"created_at"`
+	UpdatedAt       time.Time                    `json:"updated_at"`
 }
 
-// ScheduleResponse represents a schedule API response
-type ScheduleResponse struct {
+// ActivityScheduleResponse represents a schedule API response
+type ActivityScheduleResponse struct {
 	ID              int64     `json:"id"`
 	Weekday         int       `json:"weekday"`
 	TimeframeID     *int64    `json:"timeframe_id,omitempty"`
@@ -95,7 +96,7 @@ type TimespanResponse struct {
 // ActivityRequest represents an activity creation/update request
 type ActivityRequest struct {
 	Name            string            `json:"name"`
-	MaxParticipants int               `json:"max_participants"`
+	MaxParticipants *int              `json:"max_participants"`
 	IsOpen          bool              `json:"is_open"`
 	CategoryID      int64             `json:"category_id"`
 	PlannedRoomID   *int64            `json:"planned_room_id,omitempty"`
@@ -108,7 +109,7 @@ type QuickActivityRequest struct {
 	Name            string `json:"name"`
 	CategoryID      int64  `json:"category_id"`
 	RoomID          *int64 `json:"room_id,omitempty"`
-	MaxParticipants int    `json:"max_participants"`
+	MaxParticipants *int   `json:"max_participants"`
 }
 
 // QuickActivityResponse represents the response after creating an activity via quick-create
@@ -134,7 +135,7 @@ func (req *ActivityRequest) Bind(_ *http.Request) error {
 	if req.Name == "" {
 		return errors.New("activity name is required")
 	}
-	if req.MaxParticipants < 0 {
+	if req.MaxParticipants != nil && *req.MaxParticipants < 0 {
 		return errors.New("max participants cannot be negative")
 	}
 	if req.CategoryID <= 0 {
@@ -155,16 +156,32 @@ func (req *ActivityRequest) Bind(_ *http.Request) error {
 
 // Bind validates the quick activity request
 func (req *QuickActivityRequest) Bind(_ *http.Request) error {
-	if req.Name == "" {
-		return errors.New("activity name is required")
-	}
 	if req.CategoryID <= 0 {
 		return errors.New("category ID is required")
 	}
-	if req.MaxParticipants < 0 {
-		return errors.New("max participants cannot be negative")
+	return validateNewActivity(req.Name, req.MaxParticipants)
+}
+
+// validateNewActivity holds the rules a new activity meets beyond the shared
+// request checks: a name that is more than blanks, and a participant limit
+// that is either absent (no limit) or at least one. Updates keep accepting
+// 0 as "no limit"; only the create routes refused it (#7563).
+func validateNewActivity(name string, maxParticipants *int) error {
+	if strings.TrimSpace(name) == "" {
+		return errors.New("activity name is required")
+	}
+	if maxParticipants != nil && *maxParticipants <= 0 {
+		return errors.New("max participants must be greater than 0")
 	}
 	return nil
+}
+
+// participantLimit is the stored form of a requested limit: 0 for none.
+func participantLimit(maxParticipants *int) int {
+	if maxParticipants == nil {
+		return 0
+	}
+	return *maxParticipants
 }
 
 // BatchEnrollmentRequest represents a request for updating enrollments in batch

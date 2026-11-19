@@ -2,6 +2,47 @@
   "routes": [
     {
       "method": "DELETE",
+      "pattern": "/api/activities/categories/{categoryId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/activities/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/activities/{id}/students/{studentId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/activities/{id}/supervisors/{supervisorId}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "replacement_staff_id",
+          "kind": "id"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/admin/grade-transitions/{id}/",
       "portals": [
         "tenant"
@@ -1369,6 +1410,114 @@
           "kind": "ref",
           "ref": "VisitResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "category_id",
+          "kind": "id"
+        },
+        {
+          "name": "include_system",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivityResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/categories",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "include_archived",
+          "kind": "bool"
+        },
+        {
+          "name": "include_system",
+          "kind": "bool"
+        },
+        {
+          "name": "with_usage",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivityCategoryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/supervisors/available",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "specialization",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivitySupervisorResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/{id}/schedules",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ActivityScheduleResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/activities/{id}/schedules/{scheduleId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityScheduleResponse"
       }
     },
     {
@@ -3122,6 +3271,35 @@
       "response": {
         "kind": "ref",
         "ref": "RoomRemovalImpactResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/schedules/timeframes/",
+      "portals": [
+        "tenant"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "description",
+          "kind": "string"
+        },
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "page_size",
+          "kind": "int"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TimeframeResponse"
+        }
       }
     },
     {
@@ -9802,6 +9980,62 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/activities/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/activities/categories",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityCategoryRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/activities/categories/{categoryId}/restore",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/activities/quick-create",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "QuickActivityRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "QuickActivityResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/admin/grade-transitions/",
       "portals": [
         "tenant"
@@ -14821,6 +15055,36 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/activities/categories/{categoryId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityCategoryRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityCategoryResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/activities/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ActivityRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ActivityResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/admin/grade-transitions/{id}/",
       "portals": [
         "tenant"
@@ -18801,6 +19065,377 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityCategoryRequest",
+      "go_type": "httpadapter.ActivityCategoryRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityCategoryResponse",
+      "go_type": "httpadapter.ActivityCategoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "archived_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "usage_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityRequest",
+      "go_type": "httpadapter.ActivityRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_open",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planned_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleRequest"
+            }
+          }
+        },
+        {
+          "name": "supervisor_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityResponse",
+      "go_type": "httpadapter.ActivityResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_open",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "category_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "planned_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "created_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ActivityCategoryResponse"
+          }
+        },
+        {
+          "name": "supervisor_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "supervisor_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "supervisors",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ActivitySupervisorResponse"
+            }
+          }
+        },
+        {
+          "name": "schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ActivityScheduleResponse"
+            }
+          }
+        },
+        {
+          "name": "enrollment_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityScheduleResponse",
+      "go_type": "httpadapter.ActivityScheduleResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "timeframe_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivitySupervisorResponse",
+      "go_type": "httpadapter.ActivitySupervisorResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -62001,6 +62636,98 @@
       ]
     },
     {
+      "name": "QuickActivityRequest",
+      "go_type": "httpadapter.QuickActivityRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "QuickActivityResponse",
+      "go_type": "httpadapter.QuickActivityResponse",
+      "fields": [
+        {
+          "name": "activity_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "supervisor_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "Range",
       "go_type": "holidayclosurenotification.Range",
       "fields": [
@@ -65539,6 +66266,28 @@
             "elem": {
               "kind": "legacy_id"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScheduleRequest",
+      "go_type": "httpadapter.ScheduleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "timeframe_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
           }
         }
       ]
@@ -77062,6 +77811,56 @@
           "name": "labor_hint_days",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TimeframeResponse",
+      "go_type": "httpadapter.TimeframeResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]

@@ -6,7 +6,10 @@ import { apiErrorFromResponse, type ApiError } from "./api-error";
 // removes a category, so existing Termine and Aktivitäten keep theirs.
 
 import { sessionFetch } from "./session-cache";
-import type { ActivityCategory } from "./activity-helpers";
+import {
+  readActivityCategory,
+  type ActivityCategory,
+} from "./activity-helpers";
 
 interface CategoryPayload {
   name: string;
@@ -26,8 +29,8 @@ async function readOne(
   if (!response.ok) {
     throw await readError(response, fallback);
   }
-  const json = (await response.json()) as { data: ActivityCategory };
-  return json.data;
+  const json = (await response.json()) as { data: unknown };
+  return readActivityCategory(json.data);
 }
 
 class CategoryService {
@@ -47,10 +50,8 @@ class CategoryService {
         "Kategorien konnten nicht geladen werden",
       );
     }
-    const json = (await response.json()) as {
-      data: ActivityCategory[] | null;
-    };
-    return json.data ?? [];
+    const json = (await response.json()) as { data: unknown[] | null };
+    return (json.data ?? []).map(readActivityCategory);
   }
 
   async createCategory(payload: CategoryPayload): Promise<ActivityCategory> {

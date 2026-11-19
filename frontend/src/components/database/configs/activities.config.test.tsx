@@ -4,7 +4,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { activitiesConfig } from "./activities.config";
-import type { Activity, ActivitySupervisor } from "@/lib/activity-helpers";
+import {
+  mapActivityResponse,
+  type Activity,
+  type ActivitySupervisor,
+} from "@/lib/activity-helpers";
+import { buildBackendActivity } from "~/test/fixtures/activities";
 
 // Mock next-auth
 vi.mock("next-auth/react", () => ({
@@ -165,15 +170,16 @@ describe("activitiesConfig", () => {
     });
   });
 
-  it("maps response data correctly", () => {
-    const responseData = {
+  it("maps the contract's activity once", () => {
+    const responseData = buildBackendActivity({
       id: "1",
       name: "Test Activity",
-      max_participant: 20,
-    };
+    });
 
     const mapped = activitiesConfig.service?.mapResponse?.(responseData);
-    expect(mapped).toEqual(responseData);
+    expect(mapped).toEqual(mapActivityResponse(responseData));
+    expect(mapped?.max_participant).toBe(20);
+    expect(mapped?.is_open_ags).toBe(true);
   });
 
   it("has list configuration", () => {
@@ -249,4 +255,33 @@ describe("activitiesConfig", () => {
       });
     },
   );
+
+  it("offers the available supervisors by staff id and name", async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: [
+          {
+            id: "12",
+            staff_id: "12",
+            is_primary: false,
+            first_name: "Ada",
+            last_name: "Lind",
+          },
+        ],
+      }),
+    );
+    const field = activitiesConfig.form.sections[1]?.fields.find(
+      (candidate) => candidate.name === "supervisor_id",
+    );
+    const loadOptions =
+      field && typeof field.options === "function" ? field.options : undefined;
+
+    await expect(loadOptions?.()).resolves.toEqual([
+      { value: "12", label: "Ada Lind" },
+    ]);
+    expect(vi.mocked(global.fetch).mock.calls[0]?.[0]).toBe(
+      "/api/activities/supervisors/available",
+    );
+  });
 });

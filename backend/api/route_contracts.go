@@ -2,12 +2,13 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
 	groupsHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
 	gradeTransitionHTTP "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
-	"reflect"
-	"strings"
 
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
@@ -54,6 +55,7 @@ import (
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+	timetableActivitiesHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
 	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
 	statsContract "github.com/moto-ogs/project-phoenix/modules/transactionruntime/stats"
@@ -269,6 +271,8 @@ func ContractDocument() (contract.Document, error) {
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
+	// The timeframe list writes its instants through common.Time (RFC 3339).
+	options.Instants = []reflect.Type{reflect.TypeFor[common.Time]()}
 	return contract.Build(registrations, options)
 }
 
@@ -423,6 +427,8 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
 		{"/api/holiday-closure-notices", holidayClosureHTTP.SchoolRouteContracts()},
 		{"/api/rooms", roomsHTTP.RouteContracts()},
+		{"/api/activities", timetableActivitiesHTTP.RouteContracts()},
+		{"/api/schedules", timetableActivitiesHTTP.ScheduleRouteContracts()},
 		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
 		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
 		{"/api/class-list-entries", classListEntryRouteContracts()},
