@@ -70,19 +70,6 @@ func (rs *AnnouncementsResource) GetUnread(w http.ResponseWriter, r *http.Reques
 	rs.runtime.Success(w, r, http.StatusOK, responses, "Unread announcements retrieved successfully")
 }
 
-// GetUnreadCount handles getting the count of unread announcements
-func (rs *AnnouncementsResource) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
-	viewer := rs.runtime.Viewer(r)
-
-	count, err := rs.announcementService.CountUnread(r.Context(), viewer.AccountID, viewer.Roles, viewer.TenantID, viewer.OrgID)
-	if err != nil {
-		rs.internalError(w, r, "failed to count announcements", err)
-		return
-	}
-
-	rs.runtime.Success(w, r, http.StatusOK, map[string]int{"count": count}, "")
-}
-
 // MarkSeen handles marking an announcement as seen
 func (rs *AnnouncementsResource) MarkSeen(w http.ResponseWriter, r *http.Request) {
 	viewer := rs.runtime.Viewer(r)

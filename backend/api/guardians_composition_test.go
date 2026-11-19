@@ -598,7 +598,7 @@ func TestGuardianComposition_SpecialListsReturnArrays(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)
 
-	for _, path := range []string{"/without-account", "/invitable", "/invitations/pending"} {
+	for _, path := range []string{"/invitations/pending"} {
 		rr := ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, path, nil)
 		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 		dataArray(t, rr.Body.Bytes())

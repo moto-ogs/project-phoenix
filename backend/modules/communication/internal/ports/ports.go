@@ -24,7 +24,6 @@ type Store interface {
 
 type Audience interface {
 	Unread(context.Context, int64, []string, int64, int64) ([]communication.Announcement, domain.OperationStats, error)
-	CountUnread(context.Context, int64, []string, int64, int64) (int, domain.OperationStats, error)
 	TargetCount(context.Context, communication.Announcement) (int, domain.OperationStats, error)
 	ViewDetails(context.Context, int64) ([]communication.AnnouncementViewDetail, domain.OperationStats, error)
 }

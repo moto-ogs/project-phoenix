@@ -134,9 +134,9 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	assert.Empty(t, otherUnread)
 
 	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
-	count, err := module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
+	unread, err = module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
-	assert.Zero(t, count)
+	assert.Empty(t, unread)
 
 	details, err := module.GetViewDetails(ctx, announcement.ID)
 	require.NoError(t, err)

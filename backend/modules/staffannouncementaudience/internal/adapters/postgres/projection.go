@@ -110,23 +110,6 @@ func (p *Projection) Unread(ctx context.Context, userID int64, roles []string, t
 	return result, stats, nil
 }
 
-func (p *Projection) CountUnread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) (int, contract.Stats, error) {
-	db, err := p.database(ctx)
-	if err != nil {
-		return 0, contract.Stats{}, err
-	}
-	var count int
-	stats := contract.Stats{Queries: 1}
-	started := time.Now()
-	err = db.NewRaw(`SELECT COUNT(*)`+unreadFrom+unreadWhere, unreadArgs(userID, roles, tenantID, orgID)...).Scan(ctx, &count)
-	stats.StatementDuration = time.Since(started)
-	if err != nil {
-		return 0, stats, fmt.Errorf("announcement audience projection: count unread: %w", err)
-	}
-	stats.Rows = 1
-	return count, stats, nil
-}
-
 func (p *Projection) TargetCount(ctx context.Context, value contract.Target) (int, contract.Stats, error) {
 	db, err := p.database(ctx)
 	if err != nil {

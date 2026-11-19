@@ -2144,13 +2144,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *CallerRows) ActivityGroupRows(ctx context.Context, ids []int64) (any, error) {\n\treturn r.activities.ActivityGroupRows(ctx, ids)\n}",
-      "form": "forward-debt",
-      "id": "roots/owners/CallerRows.ActivityGroupRows",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (r *CallerRows) CurrentPersonName(ctx context.Context) (firstName, lastName string, err error) {\n\tperson, err := r.caller.Person(ctx)\n\tif err != nil {\n\t\treturn \"\", \"\", err\n\t}\n\treturn person.FirstName, person.LastName, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/CallerRows.CurrentPersonName",
@@ -2259,13 +2252,6 @@
       "evidence": "func (r *CallerRows) StudentAccessFacts(ctx context.Context) (admin, staff bool) {\n\taccess := r.caller.StudentAccess(ctx)\n\treturn access.Admin, access.Staff\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/CallerRows.StudentAccessFacts",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r *CallerRows) TeacherRow(ctx context.Context, teacherID int64) (any, error) {\n\treturn r.teachers.FindByID(ctx, teacherID)\n}",
-      "form": "forward-debt",
-      "id": "roots/owners/CallerRows.TeacherRow",
       "owner": "roots"
     },
     {
@@ -4590,20 +4576,6 @@
       "evidence": "func (s callerSessions) OpenSessionIDsForActivities(ctx context.Context, activityGroupIDs []int64) ([]int64, error) {\n\tif len(activityGroupIDs) == 0 {\n\t\treturn []int64{}, nil\n\t}\n\tsessions, err := s.presence.ListOpenLiveGroupsForActivities(ctx, activityGroupIDs)\n\treturn liveGroupIDs(sessions), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/callerSessions.OpenSessionIDsForActivities",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s callerSessions) SessionExists(ctx context.Context, sessionID int64) (bool, error) {\n\tsessions, err := s.presence.ListLiveGroups(ctx, []int64{sessionID})\n\treturn len(sessions) \u003e 0, err\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/callerSessions.SessionExists",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s callerSessions) SessionVisits(ctx context.Context, sessionID int64) ([]identityaccess.CallerVisit, error) {\n\tvisits, err := s.presence.ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{sessionID}})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityaccess.CallerVisit, 0, len(visits))\n\tfor _, visit := range visits {\n\t\tresult = append(result, identityaccess.CallerVisit{ID: visit.ID, CreatedAt: visit.CreatedAt, UpdatedAt: visit.UpdatedAt, TenantID: visit.TenantID, StudentID: visit.StudentID, ActiveGroupID: visit.ActiveGroupID, EntryTime: visit.EntryTime, ExitTime: visit.ExitTime})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/callerSessions.SessionVisits",
       "owner": "roots"
     },
     {

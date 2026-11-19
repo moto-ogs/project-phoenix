@@ -20,8 +20,8 @@ import (
 func TestNewCallerRowsRequiresEveryDependency(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewCallerRows(identityaccess.CallerContext{}, nil, nil, nil, nil, nil, nil, slog.Default())
-	require.EqualError(t, err, "caller rows: the caller context, the group, staff, teacher, student, activity and session rows and a logger are required")
+	_, err := NewCallerRows(identityaccess.CallerContext{}, nil, nil, nil, slog.Default())
+	require.EqualError(t, err, "caller rows: the caller context, the group, staff and session rows and a logger are required")
 }
 
 func TestNewCallerContextRequiresEveryDependency(t *testing.T) {
@@ -42,8 +42,7 @@ func (s staffIdentityStub) StaffID(context.Context) (int64, error) { return s.st
 // callerRowsOver serves caller over row ports a test never reads.
 func callerRowsOver(t *testing.T, caller identityaccess.CallerContext) *CallerRows {
 	t.Helper()
-	rows, err := NewCallerRows(caller, struct{ groupRows }{}, struct{ staffRows }{}, struct{ teacherRows }{}, struct{ studentRows }{},
-		struct{ callerActivityRows }{}, struct{ callerSessionRows }{}, slog.Default())
+	rows, err := NewCallerRows(caller, struct{ groupRows }{}, struct{ staffRows }{}, struct{ callerSessionRows }{}, slog.Default())
 	require.NoError(t, err)
 	return rows
 }

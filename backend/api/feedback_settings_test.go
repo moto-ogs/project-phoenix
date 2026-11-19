@@ -26,7 +26,7 @@ func TestStaffFeedbackRoutesRespectSchoolSetting(t *testing.T) {
 	}
 	student := testpkg.CreateTestStudent(t, db, "Feedback", "Setting", "1a")
 	setEnabled(true)
-	entry, err := module.Feedback.Submit(ctx, feedback.CreateEntry{
+	_, err = module.Feedback.Submit(ctx, feedback.CreateEntry{
 		Value: feedback.ValuePositive, Day: "2026-08-31", Time: "12:34:56", StudentID: student.ID,
 	})
 	require.NoError(t, err)
@@ -41,13 +41,8 @@ func TestStaffFeedbackRoutesRespectSchoolSetting(t *testing.T) {
 		body         any
 		status       int
 	}{
-		{http.MethodPost, "/feedback/", body, http.StatusCreated},
 		{http.MethodPost, "/feedback/batch", map[string]any{"entries": []any{body}}, http.StatusCreated},
-		{http.MethodGet, "/feedback/", nil, http.StatusOK},
-		{http.MethodGet, fmt.Sprintf("/feedback/%d", entry.ID), nil, http.StatusOK},
 		{http.MethodGet, fmt.Sprintf("/feedback/student/%d", student.ID), nil, http.StatusOK},
-		{http.MethodGet, "/feedback/date/2026-08-31", nil, http.StatusOK},
-		{http.MethodGet, "/feedback/mensa", nil, http.StatusOK},
 		{http.MethodGet, "/feedback/date-range?start_date=2026-08-01&end_date=2026-08-31", nil, http.StatusOK},
 	}
 	states := []struct {
@@ -89,11 +84,7 @@ func TestStaffFeedbackRoutesRespectSchoolSetting(t *testing.T) {
 			setEnabled(true)
 			count, countErr := module.Feedback.CountForStudent(ctx, student.ID)
 			require.NoError(t, countErr)
-			assert.Equal(t, 1, count, "refused single and batch submissions must not persist")
+			assert.Equal(t, 1, count, "a refused batch submission must not persist")
 		}
 	}
-	setEnabled(false)
-	request := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/feedback/%d", entry.ID), nil, testutil.WithJWTBearer(token))
-	response := testutil.ExecuteRequest(router, request)
-	assert.Equal(t, http.StatusOK, response.Code, "switching feedback off must not prevent erasure")
 }

@@ -68,7 +68,6 @@ const (
 // Mock AnnouncementService for platform API
 type mockPlatformAnnouncementService struct {
 	getUnreadForUserFn func(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) ([]*platformModel.Announcement, error)
-	countUnreadFn      func(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) (int, error)
 	markSeenFn         func(ctx context.Context, userID, announcementID int64) error
 	markDismissedFn    func(ctx context.Context, userID, announcementID int64) error
 }
@@ -106,13 +105,6 @@ func (m *mockPlatformAnnouncementService) GetUnreadForUser(ctx context.Context, 
 		return m.getUnreadForUserFn(ctx, userID, userRoles, tenantID, orgID)
 	}
 	return nil, nil
-}
-
-func (m *mockPlatformAnnouncementService) CountUnread(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) (int, error) {
-	if m.countUnreadFn != nil {
-		return m.countUnreadFn(ctx, userID, userRoles, tenantID, orgID)
-	}
-	return 0, nil
 }
 
 func (m *mockPlatformAnnouncementService) MarkSeen(ctx context.Context, userID, announcementID int64) error {
@@ -326,36 +318,8 @@ func TestGetUnread_NilPublishedAtRendersEmpty(t *testing.T) {
 	assert.Equal(t, "", announcement["published_at"])
 }
 
-// --- GetUnreadCount and MarkSeen ---
-// These tests cover the 2 platform handler functions that were previously untested.
-
-func TestGetUnreadCount_Success(t *testing.T) {
-	t.Parallel()
-
-	mockService := &mockPlatformAnnouncementService{
-		countUnreadFn: func(_ context.Context, _ int64, _ []string, _ int64, _ int64) (int, error) {
-			return 5, nil
-		},
-	}
-
-	resource := platformannouncements.NewAnnouncementsResource(mockService, testRuntime())
-
-	req := httptest.NewRequest(http.MethodGet, "/announcements/unread/count", nil)
-	claims := platformannouncements.Viewer{AccountID: 123, Roles: []string{"teacher"}, TenantID: 10, OrgID: 5}
-	ctx := context.WithValue(req.Context(), viewerKey{}, claims)
-	req = req.WithContext(ctx)
-	rr := httptest.NewRecorder()
-
-	resource.GetUnreadCount(rr, req)
-
-	assert.Equal(t, http.StatusOK, rr.Code)
-
-	var response map[string]any
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	require.NoError(t, err)
-	data := response["data"].(map[string]any)
-	assert.Equal(t, float64(5), data["count"])
-}
+// --- MarkSeen ---
+// These tests cover the platform MarkSeen handler.
 
 func TestMarkSeen_SuccessAndErrors(t *testing.T) {
 	t.Parallel()
@@ -452,7 +416,7 @@ func TestMarkDismissed_InvalidID(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
-// --- Error paths for GetUnread and GetUnreadCount ---
+// --- Error paths for GetUnread ---
 
 func TestGetUnread_ServiceError(t *testing.T) {
 	t.Parallel()
@@ -468,22 +432,5 @@ func TestGetUnread_ServiceError(t *testing.T) {
 	ctx := context.WithValue(req.Context(), viewerKey{}, claims)
 	rr := httptest.NewRecorder()
 	resource.GetUnread(rr, req.WithContext(ctx))
-	assert.Equal(t, http.StatusInternalServerError, rr.Code)
-}
-
-func TestGetUnreadCount_ServiceError(t *testing.T) {
-	t.Parallel()
-
-	mockService := &mockPlatformAnnouncementService{
-		countUnreadFn: func(_ context.Context, _ int64, _ []string, _ int64, _ int64) (int, error) {
-			return 0, errors.New("database error")
-		},
-	}
-	resource := platformannouncements.NewAnnouncementsResource(mockService, testRuntime())
-	req := httptest.NewRequest(http.MethodGet, "/announcements/unread/count", nil)
-	claims := platformannouncements.Viewer{AccountID: 123, Roles: []string{"teacher"}}
-	ctx := context.WithValue(req.Context(), viewerKey{}, claims)
-	rr := httptest.NewRecorder()
-	resource.GetUnreadCount(rr, req.WithContext(ctx))
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }

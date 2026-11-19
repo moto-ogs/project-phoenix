@@ -1532,11 +1532,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/CallerRows.ActivityGroupRows",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/CallerRows.CurrentPersonName",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1614,11 +1609,6 @@
       "decision": "0090",
       "id": "roots/owners/CallerRows.StudentAccessFacts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/CallerRows.TeacherRow",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
     {
       "decision": "0088",
@@ -3278,16 +3268,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/callerSessions.OpenSessionIDsForActivities",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/callerSessions.SessionExists",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/callerSessions.SessionVisits",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

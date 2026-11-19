@@ -2201,54 +2201,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs",
-      "binding_digest": "2c4c98c56c87494f1d94acaf6f9ecb5b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupStudentIDs",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs",
-      "binding_digest": "7c8869ba9997b8336caa0e51cacf7256",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupStudentIDs",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs",
-      "binding_digest": "191156d5b80ba40bb96364cc325f6fe9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupStudentIDs",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupVisits",
-      "binding_digest": "2c4c98c56c87494f1d94acaf6f9ecb5b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupVisits",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupVisits",
-      "binding_digest": "7c8869ba9997b8336caa0e51cacf7256",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupVisits",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupVisits",
-      "binding_digest": "191156d5b80ba40bb96364cc325f6fe9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupVisits",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.MyActiveSessionIDs",
       "binding_digest": "7c8869ba9997b8336caa0e51cacf7256",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.MyActiveSessionIDs",
@@ -15265,14 +15217,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.ActivityGroupRows",
-      "binding_digest": "ad561b9a22a4e8a66f614e3cc5cf2d29",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.ActivityGroupRows",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CallerActivityGroups.ActivityGroupRows",
-      "target_owner": "timetable-activities"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.EducationalGroupRows",
       "binding_digest": "e27e80dd65d3822356744c47d26aea83",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.EducationalGroupRows",
@@ -15382,46 +15326,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.StaffRow",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.StudentRows",
-      "binding_digest": "9d3d9c60fa6176004d2aed22548ed55b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.StudentRows",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDs",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "binding_digest": "901553b17b253b3b33a66ddf22a415ea",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Teacher.SetTenantID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "binding_digest": "59600cf1c0e77de47dca279a63fdf255",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.TeacherRepository.FindByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "binding_digest": "5a8d1f3677296e9e37b285a6d9f92334",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindTeacher",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "binding_digest": "a15079ade7ab3319943bc85878fe9b09",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindTeacher",
       "target_owner": "school-membership"
     },
     {
@@ -16734,14 +16638,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerSessions.OpenSessionIDsForActivities",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerSessions.SessionExists",
-      "binding_digest": "2c4c98c56c87494f1d94acaf6f9ecb5b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerSessions.SessionExists",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
       "target_owner": "student-presence"
     },
     {
@@ -19790,22 +19686,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerSessions.OpenSessionIDsForActivities",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerSessions.SessionExists",
-      "binding_digest": "2c4c98c56c87494f1d94acaf6f9ecb5b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerSessions.SessionExists",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerSessions.SessionVisits",
-      "binding_digest": "e2ed1ba9b48c9deeaff22216d8f778f7",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerSessions.SessionVisits",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListVisits",
       "target_owner": "student-presence"
     },
     {

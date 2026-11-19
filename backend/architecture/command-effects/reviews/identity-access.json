@@ -3003,66 +3003,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupStudentIDs",
-      "reason": "Read-only target already reviewed as query: identity-access reaches modules/studentpresence.Owner.ListLiveGroups (student-presence) through modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupStudentIDs",
-      "reason": "Read-only target already reviewed as query: identity-access reaches modules/studentpresence.Owner.ListOpenLiveGroupsForActivities (student-presence) through modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupStudentIDs",
-      "reason": "Read-only target already reviewed as query: identity-access reaches modules/studentpresence.Owner.ListSupervisedLiveGroups (student-presence) through modules/identityaccess/internal/application.CallerEngine.GroupStudentIDs. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupVisits",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupVisits",
-      "reason": "Read-only target already reviewed as query: identity-access reaches modules/studentpresence.Owner.ListLiveGroups (student-presence) through modules/identityaccess/internal/application.CallerEngine.GroupVisits. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupVisits",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupVisits",
-      "reason": "Read-only target already reviewed as query: identity-access reaches modules/studentpresence.Owner.ListOpenLiveGroupsForActivities (student-presence) through modules/identityaccess/internal/application.CallerEngine.GroupVisits. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.GroupVisits",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.GroupVisits",
-      "reason": "Read-only target already reviewed as query: identity-access reaches modules/studentpresence.Owner.ListSupervisedLiveGroups (student-presence) through modules/identityaccess/internal/application.CallerEngine.GroupVisits. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.MyActiveSessionIDs",
       "classification": "query",
       "effect": "query",
@@ -20657,16 +20597,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.ActivityGroupRows",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.ActivityGroupRows",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable/ports.CallerActivityGroups.ActivityGroupRows; modules/timetable/ports/retained_rows.go:56. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CallerActivityGroups.ActivityGroupRows",
-      "target_owner": "timetable-activities"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.EducationalGroupRows",
       "classification": "query",
       "effect": "query",
@@ -20804,56 +20734,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.StudentRows",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.StudentRows",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDs",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Teacher.SetTenantID; modules/peopledirectory/record_metadata.go:16. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Teacher.SetTenantID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.TeacherRepository.FindByID; modules/peopledirectory/internal/application/student_records_boundary.go:23. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.TeacherRepository.FindByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindTeacher; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindTeacher",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.TeacherRow",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.TeacherRow",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindTeacher; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindTeacher",
       "target_owner": "school-membership"
     },
     {
@@ -22623,16 +22503,6 @@
       "reason": "Read-only already reviewed target: identity-access reaches modules/studentpresence.Owner.ListOpenLiveGroupsForActivities (student-presence) through modules/identityaccess/internal/application.CallerSessions.OpenSessionIDsForActivities. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerSessions.SessionExists",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerSessions.SessionExists",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/studentpresence.Owner.ListLiveGroups (student-presence) through modules/identityaccess/internal/application.CallerSessions.SessionExists. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
       "target_owner": "student-presence"
     },
     {
@@ -26715,27 +26585,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Owner.ListOpenLiveGroupsForActivities; modules/studentpresence.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListOpenLiveGroupsForActivities",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerSessions.SessionExists",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerSessions.SessionExists",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.Owner.ListLiveGroups; modules/studentpresence.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerSessions.SessionVisits",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerSessions.SessionVisits",
-      "reason": "Owner-provided conditional locking read: ForUpdate=true requires an ambient transaction and executes SELECT FOR UPDATE; otherwise read-only. Classify the complete method surface as lock, not query. Target modules/studentpresence.Owner.ListVisits; modules/studentpresence/internal/application/visit.go:57; modules/studentpresence/internal/adapters/postgres/visit.go:75. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListVisits",
       "target_owner": "student-presence"
     },
     {

@@ -10363,28 +10363,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroup",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroup",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.Query.FindGroup. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroup",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroup",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Query.FindGroup. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DataTemplates.FindGroup",
       "classification": "platform",
       "effect": "scope",
@@ -10445,28 +10423,6 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroupByName",
       "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Capability.FindGroupByName. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroupByName",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroupByName",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.Query.FindGroupByName. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroupByName",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroupByName",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Query.FindGroupByName. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
@@ -10539,28 +10495,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroupTargets",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroupTargets",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.Query.ListGroupTargets. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroupTargets",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroupTargets",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Query.ListGroupTargets. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DataTemplates.ListGroupTargets",
       "classification": "platform",
       "effect": "scope",
@@ -10627,28 +10561,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroups",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroups",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.Query.ListGroups. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroups",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroups",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Query.ListGroups. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DataTemplates.ListGroups",
       "classification": "platform",
       "effect": "scope",
@@ -10709,28 +10621,6 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListTargetStudentIDs",
       "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Capability.ListTargetStudentIDs. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListTargetStudentIDs",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListTargetStudentIDs",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.Query.ListTargetStudentIDs. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListTargetStudentIDs",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListTargetStudentIDs",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Query.ListTargetStudentIDs. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"

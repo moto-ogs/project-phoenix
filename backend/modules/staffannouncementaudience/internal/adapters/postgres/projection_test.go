@@ -93,10 +93,6 @@ func TestProjection_UnreadStaysInTheReadersSchool(t *testing.T) {
 			require.NotNil(t, value.PublishedAt)
 		}
 	}
-	count, _, err := fix.projection.CountUnread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
-	require.NoError(t, err)
-	assert.Len(t, unread, count)
-
 	foreign, _, err := fix.projection.Unread(ctx, fix.foreignReaderID, nil, fix.foreignID, fix.foreignOrganization)
 	require.NoError(t, err)
 	assert.Contains(t, announcementIDs(foreign), fix.foreignMessage)
@@ -105,9 +101,6 @@ func TestProjection_UnreadStaysInTheReadersSchool(t *testing.T) {
 	crossed, _, err := fix.projection.Unread(ctx, fix.readerID, nil, fix.foreignID, fix.foreignOrganization)
 	require.NoError(t, err)
 	assert.Empty(t, crossed, "a reader without a mapping to the named school sees none of its announcements")
-	crossedCount, _, err := fix.projection.CountUnread(ctx, fix.readerID, nil, fix.foreignID, fix.foreignOrganization)
-	require.NoError(t, err)
-	assert.Zero(t, crossedCount)
 }
 
 // TestProjection_TargetsAndViewsStayInTheAddressedSchool pins the audience

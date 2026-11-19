@@ -1,14 +1,6 @@
 {
   "entries": [
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.CountUnread",
-      "binding_digest": "1a053b074f2451b2e02e8581fed21722",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.Capability.CountUnread",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdminRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.CreateAnnouncement",
       "binding_digest": "1a053b074f2451b2e02e8581fed21722",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.Capability.CreateAnnouncement",
@@ -1903,14 +1895,6 @@
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.ResolveBool",
       "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CountUnread",
-      "binding_digest": "e273f908dac4e2bef6f79e9c06822f30",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/ports.Audience.CountUnread",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CountUnread",
-      "target_owner": "staff-announcement-audience"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].TargetCount",

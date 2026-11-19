@@ -72,9 +72,6 @@ func (engineTestSessions) SupervisedSessionIDs(context.Context, int64) ([]int64,
 	return nil, nil
 }
 func (s engineTestSessions) SessionExists(context.Context, int64) (bool, error) { return s.exists, nil }
-func (engineTestSessions) SessionVisits(context.Context, int64) ([]identityaccess.CallerVisit, error) {
-	return nil, nil
-}
 
 type engineTestLiveTopics struct{}
 
@@ -141,24 +138,6 @@ func TestCallerEngineMapsTheChainSentinels(t *testing.T) {
 		authenticated: true, people: engineTestPeople{found: true}, membership: engineTestMembership{staff: true},
 	}.compose(t).TeacherID(ctx)
 	requireCallerError(t, err, "get current teacher", identityaccess.ErrCallerNotLinkedToTeacher)
-}
-
-func TestCallerEngineMapsTheSessionSentinels(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	seams := engineSeams{authenticated: true, people: engineTestPeople{found: true}, membership: engineTestMembership{staff: true}}
-
-	// A missing session is an expected refusal (#4599): it reports
-	// ErrCallerSessionNotFound (404 on /api/me) instead of the former
-	// anonymous lookup failure (500), and stays distinct from a missing group.
-	_, err := seams.compose(t).GroupVisits(ctx, 55)
-	requireCallerError(t, err, "get group visits", identityaccess.ErrCallerSessionNotFound)
-	assert.NotErrorIs(t, err, identityaccess.ErrCallerGroupNotFound)
-	assert.Equal(t, "usercontext.get group visits: session not found", err.Error())
-
-	seams.sessions.exists = true
-	_, err = seams.compose(t).GroupStudentIDs(ctx, 55)
-	requireCallerError(t, err, "get group students", identityaccess.ErrCallerNotAuthorized)
 }
 
 func TestCallerEngineKeepsTheCauseOfAFailedRead(t *testing.T) {

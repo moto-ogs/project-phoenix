@@ -29,12 +29,6 @@ func (m Mapped[A, V, S]) Unread(ctx context.Context, userID int64, roles []strin
 	return mapRows(rows, m.rows.Announcement), m.rows.Stats(stats), err
 }
 
-// CountUnread maps Projection.CountUnread.
-func (m Mapped[A, V, S]) CountUnread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) (int, S, error) {
-	count, stats, err := m.projection.CountUnread(ctx, userID, roles, tenantID, orgID)
-	return count, m.rows.Stats(stats), err
-}
-
 // TargetCount maps Projection.TargetCount.
 func (m Mapped[A, V, S]) TargetCount(ctx context.Context, value A) (int, S, error) {
 	count, stats, err := m.projection.TargetCount(ctx, m.rows.Target(value))

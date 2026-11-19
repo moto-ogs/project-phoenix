@@ -42,7 +42,7 @@ func createInput(studentID int64, day feedback.Date, value string) feedback.Crea
 	return feedback.CreateEntry{Value: value, Day: day, Time: "12:34:56", StudentID: studentID}
 }
 
-func TestModulePersistsReadsCountsAndDeletesOneTenant(t *testing.T) {
+func TestModulePersistsReadsAndCountsOneTenant(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	student := testpkg.CreateTestStudent(t, db, "Feedback", "Module", "1a")
@@ -62,10 +62,6 @@ func TestModulePersistsReadsCountsAndDeletesOneTenant(t *testing.T) {
 	count, err := module.CountForStudent(ctx, student.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, count)
-
-	require.NoError(t, module.EraseEntry(ctx, created.ID))
-	_, err = module.LookupEntry(ctx, created.ID)
-	require.ErrorIs(t, err, feedback.ErrEntryNotFound)
 }
 
 func TestModuleRLSHidesAnotherTenantsFeedback(t *testing.T) {
@@ -73,14 +69,12 @@ func TestModuleRLSHidesAnotherTenantsFeedback(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	module := buildModule(t, db, settingsStub{enabled: true, retention: 90})
 	student := testpkg.CreateTestStudent(t, db, "Feedback", "TenantA", "1a")
-	entry, err := module.Submit(testpkg.Ctx(t), createInput(student.ID, "2026-08-31", feedback.ValuePositive))
+	_, err := module.Submit(testpkg.Ctx(t), createInput(student.ID, "2026-08-31", feedback.ValuePositive))
 	require.NoError(t, err)
 
 	otherTenantID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, otherTenantID)
 	otherCtx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), otherTenantID)
-	_, err = module.LookupEntry(otherCtx, entry.ID)
-	require.ErrorIs(t, err, feedback.ErrEntryNotFound)
 	entries, err := module.FindEntries(otherCtx, feedback.Filter{})
 	require.NoError(t, err)
 	assert.Empty(t, entries)
@@ -148,7 +142,7 @@ func TestModuleRefusesFeedbackWhenAvailabilityCannotBeResolved(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	enabled := buildModule(t, db, settingsStub{enabled: true, retention: 90})
 	input := createInput(student.ID, "2026-08-31", feedback.ValuePositive)
-	entry, err := enabled.Submit(ctx, input)
+	_, err := enabled.Submit(ctx, input)
 	require.NoError(t, err)
 	wantErr := errors.New("settings unavailable")
 	// Even a resolver returning true with an error must not permit access.
@@ -156,8 +150,6 @@ func TestModuleRefusesFeedbackWhenAvailabilityCannotBeResolved(t *testing.T) {
 	_, err = unavailable.Submit(ctx, input)
 	require.ErrorIs(t, err, wantErr)
 	_, err = unavailable.SubmitBatch(ctx, []feedback.CreateEntry{input, input})
-	require.ErrorIs(t, err, wantErr)
-	_, err = unavailable.LookupEntry(ctx, entry.ID)
 	require.ErrorIs(t, err, wantErr)
 	_, err = unavailable.FindEntries(ctx, feedback.Filter{})
 	require.ErrorIs(t, err, wantErr)
@@ -169,7 +161,7 @@ func TestModuleRefusesFeedbackWhenAvailabilityCannotBeResolved(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
-func TestDisabledFeedbackStillAllowsTenantScopedErasureAndRetention(t *testing.T) {
+func TestDisabledFeedbackStillAllowsTenantScopedRetention(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	student := testpkg.CreateTestStudent(t, db, "Feedback", "Erasure", "1a")
@@ -178,7 +170,7 @@ func TestDisabledFeedbackStillAllowsTenantScopedErasureAndRetention(t *testing.T
 	entry, err := enabled.Submit(ctx, createInput(student.ID, "2026-07-01", feedback.ValuePositive))
 	require.NoError(t, err)
 	disabled := buildModule(t, db, settingsStub{enabled: false, retention: 30})
-	_, err = disabled.LookupEntry(ctx, entry.ID)
+	_, err = disabled.FindEntries(ctx, feedback.Filter{})
 	require.ErrorIs(t, err, feedback.ErrFeatureDisabled)
 	count, err := disabled.CountForStudent(ctx, student.ID)
 	require.NoError(t, err, "deletion previews must remain available")
@@ -187,17 +179,14 @@ func TestDisabledFeedbackStillAllowsTenantScopedErasureAndRetention(t *testing.T
 	otherTenantID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, otherTenantID)
 	otherCtx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), otherTenantID)
-	require.ErrorIs(t, disabled.EraseEntry(otherCtx, entry.ID), feedback.ErrEntryNotFound)
 	rows, err := disabled.DeleteExpired(otherCtx)
 	require.NoError(t, err)
 	assert.Zero(t, rows)
-	_, err = enabled.LookupEntry(ctx, entry.ID)
-	require.NoError(t, err, "another school's cleanup must not erase this school's feedback")
+	require.True(t, hasEntry(t, enabled, ctx, entry.ID), "another school's cleanup must not erase this school's feedback")
 	rows, err = disabled.DeleteExpired(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 1, rows)
-	_, err = enabled.LookupEntry(ctx, entry.ID)
-	require.ErrorIs(t, err, feedback.ErrEntryNotFound)
+	require.False(t, hasEntry(t, enabled, ctx, entry.ID))
 }
 
 func TestModuleRetentionUsesSettingAndRollsBackAtomically(t *testing.T) {
@@ -260,13 +249,26 @@ func TestModuleObservesMappedStableErrorCodeAndStatusClass(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	var observations []Observation
-	module := buildModule(t, db, settingsStub{enabled: true, retention: 30}, func(observation Observation) {
+	module := buildModule(t, db, settingsStub{enabled: false, retention: 30}, func(observation Observation) {
 		observations = append(observations, observation)
 	})
 
-	_, err := module.LookupEntry(testpkg.Ctx(t), 9_223_372_036_854_775_000)
-	require.ErrorIs(t, err, feedback.ErrEntryNotFound)
+	_, err := module.FindEntries(testpkg.Ctx(t), feedback.Filter{})
+	require.ErrorIs(t, err, feedback.ErrFeatureDisabled)
 	require.Len(t, observations, 1)
-	assert.ErrorIs(t, observations[0].Err, feedback.ErrEntryNotFound)
-	assert.Equal(t, "entry_not_found", feedback.ErrorCode(observations[0].Err))
+	assert.ErrorIs(t, observations[0].Err, feedback.ErrFeatureDisabled)
+	assert.Equal(t, "feature_disabled", feedback.ErrorCode(observations[0].Err))
+}
+
+// hasEntry reports whether the entry is visible to the module in ctx.
+func hasEntry(t *testing.T, module feedback.Capability, ctx context.Context, id int64) bool {
+	t.Helper()
+	entries, err := module.FindEntries(ctx, feedback.Filter{})
+	require.NoError(t, err)
+	for _, entry := range entries {
+		if entry.ID == id {
+			return true
+		}
+	}
+	return false
 }

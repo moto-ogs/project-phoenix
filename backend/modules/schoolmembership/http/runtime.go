@@ -317,7 +317,6 @@ func (rs *Resource) Register(r chi.Router, withTx Middleware) {
 	r.With(usersRead, withTx).Get("/{id}/groups", rs.getStaffGroups)
 	r.With(usersRead, withTx).Get("/{id}/school-classes", rs.getStaffSchoolClasses)
 	r.With(rs.runtime.Permission(permissions.UsersManage), withTx).Put("/{id}/school-classes", rs.updateStaffSchoolClasses)
-	r.With(usersRead, withTx).Get("/available", rs.getAvailableStaff)
 	r.With(usersRead, withTx).Get("/by-role", rs.getStaffByRole)
 
 	r.With(rs.runtime.Permission(permissions.UsersCreate), withTx).Post("/", rs.createStaff)
