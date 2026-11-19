@@ -43,6 +43,10 @@ import {
 } from "~/lib/week-protocols-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const WEEK_PROTOCOL_INFO =
+  "Hier siehst du, was moto in dieser Woche festgehalten hat. Mit „Ergänzen“ schreibst du dazu, was wichtig war. Danach wählst du „Abschließen“.";
+
 // Wochenprotokoll (#4769): eine Woche einer Gruppe. Jeder Tag zeigt, was der
 // Abend festgehalten hat. Im Entwurf ergänzt die Gruppenleitung die Tage und
 // die Woche und schließt das Protokoll ab; danach ändert es sich nicht mehr
@@ -186,6 +190,7 @@ function WeekProtocolContent() {
 
   return (
     <TenantPage
+      info={WEEK_PROTOCOL_INFO}
       title={protocol?.groupName ?? "Wochenprotokoll"}
       back
       backHref={weekProtocolsPath(protocol?.groupId)}
@@ -591,7 +596,9 @@ export default function WeekProtocolPage() {
     <RoleGuard
       variant="staffOrAdmin"
       permission={["groups:update", "groups:manage"]}
-      fallback={<TenantPage title="Wochenprotokoll" loading />}
+      fallback={
+        <TenantPage info={WEEK_PROTOCOL_INFO} title="Wochenprotokoll" loading />
+      }
     >
       <WeekProtocolContent />
     </RoleGuard>

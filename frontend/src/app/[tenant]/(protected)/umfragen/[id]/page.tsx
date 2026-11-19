@@ -75,6 +75,10 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { pollsConcept } from "~/lib/concepts/polls";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const SURVEY_DETAIL_INFO =
+  "Hier siehst du eine Umfrage mit ihren Fragen. Einen Entwurf veröffentlichst du über das Menü mit den drei Punkten. Danach stehen die Antworten unter „Auswertung“.";
+
 const logger = createLogger({ component: "SurveyDetailPage" });
 
 const BACK = {
@@ -89,7 +93,16 @@ type LifecycleAction = "publish" | "close" | "remind" | "delete" | null;
 export default function SurveyDetailPage() {
   // useSearchParams (`?reiter=`, `?bearbeiten=`) braucht die Suspense-Grenze.
   return (
-    <Suspense fallback={<TenantPage title="Umfrage" {...BACK} loading />}>
+    <Suspense
+      fallback={
+        <TenantPage
+          info={SURVEY_DETAIL_INFO}
+          title="Umfrage"
+          {...BACK}
+          loading
+        />
+      }
+    >
       <SurveyDetailContent />
     </Suspense>
   );
@@ -204,11 +217,20 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
   // Before the session is known, useSWRAuth holds the key back and reports
   // no request, so a missing survey without an error is still loading.
   if ((!survey && !loadError) || awaitingErrorText) {
-    return <TenantPage title="Umfrage" {...BACK} statsLoading loading />;
+    return (
+      <TenantPage
+        info={SURVEY_DETAIL_INFO}
+        title="Umfrage"
+        {...BACK}
+        statsLoading
+        loading
+      />
+    );
   }
   if (loadError || !survey) {
     return (
       <TenantPage
+        info={SURVEY_DETAIL_INFO}
         title="Umfrage"
         {...BACK}
         error={
@@ -286,6 +308,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
 
   return (
     <TenantPage
+      info={SURVEY_DETAIL_INFO}
       title={survey.title}
       stats={stats}
       {...BACK}

@@ -15,6 +15,10 @@ import {
   reminderToneClass,
 } from "~/lib/reminders-display";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const REMINDERS_INFO =
+  "Hier siehst du Abholungen und Aktivitäten, die bald anstehen oder schon überfällig sind. Überfällig heißt: Die Zeit ist schon vorbei.";
+
 function ReminderRow({ reminder }: { reminder: Reminder }) {
   const subtitle = reminderSubtitle(reminder);
   return (
@@ -70,6 +74,7 @@ export default function RemindersPage() {
 
   return (
     <TenantPage
+      info={REMINDERS_INFO}
       title="Erinnerungen"
       // Ohne geladene Liste keine "0 anstehend" neben dem Ladefehler (#2517).
       stats={

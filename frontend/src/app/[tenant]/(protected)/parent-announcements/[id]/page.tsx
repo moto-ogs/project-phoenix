@@ -54,6 +54,10 @@ import { pollsConcept } from "~/lib/concepts/polls";
 
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const ANNOUNCEMENT_DETAIL_INFO =
+  "Hier siehst du, was die Eltern bekommen. Unter dem Titel steht, ob es schon veröffentlicht ist. Unter „Zielgruppen und Zustellung“ steht, an wen es geht.";
+
 /** SWR-Schlüssel der Liste, die nach jeder Lebenszyklus-Aktion neu lädt. */
 const LIST_KEY = parentAnnouncementKeys.list();
 
@@ -220,6 +224,7 @@ function AnnouncementDetailPageContent() {
   if (loadError || !announcement) {
     return (
       <TenantPage
+        info={ANNOUNCEMENT_DETAIL_INFO}
         title="Mitteilung"
         back
         backHref={referrer}
@@ -269,6 +274,7 @@ function AnnouncementDetailPageContent() {
 
   return (
     <TenantPage
+      info={ANNOUNCEMENT_DETAIL_INFO}
       title={announcement.title}
       stats={statusLine}
       back

@@ -88,6 +88,10 @@ import { formatChatDateTime } from "~/lib/date-helpers";
 import { ThreadSkeleton, ThreadMessagesSkeleton } from "./page-skeleton";
 import { childrenConcept } from "~/lib/concepts/children";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const THREAD_INFO =
+  "Hier liest du die Unterhaltung mit den Eltern eines Kindes. Die neueste Nachricht steht unten. Darunter schreibst du deine Antwort.";
+
 const logger = createLogger({ component: "MessageThreadPage" });
 
 const MARK_UNREAD_LABEL = "Als ungelesen markieren";
@@ -581,6 +585,7 @@ function MessageThreadContent() {
   if (!showSkeleton && !thread) {
     return (
       <TenantPage
+        info={THREAD_INFO}
         title="Unterhaltung"
         {...MESSAGES_BACK}
         error={
@@ -597,6 +602,7 @@ function MessageThreadContent() {
 
   return (
     <TenantPage
+      info={THREAD_INFO}
       title={thread?.guardian_name ?? "Unterhaltung"}
       {...MESSAGES_BACK}
       stats={statusLine}

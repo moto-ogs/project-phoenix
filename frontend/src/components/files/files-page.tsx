@@ -204,6 +204,7 @@ export function FilesPage() {
 
   return (
     <TenantPage
+      info={FILES_INFO}
       title="Dateien"
       // Ohne geladene Ablage keine "0 Ordner" neben dem Ladefehler (#2517).
       stats={
@@ -667,3 +668,7 @@ function FolderFilesPanel({
     </div>
   );
 }
+
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const FILES_INFO =
+  "Hier liegen gemeinsame Dateien, sortiert in Ordnern. Wähle zuerst einen Ordner. Über das Menü mit den drei Punkten öffnest du eine Datei oder lädst sie herunter.";

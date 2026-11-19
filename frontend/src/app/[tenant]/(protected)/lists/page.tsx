@@ -83,6 +83,10 @@ import { IconTile } from "~/components/ui/icon-tile";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const LISTS_INFO =
+  "Hier stellst du eine Liste der Kinder für einen Tag zusammen, zum Beispiel zum Ausdrucken. Wähle oben das Datum und unter „Quelle“ die Art der Liste. Drucken und Herunterladen findest du im Menü mit den drei Punkten.";
+
 const logger = createLogger({ component: "SlotListsPage" });
 
 // Hinweise aus dem Export-Ablauf (#2516). Keine API-Fehler: der Export hält
@@ -1880,6 +1884,7 @@ export default function SlotListsPage() {
     "";
   return (
     <TenantPage
+      info={LISTS_INFO}
       title="Tageslisten"
       // Erreichbar über Datenverwaltung → Exporte, kein eigener Eintrag in
       // der Seitenleiste.

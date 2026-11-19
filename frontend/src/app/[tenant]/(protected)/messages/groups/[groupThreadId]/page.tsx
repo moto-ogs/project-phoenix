@@ -49,6 +49,10 @@ import {
 } from "~/lib/parent-group-threads-api";
 import { useTenant } from "~/lib/tenant-context";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const GROUP_THREAD_INFO =
+  "Hier schreibst du allen Eltern dieser Gruppennachricht. Unter „Gelesen“ siehst du je Kind, ob die Eltern die neueste Nachricht gelesen haben.";
+
 const logger = createLogger({ component: "GroupMessagePage" });
 
 const GROUPS_BACK = {
@@ -262,6 +266,7 @@ function GroupMessageContent() {
   if (!showSkeleton && !data) {
     return (
       <TenantPage
+        info={GROUP_THREAD_INFO}
         title="Gruppennachricht"
         {...GROUPS_BACK}
         error={error ? loadError : "Gruppennachricht nicht gefunden."}
@@ -285,6 +290,7 @@ function GroupMessageContent() {
 
   return (
     <TenantPage
+      info={GROUP_THREAD_INFO}
       title={thread?.title ?? preview?.name ?? "Gruppennachricht"}
       {...GROUPS_BACK}
       stats={stats}
