@@ -42,10 +42,10 @@ test('outbox mails failed for good alert from the worker log line', { timeout: 9
   assert.ok(ready, 'isolated Loki did not become ready');
   const now = Date.now();
   const stamp = ms => String(BigInt(ms) * 1000000n);
-  const push = (ms, record, env = 'prod') => {
+  const push = (ms, record, env = 'prod', service = 'worker') => {
     const line = JSON.stringify({ time: new Date(ms).toISOString(), ...record });
     const result = request('/loki/api/v1/push', { streams: [
-      { stream: { env, service: 'server' }, values: [[stamp(ms), line]] },
+      { stream: { env, service }, values: [[stamp(ms), line]] },
     ] });
     assert.equal(result.status, 0, 'synthetic log ingestion failed');
   };
@@ -65,6 +65,8 @@ test('outbox mails failed for good alert from the worker log line', { timeout: 9
   assert.equal(value(), 0, 'staging cannot trigger the production alarm');
   push(now - 30000, tick('delivery worker: deliveries failed for good after all attempts: 2 (1 email dispatches with unknown outcome: dispatch fence expired without finalization; email welcome delivery 9: provider rejected)'));
   assert.equal(value(), 1, 'a dead-lettered delivery alerts');
+  push(now - 20000, tick('delivery worker: deliveries failed for good after all attempts: 1'), 'prod', 'server');
+  assert.equal(value(), 2, 'the embedded worker remains covered during cutover or rollback');
   assert.equal(value(now + 16 * 60000), 0, 'the alarm resolves once no delivery failed for 15 minutes');
 });
 
@@ -76,7 +78,7 @@ test('oldest pending outbox mail alerts after an hour of waiting', { timeout: 12
   assert.equal(threshold, 3600);
   assert.equal(pending, '5m');
   // backend/observability/prometheus.go exports the gauge.
-  assert.match(expression, /phoenix_delivery_oldest_pending_age_seconds\{env="prod",service="server"\}/);
+  assert.match(expression, /phoenix_delivery_oldest_pending_age_seconds\{env="prod",service=~"server\|worker"\}/);
 
   const image = readFileSync(new URL('../monitoring/prometheus-compose.yml', import.meta.url), 'utf8')
     .match(/image: (prom\/prometheus:\S+)/)[1];
@@ -87,7 +89,7 @@ test('oldest pending outbox mail alerts after an hour of waiting', { timeout: 12
   writeFileSync(join(dir, 'rules.json'), JSON.stringify({ groups: [{ name: 'outbox', rules: [{
     alert: 'OutboxMailWaiting', expr: `(${expression}) > ${threshold}`, for: pending,
   }] }] }));
-  const series = env => `phoenix_delivery_oldest_pending_age_seconds{job="phoenix-backend-${env}", instance="${env}-server-1:8080", env="${env}", service="server"}`;
+  const series = env => `phoenix_delivery_oldest_pending_age_seconds{job="phoenix-worker-${env}", instance="${env}-worker-1:8080", env="${env}", service="worker"}`;
   const alert = (minute, firing) => ({ eval_time: `${minute}m`, alertname: 'OutboxMailWaiting', exp_alerts: firing ? [{ exp_labels: {} }] : [] });
   // prod: a short queue, then a throttled mail ages one minute per minute from
   // minute 10 and goes out at minute 80. staging waits all along.

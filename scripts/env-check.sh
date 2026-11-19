@@ -191,16 +191,9 @@ if ! python3 "${SCRIPT_DIR}/check-runtime-env.py"; then
   exit_code=1
 fi
 
-# Deployed stacks with the template's pool sizes: pools, LISTEN connections
-# and replicas fit max_connections (#7226). Deploys repeat it with the
-# decrypted values.
-echo ""
-echo "=== Check 3b: Database connection budget ==="
-for stack in staging production demo; do
-  if ! python3 "${SCRIPT_DIR}/check-db-connection-budget.py" "${PROJECT_ROOT}/environments/${stack}.compose.yml" "${PROJECT_ROOT}/.env.example"; then
-    exit_code=1
-  fi
-done
+# Connection budgets require the actual pool sizes, which are encrypted in
+# SOPS, not the unrelated local .env.example. Each deploy job checks the
+# resolved stack with its decrypted environment before copying it to the host.
 
 # ============================================================
 # CHECK 4: Fail-fast config guard

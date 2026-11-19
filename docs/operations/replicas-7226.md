@@ -7,6 +7,9 @@ scaled independently. Shared state is in PostgreSQL and the upload store
 This page covers the processes, the load balancer, draining, the database
 connection budget and scaling.
 
+Before the worker split, apply the [monitoring cutover](../../monitoring/README.md#standalone-worker-cutover):
+worker journal sources, metrics targets, and the rules that cover both process modes.
+
 ## Processes
 
 | Service | Command | Replicas | Notes |
@@ -97,8 +100,10 @@ superuser reserve (PostgreSQL defaults 100 and 3).
 `scripts/check-db-connection-budget.py` computes it from the resolved
 Compose file:
 
-- `scripts/env-check.sh` (CI, on environment and Compose changes) checks all
-  three stacks with the template values of `.env.example`.
+- PR checks validate runtime environment boundaries and regression-test the
+  budget calculation, including two APIs with a pool size of 25 (88/97) and
+  40 (133/97). They do not enforce the local `.env.example` pool sizes against
+  deployed topology: the actual pool sizes live in encrypted SOPS values.
 - Every deploy job in `build.yml` checks its stack with the decrypted
   environment before it copies anything to the server; a stack over budget
   fails there and the running release stays untouched.
