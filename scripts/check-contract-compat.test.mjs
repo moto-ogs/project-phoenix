@@ -71,6 +71,18 @@ test("no-data responses stay compatible and cannot change to or from data respon
   assert.deepEqual(breakingChanges(noData, wrongPortal), ["GET /api/rows/: portal tenant removed"]);
 });
 
+test("a file answer and a multipart request are kinds of their own", () => {
+  const file = model(base.types[0].fields, { response: undefined, file: true });
+  assert.deepEqual(breakingChanges(file, structuredClone(file)), []);
+  assert.deepEqual(breakingChanges(file, base), ["GET /api/rows/: file became array<object>"]);
+  assert.deepEqual(breakingChanges(base, file), ["GET /api/rows/: array<object> became file"]);
+  const upload = model(base.types[0].fields, { method: "POST", multipart: true });
+  const json = model(base.types[0].fields, { method: "POST", request: { kind: "ref", ref: "Row" } });
+  assert.deepEqual(breakingChanges(upload, structuredClone(upload)), []);
+  assert.deepEqual(breakingChanges(upload, json), ["POST /api/rows/ request: multipart became json"]);
+  assert.deepEqual(breakingChanges(json, upload), ["POST /api/rows/ request: json became multipart"]);
+});
+
 test("the committed model is compatible with itself", () => {
   const committed = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", MODEL_PATH), "utf8"));
   assert.deepEqual(breakingChanges(committed, committed), []);

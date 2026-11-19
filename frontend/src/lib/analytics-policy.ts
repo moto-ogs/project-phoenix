@@ -51,6 +51,25 @@ const ONBOARDING_SURFACES = [
 ] as const;
 export type OnboardingSurface = (typeof ONBOARDING_SURFACES)[number];
 
+/**
+ * Checklisten des Einstiegs, deren Zustand nur im Browser liegt (#7557): nur
+ * die Ersten Schritte der Eltern. Checklisten mit Zustand auf dem Server
+ * melden ihre Ereignisse aus dem Backend (Kernaktionen, #7541).
+ */
+const ONBOARDING_CHECKLISTS = ["parent_first_steps"] as const;
+export type OnboardingChecklist = (typeof ONBOARDING_CHECKLISTS)[number];
+
+/** Feste Schritt-Schlüssel der Ersten Schritte der Eltern (#7557). */
+const ONBOARDING_CHECKLIST_STEPS = [
+  "start",
+  "child_data",
+  "messages_news",
+  "install_app",
+  "notifications",
+] as const;
+export type OnboardingChecklistStep =
+  (typeof ONBOARDING_CHECKLIST_STEPS)[number];
+
 const ANALYTICS_SURFACES = [
   "ogs",
   "parents",
@@ -515,6 +534,11 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "onboarding_surface_shown",
   "onboarding_surface_accepted",
   "onboarding_surface_dismissed",
+  // Erste Schritte der Eltern (#7557): nur die Checkliste und der feste
+  // Schritt-Schlüssel, ihr Zustand liegt nur im Browser.
+  "onboarding_checklist_step_done",
+  "onboarding_checklist_dismissed",
+  "onboarding_checklist_completed",
 ]);
 
 const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -528,6 +552,8 @@ const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   notification_type: new Set(NOTIFICATION_FEED_ANALYTICS_TYPES),
   child_scope: new Set(CHILD_SCOPE_ANALYTICS_VALUES),
   onboarding_surface: new Set(ONBOARDING_SURFACES),
+  checklist: new Set(ONBOARDING_CHECKLISTS),
+  checklist_step: new Set(ONBOARDING_CHECKLIST_STEPS),
 };
 
 /** SDK identifiers: anonymous runtime IDs, UUIDs, the project token. */

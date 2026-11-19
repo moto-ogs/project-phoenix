@@ -478,8 +478,9 @@ func operatorSessions(values []domain.OperatorSession) []ports.OperatorSession {
 	return result
 }
 
-// VerifyOperatorSession refuses an inactive or unknown operator and an access
-// token whose refresh family is gone, expired or another operator's. Operator
+// VerifyOperatorSession refuses an inactive or unknown operator and, as an
+// ended session, an access token whose refresh family is gone, expired or
+// another operator's. Operator
 // tokens keep this check of their own; account tokens run AccessSessions.
 // Both reads share one administrative read unit (ADR 0161) in this order and
 // with these guards; it writes nothing, and a refusal ends it before the next
@@ -490,18 +491,21 @@ func (s *Service) VerifyOperatorSession(ctx context.Context, operatorID int64, f
 		if err != nil {
 			return err
 		}
-		if !operator.Active || familyID == "" {
+		if !operator.Active {
 			return identityaccess.ErrOperatorInactive
+		}
+		if familyID == "" {
+			return identityaccess.ErrOperatorSessionEnded
 		}
 		session, err := s.LatestOperatorSessionInFamily(txCtx, familyID)
 		if errors.Is(err, identityaccess.ErrOperatorSessionNotFound) {
-			return identityaccess.ErrOperatorInactive
+			return identityaccess.ErrOperatorSessionEnded
 		}
 		if err != nil {
 			return err
 		}
 		if session.OperatorID != operatorID || !session.Expiry.After(s.now()) {
-			return identityaccess.ErrOperatorInactive
+			return identityaccess.ErrOperatorSessionEnded
 		}
 		return nil
 	})
