@@ -160,22 +160,43 @@ describe("AnnouncementModal analytics", () => {
     expect(mocks.markSeen).toHaveBeenCalledTimes(2);
   });
 
-  it("does not retry a failed seen report after its request outcome is ambiguous", async () => {
+  it("does not retry a failed seen report after an unrelated re-render", async () => {
     mocks.markSeen.mockRejectedValueOnce(
       new Error("vorübergehend nicht erreichbar"),
     );
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     const { AnnouncementModal } = await setup(true);
-    render(<AnnouncementModal />);
+    const { rerender } = render(<AnnouncementModal />);
 
     await screen.findByText("Erste");
     await waitFor(() => expect(mocks.markSeen).toHaveBeenCalledTimes(1));
 
+    rerender(<AnnouncementModal />);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(5_000);
+      await Promise.resolve();
     });
 
     expect(mocks.markSeen).toHaveBeenCalledTimes(1);
+  });
+
+  it("records the visible announcement before dismissing it", async () => {
+    let resolveSeen: (() => void) | undefined;
+    mocks.announcements = [announcement(1, "Erste")];
+    mocks.markSeen.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSeen = resolve;
+        }),
+    );
+    const { AnnouncementModal } = await setup(true);
+    render(<AnnouncementModal />);
+
+    await screen.findByText("Erste");
+    await waitFor(() => expect(mocks.markSeen).toHaveBeenCalledWith(1));
+    fireEvent.click(screen.getByRole("button", { name: "Verstanden" }));
+
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+    resolveSeen?.();
+    await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledWith(1));
   });
 
   it("reports the announcement as shown once and accepted after the last „Verstanden“", async () => {

@@ -128,6 +128,9 @@ func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *
 	canSee, _, err := fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
 	require.NoError(t, err)
 	assert.False(t, canSee, "a historical seen announcement stays closed")
+	canDismiss, _, err := fix.projection.CanDismiss(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.False(t, canDismiss, "a historical seen announcement stays closed")
 
 	_, err = db.ExecContext(ctx, `UPDATE platform.announcement_views
 		SET shown_at = seen_at
@@ -140,6 +143,9 @@ func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *
 	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
 	require.NoError(t, err)
 	assert.True(t, canSee)
+	canDismiss, _, err = fix.projection.CanDismiss(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.True(t, canDismiss)
 
 	count, _, err := fix.projection.CountUnread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
@@ -156,6 +162,9 @@ func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *
 	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
 	require.NoError(t, err)
 	assert.False(t, canSee, "a dismissed announcement is not actionable")
+	canDismiss, _, err = fix.projection.CanDismiss(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.True(t, canDismiss, "a dismissed announcement acknowledges a repeated dismissal")
 }
 
 func TestProjection_CanSeeOnlyTheCurrentAudience(t *testing.T) {
@@ -243,6 +252,9 @@ func TestMap_AnswersInConsumerValues(t *testing.T) {
 	canSee, _, err := mapped.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
 	require.NoError(t, err)
 	assert.True(t, canSee)
+	canDismiss, _, err := mapped.CanDismiss(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.True(t, canDismiss)
 
 	targets, _, err := mapped.TargetCount(ctx, announcementView{ID: fix.foreignMessage})
 	require.NoError(t, err)

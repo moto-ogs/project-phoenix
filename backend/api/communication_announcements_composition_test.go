@@ -162,6 +162,20 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	assert.Equal(t, 1, stats.TargetCount)
 
 	require.NoError(t, module.MarkDismissed(ctx, viewer, announcement.ID))
+	var dismissedView struct {
+		SeenAt time.Time `bun:"seen_at"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT seen_at FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &dismissedView))
+	// A response can be lost after the write commits; the same dismissal must
+	// still acknowledge the already closed announcement.
+	require.NoError(t, module.MarkDismissed(ctx, viewer, announcement.ID))
+	var retriedView struct {
+		SeenAt time.Time `bun:"seen_at"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT seen_at FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &retriedView))
+	assert.Equal(t, dismissedView.SeenAt, retriedView.SeenAt)
 	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
 	assert.Zero(t, count, "dismissing an announcement closes it")

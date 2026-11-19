@@ -96,6 +96,12 @@ const unreadWhere = audienceWhere + `
 		AND COALESCE(v.dismissed, FALSE) = FALSE
 		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL)`
 
+// dismissed views remain dismissible so a client can safely repeat an
+// acknowledgement after losing its successful response. Historical views stay
+// closed: they have seen_at but no shown_at and were never dismissed.
+const dismissibleWhere = audienceWhere + `
+		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL OR v.dismissed = TRUE)`
+
 func (p *Projection) Unread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) ([]contract.Announcement, contract.Stats, error) {
 	db, err := p.database(ctx)
 	if err != nil {
@@ -146,6 +152,29 @@ func (p *Projection) CanSee(ctx context.Context, userID int64, roles []string, t
 	started := time.Now()
 	var id int64
 	err = db.NewRaw(`SELECT a.id`+unreadFrom+unreadWhere+`
+		AND a.id = ? FOR SHARE OF a`, append(unreadArgs(userID, roles, tenantID, orgID), announcementID)...).Scan(ctx, &id)
+	stats.StatementDuration = time.Since(started)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, stats, nil
+	}
+	if err != nil {
+		return false, stats, fmt.Errorf("announcement audience projection: validate announcement: %w", err)
+	}
+	stats.Rows = 1
+	return true, stats, nil
+}
+
+// CanDismiss validates and locks an announcement a caller may acknowledge.
+// A previously dismissed announcement remains valid for a repeat request.
+func (p *Projection) CanDismiss(ctx context.Context, userID int64, roles []string, tenantID, orgID, announcementID int64) (bool, contract.Stats, error) {
+	db, err := p.database(ctx)
+	if err != nil {
+		return false, contract.Stats{}, err
+	}
+	stats := contract.Stats{Queries: 1}
+	started := time.Now()
+	var id int64
+	err = db.NewRaw(`SELECT a.id`+unreadFrom+dismissibleWhere+`
 		AND a.id = ? FOR SHARE OF a`, append(unreadArgs(userID, roles, tenantID, orgID), announcementID)...).Scan(ctx, &id)
 	stats.StatementDuration = time.Since(started)
 	if errors.Is(err, sql.ErrNoRows) {

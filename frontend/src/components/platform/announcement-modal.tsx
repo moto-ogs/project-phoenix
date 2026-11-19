@@ -64,11 +64,11 @@ export function AnnouncementModal() {
   const dismissedIdsRef = useRef<Set<string>>(new Set());
   // Track IDs the user has seen (closed without dismissing) to avoid re-opening
   const closedIdsRef = useRef<Set<string>>(new Set());
-  // Einstieg (#7555): IDs already reported as seen, and whether this opening
-  // of the modal was reported as shown. Refs survive re-renders, so neither
-  // is sent twice.
-  const seenIdsRef = useRef<Set<string>>(new Set());
-  const seenInFlightIdsRef = useRef<Set<string>>(new Set());
+  // Einstieg (#7555): a view report is attempted at most once per modal
+  // instance. A transport failure can mean the backend committed it, so a
+  // later render must not send it again.
+  const seenAttemptedIdsRef = useRef<Set<string>>(new Set());
+  const seenRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
   const shownReportedRef = useRef(false);
 
   // Show modal when we have announcements - capture stable snapshot
@@ -88,6 +88,40 @@ export function AnnouncementModal() {
     }
   }, [announcements, isLoading, isVisible]);
 
+  const reportSeen = useCallback(
+    (id: number | string) => {
+      const key = String(id);
+      const existing = seenRequestsRef.current.get(key);
+      if (existing) return existing;
+      if (seenAttemptedIdsRef.current.has(key)) return Promise.resolve();
+
+      seenAttemptedIdsRef.current.add(key);
+      const request = Promise.resolve()
+        .then(() => markSeen(id))
+        .catch((error: unknown) => {
+          logger.error("announcement_seen_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      seenRequestsRef.current.set(key, request);
+      return request;
+    },
+    [markSeen],
+  );
+
+  const dismissAfterSeen = useCallback(
+    (id: number | string) => {
+      void reportSeen(id)
+        .then(() => dismiss(id))
+        .catch((error: unknown) => {
+          logger.error("announcement_dismiss_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    },
+    [dismiss, reportSeen],
+  );
+
   // Report each announcement once when it is on screen: the backend stores
   // seen_at and counts it for the school; the browser reports the surface.
   const currentId = isVisible
@@ -103,25 +137,8 @@ export function AnnouncementModal() {
       trackOnboardingSurface("shown", "announcement");
     }
     if (currentId === undefined) return;
-    const key = String(currentId);
-    if (seenIdsRef.current.has(key) || seenInFlightIdsRef.current.has(key)) {
-      return;
-    }
-    seenInFlightIdsRef.current.add(key);
-    // Fire-and-forget like dismiss: a failed report must not block reading.
-    void markSeen(currentId)
-      .then(() => {
-        seenIdsRef.current.add(key);
-      })
-      .catch((error: unknown) => {
-        logger.error("announcement_seen_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      })
-      .finally(() => {
-        seenInFlightIdsRef.current.delete(key);
-      });
-  }, [isVisible, currentId, markSeen]);
+    void reportSeen(currentId);
+  }, [isVisible, currentId, reportSeen]);
 
   // Dismiss current and advance to next announcement ("Weiter" / "Verstanden")
   const handleDismiss = useCallback(async () => {
@@ -131,12 +148,8 @@ export function AnnouncementModal() {
     // Track this ID as dismissed locally
     dismissedIdsRef.current.add(String(current.id));
 
-    // Send dismiss to backend (fire-and-forget, don't block UI)
-    dismiss(current.id).catch((error) => {
-      logger.error("announcement_dismiss_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    });
+    // Preserve the write order while the UI can already advance.
+    dismissAfterSeen(current.id);
 
     // Move to next or close
     if (currentIndex < queuedAnnouncements.length - 1) {
@@ -148,17 +161,22 @@ export function AnnouncementModal() {
       // Refresh data after all announcements processed
       void refresh();
     }
-  }, [queuedAnnouncements, currentIndex, dismiss, refresh]);
+  }, [queuedAnnouncements, currentIndex, dismissAfterSeen, refresh]);
 
   // Close modal entirely (X button, backdrop, Escape key)
   // Dismiss all queued announcements on the backend so they don't reappear on next login
   const handleClose = useCallback(() => {
     trackOnboardingSurface("dismissed", "announcement");
+    const visibleID = queuedAnnouncements[currentIndex]?.id;
     for (const a of queuedAnnouncements) {
       closedIdsRef.current.add(String(a.id));
       if (!dismissedIdsRef.current.has(String(a.id))) {
         dismissedIdsRef.current.add(String(a.id));
-        dismiss(a.id).catch((error) => {
+        if (a.id === visibleID) {
+          dismissAfterSeen(a.id);
+          continue;
+        }
+        void dismiss(a.id).catch((error) => {
           logger.error("announcement_dismiss_failed", {
             error: error instanceof Error ? error.message : String(error),
           });
@@ -166,7 +184,7 @@ export function AnnouncementModal() {
       }
     }
     setIsVisible(false);
-  }, [queuedAnnouncements, dismiss]);
+  }, [queuedAnnouncements, currentIndex, dismiss, dismissAfterSeen]);
 
   const current = queuedAnnouncements[currentIndex];
   if (!current || !isVisible) return null;

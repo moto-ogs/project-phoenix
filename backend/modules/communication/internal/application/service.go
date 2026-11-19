@@ -211,11 +211,11 @@ func (s *Service) CountUnread(ctx context.Context, userID int64, roles []string,
 }
 
 func (s *Service) MarkSeen(ctx context.Context, viewer communication.AnnouncementViewer, announcementID int64) error {
-	return s.markView(ctx, "mark_seen", viewer, announcementID, s.store.MarkSeen)
+	return s.markView(ctx, "mark_seen", viewer, announcementID, s.audience.CanSee, s.store.MarkSeen)
 }
 
 func (s *Service) MarkDismissed(ctx context.Context, viewer communication.AnnouncementViewer, announcementID int64) error {
-	return s.markView(ctx, "mark_dismissed", viewer, announcementID, s.store.MarkDismissed)
+	return s.markView(ctx, "mark_dismissed", viewer, announcementID, s.audience.CanDismiss, s.store.MarkDismissed)
 }
 
 func (s *Service) markView(
@@ -223,10 +223,11 @@ func (s *Service) markView(
 	operation string,
 	viewer communication.AnnouncementViewer,
 	announcementID int64,
+	canAccess func(context.Context, int64, []string, int64, int64, int64) (bool, domain.OperationStats, error),
 	mark func(context.Context, int64, int64) (domain.OperationStats, error),
 ) error {
 	return s.run(ctx, operation, func(txCtx context.Context) (stats domain.OperationStats, err error) {
-		canSee, current, err := s.audience.CanSee(txCtx, viewer.AccountID, viewer.Roles, viewer.TenantID, viewer.OrgID, announcementID)
+		canSee, current, err := canAccess(txCtx, viewer.AccountID, viewer.Roles, viewer.TenantID, viewer.OrgID, announcementID)
 		stats.Add(current)
 		if err != nil {
 			return stats, err

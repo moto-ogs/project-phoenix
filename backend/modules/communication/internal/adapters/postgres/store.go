@@ -214,9 +214,10 @@ func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismisse
 		row.ShownAt = &seenAt
 	}
 	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
-		On("CONFLICT (user_id, announcement_id) DO UPDATE").Set("seen_at = EXCLUDED.seen_at")
+		On("CONFLICT (user_id, announcement_id) DO UPDATE")
 	if shown {
-		query = query.Set("shown_at = COALESCE(platform.announcement_views.shown_at, EXCLUDED.shown_at)")
+		query = query.Set("seen_at = EXCLUDED.seen_at").
+			Set("shown_at = COALESCE(platform.announcement_views.shown_at, EXCLUDED.shown_at)")
 	}
 	if dismissed {
 		query = query.Set("dismissed = TRUE")

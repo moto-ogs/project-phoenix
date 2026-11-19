@@ -2473,6 +2473,17 @@
     },
     {
       "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanDismiss",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/ports.Audience.CanDismiss",
+      "reason": "Owner-provided locking acknowledgement gate: the projection verifies the caller's current audience and keeps an already dismissed announcement valid for a repeat request after a lost response. The adapter only maps projection rows to Communication values; caller scope and target-local guard remain required. Target modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanDismiss; modules/staffannouncementaudience/internal/adapters/postgres/mapped.go:45. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanDismiss",
+      "target_owner": "staff-announcement-audience"
+    },
+    {
+      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanSee",
       "classification": "leaf",
       "effect": "lock",
