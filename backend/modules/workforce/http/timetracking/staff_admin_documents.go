@@ -244,11 +244,8 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 		return
 	}
 	defer common.CloseFile(uploaded.File)
-	// Without a category nothing is written: the service would refuse the
-	// document only after its bytes are stored.
-	category := r.FormValue("category")
-	if category == "" {
-		renderDocumentError(w, r, fmt.Errorf("%w: category is required", workforce.ErrStaffDocumentInvalid))
+	category, ok := requireDocumentCategory(w, r)
+	if !ok {
 		return
 	}
 
@@ -288,6 +285,18 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 
 	resp := newStaffDocumentResponse(*info)
 	common.Respond(w, r, http.StatusCreated, &resp, "Staff document uploaded successfully")
+}
+
+// requireDocumentCategory reads the category of an upload. Without one
+// nothing is written: the service would refuse the document only after its
+// bytes are stored.
+func requireDocumentCategory(w http.ResponseWriter, r *http.Request) (string, bool) {
+	category := r.FormValue("category")
+	if category == "" {
+		renderDocumentError(w, r, fmt.Errorf("%w: category is required", workforce.ErrStaffDocumentInvalid))
+		return "", false
+	}
+	return category, true
 }
 
 // reserveStoredDocument names the file about to be written and queues its

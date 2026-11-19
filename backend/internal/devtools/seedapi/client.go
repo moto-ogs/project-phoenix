@@ -9,7 +9,6 @@ import (
 	"maps"
 	"mime"
 	"mime/multipart"
-	"net/textproto"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -198,15 +197,15 @@ func (c *Client) PostFileWithAuthFields(auth AuthRef, path, fieldName, filename 
 // browserFilePartHeader declares the file part as a browser does: the type
 // its extension names, application/octet-stream when it names none. The
 // uploads check the declared type (#2352).
-func browserFilePartHeader(fieldName, filename string) textproto.MIMEHeader {
+func browserFilePartHeader(fieldName, filename string) map[string][]string {
 	declared := mime.TypeByExtension(filepath.Ext(filename))
 	if declared == "" {
 		declared = "application/octet-stream"
 	}
-	header := textproto.MIMEHeader{}
-	header.Set("Content-Disposition", mime.FormatMediaType("form-data", map[string]string{"name": fieldName, "filename": filename}))
-	header.Set("Content-Type", declared)
-	return header
+	return map[string][]string{
+		"Content-Disposition": {mime.FormatMediaType("form-data", map[string]string{"name": fieldName, "filename": filename})},
+		"Content-Type":        {declared},
+	}
 }
 
 func (c *Client) uploadFile(auth AuthRef, method, path, fieldName, filename string, contents []byte, fields map[string]string) ([]byte, error) {

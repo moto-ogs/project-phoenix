@@ -14,7 +14,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/textproto"
 	"path/filepath"
 	"testing"
 
@@ -224,10 +223,10 @@ func NewMultipartRequest(t *testing.T, method, target string, fieldName, fileNam
 	if declared == "" {
 		declared = "application/octet-stream"
 	}
-	header := textproto.MIMEHeader{}
-	header.Set("Content-Disposition", mime.FormatMediaType("form-data", map[string]string{"name": fieldName, "filename": fileName}))
-	header.Set("Content-Type", declared)
-	fw, err := writer.CreatePart(header)
+	fw, err := writer.CreatePart(map[string][]string{
+		"Content-Disposition": {mime.FormatMediaType("form-data", map[string]string{"name": fieldName, "filename": fileName})},
+		"Content-Type":        {declared},
+	})
 	if err != nil {
 		t.Fatalf("failed to create form file: %v", err)
 	}

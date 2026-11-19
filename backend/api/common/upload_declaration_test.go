@@ -8,7 +8,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"net/textproto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,10 +20,11 @@ func declaredUploadRequest(t *testing.T, fieldName, filename, declared string, c
 	t.Helper()
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
-	header := textproto.MIMEHeader{}
-	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename="%s"`, fieldName, filename))
+	header := map[string][]string{
+		"Content-Disposition": {fmt.Sprintf(`form-data; name=%q; filename="%s"`, fieldName, filename)},
+	}
 	if declared != "" {
-		header.Set("Content-Type", declared)
+		header["Content-Type"] = []string{declared}
 	}
 	part, err := writer.CreatePart(header)
 	require.NoError(t, err)
