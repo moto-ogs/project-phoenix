@@ -3464,6 +3464,32 @@ export const CareModuleSchema: z.ZodType<CareModule, unknown> = object<CareModul
   contract_count: safeInt,
 });
 
+/** Go: parentbilling.HolidaySiblingChild */
+export interface HolidaySiblingChild {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
+  id: int64StringOrNumber,
+  first_name: str,
+  last_name: str,
+});
+
+/** Go: parentbilling.HolidaySibling */
+export interface HolidaySibling {
+  registration_id: string;
+  status: string;
+  children: HolidaySiblingChild[] | null;
+}
+
+export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
+  registration_id: int64StringOrNumber,
+  status: str,
+  children: nullable(arr(HolidaySiblingChildSchema)),
+});
+
 /** Go: enrollment.HolidayRegistrationBooking */
 export interface HolidayRegistrationBooking {
   week_id: string;
@@ -3896,6 +3922,41 @@ export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetai
   mails: optional(arr(RequestMailOutcomeSchema)),
   promotions: optional(arr(HolidayPromotionSchema)),
 });
+
+/** Go: enrollment.HolidayNoCareDay */
+export interface HolidayNoCareDay {
+  date: string | null;
+  kind: string;
+  name: string;
+}
+
+export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
+  date: nullable(calendarDate),
+  kind: str,
+  name: str,
+});
+
+/** Go: enrollmenthttp.holidayGuardianRequest */
+export interface holidayGuardianRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+}
+
+/** Go: enrollmenthttp.holidayAddressRequest */
+export interface holidayAddressRequest {
+  street?: string;
+  postal_code?: string;
+  city?: string;
+}
+
+/** Go: enrollmenthttp.holidayContactRequest */
+export interface holidayContactRequest {
+  name?: string;
+  phone?: string;
+  relationship?: string;
+}
 
 /** Go: parentbilling.SEPADebit */
 export interface SEPADebit {

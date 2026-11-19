@@ -1,6 +1,6 @@
 // lib/ogs-group-live-api.ts
 // Client for the aggregated OGS group live projection (#2056).
-// GET /api/ogs-group-live returns everything the OGS-Gruppen page renders for
+// GET /api/students/ogs-group-live returns everything the OGS-Gruppen page renders for
 // one supervised group in a single backend request. The wire DTO is minimal by
 // contract — it must never grow personal fields the page does not display.
 import type { ClassHandover } from "~/lib/class-handover";
@@ -197,7 +197,7 @@ export async function fetchOgsGroupLive(
       ? `?group_id=${encodeURIComponent(withGroupId)}`
       : "";
     // The route reads the session cookie; the browser holds no token (#5005).
-    return transportFetch(`/api/ogs-group-live${query}`, {
+    return transportFetch(`/api/students/ogs-group-live${query}`, {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",

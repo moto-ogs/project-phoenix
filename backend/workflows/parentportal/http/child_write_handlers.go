@@ -39,10 +39,10 @@ type SubmitSickNoteRequest struct {
 	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
 }
 
-// SickNoteEnvelopeResponse is the ?envelope=1 shape of the sick-note create.
-// The bare status-day array stays the default so a tab loaded before this
-// change keeps working; a client that wants to know whether the school gated
-// the absence into a pending request asks for the envelope (#2267).
+// SickNoteEnvelopeResponse is the answer of the sick-note create: the status
+// days it wrote and the request the school gated the absence into, if any
+// (#2267). It is the only shape since #2352; the former bare status-day
+// array without ?envelope=1 is gone, the query is ignored.
 type SickNoteEnvelopeResponse struct {
 	StatusDays     []StatusDayResponse           `json:"status_days"`
 	PendingRequest *ParentExcusedRequestResponse `json:"pending_request"`
@@ -660,26 +660,8 @@ func respondSickNote(w http.ResponseWriter, r *http.Request, result *parentServi
 	for _, d := range result.StatusDays {
 		statusDays = append(statusDays, toStatusDayResponse(d))
 	}
-
-	// ?envelope=1 is the new client's opt-in to the full result. Old tabs keep
-	// the bare array below, which is what they call .map() on (#2267).
-	if r.URL.Query().Get("envelope") == "1" {
-		common.Respond(w, r, http.StatusCreated, SickNoteEnvelopeResponse{
-			StatusDays:     statusDays,
-			PendingRequest: pendingSickNoteRequest(result, accountID),
-		}, "Absence submitted")
-		return
-	}
-
-	// Backward-compatibility (#1845 review): ALWAYS respond with the bare
-	// status-day array — the shape every client (including tabs loaded before the
-	// approval gate was enabled) already calls .map() on. When the school gates an
-	// absence the request is created server-side but NOT returned here;
-	// StatusDays is empty and the child stays "expected". New clients discover the
-	// freshly-created pending request via GET .../excused-requests (they refetch
-	// after a submit). Returning a {status_days, pending_request} object on this
-	// path would crash an already-open #1735-era tab — which has the "excused"
-	// option but expects an array — and make it report a false failure, so the
-	// parent could resubmit and create a duplicate pending request.
-	common.Respond(w, r, http.StatusCreated, statusDays, "Absence submitted")
+	common.Respond(w, r, http.StatusCreated, SickNoteEnvelopeResponse{
+		StatusDays:     statusDays,
+		PendingRequest: pendingSickNoteRequest(result, accountID),
+	}, "Absence submitted")
 }

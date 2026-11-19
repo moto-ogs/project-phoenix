@@ -4606,6 +4606,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/ogs-group-live",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "group_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "Projection"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/pickup-change-notices",
       "portals": [
         "tenant"
@@ -7187,6 +7204,30 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/sick-note",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StatusDayResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/children/{studentId}/today",
       "portals": [
         "parent"
@@ -8976,6 +9017,28 @@
       "response": {
         "kind": "ref",
         "ref": "HolidayRegistrationHealthDetail"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-registrations/status/{statusToken}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-registrations/{token}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PublicHolidayRegistrationOfferResponse"
       }
     },
     {
@@ -13089,6 +13152,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/children/{studentId}/sick-note",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SubmitSickNoteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SickNoteEnvelopeResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/notice",
       "portals": [
         "parent"
@@ -14467,6 +14545,38 @@
         "kind": "ref",
         "ref": "HolidayRegistrationDetail"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/holiday-quotes/{token}",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayQuoteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayContribution"
+      },
+      "max_body_bytes": 65536
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/holiday-registrations/{token}",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationSubmitResponse"
+      },
+      "max_body_bytes": 2097152
     },
     {
       "method": "POST",
@@ -37508,6 +37618,24 @@
       ]
     },
     {
+      "name": "DayNote",
+      "go_type": "grouplive.DayNote",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "content",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayReport",
       "go_type": "classday.DayReport",
       "fields": [
@@ -42016,6 +42144,60 @@
       ]
     },
     {
+      "name": "Group",
+      "go_type": "grouplive.Group",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "via_substitution",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_personal",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "leaders",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "GroupChildResponse",
       "go_type": "messaging.GroupChildResponse",
       "fields": [
@@ -42099,6 +42281,63 @@
           "name": "can_end",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupLiveClassHandover",
+      "go_type": "grouplive.GroupLiveClassHandover",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "handed_over_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "handed_over_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absent",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupLiveTeacherHint",
+      "go_type": "grouplive.GroupLiveTeacherHint",
+      "fields": [
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "author_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -44466,6 +44705,41 @@
       ]
     },
     {
+      "name": "HolidayChildContribution",
+      "go_type": "parentbilling.HolidayChildContribution",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "lines",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayContributionLine"
+            }
+          }
+        },
+        {
+          "name": "total_cents",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayChildContributionResponse",
       "go_type": "parentbillinghttp.HolidayChildContributionResponse",
       "fields": [
@@ -44963,6 +45237,190 @@
       ]
     },
     {
+      "name": "HolidayContribution",
+      "go_type": "parentbilling.HolidayContribution",
+      "fields": [
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayChildContribution"
+            }
+          }
+        },
+        {
+          "name": "total_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "exemption_available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "benefits_exemption",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "frozen",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "confirmed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "invoiced",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "siblings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidaySibling"
+            }
+          }
+        },
+        {
+          "name": "sibling_debtor_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "siblings_invoiced",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "correction_needed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayContributionLine",
+      "go_type": "parentbilling.HolidayContributionLine",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "amount_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "week_starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "time_model_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_rank",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "discount_basis_points",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "discount_cents",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "booked_days",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayContributionLineResponse",
       "go_type": "parentbillinghttp.HolidayContributionLineResponse",
       "fields": [
@@ -45328,6 +45786,30 @@
         },
         {
           "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayCriterionQuestion",
+      "go_type": "enrollment.HolidayCriterionQuestion",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "question",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "scope",
           "schema": {
             "kind": "string"
           }
@@ -46709,6 +47191,32 @@
       ]
     },
     {
+      "name": "HolidayQuoteRequest",
+      "go_type": "parentbillinghttp.HolidayQuoteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "children",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayQuoteChildRequest"
+            }
+          }
+        },
+        {
+          "name": "benefits_declared",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayRebookingRequest",
       "go_type": "parentbillinghttp.HolidayRebookingRequest",
       "request": true,
@@ -46723,6 +47231,30 @@
               "kind": "ref",
               "ref": "HolidayBookingChoice"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayReceiptPlacement",
+      "go_type": "enrollment.HolidayReceiptPlacement",
+      "fields": [
+        {
+          "name": "child_position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "placement",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -47842,6 +48374,52 @@
       ]
     },
     {
+      "name": "HolidayRegistrationForm",
+      "go_type": "enrollmenthttp.HolidayRegistrationForm",
+      "fields": [
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "fields",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayFormField"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlock"
+            }
+          }
+        },
+        {
+          "name": "address_requirement",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_requirement",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayRegistrationGuardianResponse",
       "go_type": "parent.HolidayRegistrationGuardianResponse",
       "fields": [
@@ -48146,6 +48724,417 @@
       ]
     },
     {
+      "name": "HolidayRegistrationRequest",
+      "go_type": "enrollmenthttp.HolidayRegistrationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "holidayGuardianRequest"
+          }
+        },
+        {
+          "name": "guardian_address",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "holidayAddressRequest"
+          }
+        },
+        {
+          "name": "second_guardian",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "holidayGuardianRequest"
+          }
+        },
+        {
+          "name": "children",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayChildRequest"
+            }
+          }
+        },
+        {
+          "name": "emergency_contacts",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayContactRequest"
+            }
+          }
+        },
+        {
+          "name": "pickup_persons",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayContactRequest"
+            }
+          }
+        },
+        {
+          "name": "privacy_consent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "health_consent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "binding_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "custody_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "declaration_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "benefits_declared",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "benefits_proof_tokens",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "captcha_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "form_version",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "legal_acceptances",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "consent_version",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "retention_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "criteria",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "parent_account_requested",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "parent_account_proof",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationSchool",
+      "go_type": "enrollmenthttp.HolidayRegistrationSchool",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationStatusChild",
+      "go_type": "enrollmenthttp.HolidayRegistrationStatusChild",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weeks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationStatusWeek"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationStatusResponse",
+      "go_type": "enrollmenthttp.HolidayRegistrationStatusResponse",
+      "fields": [
+        {
+          "name": "traeger_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "period_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "registration_closes_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "binding",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "allocation_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationStatusChild"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationStatusWeek",
+      "go_type": "enrollmenthttp.HolidayRegistrationStatusWeek",
+      "fields": [
+        {
+          "name": "first_day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "time_model_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "host_school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "placement",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "lunch",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationSubmitResponse",
+      "go_type": "enrollmenthttp.HolidayRegistrationSubmitResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "placements",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayReceiptPlacement"
+            }
+          }
+        },
+        {
+          "name": "status_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "parent_account_setup_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayRegistrationSummary",
       "go_type": "enrollment.HolidayRegistrationSummary",
       "fields": [
@@ -48249,6 +49238,137 @@
               "kind": "ref",
               "ref": "HolidayRegistrationMailProblem"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationTimeModel",
+      "go_type": "enrollmenthttp.HolidayRegistrationTimeModel",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "price_cents",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationWeek",
+      "go_type": "enrollmenthttp.HolidayRegistrationWeek",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "host_school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_models",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationTimeModel"
+            }
+          }
+        },
+        {
+          "name": "booking_unit",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "full_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "no_care_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayNoCareDay"
+            }
+          }
+        },
+        {
+          "name": "lunch_price_cents",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "lunch_days",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -60131,6 +61251,68 @@
       ]
     },
     {
+      "name": "PickupTime",
+      "go_type": "grouplive.PickupTime",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekday_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_exception",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "day_notes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "DayNote"
+            }
+          }
+        },
+        {
+          "name": "day_departure_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Placeholder",
       "go_type": "templates.Placeholder",
       "fields": [
@@ -60211,6 +61393,30 @@
         {
           "name": "notes",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlannedActivity",
+      "go_type": "grouplive.PlannedActivity",
+      "fields": [
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
           "schema": {
             "kind": "string"
           }
@@ -61173,6 +62379,81 @@
       ]
     },
     {
+      "name": "Projection",
+      "go_type": "grouplive.Projection",
+      "fields": [
+        {
+          "name": "groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Group"
+            }
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "students",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Student"
+            }
+          }
+        },
+        {
+          "name": "room_status",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RoomStatus"
+            }
+          }
+        },
+        {
+          "name": "pickup_times",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupTime"
+            }
+          }
+        },
+        {
+          "name": "tracking_indicators",
+          "schema": {
+            "kind": "ref",
+            "ref": "TrackingIndicators"
+          }
+        },
+        {
+          "name": "transfers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Transfer"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ProofMappingRequest",
       "go_type": "traegerstaff.ProofMappingRequest",
       "request": true,
@@ -61522,6 +62803,128 @@
         },
         {
           "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PublicHolidayRegistrationOfferResponse",
+      "go_type": "enrollmenthttp.PublicHolidayRegistrationOfferResponse",
+      "fields": [
+        {
+          "name": "traeger_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "registration_opens_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "registration_closes_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "binding",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "notes",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "open",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "weeks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationWeek"
+            }
+          }
+        },
+        {
+          "name": "max_days_per_child",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "allocation_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "criteria",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayCriterionQuestion"
+            }
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationSchool"
+            }
+          }
+        },
+        {
+          "name": "captcha_site_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "form",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayRegistrationForm"
+          }
+        },
+        {
+          "name": "consent_texts",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayConsentTexts"
+          }
+        },
+        {
+          "name": "holiday_wish_mode",
           "schema": {
             "kind": "string"
           }
@@ -63980,6 +65383,25 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomStatus",
+      "go_type": "grouplive.RoomStatus",
+      "fields": [
+        {
+          "name": "in_group_room",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "current_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
           }
         }
       ]
@@ -69904,6 +71326,31 @@
       ]
     },
     {
+      "name": "SickNoteEnvelopeResponse",
+      "go_type": "parent.SickNoteEnvelopeResponse",
+      "fields": [
+        {
+          "name": "status_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StatusDayResponse"
+            }
+          }
+        },
+        {
+          "name": "pending_request",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ParentExcusedRequestResponse"
+          }
+        }
+      ]
+    },
+    {
       "name": "Side",
       "go_type": "staffpersonmerge.Side",
       "fields": [
@@ -73114,6 +74561,55 @@
       ]
     },
     {
+      "name": "StatusDayResponse",
+      "go_type": "parent.StatusDayResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reported_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StatusDaysBulkCreatedResponse",
       "go_type": "studentpresencehttp.StatusDaysBulkCreatedResponse",
       "fields": [
@@ -73377,6 +74873,195 @@
           "name": "masked_email",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student",
+      "go_type": "grouplive.Student",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_location",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "current_room_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sick",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sick_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "excused_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "class_trip",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "class_trip_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "day_planning_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "day_planning_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "day_planning_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pending_excused_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "class_handover",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GroupLiveClassHandover"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "arrival_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actual_arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actual_pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "teacher_hints",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "GroupLiveTeacherHint"
+            }
+          }
+        },
+        {
+          "name": "planned_activities",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "PlannedActivity"
+            }
           }
         }
       ]
@@ -75725,6 +77410,49 @@
       ]
     },
     {
+      "name": "SubmitSickNoteRequest",
+      "go_type": "parent.SubmitSickNoteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "dates",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "recipient_guardian_profile_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "SubmitSignatureRequest",
       "go_type": "enrollmenthttp.SubmitSignatureRequest",
       "request": true,
@@ -77109,6 +78837,36 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TrackingIndicators",
+      "go_type": "grouplive.TrackingIndicators",
+      "fields": [
+        {
+          "name": "labels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "results",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "bool"
+              }
+            }
           }
         }
       ]
@@ -81406,6 +83164,43 @@
         },
         {
           "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "go_type": "grouplive.Transfer",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "substitute_staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "substitute_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
           "schema": {
             "kind": "string"
           }
@@ -91041,6 +92836,46 @@
       ]
     },
     {
+      "name": "holidayBookingRequest",
+      "go_type": "enrollmenthttp.holidayBookingRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "week_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "time_model_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "lunch",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "holidayChildEditRequest",
       "go_type": "enrollmenthttp.holidayChildEditRequest",
       "request": true,
@@ -91097,6 +92932,112 @@
             "elem": {
               "kind": "json",
               "nullable": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "holidayChildRequest",
+      "go_type": "enrollmenthttp.holidayChildRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birth_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "home_school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "guest_school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "allergies",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "medication",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bookings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayBookingRequest"
+            }
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "wish_proof",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "criteria",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
             }
           }
         }
@@ -91328,6 +93269,72 @@
           "name": "home_school_name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "holidayQuoteBookingRequest",
+      "go_type": "parentbillinghttp.holidayQuoteBookingRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "week_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "time_model_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "lunch",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "holidayQuoteChildRequest",
+      "go_type": "parentbillinghttp.holidayQuoteChildRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "bookings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayQuoteBookingRequest"
+            }
+          }
+        },
+        {
+          "name": "age_rank",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]

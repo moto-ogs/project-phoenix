@@ -46,3 +46,17 @@ func PublicRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: request + "/family-children", Portals: portals, Request: StatusFamilyChildrenRequest{}, Response: capability.RegistrationFamilyChildren{}, MaxBodyBytes: publicSmallBodyBytes},
 	}
 }
+
+// PublicHolidayRegistrationRouteContracts registers the one link of a
+// published holiday period (#4661) and the status link of a sent
+// registration (#6676), relative to /traeger/holiday-registrations. Both run
+// without a session. The proof upload and the form documents keep their BFF
+// files.
+func PublicHolidayRegistrationRouteContracts() []common.RouteContract {
+	portals := publicPortal
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/status/{statusToken}", Portals: portals, Response: HolidayRegistrationStatusResponse{}},
+		{Method: "GET", Pattern: "/{token}", Portals: portals, Response: PublicHolidayRegistrationOfferResponse{}},
+		{Method: "POST", Pattern: "/{token}", Portals: portals, Request: HolidayRegistrationRequest{}, Response: HolidayRegistrationSubmitResponse{}, MaxBodyBytes: publicFormBodyBytes},
+	}
+}

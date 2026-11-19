@@ -17,6 +17,8 @@ import {
 } from "./runtime";
 import {
   HolidayRegistrationDetailSchema,
+  HolidaySiblingSchema,
+  type HolidaySibling,
 } from "./shared.generated";
 
 /** Go: parentbilling.DebtorNumberFormat */
@@ -100,32 +102,6 @@ export const HolidayChildContributionResponseSchema: z.ZodType<HolidayChildContr
   position: safeInt,
   lines: nullable(arr(HolidayContributionLineResponseSchema)),
   total_cents: safeInt,
-});
-
-/** Go: parentbilling.HolidaySiblingChild */
-export interface HolidaySiblingChild {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
-
-export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
-  id: int64StringOrNumber,
-  first_name: str,
-  last_name: str,
-});
-
-/** Go: parentbilling.HolidaySibling */
-export interface HolidaySibling {
-  registration_id: string;
-  status: string;
-  children: HolidaySiblingChild[] | null;
-}
-
-export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
-  registration_id: int64StringOrNumber,
-  status: str,
-  children: nullable(arr(HolidaySiblingChildSchema)),
 });
 
 /** Go: parentbillinghttp.HolidayContributionResponse */

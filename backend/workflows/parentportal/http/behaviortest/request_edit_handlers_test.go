@@ -16,11 +16,10 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// TestSickNoteEnvelopeAndRecipientValidation pins the two create-path changes
-// of #2267: the bare status-day array stays the default (old tabs call .map()
-// on it), ?envelope=1 opts into {status_days, pending_request}, and a
-// malformed recipient id is refused with its own code before anything is
-// written.
+// TestSickNoteEnvelopeAndRecipientValidation pins the create path of #2267:
+// the answer is always {status_days, pending_request} (#2352), with or without
+// the former ?envelope=1 opt-in, and a malformed recipient id is refused with
+// its own code before anything is written.
 func TestSickNoteEnvelopeAndRecipientValidation(t *testing.T) {
 	t.Parallel()
 
@@ -35,11 +34,9 @@ func TestSickNoteEnvelopeAndRecipientValidation(t *testing.T) {
 		"status": absenceStatusExcused,
 	})
 	require.Equal(t, http.StatusCreated, bare.Code, bare.Body.String())
-	var bareEnv envelope
-	require.NoError(t, json.Unmarshal(bare.Body.Bytes(), &bareEnv))
-	var days []map[string]any
-	require.NoError(t, json.Unmarshal(bareEnv.Data, &days), "the default response stays a bare array")
-	assert.Empty(t, days, "a gated absence writes no status day")
+	withoutQuery := readSickNoteResult(t, bare.Body.Bytes())
+	assert.Empty(t, withoutQuery.StatusDays, "a gated absence writes no status day")
+	require.NotNil(t, withoutQuery.PendingRequest, "without the query the answer is the envelope too")
 
 	enveloped := doRequest(t, router, http.MethodPost, path+"?envelope=1", token, map[string]any{
 		"dates": []string{testDay(7).String()}, "reason": "Familienfeier",

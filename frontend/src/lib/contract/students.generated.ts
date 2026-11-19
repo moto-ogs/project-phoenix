@@ -6,6 +6,7 @@ import {
   calendarDate,
   clockTime,
   instant,
+  int64String,
   int64StringOrNumber,
   json,
   noData,
@@ -838,6 +839,221 @@ export const endedCarePageResponseSchema: z.ZodType<endedCarePageResponse, unkno
   total: safeInt,
   page: safeInt,
   page_size: safeInt,
+});
+
+/** Go: grouplive.Group */
+export interface Group {
+  id: string;
+  name: string;
+  room_id?: string;
+  room_name?: string;
+  via_substitution: boolean;
+  is_personal: boolean;
+  leaders?: string[];
+}
+
+export const GroupSchema: z.ZodType<Group, unknown> = object<Group>({
+  id: int64String,
+  name: str,
+  room_id: optional(int64String),
+  room_name: optional(str),
+  via_substitution: bool,
+  is_personal: bool,
+  leaders: optional(arr(str)),
+});
+
+/** Go: grouplive.GroupLiveClassHandover */
+export interface GroupLiveClassHandover {
+  school_class: string;
+  handed_over_at: string;
+  handed_over_by?: string;
+  absent: boolean;
+}
+
+export const GroupLiveClassHandoverSchema: z.ZodType<GroupLiveClassHandover, unknown> = object<GroupLiveClassHandover>({
+  school_class: str,
+  handed_over_at: instant,
+  handed_over_by: optional(str),
+  absent: bool,
+});
+
+/** Go: grouplive.GroupLiveTeacherHint */
+export interface GroupLiveTeacherHint {
+  body: string;
+  author_name?: string;
+  school_class?: string;
+}
+
+export const GroupLiveTeacherHintSchema: z.ZodType<GroupLiveTeacherHint, unknown> = object<GroupLiveTeacherHint>({
+  body: str,
+  author_name: optional(str),
+  school_class: optional(str),
+});
+
+/** Go: grouplive.PlannedActivity */
+export interface PlannedActivity {
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const PlannedActivitySchema: z.ZodType<PlannedActivity, unknown> = object<PlannedActivity>({
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
+/** Go: grouplive.Student */
+export interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  current_location: string;
+  location_since?: string;
+  current_room_color?: string;
+  sick: boolean;
+  sick_since?: string;
+  excused: boolean;
+  excused_since?: string;
+  class_trip: boolean;
+  class_trip_since?: string;
+  day_planning_status?: string;
+  day_planning_reason?: string;
+  day_planning_label?: string;
+  pending_excused_note?: string;
+  class_handover?: GroupLiveClassHandover;
+  arrival_time?: string;
+  arrival_is_exception?: boolean;
+  arrival_notes?: string;
+  actual_arrival_time?: string;
+  actual_pickup_time?: string;
+  photo_url?: string;
+  teacher_hints?: GroupLiveTeacherHint[];
+  planned_activities?: PlannedActivity[];
+}
+
+export const StudentSchema: z.ZodType<Student, unknown> = object<Student>({
+  id: int64String,
+  first_name: str,
+  last_name: str,
+  school_class: str,
+  current_location: str,
+  location_since: optional(instant),
+  current_room_color: optional(str),
+  sick: bool,
+  sick_since: optional(instant),
+  excused: bool,
+  excused_since: optional(instant),
+  class_trip: bool,
+  class_trip_since: optional(instant),
+  day_planning_status: optional(str),
+  day_planning_reason: optional(str),
+  day_planning_label: optional(str),
+  pending_excused_note: optional(str),
+  class_handover: optional(GroupLiveClassHandoverSchema),
+  arrival_time: optional(str),
+  arrival_is_exception: optional(bool),
+  arrival_notes: optional(str),
+  actual_arrival_time: optional(str),
+  actual_pickup_time: optional(str),
+  photo_url: optional(str),
+  teacher_hints: optional(arr(GroupLiveTeacherHintSchema)),
+  planned_activities: optional(arr(PlannedActivitySchema)),
+});
+
+/** Go: grouplive.RoomStatus */
+export interface RoomStatus {
+  in_group_room: boolean;
+  current_room_id?: string;
+}
+
+export const RoomStatusSchema: z.ZodType<RoomStatus, unknown> = object<RoomStatus>({
+  in_group_room: bool,
+  current_room_id: optional(int64String),
+});
+
+/** Go: grouplive.DayNote */
+export interface DayNote {
+  id: string;
+  content: string;
+}
+
+export const DayNoteSchema: z.ZodType<DayNote, unknown> = object<DayNote>({
+  id: int64String,
+  content: str,
+});
+
+/** Go: grouplive.PickupTime */
+export interface PickupTime {
+  student_id: string;
+  date: string;
+  weekday_name: string;
+  pickup_time?: string;
+  is_exception: boolean;
+  notes?: string;
+  day_notes?: DayNote[];
+  day_departure_mode?: string;
+}
+
+export const PickupTimeSchema: z.ZodType<PickupTime, unknown> = object<PickupTime>({
+  student_id: int64String,
+  date: str,
+  weekday_name: str,
+  pickup_time: optional(str),
+  is_exception: bool,
+  notes: optional(str),
+  day_notes: optional(arr(DayNoteSchema)),
+  day_departure_mode: optional(str),
+});
+
+/** Go: grouplive.TrackingIndicators */
+export interface TrackingIndicators {
+  labels: string[] | null;
+  results: Record<string, boolean[] | null> | null;
+}
+
+export const TrackingIndicatorsSchema: z.ZodType<TrackingIndicators, unknown> = object<TrackingIndicators>({
+  labels: nullable(arr(str)),
+  results: nullable(rec(nullable(arr(bool)))),
+});
+
+/** Go: grouplive.Transfer */
+export interface Transfer {
+  id: string;
+  group_id: string;
+  substitute_staff_id: string;
+  substitute_name?: string;
+  end_date: string;
+}
+
+export const TransferSchema: z.ZodType<Transfer, unknown> = object<Transfer>({
+  id: int64String,
+  group_id: int64String,
+  substitute_staff_id: int64String,
+  substitute_name: optional(str),
+  end_date: str,
+});
+
+/** Go: grouplive.Projection */
+export interface Projection {
+  groups: Group[] | null;
+  group_id?: string;
+  students: Student[] | null;
+  room_status: Record<string, RoomStatus> | null;
+  pickup_times: PickupTime[] | null;
+  tracking_indicators: TrackingIndicators;
+  transfers: Transfer[] | null;
+}
+
+export const ProjectionSchema: z.ZodType<Projection, unknown> = object<Projection>({
+  groups: nullable(arr(GroupSchema)),
+  group_id: optional(int64String),
+  students: nullable(arr(StudentSchema)),
+  room_status: nullable(rec(RoomStatusSchema)),
+  pickup_times: nullable(arr(PickupTimeSchema)),
+  tracking_indicators: TrackingIndicatorsSchema,
+  transfers: nullable(arr(TransferSchema)),
 });
 
 /** Go: careplanhttp.pickupChangeNoticeResponse */
@@ -3001,6 +3217,11 @@ export interface GetStudentsEndedCareQuery {
   search?: string;
 }
 
+/** Query of GET /api/students/ogs-group-live */
+export interface GetStudentsOgsGroupLiveQuery {
+  group_id?: string;
+}
+
 /** Query of GET /api/students/status-days */
 export interface GetStudentsStatusDaysQuery {
   from?: string;
@@ -3228,6 +3449,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["page", "page_size", "school_class", "search"],
     response: success(endedCarePageResponseSchema),
+  },
+  "GET /api/students/ogs-group-live": {
+    method: "GET",
+    pattern: "/api/students/ogs-group-live",
+    portals: ["tenant"],
+    query: ["group_id"],
+    response: success(ProjectionSchema),
   },
   "GET /api/students/pickup-change-notices": {
     method: "GET",

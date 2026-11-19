@@ -2,18 +2,20 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
 	groupsHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
 	gradeTransitionHTTP "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
-	"reflect"
-	"strings"
 
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
+	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
@@ -166,6 +168,7 @@ func contractMounts() []contractMount {
 		{"/api/students", deleteStudentsHTTP.StudentRouteContracts()},
 		{"/api/students", reviewStudentsHTTP.StudentRouteContracts()},
 		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
+		{"/api/students", groupLiveHTTP.RouteContracts()},
 		{"/parent", parentAPI.MeRouteContracts()},
 		{"/parent", parentPortalRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},

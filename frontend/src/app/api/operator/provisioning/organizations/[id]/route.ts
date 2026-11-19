@@ -1,3 +1,7 @@
+// Temporary (#2352): the operator client calls PUT and DELETE /api/operator/organizations/{id}
+// through the operator portal's catalog proxy, which the contract serves.
+// This path stays for an open tab with an older bundle; delete the file
+// after the next production deploy.
 import type { NextRequest } from "next/server";
 import {
   createOperatorDeleteHandler,
