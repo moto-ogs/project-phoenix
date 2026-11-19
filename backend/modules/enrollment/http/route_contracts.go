@@ -2,6 +2,7 @@ package enrollmenthttp
 
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
+	lists "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
 
@@ -28,6 +29,7 @@ func PhaseRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}/manual-bootstrap", Portals: portals, Response: PublicEnrollmentFormBootstrapResponse{}},
 		{Method: "POST", Pattern: "/{id}/late-invites", Portals: portals, Request: AdminCreateLateInviteRequest{}, Response: AdminCreateLateInviteResponse{}},
 		{Method: "POST", Pattern: "/{id}/manual-approved-enrollments", Portals: portals, Request: AdminManualApprovedEnrollmentRequest{}, Response: AdminManualApprovedEnrollmentResponse{}},
+		{Method: "POST", Pattern: "/{id}/export", Portals: portals, File: true},
 	}
 }
 
@@ -89,6 +91,7 @@ func AdminRequestRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/admin/requests/{id}/children/{childId}/offerings", Portals: portals, Request: AdminUpdateOfferingsRequest{}, Response: AdminChildOfferingsResponse{}},
 		{Method: "GET", Pattern: "/admin/requests/{id}/children/{childId}/offering-adjustments", Portals: portals, Response: []AdminOfferingAdjustment{}},
 		{Method: "GET", Pattern: "/admin/students/{studentId}/requests/", Portals: portals, Response: []AdminRequestSummary{}},
+		{Method: "POST", Pattern: "/admin/students/{studentId}/requests/export", Portals: portals, File: true},
 	}
 }
 
@@ -118,6 +121,8 @@ func AdminReviewRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/admin/change-requests/{id}/approve", Portals: portals, Request: ReviewChangeRequestRequest{}, Response: ChangeRequestResponse{}},
 		{Method: "POST", Pattern: "/admin/change-requests/{id}/reject", Portals: portals, Request: ReviewChangeRequestRequest{}, Response: ChangeRequestResponse{}},
 		{Method: "GET", Pattern: "/admin/reports/care-usage", Portals: portals, Query: usage, Response: CareUsageReportResponse{}},
+		{Method: "POST", Pattern: "/admin/reports/care-usage/export", Portals: portals, File: true},
+		{Method: "POST", Pattern: "/admin/reports/class-roster/export", Portals: portals, File: true},
 	}
 }
 
@@ -132,6 +137,9 @@ func HolidayHostRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/students/{studentId}/registration", Portals: portals, Response: []capability.HolidayStudentRegistration{}},
 		{Method: "GET", Pattern: "/{weekId}/own-children", Portals: portals, Response: []capability.HolidayOwnChildAssignment{}},
 		{Method: "GET", Pattern: "/{weekId}/participants", Portals: portals, Response: HolidayParticipantListResponse{}},
+		{Method: "GET", Pattern: "/{weekId}/participants/export", Portals: portals, File: true, Query: []common.QueryParam{
+			{Name: "format", Kind: common.QueryString, Values: []string{string(lists.FormatCSV), string(lists.FormatXLSX)}},
+		}},
 		{Method: "PUT", Pattern: "/{weekId}/guest-group", Portals: portals, Request: HolidayGuestGroupRequest{}, Response: capability.HolidayGuestTransfer{}},
 	}
 }

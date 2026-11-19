@@ -1900,6 +1900,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/calendar/appointments/{appointmentId}/ics",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/calendar/appointments/{appointmentId}/mails",
       "portals": [
         "tenant"
@@ -2954,6 +2962,96 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/holiday-weeks/{weekId}/participants/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/class-list-entries/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/opening-balances/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/students/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/teachers/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/iot/",
       "portals": [
         "tenant"
@@ -3120,6 +3218,33 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-caterer/orders/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-plan/",
       "portals": [
         "tenant"
@@ -3161,6 +3286,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-plan/orders/month/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "month",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-plan/participants",
       "portals": [
         "tenant"
@@ -3182,6 +3329,32 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-plan/participants/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "include",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-plan/participants/week",
       "portals": [
         "tenant"
@@ -3196,6 +3369,28 @@
         "kind": "ref",
         "ref": "WeeklyListResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/participants/week/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "week_start",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -4683,6 +4878,33 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/{id}/time-tracking/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/{id}/time-tracking/history",
       "portals": [
         "tenant"
@@ -4827,6 +5049,89 @@
         "kind": "ref",
         "ref": "careTimeOverrunsResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/statistics/care-time-overruns/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "group_id",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "school_class",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "section",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/statistics/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "docx",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "group_id",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "school_class",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "section",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -5871,6 +6176,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/surveys/{surveyId}/results/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/time-tracking/absence-allowances",
       "portals": [
         "tenant"
@@ -6896,6 +7209,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/week-protocols/{protocolId}/pdf",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/work-time-models/",
       "portals": [
         "tenant"
@@ -7242,6 +7563,33 @@
         "kind": "ref",
         "ref": "feedCountResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/caterer/orders/export",
+      "portals": [
+        "caterer"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -12458,6 +12806,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/birthdays/staff-export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/calendar/appointments",
       "portals": [
         "tenant"
@@ -12574,6 +12930,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/emergency/snapshot/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/enrollment/admin/change-requests/{id}/approve",
       "portals": [
         "tenant"
@@ -12616,6 +12980,22 @@
         "kind": "ref",
         "ref": "ChangeRequestResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/reports/care-usage/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/reports/class-roster/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -12668,6 +13048,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/enrollment/admin/students/{studentId}/requests/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/enrollment/care-offerings/",
       "portals": [
         "tenant"
@@ -12710,6 +13098,14 @@
         "kind": "ref",
         "ref": "PhaseResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/phases/{id}/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -12910,6 +13306,14 @@
         "tenant"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/payment-overview/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -13312,6 +13716,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/rooms/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/school-setup/complete",
       "portals": [
         "tenant"
@@ -13481,6 +13893,14 @@
         "kind": "ref",
         "ref": "ShiftResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-shifts/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -14615,6 +15035,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/timetable/betreuungsplan/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/timetable/closing-days/",
       "portals": [
         "tenant"
@@ -14791,6 +15219,18 @@
         "kind": "ref",
         "ref": "AttendanceResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/lists/export",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "slotListRequest"
+      },
+      "file": true
     },
     {
       "method": "POST",

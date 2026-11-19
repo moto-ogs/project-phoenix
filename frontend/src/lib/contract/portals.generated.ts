@@ -27,10 +27,12 @@ import { routes as catererAccount } from "./caterer-account.generated";
 import { routes as catererAuth } from "./caterer-auth.generated";
 import { routes as catererInvitations } from "./caterer-invitations.generated";
 import { routes as catererNotifications } from "./caterer-notifications.generated";
+import { routes as catererOrders } from "./caterer-orders.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
 import { routes as database } from "./database.generated";
 import { routes as display } from "./display.generated";
+import { routes as emergency } from "./emergency.generated";
 import { routes as enrollment } from "./enrollment.generated";
 import { routes as feedback } from "./feedback.generated";
 import { routes as files } from "./files.generated";
@@ -39,6 +41,7 @@ import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
 import { routes as holidayGuests } from "./holiday-guests.generated";
 import { routes as holidayWeeks } from "./holiday-weeks.generated";
+import { routes as importRoutes } from "./import.generated";
 import { routes as iot } from "./iot.generated";
 import { routes as me } from "./me.generated";
 import { routes as mealBillingMonths } from "./meal-billing-months.generated";
@@ -179,6 +182,7 @@ export const portalRoutes = {
     catererNotifications["GET /caterer/notifications/feed/unread-count"],
     catererNotifications["POST /caterer/notifications/feed/read-all"],
     catererNotifications["POST /caterer/notifications/feed/{id}/read"],
+    catererOrders["GET /caterer/orders/export"],
     catererSchools["GET /caterer/schools"],
     catererSchools["GET /caterer/schools/{schoolId}/orders"],
     catererSchools["POST /caterer/schools/{schoolId}/orders/{orderId}/confirm"],
@@ -1004,9 +1008,11 @@ export const portalRoutes = {
     authStaffPreview["GET /auth/staff-preview/candidates"],
     birthdays["GET /api/birthdays/"],
     birthdays["GET /api/birthdays/opt-out"],
+    birthdays["POST /api/birthdays/staff-export"],
     birthdays["PUT /api/birthdays/opt-out"],
     calendar["DELETE /api/calendar/appointments/{appointmentId}"],
     calendar["GET /api/calendar/appointments/{appointmentId}"],
+    calendar["GET /api/calendar/appointments/{appointmentId}/ics"],
     calendar["GET /api/calendar/appointments/{appointmentId}/mails"],
     calendar["GET /api/calendar/appointments/{appointmentId}/overview"],
     calendar["GET /api/calendar/feed"],
@@ -1029,6 +1035,7 @@ export const portalRoutes = {
     display["PATCH /api/display/{id}"],
     display["POST /api/display/"],
     display["POST /api/display/{id}/regenerate"],
+    emergency["POST /api/emergency/snapshot/export"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/children/{childId}"],
     enrollment["DELETE /api/enrollment/admin/requests/{id}/read"],
@@ -1069,13 +1076,17 @@ export const portalRoutes = {
     enrollment["POST /api/enrollment/admin/change-requests/{id}/approve"],
     enrollment["POST /api/enrollment/admin/change-requests/{id}/question"],
     enrollment["POST /api/enrollment/admin/change-requests/{id}/reject"],
+    enrollment["POST /api/enrollment/admin/reports/care-usage/export"],
+    enrollment["POST /api/enrollment/admin/reports/class-roster/export"],
     enrollment["POST /api/enrollment/admin/request-children/{id}/rollover-review"],
     enrollment["POST /api/enrollment/admin/requests/mark-all-read"],
     enrollment["POST /api/enrollment/admin/requests/{id}/children/{childId}/decide"],
     enrollment["POST /api/enrollment/admin/requests/{id}/restore"],
+    enrollment["POST /api/enrollment/admin/students/{studentId}/requests/export"],
     enrollment["POST /api/enrollment/care-offerings/"],
     enrollment["POST /api/enrollment/care-offerings/{id}/clone"],
     enrollment["POST /api/enrollment/phases/"],
+    enrollment["POST /api/enrollment/phases/{id}/export"],
     enrollment["POST /api/enrollment/phases/{id}/late-invites"],
     enrollment["POST /api/enrollment/phases/{id}/manual-approved-enrollments"],
     enrollment["POST /api/enrollment/phases/{id}/rollover"],
@@ -1115,6 +1126,7 @@ export const portalRoutes = {
     guardians["POST /api/guardians/bulk-invite"],
     guardians["POST /api/guardians/invitations/{invitationId}/approve"],
     guardians["POST /api/guardians/invitations/{invitationId}/reject"],
+    guardians["POST /api/guardians/payment-overview/export"],
     guardians["POST /api/guardians/students/{studentId}/guardians"],
     guardians["POST /api/guardians/students/{studentId}/guardians/batch"],
     guardians["POST /api/guardians/students/{studentId}/invite"],
@@ -1138,7 +1150,12 @@ export const portalRoutes = {
     holidayWeeks["GET /api/holiday-weeks/students/{studentId}/registration"],
     holidayWeeks["GET /api/holiday-weeks/{weekId}/own-children"],
     holidayWeeks["GET /api/holiday-weeks/{weekId}/participants"],
+    holidayWeeks["GET /api/holiday-weeks/{weekId}/participants/export"],
     holidayWeeks["PUT /api/holiday-weeks/{weekId}/guest-group"],
+    importRoutes["GET /api/import/class-list-entries/template"],
+    importRoutes["GET /api/import/opening-balances/template"],
+    importRoutes["GET /api/import/students/template"],
+    importRoutes["GET /api/import/teachers/template"],
     iot["DELETE /api/iot/{id}"],
     iot["GET /api/iot/"],
     iot["GET /api/iot/device-slots"],
@@ -1159,13 +1176,17 @@ export const portalRoutes = {
     mealCaterer["DELETE /api/meal-caterer/invitations/{invitationId}"],
     mealCaterer["DELETE /api/meal-caterer/supply"],
     mealCaterer["GET /api/meal-caterer/"],
+    mealCaterer["GET /api/meal-caterer/orders/export"],
     mealCaterer["POST /api/meal-caterer/invitations"],
     mealPlan["DELETE /api/meal-plan/participation/{studentId}/days/{date}"],
     mealPlan["DELETE /api/meal-plan/{date}"],
     mealPlan["GET /api/meal-plan/"],
     mealPlan["GET /api/meal-plan/orders"],
+    mealPlan["GET /api/meal-plan/orders/month/export"],
     mealPlan["GET /api/meal-plan/participants"],
+    mealPlan["GET /api/meal-plan/participants/export"],
     mealPlan["GET /api/meal-plan/participants/week"],
+    mealPlan["GET /api/meal-plan/participants/week/export"],
     mealPlan["GET /api/meal-plan/participation/{studentId}"],
     mealPlan["PUT /api/meal-plan/participation/{studentId}/days/{date}"],
     mealPlan["PUT /api/meal-plan/participation/{studentId}/schedule"],
@@ -1234,6 +1255,7 @@ export const portalRoutes = {
     rooms["GET /api/rooms/{id}/history"],
     rooms["GET /api/rooms/{id}/removal-impact"],
     rooms["POST /api/rooms/"],
+    rooms["POST /api/rooms/export"],
     rooms["PUT /api/rooms/{id}"],
     schedules["GET /api/schedules/timeframes/"],
     schoolSetup["GET /api/school-setup/"],
@@ -1298,6 +1320,7 @@ export const portalRoutes = {
     staff["GET /api/staff/{id}/target-overrides"],
     staff["GET /api/staff/{id}/time-tracking/adjustments"],
     staff["GET /api/staff/{id}/time-tracking/comp-time-preview"],
+    staff["GET /api/staff/{id}/time-tracking/export"],
     staff["GET /api/staff/{id}/time-tracking/history"],
     staff["GET /api/staff/{id}/time-tracking/month-summary"],
     staff["GET /api/staff/{id}/time-tracking/schedule-targets"],
@@ -1373,12 +1396,15 @@ export const portalRoutes = {
     staffShifts["GET /api/staff-shifts/overview"],
     staffShifts["GET /api/staff-shifts/series/{id}"],
     staffShifts["POST /api/staff-shifts/"],
+    staffShifts["POST /api/staff-shifts/export"],
     staffShifts["POST /api/staff-shifts/series"],
     staffShifts["PUT /api/staff-shifts/series/{id}/split"],
     staffShifts["PUT /api/staff-shifts/{id}"],
     staffShifts["PUT /api/staff-shifts/{id}/cancellation"],
     staffShifts["PUT /api/staff-shifts/{id}/move"],
     statistics["GET /api/statistics/care-time-overruns"],
+    statistics["GET /api/statistics/care-time-overruns/export"],
+    statistics["GET /api/statistics/export"],
     statistics["GET /api/statistics/report"],
     statistics["GET /api/statistics/students/{id}/care-times"],
     students["DELETE /api/students/care-withdrawals/{completionId}"],
@@ -1499,6 +1525,7 @@ export const portalRoutes = {
     surveys["GET /api/surveys/{surveyId}/form"],
     surveys["GET /api/surveys/{surveyId}/respondents"],
     surveys["GET /api/surveys/{surveyId}/results"],
+    surveys["GET /api/surveys/{surveyId}/results/export"],
     surveys["POST /api/surveys/"],
     surveys["POST /api/surveys/{surveyId}/answers"],
     surveys["POST /api/surveys/{surveyId}/close"],
@@ -1572,6 +1599,7 @@ export const portalRoutes = {
     timetable["GET /api/timetable/templates/{id}/offering-preview"],
     timetable["PATCH /api/timetable/instances/{instance_id}/students/{student_id}"],
     timetable["PATCH /api/timetable/operations/instances/{id}/students/{student_id}/attendance"],
+    timetable["POST /api/timetable/betreuungsplan/export"],
     timetable["POST /api/timetable/closing-days/"],
     timetable["POST /api/timetable/instances/"],
     timetable["POST /api/timetable/instances/bulk-cancel"],
@@ -1585,6 +1613,7 @@ export const portalRoutes = {
     timetable["POST /api/timetable/instances/{id}/reopen"],
     timetable["POST /api/timetable/instances/{id}/start"],
     timetable["POST /api/timetable/instances/{instance_id}/students/{student_id}/correction"],
+    timetable["POST /api/timetable/lists/export"],
     timetable["POST /api/timetable/lists/options"],
     timetable["POST /api/timetable/lists/preview"],
     timetable["POST /api/timetable/materialize"],
@@ -1624,6 +1653,7 @@ export const portalRoutes = {
     users["PUT /api/users/{id}"],
     weekProtocols["GET /api/week-protocols/"],
     weekProtocols["GET /api/week-protocols/{protocolId}"],
+    weekProtocols["GET /api/week-protocols/{protocolId}/pdf"],
     weekProtocols["POST /api/week-protocols/{protocolId}/close"],
     weekProtocols["PUT /api/week-protocols/{protocolId}/notes"],
     workTimeModels["DELETE /api/work-time-models/{id}"],

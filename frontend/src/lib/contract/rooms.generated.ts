@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   bool,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   object,
@@ -198,6 +199,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<RoomRequest>(),
     response: success(RoomResponseSchema),
+  },
+  "POST /api/rooms/export": {
+    method: "POST",
+    pattern: "/api/rooms/export",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "PUT /api/rooms/{id}": {
     method: "PUT",
