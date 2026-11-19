@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const scripts = dirname(fileURLToPath(import.meta.url));
-test('real PostgreSQL snapshot restores data, outbox schema, roles, uploads and image configuration', { timeout: 180000 }, t => {
+test('real PostgreSQL snapshot restores data, outbox schema, roles, uploads and replica configuration', { timeout: 180000 }, t => {
   const root = mkdtempSync(join(tmpdir(), 'moto-restore-integration-'));
   const cwd = join(root, 'staging'); mkdirSync(cwd);
   const project = `moto-restore-${process.pid}-${Date.now()}`;
@@ -40,12 +40,16 @@ services:
       retries: 30
   server:
     image: ${image}
+    deploy:
+      replicas: 2
     network_mode: none
     entrypoint: [sleep, infinity]
     volumes:
       - uploads:/app/public/uploads
   frontend:
     image: ${image}
+    deploy:
+      replicas: 2
     network_mode: none
     entrypoint: [sleep, infinity]
   migrate:
@@ -62,6 +66,7 @@ volumes:
     rmSync(root, { recursive: true, force: true });
   });
   docker('compose', 'up', '-d', '--wait', 'postgres', 'server', 'frontend');
+  run('bash', [join(scripts, 'release-backup.sh'), 'keep-images']);
   sql(`CREATE ROLE phoenix_auth LOGIN NOINHERIT;
 CREATE ROLE phoenix_tenant; CREATE ROLE phoenix_admin;
 CREATE ROLE phoenix_diagnostics NOLOGIN NOINHERIT;
@@ -97,6 +102,9 @@ ALTER ROLE phoenix_auth NOLOGIN;`);
   writeFileSync(join(cwd, '.env'), 'RELEASE_MARKER=after\n');
   writeFileSync(join(cwd, '.deploy-state'), 'CURRENT_SHA=bbbbbbb\nBACKUP_ID=release-20260914T010000Z-bbbbbbb\n');
   run('bash', [join(scripts, 'rollback-remote.sh'), cwd]);
+  for (const service of ['server', 'frontend']) {
+    assert.equal(docker('compose', 'ps', '-q', service).split('\n').length, 2);
+  }
   assert.equal(sql('SELECT id FROM auth.accounts;'), '41');
   assert.equal(sql("SELECT count(*) FROM information_schema.columns WHERE table_schema='platform' AND table_name='email_outbox' AND column_name='recipient';"), '0');
   assert.equal(sql("SELECT rolcanlogin FROM pg_roles WHERE rolname='phoenix_auth';"), 't');

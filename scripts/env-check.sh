@@ -191,6 +191,10 @@ if ! python3 "${SCRIPT_DIR}/check-runtime-env.py"; then
   exit_code=1
 fi
 
+# Connection budgets require the actual pool sizes, which are encrypted in
+# SOPS, not the unrelated local .env.example. Each deploy job checks the
+# resolved stack with its decrypted environment before copying it to the host.
+
 # ============================================================
 # CHECK 4: Fail-fast config guard
 # ============================================================

@@ -105,5 +105,36 @@ class UploadSealServiceTest(unittest.TestCase):
                 CHECK.check_upload_seal_service(self.service(**change))
 
 
+class WorkerServiceTest(unittest.TestCase):
+    """Staging and production run the Worker as its own process (#7226)."""
+
+    SERVER = {"image": "backend:release", "command": ["./main", "serve", "--embedded-worker=false", "--drain-delay=5s"],
+              "environment": {"DB_DSN": "postgres://phoenix_auth@postgres/postgres"},
+              "volumes": [{"type": "volume", "source": "uploads", "target": "/app/public/uploads"}]}
+
+    def services(self, server=None, **worker_changes):
+        worker = {"image": "backend:release", "command": ["./main", "worker"],
+                  "environment": dict(self.SERVER["environment"]), "volumes": list(self.SERVER["volumes"])}
+        worker.update(worker_changes)
+        return {"server": dict(self.SERVER, **(server or {})), "worker": worker}
+
+    def test_accepts_the_standalone_worker_beside_an_api_only_server(self):
+        CHECK.check_worker_service(self.services())
+
+    def test_rejects_drift_from_the_server_or_an_embedded_worker(self):
+        for name, services in {
+            "missing worker": {"server": self.SERVER},
+            "other command": self.services(command=["./main", "serve"]),
+            "other image": self.services(image="backend:other"),
+            "other environment": self.services(environment={}),
+            "other volumes": self.services(volumes=[]),
+            "published port": self.services(ports=["8080:8080"]),
+            "embedded worker": self.services(server={"command": ["./main", "serve", "--drain-delay=5s"]}),
+            "no drain": self.services(server={"command": ["./main", "serve", "--embedded-worker=false"]}),
+        }.items():
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                CHECK.check_worker_service(services)
+
+
 if __name__ == "__main__":
     unittest.main()
