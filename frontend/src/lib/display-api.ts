@@ -11,7 +11,6 @@ import type {
 } from "~/lib/contract/display.generated";
 import type { InfoDisplay } from "~/lib/display-helpers";
 import { mapDisplayResponse } from "~/lib/display-helpers";
-import { dataOrBare } from "~/lib/envelope-or-bare";
 
 // ---------------------------------------------------------------------------
 // Public dashboard payload (mirrors backend services/display DashboardPayload)
@@ -95,9 +94,6 @@ export async function fetchDisplayDashboard(
 //
 // The management routes go through the portal's catalog proxy under
 // /api/display (#7563), where the backend answers in the shared envelope.
-// Temporary (#7563): for one release a display answer may still arrive in
-// the backend's former bare form ({displays}, {display}); dataOrBare and the
-// two readers below accept both. Read `data` directly afterwards.
 
 async function readData<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -107,16 +103,13 @@ async function readData<T>(response: Response): Promise<T> {
       `display request failed (${response.status})`,
     );
   }
-  return dataOrBare<T>(await response.json());
+  return ((await response.json()) as { data: T }).data;
 }
 
 export async function listDisplays(): Promise<InfoDisplay[]> {
   const response = await transportFetch("/api/display/", { cache: "no-store" });
-  const answer = await readData<
-    InfoDisplayResponse[] | { displays?: InfoDisplayResponse[] } | null
-  >(response);
-  const displays = Array.isArray(answer) ? answer : (answer?.displays ?? []);
-  return displays.map(mapDisplayResponse);
+  const displays = await readData<InfoDisplayResponse[] | null>(response);
+  return (displays ?? []).map(mapDisplayResponse);
 }
 
 export interface DisplayWithToken {
@@ -150,10 +143,7 @@ export async function updateDisplay(
       body: JSON.stringify(body),
     },
   );
-  const answer = await readData<
-    InfoDisplayResponse | { display: InfoDisplayResponse }
-  >(response);
-  return mapDisplayResponse("display" in answer ? answer.display : answer);
+  return mapDisplayResponse(await readData<InfoDisplayResponse>(response));
 }
 
 export async function regenerateDisplayToken(id: string): Promise<string> {

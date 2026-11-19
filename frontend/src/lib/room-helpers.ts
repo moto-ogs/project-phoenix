@@ -22,13 +22,6 @@ const ROOM_CATEGORY_COLORS: Record<string, string> = {
 
 const ROOM_CATEGORY_FALLBACK_COLOR = MOTO_COLOR_PALETTE.neutral.base;
 
-// Status sentinel the temporary /api/rooms/[id]/history route file emits
-// when the backend has gated the endpoint off via gdpr.attendance_log_enabled
-// (issue #1425). Through the catalog proxy the backend's 403 with the code
-// ROOM_HISTORY_DISABLED_CODE arrives instead (#7563); the room page reads both
-// to hide the "Belegungshistorie" section deliberately.
-export const ROOM_HISTORY_STATUS_FEATURE_DISABLED = "feature_disabled";
-
 /** The backend's code for a room history the school switched off. */
 export const ROOM_HISTORY_DISABLED_CODE = "attendance.log_disabled";
 
@@ -112,9 +105,7 @@ export function isColorLockedRoom(room: Room | null | undefined): boolean {
 
 /**
  * Maps a room of the contract (`RoomResponse`, via the catalog proxy) onto the
- * frontend room. The identifier arrives as a decimal string; the temporary
- * route files of #7563 still hand on the backend's number, which String()
- * reads the same.
+ * frontend room. The identifier arrives as a decimal string.
  */
 export function mapRoomResponse(room: RoomResponse): Room {
   return {

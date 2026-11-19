@@ -2,12 +2,15 @@
 
 import { defineEntityConfig } from "@/lib/database/types";
 import {
+  mapActivityResponse,
   mapSupervisorOption,
-  readActivity,
   type Activity,
   type ActivitySupervisor,
 } from "@/lib/activity-helpers";
-import type { ActivitySupervisorResponse } from "~/lib/contract/activities.generated";
+import type {
+  ActivityResponse,
+  ActivitySupervisorResponse,
+} from "~/lib/contract/activities.generated";
 import { apiErrorFromResponse } from "~/lib/api-error";
 import { sessionFetch } from "~/lib/session-cache";
 import { createLogger } from "~/lib/logger";
@@ -397,7 +400,8 @@ export const activitiesConfig = defineEntityConfig<Activity>({
     },
 
     // Supervisor data is kept for the detail view but not used for editing.
-    mapResponse: readActivity,
+    mapResponse: (data: unknown) =>
+      mapActivityResponse(data as ActivityResponse),
   },
 
   labels: {

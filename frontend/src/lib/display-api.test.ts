@@ -104,16 +104,6 @@ describe("listDisplays", () => {
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/display/");
   });
 
-  it("reads the backend's former bare list for one release", async () => {
-    mockFetch(() =>
-      Promise.resolve(jsonResponse({ displays: [mkBackendDisplay(8)] })),
-    );
-
-    const displays = await listDisplays();
-
-    expect(displays.map((display) => display.id)).toEqual(["8"]);
-  });
-
   it("throws an ApiError with code and request id on failure", async () => {
     mockFetch(() =>
       Promise.resolve(
@@ -192,10 +182,11 @@ describe("updateDisplay", () => {
 
   it("includes the name when renaming", async () => {
     const fetchMock = mockFetch(() =>
-      Promise.resolve(jsonResponse({ display: mkBackendDisplay(4) })),
+      Promise.resolve(
+        jsonResponse({ status: "success", data: mkBackendDisplay(4) }),
+      ),
     );
 
-    // The backend's former bare answer {display} is read for one release.
     await expect(updateDisplay("4", { name: "Mensa" })).resolves.toMatchObject({
       id: "4",
     });

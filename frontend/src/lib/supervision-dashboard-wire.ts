@@ -1,7 +1,7 @@
 // The one mapping of the supervision projection (#2096, #7563): from the
 // contract's shape of GET /api/active/supervision-dashboard, as the catalog
 // proxy decodes it (identifiers already strings), to the camelCase view the
-// page renders. Pure, so the page and the temporary route share it.
+// page renders. Pure.
 import type {
   OpenRoomStudent,
   DashboardProjection,
