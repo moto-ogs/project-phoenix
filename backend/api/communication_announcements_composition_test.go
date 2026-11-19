@@ -93,6 +93,10 @@ func newAnnouncement(title string, targetTenantIDs ...int64) *communication.Anno
 	}
 }
 
+func announcementViewer(accountID, tenantID, organizationID int64) communication.AnnouncementViewer {
+	return communication.AnnouncementViewer{AccountID: accountID, TenantID: tenantID, OrgID: organizationID}
+}
+
 func ownAnnouncementsByOperator(t *testing.T, db *bun.DB, operatorID int64) {
 	t.Helper()
 	t.Cleanup(func() {
@@ -133,7 +137,14 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	require.NoError(t, err)
 	assert.Empty(t, otherUnread)
 
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
+	err = module.MarkSeen(ctx, announcementViewer(otherAccount.ID, otherTenantID, otherOrganizationID), announcement.ID)
+	assert.ErrorIs(t, err, communication.ErrAnnouncementNotFound)
+	var foreignViewCount int
+	require.NoError(t, db.NewSelect().TableExpr("platform.announcement_views").ColumnExpr("COUNT(*)").Where("user_id = ? AND announcement_id = ?", otherAccount.ID, announcement.ID).Scan(ctx, &foreignViewCount))
+	assert.Zero(t, foreignViewCount, "a school may not record a view for another school's announcement")
+
+	viewer := announcementViewer(account.ID, tenantID, organizationID)
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
 	count, err := module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, count, "seeing an announcement does not close it")
@@ -149,7 +160,7 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	assert.Equal(t, 1, stats.SeenCount)
 	assert.Equal(t, 1, stats.TargetCount)
 
-	require.NoError(t, module.MarkDismissed(ctx, account.ID, announcement.ID))
+	require.NoError(t, module.MarkDismissed(ctx, viewer, announcement.ID))
 	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
 	assert.Zero(t, count, "dismissing an announcement closes it")
@@ -247,9 +258,11 @@ func TestAnnouncementViewWriteRollsBackWithOuterUnitOfWorkAndRetryIsIdempotent(t
 	_, account := testpkg.CreateTestPersonWithAccount(t, db, "Ida", "Retry")
 	announcement := newAnnouncement("Read state", testpkg.Tenant(t))
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	viewer := announcementViewer(account.ID, testpkg.Tenant(t), tenantOrganizationID(t, db, testpkg.Tenant(t)))
 
 	err := tenant.WithinAdmin(ctx, func(txCtx context.Context) error {
-		require.NoError(t, module.MarkSeen(txCtx, account.ID, announcement.ID))
+		require.NoError(t, module.MarkSeen(txCtx, viewer, announcement.ID))
 		return errInjectedAudit
 	})
 	require.ErrorIs(t, err, errInjectedAudit)
@@ -257,8 +270,8 @@ func TestAnnouncementViewWriteRollsBackWithOuterUnitOfWorkAndRetryIsIdempotent(t
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcement_views").ColumnExpr("COUNT(*)").Where("user_id = ? AND announcement_id = ?", account.ID, announcement.ID).Scan(context.Background(), &count))
 	assert.Zero(t, count)
 
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
 	observationsMu.Lock()
 	defer observationsMu.Unlock()
 	var conflicts int

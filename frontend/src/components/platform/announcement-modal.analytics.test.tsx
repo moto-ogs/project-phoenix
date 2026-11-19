@@ -160,10 +160,10 @@ describe("AnnouncementModal analytics", () => {
     expect(mocks.markSeen).toHaveBeenCalledTimes(2);
   });
 
-  it("retries a failed seen report while the announcement stays open", async () => {
-    mocks.markSeen
-      .mockRejectedValueOnce(new Error("vorübergehend nicht erreichbar"))
-      .mockResolvedValueOnce(undefined);
+  it("does not retry a failed seen report after its request outcome is ambiguous", async () => {
+    mocks.markSeen.mockRejectedValueOnce(
+      new Error("vorübergehend nicht erreichbar"),
+    );
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { AnnouncementModal } = await setup(true);
     render(<AnnouncementModal />);
@@ -175,8 +175,7 @@ describe("AnnouncementModal analytics", () => {
       await vi.advanceTimersByTimeAsync(5_000);
     });
 
-    expect(mocks.markSeen).toHaveBeenCalledTimes(2);
-    expect(mocks.markSeen).toHaveBeenLastCalledWith(1);
+    expect(mocks.markSeen).toHaveBeenCalledTimes(1);
   });
 
   it("reports the announcement as shown once and accepted after the last „Verstanden“", async () => {

@@ -110,9 +110,10 @@ func TestProjection_UnreadStaysInTheReadersSchool(t *testing.T) {
 	assert.Zero(t, crossedCount)
 }
 
-// TestProjection_UnreadKeepsSeenAnnouncementsUntilDismissal ensures reporting
-// that a person saw a message does not make it disappear before they close it.
-func TestProjection_UnreadKeepsSeenAnnouncementsUntilDismissal(t *testing.T) {
+// TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements
+// preserves the old closed-on-seen meaning while keeping new modal reports
+// open until dismissal.
+func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *testing.T) {
 	t.Parallel()
 	db, fix := setupAudience(t)
 	ctx := context.Background()
@@ -123,7 +124,16 @@ func TestProjection_UnreadKeepsSeenAnnouncementsUntilDismissal(t *testing.T) {
 
 	unread, _, err := fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
-	assert.Contains(t, announcementIDs(unread), fix.ownAnnouncement, "a seen announcement stays open until dismissal")
+	assert.NotContains(t, announcementIDs(unread), fix.ownAnnouncement, "a historical seen announcement stays closed")
+
+	_, err = db.ExecContext(ctx, `UPDATE platform.announcement_views
+		SET shown_at = seen_at
+		WHERE user_id = ? AND announcement_id = ?`, fix.readerID, fix.ownAnnouncement)
+	require.NoError(t, err)
+
+	unread, _, err = fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
+	require.NoError(t, err)
+	assert.Contains(t, announcementIDs(unread), fix.ownAnnouncement, "a newly shown announcement stays open until dismissal")
 
 	count, _, err := fix.projection.CountUnread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
@@ -137,6 +147,33 @@ func TestProjection_UnreadKeepsSeenAnnouncementsUntilDismissal(t *testing.T) {
 	unread, _, err = fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
 	require.NoError(t, err)
 	assert.NotContains(t, announcementIDs(unread), fix.ownAnnouncement, "a dismissed announcement stays closed")
+}
+
+func TestProjection_CanSeeOnlyTheCurrentAudience(t *testing.T) {
+	t.Parallel()
+	db, fix := setupAudience(t)
+	ctx := context.Background()
+
+	canSee, stats, err := fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.True(t, canSee)
+	assert.Equal(t, 1, stats.Queries)
+
+	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.foreignMessage)
+	require.NoError(t, err)
+	assert.False(t, canSee, "another school's announcement must not be writable")
+
+	_, err = db.ExecContext(ctx, `UPDATE platform.announcements SET active = FALSE WHERE id = ?`, fix.ownAnnouncement)
+	require.NoError(t, err)
+	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.False(t, canSee, "an inactive announcement must not be writable")
+
+	_, err = db.ExecContext(ctx, `UPDATE platform.announcements SET active = TRUE, published_at = NULL WHERE id = ?`, fix.ownAnnouncement)
+	require.NoError(t, err)
+	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.False(t, canSee, "an unpublished announcement must not be writable")
 }
 
 // TestProjection_TargetsAndViewsStayInTheAddressedSchool pins the audience
@@ -193,6 +230,10 @@ func TestMap_AnswersInConsumerValues(t *testing.T) {
 	assert.Equal(t, 1, queries)
 	assert.Contains(t, unread, announcementView{ID: fix.ownAnnouncement, Title: "Own school"})
 	assert.NotContains(t, unread, announcementView{ID: fix.foreignMessage, Title: "Foreign school"})
+
+	canSee, _, err := mapped.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
+	require.NoError(t, err)
+	assert.True(t, canSee)
 
 	targets, _, err := mapped.TargetCount(ctx, announcementView{ID: fix.foreignMessage})
 	require.NoError(t, err)

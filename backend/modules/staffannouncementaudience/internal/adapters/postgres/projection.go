@@ -6,6 +6,8 @@ package audience
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -62,19 +64,17 @@ func unreadArgs(userID int64, roles []string, tenantID, orgID int64) []any {
 	return []any{userID, tenantID, orgID, pgdialect.Array(roles)}
 }
 
-const unreadFrom = ` FROM platform.announcements a
+const audienceFrom = ` FROM platform.announcements a
 	JOIN auth.accounts acc ON acc.id = ?
 	JOIN auth.account_tenants at ON at.account_id = acc.id AND at.tenant_id = ? AND at.status = 'active'
-	JOIN platform.schools s ON s.id = at.tenant_id AND s.organization_id = ? AND s.deleted_at IS NULL
-	LEFT JOIN platform.announcement_views v ON v.announcement_id = a.id AND v.user_id = acc.id`
+	JOIN platform.schools s ON s.id = at.tenant_id AND s.organization_id = ? AND s.deleted_at IS NULL`
 
-const unreadWhere = `
+const audienceWhere = `
 	WHERE a.active = true
 		AND a.published_at IS NOT NULL
 		AND a.published_at <= CURRENT_TIMESTAMP
 		AND (a.expires_at IS NULL OR a.expires_at > CURRENT_TIMESTAMP)
 		AND a.published_at >= GREATEST(s.created_at, COALESCE(at.invited_at, at.created_at), acc.created_at)
-		AND COALESCE(v.dismissed, FALSE) = FALSE
 		AND (a.target_roles = '{}'
 			OR a.target_roles && ?::text[]
 			OR EXISTS (
@@ -88,6 +88,13 @@ const unreadWhere = `
 			OR (a.target_tenant_ids != '{}' AND at.tenant_id = ANY(a.target_tenant_ids))
 			OR (a.target_org_ids != '{}' AND s.organization_id = ANY(a.target_org_ids))
 		)`
+
+const unreadFrom = audienceFrom + `
+	LEFT JOIN platform.announcement_views v ON v.announcement_id = a.id AND v.user_id = acc.id`
+
+const unreadWhere = audienceWhere + `
+		AND COALESCE(v.dismissed, FALSE) = FALSE
+		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL)`
 
 func (p *Projection) Unread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) ([]contract.Announcement, contract.Stats, error) {
 	db, err := p.database(ctx)
@@ -125,6 +132,30 @@ func (p *Projection) CountUnread(ctx context.Context, userID int64, roles []stri
 	}
 	stats.Rows = 1
 	return count, stats, nil
+}
+
+// CanSee validates and locks a currently visible announcement for the
+// authenticated school session. The lock keeps publication and targeting
+// stable until the caller records its view in the same transaction.
+func (p *Projection) CanSee(ctx context.Context, userID int64, roles []string, tenantID, orgID, announcementID int64) (bool, contract.Stats, error) {
+	db, err := p.database(ctx)
+	if err != nil {
+		return false, contract.Stats{}, err
+	}
+	stats := contract.Stats{Queries: 1}
+	started := time.Now()
+	var id int64
+	err = db.NewRaw(`SELECT a.id`+audienceFrom+audienceWhere+`
+		AND a.id = ? FOR SHARE OF a`, append(unreadArgs(userID, roles, tenantID, orgID), announcementID)...).Scan(ctx, &id)
+	stats.StatementDuration = time.Since(started)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, stats, nil
+	}
+	if err != nil {
+		return false, stats, fmt.Errorf("announcement audience projection: validate announcement: %w", err)
+	}
+	stats.Rows = 1
+	return true, stats, nil
 }
 
 func (p *Projection) TargetCount(ctx context.Context, value contract.Target) (int, contract.Stats, error) {
