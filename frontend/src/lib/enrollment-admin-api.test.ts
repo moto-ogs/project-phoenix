@@ -247,16 +247,14 @@ describe("enrollment-admin-api", () => {
     await expect(
       decideAdminChild("request-1", "child-1", "approved"),
     ).resolves.toEqual(approvedChild);
-    expect(mockFetch).toHaveBeenLastCalledWith("/api/enrollment/admin/decide", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: "request-1",
-        child_id: "child-1",
-        status: "approved",
-        reason: "",
-      }),
-    });
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      "/api/enrollment/admin/requests/request-1/children/child-1/decide",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved", reason: "" }),
+      },
+    );
 
     mockFetch.mockResolvedValueOnce(
       jsonResponse(child({ status: "rejected" })),
@@ -264,12 +262,7 @@ describe("enrollment-admin-api", () => {
     await decideAdminChild("request-1", "child-1", "rejected", "Doppelung");
     expect(
       JSON.parse(mockFetch.mock.calls.at(-1)?.[1]?.body as string),
-    ).toEqual({
-      request_id: "request-1",
-      child_id: "child-1",
-      status: "rejected",
-      reason: "Doppelung",
-    });
+    ).toEqual({ status: "rejected", reason: "Doppelung" });
   });
 
   it("updates child offerings and lists offering adjustments", async () => {
@@ -295,13 +288,11 @@ describe("enrollment-admin-api", () => {
     ).resolves.toEqual(updatedChild);
     expect(mockFetch).toHaveBeenNthCalledWith(
       1,
-      "/api/enrollment/admin/offerings",
+      "/api/enrollment/admin/requests/request-1/children/child-1/offerings",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          request_id: "request-1",
-          child_id: "child-1",
           offerings: [{ offering_id: "offering-1", selected_days: ["mon"] }],
           reason: "Elternwunsch",
           complete_withdrawal_confirmed: false,
@@ -314,7 +305,7 @@ describe("enrollment-admin-api", () => {
     ).resolves.toEqual(history);
     expect(mockFetch).toHaveBeenNthCalledWith(
       2,
-      "/api/enrollment/admin/offering-adjustments?request_id=request%2F1&child_id=child%2F1",
+      "/api/enrollment/admin/requests/request%2F1/children/child%2F1/offering-adjustments",
       { cache: "no-store" },
     );
 
@@ -324,7 +315,7 @@ describe("enrollment-admin-api", () => {
     ).resolves.toEqual([]);
   });
 
-  it("corrects approved child data through the flattened admin route", async () => {
+  it("corrects approved child data on the backend's child path", async () => {
     const audit = changeRequest({ origin: "admin", status: "approved" });
     mockFetch.mockResolvedValueOnce(jsonResponse({ data: audit }));
 
@@ -339,13 +330,11 @@ describe("enrollment-admin-api", () => {
       }),
     ).resolves.toEqual(audit);
     expect(mockFetch).toHaveBeenLastCalledWith(
-      "/api/enrollment/admin/data-correction",
+      "/api/enrollment/admin/requests/request-1/children/child-1/data-correction",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          request_id: "request-1",
-          child_id: "child-1",
           first_name: "Lina",
           last_name: "Richtig",
           date_of_birth: "2018-05-16",

@@ -41,8 +41,18 @@ func ConfigRouteContracts() []common.RouteContract {
 		{Name: "base", Kind: common.QueryString},
 	}
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/schema/", Portals: portals, Response: FormSchemaResponse{}},
+		// The bodies of POST and PUT carry the form's own fields and legal
+		// blocks, the Enrollment types the answer carries; a type the
+		// generator walks once as a request and once as a response it
+		// refuses, so those bodies stay unregistered (#7563).
+		{Method: "POST", Pattern: "/schema/", Portals: portals, Response: FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/versions", Portals: portals, Response: []FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/preview", Portals: portals, Query: preview, Response: SchemaPreviewBootstrapResponse{}},
+		{Method: "GET", Pattern: "/schema/{id}", Portals: portals, Response: FormSchemaResponse{}},
+		{Method: "PUT", Pattern: "/schema/{id}", Portals: portals, Response: FormSchemaResponse{}},
+		{Method: "PATCH", Pattern: "/schema/{id}", Portals: portals, Request: RenameSchemaRequest{}, Response: FormSchemaResponse{}},
+		{Method: "DELETE", Pattern: "/schema/{id}", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/legal-documents/{filename}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/care-offerings/", Portals: portals, Query: phase, Response: []CareOfferingResponse{}},
 		{Method: "POST", Pattern: "/care-offerings/", Portals: portals, Request: CareOfferingRequest{}, Response: CareOfferingResponse{}},
@@ -74,6 +84,10 @@ func AdminRequestRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/admin/requests/{id}/restore", Portals: portals, Response: AdminRestoreResponse{}},
 		{Method: "GET", Pattern: "/admin/requests/{id}/children/{childId}/delete-impact", Portals: portals, Response: AdminEnrollmentDeletionImpact{}},
 		{Method: "DELETE", Pattern: "/admin/requests/{id}/children/{childId}", Portals: portals, Request: AdminEnrollmentDeleteRequest{}, Response: AdminEnrollmentDeletionImpact{}},
+		{Method: "POST", Pattern: "/admin/requests/{id}/children/{childId}/decide", Portals: portals, Request: AdminDecideRequest{}, Response: AdminRequestChild{}},
+		{Method: "PUT", Pattern: "/admin/requests/{id}/children/{childId}/data-correction", Portals: portals, Request: AdminChildDataCorrectionRequest{}, Response: ChangeRequestResponse{}},
+		{Method: "PUT", Pattern: "/admin/requests/{id}/children/{childId}/offerings", Portals: portals, Request: AdminUpdateOfferingsRequest{}, Response: AdminChildOfferingsResponse{}},
+		{Method: "GET", Pattern: "/admin/requests/{id}/children/{childId}/offering-adjustments", Portals: portals, Response: []AdminOfferingAdjustment{}},
 		{Method: "GET", Pattern: "/admin/students/{studentId}/requests/", Portals: portals, Response: []AdminRequestSummary{}},
 	}
 }

@@ -192,9 +192,9 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `demo/access/sessions` | Accepts a link or cookie token and stores a new httpOnly demo cookie on success. |
 | `demo/access/status` | Uses the shared demo-token forwarding helper for credential-scoped status. |
 | `emergency/snapshot/export` | Streams emergency-snapshot export bytes and filename. |
-| `enrollment/admin/data-correction` | Maps flattened request/child IDs and a corrected payload to the backend child route. |
-| `enrollment/admin/decide` | Maps flattened request/child IDs and decision fields to the backend child route. |
-| `enrollment/admin/offerings` | Maps flattened request/child IDs and offering edits to the backend child route. |
+| `enrollment/admin/data-correction` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
+| `enrollment/admin/decide` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
+| `enrollment/admin/offerings` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
 | `enrollment/admin/reports/care-usage/export` | Streams the care-usage export with backend filename. |
 | `enrollment/admin/reports/class-roster/export` | Streams the class-roster export with backend filename. |
 | `enrollment/admin/students/[studentId]/requests/export` | Streams one student’s enrollment requests export. |
