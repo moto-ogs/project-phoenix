@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
@@ -11,8 +13,8 @@ import (
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
-	"reflect"
 
+	"github.com/moto-ogs/project-phoenix/analytics"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
@@ -30,6 +32,7 @@ import (
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	exportTransferHTTP "github.com/moto-ogs/project-phoenix/modules/exporttransfer/http"
+	meAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me"
 	identityOperatorAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
@@ -104,6 +107,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, rootContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -300,6 +304,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		Method: route.Method, Pattern: prefix + route.Pattern,
 		Request: route.Request, Response: route.Response, Paginated: route.Paginated, NoData: route.NoData,
 		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields,
+		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes,
 	}
 	for _, portal := range route.Portals {
 		registration.Portals = append(registration.Portals, string(portal))
@@ -334,6 +339,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/accounts", traegerPortalHTTP.AccountRouteContracts()},
 		{"/traeger/profile", traegerPortalHTTP.ProfileRouteContracts()},
 		{"/traeger/school-sessions", traegerPortalHTTP.SchoolSessionRouteContracts()},
+		{"/traeger/auth", traegerPortalHTTP.StepUpRouteContracts()},
 		{"/traeger/schools", traegerViewHTTP.SchoolRouteContracts()},
 		{"/traeger/organization", traegerViewHTTP.OrganizationRouteContracts()},
 		{"/traeger/access-log", traegerViewHTTP.AccessLogRouteContracts()},
@@ -395,6 +401,22 @@ func staffPortalContractMounts() []contractMount {
 		// answers no data.
 		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
 		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
+	}
+}
+
+// rootContractMounts are the routes the root mounts outside every portal's
+// mount (#2352). Each portal's proxy reaches them through its fixed list of
+// such paths (frontend/src/lib/contract/catalog-outside-mounts.ts).
+func rootContractMounts() []contractMount {
+	return []contractMount{
+		{"/analytics-consent", meAPI.AnalyticsConsentRouteContracts()},
+		// The analytics package writes its envelope without api/common; the
+		// root names its answer.
+		{"/analytics-policy", []common.RouteContract{{
+			Method: "GET", Pattern: "", Portals: []common.PortalScope{common.PortalParent, common.PortalSchool},
+			Response: analytics.PolicyResponse{},
+		}}},
+		{"/parent-news-attachments", filestoreAPI.ParentAnnouncementAttachmentRouteContracts()},
 	}
 }
 

@@ -3,6 +3,7 @@ package contract
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -181,6 +182,10 @@ func TestBuildRejects(t *testing.T) {
 	bothAnswers.NoData = true
 	strayEnum := get("/api/rows/", inner{})
 	strayEnum.Enums = []EnumSpec{{Name: "Gone", Fields: []string{"inner.gone"}, Values: []string{"x"}}}
+	limitWithoutBody := get("/api/rows/", inner{})
+	limitWithoutBody.MaxBodyBytes = 1024
+	negativeLimit := post(body{})
+	negativeLimit.MaxBodyBytes = -1
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -205,6 +210,8 @@ func TestBuildRejects(t *testing.T) {
 		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
 		"a day type entry nothing uses":             {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}}, "day type contract.ownDay"},
 		"an owner's day type without an entry":      {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a body limit on a route without a body":    {[]Registration{limitWithoutBody}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a negative body limit":                     {[]Registration{negativeLimit}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -375,6 +382,28 @@ func TestTypeScriptWritesARouteWithoutData(t *testing.T) {
 	assert.Contains(t, source, "import {\n  noData,\n} from \"./runtime\";")
 	assert.Contains(t, source, "    response: noData,\n")
 	assert.NotContains(t, source, "success")
+}
+
+// The proxy traits travel into contract.json and onto the route object the
+// catalog proxy reads; a route without them carries neither key.
+func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
+	t.Parallel()
+	once := post(body{})
+	once.NoRetryAfterRenewal = "a renewed session would mail the code twice"
+	once.MaxBodyBytes = 64 * 1024
+	plain := get("/api/rows/{id}", inner{})
+	doc, err := Build([]Registration{once, plain}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	encoded, err := json.Marshal(doc.Routes)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"no_retry_after_renewal":"a renewed session would mail the code twice","max_body_bytes":65536`)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "    pattern: \"/api/rows/\",\n    portals: [\"tenant\"],\n    noRetryAfterRenewal: \"a renewed session would mail the code twice\",\n    maxBodyBytes: 65536,\n")
+	assert.Equal(t, 1, strings.Count(source, "noRetryAfterRenewal"))
+	assert.Equal(t, 1, strings.Count(source, "maxBodyBytes"))
 }
 
 // Two portals mount the same handlers, so two resources answer with one Go

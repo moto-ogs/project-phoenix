@@ -9,8 +9,5 @@
   ],
   "api/students/change-requests/rss-feed/rotate": [
     "POST tenant /api/students/change-requests/rss-feed/rotate raw"
-  ],
-  "api/students/school-checkin/batch": [
-    "POST tenant /api/students/school-checkin/batch max=65536"
   ]
 }

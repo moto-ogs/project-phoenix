@@ -132,9 +132,15 @@ func mountSessionObservers(
 	// Core actions of the portals reach the usage analytics once their
 	// response is 2xx (#3602).
 	router.Use(coreActionAnalytics(tracker, sessionAuth, settingsCompose.NewAnalyseFreigabe(settings, logger), analyticsConsent(consent), policy))
-	router.Get("/analytics-policy", analytics.PolicyHandler(policy, analyticsRequestActor))
+	router.Get("/analytics-policy", analytics.PolicyHandler(policy, analyticsRequestActor, respondAnalyticsPolicy))
 	mountAnalyticsConsent(router, consent)
 	return nil
+}
+
+// respondAnalyticsPolicy writes the analytics policy in the shared success
+// envelope, which the analytics package may not import.
+func respondAnalyticsPolicy(w http.ResponseWriter, r *http.Request, answer analytics.PolicyResponse) {
+	apiCommon.Respond(w, r, http.StatusOK, answer, "")
 }
 
 // RequireLiveAccessSession constructs the production access-family gate.

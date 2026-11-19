@@ -4,6 +4,7 @@ import { getRouteMatcher } from "next/dist/shared/lib/router/utils/route-matcher
 import { getRouteRegex } from "next/dist/shared/lib/router/utils/route-regex";
 import { getSortedRoutes } from "next/dist/shared/lib/router/utils/sorted-routes";
 import { describe, expect, it } from "vitest";
+import { CATALOG_OUTSIDE_MOUNTS } from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
 
 /**
@@ -38,20 +39,65 @@ const routeFiles = getSortedRoutes(
 
 const isParam = (segment: string) => /^[[{]/.test(segment);
 
-const cases = Object.entries(portalRoutes).flatMap(([portal, routes]) => {
-  const [mount, prefix] = BFF_PREFIX[portal as keyof typeof portalRoutes];
+const startsWithHead = (pattern: string, head: string) =>
+  pattern === head || pattern.startsWith(`${head}/`);
+
+/**
+ * The BFF path of a pattern: `/parent/me/x/{id}` → `/api/parent/me/x/{id}`;
+ * a pattern beside the mount that the portal's outside list names keeps its
+ * whole path under the prefix: `/analytics-policy` →
+ * `/api/school/analytics-policy`. Null for a pattern no BFF path reaches.
+ */
+function bffPath(portal: keyof typeof portalRoutes, pattern: string) {
+  const [mount, prefix] = BFF_PREFIX[portal];
+  if (startsWithHead(pattern, mount)) {
+    return prefix + pattern.slice(mount.length);
+  }
+  const outside: readonly string[] = CATALOG_OUTSIDE_MOUNTS[portal];
+  return outside.some((head) => startsWithHead(pattern, head))
+    ? prefix + pattern
+    : null;
+}
+
+const cases = Object.entries(portalRoutes).flatMap(([name, routes]) => {
+  const portal = name as keyof typeof portalRoutes;
+  const [, prefix] = BFF_PREFIX[portal];
   return [...new Set(routes.map((route) => route.pattern))].map((pattern) => ({
     portal,
-    // `/parent/me/x/{id}` → `/api/parent/me/x/{id}`, without a trailing slash.
-    bff: (prefix + pattern.slice(mount.length)).replace(/\/$/, ""),
+    pattern,
+    // Without a trailing slash, as the browser calls it.
+    bff: bffPath(portal, pattern)?.replace(/\/$/, "") ?? null,
     catchAll: `${prefix}/[...path]`,
   }));
+});
+
+describe("registered route beside a portal's mount", () => {
+  it.each(cases)("$portal $pattern has a BFF path", ({ bff }) => {
+    // A pattern outside the mount needs an entry in CATALOG_OUTSIDE_MOUNTS
+    // (lib/contract/catalog-outside-mounts.ts), or the proxy never reaches it.
+    expect(bff).not.toBeNull();
+  });
+
+  it("names only heads the contract registers for the portal", () => {
+    for (const [name, heads] of Object.entries(CATALOG_OUTSIDE_MOUNTS)) {
+      const patterns = portalRoutes[name as keyof typeof portalRoutes].map(
+        (route) => route.pattern,
+      );
+      for (const head of heads) {
+        expect(
+          patterns.some((pattern) => startsWithHead(pattern, head)),
+          `${name} ${head}`,
+        ).toBe(true);
+      }
+    }
+  });
 });
 
 describe("route file in front of a portal's catalog proxy", () => {
   it.each(cases)(
     "$portal $bff is not shadowed by a dynamic route file",
     ({ bff, catchAll }) => {
+      if (bff === null) return;
       const pattern = bff.split("/");
       const sample = pattern
         .map((segment) => (isParam(segment) ? "1" : segment))

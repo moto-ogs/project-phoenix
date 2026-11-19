@@ -5,6 +5,7 @@ import {
   type CatalogMethod,
   type CatalogRoute,
 } from "../contract/catalog-proxy.server";
+import { CATALOG_OUTSIDE_MOUNTS } from "../contract/catalog-outside-mounts";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 /** The parents portal's route handlers, on the parent session only. */
@@ -40,4 +41,11 @@ export const parentApiPut = async <T, B = unknown>(
 export const catalogProxy = (
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
-) => makeCatalogProxy(parent, "/parent", routes, method);
+) =>
+  makeCatalogProxy(
+    parent,
+    "/parent",
+    routes,
+    method,
+    CATALOG_OUTSIDE_MOUNTS.parent,
+  );

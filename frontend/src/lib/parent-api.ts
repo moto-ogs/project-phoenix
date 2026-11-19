@@ -1463,7 +1463,9 @@ export async function listAnnouncementAttachments(
 ): Promise<ParentAnnouncementAttachment[]> {
   const result = await getJson<{
     attachments: ParentAnnouncementAttachment[];
-  }>(`/api/parent/me/news/${encodeURIComponent(announcementId)}/attachments`);
+  }>(
+    `/api/parent/parent-news-attachments/${encodeURIComponent(announcementId)}`,
+  );
   return result.attachments ?? [];
 }
 

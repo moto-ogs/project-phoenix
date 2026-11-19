@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -81,7 +82,11 @@ func TestCollectionPolicyParentsRequireEverySchool(t *testing.T) {
 			actor := Actor{Surface: SurfaceParents, AccountID: 91}
 			assert.Equal(t, tc.want, policy.AllowsActor(context.Background(), actor))
 			recorder := httptest.NewRecorder()
-			PolicyHandler(policy, func(*http.Request) (Actor, bool) { return actor, true })(recorder, httptest.NewRequest(http.MethodGet, "/analytics-policy", nil))
+			respond := func(w http.ResponseWriter, _ *http.Request, answer PolicyResponse) {
+				_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": answer})
+			}
+			PolicyHandler(policy, func(*http.Request) (Actor, bool) { return actor, true }, respond)(recorder, httptest.NewRequest(http.MethodGet, "/analytics-policy", nil))
+			assert.Equal(t, "no-store", recorder.Header().Get("Cache-Control"))
 			require.Equal(t, http.StatusOK, recorder.Code)
 			assert.Contains(t, recorder.Body.String(), map[bool]string{true: `"enabled":true`, false: `"enabled":false`}[tc.want])
 		})

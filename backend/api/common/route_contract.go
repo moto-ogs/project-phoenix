@@ -49,6 +49,14 @@ type RouteContract struct {
 	// DeprecatedFields announces the removal of fields one release ahead, as
 	// "GoType.json_name".
 	DeprecatedFields []string
+	// NoRetryAfterRenewal says why the portal's proxy must not send the
+	// request again after it renewed an expired session: the first call may
+	// already have acted (mailed a code, checked a password). Empty allows
+	// the retry.
+	NoRetryAfterRenewal string
+	// MaxBodyBytes is the largest request body the proxy reads; it answers a
+	// larger one 413 without calling the backend. Zero sets no limit.
+	MaxBodyBytes int
 }
 
 // QueryKind is the value form of a query parameter.

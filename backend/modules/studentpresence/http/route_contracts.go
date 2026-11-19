@@ -18,8 +18,8 @@ type StatusDayDeletedResponse struct {
 
 // StudentRouteContracts registers the typed contract of the status-day
 // writes, the privacy consent and the web check-in (ADR 0270), with patterns
-// relative to /api/students. The batch check-in keeps its own BFF route,
-// which bounds the body it reads.
+// relative to /api/students. The proxy bounds the batch check-in's body at
+// the backend's own limit, so an oversized payload never reaches it.
 func StudentRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
@@ -30,5 +30,9 @@ func StudentRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}/privacy-consent", Portals: portals, Response: PrivacyConsentResponse{}},
 		{Method: "PUT", Pattern: "/{id}/privacy-consent", Portals: portals, Request: PrivacyConsentRequest{}, Response: PrivacyConsentResponse{}},
 		{Method: "POST", Pattern: "/{id}/school-checkin", Portals: portals, Request: schoolCheckinRequest{}, Response: schoolCheckinResponse{}},
+		{
+			Method: "POST", Pattern: "/school-checkin/batch", Portals: portals, MaxBodyBytes: maxSchoolCheckinBatchBytes,
+			Request: schoolCheckinBatchRequest{}, Response: schoolCheckinBatchResponse{},
+		},
 	}
 }

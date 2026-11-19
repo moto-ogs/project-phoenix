@@ -114,6 +114,11 @@ func communicationRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: news + "/acknowledge", Portals: portals, Request: stampRequest{}, Response: AnnouncementAcknowledgedResponse{}},
 		{Method: "POST", Pattern: news + "/respond", Portals: portals, Request: respondRequest{}, Response: AnnouncementAnsweredResponse{}},
 		{
+			Method: "POST", Pattern: news + "/declaration", Portals: portals,
+			NoRetryAfterRenewal: "a renewed session would send the account password twice",
+			Request:             declarationRequest{}, Response: DeclarationRecordedResponse{},
+		},
+		{
 			// format=pdf answers a file; the proxy forwards only the JSON form.
 			Method: "GET", Pattern: news + "/declaration/proof", Portals: portals,
 			Query:    []common.QueryParam{{Name: "student_id", Kind: common.QueryID}},
