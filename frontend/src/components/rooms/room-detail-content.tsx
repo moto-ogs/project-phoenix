@@ -58,7 +58,7 @@ const logger = createLogger({ component: "RoomDetailContent" });
 // per-student-visit rows to one row per active.groups session — no student
 // IDs or names by design. Per-child detail lives behind
 // /students/{id}/attendance-history under its own GDPR gates.
-export interface RoomHistoryEntry {
+interface RoomHistoryEntry {
   sessionId: string;
   startedAt: string; // RFC3339
   endedAt: string | null; // RFC3339 or null while session is open
@@ -74,7 +74,7 @@ interface DateGroup {
 }
 
 /** Maps one session of the contract (`RoomSessionEntry`). */
-export function mapRoomHistoryEntry(entry: RoomSessionEntry): RoomHistoryEntry {
+function mapRoomHistoryEntry(entry: RoomSessionEntry): RoomHistoryEntry {
   return {
     sessionId: String(entry.session_id),
     startedAt: entry.started_at,
@@ -97,7 +97,7 @@ interface RoomHistoryBody {
 }
 
 /** A switched-off history arrives as the sentinel or as its 403 code. */
-export function isRoomHistoryDisabled(
+function isRoomHistoryDisabled(
   failure: unknown,
   body?: RoomHistoryBody | null,
 ): boolean {
