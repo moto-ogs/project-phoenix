@@ -66,6 +66,8 @@ func staffShiftRouteContracts() []common.RouteContract {
 		tenantRoute("PUT", "/{id}/move", nil, staffshiftsHTTP.ShiftResponse{}),
 		tenantRoute("PUT", "/{id}/cancellation", nil, staffshiftsHTTP.CancellationResponse{}),
 		tenantRoute("POST", "/series", nil, staffshiftsHTTP.SeriesResponse{}),
+		tenantRoute("GET", "/series/{id}", nil, staffshiftsHTTP.SeriesDetailResponse{}),
 		tenantRoute("PUT", "/series/{id}/split", nil, staffshiftsHTTP.SeriesResponse{}),
+		tenantRoute("DELETE", "/series/{id}", nil, staffshiftsHTTP.SeriesResponse{}, common.QueryParam{Name: "from", Kind: common.QueryDate}),
 	}
 }

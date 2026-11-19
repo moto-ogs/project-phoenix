@@ -35,6 +35,30 @@ vi.mock("~/lib/api-helpers.server", async (importOriginal) => ({
   apiDelete: mockApiDelete,
 }));
 
+// The catalog proxy answers the requests that ask for the contract's shape;
+// the stand-in records what it was handed.
+const { catalogCalls } = vi.hoisted(() => ({
+  catalogCalls: [] as Array<[string, unknown]>,
+}));
+vi.mock("~/lib/route-wrapper.server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/route-wrapper.server")>()),
+  catalogProxy:
+    (_routes: unknown, method: string) =>
+    async (_request: Request, context: { params: Promise<unknown> }) => {
+      catalogCalls.push([method, await context.params]);
+      return Response.json({ success: true, data: { via: "catalog" } });
+    },
+}));
+
+/** A request of the current client, which asks for the contract's shape. */
+function contractRequest(path: string, method = "GET", body?: unknown) {
+  return new NextRequest(new URL(path, "http://localhost:3000"), {
+    method,
+    headers: { "X-Moto-Wire": "contract" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
 const studentPath = "/api/students/123";
 const consentPath = "/api/students/123/privacy-consent";
 
@@ -688,5 +712,52 @@ describe("DELETE /api/students/[id]", () => {
       body,
     );
     expect(response.status).toBe(200);
+  });
+});
+
+describe("the contract's shape (#7563)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    catalogCalls.length = 0;
+    mockAuth.mockResolvedValue(defaultSession);
+  });
+
+  it.each([
+    ["GET", GET, undefined],
+    ["PUT", PUT, { first_name: "Alice" }],
+    ["DELETE", DELETE, { expected_fingerprint: "abc" }],
+  ] as const)(
+    "hands a %s with the header to the catalog proxy under the child's path",
+    async (method, handler, body) => {
+      const response = await handler(
+        contractRequest(studentPath, method, body),
+        createMockContext({ id: "123" }),
+      );
+
+      expect(await response.json()).toEqual({
+        success: true,
+        data: { via: "catalog" },
+      });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(catalogCalls).toEqual([[method, { path: ["students", "123"] }]]);
+      expect(mockApiGet).not.toHaveBeenCalled();
+      expect(mockApiPut).not.toHaveBeenCalled();
+      expect(mockApiDelete).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps the older shape for a request without the header", async () => {
+    mockApiGet.mockResolvedValueOnce(detailRow());
+
+    const response = await GET(
+      createMockRequest(studentPath),
+      createMockContext({ id: "123" }),
+    );
+
+    expect(catalogCalls).toEqual([]);
+    const json = await parseJsonResponse<{ data: { second_name: string } }>(
+      response,
+    );
+    expect(json.data.second_name).toBe("Smith");
   });
 });

@@ -282,8 +282,24 @@ func parseStudentListParams(r *http.Request, today calendar.Date) *studentListPa
 
 	// Parse pagination
 	params.page, params.pageSize = common.ParsePagination(r)
+	params.pageSize = studentListPageSize(r, params.pageSize)
 
 	return params
+}
+
+// studentListMaxPageSize bounds one page of the child list.
+const studentListMaxPageSize = 1000
+
+// studentListPageSize is the page size of the child list. Callers that do not
+// paginate (Kindersuche, the database list) get every row in one trip, so a
+// missing or unusable page_size means the whole cap; an explicit one is
+// honored up to the cap, so no caller forces an arbitrarily large query. The
+// staff portal's BFF route applied this rule until #7563.
+func studentListPageSize(r *http.Request, parsed int) int {
+	if requested, err := strconv.Atoi(r.URL.Query().Get("page_size")); err != nil || requested <= 0 {
+		return studentListMaxPageSize
+	}
+	return min(parsed, studentListMaxPageSize)
 }
 
 // hasPersonFilters returns true if any person-based filters are active

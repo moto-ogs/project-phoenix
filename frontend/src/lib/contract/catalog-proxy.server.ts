@@ -23,6 +23,10 @@ export interface CatalogRoute {
   readonly query?: readonly string[];
   /** A decoder, or the decoders of a legacy route with response variants. */
   readonly response: unknown;
+  /** The query parameter that picks a variant's decoder. */
+  readonly variantParam?: string;
+  /** The variant the backend answers without that parameter. */
+  readonly defaultVariant?: string;
   /** Why the request runs only once, also after a session renewal. */
   readonly noRetryAfterRenewal?: string;
   /** The largest request body read; a larger one is answered 413. */
@@ -46,12 +50,44 @@ const isParam = (segment: string) =>
 /** A parameter never stands for an empty or a dot segment. */
 const UNSAFE_SEGMENTS = new Set(["", ".", ".."]);
 
-/** A route this proxy can serve: one decoder for its one response shape. */
-function hasOneDecoder(
-  route: CatalogRoute,
-): route is CatalogRoute & { response: Envelope } {
-  const response = route.response as { safeParse?: unknown } | null;
-  return typeof response?.safeParse === "function";
+const isDecoder = (value: unknown): value is Envelope =>
+  typeof (value as { safeParse?: unknown } | null)?.safeParse === "function";
+
+/**
+ * A route this proxy can serve: one decoder for its one response shape, or
+ * a decoder per variant together with the query parameter that picks one.
+ */
+type ServedRoute = CatalogRoute & {
+  response: Envelope | Readonly<Record<string, Envelope>>;
+};
+
+function isServable(route: CatalogRoute): route is ServedRoute {
+  if (isDecoder(route.response)) return true;
+  const variants = route.response as Record<string, unknown> | null;
+  return (
+    route.variantParam !== undefined &&
+    route.defaultVariant !== undefined &&
+    typeof variants === "object" &&
+    variants !== null &&
+    isDecoder(variants[route.defaultVariant]) &&
+    Object.values(variants).every(isDecoder)
+  );
+}
+
+/**
+ * The decoder of the answer the request asks for. A variant the contract
+ * does not name is the backend's to refuse; were it answered, it is held to
+ * the default variant.
+ */
+function decoderOf(route: ServedRoute, request: NextRequest): Envelope {
+  if (isDecoder(route.response)) return route.response;
+  const variants = route.response as Readonly<Record<string, Envelope>>;
+  const asked = request.nextUrl.searchParams.get(route.variantParam ?? "");
+  return (
+    (asked !== null && Object.hasOwn(variants, asked)
+      ? variants[asked]
+      : undefined) ?? (variants[route.defaultVariant ?? ""] as Envelope)
+  );
 }
 
 function matches(pattern: readonly string[], path: readonly string[]) {
@@ -126,7 +162,7 @@ export function makeCatalogProxy(
   ) =>
     list
       .filter((route) => route.method === method)
-      .filter(hasOneDecoder)
+      .filter(isServable)
       .map((route) => ({ route, pattern: segmentsOf(route.pattern), isPublic }))
       .filter(({ pattern }) =>
         under.some((head) => underOutsideHead(pattern, head)),
@@ -173,17 +209,25 @@ export function makeCatalogProxy(
     return { route: found.route, endpoint: `${endpoint}${search}` };
   }
 
-  function decoded(
-    route: CatalogRoute & { response: Envelope },
-    answer: unknown,
-  ) {
+  function decoded(route: ServedRoute, request: NextRequest, answer: unknown) {
     const result = decodeContract(
       `${route.method} ${route.pattern}`,
-      route.response,
+      decoderOf(route, request),
       answer,
     );
     if (!result.ok) throw result.error.cause;
-    return result.value.data;
+    const value = result.value as { data: unknown; pagination?: unknown };
+    // A paginated answer keeps its page beside the data, as the backend
+    // sends it; the envelope then passes through the portal's handler.
+    if (value.pagination !== undefined) {
+      return {
+        success: true,
+        message: "Success",
+        data: value.data,
+        pagination: value.pagination,
+      };
+    }
+    return value.data;
   }
 
   const read = async (
@@ -195,7 +239,7 @@ export function makeCatalogProxy(
     const answer = await portal.api(method, endpoint, token, undefined, {
       request,
     });
-    return decoded(route, answer);
+    return decoded(route, request, answer);
   };
 
   /** A DELETE forwards a JSON body, such as a reason, when it carries one. */
@@ -217,7 +261,7 @@ export function makeCatalogProxy(
     );
     // A DELETE may answer 204; every other empty answer breaks the contract.
     if (answer === undefined) return null;
-    return decoded(route, answer);
+    return decoded(route, request, answer);
   };
 
   const write = async (
@@ -231,7 +275,7 @@ export function makeCatalogProxy(
       idempotencyKey: request.headers.get("Idempotency-Key"),
       request,
     });
-    return decoded(route, answer);
+    return decoded(route, request, answer);
   };
 
   type Options = {
@@ -269,7 +313,7 @@ export function makeCatalogProxy(
    */
   async function servePublic(
     request: NextRequest,
-    route: CatalogRoute & { response: Envelope },
+    route: ServedRoute,
     context: RouteContext,
   ): Promise<Response> {
     const { endpoint } = target(request, (await context.params)?.path);
@@ -285,7 +329,9 @@ export function makeCatalogProxy(
         request,
       }),
     );
-    return NextResponse.json(wrapInApiResponse(decoded(route, answer)));
+    return NextResponse.json(
+      wrapInApiResponse(decoded(route, request, answer)),
+    );
   }
 
   return async (request: NextRequest, context: RouteContext) => {
@@ -300,7 +346,7 @@ export function makeCatalogProxy(
     try {
       response = await servePublic(
         request,
-        found.route as CatalogRoute & { response: Envelope },
+        found.route as ServedRoute,
         context,
       );
     } catch (error) {

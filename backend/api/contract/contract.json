@@ -286,6 +286,23 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/staff-shifts/series/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SeriesResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/staff-shifts/{id}",
       "portals": [
         "tenant"
@@ -386,6 +403,18 @@
       "portals": [
         "tenant"
       ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/students/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "studentDeleteRequest"
+      },
       "no_data": true
     },
     {
@@ -3472,6 +3501,17 @@
       "response": {
         "kind": "ref",
         "ref": "OverviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-shifts/series/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SeriesDetailResponse"
       }
     },
     {
@@ -71224,6 +71264,97 @@
           "name": "reason",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SeriesDetailResponse",
+      "go_type": "staffshifts.SeriesDetailResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "week_pattern",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_until",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "include_school_breaks",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

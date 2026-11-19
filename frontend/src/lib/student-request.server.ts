@@ -1,22 +1,18 @@
-// What the student BFF routes accept from the browser before anything reaches
-// the backend.
+// Temporary (#7563): what the student BFF routes accept from an older app
+// bundle before anything reaches the backend. The current client builds the
+// body itself (student-request.ts). Delete with the two route files after
+// the next production deploy.
 
 import { bffError } from "~/lib/api-response-error.server";
-import type { StudentGuardianPayload } from "~/lib/guardian-helpers";
-import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
-import type { BackendPickupScheduleRequest } from "~/lib/pickup-schedule-helpers";
 import type { StudentRequest } from "./contract/students.generated";
-import { prepareStudentForBackend } from "./student-wire";
 import type { StudentUpdate } from "./student-helpers";
 import type { ConsentPairInput } from "./student-privacy-consent.server";
+import {
+  studentCreateRequest,
+  type StudentCreateBody,
+} from "./student-request";
 
-/** A create also creates guardians and weekly schedules atomically. */
-export type StudentCreateBody = StudentUpdate &
-  ConsentPairInput & {
-    guardians?: StudentGuardianPayload[];
-    arrival_schedules?: ArrivalScheduleFormEntry[];
-    pickup_schedules?: BackendPickupScheduleRequest[];
-  };
+export type { StudentCreateBody };
 
 export type StudentUpdateBody = StudentUpdate & ConsentPairInput;
 
@@ -72,21 +68,5 @@ export function buildStudentCreateRequest(
     );
   }
 
-  const [firstName, lastName, schoolClass] = required.map(({ value }) => value);
-  return {
-    ...prepareStudentForBackend(body),
-    first_name: firstName,
-    last_name: lastName,
-    school_class: schoolClass,
-    ...(body.guardians?.length && { guardians: body.guardians }),
-    ...(body.arrival_schedules?.length && {
-      arrival_schedules: body.arrival_schedules,
-    }),
-    ...(body.pickup_schedules?.length && {
-      pickup_schedules: body.pickup_schedules,
-    }),
-    // A child of the class without an OGS place (#4803); the backend refuses
-    // it unless the school keeps such children.
-    ...(body.without_care_place === true && { without_care_place: true }),
-  };
+  return studentCreateRequest(body);
 }

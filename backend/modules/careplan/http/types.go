@@ -10,6 +10,8 @@ import (
 
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+
+	validation "github.com/go-ozzo/ozzo-validation"
 )
 
 // validateDepartureCompanionNote bounds the free-text "mit wem" companion note
@@ -261,19 +263,31 @@ func (req *UpdateStudentRequest) normalizeDayFields() error {
 	return nil
 }
 
+// requireStudentNames refuses a child without first name, last name or
+// class, each blank one as a field error, so the form marks every missing
+// field at once. Blank means empty after trimming (the staff portal's BFF
+// route checked this until #7563).
+func requireStudentNames(req *StudentRequest) error {
+	missing := validation.Errors{}
+	for field, value := range map[string]string{
+		"first_name":   req.FirstName,
+		"last_name":    req.LastName,
+		"school_class": req.SchoolClass,
+	} {
+		if strings.TrimSpace(value) == "" {
+			missing[field] = errors.New("required")
+		}
+	}
+	if len(missing) > 0 {
+		return missing
+	}
+	return nil
+}
+
 // Bind validates the student request
 func (req *StudentRequest) Bind(_ *http.Request) error {
-	// Basic validation for person fields
-	if req.FirstName == "" {
-		return errors.New("first name is required")
-	}
-	if req.LastName == "" {
-		return errors.New("last name is required")
-	}
-
-	// Basic validation for student fields
-	if req.SchoolClass == "" {
-		return errors.New("school class is required")
+	if err := requireStudentNames(req); err != nil {
+		return err
 	}
 
 	// Guardian fields are now optional (legacy fields - use guardian_profiles system instead)

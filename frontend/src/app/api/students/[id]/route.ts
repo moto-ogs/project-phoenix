@@ -1,18 +1,34 @@
-import { NextResponse } from "next/server";
+// Temporary (#7563): the current client reads, updates and deletes a child
+// through the catalog proxy and maps the contract's shape itself
+// (lib/student-api); it marks its requests with the header of
+// lib/contract/wire, which this file hands to the proxy. Without the header,
+// an installed app with an older bundle still gets the shape this file
+// builds: the child mapped onto the browser's Student, the consent written
+// before and read after the update. Delete this file, its test and
+// lib/contract/wire after the next production deploy; the portal's
+// catch-all then answers the path.
+import { NextResponse, type NextRequest } from "next/server";
 import { apiDelete, handleApiError } from "~/lib/api-helpers.server";
 import { contractGet, contractWrite } from "~/lib/contract/client.server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
 import { routes } from "~/lib/contract/students.generated";
+import { asksForContractWire } from "~/lib/contract/wire";
+import { withPrivateNoStore } from "~/lib/private-no-store";
 import { problemBody, type ProblemBody } from "~/lib/api-error";
 import {
   ApiResponseError,
   isApiResponseError,
 } from "~/lib/api-response-error.server";
 import {
+  catalogProxy,
   createDeleteWithBodyHandler,
   createGetHandler,
   createPutHandler,
 } from "~/lib/route-wrapper.server";
-import { requirePathSegmentParam } from "~/lib/route-wrapper-utils.server";
+import {
+  requirePathSegmentParam,
+  type RouteContext,
+} from "~/lib/route-wrapper-utils.server";
 import { createLogger } from "~/lib/logger";
 import type { Student } from "~/lib/student-helpers";
 import {
@@ -98,7 +114,7 @@ function logFailure(message: string, id: string, error: unknown): void {
 }
 
 /** The child with access flags, feature flags and privacy consent. */
-export const GET = createGetHandler<Student>(async (request, token, params) => {
+const legacyGet = createGetHandler<Student>(async (request, token, params) => {
   const id = requirePathSegmentParam(params);
   try {
     // The tenant-scoped backend projection carries the consent: one read-budget
@@ -139,7 +155,7 @@ export const GET = createGetHandler<Student>(async (request, token, params) => {
  * overwrite somebody else's newer consent while the user is told nothing was
  * saved.
  */
-export const PUT = createPutHandler<Student | Response, StudentUpdateBody>(
+const legacyPut = createPutHandler<Student | Response, StudentUpdateBody>(
   async (request, body, token, params) => {
     const id = requirePathSegmentParam(params);
     try {
@@ -198,7 +214,7 @@ interface StudentDeletionRequest {
   acknowledged?: boolean;
 }
 
-export const DELETE = createDeleteWithBodyHandler<
+const legacyDelete = createDeleteWithBodyHandler<
   { success: true; message: string },
   StudentDeletionRequest
 >(async (_request, body, token, params) => {
@@ -223,3 +239,37 @@ export const DELETE = createDeleteWithBodyHandler<
     throw error;
   }
 });
+
+/** The path the portal's catch-all would receive for /api/students/{id}. */
+async function catalogPath(context: RouteContext) {
+  // An empty or dot segment matches no route there: the proxy answers 404.
+  const id = (await context.params)?.id;
+  return {
+    params: Promise.resolve({
+      path: ["students", typeof id === "string" ? id : ""],
+    }),
+  };
+}
+
+type Handler = (
+  request: NextRequest,
+  context: RouteContext,
+) => Promise<Response>;
+
+/** The contract's shape through the catalog proxy, else the older shape. */
+function byWire(legacy: Handler, catalog: Handler) {
+  return async (request: NextRequest, context: RouteContext) =>
+    asksForContractWire(request)
+      ? catalog(request, await catalogPath(context))
+      : legacy(request, context);
+}
+
+export const GET = withPrivateNoStore(
+  byWire(legacyGet, catalogProxy(portalRoutes.tenant, "GET")),
+);
+export const PUT = withPrivateNoStore(
+  byWire(legacyPut, catalogProxy(portalRoutes.tenant, "PUT")),
+);
+export const DELETE = withPrivateNoStore(
+  byWire(legacyDelete, catalogProxy(portalRoutes.tenant, "DELETE")),
+);

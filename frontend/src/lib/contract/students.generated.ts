@@ -3293,6 +3293,13 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/students/{id}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}",
+    portals: ["tenant"],
+    request: requestBody<studentDeleteRequest>(),
+    response: noData,
+  },
   "DELETE /api/students/{id}/arrival-exceptions/{exceptionId}": {
     method: "DELETE",
     pattern: "/api/students/{id}/arrival-exceptions/{exceptionId}",
