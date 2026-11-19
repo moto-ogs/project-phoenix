@@ -182,7 +182,7 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const FAMILY_INFO =
-  "Hier siehst du alle Rechnungen einer Familie und ihre offene Forderung. Prüfe zuerst unter „Dokumente“, bei welcher Rechnung „Forderung offen“ steht.";
+  "Hier siehst du alle Rechnungen einer Familie, auch Storno und Gutschrift. Prüfe zuerst bei „Empfänger und Zahlung“, wohin die Schreiben gehen.";
 
 export default function TraegerBillingFamilyPage() {
   const params = useParams<{ id: string }>();

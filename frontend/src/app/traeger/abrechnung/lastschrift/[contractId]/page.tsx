@@ -16,7 +16,7 @@ import { traegerPath } from "~/lib/traeger-url";
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const MANDATE_INFO =
-  "Hier verwaltest du das SEPA-Lastschriftmandat einer Familie. Prüfe zuerst, ob es „Gültig“ ist. Fehlt es, wählst du „Mandat erfassen“ und überträgst die Angaben aus dem unterschriebenen Mandat.";
+  "Hier verwaltest du das SEPA-Lastschriftmandat einer Familie. Prüfe zuerst, ob es „Gültig“ ist. Hat die Familie noch keins, wählst du „Mandat erfassen“.";
 
 export default function TraegerSepaMandatePage() {
   const params = useParams<{ contractId: string }>();

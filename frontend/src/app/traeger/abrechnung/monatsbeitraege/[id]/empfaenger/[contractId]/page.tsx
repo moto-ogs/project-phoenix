@@ -28,7 +28,7 @@ import { traegerPath } from "~/lib/traeger-url";
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const RECIPIENT_PAYMENT_INFO =
-  "Hier legst du fest, an wen die Rechnung geht und wie die Familie zahlt. Wähle zuerst bei „Rechnung an“ die Person und dann den „Zahlungsweg“.";
+  "Hier legst du fest, an wen die Rechnungen dieser Familie gehen. Wähle zuerst bei „Rechnung an“ die Person. Bei Bedarf änderst du den „Zahlungsweg“.";
 
 export default function TraegerFamilyBillingPage() {
   const params = useParams<{ id: string; contractId: string }>();
