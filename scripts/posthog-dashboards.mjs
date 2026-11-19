@@ -1210,10 +1210,10 @@ order by Portal, Flaechen`),
           ...hogql('production', (where) => `
 select
   count() as ${quoted('Schulen mit Checkliste')},
-  countIf(Abgeschlossen) as ${quoted('Abgeschlossen')},
-  countIf(Ausgeblendet and not Abgeschlossen) as ${quoted('Ausgeblendet ohne Abschluss')},
-  round(100 * countIf(Abgeschlossen) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
-  round(100 * countIf(Ausgeblendet and not Abgeschlossen) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
+  countIf(Abgeschlossen = 1) as ${quoted('Abgeschlossen')},
+  countIf(Ausgeblendet = 1 and Abgeschlossen = 0) as ${quoted('Ausgeblendet ohne Abschluss')},
+  round(100 * countIf(Abgeschlossen = 1) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
+  round(100 * countIf(Ausgeblendet = 1 and Abgeschlossen = 0) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
 from (
   select
     toString(properties.school_id) as Schule_ID,
