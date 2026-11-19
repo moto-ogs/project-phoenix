@@ -32,6 +32,7 @@ import {
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Button } from "~/components/ui/button";
+import { ICON_ONLY } from "~/components/ui/control-geometry";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
@@ -646,7 +647,9 @@ export function TagesplanView() {
         ) : undefined
       }
       actions={
-        <div className="flex items-center gap-1">
+        // Als reines Symbol-Element (`ICON_ONLY`) bleibt die Tagesnavigation
+        // auf dem Handy in der Titelzeile, statt eine eigene Zeile zu füllen.
+        <div {...ICON_ONLY} className="flex items-center gap-1">
           <Button
             type="button"
             variant="ghost"
