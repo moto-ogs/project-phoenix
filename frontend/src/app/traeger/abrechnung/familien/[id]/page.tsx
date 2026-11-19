@@ -180,6 +180,10 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
   },
 ];
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const FAMILY_INFO =
+  "Hier siehst du alle Rechnungen einer Familie und ihre offene Forderung. Prüfe zuerst unter „Dokumente“, bei welcher Rechnung „Forderung offen“ steht.";
+
 export default function TraegerBillingFamilyPage() {
   const params = useParams<{ id: string }>();
   const familyId = params?.id ?? "";
@@ -202,6 +206,7 @@ export default function TraegerBillingFamilyPage() {
 
   return (
     <TenantPage
+      info={FAMILY_INFO}
       title={family ? familyName(family) : "Familie"}
       leading={<ConceptIconTile concept={parentsConcept} size="page" />}
       back

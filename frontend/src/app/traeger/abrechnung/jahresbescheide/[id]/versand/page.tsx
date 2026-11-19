@@ -253,6 +253,10 @@ function noticeColumns(
   ];
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const NOTICE_DISPATCH_INFO =
+  "Hier sendest du die ausgestellten Jahresbescheide an die Familien. Wähle zuerst „Originale speichern“ und danach „An alle senden“.";
+
 export default function TraegerCareNoticeDeliveryPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
@@ -391,6 +395,7 @@ export default function TraegerCareNoticeDeliveryPage() {
 
   return (
     <TenantPage
+      info={NOTICE_DISPATCH_INFO}
       title={run ? `Versand der Jahresbescheide ${run.year}` : "Versand"}
       back
       backHref={runPath}

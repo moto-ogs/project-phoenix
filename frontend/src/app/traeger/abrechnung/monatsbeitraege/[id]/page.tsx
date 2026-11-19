@@ -178,6 +178,10 @@ function notBilledLabel(children: number, released = false): string {
   return `${children} Kinder mit doppeltem Vertrag ${released ? "sind" : "werden"} nicht abgerechnet.`;
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const CARE_RUN_INFO =
+  "Hier rechnest du die Monatsbeiträge eines Monats ab. Es zählt der Vertrag, nicht die Anwesenheit. Prüfe zuerst die Vorschau, bevor du „Lauf freigeben“ wählst.";
+
 export default function TraegerCareRunPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -417,6 +421,7 @@ export default function TraegerCareRunPage() {
 
   return (
     <TenantPage
+      info={CARE_RUN_INFO}
       leading={<ConceptIconTile concept={billingConcept} size="page" />}
       title={
         run ? `Monatsbeitrag ${formatMonth(run.billingMonth)}` : "Monatslauf"

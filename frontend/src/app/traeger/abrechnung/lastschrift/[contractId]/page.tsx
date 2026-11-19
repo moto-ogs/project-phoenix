@@ -14,6 +14,10 @@ import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
 import { traegerPath } from "~/lib/traeger-url";
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const MANDATE_INFO =
+  "Hier verwaltest du das SEPA-Lastschriftmandat einer Familie. Prüfe zuerst, ob es „Gültig“ ist. Fehlt es, wählst du „Mandat erfassen“ und überträgst die Angaben aus dem unterschriebenen Mandat.";
+
 export default function TraegerSepaMandatePage() {
   const params = useParams<{ contractId: string }>();
   const contractId = params?.contractId ?? "";
@@ -34,6 +38,7 @@ export default function TraegerSepaMandatePage() {
 
   return (
     <TenantPage
+      info={MANDATE_INFO}
       title={
         family ? `Lastschrift: Familie ${party?.partyLastName}` : "Lastschrift"
       }
