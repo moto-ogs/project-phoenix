@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 // Opt out of the global tenant-provider mock so the guard sees the real
@@ -77,10 +77,13 @@ describe("BinaryModeGuard", () => {
       </TenantProvider>,
     );
 
-    expect(
+    fireEvent.click(
       screen.getByRole("button", {
         name: "Erklärung zu Nicht eingeschaltet",
       }),
+    );
+    expect(
+      screen.getByText("Erklärung der geschützten Seite."),
     ).toBeInTheDocument();
   });
 

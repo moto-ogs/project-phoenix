@@ -123,6 +123,8 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 
 const ACTIVE_SUPERVISIONS_INFO =
   "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
+const ACTIVE_SUPERVISIONS_BINARY_MODE_INFO =
+  "Hier wäre die Kinderliste deiner Aufsicht. Deine Schule nutzt sie zurzeit nicht.";
 
 function hasSameGroupNames(
   previous: readonly string[] | undefined,
@@ -1152,7 +1154,10 @@ function ActiveSupervisionGate({
 // data that depends on detailed-mode room visits.
 export default function MeinRaumPage() {
   return (
-    <BinaryModeGuard title="Aktuelle Aufsicht" info={ACTIVE_SUPERVISIONS_INFO}>
+    <BinaryModeGuard
+      title="Aktuelle Aufsicht"
+      info={ACTIVE_SUPERVISIONS_BINARY_MODE_INFO}
+    >
       <Suspense
         fallback={
           <TenantPage

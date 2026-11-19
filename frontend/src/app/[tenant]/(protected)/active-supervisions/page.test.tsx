@@ -309,7 +309,7 @@ vi.mock("~/lib/swr", () => ({
 
 import { useSWRAuth } from "~/lib/swr";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
-import { useNFCEnabled } from "~/lib/tenant-context";
+import { useNFCEnabled, usePresenceMode } from "~/lib/tenant-context";
 import MeinRaumPage from "./page";
 import { useSupervisionDashboard } from "~/components/active-supervisions/use-supervision-dashboard";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
@@ -420,6 +420,21 @@ describe("MeinRaumPage (Active Supervisions) (1/5)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Erklärung zu Aktuelle Aufsicht" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows binary-mode-specific page information", () => {
+    vi.mocked(usePresenceMode).mockReturnValueOnce("binary");
+
+    render(<MeinRaumPage />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Aktuelle Aufsicht" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier wäre die Kinderliste deiner Aufsicht. Deine Schule nutzt sie zurzeit nicht.",
+      ),
     ).toBeInTheDocument();
   });
 

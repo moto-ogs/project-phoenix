@@ -133,6 +133,7 @@ import { useSession } from "next-auth/react";
 // eslint-disable-next-line no-restricted-imports -- test mock
 import { useRouter } from "next/navigation";
 import { useSWRAuth } from "~/lib/swr";
+import { usePresenceMode } from "~/lib/tenant-context";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -207,6 +208,19 @@ describe("RoomsPage", () => {
     // Session loading now shows the same grid skeleton as the data-loading
     // branch instead of the generic spinner.
     expect(screen.getByTestId("rooms-grid-skeleton")).toBeInTheDocument();
+  });
+
+  it("keeps the room explanation in binary mode", () => {
+    vi.mocked(usePresenceMode).mockReturnValueOnce("binary");
+
+    render(<RoomsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Erklärung zu Räume" }));
+    expect(
+      screen.getByText(
+        "Hier siehst du, welche Räume frei oder belegt sind. Wähle einen Raum, um zu sehen, welche Kinder dort sind.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("filters rooms by search, building, and occupancy", async () => {
