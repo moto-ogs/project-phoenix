@@ -31,6 +31,10 @@ import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const QUALIFICATION_TYPES_INFO =
+  "Hier legst du fest, welche Nachweise dein Team braucht, zum Beispiel Erste Hilfe am Kind. Je Art stellst du ein, wie lange sie gültig ist und wann moto erinnert. Eine Art mit Pflicht braucht jede Person.";
+
 const CACHE_KEY = staffQualificationKeys.types();
 
 function sections(): SectionConfig[] {
@@ -220,6 +224,7 @@ function QualificationTypesPageContent() {
 
   return (
     <CatalogPage
+      info={QUALIFICATION_TYPES_INFO}
       config={config}
       items={data}
       isLoading={

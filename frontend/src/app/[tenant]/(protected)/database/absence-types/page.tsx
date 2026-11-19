@@ -34,6 +34,10 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const ABSENCE_TYPES_INFO =
+  "Hier legst du fest, welche Arten von Abwesenheit es an deiner Schule gibt. Fehlt dir eine Art, lege sie hier an. Beim Eintragen einer Abwesenheit stehen die Arten dann zur Auswahl.";
+
 const CACHE_KEY = tenantAdminKeys.absenceTypes();
 
 // Ein per API gesetzter Tag, der kein Monatsende ist, bleibt wählbar.
@@ -346,6 +350,7 @@ function AbsenceTypesPageContent() {
 
   return (
     <CatalogPage
+      info={ABSENCE_TYPES_INFO}
       config={config}
       items={items}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett
@@ -365,7 +370,11 @@ function AbsenceTypesPageContent() {
 
 export default function AbsenceTypesPage() {
   return (
-    <ModuleRouteGuard module="zeiterfassung" title="Abwesenheitsarten">
+    <ModuleRouteGuard
+      module="zeiterfassung"
+      title="Abwesenheitsarten"
+      info={ABSENCE_TYPES_INFO}
+    >
       <Suspense fallback={null}>
         <AbsenceTypesPageContent />
       </Suspense>

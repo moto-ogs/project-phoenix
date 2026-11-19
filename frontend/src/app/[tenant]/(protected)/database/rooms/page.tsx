@@ -32,6 +32,10 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 import { foldForSearch } from "~/lib/search-fold";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const ROOMS_INFO =
+  "Hier legst du jeden Raum deiner OGS einmal an. Danach kannst du den Raum einer Gruppe zuweisen. Wähle einen Raum, um seine Angaben zu ändern.";
+
 type RoomsGroupingMode = "none" | "building" | "floor";
 
 const ROOMS_GROUPING_DEFAULT: RoomsGroupingMode = "building";
@@ -312,6 +316,7 @@ function RoomsPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Räume",
+        info: ROOMS_INFO,
         description: statusLine,
         actions: (
           <div className="flex items-center gap-2">

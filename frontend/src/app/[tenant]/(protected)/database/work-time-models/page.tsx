@@ -44,6 +44,10 @@ import {
 } from "~/components/staff/arbeitszeit-hours";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const WORK_TIME_MODELS_INFO =
+  "Eine Vorlage legt die Soll-Stunden für mehrere Personen fest. Lege zuerst eine Vorlage an. Änderst du sie später, gilt das ab heute für alle Personen mit dieser Vorlage.";
+
 const CACHE_KEY = workTimeModelKeys.catalog();
 // Der Reiter „Arbeitszeitmodell“ liest die Vorlagen unter diesem Schlüssel.
 const STAFF_PICKER_KEY = workTimeModelKeys.picker();
@@ -268,6 +272,7 @@ function WorkTimeModelsPageContent() {
 
   return (
     <CatalogPage
+      info={WORK_TIME_MODELS_INFO}
       config={config}
       items={items}
       isLoading={
@@ -285,7 +290,11 @@ function WorkTimeModelsPageContent() {
 
 export default function WorkTimeModelsPage() {
   return (
-    <ModuleRouteGuard module="zeiterfassung" title="Arbeitszeitmodelle">
+    <ModuleRouteGuard
+      module="zeiterfassung"
+      title="Arbeitszeitmodelle"
+      info={WORK_TIME_MODELS_INFO}
+    >
       <Suspense fallback={null}>
         <WorkTimeModelsPageContent />
       </Suspense>

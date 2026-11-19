@@ -60,6 +60,8 @@ import {
   formatWeekLabel,
 } from "~/lib/timetable-helpers";
 
+import { DIENSTPLAN_INFO } from "./dienstplan-info";
+
 const logger = createLogger({ component: "DienstplanView" });
 
 // Admin week view for planned staff shifts (Dienstplan, #1376 core slice).
@@ -563,6 +565,7 @@ function DienstplanContent() {
   return (
     <TenantPage
       title="Dienstplan"
+      info={DIENSTPLAN_INFO}
       stats={statusLine}
       statsLoading={pageLoading}
       // Struktur-Skelett statt der generischen Karten: ein Wochenraster lädt

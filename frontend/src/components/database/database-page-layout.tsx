@@ -13,6 +13,8 @@ interface DatabasePageHead {
   description?: ReactNode;
   /** Seitenaktionen, zum Beispiel DatabaseCreateAction oder OverflowMenu. */
   actions?: ReactNode;
+  /** Info-Knopf am Titel: wofür die Seite da ist, wie `TenantPage` `info`. */
+  info?: ReactNode;
 }
 
 interface DatabasePageLayoutProps {
@@ -90,6 +92,7 @@ export function DatabasePageLayout({
     <>
       <TenantPage
         title={intro.title}
+        info={intro.info}
         stats={intro.description}
         // Das Gerüst setzt das Skelett der Statuszeile selbst. Eine Seite, die
         // stattdessen ein eigenes <Skeleton> als Beschreibung übergibt, landet
