@@ -1,6 +1,0 @@
-{
-  "api/students/change-requests": [
-    "GET tenant /api/students/change-requests query=view,search,student_id,types,status,from,to,cursor,limit",
-    "POST tenant /api/students/change-requests/bulk-approve"
-  ]
-}

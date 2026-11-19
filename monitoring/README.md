@@ -40,6 +40,28 @@ docker compose restart grafana
 
 `prometheus-compose.yml` is an additive Compose overlay. Keep the server's existing `/root/monitoring/docker-compose.yml` as the base file because it owns Loki, Grafana, Alloy, and the healthcheck containers.
 
+### Standalone worker cutover
+
+Before deploying the worker split, merge [`alloy/worker-logs.alloy`](alloy/worker-logs.alloy)
+into the host's existing Alloy configuration. It reads the Docker journald
+`CONTAINER_TAG` values `prod-worker` and `staging-worker` and publishes
+`service="worker"` with the matching environment. Reuse the existing journal
+mounts, permissions and Loki destination; adapt `loki.write.default` to the
+host's destination name. Do not add duplicate sources if the existing mapping
+already forwards those tags. Validate the complete configuration with the
+installed Alloy version before restarting Alloy.
+
+Copy the updated Prometheus configuration and reload Prometheus. Its worker
+targets use the existing app networks and metrics bearer token, with no host
+ports. Deploy the updated Grafana rules and booking-consistency dashboard
+before the split: their `server|worker` selectors cover both the old embedded
+worker and the new process, including a rollback.
+
+After cutover, check both worker targets are up in Prometheus and that Loki
+returns worker startup/job lines for `{env="prod",service="worker"}` and
+`{env="staging",service="worker"}`. Configuration validation alone does not
+prove the host's journal ingestion or alert delivery.
+
 The Prometheus container reads `METRICS_BEARER_TOKEN` from `/root/monitoring/.env`. Add that key to the existing file next to `GRAFANA_ADMIN_PASSWORD`, using the same value deployed to the production and staging app `.env` files.
 
 Copy the complete `grafana/provisioning` directory before restarting Grafana.
@@ -84,7 +106,7 @@ staging; never inject a synthetic audit failure into Production data.
 "Error Spike" rule (#2953). The server rule ignores `transaction_failure`
 lines without a 5xx status; the Postgres rule counts `ERROR:` and `PANIC:`
 lines from the database container. Both read the `service` label that Alloy
-derives from the journald tags `prod-server` and `prod-postgres`. After
+derives from the journald tags `prod-server`, `prod-worker` and `prod-postgres`. After
 copying the file:
 
 ```bash
@@ -105,8 +127,9 @@ connection pool, not the PostgreSQL cluster (#6465). It fires when the 5-minute
 mean of `phoenix_db_in_use_connections` stays above 80% of
 `phoenix_db_max_open_connections` (`DB_MAX_OPEN_CONNS`) for 10 minutes. It
 warns before `DB Pool Saturation`, which fires once requests wait for a free
-connection. Prometheus scrapes both gauges from `production-server-1` and
-`staging-server-1`; the demo environment is not scraped.
+connection. Prometheus scrapes both gauges from `production-server-1`,
+`production-worker-1`, `staging-server-1` and `staging-worker-1`; the demo
+environment is not scraped.
 
 Missing data is not OK. An env whose backend is up but exports no pool gauges
 fires with `reason="pool_metric_missing"`; no data at all and evaluation errors
@@ -249,8 +272,8 @@ curl -s http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job:
 Prometheus is published on `127.0.0.1:9090` only and also joins the production
 and staging Docker networks to scrape the app containers directly. The app
 targets use the Compose container names (`production-server-1`,
-`production-frontend-1`, `staging-server-1`, `staging-frontend-1`) instead of
-host loopback ports.
+`production-worker-1`, `production-frontend-1`, `staging-server-1`,
+`staging-worker-1`, `staging-frontend-1`) instead of host loopback ports.
 
 Caddy is not scraped by default because it runs as a systemd service on the
 host. Enable it only after binding Caddy's admin metrics listener to an address

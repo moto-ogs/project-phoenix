@@ -54,43 +54,45 @@ func (s *StaffOnboarding) StaffStatus(ctx context.Context, tenantID, accountID i
 }
 
 // SetStaffStepState marks a step done, skipped or open again.
-func (s *StaffOnboarding) SetStaffStepState(ctx context.Context, tenantID, accountID int64, key, stepState string) error {
+func (s *StaffOnboarding) SetStaffStepState(ctx context.Context, tenantID, accountID int64, key, stepState string) (bool, error) {
 	step, ok := schoolsetup.ParseStaffStepKey(key)
 	if !ok {
-		return fmt.Errorf("%w: %q", schoolsetup.ErrUnknownStep, key)
+		return false, fmt.Errorf("%w: %q", schoolsetup.ErrUnknownStep, key)
 	}
 	if !schoolsetup.ValidStaffStepState(stepState) {
-		return fmt.Errorf("%w: %q", schoolsetup.ErrUnknownStepState, stepState)
+		return false, fmt.Errorf("%w: %q", schoolsetup.ErrUnknownStepState, stepState)
 	}
-	return s.update(ctx, tenantID, accountID, func(state *schoolsetup.StaffState) {
-		state.SetStepState(step, stepState)
+	return s.update(ctx, tenantID, accountID, func(state *schoolsetup.StaffState) bool {
+		return state.SetStepState(step, stepState)
 	})
 }
 
 // SetStaffDismissed hides the checklist for the calling person, or brings it
 // back.
-func (s *StaffOnboarding) SetStaffDismissed(ctx context.Context, tenantID, accountID int64, dismissed bool) error {
-	return s.update(ctx, tenantID, accountID, func(state *schoolsetup.StaffState) {
+func (s *StaffOnboarding) SetStaffDismissed(ctx context.Context, tenantID, accountID int64, dismissed bool) (bool, error) {
+	return s.update(ctx, tenantID, accountID, func(state *schoolsetup.StaffState) bool {
+		if (state.DismissedAt != nil) == dismissed {
+			return false
+		}
 		if !dismissed {
 			state.DismissedAt = nil
-			return
+			return true
 		}
-		if state.DismissedAt == nil {
-			now := s.now()
-			state.DismissedAt = &now
-		}
+		now := s.now()
+		state.DismissedAt = &now
+		return true
 	})
 }
 
 // update applies change to the person's state and stores it. A person gets
 // the state on the first write.
-func (s *StaffOnboarding) update(ctx context.Context, tenantID, accountID int64, change func(*schoolsetup.StaffState)) error {
+func (s *StaffOnboarding) update(ctx context.Context, tenantID, accountID int64, change func(*schoolsetup.StaffState) bool) (bool, error) {
 	if err := s.store.LockStaffOnboarding(ctx, accountID); err != nil {
-		return err
+		return false, err
 	}
 	state, err := s.store.StaffOnboardingOf(ctx, accountID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if state == nil {
 		state = &schoolsetup.StaffState{
@@ -102,8 +104,11 @@ func (s *StaffOnboarding) update(ctx context.Context, tenantID, accountID int64,
 	// The person's whole state moves into the school of the request; its row
 	// is the newest and so the state every school of the person reads (#5659).
 	state.TenantID = tenantID
-	change(state)
-	return s.store.StoreStaffOnboarding(ctx, state)
+	changed := change(state)
+	if err := s.store.StoreStaffOnboarding(ctx, state); err != nil {
+		return false, err
+	}
+	return changed, nil
 }
 
 // known drops step keys the checklist no longer has, so a retired step never

@@ -86,6 +86,9 @@ func TestViolationsKnowsEveryEnvelope(t *testing.T) {
 	assert.Empty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":null}`)}))
 	assert.NotEmpty(t, doc.Violations(noData, Answer{Status: 200, Body: []byte(`{"status":"success","data":{}}`)}))
 	assert.NotEmpty(t, doc.Violations(route, Answer{Status: 204}), "a route with data may not answer 204")
+	file := Route{Method: "GET", Pattern: "/api/rows/export", File: true}
+	assert.Equal(t, []string{"the route registers a file, not the envelope"},
+		doc.Violations(file, Answer{Status: 200, Body: []byte(`{"status":"success","data":[]}`)}), "a file route never answers the envelope")
 
 	paginated := route
 	paginated.Paginated = true

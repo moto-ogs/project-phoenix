@@ -29,7 +29,8 @@ func RequiresOperatorScope(next http.Handler) http.Handler {
 }
 
 // RequiresActiveOperator rejects stale access tokens after an operator account
-// is deactivated or removed, or its refresh family ended.
+// is deactivated (403) or removed, or its refresh family ended (401, so the
+// portal renews and, with the family gone, signs out).
 func RequiresActiveOperator(lookup identityaccess.OperatorSessionLiveness) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +59,9 @@ func RequiresActiveOperator(lookup identityaccess.OperatorSessionLiveness) func(
 }
 
 func renderOperatorLookupError(w http.ResponseWriter, r *http.Request, operatorID int, err error) {
-	if errors.Is(err, identityaccess.ErrOperatorInactive) || errors.Is(err, identityaccess.ErrOperatorNotFound) {
+	if errors.Is(err, identityaccess.ErrOperatorInactive) ||
+		errors.Is(err, identityaccess.ErrOperatorSessionEnded) ||
+		errors.Is(err, identityaccess.ErrOperatorNotFound) {
 		common.RenderError(w, r, AuthErrorRenderer(err))
 		return
 	}

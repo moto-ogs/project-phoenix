@@ -19,14 +19,38 @@ environment() {
   case "${DEPLOY_DIR:-}" in staging|production|demo) ;; *) fail 'DEPLOY_DIR must be staging, production or demo';; esac
 }
 
+# Snapshots and retained tags describe one image/configuration per service.
+# Include stopped replicas: snapshot creation runs after the application stops.
+# An empty result lets callers distinguish optional, never-started services.
+service_container() {
+  local service=$1 containers container first='' fingerprint expected=''
+  containers=$(compose ps -a -q "$service") || fail "Cannot list $service replicas"
+  if [[ "$containers" != *$'\n'* ]]; then
+    printf '%s\n' "$containers"
+    return 0
+  fi
+  for container in $containers; do
+    fingerprint=$( { docker inspect --format '{{.Image}}' "$container" &&
+      docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container" | LC_ALL=C sort; } |
+      sha256sum | cut -d' ' -f1) || fail "Cannot inspect a $service replica"
+    if [ -z "$first" ]; then first=$container; expected=$fingerprint; fi
+    [ "$fingerprint" = "$expected" ] || fail "$service replicas differ in image or environment; recreate them from one configuration"
+  done
+  printf '%s\n' "$first"
+}
+
 volume() {
-  local container mounted
-  container=$(compose ps -a -q server)
-  [ -n "$container" ] || fail 'Serving container is missing; cannot identify the uploads volume'
-  mounted=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/public/uploads"}}{{if eq .Type "volume"}}{{.Name}}{{end}}{{end}}{{end}}' "$container")
-  [ -n "$mounted" ] || fail 'Server uploads mount is not a named volume'
-  docker volume inspect "$mounted" >/dev/null
-  printf '%s\n' "$mounted"
+  local containers container mounted first=''
+  containers=$(compose ps -a -q server)
+  [ -n "$containers" ] || fail 'Serving container is missing; cannot identify the uploads volume'
+  for container in $containers; do
+    mounted=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/public/uploads"}}{{if eq .Type "volume"}}{{.Name}}{{end}}{{end}}{{end}}' "$container")
+    [ -n "$mounted" ] || fail 'Server uploads mount is not a named volume'
+    [ -n "$first" ] || first=$mounted
+    [ "$mounted" = "$first" ] || fail 'Server replicas differ in uploads volume'
+  done
+  docker volume inspect "$first" >/dev/null
+  printf '%s\n' "$first"
 }
 
 # The environment the serving container ran with, the one that wrote the
@@ -35,7 +59,7 @@ volume() {
 server_env=''
 read_server_env() {
   local container
-  container=$(compose ps -a -q server)
+  container=$(service_container server) || fail 'Cannot read the upload settings of the serving container'
   [ -n "$container" ] || fail 'Serving container is missing; cannot read its upload settings'
   server_env=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container") &&
     [ -n "$server_env" ] || fail 'Cannot read the upload settings of the serving container'
@@ -102,23 +126,60 @@ bucket_rclone() {
 }
 
 # Everything that writes to the database or uploads: server and frontend
-# everywhere, plus the demo stack's demo-runtime. Read from the current Compose
-# file, so staging, production and older demo snapshots never name the sidecar.
+# everywhere, the standalone worker where the stack has one (#7226), plus the
+# demo stack's demo-runtime. Read from the current Compose file, so older
+# snapshots never name a service they lack.
 app_services() {
-  local listed
+  local listed services='server frontend'
   listed=$(compose config --services)
-  if grep -qx demo-runtime <<< "$listed"; then echo 'server frontend demo-runtime'; else echo 'server frontend'; fi
+  if grep -qx worker <<< "$listed"; then services+=' worker'; fi
+  if grep -qx demo-runtime <<< "$listed"; then services+=' demo-runtime'; fi
+  echo "$services"
+}
+
+# The services whose health gates a release: server and frontend, plus the
+# standalone worker (#7226). The demo sidecar never gates one.
+gate_services() {
+  local service
+  for service in $(app_services); do
+    [ "$service" = demo-runtime ] || printf '%s ' "$service"
+  done
+  echo
+}
+
+# All replicas of a service must run one image with one environment (#7226):
+# Next.js replicas share NEXTAUTH_SECRET and the build, API replicas the JWT
+# key and limiter settings. A replica started from another tag or another
+# .env (a manual --scale after a config change) fails here, and the release
+# with it. Prints no values: environments are compared by hash only.
+check_replicas() {
+  local service container fingerprint first
+  for service in $(gate_services); do
+    first=
+    for container in $(compose ps -q "$service"); do
+      fingerprint=$( { docker inspect --format '{{.Image}}' "$container" &&
+        docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container" | LC_ALL=C sort; } |
+        sha256sum | cut -d' ' -f1) || fail "Cannot inspect a $service replica"
+      [ -n "$first" ] || first=$fingerprint
+      [ "$fingerprint" = "$first" ] || fail "$service replicas differ in image or environment; recreate them from one configuration"
+    done
+  done
 }
 
 ensure_stopped() {
-  local service container services
+  local service container containers services
   services=$(app_services)
   for service in $services; do
-    container=$(compose ps -a -q "$service")
-    # The sidecar has no container until its first deployment has started it.
-    [ -n "$container" ] || [ "$service" != demo-runtime ] || continue
-    [ -n "$container" ] || fail "Missing $service container"
-    [ "$(docker inspect --format '{{.State.Running}}' "$container")" = false ] || fail "$service is still running"
+    containers=$(compose ps -a -q "$service")
+    if [ -z "$containers" ]; then
+      # The sidecar and a new worker have no container until their first start.
+      case "$service" in demo-runtime|worker) continue;; esac
+      fail "Missing $service container"
+    fi
+    # One container per replica (#7226); every one must be stopped.
+    for container in $containers; do
+      [ "$(docker inspect --format '{{.State.Running}}' "$container")" = false ] || fail "$service is still running"
+    done
   done
 }
 
@@ -131,7 +192,7 @@ keep_images() {
   local service container image_id name
   [ -f docker-compose.yml ] || return 0
   while IFS= read -r service; do
-    container=$(compose ps -a -q "$service")
+    container=$(service_container "$service")
     [ -n "$container" ] || continue
     image_id=$(docker inspect --format '{{.Image}}' "$container")
     name=$(docker inspect --format '{{.Config.Image}}' "$container")
@@ -222,8 +283,8 @@ create() {
     # migrate, demo-runtime, bank-data-rekey and upload-seal run the serving backend image
     # by contract; the one-shot jobs need not have a container of their own.
     case "$service" in migrate|demo-runtime|bank-data-rekey|upload-seal)
-      container=$(compose ps -a -q server);;
-    *) container=$(compose ps -a -q "$service");;
+      container=$(service_container server);;
+    *) container=$(service_container "$service");;
     esac
     [ -n "$container" ] || fail "No previous container for $service"
     image_id=$(docker inspect --format '{{.Image}}' "$container")
@@ -433,6 +494,8 @@ case "${1:-}" in
     if [ "$1" = verify-files ]; then verify_files; else "$1"; fi
     ;;
   app-services) app_services;;
+  gate-services) gate_services;;
+  check-replicas) check_replicas;;
   keep-images) keep_images;;
   prune)
     [ "$#" = 4 ] || [ "$#" = 5 ] || fail 'Usage: release-backup.sh prune /absolute/snapshot-root count max-age-days [current-snapshot]'

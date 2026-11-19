@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { CONTRACT_WIRE_HEADER } from "./contract/wire";
 
 const { mockBffJson } = vi.hoisted(() => ({ mockBffJson: vi.fn() }));
 vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
@@ -24,7 +23,6 @@ describe("fetchCourseWaitlists", () => {
 
     expect(mockBffJson).toHaveBeenCalledWith(
       "/api/students/offering-change-requests/course-waitlists?activity_group_id=7",
-      { headers: { [CONTRACT_WIRE_HEADER]: "contract" } },
     );
     expect(waitlists).toEqual([
       {

@@ -37,21 +37,7 @@ const PORTALS = [
  * bekommt, fliegt hier heraus. Lehrer-Seiten tragen das Präfix `school:`,
  * Träger-Seiten das Präfix `traeger:`.
  */
-const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
-  // Abrechnung im Träger-Portal: erklärt das Folge-Ticket #7596.
-  "traeger:/abrechnung/[id]",
-  "traeger:/abrechnung/[id]/faelligkeiten",
-  "traeger:/abrechnung/exporte/empfaenger/[id]",
-  "traeger:/abrechnung/familien/[id]",
-  "traeger:/abrechnung/jahresbescheide/[id]",
-  "traeger:/abrechnung/jahresbescheide/[id]/lastschrift",
-  "traeger:/abrechnung/jahresbescheide/[id]/versand",
-  "traeger:/abrechnung/lastschrift/[contractId]",
-  "traeger:/abrechnung/monatsbeitraege/[id]",
-  "traeger:/abrechnung/monatsbeitraege/[id]/empfaenger/[contractId]",
-  "traeger:/abrechnung/monatsbeitraege/[id]/faelligkeiten",
-  "traeger:/abrechnung/monatsbeitraege/[id]/schreiben",
-];
+const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [];
 
 /**
  * Seiten ohne eigenen Seitenkopf: Sie leiten nur weiter und zeigen nie einen

@@ -105,10 +105,6 @@ export default {
     "const closed = new Date(survey.closes_at) <= new Date();",
   ],
   "src/app/api/health/route.ts": ["timestamp: new Date().toISOString(),"],
-  "src/app/api/activities/route.ts": [
-    "created_at: new Date(),",
-    "updated_at: new Date(),",
-  ],
   "src/app/[tenant]/(protected)/time-tracking/page.tsx": [
     "const now = new Date();",
     "const now = new Date();",

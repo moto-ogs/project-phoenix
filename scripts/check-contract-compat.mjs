@@ -69,12 +69,18 @@ export function breakingChanges(base, head) {
       if (!next.portals.includes(portal)) breaking.push(`${key}: portal ${portal} removed`);
     }
     if (route.request && next.request) compare(`${key} request`, route.request, next.request);
+    // A multipart upload and a JSON body are different requests: a client
+    // of the base would send the other kind.
+    if (Boolean(route.multipart) !== Boolean(next.multipart)) {
+      breaking.push(`${key} request: ${route.multipart ? "multipart" : "json"} became ${next.multipart ? "multipart" : "json"}`);
+    }
     // Both envelopes require status and data; only the paginated one also
     // requires pagination. Adding it is safe because readers ignore extras.
     if (route.paginated && !next.paginated) breaking.push(`${key}.pagination: may now be absent`);
-    // No data is an explicit response kind, not a removed response. Its
-    // decoder rejects data, so changing either way also breaks old readers.
-    const defaultResponse = (entry) => entry.no_data ? { kind: "no_data" } : entry.variants
+    // No data and a file are explicit response kinds, not a removed
+    // response. A reader of one cannot read another, so a change either way
+    // breaks old readers.
+    const defaultResponse = (entry) => entry.file ? { kind: "file" } : entry.no_data ? { kind: "no_data" } : entry.variants
       ? entry.variants.cases[entry.variants.default] : entry.response;
     // Compare what an existing request selects, not just equal case names.
     // No selector uses the default; a renamed selector ignores the old key.

@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -81,6 +82,12 @@ export const routes = {
     pattern: "/traeger/sepa-debits/{kind}/{id}",
     portals: ["org"],
     response: success(SEPADebitRunSchema),
+  },
+  "GET /traeger/sepa-debits/{kind}/{id}/file": {
+    method: "GET",
+    pattern: "/traeger/sepa-debits/{kind}/{id}/file",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/sepa-debits/{kind}/{id}/submission": {
     method: "POST",

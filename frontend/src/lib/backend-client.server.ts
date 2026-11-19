@@ -149,6 +149,8 @@ export async function sendBackend(
       method,
       headers,
       body,
+      // A streamed upload (catalog proxy, #2352) leaves while it is read.
+      ...(body instanceof ReadableStream && { duplex: "half" }),
       cache: "no-store",
       signal: call.signal
         ? AbortSignal.any([call.signal, timeout.signal])

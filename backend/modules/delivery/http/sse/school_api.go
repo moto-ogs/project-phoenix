@@ -179,10 +179,14 @@ func (rs *Resource[E, C]) runSchoolEventLoop(ctx context.Context, conn *sseConne
 
 	heartbeat := time.NewTicker(30 * time.Second)
 	defer heartbeat.Stop()
+	draining := rs.hub.Draining()
 
 	for {
 		select {
 		case <-ctx.Done():
+			return
+
+		case <-draining:
 			return
 
 		case event := <-conn.client.SSEEvents():

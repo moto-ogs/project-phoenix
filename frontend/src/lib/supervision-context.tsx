@@ -270,18 +270,9 @@ export function SupervisionProvider({
 
       if (response.ok) {
         const json = (await response.json()) as {
-          data?:
-            | NavigationGroup[]
-            | { groups?: NavigationEducationalGroup[] }
-            | null;
-          groups?: NavigationEducationalGroup[];
+          data: NavigationGroup[] | null;
         };
-        // Temporary (#7563): the former route's `{ groups }` is still read
-        // for one release; read `data` alone afterwards.
-        const groups = Array.isArray(json.data)
-          ? json.data
-          : (json.data?.groups ?? json.groups ?? []);
-        applyCurrent(sortNavigationGroups(groups));
+        applyCurrent(sortNavigationGroups(json.data ?? []));
       } else {
         applyCurrent([], true);
       }

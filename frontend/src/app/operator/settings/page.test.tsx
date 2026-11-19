@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { catalogText } from "~/test/error-catalog-text";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -18,20 +24,27 @@ const {
   mockSessionFetch,
   mockToastSuccess,
   mockToastError,
+  mockLogout,
 } = vi.hoisted(() => ({
   mockUseSession: vi.fn(),
   mockUpdateSession: vi.fn(),
   mockSessionFetch: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockLogout: vi.fn(),
 }));
 
 vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
 }));
 
-vi.mock("~/lib/session-cache", () => ({
+vi.mock("~/lib/session-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
   sessionFetch: (...args: unknown[]) => mockSessionFetch(...args),
+}));
+
+vi.mock("~/lib/shell-auth-context", () => ({
+  useShellAuth: () => ({ logout: mockLogout }),
 }));
 
 const mockApiErrorDisplay = { show: vi.fn() };
@@ -61,6 +74,7 @@ vi.mock("~/components/settings/trusted-devices-section", () => ({
   TrustedDevicesSection: () => null,
 }));
 
+import { PASSWORD_CHANGED_KEY } from "~/lib/session-cache";
 import OperatorSettingsPage from "./page";
 
 function renderPage() {
@@ -80,6 +94,8 @@ const defaultProfile = {
 describe("OperatorSettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+    mockLogout.mockResolvedValue(undefined);
     mockUpdateSession.mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
       data: {
@@ -724,5 +740,18 @@ describe("OperatorSettingsPage", () => {
       invalid: expect.any(Function),
       fieldError: expect.any(Function),
     });
+  });
+  // The backend ends every operator session with the password change, this
+  // one too: the page signs out and the login asks for the new password.
+  it("signs out after a password change", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByText("Passwort ändern"));
+
+    const onSuccess = passwordModalProps.current?.onSuccess as () => void;
+    await act(async () => onSuccess());
+
+    await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
+    expect(sessionStorage.getItem(PASSWORD_CHANGED_KEY)).toBe("1");
+    expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 });

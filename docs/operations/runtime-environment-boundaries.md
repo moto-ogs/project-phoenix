@@ -15,6 +15,7 @@ The groups below explain why each set exists.
 | Frontend runtime | `NEXTAUTH_SECRET` signs portal sessions; `METRICS_BEARER_TOKEN` protects metrics. JWT expiry/refresh timing remains required, without the backend JWT signing key. API URL, portal/domain URLs, log level, public analytics/Sentry settings, proxy trust, timezone, port and hostname complete its allowlist. | `frontend/src/env.js`, `lib/env-validation.js`, `lib/server-runtime-env.ts`, `proxy.ts`, NextAuth host-trust configuration |
 | Frontend build | Public `NEXT_PUBLIC_*` values plus internal `API_URL` and `TENANT_DOMAIN`. CI build arguments supply browser-inlined values. Runtime values cannot replace an already built browser bundle. No authentication, database, SMTP or push private key is a build argument. | `frontend/Dockerfile.prod`, `.github/workflows/build.yml` |
 | Serving backend | Backend JWT key, application-role password, SMTP credentials, VAPID private key, Turnstile keys, the health data key ring `HEALTH_DATA_KEYS` (#4722, #5472), the independent bank ring `BANK_DATA_KEYS` and explicitly temporary read ring `BANK_DATA_LEGACY_KEYS` (#6252; empty in all deployed environments since #6508), metrics token, analytics settings; pool sizing, public API and portal URLs, auth timing, rate limits, logging, scheduler and checkout configuration. | `backend/cmd/serve.go`, `backend/modules/transactionruntime/internal/adapters/database/database_config.go`, `backend/api/server.go`, `backend/api/base.go`, `backend/modules/schedulerruntime/` |
+| Standalone Worker (staging, production) | Exactly the serving backend's environment and volumes, through the same Compose anchors; same pinned image, command `./main worker`, no published port (#2726, #7226). The demo keeps the embedded Worker. | `backend/cmd/worker.go`, [replica operations](replicas-7226.md) |
 | PostgreSQL | `POSTGRES_PASSWORD` and `TZ` only. Database administration stays inside this boundary. | PostgreSQL image startup; existing backup/restore commands |
 | Migration job | Privileged `DB_DSN`, pool sizing, `APP_ENV`, `TZ`, `PHOENIX_AUTH_PASSWORD`, admin/operator bootstrap credentials, and `HEALTH_DATA_KEYS`, with which migration `001015725` seals the existing health information of the holiday registrations and migration `001015730` the children's health field (#5472). No HTTP signing, SMTP, device or push secrets. | `backend/cmd/migrate.go`; migrations `001006002`, `001011003`, `001014001`, `001015725`, `001015730` |
 | Bank rekey job | Privileged `DB_DSN`, pool sizing, `APP_ENV`, `TZ`, `BANK_DATA_KEYS` and explicit `BANK_DATA_LEGACY_KEYS` only. No health, HTTP or bootstrap credentials, ports or mounts. Explicit `maintenance` profile, same pinned image as server. | `backend/cmd/bank_data_rekey.go`; [ADR 0183 rollout](../adr/0183-bankdaten-haben-einen-eigenen-schluesselring-und-einen-wiederholbaren-rekey.md#manueller-rollout-ohne-ausfall) |
@@ -91,7 +92,7 @@ enabled by the deployment service.
 ### Separately authorized post-deploy check
 
 After deployment is authorized separately, run this in the deployed Compose
-directory for each service (`frontend`, `server`, `postgres`):
+directory for each service (`frontend`, `server`, `worker` outside the demo, `postgres`):
 
 ```bash
 docker compose exec -T frontend sh -c 'env | cut -d= -f1 | sort'

@@ -39,8 +39,13 @@ describe("reviewed proxy fragments", () => {
       "api/school/calendar": ["GET school /school/calendar"],
     });
   });
+  it("reads a missing or empty register as no rows", () => {
+    expect(
+      readProxyRouteExpectations(path.join(fixture({}), "missing")),
+    ).toEqual({});
+    expect(readProxyRouteExpectations(fixture({}))).toEqual({});
+  });
   it.each([
-    ["empty", {}],
     ["empty part", { "api/new.json": "{}" }],
     [
       "wrong capability",

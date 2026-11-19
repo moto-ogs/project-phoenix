@@ -13,6 +13,10 @@ import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { fetchCareNoticeRun } from "~/lib/traeger-care-notices-api";
 import { traegerPath } from "~/lib/traeger-url";
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const NOTICE_DEBITS_INFO =
+  "Hier bekommst du die Datei, mit der deine Bank die Raten der Bescheide abbucht. Wähle zuerst bei „Raten fällig im“ den Monat.";
+
 export default function TraegerNoticeDebitsPage() {
   const { id: runId } = useParams<{ id: string }>();
   const {
@@ -29,6 +33,7 @@ export default function TraegerNoticeDebitsPage() {
 
   return (
     <TenantPage
+      info={NOTICE_DEBITS_INFO}
       title={
         run ? `Lastschrift der Raten ${run.year}` : "Lastschrift der Raten"
       }

@@ -1,4 +1,11 @@
-import { readFileSync, readdirSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it, vi } from "vitest";
@@ -18,6 +25,7 @@ import { PROXY_ROUTES } from "~/test/proxy-routes.table";
  * The register only shrinks (#2352): `scripts/check-proxy-routes.mjs` fails a
  * pull request that adds a row. A backend route is registered in the contract
  * and answered by the portal's catalog proxy instead of a new route file.
+ * The register is empty now, so any pure proxy route file fails here.
  */
 
 type Portal =
@@ -140,6 +148,28 @@ const pureRoutes = readdirSync(appDir, { recursive: true, encoding: "utf8" })
   .sort();
 
 describe("pure proxy routes", () => {
+  // Anchor for the empty register: the detector still finds a pass-through
+  // file and passes over a route with code of its own.
+  it.each([
+    [
+      'import { proxyGet } from "~/lib/route-wrapper.server";\nexport const GET = proxyGet("/api/x");\n',
+      true,
+    ],
+    [
+      'import { proxyGet } from "~/lib/route-wrapper.server";\nconst x = 1;\nexport const GET = proxyGet(`/api/${x}`);\n',
+      false,
+    ],
+  ])("detects a pass-through route file (%#)", (source, pure) => {
+    const directory = mkdtempSync(path.join(tmpdir(), "phoenix-proxy-route-"));
+    try {
+      const file = path.join(directory, "route.ts");
+      writeFileSync(file, source);
+      expect(isPureProxyRoute(file)).toBe(pure);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("has exactly one table row per pure proxy route", () => {
     expect(Object.keys(PROXY_ROUTES).sort()).toEqual(pureRoutes);
   });

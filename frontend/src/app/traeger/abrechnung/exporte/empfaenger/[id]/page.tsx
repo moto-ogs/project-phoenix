@@ -133,6 +133,10 @@ function RecipientStateNotice({
   );
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const RECIPIENT_INFO =
+  "Hier legst du fest, wie moto Dateien an diesen Empfänger übergibt. Prüfe zuerst unter „Letzte Übergaben“, ob die Dateien ankommen. Fehlt etwas, ergänzt du es unter „Zugang zum Empfänger“.";
+
 export default function TraegerExportRecipientPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -153,6 +157,7 @@ export default function TraegerExportRecipientPage() {
 
   return (
     <TenantPage
+      info={RECIPIENT_INFO}
       title={recipient?.name ?? "Empfänger"}
       back
       backHref={traegerPath(EXPORT_RECIPIENT_PATH)}

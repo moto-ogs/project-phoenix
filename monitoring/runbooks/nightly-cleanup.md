@@ -57,7 +57,7 @@ Die Alarmregel nimmt je Schule und Job den letzten Wert von
 Fehlerzeilen. Sie alarmiert ab 3. In Grafana Explore (Loki):
 
 ```logql
-max by (tenant_id, job_id) (last_over_time({env="prod",service="server"} |= "nightly cleanup" | json | msg=~"nightly cleanup (failing repeatedly|recovered)" | keep tenant_id, job_id, consecutive_failures | unwrap consecutive_failures [30h]))
+max by (tenant_id, job_id) (last_over_time({env="prod",service=~"server|worker"} |= "nightly cleanup" | json | msg=~"nightly cleanup (failing repeatedly|recovered)" | keep tenant_id, job_id, consecutive_failures | unwrap consecutive_failures [30h]))
 ```
 
 Read-only in der Datenbank, nur mit dem Admin-Zugang des Betriebs:

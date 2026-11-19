@@ -7,6 +7,7 @@ import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { CATALOG_PUBLIC_OUTSIDE_MOUNTS } from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
+import { fileAnswer } from "~/lib/contract/runtime";
 
 const OPERATOR_HOSTNAME = "operator.localhost:3000";
 const PARENTS_HOSTNAME = "parents.localhost:3000";
@@ -322,12 +323,27 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
 
   // The proxy's CSP is the one the browser gets: Next sets it on the
   // response before the route runs and keeps it over the route's own
-  // (review L9). So this list alone sandboxes an uploaded file.
+  // (review L9). So this list alone sandboxes an uploaded file. A file the
+  // contract registers has no route file; the portal's catalog proxy serves
+  // it under the same BFF folder (`/traeger/x/{id}` → `traeger/x/[id]`).
   it("sandboxes exactly the routes that stream an uploaded file", () => {
     const apiDir = path.join(__dirname, "app", "api");
-    const sandboxed = readdirSync(apiDir, { recursive: true, encoding: "utf8" })
+    const routeFolders = readdirSync(apiDir, {
+      recursive: true,
+      encoding: "utf8",
+    })
       .filter((file) => file.endsWith("route.ts"))
-      .map((file) => path.dirname(file).split(path.sep).join("/"))
+      .map((file) => path.dirname(file).split(path.sep).join("/"));
+    const contractFiles = Object.values(portalRoutes)
+      .flat()
+      .filter((route) => route.response === fileAnswer)
+      .map((route) =>
+        route.pattern
+          .replace(/^\/(?:api\/)?/, "")
+          .replace(/\{([^}]+)\}/g, "[$1]")
+          .replace(/\/$/, ""),
+      );
+    const sandboxed = [...new Set([...routeFolders, ...contractFiles])]
       .filter((dir) => {
         const route =
           "/api/" +
@@ -729,7 +745,7 @@ describe("proxy", () => {
       expect(rewrite).toContain("/operator/organizations/123");
     });
 
-    it("returns 404 for tenant /api/auth/* routes on operator host", () => {
+    it("returns 404 for tenant /api/auth/* routes on operator host", async () => {
       const res = proxy(
         makeRequest(
           `http://${OPERATOR_HOSTNAME}/api/auth/session`,
@@ -742,6 +758,13 @@ describe("proxy", () => {
       const redirect = res.headers.get("location");
       expect(rewrite).toBeNull();
       expect(redirect).toBeNull();
+      // A tab from before a release that retired the route reads the
+      // code's text and reloads.
+      expect(res.headers.get("Content-Type")).toBe("application/problem+json");
+      expect(await res.json()).toMatchObject({
+        status: 404,
+        code: "general.route_not_found",
+      });
     });
 
     it("passes through /api/operator/auth/* routes without rewriting", () => {
@@ -1110,11 +1133,9 @@ describe("proxy", () => {
 
     it("passes through the public invitation API routes", () => {
       for (const path of [
-        "/api/invitations/validate",
         "/api/invitations/accept",
-        // „Andere moto-Adresse wählen“ lists the schools (#7369).
-        "/api/tenant/list",
-        // The same through the staff proxy's public routes (#2352).
+        // The invitation link and „Andere moto-Adresse wählen“ (#7369)
+        // through the staff proxy's public routes (#2352).
         "/api/auth/invitations/tok",
         "/api/auth/tenants",
       ]) {
@@ -1944,19 +1965,15 @@ describe("proxy", () => {
         "/api/parent/auth/session",
         "/api/parent/me/children",
         "/api/tenant/resolve",
-        "/api/tenant/list",
         "/api/public/care-contract-signing/abc",
         "/api/public/login-image/a.webp",
-        "/api/invitations/validate",
         "/api/invitations/accept",
-        "/api/guardian-invitations/tok/accept",
         // The links and the school list through the staff proxy's public
         // routes (#2352).
         "/api/auth/invitations/tok",
         "/api/auth/tenants",
         "/api/auth/guardian-invitations/tok/accept",
         "/api/auth/holiday-parent-setups/tok",
-        "/api/holiday-parent-setups/tok",
         "/api/holiday-registrations/tok/uploads",
         "/api/enrollment/requests/tok/edit-bootstrap",
         "/api/enrollment/school-a/uploads",
@@ -2086,6 +2103,11 @@ describe("proxy", () => {
         "/api/enrollment/form-bootstrap/public/school-a/5",
         "/api/operator/auth/session",
         "/api/school/auth/session",
+        // The paths of the route files removed after the deploy (#2352).
+        "/api/tenant/list",
+        "/api/invitations/validate",
+        "/api/guardian-invitations/tok/accept",
+        "/api/holiday-parent-setups/tok",
       ]) {
         expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(404);
       }

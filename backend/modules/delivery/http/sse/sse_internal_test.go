@@ -204,6 +204,47 @@ func TestRunEventLoopDoesNotSendBufferedEventAfterDeadline(t *testing.T) {
 	}
 }
 
+// A stopping process drains its hub: an open stream and one that registers
+// afterwards both end, so their clients reconnect to another replica (#7226).
+func TestRunEventLoopEndsWhenHubDrains(t *testing.T) {
+	t.Parallel()
+
+	hub := realtime.NewHub(slog.Default())
+	rs := &Resource[realtime.Event, *realtime.Client]{runtime: testSSETransportRuntime(), hub: hub}
+	newConn := func() *sseConnection[realtime.Event, *realtime.Client] {
+		mf := newMockFlusher()
+		client := &realtime.Client{Channel: make(chan realtime.Event, 1), SubscribedGroups: make(map[string]bool)}
+		hub.Register(client, 1, nil)
+		return &sseConnection[realtime.Event, *realtime.Client]{writer: mf, flusher: mf, client: client}
+	}
+
+	open := newConn()
+	ended := make(chan struct{})
+	go func() {
+		rs.runEventLoop(context.Background(), open)
+		close(ended)
+	}()
+	hub.Drain()
+	select {
+	case <-ended:
+	case <-time.After(5 * time.Second):
+		t.Fatal("open stream did not end after Drain")
+	}
+
+	late := make(chan struct{})
+	go func() {
+		rs.runEventLoop(context.Background(), newConn())
+		close(late)
+	}()
+	select {
+	case <-late:
+	case <-time.After(5 * time.Second):
+		t.Fatal("stream opened after Drain did not end")
+	}
+	hub.Drain() // repeated calls are harmless
+	assert.Zero(t, hub.GetClientCount())
+}
+
 // =============================================================================
 // SETUP CONNECTION TESTS
 // =============================================================================
