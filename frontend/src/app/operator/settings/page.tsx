@@ -24,6 +24,7 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { sessionFetch } from "~/lib/session-cache";
 import { useSWRAuth } from "~/lib/swr";
+import { useShellAuth } from "~/lib/shell-auth-context";
 import { operatorKeys } from "~/lib/swr/operator-keys";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { PasskeySettingsSection } from "~/components/settings/passkey-settings-section";
@@ -66,6 +67,7 @@ const operatorSettingsLoadingFallback = (
 function OperatorSettingsContent() {
   const { data: session, status, update: updateSession } = useSession();
   const { success: toastSuccess } = useToast();
+  const { logout } = useShellAuth();
   // An address is never a name (#7305); it stays in the email field only.
   const sessionName = getSessionPersonName(session);
   const sessionEmail = session?.user?.email ?? "";
@@ -229,11 +231,13 @@ function OperatorSettingsContent() {
               apiEndpoint="/api/operator/profile/password"
               errorPath={passwordErrors}
               formRef={passwordFormRef}
+              // The change ended every operator session, this one too (the
+              // backend revokes all families). Sign out to the login, which
+              // asks for the new password. If the logout request fails, the
+              // revoked session still opens nothing (#5194).
               onSuccess={() => {
                 handleClosePasswordModal();
-                toastSuccess("Passwort erfolgreich geändert", {
-                  duration: 3000,
-                });
+                void logout().catch(() => undefined);
               }}
             />
           )}
@@ -386,7 +390,7 @@ function OperatorSettingsContent() {
 
       <SectionCard
         title="Passwort"
-        description="Aktualisiere dein Passwort regelmäßig für zusätzliche Sicherheit."
+        description="Nach dem Ändern meldest du dich auf allen Geräten neu an."
         actions={
           <Button
             type="button"
