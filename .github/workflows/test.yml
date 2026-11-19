@@ -571,7 +571,17 @@ jobs:
       - name: Install Google Chrome
         if: ${{ matrix.project == 'node' }}
         working-directory: frontend
-        run: pnpm exec playwright install --with-deps --force chrome
+        run: |
+          # Retry transient download failures, never the tests themselves.
+          for attempt in 1 2 3; do
+            if pnpm exec playwright install --with-deps --force chrome; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep 2
+          done
 
       - name: Run browser layout tests
         if: ${{ matrix.project == 'node' }}
