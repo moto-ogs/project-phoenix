@@ -477,6 +477,11 @@ func (w *tsWriter) field(s Schema) string {
 		z = helper("json")
 	case KindRef:
 		z = s.Ref + "Schema"
+		if w.pending[s.Ref] {
+			// A type that refers back to itself or to a type of its cycle
+			// reads that schema once it exists.
+			z = helper("lazy") + "(() => " + z + ")"
+		}
 	}
 	if s.Nullable {
 		z = helper("nullable") + "(" + z + ")"

@@ -6,6 +6,7 @@ import {
   calendarDate,
   instant,
   int64StringOrNumber,
+  lazy,
   nullable,
   object,
   optional,
@@ -287,7 +288,7 @@ export const GroupSupervisorSchema: z.ZodType<GroupSupervisor, unknown> = object
   start_date: nullable(calendarDate),
   end_date: optional(calendarDate),
   staff: optional(SessionStaffSchema),
-  active_group: optional(ActiveGroupSchema),
+  active_group: optional(lazy(() => ActiveGroupSchema)),
 });
 
 /** Go: ports.ActiveGroup */

@@ -97,6 +97,8 @@ export const arr = (item: Field): Field => z.array(item);
 export const rec = (value: Field): Field => z.record(z.string(), value);
 export const nullable = (value: Field): Field => value.nullable();
 export const optional = (value: Field): Field => value.optional();
+/** A schema of the same file that is declared further down (a cycle). */
+export const lazy = (schema: () => Field): Field => z.lazy(schema);
 
 /** common.Response */
 export function success<T>(

@@ -403,19 +403,19 @@ type Counters struct {
 // are applied), so the UI dropdowns stay populated while rows/counters reflect
 // the active selection.
 type Result struct {
-	Date         string        `json:"date"`
-	Target       Target        `json:"target"`
-	PickupCohort PickupCohort  `json:"pickup_cohort,omitempty"`
-	ListKind     ListKind      `json:"list_kind,omitempty"`
-	ListLabel    string        `json:"list_label"`
-	Source       Source        `json:"source"`
-	GroupBy      GroupBy       `json:"group_by,omitempty"`
-	Provenance   string        `json:"provenance"`
-	Slots        []Slot        `json:"slots"`
+	Date         string                `json:"date"`
+	Target       Target                `json:"target"`
+	PickupCohort PickupCohort          `json:"pickup_cohort,omitempty"`
+	ListKind     ListKind              `json:"list_kind,omitempty"`
+	ListLabel    string                `json:"list_label"`
+	Source       Source                `json:"source"`
+	GroupBy      GroupBy               `json:"group_by,omitempty"`
+	Provenance   string                `json:"provenance"`
+	Slots        []Slot                `json:"slots"`
 	Groups       []ClassdayGroupOption `json:"groups"`
-	Classes      []string      `json:"classes"`
-	Counters     Counters      `json:"counters"`
-	Rows         []SlotListRow `json:"rows"`
+	Classes      []string              `json:"classes"`
+	Counters     Counters              `json:"counters"`
+	Rows         []SlotListRow         `json:"rows"`
 	// Signature is a stable content hash of the rendered list (label,
 	// provenance, counters and every row). The export endpoint re-derives the
 	// list in a second request after the client verified this preview, so live

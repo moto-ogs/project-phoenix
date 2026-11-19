@@ -541,6 +541,6 @@ func TestATypeOfACycleReadsTheLaterSchemaLazily(t *testing.T) {
 	source := files["rows.generated.ts"]
 	first, second := strings.Index(source, "export const supervisorSchema"), strings.Index(source, "export const sessionSchema")
 	require.True(t, first >= 0 && second > first, source)
-	assert.Contains(t, source, "  session: z.lazy(() => sessionSchema).optional(),")
-	assert.Contains(t, source, "  supervisors: z.array(supervisorSchema.nullable()).optional(),")
+	assert.Contains(t, source, "  session: optional(lazy(() => sessionSchema)),")
+	assert.Contains(t, source, "  supervisors: optional(arr(nullable(supervisorSchema))),")
 }
