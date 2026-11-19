@@ -16,4 +16,20 @@ describe("useScrollRegion", () => {
 
     expect(result.current).toBe(true);
   });
+
+  it("keeps an activated unmeasured region keyboard reachable", () => {
+    vi.stubGlobal("ResizeObserver", undefined);
+    const ref = { current: document.createElement("div") };
+
+    const { result, rerender } = renderHook(
+      ({ active }) => useScrollRegion(ref, active),
+      { initialProps: { active: false } },
+    );
+
+    expect(result.current).toBe(false);
+
+    rerender({ active: true });
+
+    expect(result.current).toBe(true);
+  });
 });

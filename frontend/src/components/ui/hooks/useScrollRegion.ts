@@ -22,7 +22,7 @@ export function useScrollRegion(
   useLayoutEffect(() => {
     const element = ref.current;
     if (!active || !element || typeof ResizeObserver === "undefined") {
-      if (!active) setScrolls(false);
+      setScrolls(active);
       return;
     }
     // With a control inside, the keyboard already reaches the area: no
