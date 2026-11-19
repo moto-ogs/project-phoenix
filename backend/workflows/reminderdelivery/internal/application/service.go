@@ -64,7 +64,7 @@ func (s *service) ComputeForCaller(ctx context.Context, effectiveAdmin bool) (*r
 }
 
 func (s *service) Compute(ctx context.Context, scope reminder.Scope) (*reminder.Result, error) {
-	empty := &reminder.Result{Reminders: []reminder.Reminder{}}
+	empty := &reminder.Result{Reminders: []reminder.StaffReminder{}}
 	if s.Settings == nil {
 		return empty, nil
 	}
@@ -97,7 +97,7 @@ func (s *service) Compute(ctx context.Context, scope reminder.Scope) (*reminder.
 
 	today, nowMin := s.Clock()
 
-	var pickupPart, activityPart []reminder.Reminder
+	var pickupPart, activityPart []reminder.StaffReminder
 	// -1 = no future time-based change pending. Both branches feed their soonest
 	// boundary in; the earliest across pickups and activities wins.
 	nextChange := -1
@@ -142,8 +142,8 @@ var errActivityRoomReaderMissing = errors.New("activity reminder room reader is 
 //
 // Pickups are appended before activities and the sort is stable, so the two
 // groups keep their relative order when they tie on urgency.
-func assembleResult(pickupPart, activityPart []reminder.Reminder, today string, nextChange int) *reminder.Result {
-	reminders := make([]reminder.Reminder, 0, len(pickupPart)+len(activityPart))
+func assembleResult(pickupPart, activityPart []reminder.StaffReminder, today string, nextChange int) *reminder.Result {
+	reminders := make([]reminder.StaffReminder, 0, len(pickupPart)+len(activityPart))
 	reminders = append(reminders, pickupPart...)
 	reminders = append(reminders, activityPart...)
 
@@ -173,7 +173,7 @@ func assembleResult(pickupPart, activityPart []reminder.Reminder, today string, 
 //     empty even when checked-in students have due pickups). Fall back to all
 //     present students from attendance and let the read predicate in
 //     pickupReminders lock the set down to the caregiver's own education groups.
-func (s *service) pickupReminders(ctx context.Context, scope reminder.Scope, studentIDs []int64, today string, nowMin, lead int, upcoming, overdue bool) ([]reminder.Reminder, int, error) {
+func (s *service) pickupReminders(ctx context.Context, scope reminder.Scope, studentIDs []int64, today string, nowMin, lead int, upcoming, overdue bool) ([]reminder.StaffReminder, int, error) {
 	nextChange := -1
 	if len(studentIDs) == 0 || s.Pickup == nil {
 		return nil, nextChange, nil
@@ -315,8 +315,8 @@ func duePickups(
 // buildPickupReminders renders due pickups into reminders. Pure: it neither
 // reads nor logs, and returns the students it had to drop so the caller can emit
 // the log line. Both entry points share it, so the drop rule cannot diverge.
-func buildPickupReminders(dues []duePickup, names map[int64]studentNameInfo) ([]reminder.Reminder, []int64) {
-	out := make([]reminder.Reminder, 0, len(dues))
+func buildPickupReminders(dues []duePickup, names map[int64]studentNameInfo) ([]reminder.StaffReminder, []int64) {
+	out := make([]reminder.StaffReminder, 0, len(dues))
 	var dropped []int64
 
 	for _, d := range dues {
@@ -338,7 +338,7 @@ func buildPickupReminders(dues []duePickup, names map[int64]studentNameInfo) ([]
 		if d.isOverdue {
 			reminderType = reminder.TypePickupOverdue
 		}
-		out = append(out, reminder.Reminder{
+		out = append(out, reminder.StaffReminder{
 			Type:        reminderType,
 			StudentID:   int64String(d.id),
 			Title:       info.name,
@@ -364,7 +364,7 @@ func (s *service) logDroppedPickups(dropped []int64) {
 // activityRemindersFor evaluates start and overdue reminders over already
 // loaded instances, so Compute reads today's blocks once for every activity
 // type.
-func (s *service) activityRemindersFor(ctx context.Context, scope reminder.Scope, roomIDs []int64, instances []*ports.ActivityInstance, nowMin, lead, overdueThreshold int, upcoming, overdue bool) ([]reminder.Reminder, int, error) {
+func (s *service) activityRemindersFor(ctx context.Context, scope reminder.Scope, roomIDs []int64, instances []*ports.ActivityInstance, nowMin, lead, overdueThreshold int, upcoming, overdue bool) ([]reminder.StaffReminder, int, error) {
 	nextChange := -1
 	roomFilter := activityRoomFilter(scope, roomIDs)
 
@@ -490,9 +490,9 @@ func buildActivityReminders(
 	instances []*ports.ActivityInstance,
 	inScope func(*ports.ActivityInstance) bool,
 	w activityWindow,
-) ([]reminder.Reminder, int) {
+) ([]reminder.StaffReminder, int) {
 	nextChange := -1
-	out := make([]reminder.Reminder, 0)
+	out := make([]reminder.StaffReminder, 0)
 
 	for _, inst := range instances {
 		// Only planned instances are relevant: started/completed/cancelled rows
@@ -510,7 +510,7 @@ func buildActivityReminders(
 		nextChange = activityNextBoundary(startMin, endMin, w, nextChange)
 		switch {
 		case w.upcoming && diff >= 0 && diff <= w.lead:
-			out = append(out, reminder.Reminder{
+			out = append(out, reminder.StaffReminder{
 				Type:               reminder.TypeActivityStart,
 				ActivityInstanceID: int64String(inst.ID),
 				Title:              inst.Title,
@@ -520,7 +520,7 @@ func buildActivityReminders(
 		// Overdue: planned, started late by at least the threshold, and the
 		// slot is not over yet (after end_time a reminder is pointless).
 		case w.overdue && diff < 0 && -diff >= w.overdueThreshold && w.nowMin < endMin:
-			out = append(out, reminder.Reminder{
+			out = append(out, reminder.StaffReminder{
 				Type:               reminder.TypeActivityOverdue,
 				ActivityInstanceID: int64String(inst.ID),
 				Title:              inst.Title,

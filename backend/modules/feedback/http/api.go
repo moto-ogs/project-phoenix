@@ -67,18 +67,18 @@ func (rs *Resource) Router() chi.Router {
 }
 
 type FeedbackResponse struct {
-	ID              int64            `json:"id"`
-	Value           string           `json:"value"`
-	Day             string           `json:"day"`
-	Time            string           `json:"time"`
-	StudentID       int64            `json:"student_id"`
-	IsMensaFeedback bool             `json:"is_mensa_feedback"`
-	CreatedAt       time.Time        `json:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at"`
-	Student         *StudentResponse `json:"student,omitempty"`
+	ID              int64                    `json:"id"`
+	Value           string                   `json:"value"`
+	Day             string                   `json:"day"`
+	Time            string                   `json:"time"`
+	StudentID       int64                    `json:"student_id"`
+	IsMensaFeedback bool                     `json:"is_mensa_feedback"`
+	CreatedAt       time.Time                `json:"created_at"`
+	UpdatedAt       time.Time                `json:"updated_at"`
+	Student         *FeedbackStudentResponse `json:"student,omitempty"`
 }
 
-type StudentResponse struct {
+type FeedbackStudentResponse struct {
 	ID        int64  `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -310,7 +310,7 @@ func newFeedbackResponse(entry feedbackModule.Entry) FeedbackResponse {
 		IsMensaFeedback: entry.IsMensaFeedback, CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt,
 	}
 	if entry.Student != nil {
-		response.Student = &StudentResponse{ID: entry.Student.ID, FirstName: entry.Student.FirstName, LastName: entry.Student.LastName}
+		response.Student = &FeedbackStudentResponse{ID: entry.Student.ID, FirstName: entry.Student.FirstName, LastName: entry.Student.LastName}
 	}
 	return response
 }

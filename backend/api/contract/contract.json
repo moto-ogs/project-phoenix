@@ -954,6 +954,34 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/birthdays/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "week_start",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "overviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/birthdays/opt-out",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "optOutResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/class-list-entries/",
       "portals": [
         "tenant"
@@ -977,6 +1005,20 @@
         "elem": {
           "kind": "ref",
           "ref": "PhaseExpiryWarningResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/feedback/student/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "FeedbackResponse"
         }
       }
     },
@@ -1560,6 +1602,17 @@
           "kind": "ref",
           "ref": "PlatformAnnouncementResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/reminders/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "Result"
       }
     },
     {
@@ -11805,6 +11858,21 @@
       "response": {
         "kind": "ref",
         "ref": "TransitionResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/birthdays/opt-out",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "optOutRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "optOutResponse"
       }
     },
     {
@@ -32891,6 +32959,92 @@
       ]
     },
     {
+      "name": "FeedbackResponse",
+      "go_type": "feedback.FeedbackResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "value",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "day",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "is_mensa_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "student",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "FeedbackStudentResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FeedbackStudentResponse",
+      "go_type": "feedback.FeedbackStudentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "FileNumberStartRequest",
       "go_type": "parentbillinghttp.FileNumberStartRequest",
       "request": true,
@@ -50724,6 +50878,42 @@
       ]
     },
     {
+      "name": "Result",
+      "go_type": "reminderdelivery.Result",
+      "fields": [
+        {
+          "name": "reminders",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffReminder"
+            }
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "next_change_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "RetentionInstruction",
       "go_type": "parentbilling.RetentionInstruction",
       "fields": [
@@ -57494,6 +57684,64 @@
               "kind": "ref",
               "ref": "StaffPoolEntryResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffReminder",
+      "go_type": "reminderdelivery.StaffReminder",
+      "fields": [
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_instance_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subtitle",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "due_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "minutes_away",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pickup_due_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -70130,6 +70378,63 @@
       ]
     },
     {
+      "name": "celebrationResponse",
+      "go_type": "birthdays.celebrationResponse",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "age",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_today",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "changeHistoryEntry",
       "go_type": "students.changeHistoryEntry",
       "fields": [
@@ -76427,6 +76732,33 @@
       ]
     },
     {
+      "name": "optOutRequest",
+      "go_type": "birthdays.optOutRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "opt_out",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "optOutResponse",
+      "go_type": "birthdays.optOutResponse",
+      "fields": [
+        {
+          "name": "opt_out",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "optionResponse",
       "go_type": "announcement.optionResponse",
       "fields": [
@@ -76440,6 +76772,65 @@
           "name": "label",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "overviewResponse",
+      "go_type": "birthdays.overviewResponse",
+      "fields": [
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "include_staff",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "today",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "week_end",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "earliest_week_start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "latest_week_start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "celebrations",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "celebrationResponse"
+            }
           }
         }
       ]

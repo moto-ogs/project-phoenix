@@ -35,6 +35,7 @@ import (
 	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
 	peopleStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
@@ -501,5 +502,8 @@ func staffPortalAdminContractMounts() []contractMount {
 		{"/api/staff-notices", timetableHTTP.StaffNoticeRouteContracts()},
 		{"/api/statistics", statisticsHTTP.RouteContracts()},
 		{"/api/settings", settingsAdminRouteContracts()},
+		{"/api/birthdays", birthdaysAPI.RouteContracts()},
+		{"/api/feedback", feedbackStudentRouteContracts()},
+		{"/api/reminders", reminderRouteContracts()},
 	}
 }

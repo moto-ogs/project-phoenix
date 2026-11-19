@@ -2,10 +2,12 @@
 import { routes as absenceTypes } from "./absence-types.generated";
 import { routes as admin } from "./admin.generated";
 import { routes as announcementAttachments } from "./announcement-attachments.generated";
+import { routes as birthdays } from "./birthdays.generated";
 import { routes as catererNotifications } from "./caterer-notifications.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
 import { routes as enrollment } from "./enrollment.generated";
+import { routes as feedback } from "./feedback.generated";
 import { routes as files } from "./files.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
@@ -31,6 +33,7 @@ import { routes as parentHolidayRegistrations } from "./parent-holiday-registrat
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as platform } from "./platform.generated";
 import { routes as pwa } from "./pwa.generated";
+import { routes as reminders } from "./reminders.generated";
 import { routes as rooms } from "./rooms.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
@@ -625,12 +628,16 @@ export const portalRoutes = {
     admin["POST /api/admin/grade-transitions/{id}/revert"],
     admin["PUT /api/admin/grade-transitions/{id}/"],
     announcementAttachments["DELETE /api/announcement-attachments/{announcementId}/{attachmentId}"],
+    birthdays["GET /api/birthdays/"],
+    birthdays["GET /api/birthdays/opt-out"],
+    birthdays["PUT /api/birthdays/opt-out"],
     classListEntries["DELETE /api/class-list-entries/{id}"],
     classListEntries["GET /api/class-list-entries/"],
     classListEntries["POST /api/class-list-entries/"],
     classListEntries["POST /api/class-list-entries/{id}/assign"],
     classListEntries["PUT /api/class-list-entries/{id}"],
     enrollment["GET /api/enrollment/phases/expiry-warnings"],
+    feedback["GET /api/feedback/student/{id}"],
     files["DELETE /api/files/folders/{folderId}"],
     files["DELETE /api/files/folders/{folderId}/files/{fileId}"],
     files["GET /api/files/audience"],
@@ -721,6 +728,7 @@ export const portalRoutes = {
     platform["GET /api/platform/announcements/unread"],
     platform["POST /api/platform/announcements/{id}/dismiss"],
     pwa["POST /api/pwa/usage"],
+    reminders["GET /api/reminders/"],
     rooms["GET /api/rooms/by-category"],
     rooms["GET /api/rooms/{id}/removal-impact"],
     schoolSetup["GET /api/school-setup/"],
