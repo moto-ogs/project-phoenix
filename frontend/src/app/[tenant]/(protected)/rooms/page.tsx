@@ -576,6 +576,7 @@ function RoomsPageContent() {
   return (
     <TenantPage
       title="Räume"
+      info="Hier siehst du, welche Räume frei oder belegt sind. Offene Räume stehen oben. Wähle einen Raum, um zu sehen, welche Kinder dort sind."
       stats={roomSummary}
       statsLoading={showSkeleton}
       // Das Exportmenü ist eine Aktion der Seite und sitzt deshalb im Kopf,

@@ -429,6 +429,8 @@ vi.mock("~/components/students/student-card", () => ({
 vi.mock("lucide-react", () => ({
   // Die Gruppenreiter (TenantPage-Reiterleiste) zeichnen den Pfeil des Menüs.
   ChevronDown: () => null,
+  // Info-Knopf am Seitentitel (#7565).
+  Info: () => null,
   Clock: ({ className }: { className?: string }) => (
     <span data-testid="lucide-clock" className={className}>
       clock

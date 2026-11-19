@@ -3334,6 +3334,7 @@ function SearchPageContent() {
           darunter Suche und Filter. */}
       <TenantPage
         title="Alle Kinder"
+        info="Hier findest du jedes Kind deiner OGS. Gib zuerst den Namen in die Suche ein. Wähle dann die Karte des Kindes, um seine Angaben zu sehen."
         tabs={childScope.tabs}
         stats={studentSummary}
         statsLoading={!hasFetchedOnce || isDateTransition}

@@ -870,6 +870,7 @@ function MeinRaumPageContent() {
       // Die Breadcrumb bleibt „Aktuelle Aufsicht > Name“, der Seitentitel
       // nennt deshalb nur den Namen statt die Aufsicht ein zweites Mal (#3312).
       title={supervisionName ?? "Aktuelle Aufsicht"}
+      info="Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen."
       stats={supervisionSummary}
       back={isSharedRoomView}
       backHref={

@@ -563,7 +563,9 @@ describe("TagesplanView", () => {
     render(<TagesplanView />);
 
     expect(
-      screen.getByText("Heute ist keine Betreuung geplant"),
+      // Das Gerüst setzt Titel und Beschreibung des Leerzustands zu einem
+      // Satz zusammen.
+      screen.getByText(/^Heute ist keine Betreuung geplant\./),
     ).toBeInTheDocument();
   });
 
@@ -585,7 +587,7 @@ describe("TagesplanView", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Failed to fetch/)).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Heute ist keine Betreuung geplant"),
+      screen.queryByText(/Heute ist keine Betreuung geplant/),
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(reloadList).toHaveBeenCalled();

@@ -482,6 +482,8 @@ vi.mock("lucide-react", () => ({
   ChevronRight: () => <span data-testid="chevron-right" />,
   Download: () => <span data-testid="download-icon" />,
   ExternalLink: () => <span data-testid="external-link" />,
+  // Info-Knopf am Seitentitel (#7565).
+  Info: () => <span data-testid="info-icon" />,
   MoreVertical: () => <span data-testid="more-vertical" />,
   Pencil: () => <span data-testid="pencil-icon" />,
   Plus: () => <span data-testid="plus-icon" />,

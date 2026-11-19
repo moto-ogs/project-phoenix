@@ -1450,6 +1450,11 @@ function StudentDetailPageContent() {
       backLabel={backLabel}
       leading={<StudentHeaderAvatar student={student} />}
       title={studentHeaderTitle(student)}
+      info={
+        isHolidayGuest
+          ? undefined
+          : "Hier stehen alle Angaben zu diesem Kind. Die Reiter teilen sie in Bereiche. Kontakte und Abholberechtigte findest du unter „Erziehungsberechtigte“."
+      }
       actions={
         canManageRecord ? (
           <StudentRecordActions

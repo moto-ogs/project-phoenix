@@ -1421,6 +1421,7 @@ function OGSGroupPageContent() {
           Vertretungshinweis und das Kebab-Menü. */}
       <TenantPage
         title={currentGroup?.name ?? OGS_GROUPS_LABEL}
+        info="Hier siehst du die Kinder deiner Gruppen und wer gerade da ist. Wähle oben zuerst deine Gruppe. Deine eigene ist mit „Meine Gruppe“ markiert."
         stats={groupStats}
         statsLoading={showSkeleton}
         actions={

@@ -3998,6 +3998,7 @@ function TimeTrackingContent() {
   return (
     <TenantPage
       title="Zeiterfassung"
+      info="Hier erfasst du deine Arbeitszeit und deine Pausen. Wähle zuerst unter „Stempeluhr“ deinen Arbeitsort und dann „Einstempeln“. Darunter siehst du deine erfassten Zeiten und deinen Saldo."
       statsLoading={metricsLoading}
       // Laden kommt aus dem Gerüst (Bauart 3, Regel 5) — kein eigenes
       // Seiten-Skelett neben den Zuständen der TenantPage.
