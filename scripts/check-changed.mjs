@@ -2,7 +2,7 @@
 // One command for CI's fast checks on this branch's changes, uncommitted and
 // untracked files included:
 //   static  scripts/pre-push.sh --worktree: secrets, agent context, generated
-//           error codes, backend lint, frontend lint/types/knip/guard
+//           error codes, backend lint, frontend lint/types/knip/depcruise/guard
 //           inventory, as selected by the changed paths
 //   arch    scripts/backend-architecture.sh check without the base
 //           comparison, when a path of CI's architecture ratchet changed:
