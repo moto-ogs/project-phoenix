@@ -192,9 +192,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `demo/access/sessions` | Accepts a link or cookie token and stores a new httpOnly demo cookie on success. |
 | `demo/access/status` | Uses the shared demo-token forwarding helper for credential-scoped status. |
 | `emergency/snapshot/export` | Streams emergency-snapshot export bytes and filename. |
-| `enrollment/admin/data-correction` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
-| `enrollment/admin/decide` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
-| `enrollment/admin/offerings` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
 | `enrollment/admin/reports/care-usage/export` | Streams the care-usage export with backend filename. |
 | `enrollment/admin/reports/class-roster/export` | Streams the class-roster export with backend filename. |
 | `enrollment/admin/students/[studentId]/requests/export` | Streams one student’s enrollment requests export. |
@@ -203,7 +200,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `enrollment/phases/[id]/export` | Streams a phase export in its backend-selected format. |
 | `files/folders/[folderId]/files` | Multipart folder-file upload uses the shared file-upload validator. |
 | `files/folders/[folderId]/files/[fileId]/download` | Streams folder-file bytes and disposition. |
-| `guardian-invitations/[token]/accept` | Maps invitation password fields and forwards the client headers. |
 | `guardians/payment-overview/export` | Streams payment-overview export bytes with backend disposition. |
 | `import/class-list-entries/template` | Returns the class-list CSV template and backend filename. |
 | `import/opening-balances/template` | Returns the opening-balance CSV template and backend filename. |
@@ -251,12 +247,10 @@ The three SSE routes (`sse/events`, `parent/sse/events`, and
 portal credential and abortable event stream, which a JSON factory would buffer.
 
 Helper-backed custom handlers without a direct `fetch` have narrower reasons:
-`rooms/[id]/history` applies the documented empty/disabled BFF mapping;
 `statistics/report` whitelists audit-sensitive queries, retries refreshed
 tenant sessions, and keeps its established no-store success envelope
 (`students/day-log` and `students/[id]/attendance-history` forward only their
 audit-sensitive query keys through `proxyGet` with `forwardQuery`);
-`auth/password` validates and renames password fields before `apiPost`;
 `auth/token` renews the tenant session and answers 204 without a token;
 `auth/staff-preview/end` takes the running preview's token from the session
 cookie; `logs` and `parent/logs` ingest client
@@ -269,11 +263,9 @@ and headers. The remaining helper-backed routes use their portal's
 `create*Handler` or `proxy*` factories, including the operator and parent
 wrappers; they are not handwritten auth/fetch/error loops.
 
-Business adapters are not transparent proxies: room history maps the
-documented 404 and `feature_disabled` 403 to an empty/disabled view;
-student PUT marks a consent write that succeeded before a later student write
-failed. The student routes own the backend wire shape (`lib/student-wire.ts`);
-the browser client `lib/student-api.ts` receives mapped `Student` objects. Demo handoff produces a redirect after checking readiness. An exhausted
+The student wire shape lives in `lib/student-wire.ts`; the browser client
+`lib/student-api.ts` maps the catalog proxy's answers onto `Student` objects.
+Demo handoff produces a redirect after checking readiness. An exhausted
 auth refresh/retry answers 401 with `general.permission`. All other
 backend errors in those routes retain the shared error contract. Logout
 forwards backend errors unchanged even though the browser always clears its
@@ -281,7 +273,7 @@ local session.
 
 Read [the tenant route wrapper](../../frontend/src/lib/route-wrapper.server.ts)
 and the affected portal's wrapper before changing a handler. Existing consumers
-such as [the rooms route](../../frontend/src/app/api/rooms/route.ts) show the
+such as [the rooms export route](../../frontend/src/app/api/rooms/export/route.ts) show the
 request/response wiring; retain the affected endpoint's error contract.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.

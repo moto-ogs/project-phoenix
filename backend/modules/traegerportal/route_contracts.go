@@ -9,11 +9,13 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // AccountRouteContracts registers the Träger-Büro's account management
 // (ADR 0270), with patterns relative to /traeger/accounts. The exports
-// answer files and keep their route files.
+// answer files (#2352).
 func AccountRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: TraegerAccountsResponse{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "GET", Pattern: "/history", Portals: traegerPortal, Query: []common.QueryParam{{Name: "before", Kind: common.QueryID}}, Response: TraegerHistoryResponse{}},
+		{Method: "GET", Pattern: "/history/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "POST", Pattern: "/invitations", Portals: traegerPortal, Request: TraegerInviteRequest{}, Response: TraegerInvitationResponse{}},
 		{Method: "DELETE", Pattern: "/invitations/{invitationId}", Portals: traegerPortal, NoData: true},
 		{Method: "PUT", Pattern: "/{accountId}/roles", Portals: traegerPortal, Request: TraegerRolesRequest{}, Response: TraegerMemberResponse{}},

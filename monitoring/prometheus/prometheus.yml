@@ -54,3 +54,23 @@ scrape_configs:
         labels:
           env: staging
           service: frontend
+
+  - job_name: phoenix-worker-prod
+    metrics_path: /internal/metrics
+    authorization:
+      credentials: __METRICS_BEARER_TOKEN__
+    static_configs:
+      - targets: ["production-worker-1:8080"]
+        labels:
+          env: prod
+          service: worker
+
+  - job_name: phoenix-worker-staging
+    metrics_path: /internal/metrics
+    authorization:
+      credentials: __METRICS_BEARER_TOKEN__
+    static_configs:
+      - targets: ["staging-worker-1:8080"]
+        labels:
+          env: staging
+          service: worker

@@ -121,63 +121,6 @@ describe("activity-api", () => {
       expect(result[0]?.created_at).toBeInstanceOf(Date);
     });
 
-    // Temporary (#7563): the previous release's route file answers a paged
-    // object of mapped activities.
-    it("handles nested data.data structure in browser context", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          data: {
-            data: [
-              JSON.parse(
-                JSON.stringify(mapActivityResponse(sampleBackendActivity)),
-              ) as unknown,
-            ],
-          },
-        }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.fetchActivities();
-
-      expect(result).toEqual([mapActivityResponse(sampleBackendActivity)]);
-    });
-
-    it("handles direct array response in browser context", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const frontendActivity: Activity = {
-        id: "1",
-        name: "Test Activity",
-        max_participant: 20,
-        is_open_ags: true,
-        supervisor_id: "1",
-        ag_category_id: "1",
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-
-      const mockResponse = {
-        ok: true,
-        json: async () => [frontendActivity],
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.fetchActivities();
-
-      expect(result).toHaveLength(1);
-    });
-
     it("returns empty array for empty response", async () => {
       vi.stubGlobal("window", {});
       mockedGetSession.mockResolvedValueOnce({
@@ -305,33 +248,6 @@ describe("activity-api", () => {
       const mockResponse = {
         ok: true,
         json: async () => ({ data: [frontendCategory] }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getCategories();
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("fetches categories in browser context with direct response", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const frontendCategory = {
-        id: "1",
-        name: "Sport",
-        description: "Sports",
-        color: "#3b82f6",
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-
-      const mockResponse = {
-        ok: true,
-        json: async () => [frontendCategory],
       };
       vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
 

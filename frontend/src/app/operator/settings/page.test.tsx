@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { catalogText } from "~/test/error-catalog-text";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -742,7 +748,7 @@ describe("OperatorSettingsPage", () => {
     fireEvent.click(await screen.findByText("Passwort ändern"));
 
     const onSuccess = passwordModalProps.current?.onSuccess as () => void;
-    onSuccess();
+    await act(async () => onSuccess());
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
     expect(sessionStorage.getItem(PASSWORD_CHANGED_KEY)).toBe("1");

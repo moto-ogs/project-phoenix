@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   multipart,
@@ -220,6 +221,11 @@ export interface FamilyChildrenRequest {
   valid_until?: string | null;
 }
 
+/** Query of GET /traeger/family-children/export */
+export interface GetTraegerFamilyChildrenExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/family-children/{contractId}": {
     method: "DELETE",
@@ -232,6 +238,13 @@ export const routes = {
     pattern: "/traeger/family-children/",
     portals: ["org"],
     response: success(FamilyChildrenSetSchema),
+  },
+  "GET /traeger/family-children/export": {
+    method: "GET",
+    pattern: "/traeger/family-children/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "POST /traeger/family-children/imports": {
     method: "POST",

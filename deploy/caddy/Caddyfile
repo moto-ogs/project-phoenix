@@ -8,6 +8,11 @@
 		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
 		client_ip_headers CF-Connecting-IP
 		trusted_proxies_strict
+		# Keep-alive connections idle this long; an open event stream is
+		# never idle (30 s heartbeat). Above the 75 s client watchdog (#7226).
+		timeouts {
+			idle 5m
+		}
 	}
 }
 
@@ -21,6 +26,31 @@
 	header_up X-Real-IP {client_ip}
 	header_up X-Forwarded-Host {host}
 	header_up -X-Moto-Original-*
+}
+
+# Shared snippet: one pool of replicas per app (#7226). Every app lists its
+# fixed port plus its replica port range (production API 18080-18083, frontend
+# 13000-13003; staging API 18180-18183, frontend 13100-13103), see
+# docs/operations/replicas-7226.md. A port without a running replica fails the
+# health check and gets no traffic.
+# - least_conn spreads the long-lived event streams.
+# - The active health check takes a draining replica out within 2 s; both
+#   apps answer 503 there once they stop (--drain-delay, Next.js drain).
+# - A refused connection retries on another replica for up to 5 s.
+# - flush_interval -1 passes every event-stream byte at once. Caddy sets no
+#   read, write or stream timeout here, so a stream stays open as long as the
+#   upstream writes; the backend sends a heartbeat every 30 s, well inside
+#   the 75 s client watchdog and the idle timeout below.
+(replica_pool) {
+	lb_policy least_conn
+	lb_try_duration 5s
+	lb_try_interval 250ms
+	health_uri {args[0]}
+	health_interval 2s
+	health_timeout 2s
+	health_status 200
+	fail_duration 10s
+	flush_interval -1
 }
 
 # Shared snippet: security headers + gzip
@@ -159,8 +189,9 @@ www.moto-app.de {
 }
 
 moto-app.de {
-	reverse_proxy localhost:3000 {
+	reverse_proxy localhost:3000 localhost:13000 localhost:13001 localhost:13002 localhost:13003 {
 		import client_ip_upstream
+		import replica_pool /api/health
 	}
 	import common
 	import maintenance-html
@@ -168,8 +199,9 @@ moto-app.de {
 
 # --- Production API --------------------------------------------------
 api.moto-app.de {
-	reverse_proxy localhost:8080 {
+	reverse_proxy localhost:8080 localhost:18080 localhost:18081 localhost:18082 localhost:18083 {
 		import client_ip_upstream
+		import replica_pool /health
 	}
 	import common
 	import maintenance-json
@@ -177,16 +209,18 @@ api.moto-app.de {
 
 # --- Staging: base domain + API --------------------------------------
 staging.moto-app.de {
-	reverse_proxy localhost:3001 {
+	reverse_proxy localhost:3001 localhost:13100 localhost:13101 localhost:13102 localhost:13103 {
 		import client_ip_upstream
+		import replica_pool /api/health
 	}
 	import common
 	import maintenance-html
 }
 
 api-staging.moto-app.de {
-	reverse_proxy localhost:8081 {
+	reverse_proxy localhost:8081 localhost:18180 localhost:18181 localhost:18182 localhost:18183 {
 		import client_ip_upstream
+		import replica_pool /health
 	}
 	import common
 	import maintenance-json
@@ -281,8 +315,9 @@ pyreportal-staging.moto-app.de {
 # --- Production wildcard: *.moto-app.de -> frontend :3000 ------------
 *.moto-app.de {
 	import cloudflare-tls
-	reverse_proxy localhost:3000 {
+	reverse_proxy localhost:3000 localhost:13000 localhost:13001 localhost:13002 localhost:13003 {
 		import client_ip_upstream
+		import replica_pool /api/health
 	}
 	import common
 	import maintenance-html
@@ -291,8 +326,9 @@ pyreportal-staging.moto-app.de {
 # --- Staging wildcard: *.staging.moto-app.de -> frontend :3001 -------
 *.staging.moto-app.de {
 	import cloudflare-tls
-	reverse_proxy localhost:3001 {
+	reverse_proxy localhost:3001 localhost:13100 localhost:13101 localhost:13102 localhost:13103 {
 		import client_ip_upstream
+		import replica_pool /api/health
 	}
 	import common
 	import maintenance-html

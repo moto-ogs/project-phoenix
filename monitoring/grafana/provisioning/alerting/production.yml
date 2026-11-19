@@ -20,7 +20,7 @@ groups:
               to: 0
             datasourceUid: P8E80F9AEF21F6940
             model:
-              expr: 'sum(count_over_time({env="prod", service="server"} | json | __error__=""
+              expr: 'sum(count_over_time({env="prod", service=~"server|worker"} | json | __error__=""
                 | msg =~ "5[0-9][0-9]: .*" [5m]))'
               instant: true
               intervalMs: 1000

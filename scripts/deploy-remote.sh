@@ -55,12 +55,17 @@ load_app_services() {
   (( ${#app_services[@]} >= 2 ))
 }
 
-# Only server and frontend gate a release. The demo sidecar starts afterwards
-# without --wait: its first start seeds a school for minutes, and its health
-# must never roll back or stop a healthy application. Its healthcheck and
-# journald log report a failing sidecar instead.
+# server, frontend and a standalone worker gate a release; every replica of
+# them must run the same image and environment (#7226). The demo sidecar
+# starts afterwards without --wait: its first start seeds a school for
+# minutes, and its health must never roll back or stop a healthy application.
+# Its healthcheck and journald log report a failing sidecar instead.
 start_app_services() {
-  docker compose up -d --wait "$@" server frontend || return 1
+  local gated
+  gated=$(bash "$script_dir/release-backup.sh" gate-services) || return 1
+  # shellcheck disable=SC2086 # service names, split on purpose
+  docker compose up -d --wait "$@" $gated || return 1
+  bash "$script_dir/release-backup.sh" check-replicas || return 1
   [[ " ${app_services[*]} " != *' demo-runtime '* ]] || docker compose up -d --no-deps --force-recreate demo-runtime ||
     echo 'WARNING: demo-runtime did not start; the application itself is healthy' >&2
 }

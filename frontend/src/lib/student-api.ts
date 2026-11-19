@@ -17,7 +17,6 @@ import type {
   StudentDetailResponse,
   StudentResponse,
 } from "./contract/students.generated";
-import { CONTRACT_WIRE } from "./contract/wire";
 import { createLogger } from "~/lib/logger";
 import { encodeMultiValueParam } from "./multi-value-param";
 import { sessionFetch } from "./session-cache";
@@ -162,7 +161,7 @@ export async function fetchStudents(
   filters?: StudentFilters,
 ): Promise<{ students: Student[]; pagination: StudentPage["pagination"] }> {
   const url = `/api/students${studentQuery(filters)}`;
-  const response = await sessionFetch(url, { headers: CONTRACT_WIRE });
+  const response = await sessionFetch(url);
   if (!response.ok) {
     throw await apiErrorFromResponse(
       response,
@@ -201,7 +200,6 @@ export async function fetchStudent(id: string): Promise<Student> {
   return mapStudentDetailResponse(
     await bffJson<StudentDetailResponse>(
       `/api/students/${encodeURIComponent(id)}?include_privacy_consent=true`,
-      { headers: CONTRACT_WIRE },
     ),
   );
 }
@@ -220,7 +218,6 @@ export async function createStudent(body: StudentCreateBody): Promise<Student> {
   const created = await bffJson<StudentResponse>("/api/students", {
     method: "POST",
     body: studentCreateRequest(body),
-    headers: CONTRACT_WIRE,
   });
 
   let written = consent;
@@ -362,7 +359,6 @@ export async function updateStudent(
   try {
     response = await sessionFetch(`/api/students/${encodeURIComponent(id)}`, {
       method: "PUT",
-      headers: CONTRACT_WIRE,
       body: JSON.stringify(prepareStudentForBackend(update)),
     });
   } catch (error) {
@@ -676,7 +672,7 @@ export async function deleteStudentWithData(
     completionId
       ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}`
       : `/api/students/${encodeURIComponent(id)}`,
-    { method: "DELETE", body: input, headers: CONTRACT_WIRE },
+    { method: "DELETE", body: input },
   );
 }
 

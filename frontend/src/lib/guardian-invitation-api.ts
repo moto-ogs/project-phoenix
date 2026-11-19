@@ -39,8 +39,7 @@ export interface GuardianInvitationAcceptResult {
 }
 
 interface BackendAcceptGuardianResponse {
-  /** A decimal string; a number from a backend before #2352. */
-  account_id: string | number;
+  account_id: string;
   email: string;
   tenant_slug?: string;
 }
@@ -120,7 +119,7 @@ export async function acceptGuardianInvitation(
   const raw = (await response.json()) as unknown;
   const payload = extractData<BackendAcceptGuardianResponse>(raw);
   return {
-    accountId: String(payload.account_id),
+    accountId: payload.account_id,
     email: payload.email,
     tenantSlug: payload.tenant_slug,
   };

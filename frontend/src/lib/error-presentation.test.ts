@@ -154,6 +154,20 @@ describe("presentError", () => {
     expect(result.requestId).toBeUndefined();
   });
 
+  it("asks to reload the page when the app calls a retired route", () => {
+    // A tab from before a release still calls a route the release removed;
+    // the BFF answers 404 general.route_not_found.
+    const result = presentError(
+      new ApiError("route not found", 404, { code: "general.route_not_found" }),
+      "Die Raumliste",
+    );
+
+    expect(result.message).toBe(
+      "Die Raumliste konnte nicht bearbeitet werden. Es gibt eine neue Version von moto. Bitte lade die Seite neu.",
+    );
+    expect(result.retryable).toBe(false);
+  });
+
   it("falls back to the class text in the reader's language when a code is unknown", () => {
     const error = new ApiError("Backend diagnostic", 503, {
       code: "future.unknown",

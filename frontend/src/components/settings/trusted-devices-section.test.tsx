@@ -96,7 +96,7 @@ describe("TrustedDevicesSection", () => {
   });
 
   it("renders empty state when no devices exist", async () => {
-    global.fetch = jsonResponse([]);
+    global.fetch = jsonResponse({ status: "success", data: [] });
     render(<TrustedDevicesSection />);
 
     await waitFor(() => {
@@ -111,7 +111,7 @@ describe("TrustedDevicesSection", () => {
   });
 
   it("renders a device row with shortened User-Agent + revoke button", async () => {
-    global.fetch = jsonResponse([sampleDevice]);
+    global.fetch = jsonResponse({ status: "success", data: [sampleDevice] });
     render(<TrustedDevicesSection />);
 
     await waitFor(() => {
@@ -167,7 +167,7 @@ describe("TrustedDevicesSection", () => {
       error: "RefreshTokenError",
       expires: "2099-01-01",
     };
-    global.fetch = jsonResponse([]);
+    global.fetch = jsonResponse({ status: "success", data: [] });
     render(<TrustedDevicesSection />);
 
     expect(
@@ -178,9 +178,9 @@ describe("TrustedDevicesSection", () => {
   });
 
   it("calls DELETE on revoke + reloads the list", async () => {
-    const listMock = jsonResponse([sampleDevice]);
+    const listMock = jsonResponse({ status: "success", data: [sampleDevice] });
     const deleteMock = noContentResponse();
-    const reloadMock = jsonResponse([]);
+    const reloadMock = jsonResponse({ status: "success", data: [] });
     let call = 0;
     global.fetch = vi.fn(async (input, init) => {
       call++;
@@ -249,11 +249,11 @@ describe("TrustedDevicesSection", () => {
 
     it("keeps a revoked device revoked when the reload fails", async () => {
       const responses = [
-        () => jsonResponse([sampleDevice]),
+        () => jsonResponse({ status: "success", data: [sampleDevice] }),
         () => noContentResponse(),
         () =>
           jsonResponse({ code: "general.unavailable", detail: "down" }, 503),
-        () => jsonResponse([]),
+        () => jsonResponse({ status: "success", data: [] }),
       ];
       let call = 0;
       const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) =>

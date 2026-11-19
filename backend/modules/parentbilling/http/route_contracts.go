@@ -26,26 +26,51 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 // it, as importFileOf reads them.
 const importUploadBytes = capability.MaxImportFileBytes + importFormOverhead
 
+// listExport is the query of a list export: its format (common.ListFormatOf).
+var listExport = []common.QueryParam{common.ListFormatQuery}
+
+// runExport is the query of a run's own export, which requires a format.
+var runExport = []common.QueryParam{{
+	Name: "format", Kind: common.QueryString,
+	Values: []string{capability.ExportPDF, capability.ExportXLSX, capability.ExportCSV},
+}}
+
+// printOnly is the query of a print of letters: only those without e-mail.
+var printOnly = []common.QueryParam{{Name: "only", Kind: common.QueryString, Values: []string{capability.CareLetterPrintWithoutEmail}}}
+
+// letterPreviewBodyBytes bounds the JSON body of a letter preview: the date,
+// the notes and the emergency numbers.
+const letterPreviewBodyBytes = 64 * 1024
+
 // billingFamilyListRouteContracts registers the families, their children
-// and debtor numbers. The exports answer files and keep their route files.
+// and debtor numbers. The exports answer files (#2352).
 func billingFamilyListRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.BillingFamily{}},
 		{Method: "GET", Pattern: "/children", Portals: traegerPortal, Response: []capability.FamilyChildNumbers{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: capability.BillingFamilyDetail{}},
+		{Method: "GET", Pattern: "/{id}/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "PUT", Pattern: "/debtor-number", Portals: traegerPortal, Request: FamilyDebtorNumberRequest{}, Response: capability.FamilyDebtorNumber{}},
 		{Method: "PUT", Pattern: "/child-debtor-number", Portals: traegerPortal, Request: ChildDebtorNumberRequest{}, Response: capability.FamilyChild{}},
 	}
 }
 
 // BillingRunRouteContracts registers the holiday billing runs (#4668),
-// relative to /traeger/billing-runs. Exports, letters and the print answer
-// files and keep their route files.
+// relative to /traeger/billing-runs. The exports, letters, preview and print
+// answer files (#2352).
 func BillingRunRouteContracts() []common.RouteContract {
+	period := append([]common.QueryParam{{Name: "holiday_period_id", Kind: common.QueryID}}, listExport...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.BillingRun{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: BillingRunRequest{}, Response: capability.BillingRun{}},
 		{Method: "GET", Pattern: "/periods", Portals: traegerPortal, Response: []capability.HolidayBillingPeriod{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: period, File: true},
+		{Method: "GET", Pattern: "/{id}/export", Portals: traegerPortal, Query: runExport, File: true},
+		{Method: "GET", Pattern: "/{id}/cost-takeovers/{costBearerId}/export", Portals: traegerPortal, Query: runExport, File: true},
+		{Method: "POST", Pattern: "/{id}/letters/preview", Portals: traegerPortal, Request: BillingLettersRequest{}, MaxBodyBytes: letterPreviewBodyBytes, File: true},
+		{Method: "GET", Pattern: "/{id}/documents/{documentID}/letter", Portals: traegerPortal, File: true},
+		{Method: "GET", Pattern: "/{id}/letters/print", Portals: traegerPortal, File: true},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: capability.BillingRunDetail{}},
 		{Method: "POST", Pattern: "/{id}/corrections", Portals: traegerPortal, Request: BillingCorrectionRequest{}, Response: capability.BillingRunDetail{}},
 		{Method: "POST", Pattern: "/{id}/release", Portals: traegerPortal, Request: BillingReleaseRequest{}, Response: capability.BillingRunDetail{}},
@@ -123,13 +148,20 @@ func CareMealTariffRouteContracts() []common.RouteContract {
 }
 
 // CareRunRouteContracts registers the monthly care billing runs, relative
-// to /traeger/care-billing-runs. Exports, letters and the print answer
-// files and keep their route files.
+// to /traeger/care-billing-runs. The exports, letters, preview and print
+// answer files (#2352).
 func CareRunRouteContracts() []common.RouteContract {
 	kind := []common.QueryParam{{Name: "kind", Kind: common.QueryString}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.CareRunList{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CareRunRequest{}, Response: capability.CareRun{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
+		{Method: "GET", Pattern: "/{id}/invoices/export", Portals: traegerPortal, Query: listExport, File: true},
+		{Method: "GET", Pattern: "/{id}/review-export", Portals: traegerPortal, Query: runExport, File: true},
+		{Method: "GET", Pattern: "/{id}/cost-shares/{costBearerID}/export", Portals: traegerPortal, Query: runExport, File: true},
+		{Method: "POST", Pattern: "/{id}/letters/preview", Portals: traegerPortal, Request: CareLetterRequest{}, MaxBodyBytes: letterPreviewBodyBytes, File: true},
+		{Method: "GET", Pattern: "/{id}/letters/print", Portals: traegerPortal, Query: printOnly, File: true},
+		{Method: "GET", Pattern: "/{id}/invoices/{invoiceID}/letter", Portals: traegerPortal, Query: kind, File: true},
 		{Method: "GET", Pattern: "/schools", Portals: traegerPortal, Query: []common.QueryParam{{Name: "month", Kind: common.QueryDate}}, Response: []capability.CareRunSchool{}},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: capability.CareRunDetail{}},
 		{Method: "POST", Pattern: "/{id}/release", Portals: traegerPortal, Request: CareReleaseRequest{}, Response: capability.CareRunDetail{}},
@@ -147,12 +179,17 @@ func CareRunRouteContracts() []common.RouteContract {
 }
 
 // CareNoticeRunRouteContracts registers the Jahresbescheide (#6219),
-// relative to /traeger/care-notice-runs. Exports, PDFs and the print answer
-// files and keep their route files.
+// relative to /traeger/care-notice-runs. The exports, PDFs and the print
+// answer files (#2352).
 func CareNoticeRunRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.CareNoticeRunList{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CareNoticeRunRequest{}, Response: capability.CareNoticeRun{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
+		{Method: "GET", Pattern: "/{id}/export", Portals: traegerPortal, Query: listExport, File: true},
+		{Method: "GET", Pattern: "/{id}/letters/export", Portals: traegerPortal, Query: listExport, File: true},
+		{Method: "GET", Pattern: "/{id}/letters/print", Portals: traegerPortal, Query: printOnly, File: true},
+		{Method: "GET", Pattern: "/{id}/notices/{contractID}/pdf", Portals: traegerPortal, File: true},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: capability.CareNoticeRunDetail{}},
 		{Method: "POST", Pattern: "/{id}/release", Portals: traegerPortal, Request: CareReleaseRequest{}, Response: capability.CareNoticeRunDetail{}},
 		{Method: "POST", Pattern: "/{id}/discard", Portals: traegerPortal, Response: capability.CareNoticeRunDetail{}},
@@ -176,10 +213,11 @@ func CareRuleRouteContracts() []common.RouteContract {
 }
 
 // CareEvidenceRouteContracts registers the evidences of a reduction,
-// relative to /traeger/care-evidences. The export keeps its route file.
+// relative to /traeger/care-evidences. The export answers a file (#2352).
 func CareEvidenceRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.CareEvidenceSet{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CareEvidenceRequest{}, Response: capability.CareEvidenceSet{}},
 		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: CareEvidenceRequest{}, Response: capability.CareEvidenceSet{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, Response: capability.CareEvidenceSet{}},
@@ -187,10 +225,11 @@ func CareEvidenceRouteContracts() []common.RouteContract {
 }
 
 // CareCostShareRouteContracts registers the cost shares of the cost bearers,
-// relative to /traeger/care-cost-shares. The export keeps its route file.
+// relative to /traeger/care-cost-shares. The export answers a file (#2352).
 func CareCostShareRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.CareCostShareSet{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CareCostShareRequest{}, Response: capability.CareCostShareSet{}},
 		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: CareCostShareRequest{}, Response: capability.CareCostShareSet{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, Response: capability.CareCostShareSet{}},
@@ -198,8 +237,8 @@ func CareCostShareRouteContracts() []common.RouteContract {
 }
 
 // FamilyChildrenRouteContracts registers the children of the families
-// (#5918), relative to /traeger/family-children. The import takes uploads
-// (#2352); the export answers a file and keeps its route file.
+// (#5918), relative to /traeger/family-children. Imports take uploads and
+// the export answers a file through the catalog (#2352).
 func FamilyChildrenRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.FamilyChildrenSet{}},
@@ -207,6 +246,7 @@ func FamilyChildrenRouteContracts() []common.RouteContract {
 			TooLargeCode: common.CodeParentBillingFamilyChildrenImportFileTooLarge, Response: capability.FamilyChildrenImport{}},
 		{Method: "POST", Pattern: "/imports", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
 			TooLargeCode: common.CodeParentBillingFamilyChildrenImportFileTooLarge, Response: capability.FamilyChildrenImport{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "PUT", Pattern: "/", Portals: traegerPortal, Request: FamilyChildrenRequest{}, Response: capability.FamilyChildrenSet{}},
 		{Method: "DELETE", Pattern: "/{contractId}", Portals: traegerPortal, Response: capability.FamilyChildrenSet{}},
 	}
@@ -249,13 +289,14 @@ func SEPACreditorRouteContracts() []common.RouteContract {
 }
 
 // SEPAMandateRouteContracts registers the mandates, relative to
-// /traeger/sepa-mandates. The imports take uploads (#2352); the export
-// keeps its route file.
+// /traeger/sepa-mandates. Imports take uploads and the export answers a
+// file through the catalog (#2352).
 func SEPAMandateRouteContracts() []common.RouteContract {
 	contract := []common.QueryParam{{Name: "contract_id", Kind: common.QueryID}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: contract, Response: []capability.SEPAMandate{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: SEPAMandateRequest{}, Response: capability.SEPAMandate{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "GET", Pattern: "/imports", Portals: traegerPortal, Response: []capability.SEPAMandateImportEntry{}},
 		{Method: "POST", Pattern: "/imports/preview", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
 			TooLargeCode: common.CodeParentBillingSepaImportFileTooLarge, Response: capability.SEPAMandateImport{}},
@@ -268,21 +309,24 @@ func SEPAMandateRouteContracts() []common.RouteContract {
 }
 
 // SEPADebitRouteContracts registers the direct debits of a run (#4697),
-// relative to /traeger/sepa-debits. The file keeps its route file.
+// relative to /traeger/sepa-debits. The PAIN.008 answers a file (#2352).
 func SEPADebitRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{kind}/{id}", Portals: traegerPortal, Response: capability.SEPADebitRun{}},
+		{Method: "GET", Pattern: "/{kind}/{id}/file", Portals: traegerPortal, File: true},
 		{Method: "POST", Pattern: "/{kind}/{id}/submission", Portals: traegerPortal, Request: SEPADebitSubmissionRequest{}, Response: capability.SEPADebitRun{}},
 	}
 }
 
 // FinanceExportRouteContracts registers the finance exports and their
-// protocol (#4693), relative to /traeger/finance-exports. The files keep
-// their route files.
+// protocol (#4693), relative to /traeger/finance-exports. The files and the
+// exports answer files (#2352).
 func FinanceExportRouteContracts() []common.RouteContract {
 	offset := common.QueryParam{Name: "offset", Kind: common.QueryInt}
-	files := []common.QueryParam{offset, {Name: "run_kind", Kind: common.QueryString}, {Name: "run_id", Kind: common.QueryID}}
+	run := []common.QueryParam{{Name: "run_kind", Kind: common.QueryString}, {Name: "run_id", Kind: common.QueryID}}
+	files := append([]common.QueryParam{offset}, run...)
 	runs := []common.QueryParam{{Name: "care", Kind: common.QueryString}, {Name: "holiday", Kind: common.QueryString}}
+	datev := []common.QueryParam{{Name: "mode", Kind: common.QueryString, Values: []string{"new", "all"}}, {Name: "fiscal_year", Kind: common.QueryDate}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/settings", Portals: traegerPortal, Response: capability.ExportSettings{}},
 		{Method: "PUT", Pattern: "/settings/sollstellung", Portals: traegerPortal, Request: SollstellungMappingRequest{}, Response: capability.ExportSettings{}},
@@ -291,6 +335,10 @@ func FinanceExportRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/runs", Portals: traegerPortal, Query: []common.QueryParam{offset}, Response: capability.ExportRunPage{}},
 		{Method: "GET", Pattern: "/datev-runs", Portals: traegerPortal, Query: runs, Response: capability.DatevRunOverviews{}},
 		{Method: "GET", Pattern: "/files", Portals: traegerPortal, Query: files, Response: capability.ExportProtocolPage{}},
+		{Method: "GET", Pattern: "/runs/export", Portals: traegerPortal, Query: listExport, File: true},
+		{Method: "GET", Pattern: "/files/export", Portals: traegerPortal, Query: append(append([]common.QueryParam{}, listExport...), run...), File: true},
+		{Method: "GET", Pattern: "/runs/{kind}/{id}/sollstellung", Portals: traegerPortal, File: true},
+		{Method: "GET", Pattern: "/runs/{kind}/{id}/datev", Portals: traegerPortal, Query: datev, File: true},
 		{Method: "GET", Pattern: "/booking-accounts", Portals: traegerPortal, Response: capability.BookingAccounts{}},
 		{Method: "PUT", Pattern: "/booking-accounts/revenue-accounts", Portals: traegerPortal, Request: RevenueAccountRequest{}, Response: capability.BookingAccounts{}},
 		{Method: "POST", Pattern: "/booking-accounts/cost-centers", Portals: traegerPortal, Request: CostCenterRequest{}, Response: capability.BookingAccounts{}},

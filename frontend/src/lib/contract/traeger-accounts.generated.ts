@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   noData,
@@ -106,9 +107,19 @@ export interface TraegerRolesRequest {
   roles?: string[] | null;
 }
 
+/** Query of GET /traeger/accounts/export */
+export interface GetTraegerAccountsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 /** Query of GET /traeger/accounts/history */
 export interface GetTraegerAccountsHistoryQuery {
   before?: string;
+}
+
+/** Query of GET /traeger/accounts/history/export */
+export interface GetTraegerAccountsHistoryExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
 }
 
 export const routes = {
@@ -130,12 +141,26 @@ export const routes = {
     portals: ["org"],
     response: success(TraegerAccountsResponseSchema),
   },
+  "GET /traeger/accounts/export": {
+    method: "GET",
+    pattern: "/traeger/accounts/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
   "GET /traeger/accounts/history": {
     method: "GET",
     pattern: "/traeger/accounts/history",
     portals: ["org"],
     query: ["before"],
     response: success(TraegerHistoryResponseSchema),
+  },
+  "GET /traeger/accounts/history/export": {
+    method: "GET",
+    pattern: "/traeger/accounts/history/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "POST /traeger/accounts/invitations": {
     method: "POST",

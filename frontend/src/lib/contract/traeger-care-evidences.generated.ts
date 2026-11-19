@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -82,6 +83,11 @@ export interface CareEvidenceRequest {
   checked_on?: string | null;
 }
 
+/** Query of GET /traeger/care-evidences/export */
+export interface GetTraegerCareEvidencesExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/care-evidences/{id}": {
     method: "DELETE",
@@ -94,6 +100,13 @@ export const routes = {
     pattern: "/traeger/care-evidences/",
     portals: ["org"],
     response: success(CareEvidenceSetSchema),
+  },
+  "GET /traeger/care-evidences/export": {
+    method: "GET",
+    pattern: "/traeger/care-evidences/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "POST /traeger/care-evidences/": {
     method: "POST",
