@@ -78,7 +78,7 @@ func staffFirstStepsStatusOf(body []byte) (staffFirstStepsStatus, bool) {
 // what the request set.
 func staffFirstStepChanged(r *http.Request, body []byte) (string, map[string]string, bool) {
 	step := chi.URLParam(r, "step")
-	if !slices.Contains(staffFirstStepKeys, step) {
+	if !slices.Contains(StaffFirstStepKeys(), step) {
 		return "", nil, false
 	}
 	status, ok := staffFirstStepsStatusOf(body)
