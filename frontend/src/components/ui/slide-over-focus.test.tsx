@@ -371,13 +371,14 @@ describe("SlideOver focus (#7502)", () => {
       clickFocused("Abbrechen");
       await finishClosing("Neue Person");
       const resumed = await screen.findByRole("dialog", { name: "Neues Kind" });
+      // Mounted anew, the panel itself takes the focus. Still mounted, the
+      // second panel returns it to its own opener inside. Which of the two
+      // happens without `slidOut` depends on Vaul's slide-out style being
+      // in the document, so only the panel is asserted there.
       await waitFor(() =>
-        expect(
-          slidOut
-            ? resumed
-            : screen.getByRole("button", { name: "Neu anlegen" }),
-        ).toHaveFocus(),
+        expect(resumed.contains(document.activeElement)).toBe(true),
       );
+      if (slidOut) expect(resumed).toHaveFocus();
 
       fireEvent.keyDown(resumed, { key: "Escape" });
       await finishClosing("Neues Kind");
