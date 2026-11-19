@@ -35,6 +35,21 @@ const CHILD_SCOPE_ANALYTICS_VALUES = ["all", "groups", "room"] as const;
 export type ChildScopeAnalyticsValue =
   (typeof CHILD_SCOPE_ANALYTICS_VALUES)[number];
 
+/**
+ * Selbstöffnende Flächen des Einstiegs (#7541). Ein Wert je Fläche; eine
+ * neue Fläche braucht nur einen neuen Wert hier.
+ */
+export const ONBOARDING_SURFACES = [
+  "announcement",
+  "setup_checklist",
+  "staff_first_steps",
+  "parent_first_steps",
+  "notification_setup",
+  "install_hint",
+  "samsung_hint",
+] as const;
+export type OnboardingSurface = (typeof ONBOARDING_SURFACES)[number];
+
 const ANALYTICS_SURFACES = [
   "ogs",
   "parents",
@@ -494,6 +509,11 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "notification_feed_all_read",
   // Reiter auf „Alle Kinder“ (#5046): nur die Art des Reiters, nie ein Raum.
   "child_scope_tab_selected",
+  // Selbstöffnende Flächen des Einstiegs (#7541): nur die Fläche
+  // (onboarding_surface); das Portal steht in `surface`.
+  "onboarding_surface_shown",
+  "onboarding_surface_accepted",
+  "onboarding_surface_dismissed",
 ]);
 
 const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -506,6 +526,7 @@ const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   $dead_swipe_direction: new Set(["up", "down", "left", "right"]),
   notification_type: new Set(NOTIFICATION_FEED_ANALYTICS_TYPES),
   child_scope: new Set(CHILD_SCOPE_ANALYTICS_VALUES),
+  onboarding_surface: new Set(ONBOARDING_SURFACES),
 };
 
 /** SDK identifiers: anonymous runtime IDs, UUIDs, the project token. */
