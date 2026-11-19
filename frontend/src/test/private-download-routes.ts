@@ -74,7 +74,5 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["timetable/betreuungsplan/export", "POST"],
   ["timetable/lists/export", "POST"],
   ["traeger-documents/[id]/file", "GET"],
-  ["traeger/contracts/[id]/paper-signature", "GET"],
-  ["traeger/holiday-periods/[id]/form/documents/[documentId]", "GET"],
   ["week-protocols/[protocolId]/pdf", "GET"],
 ] as const;
