@@ -32,6 +32,10 @@ import { useTenantMutateMatching } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { traegerPath } from "~/lib/traeger-url";
 
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const PERIOD_INFO =
+  "Hier planst du den Ferienzeitraum: Anmeldebeginn, Anmeldeschluss und die Wochen. Jede Woche bekommt eine „Ausrichtende OGS“ und ihre „Zeitmodelle“. Eltern melden ihre Kinder erst an, wenn du den Ferienzeitraum veröffentlicht hast.";
+
 export default function TraegerHolidayPeriodPage() {
   const holidayCalendar = useHolidayEditorCalendar();
   const router = useRouter();
@@ -75,6 +79,7 @@ export default function TraegerHolidayPeriodPage() {
 
   return (
     <TenantPage
+      info={PERIOD_INFO}
       title={period?.name ?? preview?.name ?? "Ferienzeitraum"}
       back
       backHref={listHref}

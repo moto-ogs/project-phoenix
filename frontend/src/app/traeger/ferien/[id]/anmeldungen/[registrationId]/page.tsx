@@ -142,6 +142,11 @@ const NO_FAMILY_DEBTOR_NUMBERS: HolidayFamilyDebtorNumbers = {
 };
 
 const logger = createLogger({ component: "TraegerHolidayRegistrationPage" });
+
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const REGISTRATION_INFO =
+  "Hier prüfst du eine Anmeldung für die Ferien. Schau dir zuerst die Reiter „Kind“, „Eltern“ und „Nachweise und Beitrag“ an. Ist sie eingegangen, bestätigst du sie oben mit „Bestätigen“.";
+
 const TRAEGER_BILLING_RIGHT = "traeger_billing:manage";
 // The mail notice leads here: phone and address of the parents (#6999).
 const PARENTS_SECTION_ID = "eltern";
@@ -211,6 +216,7 @@ export default function TraegerHolidayRegistrationPage() {
     <Suspense
       fallback={
         <TenantPage
+          info={REGISTRATION_INFO}
           title="Anmeldung"
           leading={
             <ConceptIconTile concept={holidayWeeksConcept} size="page" />
@@ -597,6 +603,7 @@ function HolidayRegistrationContent() {
   if (!(registration && view)) {
     return (
       <TenantPage
+        info={REGISTRATION_INFO}
         {...head}
         statsLoading={!loadError}
         error={loadError}
@@ -876,6 +883,7 @@ function HolidayRegistrationContent() {
     >
       {(status) => (
         <TenantPage
+          info={REGISTRATION_INFO}
           {...head}
           error={loadError}
           stats={

@@ -105,6 +105,10 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
 const logger = createLogger({ component: "TraegerVertragPage" });
 
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const CONTRACT_INFO =
+  "Hier siehst du den Vertrag eines Kindes. Prüfe im Reiter „Vertrag“ zuerst die „Gebuchte Betreuung“, den „Beginn“ und den „Beitrag im Monat“. Im Reiter „Unterschrift und Versand“ siehst du, ob die Eltern unterschrieben haben.";
+
 const LIST_HREF = traegerPath("/traeger/vertraege");
 
 export default function TraegerVertragPage() {
@@ -113,6 +117,7 @@ export default function TraegerVertragPage() {
     <Suspense
       fallback={
         <TenantPage
+          info={CONTRACT_INFO}
           title="Vertrag"
           back
           backHref={LIST_HREF}
@@ -431,6 +436,7 @@ function TraegerVertragView() {
 
   return (
     <TenantPage
+      info={CONTRACT_INFO}
       title={contract ? childName(contract) : "Vertrag"}
       leading={<ConceptIconTile concept={careContractsConcept} size="page" />}
       back
