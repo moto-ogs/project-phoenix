@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -100,15 +101,16 @@ func CoreActionMiddleware(cfg CoreActionConfig) func(http.Handler) http.Handler 
 			if !ok || action.Event == "" {
 				return
 			}
-			if !action.countsResponse(body.Bytes()) {
+			extra, ok := action.responseProperties(r, body.Bytes())
+			if !ok {
 				return
 			}
-			captureCoreAction(cfg, r, action, body)
+			captureCoreAction(cfg, r, action, body, extra)
 		})
 	}
 }
 
-func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction, body *cappedBuffer) {
+func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction, body *cappedBuffer, extra map[string]any) {
 	actor, ok := resolveActor(cfg, r, action, body)
 	if !ok {
 		return
@@ -119,7 +121,9 @@ func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction,
 		return
 	}
 	ctx, distinct := identify(context.WithValue(r.Context(), collectionPermissionKey{}, true), cfg, actor)
-	cfg.Tracker.CaptureContext(ctx, distinct, action.Event, action.properties(actor))
+	props := action.properties(actor)
+	maps.Copy(props, extra)
+	cfg.Tracker.CaptureContext(ctx, distinct, action.Event, props)
 }
 
 func lookupCoreAction(r *http.Request) (CoreAction, bool) {

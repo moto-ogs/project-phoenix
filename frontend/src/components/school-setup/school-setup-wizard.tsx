@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { CoachMark } from "~/components/ui/coach-mark";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import {
   buildHelpGroupHref,
   buildHelpHref,
@@ -173,12 +174,25 @@ function SchoolSetupWizardForAdmin({
 
   const nextOpen = state ? firstOpenStep(state) : null;
 
-  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf.
+  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf. Das
+  // zählt als angezeigte Fläche des Einstiegs (#7554); klappt die Person sie
+  // danach zum ersten Mal ein, hat sie die Fläche geschlossen. Abschließen,
+  // Überspringen und Ausblenden zählt das Backend.
+  const openedByItself = useRef(false);
   useEffect(() => {
     if (visible && accountID && claimFirstOpen(accountID)) {
       setView("checklist");
+      openedByItself.current = true;
+      trackOnboardingSurface("shown", "setup_checklist");
     }
   }, [visible, accountID]);
+  const collapse = () => {
+    if (openedByItself.current) {
+      openedByItself.current = false;
+      trackOnboardingSurface("dismissed", "setup_checklist");
+    }
+    setView("beacon");
+  };
 
   // Aufgeklappt ist der nächste offene Schritt, solange die Person nicht
   // selbst einen anderen gewählt hat. Wird er erledigt, rückt der nächste nach.
@@ -290,7 +304,7 @@ function SchoolSetupWizardForAdmin({
           void run(() => setSchoolSetupStepSkipped(step, skipped))
         }
         onComplete={() => void run(completeSchoolSetup)}
-        onCollapse={() => setView("beacon")}
+        onCollapse={collapse}
         onDismiss={() => setConfirmDismiss(true)}
       />
       {/* Ausblenden ist endgültig: kein Weg zurück in den Einstellungen,

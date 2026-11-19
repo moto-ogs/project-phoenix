@@ -443,6 +443,31 @@ const ONBOARDING_SURFACE_EVENTS = ['onboarding_surface_shown', 'onboarding_surfa
 const sqlArray = (values) => `[${values.map(sqlString).join(', ')}]`;
 const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlArray(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlArray(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
 
+/**
+ * Core actions of the leadership's setup checklist (#7554), sent by the
+ * server for every school that allows the usage analytics, with or without
+ * the person's consent. A done step has no event: the server derives it.
+ */
+const SETUP_CHECKLIST_EVENTS = {
+  completed: 'onboarding_setup_checklist_completed',
+  dismissed: 'onboarding_setup_checklist_dismissed',
+  stepSkipped: 'onboarding_setup_checklist_step_skipped',
+};
+
+/**
+ * German names of the setup checklist's steps (schoolsetup.StepKeys), short
+ * forms of the checklist's titles (a query naming a person fails the guard).
+ */
+export const SETUP_CHECKLIST_STEP_LABELS = Object.freeze({
+  team: 'Team einladen',
+  rooms: 'Raum anlegen',
+  groups: 'Gruppe anlegen',
+  students: 'Kind anlegen',
+  guardians: 'Eltern einladen',
+  worktime: 'Arbeitszeitmodelle eintragen',
+});
+const setupStepLabel = `transform(toString(properties.step), ${sqlArray(Object.keys(SETUP_CHECKLIST_STEP_LABELS))}, ${sqlArray(Object.values(SETUP_CHECKLIST_STEP_LABELS))}, toString(properties.step))`;
+
 /** HogQL: the product name of a school portal (`surface`). */
 const portalLabel = (surface) => `multiIf(${surface} = 'ogs', 'OGS-App', ${surface} = 'school', 'Schul-App', ${surface} = 'parents', 'Eltern-App', 'unbekannt')`;
 
@@ -1130,7 +1155,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
     },
     {
       name: 'Nutzungsanalyse: Einstieg',
-      description: 'Was beim Einstieg in moto von selbst aufgeht und was Personen damit tun, in echten Schulen (deployment = moto-app.de). Die Flächen meldet der Browser, also nur mit Einwilligung: Personen ohne Einwilligung und die allererste Sitzung vor der Einwilligung fehlen. Die Werte sind deshalb verzerrt und kein Gesamtwert. ' + WORKDAYS_NOTE,
+      description: 'Was beim Einstieg in moto von selbst aufgeht und was Personen damit tun, in echten Schulen (deployment = moto-app.de). Die Flächen meldet der Browser, also nur mit Einwilligung: Personen ohne Einwilligung und die allererste Sitzung vor der Einwilligung fehlen. Die Werte dieser Kacheln sind deshalb verzerrt und kein Gesamtwert. Die Kacheln der Einrichtungs-Checkliste meldet der Server für jede Schule mit Nutzungsanalyse, auch ohne Einwilligung. ' + WORKDAYS_NOTE,
       insights: [
         {
           name: 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)',
@@ -1178,6 +1203,45 @@ from (
 )
 group by Portal, Flaechen
 order by Portal, Flaechen`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: abgeschlossen und ausgeblendet',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Schulen, deren Leitung in der Checkliste etwas tat: abschließen, Schritt überspringen oder ausblenden. Abschließen gilt für die Schule, Ausblenden für eine Person; die Schule zählt als ausgeblendet, sobald jemand ausblendet. Nur angesehene Checklisten fehlen; sie stehen in der Kachel je Fläche.',
+          ...hogql('production', (where) => `
+select
+  count() as ${quoted('Schulen mit Checkliste')},
+  countIf(Abgeschlossen) as ${quoted('Abgeschlossen')},
+  countIf(Ausgeblendet and not Abgeschlossen) as ${quoted('Ausgeblendet ohne Abschluss')},
+  round(100 * countIf(Abgeschlossen) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
+  round(100 * countIf(Ausgeblendet and not Abgeschlossen) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
+from (
+  select
+    toString(properties.school_id) as Schule_ID,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.completed)}) > 0 as Abgeschlossen,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.dismissed)}) > 0 as Ausgeblendet
+  from events
+  where ${where}
+    and event in ${sqlList(Object.values(SETUP_CHECKLIST_EVENTS))}
+    and ${SCHOOL_EVENT}
+    and timestamp > now() - interval 30 day
+  group by Schule_ID
+)`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: übersprungene Schritte',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Welche Schritte die Leitung überspringt, und in wie vielen Schulen. Wer einen Sprung zurücknimmt und neu überspringt, zählt bei „Übersprungen“ doppelt, bei „Schulen“ nicht.',
+          ...hogql('production', (where) => `
+select
+  ${setupStepLabel} as Schritt,
+  count() as ${quoted('Übersprungen')},
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and event = ${sqlString(SETUP_CHECKLIST_EVENTS.stepSkipped)}
+  and ${SCHOOL_EVENT}
+  and timestamp > now() - interval 30 day
+group by Schritt
+order by Schulen desc`),
         },
       ],
     },
