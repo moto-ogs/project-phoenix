@@ -378,7 +378,7 @@ export function makeCatalogProxy(
     const answer = await readBackendJson<unknown>(response);
     return NextResponse.json(
       wrapInApiResponse(decoded(route as ServedRoute, request, answer)),
-      { status: response.status },
+      { status: response.status === 204 ? 200 : response.status },
     );
   }
 

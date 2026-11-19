@@ -205,6 +205,9 @@ func TestBuildRejects(t *testing.T) {
 	uploadWithoutCode.TooLargeCode = ""
 	uploadAndBody := upload()
 	uploadAndBody.Request = body{}
+	uploadAndFile := upload()
+	uploadAndFile.Response = nil
+	uploadAndFile.File = true
 	uploadOnGet := upload()
 	uploadOnGet.Method = "GET"
 	uploadRetry := upload()
@@ -247,6 +250,7 @@ func TestBuildRejects(t *testing.T) {
 		"an upload without a body limit":            {[]Registration{uploadWithoutLimit}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
 		"an upload without its too large code":      {[]Registration{uploadWithoutCode}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
 		"an upload beside a JSON body":              {[]Registration{uploadAndBody}, Options{Identifiers: identifiers}, "a multipart upload and a JSON request body"},
+		"an upload with a file response":            {[]Registration{uploadAndFile}, Options{Identifiers: identifiers}, "a multipart upload cannot answer a file"},
 		"an upload on a GET":                        {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
 		"an upload that names a retry":              {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
 		"a too large code without an upload":        {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},

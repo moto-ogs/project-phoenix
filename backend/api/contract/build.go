@@ -192,8 +192,8 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 }
 
 // multipartTraits refuses an upload the proxy cannot stream: one without a
-// bound, without the code of its refusal, beside a JSON body, or with a
-// retry trait although an upload is sent only once.
+// bound, without the code of its refusal, beside a JSON body or file answer,
+// or with a retry trait although an upload is sent only once.
 func multipartTraits(rc Registration, where string) error {
 	if !rc.Multipart {
 		if rc.TooLargeCode != "" {
@@ -206,6 +206,8 @@ func multipartTraits(rc Registration, where string) error {
 		return fmt.Errorf("%s: a multipart upload is a POST, PUT or PATCH", where)
 	case rc.Request != nil:
 		return fmt.Errorf("%s registers a multipart upload and a JSON request body", where)
+	case rc.File:
+		return fmt.Errorf("%s: a multipart upload cannot answer a file", where)
 	case rc.MaxBodyBytes == 0 || rc.TooLargeCode == "":
 		return fmt.Errorf("%s: a multipart upload needs MaxBodyBytes and TooLargeCode", where)
 	case rc.NoRetryAfterRenewal != "":

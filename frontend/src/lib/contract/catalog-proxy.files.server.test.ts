@@ -8,7 +8,7 @@ import {
   type CatalogMethod,
   type CatalogRoute,
 } from "./catalog-proxy.server";
-import { fileAnswer, multipart, success } from "./runtime";
+import { fileAnswer, multipart, noData, success } from "./runtime";
 
 // The file and upload kinds of the catalog proxy (ADR 0270, addendum of
 // 2026-11-19), on the real portal handlers: session, renewal, backend client
@@ -44,6 +44,14 @@ const routes: CatalogRoute[] = [
     tooLargeCode: "enrollment.upload_invalid",
     request: multipart,
     response: success(z.object({ id: z.string() })),
+  },
+  {
+    method: "POST",
+    pattern: "/traeger/rows/{id}/proofs/complete",
+    maxBodyBytes: LIMIT,
+    tooLargeCode: "enrollment.upload_invalid",
+    request: multipart,
+    response: noData,
   },
 ];
 
@@ -232,6 +240,24 @@ describe("catalog file route", () => {
 });
 
 describe("catalog multipart upload", () => {
+  it("normalizes a successful 204 to a 200 no-data envelope", async () => {
+    mockFetch.mockResolvedValue(new Response(null, { status: 204 }));
+
+    const response = await call("POST", ["rows", "7", "proofs", "complete"], {
+      body: "abcd",
+      headers: uploadHeaders(4),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      success: true,
+      message: "Success",
+      data: null,
+    });
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("streams the body to the backend before the browser has sent all of it", async () => {
     const browser = feed();
     let received = new Uint8Array();
