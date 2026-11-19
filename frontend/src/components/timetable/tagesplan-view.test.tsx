@@ -664,6 +664,14 @@ describe("TagesplanView", () => {
     expect(
       screen.getByRole("button", { name: "Erklärung zu Heute" }),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Erklärung zu Heute" }));
+    expect(
+      within(
+        screen.getByRole("dialog", { name: "Erklärung zu Heute" }),
+      ).getByText(
+        "Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows the own-scope hint when the school keeps staff on their own blocks (#2380)", () => {

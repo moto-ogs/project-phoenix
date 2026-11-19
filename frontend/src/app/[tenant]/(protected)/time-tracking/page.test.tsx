@@ -950,6 +950,9 @@ describe("TimeTrackingPage", () => {
       expect(
         screen.getByRole("link", { name: "Zur Startseite" }),
       ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Erklärung zu Zeiterfassung" }),
+      ).toBeInTheDocument();
       expect(screen.queryByText("Stempeluhr")).not.toBeInTheDocument();
     });
 

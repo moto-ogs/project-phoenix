@@ -121,6 +121,9 @@ import { OwnSupervisionView } from "~/components/active-supervisions/own-supervi
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
+const ACTIVE_SUPERVISIONS_INFO =
+  "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
+
 function hasSameGroupNames(
   previous: readonly string[] | undefined,
   next: readonly string[],
@@ -870,7 +873,7 @@ function MeinRaumPageContent() {
       // Die Breadcrumb bleibt „Aktuelle Aufsicht > Name“, der Seitentitel
       // nennt deshalb nur den Namen statt die Aufsicht ein zweites Mal (#3312).
       title={supervisionName ?? "Aktuelle Aufsicht"}
-      info="Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen."
+      info={ACTIVE_SUPERVISIONS_INFO}
       stats={supervisionSummary}
       back={isSharedRoomView}
       backHref={
@@ -1110,6 +1113,7 @@ function ActiveSupervisionGate({
     return (
       <TenantPage
         title="Aktuelle Aufsicht"
+        info={ACTIVE_SUPERVISIONS_INFO}
         statsLoading
         loading
         loadingLabel="Aktuelle Aufsicht wird geladen…"
@@ -1138,7 +1142,9 @@ function ActiveSupervisionGate({
 
   // Fehlendes Recht ist ein Zustand der Seite, kein Fehler: dieselbe
   // Kopfkarte mit demselben Titel, darunter der ruhige Leerzustand.
-  return <ForbiddenPage title="Aktuelle Aufsicht" />;
+  return (
+    <ForbiddenPage title="Aktuelle Aufsicht" info={ACTIVE_SUPERVISIONS_INFO} />
+  );
 }
 
 // Main component with Suspense wrapper. BinaryModeGuard runs first so
@@ -1151,6 +1157,7 @@ export default function MeinRaumPage() {
         fallback={
           <TenantPage
             title="Aktuelle Aufsicht"
+            info={ACTIVE_SUPERVISIONS_INFO}
             statsLoading
             loading
             loadingLabel="Aktuelle Aufsicht wird geladen…"

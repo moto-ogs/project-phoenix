@@ -131,7 +131,13 @@ const FIRST_WEEK_PAGES = [
  */
 const PAGES_WITH_CONDITIONAL_INFO: readonly string[] = [
   "/home", // Nur beim Anordnen der Startseite erklärt der Knopf das Verschieben.
+  "/mein-dienstplan", // Der Modulwächter erhält den Hinweis über seine Eigenschaft.
+  "/parent-announcements", // Die Erklärung richtet sich nach der gewählten Mitteilungsart.
   "/students/[id]", // Ferienkinder haben keine Reiter; der normale Text wäre falsch.
+  "/team-chat", // Der Posteingang hat keinen einheitlichen Erklärungstext.
+  "/team-chat/[threadID]", // Gesperrte und fehlerhafte Unterhaltungen erklären sich selbst.
+  "school:/nachrichten", // Der Posteingang hat keinen einheitlichen Erklärungstext.
+  "school:/nachrichten/[threadID]", // Gesperrte und fehlerhafte Unterhaltungen erklären sich selbst.
 ];
 
 function collectPageFiles(directory: string): string[] {
@@ -189,24 +195,37 @@ function combineConditionalBranches(
   return left === right ? left : "conditional";
 }
 
-function preferInfoAvailability(
+function combineRendererAvailability(
   left: InfoAvailability,
   right: InfoAvailability,
 ): InfoAvailability {
-  const rank: Record<InfoAvailability, number> = {
-    none: 0,
-    conditional: 1,
-    always: 2,
-  };
-  return rank[left] >= rank[right] ? left : right;
+  return left === right ? left : "conditional";
 }
 
-function infoAvailability(expression: ts.Expression): InfoAvailability {
+function infoAvailability(
+  expression: ts.Expression,
+  constants: ReadonlyMap<string, ts.Expression>,
+  resolving = new Set<string>(),
+): InfoAvailability {
   if (
     expression.kind === ts.SyntaxKind.NullKeyword ||
-    (ts.isIdentifier(expression) && expression.text === "undefined")
+    (ts.isIdentifier(expression) && expression.text === "undefined") ||
+    expression.kind === ts.SyntaxKind.TrueKeyword ||
+    expression.kind === ts.SyntaxKind.FalseKeyword
   ) {
     return "none";
+  }
+  // `info` ist die optionale Eigenschaft gemeinsamer Seitengerüste. Ohne
+  // Aufrufanalyse kann sie leer sein und zählt deshalb nicht als Erklärung.
+  if (ts.isIdentifier(expression) && expression.text === "info") {
+    return "none";
+  }
+  if (ts.isIdentifier(expression)) {
+    const initializer = constants.get(expression.text);
+    if (!initializer || resolving.has(expression.text)) return "conditional";
+    const nextResolving = new Set(resolving);
+    nextResolving.add(expression.text);
+    return infoAvailability(initializer, constants, nextResolving);
   }
   if (
     ts.isStringLiteral(expression) ||
@@ -215,25 +234,42 @@ function infoAvailability(expression: ts.Expression): InfoAvailability {
     return expression.text.trim() === "" ? "none" : "always";
   }
   if (ts.isParenthesizedExpression(expression)) {
-    return infoAvailability(expression.expression);
+    return infoAvailability(expression.expression, constants, resolving);
   }
   if (ts.isAsExpression(expression) || ts.isSatisfiesExpression(expression)) {
-    return infoAvailability(expression.expression);
+    return infoAvailability(expression.expression, constants, resolving);
   }
   if (ts.isConditionalExpression(expression)) {
     return combineConditionalBranches(
-      infoAvailability(expression.whenTrue),
-      infoAvailability(expression.whenFalse),
+      infoAvailability(expression.whenTrue, constants, resolving),
+      infoAvailability(expression.whenFalse, constants, resolving),
     );
   }
-  // Ein dynamischer Wert kann der Quelltext-Wächter nicht auflösen. Explizite
-  // Leerwerte und bedingte Leerwerte prüft er oben; ein Name oder JSX-Knoten
-  // rendert dagegen zumindest einen Info-Knopf.
-  return "always";
+  if (ts.isBinaryExpression(expression)) {
+    switch (expression.operatorToken.kind) {
+      case ts.SyntaxKind.AmpersandAmpersandToken:
+      case ts.SyntaxKind.BarBarToken:
+      case ts.SyntaxKind.QuestionQuestionToken:
+        return "conditional";
+    }
+  }
+  if (
+    ts.isPrefixUnaryExpression(expression) &&
+    expression.operator === ts.SyntaxKind.ExclamationToken
+  ) {
+    return "none";
+  }
+  if (ts.isJsxElement(expression) || ts.isJsxFragment(expression)) {
+    return "always";
+  }
+  // Nicht statisch auflösbare Werte können leer sein. Sie bleiben als
+  // bedingter Zustand sichtbar, statt eine Seite fälschlich abzudecken.
+  return "conditional";
 }
 
 function infoAttributeAvailability(
   attribute: ts.JsxAttribute,
+  constants: ReadonlyMap<string, ts.Expression>,
 ): InfoAvailability {
   if (!attribute.initializer) return "none";
   if (ts.isStringLiteral(attribute.initializer)) {
@@ -241,7 +277,7 @@ function infoAttributeAvailability(
   }
   if (ts.isJsxExpression(attribute.initializer)) {
     return attribute.initializer.expression
-      ? infoAvailability(attribute.initializer.expression)
+      ? infoAvailability(attribute.initializer.expression, constants)
       : "none";
   }
   return "always";
@@ -260,6 +296,20 @@ function parseModule(file: string): ParsedModule {
   let rendersTenantPage = false;
   let info: InfoAvailability | undefined;
   const imports: string[] = [];
+  const constants = new Map<string, ts.Expression>();
+  const collectConstants = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isVariableDeclarationList(node.parent) &&
+      (node.parent.flags & ts.NodeFlags.Const) !== 0
+    ) {
+      constants.set(node.name.text, node.initializer);
+    }
+    ts.forEachChild(node, collectConstants);
+  };
+  collectConstants(source);
   const visit = (node: ts.Node): void => {
     if (
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
@@ -281,8 +331,10 @@ function parseModule(file: string): ParsedModule {
           attribute.name.getText(source) === "info",
       );
       if (infoAttribute) {
-        const currentInfo = infoAttributeAvailability(infoAttribute);
-        info = info ? preferInfoAvailability(info, currentInfo) : currentInfo;
+        const currentInfo = infoAttributeAvailability(infoAttribute, constants);
+        info = info
+          ? combineRendererAvailability(info, currentInfo)
+          : currentInfo;
       }
     }
     ts.forEachChild(node, visit);
@@ -312,10 +364,12 @@ function pageInfoAvailability(pageFile: string): InfoAvailability {
       (file) => parseModule(file).rendersTenantPage,
     );
     if (renderers.length > 0) {
-      return renderers.reduce<InfoAvailability>(
+      const [firstRenderer, ...otherRenderers] = renderers;
+      if (!firstRenderer) return "none";
+      return otherRenderers.reduce<InfoAvailability>(
         (availability, file) =>
-          preferInfoAvailability(availability, parseModule(file).info),
-        "none",
+          combineRendererAvailability(availability, parseModule(file).info),
+        parseModule(firstRenderer).info,
       );
     }
     level = level

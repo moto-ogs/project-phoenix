@@ -45,6 +45,9 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 
 const NO_ROOMS = [] as const;
 
+const ACTIVE_SUPERVISIONS_INFO =
+  "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
+
 function sessionHref(activeGroupId: string): string {
   return `/active-supervisions?session=${activeGroupId}`;
 }
@@ -226,6 +229,7 @@ export function OwnSupervisionView() {
   return (
     <TenantPage
       title={title}
+      info={ACTIVE_SUPERVISIONS_INFO}
       stats={
         selected ? formatChildCount(presentCount, null) : "Keine Aufsicht aktiv"
       }

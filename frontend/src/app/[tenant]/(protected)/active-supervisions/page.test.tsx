@@ -418,6 +418,9 @@ describe("MeinRaumPage (Active Supervisions) (1/5)", () => {
     expect(
       screen.getByLabelText("Aktuelle Aufsicht wird geladen…"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Erklärung zu Aktuelle Aufsicht" }),
+    ).toBeInTheDocument();
   });
 
   it("renders with SSE error boundary wrapper", () => {

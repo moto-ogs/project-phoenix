@@ -61,6 +61,9 @@ const ALLOWED_URL_PARAMS = ["d"] as const;
 
 const EMPTY_SHIFTS: readonly StaffShift[] = [];
 
+export const OWN_DIENSTPLAN_INFO =
+  "Hier siehst du deine Schichten und Stunden, mit den Pfeilen auch für andere Wochen. Die Leitung plant die Schichten. Fragen zu einer Schicht klärst du mit ihr.";
+
 const STAFF_PLAN_ICON = (
   <MotoConceptIcon concept={staffPlanConcept} size={48} />
 );
@@ -80,6 +83,7 @@ export function OwnDienstplanView() {
     return (
       <TenantPage
         title="Mein Dienstplan"
+        info={OWN_DIENSTPLAN_INFO}
         testId="own-dienstplan-page"
         empty={{
           icon: STAFF_PLAN_ICON,
@@ -105,6 +109,7 @@ export function OwnDienstplanView() {
     return (
       <TenantPage
         title="Mein Dienstplan"
+        info={OWN_DIENSTPLAN_INFO}
         testId="own-dienstplan-page"
         empty={noOwnStaff}
       />
@@ -115,6 +120,7 @@ export function OwnDienstplanView() {
     return (
       <TenantPage
         title="Mein Dienstplan"
+        info={OWN_DIENSTPLAN_INFO}
         loading={<DienstplanGridSkeleton />}
       />
     );
@@ -265,7 +271,7 @@ function OwnDienstplanContent() {
     <TenantPage
       title="Mein Dienstplan"
       testId="own-dienstplan-page"
-      info="Hier siehst du deine Schichten und Stunden, mit den Pfeilen auch für andere Wochen. Die Leitung plant die Schichten. Fragen zu einer Schicht klärst du mit ihr."
+      info={OWN_DIENSTPLAN_INFO}
       stats={hasShiftData ? <TenantPageStats items={statsItems} /> : undefined}
       statsLoading={loading}
       loading={loading ? <DienstplanGridSkeleton /> : false}
