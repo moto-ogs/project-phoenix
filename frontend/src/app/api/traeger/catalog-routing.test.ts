@@ -91,6 +91,7 @@ describe("Träger catalog route selection", () => {
     const response = await get(pathname);
 
     expect(response.status).toBe(502);
-    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    // The cache policy comes from the portal's real binding, which this file
+    // mocks: server/auth/portal-cache-control.test.ts asserts it for this path.
   });
 });

@@ -32,7 +32,7 @@ export async function validateInvitation(
   token: string,
 ): Promise<InvitationValidation> {
   const response = await transportFetch(
-    `/api/invitations/validate?token=${encodeURIComponent(token)}`,
+    `/api/auth/invitations/${encodeURIComponent(token)}`,
   );
   if (!response.ok) {
     throw await buildApiError(

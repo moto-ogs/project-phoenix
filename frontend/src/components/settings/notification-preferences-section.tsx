@@ -49,7 +49,8 @@ const GROUP_LABELS: Record<string, string> = {
 const NO_TYPES: NotificationPreferenceType[] = [];
 
 const PARENT_GROUPS = new Set(["kinder", "mitteilungen", "termine"]);
-const PARENT_TYPES = new Set([
+/** Types the parent portal names from its own catalog, in the reader's language. */
+export const PARENT_TYPES: ReadonlySet<string> = new Set([
   "parent_announcement",
   "parent_message",
   "parent_appointment",

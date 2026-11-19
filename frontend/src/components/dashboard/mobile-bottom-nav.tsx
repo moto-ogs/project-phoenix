@@ -533,10 +533,13 @@ interface MobileBottomNavProps {
 
 /**
  * In den Einstellungen folgt die Leiste der Seitenleiste (#5750): Rückweg zur
- * App und die Bereiche statt der Hauptnavigation.
+ * App und die Bereiche statt der Hauptnavigation. Nur im Schulportal: die
+ * eigenen Einstellungen des Operators liegen ebenfalls unter /settings.
  */
 export function MobileBottomNav(props: MobileBottomNavProps) {
-  return useIsStaffSettingsPage() ? (
+  const isTeacherShell = useShellAuth().mode === "teacher";
+  const isSettingsPage = useIsStaffSettingsPage();
+  return isTeacherShell && isSettingsPage ? (
     <StaffSettingsBottomNav />
   ) : (
     <MainMobileBottomNav {...props} />

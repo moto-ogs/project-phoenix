@@ -102,10 +102,11 @@ export function useUserContext(enabled = true): UseUserContextReturn {
  * Kontext vollständig geladen ist und kein Profil nennt, etwa für eine Person
  * des Trägers oder eine Schul-Admin ohne Profil (#7306). Solange er lädt,
  * fehlt oder unvollständig ist, gilt `true`: dann entscheidet wie bisher die
- * Seite.
+ * Seite. Ohne Schulsitzung (`enabled` false, etwa im Operator- oder
+ * Trägerportal) fragt der Hook nichts ab und gilt ebenfalls `true`.
  */
-export function useHasOwnStaff(): boolean {
-  const { userContext, isIncomplete } = useUserContext();
+export function useHasOwnStaff(enabled = true): boolean {
+  const { userContext, isIncomplete } = useUserContext(enabled);
   return !(
     userContext !== undefined &&
     !isIncomplete &&

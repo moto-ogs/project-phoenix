@@ -97,3 +97,23 @@ func SelfServiceRouteContracts() []common.RouteContract {
 		changePassword,
 	}
 }
+
+// publicLinkBodyBytes bounds the body of a public link's write: two
+// passwords.
+const publicLinkBodyBytes = 4 << 10
+
+// PublicRouteContracts registers the token-proved links and the school list
+// below /auth as public (#2352): each carries no session, the link or the
+// lookup is the whole permission. The tenant resolve stays unregistered:
+// its two identifiers still travel as JSON numbers, which the contract no
+// longer admits for a new route (ADR 0270).
+func PublicRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalPublic}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/invitations/{token}", Portals: portals, Response: InvitationValidationResponse{}},
+		{Method: "POST", Pattern: "/guardian-invitations/{token}/accept", Portals: portals, Request: AcceptGuardianInvitationRequest{}, Response: AcceptGuardianInvitationResponse{}, MaxBodyBytes: publicLinkBodyBytes},
+		{Method: "GET", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Response: HolidayParentSetupResponse{}},
+		{Method: "POST", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Request: CompleteHolidayParentSetupRequest{}, Response: CompleteHolidayParentSetupResponse{}, MaxBodyBytes: publicLinkBodyBytes},
+		{Method: "GET", Pattern: "/tenants", Portals: portals, Response: []PublicTenantResponse{}},
+	}
+}

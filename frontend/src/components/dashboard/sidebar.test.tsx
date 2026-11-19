@@ -36,10 +36,19 @@ vi.mock("~/lib/supervision-context", () => ({
 }));
 // Personalprofil in dieser Schule (#7306); Standard: vorhanden.
 const ownStaff = vi.hoisted(() => ({ present: true }));
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useHasOwnStaff: () => ownStaff.present,
-}));
+// The real hook still runs, so its request for the school context stays
+// visible to "asks for no school switches without a school session".
+vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/lib/hooks/use-user-context")>();
+  return {
+    ...actual,
+    useHasOwnStaff: (...args: Parameters<typeof actual.useHasOwnStaff>) => {
+      actual.useHasOwnStaff(...args);
+      return ownStaff.present;
+    },
+  };
+});
 afterEach(() => {
   ownStaff.present = true;
 });

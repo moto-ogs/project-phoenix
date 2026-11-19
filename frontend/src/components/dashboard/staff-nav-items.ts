@@ -520,7 +520,7 @@ export function useStaffNavPages(
   );
   const mealPlanEnabled = useMealPlanEnabled();
   const { canOpenRequestsPage } = useChangeRequestAccess();
-  const hasOwnStaff = useHasOwnStaff();
+  const hasOwnStaff = useHasOwnStaff(rules.loadSchoolSwitches);
   const isAdmin = hasRole(session, "admin");
   const effectiveAdminScope = hasEffectiveAdminScope(session);
   const viewer: StaffNavViewer = {

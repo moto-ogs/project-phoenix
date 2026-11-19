@@ -62,6 +62,10 @@ import { EyeOff } from "lucide-react";
 
 const logger = createLogger({ component: "TraegerDocumentPage" });
 
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const DOCUMENT_INFO =
+  "Hier siehst du ein Dokument und für wen es freigegeben ist. Erst mit einer Freigabe sehen Eltern oder Schulen es. Oben steht, wie oft es geöffnet wurde.";
+
 /** Das Recht, das Freigeben, Zurücknehmen und Löschen öffnet (Rolle Dokumente, #5992). */
 const MANAGE_RIGHT = "traeger_documents:manage";
 
@@ -156,6 +160,7 @@ export default function TraegerDocumentPage() {
 
   return (
     <TenantPage
+      info={DOCUMENT_INFO}
       title={document?.title ?? "Dokument"}
       leading={<ConceptIconTile concept={documentsConcept} size="page" />}
       back

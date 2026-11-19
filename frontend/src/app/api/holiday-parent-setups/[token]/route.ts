@@ -1,6 +1,13 @@
 import { problemResponse } from "~/lib/api-helpers.server";
 import { createPublicJsonProxy } from "~/lib/backend-proxy-route.server";
 
+/**
+ * Temporary (#2352): remove after the next production deploy. The current
+ * client calls `/api/auth/holiday-parent-setups/{token}`, the backend path,
+ * through the staff portal's catalog proxy; this file stays one release for an
+ * installed app with an older bundle that still calls this path.
+ */
+
 // Setting up the parent account from the holiday registration's mail
 // (#6673, ADR 0216): no session, the link is the permission. GET names the
 // address, the Träger and whether the account exists; POST sets the

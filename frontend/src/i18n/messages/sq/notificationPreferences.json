@@ -41,6 +41,10 @@
       "label": "Kujdesi anulohet",
       "description": "Kur {careTerm}-ja anulon një nga takimet e kujdesit të fëmijës suaj."
     },
+    "parent_class_timetable_changed": {
+      "label": "Orari i klasës",
+      "description": "Kur ndryshon mbarimi i mësimit në klasën e fëmijës suaj. Njoftimi në moto vjen gjithmonë. Nëse e aktivizoni këtë, për ndryshimet në 14 ditët e ardhshme vjen edhe një njoftim në telefon."
+    },
     "parent_school_closing_day_changed": {
       "label": "Ditët e mbylljes",
       "description": "Kur {careTerm}-ja shton, ndryshon ose fshin një ditë mbylljeje. Njoftimi në moto vjen gjithmonë, njoftimi në telefon vetëm për ditët e mbylljes në 14 ditët e ardhshme."

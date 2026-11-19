@@ -99,7 +99,7 @@ describe("invitation-api", () => {
       const result = await validateInvitation("test-token-123");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/invitations/validate?token=test-token-123",
+        "/api/auth/invitations/test-token-123",
         // transportFetch hands fetch an explicit init.
         undefined,
       );
@@ -134,7 +134,7 @@ describe("invitation-api", () => {
       await validateInvitation("token with spaces & special=chars");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/invitations/validate?token=token%20with%20spaces%20%26%20special%3Dchars",
+        "/api/auth/invitations/token%20with%20spaces%20%26%20special%3Dchars",
         // transportFetch hands fetch an explicit init.
         undefined,
       );

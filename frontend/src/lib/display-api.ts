@@ -107,7 +107,7 @@ async function readData<T>(response: Response): Promise<T> {
 }
 
 export async function listDisplays(): Promise<InfoDisplay[]> {
-  const response = await transportFetch("/api/display/", { cache: "no-store" });
+  const response = await transportFetch("/api/display", { cache: "no-store" });
   const displays = await readData<InfoDisplayResponse[] | null>(response);
   return (displays ?? []).map(mapDisplayResponse);
 }
@@ -118,7 +118,7 @@ export interface DisplayWithToken {
 }
 
 export async function createDisplay(name: string): Promise<DisplayWithToken> {
-  const response = await transportFetch("/api/display/", {
+  const response = await transportFetch("/api/display", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name } satisfies InfoDisplayWriteRequest),

@@ -95,13 +95,13 @@ describe("listDisplays", () => {
     ]);
   });
 
-  it("reads the list from the catalog proxy under /api/display/", async () => {
+  it("reads the list from the catalog proxy at /api/display without a trailing slash", async () => {
     const fetchMock = mockFetch(() =>
       Promise.resolve(jsonResponse({ status: "success", data: [] })),
     );
 
     await expect(listDisplays()).resolves.toEqual([]);
-    expect(fetchMock.mock.calls[0]![0]).toBe("/api/display/");
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/display");
   });
 
   it("throws an ApiError with code and request id on failure", async () => {
@@ -157,7 +157,7 @@ describe("createDisplay", () => {
     expect(result.token).toBe("secret-token");
     expect(result.display.id).toBe("3");
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/display/");
+    expect(url).toBe("/api/display");
     expect(init?.method).toBe("POST");
     expect(JSON.parse(init?.body as string)).toEqual({ name: "Foyer" });
   });

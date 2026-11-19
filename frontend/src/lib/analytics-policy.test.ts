@@ -869,6 +869,55 @@ describe("filterAnalyticsEvent", () => {
     expect(leaked?.properties).not.toHaveProperty("label");
   });
 
+  // Selbstöffnende Flächen des Einstiegs (#7541): feste Fläche, das Portal
+  // aus dem Kontext; jeder andere Wert und jedes andere Ereignis fällt weg.
+  it("keeps the onboarding surface events with an allowlisted surface only", () => {
+    for (const event of [
+      "onboarding_surface_shown",
+      "onboarding_surface_accepted",
+      "onboarding_surface_dismissed",
+    ]) {
+      for (const surface of ["install_hint", "samsung_hint", "announcement"]) {
+        const result = filterAnalyticsEvent(
+          { ...ogs, surface: "school" },
+          capture(event, { school_id: "42", onboarding_surface: surface }),
+        );
+        expect(result?.event).toBe(event);
+        expect(result?.properties.onboarding_surface).toBe(surface);
+        expect(result?.properties.surface).toBe("school");
+      }
+    }
+
+    const leaked = filterAnalyticsEvent(
+      ogs,
+      capture("onboarding_surface_shown", {
+        school_id: "42",
+        onboarding_surface: "Hinweis für Frau Müller",
+        portal: "operator",
+        surface: "operator",
+        title: "moto als App nutzen",
+      }),
+    );
+    expect(leaked?.event).toBe("onboarding_surface_shown");
+    expect(leaked?.properties).not.toHaveProperty("onboarding_surface");
+    expect(leaked?.properties).not.toHaveProperty("portal");
+    expect(leaked?.properties).not.toHaveProperty("title");
+    expect(leaked?.properties.surface).toBe("ogs");
+
+    for (const event of [
+      "onboarding_surface_opened",
+      "onboarding_surface_closed",
+      "install_hint_shown",
+    ]) {
+      expect(
+        filterAnalyticsEvent(
+          ogs,
+          capture(event, { onboarding_surface: "install_hint" }),
+        ),
+      ).toBeNull();
+    }
+  });
+
   it("drops a free-text role or a non-numeric school", () => {
     const result = filterAnalyticsEvent(
       ogs,

@@ -103,6 +103,16 @@ export function readBrowserEvents(
   return events;
 }
 
+/** The allowed surfaces of the entry (ONBOARDING_SURFACES in analytics-policy.ts). */
+export function readOnboardingSurfaces(
+  source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
+) {
+  const body = /const ONBOARDING_SURFACES = \[([\s\S]*?)\] as const;/.exec(source)?.[1];
+  const surfaces = body ? [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, surface]) => surface) : [];
+  if (surfaces.length === 0) throw new Error('analytics-policy.ts has no ONBOARDING_SURFACES');
+  return surfaces;
+}
+
 // --- query builders ----------------------------------------------------------
 
 const sqlString = (value) => `'${String(value).replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
@@ -353,12 +363,28 @@ export const NO_FEATURE_PAGES = Object.freeze({
  * counts it).
  */
 const NO_FEATURE_EVENTS = [
-  'login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'pwa_installed', 'pwa_install_prompt_shown', 'page_viewed',
+  'login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'page_viewed',
+  // The install hint and its browser dialog: getting in, not using a feature.
+  'pwa_installed', 'pwa_install_prompt_shown', 'pwa_install_prompt_accepted', 'pwa_install_prompt_dismissed',
   'caterer_invite_accepted', 'meal_order_confirmed',
   // Clicks inside a page the browser reports (tab, bell): the page view
   // already counts the feature, a click is no action of its own.
   'child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read',
 ];
+
+/**
+ * German names of the self-opening surfaces of the entry (#7541), one per
+ * value of ONBOARDING_SURFACES in analytics-policy.ts (the test compares both).
+ */
+export const ONBOARDING_SURFACE_LABELS = Object.freeze({
+  announcement: 'Ankündigung',
+  setup_checklist: 'Einrichtungs-Checkliste',
+  staff_first_steps: 'Erste Schritte der Betreuung',
+  parent_first_steps: 'Erste Schritte der Eltern',
+  notification_setup: 'Benachrichtigungs-Einrichtung',
+  install_hint: 'Installations-Hinweis',
+  samsung_hint: 'Samsung-Hinweis',
+});
 
 /** Area unmatched pages and events fall into; growing means FEATURES lacks an entry. */
 const OTHER_FEATURE = 'Sonstiges';
@@ -401,13 +427,24 @@ export function featureExpression() {
     branches.push([conditions.map((condition) => `(${condition})`).join(' or '), sqlString(feature.name)]);
   }
   branches.push([
-    `event = '$pageview' or not (startsWith(event, '$') or startsWith(event, 'demo_') or event in ${sqlList(NO_FEATURE_EVENTS)})`,
+    // `onboarding_`: the entry's self-opening surfaces (#7541), no feature use.
+    `event = '$pageview' or not (startsWith(event, '$') or startsWith(event, 'demo_') or startsWith(event, 'onboarding_') or event in ${sqlList(NO_FEATURE_EVENTS)})`,
     sqlString(OTHER_FEATURE),
   ]);
   return `multiIf(${branches.map(([condition, value]) => `${condition}, ${value}`).join(', ')}, '')`;
 }
 
 const quoted = (name) => `\`${name}\``;
+
+/** Browser events of the entry's self-opening surfaces (analytics-policy.ts). */
+const ONBOARDING_SURFACE_EVENTS = ['onboarding_surface_shown', 'onboarding_surface_accepted', 'onboarding_surface_dismissed'];
+
+/** HogQL: the German name of an event's surface; an unknown value shows as itself. */
+const sqlArray = (values) => `[${values.map(sqlString).join(', ')}]`;
+const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlArray(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlArray(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
+
+/** HogQL: the product name of a school portal (`surface`). */
+const portalLabel = (surface) => `multiIf(${surface} = 'ogs', 'OGS-App', ${surface} = 'school', 'Schul-App', ${surface} = 'parents', 'Eltern-App', 'unbekannt')`;
 
 // --- definitions -------------------------------------------------------------
 
@@ -638,8 +675,9 @@ function viewsPerWeek(deployment, surface, name) {
 }
 
 /**
- * The dashboards: one per product surface (OGS-App, Eltern-App, Schul-App, Caterer-Portal, Demo) plus
- * two across schools (Nutzung je Standort, Schule im Verlauf). `projectId`
+ * The dashboards: one per product surface (OGS-App, Eltern-App, Schul-App, Caterer-Portal, Demo),
+ * two across schools (Nutzung je Standort, Schule im Verlauf), and the entry
+ * (Einstieg, #7541). `projectId`
  * feeds the heatmap links.
  */
 export function dashboards({ projectId, routes = readRouteTemplates(), browserEvents = readBrowserEvents(), pageNames = readPageNames() }) {
@@ -1087,6 +1125,59 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
             })],
             compare: true,
           }),
+        },
+      ],
+    },
+    {
+      name: 'Nutzungsanalyse: Einstieg',
+      description: 'Was beim Einstieg in moto von selbst aufgeht und was Personen damit tun, in echten Schulen (deployment = moto-app.de). Die Flächen meldet der Browser, also nur mit Einwilligung: Personen ohne Einwilligung und die allererste Sitzung vor der Einwilligung fehlen. Die Werte sind deshalb verzerrt und kein Gesamtwert. ' + WORKDAYS_NOTE,
+      insights: [
+        {
+          name: 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)',
+          description: 'Nur mit Einwilligung, letzte 30 Tage. Je Fläche und Portal: wie oft sie erschien, wie oft die Person ihr Angebot annahm und wie oft sie sie schloss. Die Antwort im Installations-Dialog des Browsers steht nicht hier.',
+          ...hogql('production', (where) => `
+select
+  ${surfaceLabel} as ${quoted('Fläche')},
+  ${portalLabel('properties.surface')} as Portal,
+  countIf(event = 'onboarding_surface_shown') as Angezeigt,
+  countIf(event = 'onboarding_surface_accepted') as Angenommen,
+  countIf(event = 'onboarding_surface_dismissed') as Geschlossen,
+  round(100 * countIf(event = 'onboarding_surface_accepted') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Angenommen in Prozent')},
+  round(100 * countIf(event = 'onboarding_surface_dismissed') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Geschlossen in Prozent')},
+  uniq(properties.$session_id) as Sitzungen
+from events
+where ${where}
+  and event in ${sqlList(ONBOARDING_SURFACE_EVENTS)}
+  and ${portalCondition}
+  and timestamp > now() - interval 30 day
+group by ${quoted('Fläche')}, Portal
+order by Angezeigt desc`),
+        },
+        {
+          name: 'Einstieg: Flächen pro erfasster Sitzung (nur mit Einwilligung)',
+          description: 'Nur mit Einwilligung, letzte 30 Tage, nur Sitzungen mit mindestens einer Fläche. Wie viele verschiedene Flächen in einer Sitzung erschienen. Die allererste Sitzung vor der Einwilligung fehlt immer.',
+          ...hogql('production', (where) => `
+select
+  Portal,
+  Flaechen as ${quoted('Flächen in der Sitzung')},
+  count() as Sitzungen,
+  round(100 * count() / sum(count()) over (partition by Portal), 1) as ${quoted('Anteil in Prozent')}
+from (
+  select
+    properties.$session_id as Sitzung,
+    ${portalLabel('any(properties.surface)')} as Portal,
+    uniq(toString(properties.onboarding_surface)) as Flaechen
+  from events
+  where ${where}
+    and event = 'onboarding_surface_shown'
+    and isNotNull(properties.$session_id)
+    and isNotNull(properties.onboarding_surface)
+    and ${portalCondition}
+    and timestamp > now() - interval 30 day
+  group by Sitzung
+)
+group by Portal, Flaechen
+order by Portal, Flaechen`),
         },
       ],
     },

@@ -22,7 +22,7 @@ interface BackendSetup {
 }
 
 function setupPath(token: string): string {
-  return `/api/holiday-parent-setups/${encodeURIComponent(token)}`;
+  return `/api/auth/holiday-parent-setups/${encodeURIComponent(token)}`;
 }
 
 async function readError(

@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { NextURL } from "next/dist/server/web/next-url";
 import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { CATALOG_PUBLIC_OUTSIDE_MOUNTS } from "~/lib/contract/catalog-outside-mounts";
@@ -416,7 +417,25 @@ describe("trailing slash", () => {
     );
 
     expect(res.status).toBe(308);
-    expect(res.headers.get("location")).toBe("/students/42?tab=akte");
+    expect(res.headers.get("location")).toBe(
+      "http://school-a.localhost:3000/students/42?tab=akte",
+    );
+  });
+
+  // Next.js reads the proxy's Location with `new NextURL(location)` and no
+  // base before it relativizes a same-host target. A relative Location threw
+  // there, so every path ending in "/" answered 500 (/api/display/).
+  it("answers a Location that Next.js can parse without a base", () => {
+    const res = proxy(
+      makeRequest(
+        "http://school-a.localhost:3000/api/display/",
+        "school-a.localhost:3000",
+      ),
+    );
+
+    const location = res.headers.get("location") ?? "";
+    expect(() => new NextURL(location)).not.toThrow();
+    expect(new NextURL(location).pathname).toBe("/api/display");
   });
 
   it("leaves the root path alone", () => {
@@ -1095,6 +1114,9 @@ describe("proxy", () => {
         "/api/invitations/accept",
         // „Andere moto-Adresse wählen“ lists the schools (#7369).
         "/api/tenant/list",
+        // The same through the staff proxy's public routes (#2352).
+        "/api/auth/invitations/tok",
+        "/api/auth/tenants",
       ]) {
         const res = proxy(
           makeRequest(`http://${SCHOOL_HOSTNAME}${path}`, SCHOOL_HOSTNAME),
@@ -1928,12 +1950,52 @@ describe("proxy", () => {
         "/api/invitations/validate",
         "/api/invitations/accept",
         "/api/guardian-invitations/tok/accept",
+        // The links and the school list through the staff proxy's public
+        // routes (#2352).
+        "/api/auth/invitations/tok",
+        "/api/auth/tenants",
+        "/api/auth/guardian-invitations/tok/accept",
+        "/api/auth/holiday-parent-setups/tok",
+        "/api/holiday-parent-setups/tok",
         "/api/holiday-registrations/tok/uploads",
         "/api/enrollment/requests/tok/edit-bootstrap",
         "/api/enrollment/school-a/uploads",
         "/api/demo/access/handoff",
       ]) {
         expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(200);
+      }
+    });
+
+    // The staff invitation's link shares its path with the staff portal's
+    // session routes (`DELETE /auth/invitations/{id}`), so the parents and
+    // school hosts open it to a GET only (#2352).
+    it("opens the staff invitation link to a GET only", () => {
+      const answer = (host: string, method: string, apiPath: string) =>
+        proxy(
+          (() => {
+            const request = new NextRequest(`http://${host}${apiPath}`, {
+              method,
+            });
+            request.headers.set("host", host);
+            return request;
+          })(),
+        ).status;
+      for (const host of [PARENTS_HOSTNAME, SCHOOL_HOSTNAME]) {
+        expect(answer(host, "GET", "/api/auth/invitations/tok"), host).toBe(
+          200,
+        );
+        for (const [method, apiPath] of [
+          ["DELETE", "/api/auth/invitations/tok"],
+          ["POST", "/api/auth/invitations/former-employment"],
+          ["POST", "/api/auth/invitations/tok/resend"],
+          ["GET", "/api/auth/invitations"],
+          ["GET", "/api/auth/roles"],
+        ] as const) {
+          expect(
+            answer(host, method, apiPath),
+            `${host} ${method} ${apiPath}`,
+          ).toBe(404);
+        }
       }
     });
 

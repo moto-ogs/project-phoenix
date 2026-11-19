@@ -682,7 +682,7 @@ describe("tenant-api", () => {
       const { listAllTenants } = await import("./tenant-api");
       const result = await listAllTenants(1);
 
-      expect(global.fetch).toHaveBeenCalledWith("/api/tenant/list");
+      expect(global.fetch).toHaveBeenCalledWith("/api/auth/tenants");
       expect(result.status).toBe("ok");
       expect(result.tenants).toHaveLength(2);
       expect(result.tenants[0]).toEqual({

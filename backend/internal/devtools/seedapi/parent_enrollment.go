@@ -242,7 +242,7 @@ func (s parentEnrollmentSeedStep) acceptGuardianInvitation(rt *Runtime, token, p
 	}
 	var resp struct {
 		Data struct {
-			AccountID int64 `json:"account_id"`
+			AccountID int64 `json:"account_id,string"` // a decimal string (#2352)
 		} `json:"data"`
 	}
 	if err := parseJSON(respBody, &resp); err != nil {

@@ -6,6 +6,14 @@ import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { problemResponse } from "~/lib/api-helpers.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 
+/**
+ * Temporary (#2352): remove after the next production deploy. The current
+ * client calls `/api/auth/guardian-invitations/{token}/accept`, the backend
+ * path, through the staff portal's catalog proxy and sends the backend's field
+ * names; this file stays one release for an installed app with an older bundle
+ * that still calls this path with `confirmPassword`.
+ */
+
 const logger = createLogger({ component: "GuardianInvitationAcceptRoute" });
 
 interface RouteContext {

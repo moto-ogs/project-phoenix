@@ -39,7 +39,8 @@ export interface GuardianInvitationAcceptResult {
 }
 
 interface BackendAcceptGuardianResponse {
-  account_id: number;
+  /** A decimal string; a number from a backend before #2352. */
+  account_id: string | number;
   email: string;
   tenant_slug?: string;
 }
@@ -99,11 +100,15 @@ export async function acceptGuardianInvitation(
   data: GuardianInvitationAcceptRequest,
 ): Promise<GuardianInvitationAcceptResult> {
   const response = await transportFetch(
-    `/api/guardian-invitations/${encodeURIComponent(token)}/accept`,
+    `/api/auth/guardian-invitations/${encodeURIComponent(token)}/accept`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      // The backend's field names: the catalog proxy forwards the body as is.
+      body: JSON.stringify({
+        password: data.password,
+        confirm_password: data.confirmPassword,
+      }),
     },
   );
   if (!response.ok) {
@@ -115,7 +120,7 @@ export async function acceptGuardianInvitation(
   const raw = (await response.json()) as unknown;
   const payload = extractData<BackendAcceptGuardianResponse>(raw);
   return {
-    accountId: payload.account_id.toString(),
+    accountId: String(payload.account_id),
     email: payload.email,
     tenantSlug: payload.tenant_slug,
   };
