@@ -250,6 +250,18 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
     expect(swrKeys).toContain("payroll-sftp-status");
   });
 
+  it("erklärt den DATEV-Mandanten nur für LODAS", () => {
+    render(<PayrollPage />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Abrechnung" }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Erklärung zu Abrechnung" }),
+    ).toHaveTextContent("Bei LODAS trägst du auch den DATEV-Mandanten ein.");
+  });
+
   it("saves the switch as a boolean", async () => {
     render(<PayrollPage />);
 
