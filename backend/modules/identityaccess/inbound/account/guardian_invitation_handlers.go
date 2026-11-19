@@ -161,13 +161,3 @@ func (rs *Resource) lookupTenantSlugForGuardianInvitation(ctx context.Context, t
 	}
 	return rs.GuardianInvitations.GuardianInvitationSchoolSlug(ctx, token)
 }
-
-func (rs *Resource) resendGuardianInvitation(w http.ResponseWriter, r *http.Request) {
-	if rs.GuardianInvitations == nil {
-		common.RenderError(w, r, common.ErrorInternalServer(errors.New(errGuardianInvitationServiceUnavailable)))
-		return
-	}
-	rs.resendInvitationHandler(w, r,
-		rs.GuardianInvitations.ResendGuardianInvitation,
-		"guardian invitation resend requested", "Guardian invitation resent", "Guardian invitation resent successfully")
-}

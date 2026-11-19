@@ -21,10 +21,4 @@ export const routes = {
     query: ["action", "resource"],
     response: success(z.array(PermissionResponseSchema)),
   },
-  "GET /auth/permissions/{id}/": {
-    method: "GET",
-    pattern: "/auth/permissions/{id}/",
-    portals: ["tenant"],
-    response: success(PermissionResponseSchema),
-  },
 } as const;

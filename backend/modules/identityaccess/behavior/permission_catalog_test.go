@@ -68,7 +68,7 @@ func TestPermissionPersistence_Create(t *testing.T) {
 		permission, err := repo.CreatePermission(ctx, permission.Name, permission.Description, permission.Resource, permission.Action)
 		require.NoError(t, err)
 		assert.NotZero(t, permission.ID)
-		t.Cleanup(func() { require.NoError(t, repo.DeletePermission(ctx, permission.ID)) })
+		testpkg.OwnTestPermission(t, db, permission.ID)
 	})
 
 	t.Run("creates permission with different actions", func(t *testing.T) {
@@ -83,30 +83,7 @@ func TestPermissionPersistence_Create(t *testing.T) {
 		permission, err := repo.CreatePermission(ctx, permission.Name, permission.Description, permission.Resource, permission.Action)
 		require.NoError(t, err)
 		assert.NotZero(t, permission.ID)
-		t.Cleanup(func() { require.NoError(t, repo.DeletePermission(ctx, permission.ID)) })
-	})
-}
-
-func TestPermissionPersistence_FindByID(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := roleAdministrationOf(t, setupAuthService(t, db))
-	ctx := testpkg.Ctx(t)
-
-	t.Run("finds existing permission", func(t *testing.T) {
-		permission := testpkg.CreateTestPermission(t, db, "FindByID", "resource", "read")
-
-		found, err := repo.GetPermission(ctx, permission.ID)
-		require.NoError(t, err)
-		assert.Equal(t, permission.ID, found.ID)
-		assert.Contains(t, found.Name, "FindByID")
-	})
-
-	t.Run("returns error for non-existent permission", func(t *testing.T) {
-		_, err := repo.GetPermission(ctx, 0)
-		require.Error(t, err)
+		testpkg.OwnTestPermission(t, db, permission.ID)
 	})
 }
 
@@ -128,48 +105,6 @@ func TestPermissionPersistence_FindByName(t *testing.T) {
 
 	t.Run("returns error for non-existent name", func(t *testing.T) {
 		_, err := repo.GetPermissionByName(ctx, "NonExistentPermission12345")
-		require.Error(t, err)
-	})
-}
-
-func TestPermissionPersistence_Update(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := roleAdministrationOf(t, setupAuthService(t, db))
-	ctx := testpkg.Ctx(t)
-
-	t.Run("updates permission description", func(t *testing.T) {
-		permission := testpkg.CreateTestPermission(t, db, "Update", "resource", "read")
-
-		updated, err := repo.GetPermission(ctx, permission.ID)
-		require.NoError(t, err)
-		updated.Description = "Updated description"
-		err = repo.UpdatePermission(ctx, updated)
-		require.NoError(t, err)
-
-		found, err := repo.GetPermission(ctx, permission.ID)
-		require.NoError(t, err)
-		assert.Equal(t, "Updated description", found.Description)
-	})
-}
-
-func TestPermissionPersistence_Delete(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := roleAdministrationOf(t, setupAuthService(t, db))
-	ctx := testpkg.Ctx(t)
-
-	t.Run("deletes existing permission", func(t *testing.T) {
-		permission := testpkg.CreateTestPermission(t, db, "Delete", "resource", "read")
-
-		err := repo.DeletePermission(ctx, permission.ID)
-		require.NoError(t, err)
-
-		_, err = repo.GetPermission(ctx, permission.ID)
 		require.Error(t, err)
 	})
 }

@@ -51,7 +51,6 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{}),
 		route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, nil),
 		listPermissions,
-		route("GET", "/permissions/{id}/", nil, PermissionResponse{}),
 		route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{}),
 		route("PUT", "/accounts/{accountId}/roles/", ReplaceAccountRoleRequest{}, nil),
 		route("GET", "/accounts/{accountId}/mfa/", nil, AccountMFAAdminStateResponse{}),

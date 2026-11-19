@@ -194,7 +194,6 @@ type RoleCommand interface {
 
 // PermissionQuery reads permissions and role selections.
 type PermissionQuery interface {
-	GetPermission(ctx context.Context, id int64) (Permission, error)
 	GetPermissionByName(ctx context.Context, name string) (Permission, error)
 	ListPermissions(ctx context.Context, filter PermissionFilter) ([]Permission, error)
 	GetRolePermissions(ctx context.Context, roleID int64) ([]Permission, error)
@@ -203,8 +202,6 @@ type PermissionQuery interface {
 // PermissionCommand changes permissions and role selections. Role selections of system roles are immutable.
 type PermissionCommand interface {
 	CreatePermission(ctx context.Context, name, description, resource, action string) (Permission, error)
-	UpdatePermission(ctx context.Context, permission Permission) error
-	DeletePermission(ctx context.Context, id int64) error
 	AssignPermissionToRole(ctx context.Context, roleID, permissionID int64) error
 	// ReplaceRolePermissions applies a complete selection atomically; an
 	// invalid request leaves the current selection untouched. A reserved

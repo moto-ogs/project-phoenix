@@ -73,7 +73,6 @@ type testAuthService interface {
 	GetAccountByID(ctx context.Context, id int) (*testpkg.AccountFixture, error)
 	UpdateAccount(ctx context.Context, account *testpkg.AccountFixture) error
 	ListAccounts(ctx context.Context, filters map[string]any) ([]*testpkg.AccountFixture, error)
-	GetAccountsByRole(ctx context.Context, roleName string) ([]*testpkg.AccountFixture, error)
 	ActivateAccount(ctx context.Context, accountID int) error
 	DeactivateAccount(ctx context.Context, accountID int) error
 	ChangePassword(ctx context.Context, accountID int, currentPassword, newPassword string) error
@@ -167,14 +166,6 @@ func (s *fixtureOwnedAuthService) ListAccounts(ctx context.Context, filters map[
 		filter.Active = &active
 	}
 	accounts, err := s.administration.ListManageableAccounts(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	return managedAccountModels(accounts), nil
-}
-
-func (s *fixtureOwnedAuthService) GetAccountsByRole(ctx context.Context, roleName string) ([]*testpkg.AccountFixture, error) {
-	accounts, err := s.administration.ListManageableAccountsByRole(ctx, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -1552,34 +1543,6 @@ func TestAuthService_CreatePermission(t *testing.T) {
 	})
 }
 
-func TestAuthService_GetPermissionByID(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	rbac := roleAdministrationOf(t, service)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns permission when found", func(t *testing.T) {
-		// ARRANGE
-		uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
-		name := fmt.Sprintf("get-perm-%s", uniqueID)
-		resource := fmt.Sprintf("resource-get-%s", uniqueID)
-		perm, err := rbac.CreatePermission(ctx, name, "desc", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, perm.ID)
-
-		// ACT
-		result, err := rbac.GetPermission(ctx, perm.ID)
-
-		// ASSERT
-		require.NoError(t, err)
-		assert.NotZero(t, result)
-		assert.Equal(t, perm.ID, result.ID)
-	})
-}
-
 func TestAuthService_ListPermissions(t *testing.T) {
 	t.Parallel()
 
@@ -1641,69 +1604,6 @@ func TestAuthService_GetPermissionByName(t *testing.T) {
 		// ASSERT
 		require.Error(t, err)
 		assert.Zero(t, result)
-	})
-}
-
-func TestAuthService_UpdatePermission(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	rbac := roleAdministrationOf(t, service)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("updates permission successfully", func(t *testing.T) {
-		// ARRANGE
-		uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
-		permName := fmt.Sprintf("update-perm-%s", uniqueID)
-		resource := fmt.Sprintf("upd-res-%s", uniqueID)
-		permission, err := rbac.CreatePermission(ctx, permName, "Original description", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, permission.ID)
-
-		permission.Description = "Updated description"
-
-		// ACT
-		err = rbac.UpdatePermission(ctx, permission)
-
-		// ASSERT
-		require.NoError(t, err)
-
-		// Verify update
-		updated, err := rbac.GetPermission(ctx, permission.ID)
-		require.NoError(t, err)
-		assert.Equal(t, "Updated description", updated.Description)
-	})
-}
-
-func TestAuthService_DeletePermission(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	rbac := roleAdministrationOf(t, service)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("deletes permission successfully", func(t *testing.T) {
-		// ARRANGE
-		uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
-		permName := fmt.Sprintf("delete-perm-%s", uniqueID)
-		resource := fmt.Sprintf("del-res-%s", uniqueID)
-		permission, err := rbac.CreatePermission(ctx, permName, "To be deleted", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, permission.ID)
-
-		// ACT
-		err = rbac.DeletePermission(ctx, permission.ID)
-
-		// ASSERT
-		require.NoError(t, err)
-
-		// Verify deletion
-		_, err = rbac.GetPermission(ctx, permission.ID)
-		require.Error(t, err)
 	})
 }
 
@@ -1882,24 +1782,6 @@ func TestAuthService_UpdateAccount(t *testing.T) {
 		// An identity update never disables an account: that is the
 		// deactivation command, which revokes the sessions with it (#3332).
 		assert.True(t, updated.Active)
-	})
-}
-
-func TestAuthService_GetAccountsByRole(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns accounts with role or empty list", func(t *testing.T) {
-		// ACT - use existing teacher role name
-		_, err := service.GetAccountsByRole(ctx, "teacher")
-
-		// ASSERT - may be empty if no accounts have teacher role
-		require.NoError(t, err)
-		// Result can be nil or empty slice, both are valid
 	})
 }
 

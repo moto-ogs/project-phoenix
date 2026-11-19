@@ -7035,17 +7035,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/auth/permissions/{id}/",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "ref",
-        "ref": "PermissionResponse"
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/auth/roles/",
       "portals": [
         "tenant"

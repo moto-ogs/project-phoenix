@@ -203,9 +203,6 @@ func (rs *Resource) mountAuthRoutes(r chi.Router, authRateLimiter func(http.Hand
 		r.Group(func(r chi.Router) {
 			configureSession(r)
 
-			// School switching for Lehrkraft accounts mapped to several
-			// schools — the school-portal sibling of /auth/switch-tenant.
-			r.Post("/switch-school", rs.switchSchool)
 			// The Lehrkraft's own remembered devices at the session's school
 			// (#6955), as the tenant portal's /auth/mfa/trusted-devices.
 			r.Get("/mfa/trusted-devices", rs.listTrustedDevices)

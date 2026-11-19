@@ -48,36 +48,6 @@ func TestCreateGuardianInvitation_MailFailureRollsBackTheInvitation(t *testing.T
 	assert.Empty(t, outbox.Requests(), "no welcome follows a failed invitation mail")
 }
 
-func TestResendGuardianInvitation_MailFailureKeepsThePreviousLink(t *testing.T) {
-	t.Parallel()
-	var failing atomic.Bool
-	outbox := api.NewCapturingOutboxFailingWhen(func(ctx context.Context, kind string, _ map[string]any) error {
-		if failing.Load() && kind == emailKindGuardianInvitation {
-			return failingEnqueueStatement(ctx)
-		}
-		return nil
-	})
-	env := setupGuardianInvitationTest(t, func(_ *bun.DB, cfg *api.GuardianInvitationTestConfig) { cfg.Outbox = outbox })
-	profile := testpkg.CreateTestGuardianProfile(t, env.db, "resend-failure")
-	creatorID := env.inviterAccountID(t)
-	ctx := testpkg.Ctx(t)
-	invitation, err := env.service.CreateGuardianInvitation(ctx, identityaccess.GuardianInvitationRequest{
-		GuardianProfileID: profile.ID, CreatedBy: creatorID,
-	})
-	require.NoError(t, err)
-	queued := len(outbox.Requests())
-
-	failing.Store(true)
-	err = env.service.ResendGuardianInvitation(ctx, invitation.ID, creatorID)
-
-	require.ErrorIs(t, err, identityaccess.ErrGuardianAccessMailNotQueued, "the resend reports the failed mail")
-	assert.Len(t, outbox.Requests(), queued)
-	assert.Equal(t, sha256Hex(invitation.Token), testpkg.GuardianInvitationByID(t, env.db, invitation.ID).Token,
-		"the new link rolls back; the previous one still works")
-	_, err = env.service.ValidateGuardianInvitation(context.Background(), invitation.Token)
-	require.NoError(t, err)
-}
-
 // In a bulk run only the guardian whose mail failed is rolled back and
 // listed with the reason; the others are invited as usual.
 func TestBulkInviteToStudents_MailFailureListsOnlyThatGuardian(t *testing.T) {
