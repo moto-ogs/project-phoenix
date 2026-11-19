@@ -43,6 +43,7 @@ import { routes as settings } from "./settings.generated";
 import { routes as shiftTypes } from "./shift-types.generated";
 import { routes as staff } from "./staff.generated";
 import { routes as staffMessages } from "./staff-messages.generated";
+import { routes as staffNotices } from "./staff-notices.generated";
 import { routes as staffOnboarding } from "./staff-onboarding.generated";
 import { routes as staffPool } from "./staff-pool.generated";
 import { routes as staffShifts } from "./staff-shifts.generated";
@@ -822,6 +823,14 @@ export const portalRoutes = {
     staffMessages["POST /api/staff-messages/threads/{threadID}/leave"],
     staffMessages["POST /api/staff-messages/threads/{threadID}/members"],
     staffMessages["PUT /api/staff-messages/threads/{threadID}/name"],
+    staffNotices["DELETE /api/staff-notices/{noticeId}"],
+    staffNotices["GET /api/staff-notices/"],
+    staffNotices["GET /api/staff-notices/today"],
+    staffNotices["GET /api/staff-notices/{noticeId}"],
+    staffNotices["GET /api/staff-notices/{noticeId}/acknowledgements"],
+    staffNotices["POST /api/staff-notices/"],
+    staffNotices["POST /api/staff-notices/{noticeId}/acknowledge"],
+    staffNotices["PUT /api/staff-notices/{noticeId}"],
     staffOnboarding["GET /api/staff-onboarding/"],
     staffOnboarding["PUT /api/staff-onboarding/dismissal"],
     staffOnboarding["PUT /api/staff-onboarding/steps/{step}"],

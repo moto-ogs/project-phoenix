@@ -497,5 +497,6 @@ func staffPortalAdminContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/staff", timeTrackingHTTP.StaffAdminWorkflowRouteContracts()},
 		{"/api/admin/grade-transitions", gradeTransitionHTTP.RouteContracts()},
+		{"/api/staff-notices", timetableHTTP.StaffNoticeRouteContracts()},
 	}
 }

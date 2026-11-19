@@ -151,6 +151,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/staff-notices/{noticeId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/staff-pool/blocks/{id}",
       "portals": [
         "tenant"
@@ -1718,6 +1726,59 @@
       "response": {
         "kind": "ref",
         "ref": "unreadCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-notices/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "noticeResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-notices/today",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "noticeResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-notices/{noticeId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "noticeResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-notices/{noticeId}/acknowledgements",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "acknowledgerResponse"
+        }
       }
     },
     {
@@ -7965,6 +8026,29 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/staff-notices/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "noticeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "noticeResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-notices/{noticeId}/acknowledge",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/staff-pool/blocks",
       "portals": [
         "tenant"
@@ -11807,6 +11891,21 @@
       "response": {
         "kind": "ref",
         "ref": "ThreadDetailResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/staff-notices/{noticeId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "noticeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "noticeResponse"
       }
     },
     {
@@ -67589,6 +67688,30 @@
       ]
     },
     {
+      "name": "acknowledgerResponse",
+      "go_type": "timetablehttp.acknowledgerResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "acknowledged_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "adjustedRosterTemplateResponse",
       "go_type": "careplanhttp.adjustedRosterTemplateResponse",
       "fields": [
@@ -74470,6 +74593,180 @@
               "kind": "ref",
               "ref": "noteSubjectActivity"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "noticeRequest",
+      "go_type": "timetablehttp.noticeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "active",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "noticeResponse",
+      "go_type": "timetablehttp.noticeResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "week_pattern",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "acknowledged_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
