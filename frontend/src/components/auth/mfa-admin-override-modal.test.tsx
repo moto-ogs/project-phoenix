@@ -69,7 +69,10 @@ const props = {
 describe("MFAAdminOverrideModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = ok({ override: "none", enrolled: false });
+    global.fetch = ok({
+      status: "success",
+      data: { override: "none", enrolled: false },
+    });
   });
 
   afterEach(() => {
@@ -188,7 +191,10 @@ describe("MFAAdminOverrideModal", () => {
     expect(screen.queryByText(/Aktueller Status/)).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Standard" })).toBeDisabled();
 
-    global.fetch = ok({ override: "force_on", enrolled: true });
+    global.fetch = ok({
+      status: "success",
+      data: { override: "force_on", enrolled: true },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
 
     expect(await screen.findByText(/Aktueller Status/)).toBeInTheDocument();

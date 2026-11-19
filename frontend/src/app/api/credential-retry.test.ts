@@ -55,21 +55,9 @@ const backend = vi.fn<typeof fetch>();
 type RoutePost = (request: NextRequest, context: unknown) => Promise<Response>;
 
 const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
-  "auth/password": () => import("./auth/password/route"),
-  "operator/profile/password": () =>
-    import("./operator/profile/password/route"),
-  "caterer/account/password": () => import("./caterer/account/password/route"),
-  "caterer/account/mfa/disable": () =>
-    import("./caterer/account/mfa/disable/route"),
   "caterer/account/mfa/confirm": () =>
     import("./caterer/account/mfa/confirm/route"),
-  "parent/me/mfa/disable": () => import("./parent/me/mfa/disable/route"),
   "parent/me/mfa/confirm": () => import("./parent/me/mfa/confirm/route"),
-  "caterer/account/mfa/start": () =>
-    import("./caterer/account/mfa/start/route"),
-  "parent/me/mfa/start": () => import("./parent/me/mfa/start/route"),
-  "parent/me/children/[studentId]/sick-note": () =>
-    import("./parent/me/children/[studentId]/sick-note/route"),
 };
 
 /**
@@ -88,7 +76,39 @@ const CATALOG: Record<
     load: () => import("./operator/[...path]/route"),
     path: ["profile", "email-change"],
   },
-  // The hand-off below `auth`, which Next would give Auth.js otherwise.
+  "operator/profile/password": {
+    load: () => import("./operator/[...path]/route"),
+    path: ["profile", "password"],
+  },
+  "caterer/account/password": {
+    load: () => import("./caterer/[...path]/route"),
+    path: ["account", "password"],
+  },
+  "caterer/account/mfa/disable": {
+    load: () => import("./caterer/[...path]/route"),
+    path: ["account", "mfa", "disable"],
+  },
+  "caterer/account/mfa/start": {
+    load: () => import("./caterer/[...path]/route"),
+    path: ["account", "mfa", "start"],
+  },
+  "parent/me/mfa/disable": {
+    load: () => import("./parent/[...path]/route"),
+    path: ["me", "mfa", "disable"],
+  },
+  "parent/me/mfa/start": {
+    load: () => import("./parent/[...path]/route"),
+    path: ["me", "mfa", "start"],
+  },
+  "parent/me/children/[studentId]/sick-note": {
+    load: () => import("./parent/[...path]/route"),
+    path: ["me", "children", "1", "sick-note"],
+  },
+  // The hand-offs below `auth`, which Next would give Auth.js otherwise.
+  "auth/password": {
+    load: () => import("./auth/password/[[...path]]/route"),
+    path: [],
+  },
   "traeger/auth/mfa/step-up": {
     load: () => import("./traeger/auth/mfa/[...path]/route"),
     path: ["step-up"],
@@ -143,9 +163,9 @@ beforeEach(() => {
 });
 
 const password = {
-  currentPassword: SECRET,
-  newPassword: "New-Secret-2!",
-  confirmPassword: "New-Secret-2!",
+  current_password: SECRET,
+  new_password: "New-Secret-2!",
+  confirm_password: "New-Secret-2!",
 };
 
 describe("routes that carry the current password or a code", () => {
@@ -166,13 +186,13 @@ describe("routes that carry the current password or a code", () => {
     [
       "caterer/account/mfa/disable",
       "caterer.localhost:3000",
-      { currentPassword: SECRET },
+      { current_password: SECRET },
     ],
     ["caterer/account/mfa/confirm", "caterer.localhost:3000", { code: SECRET }],
     [
       "parent/me/mfa/disable",
       "parents.localhost:3000",
-      { currentPassword: SECRET },
+      { current_password: SECRET },
     ],
     ["parent/me/mfa/confirm", "parents.localhost:3000", { code: SECRET }],
   ])("%s sends it once after a 401", async (route, host, body) => {

@@ -121,7 +121,7 @@ describe("caterer second factor (#4497)", () => {
     ]);
   });
 
-  it("reads the parents' devices at the backend path, bare or in the envelope", async () => {
+  it("reads the parents' devices at the backend path in the envelope", async () => {
     const device = {
       id: 3,
       created_at: "2026-09-01T10:00:00Z",
@@ -132,12 +132,14 @@ describe("caterer second factor (#4497)", () => {
       .mockResolvedValueOnce(
         Response.json({ success: true, message: "Success", data: [device] }),
       )
-      .mockResolvedValueOnce(Response.json([device]))
+      .mockResolvedValueOnce(
+        Response.json({ success: true, message: "Success", data: null }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     global.fetch = fetchMock as unknown as typeof global.fetch;
 
     await expect(listTrustedDevices("parent")).resolves.toEqual([device]);
-    await expect(listTrustedDevices("parent")).resolves.toEqual([device]);
+    await expect(listTrustedDevices("parent")).resolves.toEqual([]);
     await revokeTrustedDevice("parent", 3);
 
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([

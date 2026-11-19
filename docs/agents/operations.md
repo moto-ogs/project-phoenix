@@ -705,6 +705,15 @@ that makes a new lookup to see the change.
 | Client log budget | Each Next.js process caps work and log volume for its own requests. No authorization depends on the count. |
 | Session refresh deduplication | Each Next.js process can coalesce its own refreshes. PostgreSQL governs token rotation and concurrent retries across the replicas. |
 
+## Scaling API and frontend replicas
+
+Staging and production run the Worker as its own `worker` service; the API
+(`server`) and the BFF (`frontend`) can each run as several replicas behind
+Caddy's pools. Draining, the PostgreSQL connection budget
+(`scripts/check-db-connection-budget.py`), the replica consistency check and
+the steps to scale each app up or down:
+[replicas runbook](../operations/replicas-7226.md).
+
 ## Caddy reverse proxy
 
 `deploy/caddy/Caddyfile` is the source of truth for `/etc/caddy/Caddyfile` on
@@ -720,7 +729,8 @@ change by serving the snippet from the server's Caddy version in Docker with a
 dead upstream, and attach desktop and phone screenshots to the PR.
 
 Checks: `node scripts/check-caddyfile.mjs` (CI, on every change) verifies that
-each `reverse_proxy` imports `client_ip_upstream`; `--cloudflare` also compares
+each `reverse_proxy` imports `client_ip_upstream` and every app proxy
+balances a replica pool with unbuffered streams (#7226); `--cloudflare` also compares
 `trusted_proxies` with https://www.cloudflare.com/ips-v4 and `ips-v6`.
 `caddy-cloudflare-ranges.yml` runs that comparison weekly and opens an issue
 with the diff and the corrected line.

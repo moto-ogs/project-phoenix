@@ -26,7 +26,7 @@ groups:
               to: 0
             datasourceUid: P8E80F9AEF21F6940
             model:
-              expr: 'max by (tenant_id, job_id) (last_over_time({env="prod",service="server"} |= "nightly cleanup" | json | msg=~"nightly cleanup (failing repeatedly|recovered)" | keep tenant_id, job_id, consecutive_failures | unwrap consecutive_failures [30h]))'
+              expr: 'max by (tenant_id, job_id) (last_over_time({env="prod",service=~"server|worker"} |= "nightly cleanup" | json | msg=~"nightly cleanup (failing repeatedly|recovered)" | keep tenant_id, job_id, consecutive_failures | unwrap consecutive_failures [30h]))'
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

@@ -846,7 +846,8 @@ export async function submitSickNote(
   status: StudentStatusKind = "sick",
   recipientGuardianProfileIds: string[] = [],
 ): Promise<SickNoteSubmitResult> {
-  const res = await postJson<SickNoteSubmitResult | StatusDay[]>(
+  // The backend answers {status_days, pending_request} (#2352).
+  return postJson<SickNoteSubmitResult>(
     `/api/parent/me/children/${encodeURIComponent(studentId)}/sick-note`,
     {
       dates,
@@ -855,12 +856,6 @@ export async function submitSickNote(
       recipient_guardian_profile_ids: recipientGuardianProfileIds,
     },
   );
-  // The backend answers {status_days, pending_request} (#2352). Until the
-  // temporary sick-note route file is gone, a bare array from a backend of an
-  // older release is still read, so callers see one stable shape.
-  return Array.isArray(res)
-    ? { status_days: res, pending_request: undefined }
-    : res;
 }
 
 /**

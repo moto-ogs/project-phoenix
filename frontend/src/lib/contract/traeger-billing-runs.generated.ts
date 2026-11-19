@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -429,6 +430,22 @@ export interface BillingCarriedCorrectionRequest {
   reason?: string;
 }
 
+/** Query of GET /traeger/billing-runs/export */
+export interface GetTraegerBillingRunsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  holiday_period_id?: string;
+}
+
+/** Query of GET /traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export */
+export interface GetTraegerBillingRunsIdCostTakeoversCostBearerIdExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
+/** Query of GET /traeger/billing-runs/{id}/export */
+export interface GetTraegerBillingRunsIdExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/billing-runs/{id}/carried-corrections/{positionID}": {
     method: "DELETE",
@@ -442,6 +459,13 @@ export const routes = {
     portals: ["org"],
     response: success(z.array(BillingRunSchema)),
   },
+  "GET /traeger/billing-runs/export": {
+    method: "GET",
+    pattern: "/traeger/billing-runs/export",
+    portals: ["org"],
+    query: ["format", "holiday_period_id"],
+    response: fileAnswer,
+  },
   "GET /traeger/billing-runs/periods": {
     method: "GET",
     pattern: "/traeger/billing-runs/periods",
@@ -453,6 +477,32 @@ export const routes = {
     pattern: "/traeger/billing-runs/{id}",
     portals: ["org"],
     response: success(BillingRunDetailSchema),
+  },
+  "GET /traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export": {
+    method: "GET",
+    pattern: "/traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
+  "GET /traeger/billing-runs/{id}/documents/{documentID}/letter": {
+    method: "GET",
+    pattern: "/traeger/billing-runs/{id}/documents/{documentID}/letter",
+    portals: ["org"],
+    response: fileAnswer,
+  },
+  "GET /traeger/billing-runs/{id}/export": {
+    method: "GET",
+    pattern: "/traeger/billing-runs/{id}/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
+  "GET /traeger/billing-runs/{id}/letters/print": {
+    method: "GET",
+    pattern: "/traeger/billing-runs/{id}/letters/print",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "GET /traeger/billing-runs/{id}/mailings": {
     method: "GET",
@@ -506,6 +556,14 @@ export const routes = {
     portals: ["org"],
     request: requestBody<BillingLettersRequest>(),
     response: success(BillingLettersSchema),
+  },
+  "POST /traeger/billing-runs/{id}/letters/preview": {
+    method: "POST",
+    pattern: "/traeger/billing-runs/{id}/letters/preview",
+    portals: ["org"],
+    maxBodyBytes: 65536,
+    request: requestBody<BillingLettersRequest>(),
+    response: fileAnswer,
   },
   "POST /traeger/billing-runs/{id}/mailings": {
     method: "POST",

@@ -197,14 +197,16 @@ describe("SpontaneousActivityStart", () => {
     });
   });
 
-  it("accepts the raw /api/rooms array response used by the route wrapper", async () => {
+  it("offers the rooms of the catalog proxy's /api/rooms list", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
-        json: async () => [
-          { id: 3, name: "Mensa" },
-          { id: 4, name: "Atelier", building: "Haus A" },
-        ],
+        json: async () => ({
+          data: [
+            { id: "3", name: "Mensa" },
+            { id: "4", name: "Atelier", building: "Haus A" },
+          ],
+        }),
       }),
     );
     const onStart = vi.fn();

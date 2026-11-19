@@ -4,10 +4,12 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   json,
   multipart,
+  noData,
   nullable,
   object,
   optional,
@@ -554,6 +556,19 @@ export interface HolidayAllocationRequest {
   decisions?: holidayAllocationChoiceRequest[] | null;
 }
 
+/** Go: enrollment.HolidayFormDocument */
+export interface HolidayFormDocument {
+  id: string;
+  filename: string;
+  size: number;
+}
+
+export const HolidayFormDocumentSchema: z.ZodType<HolidayFormDocument, unknown> = object<HolidayFormDocument>({
+  id: str,
+  filename: str,
+  size: safeInt,
+});
+
 /** Go: enrollmenthttp.holidayCriterionRequest */
 export interface holidayCriterionRequest {
   id?: number;
@@ -607,8 +622,33 @@ export interface HolidayRegistrationEditRequest {
   custom_data?: Record<string, unknown | null> | null;
 }
 
+/** Query of GET /traeger/holiday-periods/export */
+export interface GetTraegerHolidayPeriodsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
+/** Query of GET /traeger/holiday-periods/{id}/allocation/export */
+export interface GetTraegerHolidayPeriodsIdAllocationExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
+/** Query of GET /traeger/holiday-periods/{id}/places/export */
+export interface GetTraegerHolidayPeriodsIdPlacesExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 /** Query of GET /traeger/holiday-periods/{id}/registrations */
 export interface GetTraegerHolidayPeriodsIdRegistrationsQuery {
+  school?: string;
+  status?: string;
+  time_model?: string;
+  week_id?: string;
+  wish?: string;
+}
+
+/** Query of GET /traeger/holiday-periods/{id}/registrations/export */
+export interface GetTraegerHolidayPeriodsIdRegistrationsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
   school?: string;
   status?: string;
   time_model?: string;
@@ -621,7 +661,28 @@ export interface GetTraegerHolidayPeriodsIdRegistrationsKnownChildrenQuery {
   registration_id?: string;
 }
 
+/** Query of GET /traeger/holiday-periods/{id}/registrations/pdf */
+export interface GetTraegerHolidayPeriodsIdRegistrationsPdfQuery {
+  health?: boolean;
+  school?: string;
+  status?: string;
+  time_model?: string;
+  week_id?: string;
+  wish?: string;
+}
+
+/** Query of GET /traeger/holiday-periods/{id}/registrations/{registrationId}/pdf */
+export interface GetTraegerHolidayPeriodsIdRegistrationsRegistrationIdPdfQuery {
+  health?: boolean;
+}
+
 export const routes = {
+  "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}": {
+    method: "DELETE",
+    pattern: "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+    portals: ["org"],
+    response: noData,
+  },
   "GET /traeger/holiday-periods/": {
     method: "GET",
     pattern: "/traeger/holiday-periods/",
@@ -633,6 +694,13 @@ export const routes = {
     pattern: "/traeger/holiday-periods/criteria",
     portals: ["org"],
     response: success(HolidayCriteriaCatalogSchema),
+  },
+  "GET /traeger/holiday-periods/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}": {
     method: "GET",
@@ -646,11 +714,24 @@ export const routes = {
     portals: ["org"],
     response: success(HolidayAllocationBoardSchema),
   },
+  "GET /traeger/holiday-periods/{id}/allocation/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/allocation/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
   "GET /traeger/holiday-periods/{id}/form": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/form",
     portals: ["org"],
     response: success(HolidayFormEditorSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/form/documents/{documentId}": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/places": {
     method: "GET",
@@ -658,12 +739,26 @@ export const routes = {
     portals: ["org"],
     response: success(z.array(HolidayWeekPlacesSchema)),
   },
+  "GET /traeger/holiday-periods/{id}/places/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/places/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
   "GET /traeger/holiday-periods/{id}/registrations": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations",
     portals: ["org"],
     query: ["school", "status", "time_model", "week_id", "wish"],
     response: success(HolidayRegistrationListSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/registrations/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/export",
+    portals: ["org"],
+    query: ["format", "school", "status", "time_model", "week_id", "wish"],
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/registrations/known-children": {
     method: "GET",
@@ -678,6 +773,13 @@ export const routes = {
     portals: ["org"],
     response: success(HolidayMailProblemsResponseSchema),
   },
+  "GET /traeger/holiday-periods/{id}/registrations/pdf": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/pdf",
+    portals: ["org"],
+    query: ["health", "school", "status", "time_model", "week_id", "wish"],
+    response: fileAnswer,
+  },
   "GET /traeger/holiday-periods/{id}/registrations/{registrationId}": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}",
@@ -689,6 +791,19 @@ export const routes = {
     pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/health",
     portals: ["org"],
     response: success(HolidayRegistrationHealthDetailSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/pdf": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/pdf",
+    portals: ["org"],
+    query: ["health"],
+    response: fileAnswer,
+  },
+  "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/holiday-periods/": {
     method: "POST",
@@ -703,6 +818,15 @@ export const routes = {
     portals: ["org"],
     request: requestBody<HolidayAllocationRequest>(),
     response: success(HolidayAllocationBoardSchema),
+  },
+  "POST /traeger/holiday-periods/{id}/form/documents": {
+    method: "POST",
+    pattern: "/traeger/holiday-periods/{id}/form/documents",
+    portals: ["org"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "enrollment.legal_document_invalid",
+    request: multipart,
+    response: success(HolidayFormDocumentSchema),
   },
   "POST /traeger/holiday-periods/{id}/publish": {
     method: "POST",

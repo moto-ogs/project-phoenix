@@ -22,16 +22,10 @@ const DATA = { timeout: 15000 } as const;
 async function firstStudentId(page: Page): Promise<string | null> {
   const res = await page.request.get(`${base}/api/students?page_size=1`);
   if (!res.ok()) return null;
-  // The tenant route returns a wrapped paginated shape:
-  // { data: { data: Student[], pagination } }.
-  const body = (await res.json()) as {
-    data?:
-      | { data?: Array<{ id: string | number }> }
-      | Array<{ id: string | number }>;
-  };
-  const container = body.data;
-  const list = Array.isArray(container) ? container : (container?.data ?? []);
-  const id = list[0]?.id;
+  // The catalog proxy answers the contract's list in the envelope, the page
+  // beside it: { data: Student[], pagination }.
+  const body = (await res.json()) as { data?: Array<{ id: string }> | null };
+  const id = body.data?.[0]?.id;
   return id != null ? String(id) : null;
 }
 
