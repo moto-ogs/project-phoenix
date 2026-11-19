@@ -8,22 +8,25 @@ import {
   formatLastSeen,
   getDeviceTypeEmoji,
   generateDefaultDeviceName,
-  type BackendDevice,
   type Device,
 } from "./iot-helpers";
+import type {
+  DeviceCreationResponse,
+  DeviceResponse,
+} from "./contract/iot.generated";
 import { LOCATION_COLORS } from "./location-helper";
 
 describe("iot-helpers", () => {
   describe("mapDeviceResponse", () => {
-    it("should map valid backend device to frontend device", () => {
-      const backendDevice: BackendDevice = {
-        id: 123,
+    it("maps the created device of the contract with its one-time key", () => {
+      const backendDevice: DeviceCreationResponse = {
+        id: "123",
         device_id: "RFID-001",
         device_type: "terminal",
         name: "Main Reader",
         status: "active",
         last_seen: "2024-01-15T10:30:00Z",
-        registered_by_id: 456,
+        registered_by_id: "456",
         is_online: true,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
@@ -48,8 +51,8 @@ describe("iot-helpers", () => {
     });
 
     it("should handle device without optional fields", () => {
-      const backendDevice: BackendDevice = {
-        id: 123,
+      const backendDevice: DeviceResponse = {
+        id: "123",
         device_id: "RFID-001",
         device_type: "terminal",
         status: "active",
@@ -68,20 +71,20 @@ describe("iot-helpers", () => {
     });
 
     it("should throw error for null input", () => {
-      expect(() => mapDeviceResponse(null as unknown as BackendDevice)).toThrow(
-        "Invalid device data provided to mapper",
-      );
+      expect(() =>
+        mapDeviceResponse(null as unknown as DeviceResponse),
+      ).toThrow("Invalid device data provided to mapper");
     });
 
     it("should throw error for undefined input", () => {
       expect(() =>
-        mapDeviceResponse(undefined as unknown as BackendDevice),
+        mapDeviceResponse(undefined as unknown as DeviceResponse),
       ).toThrow("Invalid device data provided to mapper");
     });
 
     it("should throw error for non-object input", () => {
       expect(() =>
-        mapDeviceResponse("invalid" as unknown as BackendDevice),
+        mapDeviceResponse("invalid" as unknown as DeviceResponse),
       ).toThrow("Invalid device data provided to mapper");
     });
 
@@ -93,7 +96,7 @@ describe("iot-helpers", () => {
         is_online: true,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
-      } as unknown as BackendDevice;
+      } as unknown as DeviceResponse;
 
       expect(() => mapDeviceResponse(backendDevice)).toThrow(
         "Required device fields are missing",
@@ -108,7 +111,7 @@ describe("iot-helpers", () => {
         is_online: true,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
-      } as unknown as BackendDevice;
+      } as unknown as DeviceResponse;
 
       expect(() => mapDeviceResponse(backendDevice)).toThrow(
         "Required device fields are missing",
@@ -123,7 +126,7 @@ describe("iot-helpers", () => {
         is_online: true,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
-      } as unknown as BackendDevice;
+      } as unknown as DeviceResponse;
 
       expect(() => mapDeviceResponse(backendDevice)).toThrow(
         "Required device fields are missing",
@@ -132,13 +135,13 @@ describe("iot-helpers", () => {
 
     it("should handle is_online as false when undefined", () => {
       const backendDevice = {
-        id: 123,
+        id: "123",
         device_id: "RFID-001",
         device_type: "terminal",
         status: "active",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
-      } as BackendDevice;
+      } as DeviceResponse;
 
       const result = mapDeviceResponse(backendDevice);
       expect(result.is_online).toBe(false);

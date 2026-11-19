@@ -29,6 +29,10 @@ import {
 import { useSWRAuth } from "~/lib/swr";
 import { roomKeys } from "~/lib/swr/rooms-keys";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import type {
+  RoomResponse,
+  RoomSessionEntry,
+} from "~/lib/contract/rooms.generated";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   berlinTodayISO,
@@ -40,8 +44,8 @@ import {
 import {
   formatFloor,
   mapRoomResponse,
+  ROOM_HISTORY_DISABLED_CODE,
   ROOM_HISTORY_STATUS_FEATURE_DISABLED,
-  type BackendRoom,
   type Room,
 } from "~/lib/room-helpers";
 import { createLogger } from "~/lib/logger";
@@ -54,7 +58,7 @@ const logger = createLogger({ component: "RoomDetailContent" });
 // per-student-visit rows to one row per active.groups session — no student
 // IDs or names by design. Per-child detail lives behind
 // /students/{id}/attendance-history under its own GDPR gates.
-interface RoomHistoryEntry {
+export interface RoomHistoryEntry {
   sessionId: string;
   startedAt: string; // RFC3339
   endedAt: string | null; // RFC3339 or null while session is open
@@ -69,38 +73,40 @@ interface DateGroup {
   entries: RoomHistoryEntry[];
 }
 
-interface BackendRoomHistoryEntry {
-  session_id: number;
-  started_at: string;
-  ended_at?: string | null;
-  duration_minutes?: number | null;
-  activity_name: string;
-  supervisor_name: string;
-  student_count: number;
-}
-
-/** Ältere Antworten trugen den Namen als `room_name`. */
-type RoomPayload = BackendRoom & { room_name?: string };
-
-function mapBackendToFrontendRoom(backendRoom: RoomPayload): Room {
-  return mapRoomResponse({
-    ...backendRoom,
-    name: backendRoom.name ?? backendRoom.room_name ?? "",
-  });
-}
-
-function mapBackendToFrontendHistoryEntry(
-  backendEntry: BackendRoomHistoryEntry,
-): RoomHistoryEntry {
+/** Maps one session of the contract (`RoomSessionEntry`). */
+export function mapRoomHistoryEntry(entry: RoomSessionEntry): RoomHistoryEntry {
   return {
-    sessionId: String(backendEntry.session_id),
-    startedAt: backendEntry.started_at,
-    endedAt: backendEntry.ended_at ?? null,
-    durationMinutes: backendEntry.duration_minutes ?? null,
-    activityName: backendEntry.activity_name,
-    supervisorName: backendEntry.supervisor_name,
-    studentCount: backendEntry.student_count,
+    sessionId: String(entry.session_id),
+    startedAt: entry.started_at,
+    endedAt: entry.ended_at ?? null,
+    durationMinutes: entry.duration_minutes ?? null,
+    activityName: entry.activity_name,
+    supervisorName: entry.supervisor_name,
+    studentCount: entry.student_count,
   };
+}
+
+/**
+ * The history answer: the contract's envelope through the catalog proxy, or,
+ * while the temporary route file of #7563 still answers, its envelope with
+ * `status: "feature_disabled"` for a school without the attendance log.
+ */
+interface RoomHistoryBody {
+  status?: string;
+  data?: RoomSessionEntry[] | null;
+}
+
+/** A switched-off history arrives as the sentinel or as its 403 code. */
+export function isRoomHistoryDisabled(
+  failure: unknown,
+  body?: RoomHistoryBody | null,
+): boolean {
+  if (body?.status === ROOM_HISTORY_STATUS_FEATURE_DISABLED) return true;
+  return (
+    typeof failure === "object" &&
+    failure !== null &&
+    (failure as { code?: unknown }).code === ROOM_HISTORY_DISABLED_CODE
+  );
 }
 
 function groupByDate(entries: readonly RoomHistoryEntry[]): DateGroup[] {
@@ -130,11 +136,10 @@ export interface UseRoomDetailResult {
   loading: boolean;
   /** Failed load of the room, for TenantPage `error` (retry, request ID). */
   error: FormError | null;
-  // True when the tenant has gdpr.attendance_log_enabled = false. The proxy
-  // route (`/api/rooms/[id]/history`) translates the backend's 403 into
-  // `status: "feature_disabled"` so the page can hide the
-  // "Belegungshistorie" section deliberately (issue #1425) rather than
-  // letting it collapse incidentally on an empty history array.
+  // True when the tenant has gdpr.attendance_log_enabled = false: the
+  // backend refuses the history with 403 and attendance.log_disabled, so the
+  // page hides the "Belegungshistorie" section deliberately (issue #1425)
+  // rather than letting it collapse incidentally on an empty history array.
   historyDisabled: boolean;
   /** Fehler beim separaten Laden der Belegungshistorie. */
   historyError: FormError | null;
@@ -173,69 +178,33 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
       if (!roomResponse.ok) {
         throw await apiErrorFromResponse(roomResponse, "room detail failed");
       }
-      const roomResponseData = (await roomResponse.json()) as {
-        data?: RoomPayload;
-      } & RoomPayload;
-      const roomData = roomResponseData.data ?? roomResponseData;
-      const room = mapBackendToFrontendRoom(roomData);
+      const roomBody = (await roomResponse.json()) as { data: RoomResponse };
+      const room = mapRoomResponse(roomBody.data);
 
       let history: RoomHistoryEntry[] = [];
       let historyDisabled = false;
       let historyFailure: unknown = null;
-      if (!historyResponse.ok) {
-        // A non-OK response is NOT the same as "no history". The proxy
-        // maps the GDPR feature-disabled path to 200 + status:"feature_disabled"
-        // (handled in the OK branch below), so anything reaching here is a
-        // genuine failure — proxy crash, backend 500, network timeout. Log
-        // it so the empty section isn't indistinguishable from a real
-        // outage. We deliberately leave historyDisabled=false: hiding the
-        // section on real errors would mask the failure further.
-        logger.warn("room_history_fetch_failed", {
-          room_id: roomId,
-          status: historyResponse.status,
-        });
-        historyFailure = await apiErrorFromResponse(
+      if (historyResponse.ok) {
+        const body = (await historyResponse.json()) as RoomHistoryBody | null;
+        historyDisabled = isRoomHistoryDisabled(null, body);
+        history = (body?.data ?? []).map(mapRoomHistoryEntry);
+      } else {
+        const failure = await apiErrorFromResponse(
           historyResponse,
           "room history failed",
         );
-      } else {
-        const historyResponseData = (await historyResponse.json()) as
-          | BackendRoomHistoryEntry[]
-          | { status?: string; data?: BackendRoomHistoryEntry[] | null }
-          | null;
-        // Four observed response shapes:
-        //   - bare array (legacy)
-        //   - { data: [...] } wrapped
-        //   - { status: "success", data: null, message: "..." } when no history
-        //   - { status: "feature_disabled", data: [] } when the tenant has
-        //     gdpr.attendance_log_enabled = false (issue #1425). In that
-        //     case set historyDisabled so the page hides the section
-        //     deliberately — distinguishing "off" from "no data" matters for
-        //     debugging and for surviving any future UX change that would
-        //     otherwise render a placeholder for empty history.
-        // Anything that isn't a real array must collapse to []; otherwise
-        // .map on the next line throws (#1374 regression).
-        if (
-          historyResponseData &&
-          typeof historyResponseData === "object" &&
-          !Array.isArray(historyResponseData) &&
-          historyResponseData.status === ROOM_HISTORY_STATUS_FEATURE_DISABLED
-        ) {
+        // gdpr.attendance_log_enabled is off for this school (#1425): the
+        // section hides deliberately. Any other refusal is a real failure
+        // and stays visible; hiding it would mask an outage.
+        if (isRoomHistoryDisabled(failure)) {
           historyDisabled = true;
+        } else {
+          logger.warn("room_history_fetch_failed", {
+            room_id: roomId,
+            status: historyResponse.status,
+          });
+          historyFailure = failure;
         }
-        const backendHistoryEntries: BackendRoomHistoryEntry[] = (() => {
-          if (Array.isArray(historyResponseData)) return historyResponseData;
-          if (
-            historyResponseData &&
-            typeof historyResponseData === "object" &&
-            "data" in historyResponseData &&
-            Array.isArray(historyResponseData.data)
-          ) {
-            return historyResponseData.data;
-          }
-          return [];
-        })();
-        history = backendHistoryEntries.map(mapBackendToFrontendHistoryEntry);
       }
 
       return { room, history, historyDisabled, historyFailure };

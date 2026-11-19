@@ -10,7 +10,9 @@ import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { defineEntityConfig } from "@/lib/database/types";
 import type { Device } from "@/lib/iot-helpers";
+import type { DeviceResponse } from "~/lib/contract/iot.generated";
 import {
+  mapDeviceResponse,
   prepareDeviceForBackend,
   getDeviceTypeDisplayName,
   getDeviceStatusDisplayName,
@@ -295,7 +297,9 @@ export const devicesConfig = defineEntityConfig<Device>({
   },
 
   service: {
-    // mapResponse: removed because API route already handles mapping
+    // The catalog proxy hands on the contract's DeviceResponse; the client
+    // maps it once (#7563).
+    mapResponse: (data: unknown) => mapDeviceResponse(data as DeviceResponse),
     mapRequest: (data: Partial<Device>) =>
       prepareDeviceForBackend(data) as Record<string, unknown>,
   },

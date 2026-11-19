@@ -45,10 +45,14 @@ export async function fetchPlannerRooms(): Promise<PlannerRoomReference[]> {
     const body = await readReferenceResponse<
       ReferenceEnvelope<PlannerRoomReference> | PlannerRoomReference[]
     >(response);
-    rooms.push(...unwrapReferences(body));
-    if (Array.isArray(body) === false) {
-      totalPages = body.pagination?.total_pages ?? 1;
-    }
+    const pageRooms = unwrapReferences(body);
+    rooms.push(...pageRooms);
+    const pagination = Array.isArray(body) ? undefined : body.pagination;
+    // The catalog proxy hands on the list without its pagination (#7563): a
+    // full page then means another page may follow.
+    totalPages =
+      pagination?.total_pages ??
+      (pageRooms.length === pageSize ? page + 1 : page);
   }
 
   return rooms;
