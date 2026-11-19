@@ -1,10 +1,11 @@
 "use client";
 
 import { FeatureOffPage } from "~/components/ui/feature-off-page";
+import type { TenantPageProps } from "~/components/ui/tenant-page";
 import { usePresenceMode } from "~/lib/tenant-context";
 
 /**
- * BinaryModeGuard — triggers Next.js 404 when the tenant runs in binary mode.
+ * BinaryModeGuard — shows a feature-off state when the tenant runs in binary mode.
  *
  * Use at the top of any page that depends on detailed-mode concepts (room
  * visits, activities, room supervision, room history). Binary-mode tenants
@@ -28,15 +29,18 @@ import { usePresenceMode } from "~/lib/tenant-context";
 export function BinaryModeGuard({
   children,
   title = "Nicht eingeschaltet",
+  info,
 }: {
   children: React.ReactNode;
   title?: string;
+  info?: TenantPageProps["info"];
 }) {
   const mode = usePresenceMode();
   if (mode === "binary") {
     return (
       <FeatureOffPage
         title={title}
+        info={info}
         description="Deine Schule erfasst nur, ob ein Kind da ist oder nicht. Räume und Aktivitäten werden dabei nicht geführt."
       />
     );

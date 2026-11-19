@@ -1152,7 +1152,7 @@ function ActiveSupervisionGate({
 // data that depends on detailed-mode room visits.
 export default function MeinRaumPage() {
   return (
-    <BinaryModeGuard title="Aktuelle Aufsicht">
+    <BinaryModeGuard title="Aktuelle Aufsicht" info={ACTIVE_SUPERVISIONS_INFO}>
       <Suspense
         fallback={
           <TenantPage

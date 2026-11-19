@@ -79,7 +79,7 @@ const logger = createLogger({ component: "TagesplanView" });
 
 const TAGESPLAN_INFO =
   "Hier siehst du die Betreuung des Tages nach Uhrzeit. Eine Linie zeigt, wo du gerade im Tag stehst. Tippe auf einen laufenden Block, um seine Kinderliste zu öffnen.";
-const TAGESPLAN_DISABLED_INFO =
+export const TAGESPLAN_DISABLED_INFO =
   "Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“.";
 
 // Zwischen Navigationen gemerkte Scrollposition (#2383): wer aus einer
@@ -697,7 +697,7 @@ export function TagesplanView() {
       loading={showSkeleton}
       error={pageError}
       empty={
-        instances != null && groups.length === 0
+        instances != null && listError == null && groups.length === 0
           ? {
               title: isToday
                 ? "Heute ist keine Betreuung geplant"

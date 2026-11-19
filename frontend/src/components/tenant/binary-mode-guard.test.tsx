@@ -68,9 +68,25 @@ describe("BinaryModeGuard", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the page explanation in binary mode", () => {
+    render(
+      <TenantProvider tenantSlug="demo" tenant={makeTenant("binary")}>
+        <BinaryModeGuard info="Erklärung der geschützten Seite.">
+          <div>protected-content</div>
+        </BinaryModeGuard>
+      </TenantProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Erklärung zu Nicht eingeschaltet",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("renders children when no tenant context (safe default is detailed)", () => {
     // Outside a TenantProvider the hook returns "detailed" — first paint
-    // on cold load should NOT accidentally 404 protected pages.
+    // on cold load should NOT accidentally show a disabled state.
     render(
       <BinaryModeGuard>
         <div>protected-content</div>

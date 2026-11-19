@@ -633,6 +633,27 @@ describe("TagesplanView", () => {
     expect(reloadList).toHaveBeenCalled();
   });
 
+  it("does not show an empty state when an empty refresh fails", async () => {
+    setSWR({
+      data: [],
+      isLoading: false,
+      error: new ApiError("Failed to fetch", 503, {
+        code: "general.unavailable",
+      }),
+    });
+
+    render(<TagesplanView />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Liste der Termine"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Heute ist keine Betreuung geplant/),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the module state when a refresh is refused", async () => {
     setSWR({
       data: [makeInstance({ id: "1", title: "Basteln" })],

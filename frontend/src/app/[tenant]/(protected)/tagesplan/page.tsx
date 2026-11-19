@@ -7,12 +7,18 @@
 import { Suspense } from "react";
 
 import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
-import { TagesplanView } from "~/components/timetable/tagesplan-view";
+import {
+  TagesplanView,
+  TAGESPLAN_DISABLED_INFO,
+} from "~/components/timetable/tagesplan-view";
 import { STAFF_FLAT_PAGES } from "~/lib/section-navigation";
 
 export default function TagesplanPage() {
   return (
-    <BinaryModeGuard title={STAFF_FLAT_PAGES.tagesplan.label}>
+    <BinaryModeGuard
+      title={STAFF_FLAT_PAGES.tagesplan.label}
+      info={TAGESPLAN_DISABLED_INFO}
+    >
       <Suspense fallback={null}>
         <TagesplanView />
       </Suspense>
