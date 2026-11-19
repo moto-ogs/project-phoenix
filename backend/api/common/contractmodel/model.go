@@ -88,6 +88,13 @@ type Route struct {
 	NoRetryAfterRenewal string `json:"no_retry_after_renewal,omitempty"`
 	// MaxBodyBytes is the largest request body the proxy reads.
 	MaxBodyBytes int `json:"max_body_bytes,omitempty"`
+	// File says the route answers a file instead of the envelope.
+	File bool `json:"file,omitempty"`
+	// Multipart says the request body is a multipart/form-data upload the
+	// proxy streams through.
+	Multipart bool `json:"multipart,omitempty"`
+	// TooLargeCode is the error code of a multipart body over MaxBodyBytes.
+	TooLargeCode string `json:"too_large_code,omitempty"`
 }
 
 // Key is the route's line in the route catalog.

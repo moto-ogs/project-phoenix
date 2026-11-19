@@ -195,6 +195,22 @@ func TestBuildRejects(t *testing.T) {
 	publicBeside.Portals = []string{PublicPortal, "tenant"}
 	publicLink := get("/api/rows/{token}", inner{})
 	publicLink.Portals = []string{PublicPortal}
+	fileAndJSON := get("/api/rows/export", inner{})
+	fileAndJSON.File = true
+	publicFile := fileRoute("/api/links/{token}/file")
+	publicFile.Portals = []string{PublicPortal}
+	uploadWithoutLimit := upload()
+	uploadWithoutLimit.MaxBodyBytes = 0
+	uploadWithoutCode := upload()
+	uploadWithoutCode.TooLargeCode = ""
+	uploadAndBody := upload()
+	uploadAndBody.Request = body{}
+	uploadOnGet := upload()
+	uploadOnGet.Method = "GET"
+	uploadRetry := upload()
+	uploadRetry.NoRetryAfterRenewal = "stores the file twice"
+	strayCode := post(body{})
+	strayCode.TooLargeCode = "files.file_too_large"
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -226,6 +242,14 @@ func TestBuildRejects(t *testing.T) {
 		"a public route that names a retry":         {[]Registration{publicRetry}, Options{Identifiers: identifiers}, "has no session to renew"},
 		"a public route beside a session portal":    {[]Registration{publicBeside}, Options{Identifiers: identifiers}, "names no session portal"},
 		"a public pattern a session pattern takes":  {[]Registration{publicLink, get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers}, "overlaps the session route GET /api/rows/{id}"},
+		"a file with a JSON response":               {[]Registration{fileAndJSON}, Options{Identifiers: identifiers}, "registers a file and a JSON response"},
+		"a public file":                             {[]Registration{publicFile}, Options{Identifiers: identifiers}, "answers JSON only"},
+		"an upload without a body limit":            {[]Registration{uploadWithoutLimit}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
+		"an upload without its too large code":      {[]Registration{uploadWithoutCode}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
+		"an upload beside a JSON body":              {[]Registration{uploadAndBody}, Options{Identifiers: identifiers}, "a multipart upload and a JSON request body"},
+		"an upload on a GET":                        {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
+		"an upload that names a retry":              {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
+		"a too large code without an upload":        {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -433,6 +457,42 @@ func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
 	assert.Contains(t, source, "    pattern: \"/api/rows/\",\n    portals: [\"tenant\"],\n    noRetryAfterRenewal: \"a renewed session would mail the code twice\",\n    maxBodyBytes: 65536,\n")
 	assert.Equal(t, 1, strings.Count(source, "noRetryAfterRenewal"))
 	assert.Equal(t, 1, strings.Count(source, "maxBodyBytes"))
+}
+
+func fileRoute(pattern string) Registration {
+	return Registration{Method: "GET", Pattern: pattern, Portals: []string{"tenant"}, File: true}
+}
+
+func upload() Registration {
+	return Registration{
+		Method: "POST", Pattern: "/api/rows/{id}/files", Portals: []string{"tenant"},
+		Multipart: true, MaxBodyBytes: 1 << 20, TooLargeCode: "files.file_too_large", Response: inner{},
+	}
+}
+
+// A file answer and a multipart upload are kinds of their own in the model
+// and on the route object: no decoder for the file, no body type for the
+// upload, and the upload names its limit and the code of a larger body.
+func TestTypeScriptWritesAFileAndAnUpload(t *testing.T) {
+	t.Parallel()
+	export := fileRoute("/api/rows/export")
+	export.Query = []QueryParam{{Name: "format", Kind: "string"}}
+	doc, err := Build([]Registration{export, upload()}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	encoded, err := json.Marshal(doc.Routes)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"file":true`)
+	assert.Contains(t, string(encoded), `"max_body_bytes":1048576,"multipart":true,"too_large_code":"files.file_too_large"`)
+	assert.Nil(t, doc.Routes[0].Response)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: [\"format\"],\n    response: fileAnswer,\n  },\n")
+	assert.Contains(t, source, "    maxBodyBytes: 1048576,\n    tooLargeCode: \"files.file_too_large\",\n    request: multipart,\n    response: success(innerSchema),\n")
+	assert.Contains(t, source, "  fileAnswer,\n")
+	assert.Contains(t, source, "  multipart,\n")
+	assert.NotContains(t, source, "requestBody")
 }
 
 // Two portals mount the same handlers, so two resources answer with one Go

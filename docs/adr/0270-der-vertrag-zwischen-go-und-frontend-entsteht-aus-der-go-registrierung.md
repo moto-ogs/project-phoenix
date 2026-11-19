@@ -114,3 +114,61 @@ angemeldet. Daraus folgen drei Ergänzungen:
 - **Eine Route, deren Antwort ein anderer Owner rendert**, meldet der Owner
   des Handlers an; die Wurzel nennt den Antworttyp, so wie sie auch die
   Antwortfunktion bindet.
+
+## Nachtrag vom 2026-11-19: Dateien und Uploads
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Rund
+170 Routendateien des Frontends reichen nur eine Datei-Antwort oder einen
+Upload durch (`proxyFile`, `proxyUpload` und Verwandte). Der Katalog-Proxy
+konnte das nicht: Er liest jede Antwort als JSON durch einen Decoder und jeden
+Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
+
+### Entscheidung
+
+1. **Datei und Multipart sind eigene Arten im Vertrag, kein JSON mit
+   Decoder.** `common.RouteContract` meldet sie mit `File` (statt
+   `Response`) und `Multipart` (statt `Request`) an. Im Modell stehen sie als
+   `file` und `multipart`, im erzeugten Code als `response: fileAnswer` und
+   `request: multipart`. Der Generator lehnt eine Datei-Route mit
+   JSON-Antwort, einen Upload mit JSON-Body und einen Upload ohne Grenze ab.
+2. **Der Proxy streamt beides ungelesen.** Die Datei geht mit den Headern
+   durch, die `fileResponse` schon heute durchlässt (`Content-Type`,
+   `Content-Disposition`, `Content-Length`, `X-Content-Type-Options`);
+   `Range`, `ETag`, `Last-Modified` und `Accept-Ranges` gingen nie durch und
+   gehen auch jetzt nicht durch. Jede Antwort einer Datei-Route ist
+   `private, no-store`, auch eine Ablehnung, wie bei
+   `withPrivateDownloadNoStore`. Ein Backend-Fehler bleibt sein
+   Problem-JSON.
+3. **Ein Upload nennt seine Grenze und seinen Code im Vertrag.**
+   `MaxBodyBytes` ist die Grenze des ganzen Bodys mit Platz für den
+   Multipart-Rahmen, `TooLargeCode` der Code, mit dem das Backend eine zu
+   große Datei ablehnt. Der Proxy prüft `Content-Length` vor jedem
+   Backend-Aufruf (fehlt sie: 411, ist sie zu groß: 413 mit diesem Code und
+   `max_bytes`/`max_mb`) und zählt beim Streamen mit; ein längerer Body als
+   angegeben bricht den Aufruf ab und wird ebenfalls 413.
+4. **Ein Upload geht einmal.** Sein Body ist beim Senden schon unterwegs und
+   lässt sich nach einer Sitzungserneuerung nicht wiederholen. Auth.js
+   erneuert den Token fünf Minuten vor Ablauf
+   (`ACCESS_TOKEN_REFRESH_BUFFER_MS`); ein 401 des Backends ist deshalb eine
+   echte Ablehnung und wird so beantwortet. Ein JSON-Body einer Datei-Route
+   (Brief-Vorschau per POST) wird begrenzt gelesen und darf wiederholt
+   werden.
+5. **Portal und Sitzung prüft der Proxy wie bei JSON.** Eine Route, die der
+   Vertrag dem Portal nicht zuordnet, ist 404 vor Sitzung und Backend; ohne
+   Sitzung 401; nur registrierte Query-Parameter gehen durch.
+
+### Grenzen
+
+- Öffentliche Datei-Routen (`public/*`, Feed- und Link-Routen mit Token)
+  bleiben eigene Dateien. Der sitzungsfreie Weg des Proxys beantwortet nur
+  JSON; der Generator lehnt eine öffentliche Datei oder einen öffentlichen
+  Upload ab.
+- Eine Datei, die mehr tut als durchzureichen (eigener Cache-Header für ein
+  Logo, Umformung, Prüfung im BFF, mehrere Backend-Aufrufe), bleibt eine
+  eigene Datei.
+- Die Upload-Antwort ist JSON und läuft durch den Decoder der Route; sie hat
+  danach die Hülle des Katalogs (`success`, `message`, `data`) statt der des
+  Backends. Ein Client, der mehr als `data` liest, zieht beim Umzug mit.
+- Ein gestreamter Upload läuft unter dem Header-Timeout des Backend-Clients
+  (90 s ab Beginn des Sendens). Bisher lief er erst nach dem vollständigen
+  Lesen an.
