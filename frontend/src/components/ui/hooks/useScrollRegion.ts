@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type RefObject } from "react";
+import { useLayoutEffect, useState, type RefObject } from "react";
 
 /**
  * Whether an element scrolls its content (#7112). A scrolling area without
@@ -15,10 +15,16 @@ export function useScrollRegion(
   ref: RefObject<HTMLElement | null>,
   active = true,
 ): boolean {
-  const [scrolls, setScrolls] = useState(false);
-  useEffect(() => {
+  // Der erste sichtbare Render muss schon tastaturerreichbar sein. Sonst kann
+  // axe den Bereich zwischen dem Öffnen des Dialogs und der ersten Messung
+  // als nicht erreichbaren Scrollbereich finden.
+  const [scrolls, setScrolls] = useState(active);
+  useLayoutEffect(() => {
     const element = ref.current;
-    if (!active || !element || typeof ResizeObserver === "undefined") return;
+    if (!active || !element || typeof ResizeObserver === "undefined") {
+      if (!active) setScrolls(false);
+      return;
+    }
     // With a control inside, the keyboard already reaches the area: no
     // extra tab stop then.
     const measure = () =>
