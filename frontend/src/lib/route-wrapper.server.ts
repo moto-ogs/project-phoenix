@@ -57,6 +57,7 @@ export const catalogProxy = (
  * The staff portal's proxy for a route file below `/api/<head…>` that Next
  * would give another file: the file's catch-all `path` is the tail after the
  * head, so the head goes in front again before the proxy matches it.
+ * `publicRoutes` are served without a session, as in the catch-all.
  */
 export function catalogProxyUnder(
   head: HandOffHead,

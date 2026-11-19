@@ -293,9 +293,11 @@ function secureRewrite(request: NextRequest, url: URL): NextResponse {
  * portal host, so a tenant route must not run there. */
 interface PortalHostRules {
   /** BFF routes the host serves: a string ending in "/" is a prefix, any
-   * other string an exact path. Every other /api/ path answers 404. The
-   * portal's own prefix also carries its client log route (`portalLogPath`). */
-  readonly api: readonly (string | RegExp)[];
+   * other string an exact path, `{ get }` a path served only to a GET (its
+   * other methods are another portal's session routes). Every other /api/
+   * path answers 404. The portal's own prefix also carries its client log
+   * route (`portalLogPath`). */
+  readonly api: readonly (string | RegExp | { readonly get: RegExp })[];
   /** Parent-facing: the request may render in the parent's language. */
   readonly localized: boolean;
   /** Serves the public /help pages. */
@@ -315,6 +317,9 @@ interface PortalHost extends PortalHostRules {
   readonly pages: readonly string[];
 }
 
+/** The staff invitation's link, `GET /auth/invitations/{token}` (#2352). */
+const STAFF_INVITATION_LINK = { get: /^\/api\/auth\/invitations\/[^/]+$/ };
+
 const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
   operator: {
     api: ["/api/operator/"],
@@ -330,19 +335,27 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       "/api/public/",
       "/api/tenant/resolve",
       // The staff invitation's school picker (#7369); attaches no session.
-      "/api/tenant/list",
-      "/api/invitations/validate",
+      "/api/auth/tenants",
+      // The invitation link through the staff proxy's public route (#2352);
+      // the path's other methods are staff session routes.
+      STAFF_INVITATION_LINK,
       "/api/invitations/accept",
-      "/api/guardian-invitations/",
+      "/api/auth/guardian-invitations/",
       "/api/holiday-registrations/",
       // The holiday link and its summary through the Träger proxy's public
       // routes (#2352); every other /api/traeger/ path stays off this host.
       "/api/traeger/holiday-registrations/",
       "/api/traeger/holiday-quotes/",
-      "/api/holiday-parent-setups/",
+      "/api/auth/holiday-parent-setups/",
       "/api/enrollment/requests/",
       /^\/api\/enrollment\/[^/]+\/uploads$/,
       "/api/demo/access/",
+      // Temporary (#2352): the paths of the route files an older bundle
+      // still calls; remove after the next production deploy.
+      "/api/tenant/list",
+      "/api/invitations/validate",
+      "/api/guardian-invitations/",
+      "/api/holiday-parent-setups/",
     ],
     localized: true,
     help: true,
@@ -350,9 +363,13 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
   school: {
     api: [
       "/api/school/",
-      "/api/invitations/validate",
+      STAFF_INVITATION_LINK,
       "/api/invitations/accept",
       // The invitation's school picker (#7369); attaches no session.
+      "/api/auth/tenants",
+      // Temporary (#2352): the paths of the route files an older bundle
+      // still calls; remove after the next production deploy.
+      "/api/invitations/validate",
       "/api/tenant/list",
     ],
     localized: false,
@@ -394,9 +411,16 @@ function isUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-function servesApi(host: PortalHost, pathname: string): boolean {
+function servesApi(
+  host: PortalHost,
+  pathname: string,
+  method: string,
+): boolean {
   return host.api.some((rule) => {
-    if (typeof rule !== "string") return rule.test(pathname);
+    if (rule instanceof RegExp) return rule.test(pathname);
+    if (typeof rule !== "string") {
+      return (method === "GET" || method === "HEAD") && rule.get.test(pathname);
+    }
     return rule.endsWith("/") ? pathname.startsWith(rule) : pathname === rule;
   });
 }
@@ -433,7 +457,9 @@ function handlePortalHost(
   if (host.help && isUnder(pathname, "/help")) return secureNext(request);
   if (isUnder(pathname, "/monitoring")) return secureNext(request);
   if (pathname.startsWith("/api/")) {
-    return servesApi(host, pathname) ? secureNext(request) : notFound();
+    return servesApi(host, pathname, request.method)
+      ? secureNext(request)
+      : notFound();
   }
 
   const rewrite = host.localized ? rewriteLocalized : secureRewrite;

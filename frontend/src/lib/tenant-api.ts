@@ -460,7 +460,7 @@ export async function listAllTenants(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const response = await fetch("/api/tenant/list");
+      const response = await fetch("/api/auth/tenants");
       if (!response.ok) {
         lastError = new Error(`HTTP ${response.status}`);
         if (attempt < maxAttempts) {

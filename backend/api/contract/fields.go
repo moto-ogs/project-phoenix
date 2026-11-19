@@ -122,6 +122,14 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	case errors.Is(err, errBareInt64):
 		err = b.numericID(&schema, declaring, sf.Name, slices.Contains(options, "string"), at)
 	}
+	if err == nil && format == "legacy-id" {
+		// During an ID migration, Go writes strings but the decoder still
+		// accepts the previous release's numeric answer (ADR 0270).
+		if request || schema.Kind != KindID {
+			return Field{}, fmt.Errorf("%s: the tag contract:%q needs an ID response field", at, format)
+		}
+		schema.Kind, format = KindLegacyID, ""
+	}
 	if err == nil {
 		err = setFormat(&schema, format, at)
 	}

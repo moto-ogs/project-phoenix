@@ -1582,7 +1582,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
 				"data": map[string]any{
-					"account_id": idCounter,
+					"account_id": fmt.Sprintf("%d", idCounter),
 					"email":      "parent@example.test",
 				},
 			})
