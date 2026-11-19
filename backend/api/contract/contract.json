@@ -12895,6 +12895,7 @@
         "kind": "ref",
         "ref": "studentExportRequest"
       },
+      "max_body_bytes": 1048576,
       "file": true
     },
     {

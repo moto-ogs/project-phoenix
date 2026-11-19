@@ -201,3 +201,20 @@ describe("message attachment upload over the limit", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });
+
+// The export's filter body stays bounded like the former route file's (1 MiB).
+describe("POST /api/students/export", () => {
+  it("refuses a body over 1 MiB before the backend", async () => {
+    const { POST } = await import("./students/export/route");
+    const response = await POST(
+      new NextRequest("http://localhost:3000/api/students/export", {
+        method: "POST",
+        body: JSON.stringify({ title: "x".repeat(1024 * 1024) }),
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    expect(response.status).toBe(413);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});

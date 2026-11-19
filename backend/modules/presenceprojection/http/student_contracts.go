@@ -46,7 +46,9 @@ func StudentRouteContracts() []common.RouteContract {
 				{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
 			},
 		},
-		{Method: "POST", Pattern: "/export", Portals: tenant, Request: studentExportRequest{}, File: true},
+		// The filter and column choice of the export, bounded like the
+		// former route file's body (1 MiB).
+		{Method: "POST", Pattern: "/export", Portals: tenant, Request: studentExportRequest{}, MaxBodyBytes: 1 << 20, File: true},
 		{
 			Method: "GET", Pattern: "/day-log", Portals: tenant,
 			Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID}},

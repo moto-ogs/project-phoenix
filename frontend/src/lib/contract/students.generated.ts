@@ -3879,6 +3879,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/students/export",
     portals: ["tenant"],
+    maxBodyBytes: 1048576,
     request: requestBody<studentExportRequest>(),
     response: fileAnswer,
   },
