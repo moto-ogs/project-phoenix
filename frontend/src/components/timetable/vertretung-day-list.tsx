@@ -244,6 +244,14 @@ export function classifyInstances(
 }
 
 /**
+ * Schlüssel, über den der Fokus den Zeilenknopf nach dem Speichern
+ * wiederfindet (`data-focus-return`, #7502).
+ */
+export function vertretungRowFocusKey(instanceId: string): string {
+  return `vertretung-row-${instanceId}`;
+}
+
+/**
  * Besetzung einer Zeile, wie Liste und Raster sie zeigen: „da von gebraucht“.
  * Eine offene Lücke hat zwei Ursachen. Fehlt eine geplante Person, lässt sie
  * sich hier besetzen (`canFill`). Ist niemand oder für einen Dienst zu wenig
@@ -613,7 +621,7 @@ function VertretungDayListRow({
           // Nach dem Speichern wandert die Zeile oft in eine andere Gruppe
           // und wird neu gebaut; der Fokus findet sie über diesen Schlüssel
           // wieder (#7502).
-          data-focus-return={`vertretung-row-${instance.id}`}
+          data-focus-return={vertretungRowFocusKey(instance.id)}
           className="shrink-0"
           onClick={() => onEdit(instance.id)}
         >

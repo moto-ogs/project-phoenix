@@ -30,6 +30,7 @@ import { ListGroupHeader } from "~/components/ui/list-group-header";
 import {
   classifyInstances,
   VertretungRowList,
+  vertretungRowFocusKey,
   type ClassifiedRow,
   type VertretungDayListMode,
 } from "~/components/timetable/vertretung-day-list";
@@ -275,6 +276,16 @@ export function VertretungWeekList({
                         collapsible={{
                           expanded: settledExpanded,
                           onToggle: () => toggleSettled(iso),
+                          // Eine besetzte Lücke wandert hier hinein und ist
+                          // eingeklappt nicht zu sehen: der Gruppenname
+                          // nimmt dann ihren Fokus (#7502).
+                          focusReturn: settledExpanded
+                            ? undefined
+                            : settled
+                                .map((row) =>
+                                  vertretungRowFocusKey(row.instance.id),
+                                )
+                                .join(" "),
                         }}
                         className={LIST_INSET}
                       />

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Drawer as DrawerPrimitive } from "vaul";
 import {
   act,
   fireEvent,
@@ -19,7 +20,14 @@ import {
 // Real Vaul and Radix focus scope (#7502): `slide-over.test.tsx` mocks Vaul,
 // and focus on open and close lives inside Vaul's Radix dialog.
 
-function Harness({ children }: { readonly children?: ReactNode }) {
+function Harness({
+  children,
+  collapsedAfterSave = false,
+}: {
+  readonly children?: ReactNode;
+  /** The saved row lands in a collapsed group: only its name is rendered. */
+  readonly collapsedAfterSave?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   // A save moves the row to another group: React builds a new trigger.
   const [saved, setSaved] = useState(false);
@@ -35,7 +43,14 @@ function Harness({ children }: { readonly children?: ReactNode }) {
   return (
     <>
       <section>{saved ? null : trigger}</section>
-      <section>{saved ? trigger : null}</section>
+      <section>
+        {saved && collapsedAfterSave ? (
+          <button type="button" data-focus-return="row-0 row-1">
+            Schon geregelt
+          </button>
+        ) : null}
+        {saved && !collapsedAfterSave ? trigger : null}
+      </section>
       <button type="button">Weiter auf der Seite</button>
       <SlideOver open={open} onOpenChange={setOpen}>
         <SlideOverContent aria-describedby={undefined}>
@@ -79,6 +94,72 @@ function MountedWhileOpen() {
   );
 }
 
+// A panel that opens a second one and steps aside for it, as „Neues Kind“
+// does for „Neu anlegen“: closing the second resumes the first.
+function Suspending() {
+  const [step, setStep] = useState<"closed" | "parent" | "child">("closed");
+  return (
+    <>
+      <button type="button" onClick={() => setStep("parent")}>
+        Öffnen
+      </button>
+      <SlideOver
+        open={step === "parent"}
+        onOpenChange={(next) => setStep(next ? "parent" : "closed")}
+      >
+        <SlideOverContent aria-describedby={undefined}>
+          <SlideOverHeader>
+            <SlideOverTitle>Neues Kind</SlideOverTitle>
+          </SlideOverHeader>
+          <SlideOverBody>
+            <button type="button" onClick={() => setStep("child")}>
+              Neu anlegen
+            </button>
+          </SlideOverBody>
+        </SlideOverContent>
+      </SlideOver>
+      <SlideOver
+        open={step === "child"}
+        onOpenChange={(next) => setStep(next ? "child" : "parent")}
+      >
+        <SlideOverContent aria-describedby={undefined}>
+          <SlideOverHeader>
+            <SlideOverTitle>Neue Person</SlideOverTitle>
+          </SlideOverHeader>
+          <SlideOverBody>
+            <button type="button" onClick={() => setStep("parent")}>
+              Abbrechen
+            </button>
+          </SlideOverBody>
+        </SlideOverContent>
+      </SlideOver>
+    </>
+  );
+}
+
+function WithRadixTrigger() {
+  return (
+    <SlideOver>
+      <DrawerPrimitive.Trigger>Öffnen</DrawerPrimitive.Trigger>
+      <SlideOverContent aria-describedby={undefined}>
+        <SlideOverHeader>
+          <SlideOverTitle>Vertretung</SlideOverTitle>
+        </SlideOverHeader>
+        <SlideOverBody>
+          <input aria-label="Notiz" />
+        </SlideOverBody>
+      </SlideOverContent>
+    </SlideOver>
+  );
+}
+
+function clickFocused(name: string) {
+  const button = screen.getByRole("button", { name });
+  button.focus();
+  fireEvent.click(button);
+  return button;
+}
+
 function openFromTrigger() {
   const trigger = screen.getByRole("button", { name: "Öffnen" });
   trigger.focus();
@@ -89,8 +170,16 @@ function openFromTrigger() {
 // With Vaul's slide-out animation in the document, Radix keeps the closed
 // panel mounted until it ends; jsdom runs no animation, so the test ends it.
 // Without that style (another test file reset the head) it unmounts at once.
-async function finishClosing() {
-  const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+// A panel under another one is hidden from the accessibility tree, so the
+// role query cannot name it.
+function findDialog(name?: string): HTMLElement | undefined {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>('[role="dialog"]'),
+  ).find((dialog) => name === undefined || dialog.textContent.includes(name));
+}
+
+async function finishClosing(name?: string) {
+  const dialog = findDialog(name);
   if (dialog?.isConnected) {
     await waitFor(() => expect(dialog).toHaveAttribute("data-state", "closed"));
     const end = new Event("animationend");
@@ -101,14 +190,13 @@ async function finishClosing() {
       dialog.dispatchEvent(end);
     });
   }
-  await waitFor(() =>
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-  );
+  await waitFor(() => expect(findDialog(name)).toBeUndefined());
 }
 
 describe("SlideOver focus (#7502)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("moves focus onto the panel itself, the named dialog, on open", async () => {
@@ -179,6 +267,138 @@ describe("SlideOver focus (#7502)", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Öffnen" })).toHaveFocus(),
     );
+  });
+
+  it("moves Shift+Tab from the panel to its last control", async () => {
+    render(<Harness />);
+    openFromTrigger();
+    const dialog = await screen.findByRole("dialog", { name: "Vertretung" });
+    await waitFor(() => expect(dialog).toHaveFocus());
+
+    // The panel is no tab stop: without help the focus trap pulls a reverse
+    // Tab straight back onto it.
+    const notPrevented = fireEvent.keyDown(dialog, {
+      key: "Tab",
+      shiftKey: true,
+    });
+
+    expect(notPrevented).toBe(false);
+    expect(screen.getByRole("button", { name: "Speichern" })).toHaveFocus();
+  });
+
+  it("leaves Shift+Tab from a control inside to the focus loop", async () => {
+    render(<Harness />);
+    openFromTrigger();
+    const dialog = await screen.findByRole("dialog", { name: "Vertretung" });
+    await waitFor(() => expect(dialog).toHaveFocus());
+    const note = screen.getByRole("textbox", { name: "Notiz" });
+    note.focus();
+
+    fireEvent.keyDown(note, { key: "Tab", shiftKey: true });
+
+    expect(note).toHaveFocus();
+  });
+
+  it("hands focus to the control that hides the re-rendered trigger", async () => {
+    render(<Harness collapsedAfterSave />);
+    openFromTrigger();
+    const dialog = await screen.findByRole("dialog", { name: "Vertretung" });
+    await waitFor(() => expect(dialog).toHaveFocus());
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await finishClosing();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Schon geregelt" }),
+      ).toHaveFocus(),
+    );
+  });
+
+  it.each([
+    ["with the keyboard, into view", true, 1],
+    ["with a pointer, without moving the page", false, 0],
+  ])(
+    "returns focus to a moved trigger %s",
+    async (_case, focusVisible, scrolls) => {
+      const matches = HTMLElement.prototype.matches;
+      vi.spyOn(HTMLElement.prototype, "matches").mockImplementation(function (
+        this: HTMLElement,
+        selector: string,
+      ) {
+        return selector === ":focus-visible"
+          ? focusVisible
+          : matches.call(this, selector);
+      });
+      const scrollIntoView = vi.fn();
+      HTMLElement.prototype.scrollIntoView = scrollIntoView;
+      render(<Harness />);
+      openFromTrigger();
+      const dialog = await screen.findByRole("dialog", { name: "Vertretung" });
+      await waitFor(() => expect(dialog).toHaveFocus());
+
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      fireEvent.keyDown(dialog, { key: "Escape" });
+      await finishClosing();
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Öffnen" })).toHaveFocus(),
+      );
+      expect(scrollIntoView).toHaveBeenCalledTimes(scrolls);
+    },
+  );
+
+  it.each([
+    // The first panel is gone when the second closes: resuming mounts it
+    // anew and reads the focus inside the second panel, not the opener.
+    ["after it slid out", true],
+    // Still sliding out: it resumes in place.
+    ["while it slides out", false],
+  ])(
+    "keeps the page opener of a panel that a second one suspended, resumed %s",
+    async (_case, slidOut) => {
+      render(<Suspending />);
+      const opener = clickFocused("Öffnen");
+      const parent = await screen.findByRole("dialog", { name: "Neues Kind" });
+      await waitFor(() => expect(parent).toHaveFocus());
+
+      clickFocused("Neu anlegen");
+      const child = await screen.findByRole("dialog", { name: "Neue Person" });
+      await waitFor(() => expect(child).toHaveFocus());
+      if (slidOut) await finishClosing("Neues Kind");
+
+      clickFocused("Abbrechen");
+      await finishClosing("Neue Person");
+      const resumed = await screen.findByRole("dialog", { name: "Neues Kind" });
+      await waitFor(() =>
+        expect(
+          slidOut
+            ? resumed
+            : screen.getByRole("button", { name: "Neu anlegen" }),
+        ).toHaveFocus(),
+      );
+
+      fireEvent.keyDown(resumed, { key: "Escape" });
+      await finishClosing("Neues Kind");
+
+      await waitFor(() => expect(opener).toHaveFocus());
+    },
+  );
+
+  it("leaves the return to a Radix trigger that opened without focus", async () => {
+    render(<WithRadixTrigger />);
+    // A pointer click that gives the button no focus (Safari, Firefox on
+    // macOS): the kit has no opener to return to, Radix knows its trigger.
+    const trigger = screen.getByRole("button", { name: "Öffnen" });
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole("dialog", { name: "Vertretung" });
+    await waitFor(() => expect(dialog).toHaveFocus());
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await finishClosing();
+
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it("leaves focus where it went after close instead of pulling it back", async () => {

@@ -210,6 +210,27 @@ describe("VertretungWeekList", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("lässt den eingeklappten Gruppennamen für seine Zeilen den Fokus nehmen (#7502)", () => {
+    // Nach dem Besetzen wandert die Zeile in die eingeklappte Gruppe und ist
+    // nicht mehr gerendert: der Fokus findet stattdessen den Gruppennamen.
+    renderWeekList();
+    const settled = within(daySection(THU)).getByRole("button", {
+      name: "Schon geregelt",
+    });
+
+    expect(settled.dataset.focusReturn?.split(" ")).toEqual([
+      "vertretung-row-30",
+    ]);
+
+    // Aufgeklappt trägt die Zeile ihren Schlüssel selbst, sonst gäbe es ihn
+    // zweimal.
+    fireEvent.click(settled);
+    expect(settled).not.toHaveAttribute("data-focus-return");
+    expect(
+      within(daySection(THU)).getByRole("button", { name: /Fußball/ }),
+    ).toHaveAttribute("data-focus-return", "vertretung-row-30");
+  });
+
   it("zeigt im Modus 'Ganze Woche' auch ungestörte Termine", () => {
     renderWeekList({ mode: "ganzer-tag" });
 
