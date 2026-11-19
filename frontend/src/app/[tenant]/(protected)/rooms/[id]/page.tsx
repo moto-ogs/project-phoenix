@@ -70,7 +70,7 @@ import { RoomDetailLoadingPage } from "./page-skeleton";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
 const ROOM_INFO =
-  "Hier siehst du, ob dieser Raum belegt ist und welche Kinder gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.";
+  "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.";
 // Erfasst die Schule nur, ob ein Kind da ist, gibt es keine Belegung.
 const ROOM_RECORD_INFO =
   "Hier stehen die Angaben zu diesem Raum. Deine Schule erfasst nicht, welche Kinder in welchem Raum sind.";
@@ -169,6 +169,7 @@ function RoomDetailPageContent() {
   // Im binären Modus führt die Schule keine Belegung; die Raumseite ist dann
   // der reine Datensatz.
   const hasOccupancy = presenceMode !== "binary";
+  const roomInfo = hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO;
   // Ein offener Raum (#3065) hat seine gemeinsame Aufsichtsansicht. Sie ist
   // seit #4372 nur noch über „Räume“ erreichbar, also über diese Seite.
   // Dieselbe Regel wie der Zugang zur Aufsichtsseite.
@@ -346,7 +347,7 @@ function RoomDetailPageContent() {
         referrer={referrer}
         backLabel={backLabel}
         preview={preview}
-        info={hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO}
+        info={roomInfo}
       />
     );
   }
@@ -355,7 +356,7 @@ function RoomDetailPageContent() {
     return (
       <TenantPage
         title="Raum"
-        info={hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO}
+        info={roomInfo}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -423,7 +424,7 @@ function RoomDetailPageContent() {
   return (
     <TenantPage
       title={room.name}
-      info={hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO}
+      info={roomInfo}
       stats={statusLine ?? undefined}
       back
       backHref={referrer}

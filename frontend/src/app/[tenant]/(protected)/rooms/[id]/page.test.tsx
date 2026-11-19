@@ -526,7 +526,7 @@ describe("RoomDetailPage", () => {
     );
     expect(
       screen.getByText(
-        "Hier siehst du, ob dieser Raum belegt ist und welche Kinder gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
+        "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
       ),
     ).toBeInTheDocument();
     unmount();

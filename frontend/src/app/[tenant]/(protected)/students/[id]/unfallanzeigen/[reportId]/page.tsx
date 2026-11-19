@@ -44,7 +44,7 @@ import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 
 const ACCIDENT_REPORT_INFO =
-  "Hier steht die Unfallanzeige zu einem Unfall dieses Kindes. Ist sie unterschrieben, gibst du das PDF selbst an die Unfallkasse weiter.";
+  "Hier steht die Unfallanzeige zu einem Unfall dieses Kindes. Unterschrieben wird sie unter „Unterschrift der Leitung“. Danach gibst du das PDF selbst an die Unfallkasse weiter.";
 
 // Unfallanzeige (#4771): one accident report of a child. The page shows what
 // was recorded, lets the leadership sign it (drawn signature or the signed

@@ -11,7 +11,7 @@ import { RoomsGridSkeleton } from "../page-skeleton";
 import { transitConcept } from "~/lib/concepts/transit";
 
 const TRANSIT_INFO =
-  "Hier stehen Kinder, die da sind, aber in keinem Raum. Wähle Kinder aus und dann den „Zielraum“. Mit „In Raum setzen“ sind sie dort.";
+  "Hier stehen Kinder, die da sind, aber in keinem Raum. Darfst du sie zuweisen, wählst du sie aus und setzt sie in einen Raum.";
 const TRANSIT_BINARY_MODE_INFO =
   "Hier wären Kinder, die da sind, aber in keinem Raum. Deine Schule nutzt das zurzeit nicht.";
 

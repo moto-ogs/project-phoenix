@@ -48,10 +48,10 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
 
 const SUBSTITUTIONS_INFO =
-  "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt. Fehlt in einer Aufsicht jemand, wähle dort „Betreuer hinzufügen“. Mit „Gruppe übergeben“ gibst du eine Gruppe an eine andere Person.";
+  "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt. Unter „Laufende Betreuungen“ holst du mit „Betreuer hinzufügen“ jemanden dazu. Mit „Gruppe übergeben“ gibst du eine Gruppe an eine andere Person.";
 // Ohne feste Gruppen gibt es keine Gruppenübergabe.
 const SUBSTITUTIONS_OPEN_CARE_INFO =
-  "Hier siehst du, wer heute eine Aufsicht oder einen Termin übernimmt. Fehlt in einer Aufsicht jemand, wähle dort „Betreuer hinzufügen“.";
+  "Hier siehst du, wer heute eine Aufsicht oder einen Termin übernimmt. Unter „Laufende Betreuungen“ holst du mit „Betreuer hinzufügen“ jemanden dazu.";
 
 const logger = createLogger({ component: "SubstitutionsPage" });
 
@@ -1109,10 +1109,11 @@ function SubstitutionPageContent() {
 }
 
 function LoadingFallback() {
+  const openCare = useOpenCareGroupMode();
   return (
     <TenantPage
       title="Übergaben"
-      info={SUBSTITUTIONS_OPEN_CARE_INFO}
+      info={openCare ? SUBSTITUTIONS_OPEN_CARE_INFO : SUBSTITUTIONS_INFO}
       // Das Gerüst trägt die vorlesbare Ankündigung selbst — ein zweites
       // role="status" darunter wäre eine doppelte Meldung.
       loading={<ListSkeleton rows={6} />}

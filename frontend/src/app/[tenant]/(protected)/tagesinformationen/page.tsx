@@ -430,6 +430,7 @@ export default function TagesinformationenPage() {
       fallback={
         <TenantPage
           title="Hinweise der Leitung"
+          // Vor dem Laden ist die Rolle offen; den Lesetext sehen alle.
           info={NOTICES_INFO}
           statsLoading
           loading

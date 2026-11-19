@@ -15,7 +15,7 @@ import { emergencyConcept } from "~/lib/concepts/emergency";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
 const EMERGENCY_INFO =
-  "Hier erstellst du eine Liste aller Kinder, die gerade anwesend sind. Du brauchst sie zum Beispiel bei einem Feueralarm am Sammelplatz. Erstelle im Notfall immer eine neue Liste.";
+  "Hier druckst du die Liste der Kinder, die gerade anwesend sind. Du brauchst sie zum Beispiel bei einem Feueralarm am Sammelplatz.";
 
 export default function EmergencyPage() {
   const { status } = useSession({ required: true });

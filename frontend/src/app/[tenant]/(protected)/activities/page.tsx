@@ -43,7 +43,7 @@ import { foldForSearch } from "~/lib/search-fold";
 import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 const ACTIVITIES_INFO =
-  "Hier stehen die Aktivitäten, die am Tablet zur Wahl stehen. Lege eine neue mit dem Plus an. Eine eigene Aktivität öffnest du, um sie zu ändern.";
+  "Hier stehen die Aktivitäten, die am Tablet zur Wahl stehen. Eine neue erstellst du mit „Aktivität erstellen“, am Handy mit dem Plus. Eine eigene Aktivität öffnest du, um sie zu ändern.";
 const ACTIVITIES_OFF_INFO =
   "Hier wären die Aktivitäten für das Tablet. Deine Schule nutzt sie zurzeit nicht.";
 

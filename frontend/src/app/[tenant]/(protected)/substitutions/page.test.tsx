@@ -298,7 +298,7 @@ describe("SubstitutionPage", () => {
     );
     expect(
       screen.getByText(
-        "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt. Fehlt in einer Aufsicht jemand, wähle dort „Betreuer hinzufügen“. Mit „Gruppe übergeben“ gibst du eine Gruppe an eine andere Person.",
+        "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt. Unter „Laufende Betreuungen“ holst du mit „Betreuer hinzufügen“ jemanden dazu. Mit „Gruppe übergeben“ gibst du eine Gruppe an eine andere Person.",
       ),
     ).toBeInTheDocument();
     unmount();
@@ -310,7 +310,7 @@ describe("SubstitutionPage", () => {
     );
     expect(
       screen.getByText(
-        "Hier siehst du, wer heute eine Aufsicht oder einen Termin übernimmt. Fehlt in einer Aufsicht jemand, wähle dort „Betreuer hinzufügen“.",
+        "Hier siehst du, wer heute eine Aufsicht oder einen Termin übernimmt. Unter „Laufende Betreuungen“ holst du mit „Betreuer hinzufügen“ jemanden dazu.",
       ),
     ).toBeInTheDocument();
   });
