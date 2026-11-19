@@ -49,15 +49,6 @@ describe("mapRoomResponse", () => {
     expect(result.updatedAt).toBe("2024-01-15T12:00:00Z");
   });
 
-  it("reads the numeric id the temporary route file still hands on", () => {
-    const result = mapRoomResponse({
-      ...sampleBackendRoom,
-      id: 7 as unknown as string,
-    });
-
-    expect(result.id).toBe("7");
-  });
-
   it("keeps the release, system and archive flags", () => {
     const result = mapRoomResponse({
       ...sampleBackendRoom,

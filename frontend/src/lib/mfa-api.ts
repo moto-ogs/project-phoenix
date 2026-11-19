@@ -5,7 +5,6 @@ import {
   type EnvelopableAuthStep,
   type PortalKey,
 } from "./portal-paths";
-import { dataOrBare } from "./envelope-or-bare";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 export type LoginScope = PortalKey;
@@ -237,8 +236,7 @@ export interface TrustedDeviceDTO {
 
 /**
  * The remembered devices of a portal. The parents portal reads them under
- * the backend's path through its catalog proxy (#2352); its old path under
- * `auth` stays one release for older app bundles.
+ * the backend's path through its catalog proxy (#2352).
  */
 function trustedDevicesUrl(scope: LoginScope, suffix = ""): string {
   if (scope === "parent") {
@@ -250,13 +248,13 @@ function trustedDevicesUrl(scope: LoginScope, suffix = ""): string {
 export async function listTrustedDevices(
   scope: LoginScope,
 ): Promise<TrustedDeviceDTO[]> {
-  // The catalog proxies answer in the envelope, the temporary route files
-  // bare (#2352).
-  return dataOrBare<TrustedDeviceDTO[]>(
-    await postJson<unknown>(trustedDevicesUrl(scope), undefined, {
-      method: "GET",
-    }),
+  // The catalog proxies answer in the envelope (#2352).
+  const { data } = await postJson<{ data: TrustedDeviceDTO[] | null }>(
+    trustedDevicesUrl(scope),
+    undefined,
+    { method: "GET" },
   );
+  return data ?? [];
 }
 
 export async function revokeTrustedDevice(
@@ -296,13 +294,13 @@ export async function adminResetMFA(
 export async function adminGetMFAState(
   accountId: string,
 ): Promise<MFAAdminState> {
-  // Bare from the temporary route file, in the envelope through the staff
-  // portal's catalog proxy (#2352).
-  return dataOrBare<MFAAdminState>(
-    await postJson<unknown>(adminMFAUrl(accountId, ""), undefined, {
-      method: "GET",
-    }),
+  // In the envelope through the staff portal's catalog proxy (#2352).
+  const { data } = await postJson<{ data: MFAAdminState }>(
+    adminMFAUrl(accountId, ""),
+    undefined,
+    { method: "GET" },
   );
+  return data;
 }
 
 export async function adminSetMFAOverride(

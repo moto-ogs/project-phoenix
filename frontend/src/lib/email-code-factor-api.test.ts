@@ -8,14 +8,14 @@ describe("emailCodeFactorApi", () => {
     global.fetch = originalFetch;
   });
 
-  it("reads the state and the start bare and in the catalog proxy's envelope (#2352)", async () => {
+  it("reads the state and the start in the catalog proxy's envelope (#2352)", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
         Response.json({
-          enabled: false,
-          available: false,
-          masked_email: "e***@x.de",
+          success: true,
+          message: "Success",
+          data: { enabled: false, available: false, masked_email: "e***@x.de" },
         }),
       )
       .mockResolvedValueOnce(
@@ -25,7 +25,13 @@ describe("emailCodeFactorApi", () => {
           data: { enabled: true, masked_email: "e***@x.de" },
         }),
       )
-      .mockResolvedValueOnce(Response.json({ challenge_token: "bare" }))
+      .mockResolvedValueOnce(
+        Response.json({
+          success: true,
+          message: "Success",
+          data: { challenge_token: "first" },
+        }),
+      )
       .mockResolvedValueOnce(
         Response.json({
           success: true,
@@ -48,7 +54,7 @@ describe("emailCodeFactorApi", () => {
       maskedEmail: "e***@x.de",
     });
     await expect(api.start()).resolves.toEqual({
-      challengeToken: "bare",
+      challengeToken: "first",
       maskedEmail: "",
     });
     await expect(api.start()).resolves.toEqual({

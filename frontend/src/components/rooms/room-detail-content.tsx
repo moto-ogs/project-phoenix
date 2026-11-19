@@ -45,7 +45,6 @@ import {
   formatFloor,
   mapRoomResponse,
   ROOM_HISTORY_DISABLED_CODE,
-  ROOM_HISTORY_STATUS_FEATURE_DISABLED,
   type Room,
 } from "~/lib/room-helpers";
 import { createLogger } from "~/lib/logger";
@@ -86,22 +85,16 @@ function mapRoomHistoryEntry(entry: RoomSessionEntry): RoomHistoryEntry {
   };
 }
 
-/**
- * The history answer: the contract's envelope through the catalog proxy, or,
- * while the temporary route file of #7563 still answers, its envelope with
- * `status: "feature_disabled"` for a school without the attendance log.
- */
+/** The history answer: the contract's envelope through the catalog proxy. */
 interface RoomHistoryBody {
-  status?: string;
   data?: RoomSessionEntry[] | null;
 }
 
-/** A switched-off history arrives as the sentinel or as its 403 code. */
-function isRoomHistoryDisabled(
-  failure: unknown,
-  body?: RoomHistoryBody | null,
-): boolean {
-  if (body?.status === ROOM_HISTORY_STATUS_FEATURE_DISABLED) return true;
+/**
+ * A switched-off history (gdpr.attendance_log_enabled, #1425) arrives as the
+ * backend's 403 with its code (#7563).
+ */
+function isRoomHistoryDisabled(failure: unknown): boolean {
   return (
     typeof failure === "object" &&
     failure !== null &&
@@ -186,7 +179,6 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
       let historyFailure: unknown = null;
       if (historyResponse.ok) {
         const body = (await historyResponse.json()) as RoomHistoryBody | null;
-        historyDisabled = isRoomHistoryDisabled(null, body);
         history = (body?.data ?? []).map(mapRoomHistoryEntry);
       } else {
         const failure = await apiErrorFromResponse(

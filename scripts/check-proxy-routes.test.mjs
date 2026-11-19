@@ -30,3 +30,8 @@ test("the fragments of the capabilities form one register", () => {
     "api/b": ["GET tenant /api/b"],
   });
 });
+
+test("an empty register adds nothing, and any row on it is new", () => {
+  assert.deepEqual(addedPassThroughs(base, {}), []);
+  assert.deepEqual(addedPassThroughs({}, { "api/new": ["GET tenant /api/new"] }), ["api/new: GET tenant /api/new"]);
+});
