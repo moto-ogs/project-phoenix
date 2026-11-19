@@ -46,7 +46,12 @@ export default defineConfig({
     url: `http://localhost:${frontendPort}/help/nfc/erste-schritte`,
     // Locally reuse a server you already have running; in CI always build fresh.
     reuseExistingServer: !process.env.CI,
-    // build + start is far slower to become ready than `next dev`.
-    timeout: 300_000,
+    // build + start is far slower to become ready than `next dev`. On the
+    // deploy runner it took 30–266 s across 15 green runs and once passed
+    // 300 s (Build 7c68f66), so 600 s leaves room inside the job's 20 min.
+    timeout: 600_000,
+    // Show the build output in the CI log, so a slow or failing build is
+    // visible instead of a bare webServer timeout.
+    stdout: "pipe",
   },
 });
