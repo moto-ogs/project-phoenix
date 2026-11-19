@@ -20,6 +20,7 @@ import {
   type NotificationPreferenceType,
 } from "~/lib/notification-preferences-api";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
@@ -148,6 +149,23 @@ export function NotificationSetupDialog({
     isInstallationCompleted,
     () => false,
   );
+
+  // Einstieg messen (#7556): nur der Dialog, der sich von selbst öffnet, ist
+  // eine Fläche des Einstiegs. Den Neustart aus der Einstellungskarte hat die
+  // Person selbst angefordert; er zählt nicht mit. Ohne Einwilligung und ohne
+  // Freigabe der Schule (Eltern: aller Schulen) sendet die Erfassung nichts.
+  const reportsSurface = restartToken === 0;
+  const shownReportedRef = useRef(false);
+  useEffect(() => {
+    if (!mode || !reportsSurface || shownReportedRef.current) return;
+    // Einmal je Öffnung: der Wechsel zwischen den Schritten (Installieren,
+    // Einschalten, abgelehnt) ist dieselbe Fläche.
+    shownReportedRef.current = true;
+    trackOnboardingSurface("shown", "notification_setup");
+  }, [mode, reportsSurface]);
+  const reportOutcome = (action: "accepted" | "dismissed") => {
+    if (reportsSurface) trackOnboardingSurface(action, "notification_setup");
+  };
 
   const close = useCallback(
     (mode: SetupMode | null) => {
@@ -279,12 +297,16 @@ export function NotificationSetupDialog({
     else writeDecision(storageKey, { done: true });
   }, [check, portal, preferences, preferencesError, storageKey]);
 
+  // „Später“: die Person schiebt die Einrichtung auf (Später erinnern, X,
+  // Hintergrund, Verstanden, Anleitung schließen).
   const remindLater = () => {
+    reportOutcome("dismissed");
     writeDecision(storageKey, { remindAfter: Date.now() + REMIND_LATER_MS });
     close(null);
   };
 
   const finishInstallGuide = () => {
+    reportOutcome("dismissed");
     writeDecision(storageKey, {
       remindAfter: Date.now() + INSTALL_GUIDE_REMIND_MS,
     });
@@ -330,6 +352,8 @@ export function NotificationSetupDialog({
         invalidate((key) => key === preferences),
       );
       await Promise.all([pushRequest, ...preferenceRequests]);
+      // „Fertig“: Benachrichtigungen sind auf diesem Gerät eingeschaltet.
+      reportOutcome("accepted");
       writeDecision(storageKey, { done: true });
       close(null);
     } catch (err) {

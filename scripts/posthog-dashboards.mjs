@@ -103,14 +103,26 @@ export function readBrowserEvents(
   return events;
 }
 
+/** The values of a `const NAME = [...] as const` list in analytics-policy.ts. */
+function readPolicyList(name, source) {
+  const body = new RegExp(`const ${name} = \\[([\\s\\S]*?)\\] as const;`).exec(source)?.[1];
+  const values = body ? [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, value]) => value) : [];
+  if (values.length === 0) throw new Error(`analytics-policy.ts has no ${name}`);
+  return values;
+}
+
 /** The allowed surfaces of the entry (ONBOARDING_SURFACES in analytics-policy.ts). */
 export function readOnboardingSurfaces(
   source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
 ) {
-  const body = /const ONBOARDING_SURFACES = \[([\s\S]*?)\] as const;/.exec(source)?.[1];
-  const surfaces = body ? [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, surface]) => surface) : [];
-  if (surfaces.length === 0) throw new Error('analytics-policy.ts has no ONBOARDING_SURFACES');
-  return surfaces;
+  return readPolicyList('ONBOARDING_SURFACES', source);
+}
+
+/** The allowed steps of the parents' first steps (ONBOARDING_CHECKLIST_STEPS in analytics-policy.ts). */
+export function readOnboardingChecklistSteps(
+  source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
+) {
+  return readPolicyList('ONBOARDING_CHECKLIST_STEPS', source);
 }
 
 // --- query builders ----------------------------------------------------------
@@ -405,6 +417,19 @@ export const ONBOARDING_SURFACE_LABELS = Object.freeze({
   samsung_hint: 'Samsung-Hinweis',
 });
 
+/**
+ * German names of the steps of the parents' first steps (#7557), one per value
+ * of ONBOARDING_CHECKLIST_STEPS in analytics-policy.ts (the test compares both).
+ * `messages_news` is „Nachrichten finden“ where the school sends no letters.
+ */
+export const PARENT_FIRST_STEP_LABELS = Object.freeze({
+  start: 'Startseite kennenlernen',
+  child_data: 'Angaben zum Kind ändern',
+  messages_news: 'Nachrichten und Elternbriefe finden',
+  install_app: 'moto als App hinzufügen',
+  notifications: 'Benachrichtigungen einschalten',
+});
+
 /** Area unmatched pages and events fall into; growing means FEATURES lacks an entry. */
 const OTHER_FEATURE = 'Sonstiges';
 
@@ -458,9 +483,13 @@ const quoted = (name) => `\`${name}\``;
 /** Browser events of the entry's self-opening surfaces (analytics-policy.ts). */
 const ONBOARDING_SURFACE_EVENTS = ['onboarding_surface_shown', 'onboarding_surface_accepted', 'onboarding_surface_dismissed'];
 
+/** Browser events of the parents' first steps (analytics-policy.ts, #7557). */
+const PARENT_CHECKLIST_EVENTS = ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed'];
+
 /** HogQL: the German name of an event's surface; an unknown value shows as itself. */
 const sqlArray = (values) => `[${values.map(sqlString).join(', ')}]`;
 const staffStepLabel = `transform(toString(properties.step), ${sqlArray(Object.keys(STAFF_FIRST_STEP_LABELS))}, ${sqlArray(Object.values(STAFF_FIRST_STEP_LABELS))}, toString(properties.step))`;
+const parentStepLabel = `transform(toString(properties.checklist_step), ${sqlArray(Object.keys(PARENT_FIRST_STEP_LABELS))}, ${sqlArray(Object.values(PARENT_FIRST_STEP_LABELS))}, toString(properties.checklist_step))`;
 const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlArray(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlArray(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
 
 /** HogQL: the product name of a school portal (`surface`). */
@@ -1232,6 +1261,51 @@ from (
 )
 group by Portal, Flaechen
 order by Portal, Flaechen`),
+        },
+        {
+          name: 'Einstieg: Erste Schritte der Eltern (nur mit Einwilligung)',
+          description: 'Nur mit Einwilligung, letzte 30 Tage, Eltern-App. Wie oft die Liste von selbst aufging, welche Schritte erledigt wurden und wie oft Eltern die Liste ausblendeten oder mit „Erste Schritte abschließen“ abschlossen; der Anteil bezieht sich auf „von selbst geöffnet“. Der Fortschritt liegt nur im Browser; ein neues Gerät beginnt von vorn. Die allererste Sitzung vor der Einwilligung fehlt immer.',
+          ...hogql('production', (where) => `
+select
+  multiIf(
+    event = 'onboarding_surface_shown', '1 Von selbst geöffnet',
+    event = 'onboarding_checklist_step_done', '2 Schritt erledigt',
+    event = 'onboarding_checklist_dismissed', '3 Ausgeblendet',
+    '4 Abgeschlossen') as Ereignis,
+  if(event = 'onboarding_checklist_step_done', ${parentStepLabel}, '–') as Schritt,
+  count() as Anzahl,
+  round(100 * count() / greatest(sum(countIf(event = 'onboarding_surface_shown')) over (), 1), 1) as ${quoted('Anteil an „von selbst geöffnet“ in Prozent')},
+  uniq(properties.$session_id) as Sitzungen
+from events
+where ${where}
+  and properties.surface = 'parents'
+  and (
+    (event = 'onboarding_surface_shown' and properties.onboarding_surface = 'parent_first_steps')
+    or (event in ${sqlList(PARENT_CHECKLIST_EVENTS)} and properties.checklist = 'parent_first_steps')
+  )
+  and timestamp > now() - interval 30 day
+group by Ereignis, Schritt
+order by Ereignis, Anzahl desc`),
+        },
+        {
+          name: 'Einstieg: Benachrichtigungs-Einrichtung je Portal (nur mit Einwilligung)',
+          description: 'Nur mit Einwilligung, letzte 30 Tage. Der Benachrichtigungs-Dialog, der sich nach dem Login von selbst öffnet, je Portal: wie oft er erschien, eingeschaltet wurde (fertig) und auf später geschoben (Später erinnern, Verstanden, Anleitung schließen, X). Ein Neustart aus den Einstellungen zählt nicht. Vorher-Wert für #7542.',
+          ...hogql('production', (where) => `
+select
+  ${portalLabel('properties.surface')} as Portal,
+  countIf(event = 'onboarding_surface_shown') as Angezeigt,
+  countIf(event = 'onboarding_surface_accepted') as Eingeschaltet,
+  countIf(event = 'onboarding_surface_dismissed') as ${quoted('Auf später')},
+  round(100 * countIf(event = 'onboarding_surface_accepted') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Eingeschaltet in Prozent')},
+  round(100 * countIf(event = 'onboarding_surface_dismissed') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Auf später in Prozent')}
+from events
+where ${where}
+  and event in ${sqlList(ONBOARDING_SURFACE_EVENTS)}
+  and properties.onboarding_surface = 'notification_setup'
+  and ${portalCondition}
+  and timestamp > now() - interval 30 day
+group by Portal
+order by Angezeigt desc`),
         },
       ],
     },
