@@ -407,6 +407,18 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/students/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "studentDeleteRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/students/{id}/arrival-exceptions/{exceptionId}",
       "portals": [
         "tenant"

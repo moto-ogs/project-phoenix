@@ -1127,6 +1127,7 @@ export const portalRoutes = {
     statistics["GET /api/statistics/students/{id}/care-times"],
     students["DELETE /api/students/care-withdrawals/{completionId}"],
     students["DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}"],
+    students["DELETE /api/students/{id}"],
     students["DELETE /api/students/{id}/arrival-exceptions/{exceptionId}"],
     students["DELETE /api/students/{id}/arrival-notes/{noteId}"],
     students["DELETE /api/students/{id}/departure-exceptions/{date}"],
