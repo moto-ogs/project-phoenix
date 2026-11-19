@@ -17,6 +17,25 @@ import {
   type ShiftResponse,
 } from "./shared.generated";
 
+/** Go: staffshifts.SeriesResponse */
+export interface SeriesResponse {
+  series_id: string;
+  old_series_id?: string;
+  created: number;
+  deleted: number;
+  skipped_dates: string[] | null;
+  skipped_non_working_days: number;
+}
+
+export const SeriesResponseSchema: z.ZodType<SeriesResponse, unknown> = object<SeriesResponse>({
+  series_id: int64String,
+  old_series_id: optional(int64String),
+  created: safeInt,
+  deleted: safeInt,
+  skipped_dates: nullable(arr(str)),
+  skipped_non_working_days: safeInt,
+});
+
 /** Go: staffshifts.ShiftDeletedResponse */
 export interface ShiftDeletedResponse {
   id: string;
@@ -140,23 +159,37 @@ export const OverviewResponseSchema: z.ZodType<OverviewResponse, unknown> = obje
   weekly_summaries: nullable(arr(WeeklySummaryResponseSchema)),
 });
 
-/** Go: staffshifts.SeriesResponse */
-export interface SeriesResponse {
-  series_id: string;
-  old_series_id?: string;
-  created: number;
-  deleted: number;
-  skipped_dates: string[] | null;
-  skipped_non_working_days: number;
+/** Go: staffshifts.SeriesDetailResponse */
+export interface SeriesDetailResponse {
+  id: string;
+  staff_id: string;
+  weekdays: number[] | null;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  shift_type_id: string | null;
+  notes?: string;
+  calendar_period_id: string;
+  week_pattern: number;
+  valid_from: string;
+  valid_until: string | null;
+  include_school_breaks: boolean;
 }
 
-export const SeriesResponseSchema: z.ZodType<SeriesResponse, unknown> = object<SeriesResponse>({
-  series_id: int64String,
-  old_series_id: optional(int64String),
-  created: safeInt,
-  deleted: safeInt,
-  skipped_dates: nullable(arr(str)),
-  skipped_non_working_days: safeInt,
+export const SeriesDetailResponseSchema: z.ZodType<SeriesDetailResponse, unknown> = object<SeriesDetailResponse>({
+  id: int64String,
+  staff_id: int64StringOrNumber,
+  weekdays: nullable(arr(safeInt)),
+  start_time: str,
+  end_time: str,
+  break_minutes: safeInt,
+  shift_type_id: nullable(int64StringOrNumber),
+  notes: optional(str),
+  calendar_period_id: int64StringOrNumber,
+  week_pattern: safeInt,
+  valid_from: str,
+  valid_until: nullable(str),
+  include_school_breaks: bool,
 });
 
 /** Go: staffshifts.CancellationResponse */
@@ -169,6 +202,11 @@ export const CancellationResponseSchema: z.ZodType<CancellationResponse, unknown
   shift: ShiftResponseSchema,
   replacements: nullable(arr(ShiftResponseSchema)),
 });
+
+/** Query of DELETE /api/staff-shifts/series/{id} */
+export interface DeleteStaffShiftsSeriesIdQuery {
+  from?: string;
+}
 
 /** Query of GET /api/staff-shifts/ */
 export interface GetStaffShiftsQuery {
@@ -184,6 +222,13 @@ export interface GetStaffShiftsOverviewQuery {
 }
 
 export const routes = {
+  "DELETE /api/staff-shifts/series/{id}": {
+    method: "DELETE",
+    pattern: "/api/staff-shifts/series/{id}",
+    portals: ["tenant"],
+    query: ["from"],
+    response: success(SeriesResponseSchema),
+  },
   "DELETE /api/staff-shifts/{id}": {
     method: "DELETE",
     pattern: "/api/staff-shifts/{id}",
@@ -203,6 +248,12 @@ export const routes = {
     portals: ["tenant"],
     query: ["from", "to"],
     response: success(OverviewResponseSchema),
+  },
+  "GET /api/staff-shifts/series/{id}": {
+    method: "GET",
+    pattern: "/api/staff-shifts/series/{id}",
+    portals: ["tenant"],
+    response: success(SeriesDetailResponseSchema),
   },
   "POST /api/staff-shifts/": {
     method: "POST",

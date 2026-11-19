@@ -241,13 +241,13 @@ describe("staffShiftSeriesService", () => {
         {
           data: {
             id: "5",
-            staff_id: 7,
+            staff_id: "7",
             weekdays: [1, 3],
             start_time: "09:00",
             end_time: "12:00",
             break_minutes: 15,
-            shift_type_id: 4,
-            calendar_period_id: 8,
+            shift_type_id: "4",
+            calendar_period_id: "8",
             week_pattern: 1,
             valid_from: "2026-09-01",
             valid_until: "2026-10-01",
@@ -273,25 +273,26 @@ describe("staffShiftSeriesService", () => {
       includeSchoolBreaks: true,
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff/shifts/series/5");
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/series/5");
   });
 
-  it("maps a rule without weekdays, type, or end date onto safe values", async () => {
+  it("maps a rule without weekdays, type, or end date", async () => {
     mockSessionFetch.mockResolvedValueOnce(
       Response.json(
         {
           data: {
             id: "5",
-            staff_id: 7,
+            staff_id: "7",
             weekdays: null,
             start_time: "09:00",
             end_time: "12:00",
             break_minutes: 0,
             shift_type_id: null,
-            calendar_period_id: 8,
+            calendar_period_id: "8",
             week_pattern: 0,
             valid_from: "2026-09-01",
             valid_until: null,
+            include_school_breaks: false,
           },
         },
         { status: 200 },
@@ -324,7 +325,7 @@ describe("staffShiftSeriesService", () => {
 
   it("ends a series from the given date", async () => {
     mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ data: { series_id: 5, deleted: 6 } }, { status: 200 }),
+      Response.json({ data: { series_id: "5", deleted: 6 } }, { status: 200 }),
     );
 
     await expect(
@@ -332,7 +333,7 @@ describe("staffShiftSeriesService", () => {
     ).resolves.toBeUndefined();
 
     expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/shifts/series/5?from=2026-10-05",
+      "/api/staff-shifts/series/5?from=2026-10-05",
       { method: "DELETE" },
     );
   });

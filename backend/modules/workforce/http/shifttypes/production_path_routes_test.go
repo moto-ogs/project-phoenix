@@ -203,4 +203,26 @@ func TestStaffShiftPlanningRoutesStoreThePlan(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT start_time::text FROM schedule.staff_shifts WHERE series_id = ? ORDER BY date LIMIT 1`, split.SeriesID).
 		Scan(testpkg.Ctx(t), &successorStart))
 	assert.Equal(t, "09:00:00", successorStart)
+
+	// The series editor reads the successor's rule, and the series ends
+	// from a later Monday on.
+	var rule struct {
+		ID        string `json:"id"`
+		Weekdays  []int  `json:"weekdays"`
+		StartTime string `json:"start_time"`
+		ValidFrom string `json:"valid_from"`
+	}
+	send(http.MethodGet, "/staff-shifts/series/"+split.SeriesID, nil, http.StatusOK, &rule)
+	assert.Equal(t, split.SeriesID, rule.ID)
+	assert.Equal(t, []int{1}, rule.Weekdays)
+	assert.Equal(t, "09:00", rule.StartTime)
+	assert.Equal(t, "2030-05-06", rule.ValidFrom)
+
+	var ended series
+	send(http.MethodDelete, "/staff-shifts/series/"+split.SeriesID+"?from=2030-06-03", nil, http.StatusOK, &ended)
+	assert.Equal(t, split.SeriesID, ended.SeriesID)
+	var remaining int
+	require.NoError(t, db.NewRaw(`SELECT count(*) FROM schedule.staff_shifts WHERE series_id = ? AND date >= '2030-06-03'`, split.SeriesID).
+		Scan(testpkg.Ctx(t), &remaining))
+	assert.Zero(t, remaining, "the ended series keeps no shift from that day on")
 }
