@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SchoolSetupState } from "~/lib/school-setup-api";
 
@@ -55,6 +55,11 @@ vi.mock("./use-school-setup", () => ({
     refresh: () => Promise.resolve(),
     replace: () => Promise.resolve(),
   }),
+}));
+vi.mock("~/lib/school-setup-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/school-setup-api")>()),
+  setSchoolSetupDismissed: () =>
+    Promise.resolve({ ...newSchool(), dismissed: true }),
 }));
 vi.mock("./use-work-time-coverage", () => ({
   useWorkTimeCoverage: () => ({
@@ -134,6 +139,23 @@ describe("SchoolSetupWizard analytics", () => {
       screen.getByRole("button", { name: "Erste Schritte öffnen, 2 offen" }),
     );
     fireEvent.click(screen.getByLabelText("Checkliste einklappen"));
+    expect(surfaceEvents()).toHaveLength(2);
+  });
+
+  it("reports hiding the checklist that opened itself as dismissed", async () => {
+    const { SchoolSetupWizard } = await setup(true);
+    render(<SchoolSetupWizard />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Nicht mehr anzeigen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
+    await waitFor(() => {
+      expect(mocks.capture).toHaveBeenCalledWith(
+        "onboarding_surface_dismissed",
+        CHECKLIST,
+      );
+    });
     expect(surfaceEvents()).toHaveLength(2);
   });
 

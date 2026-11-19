@@ -176,8 +176,9 @@ function SchoolSetupWizardForAdmin({
 
   // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf. Das
   // zählt als angezeigte Fläche des Einstiegs (#7554); klappt die Person sie
-  // danach zum ersten Mal ein, hat sie die Fläche geschlossen. Abschließen,
-  // Überspringen und Ausblenden zählt das Backend.
+  // danach zum ersten Mal ein oder blendet sie aus, hat sie die Fläche
+  // geschlossen. Abschließen, Überspringen und Ausblenden als Kernaktion
+  // zählt das Backend.
   const openedByItself = useRef(false);
   useEffect(() => {
     if (visible && accountID && claimFirstOpen(accountID)) {
@@ -186,11 +187,14 @@ function SchoolSetupWizardForAdmin({
       trackOnboardingSurface("shown", "setup_checklist");
     }
   }, [visible, accountID]);
-  const collapse = () => {
+  const closedByPerson = () => {
     if (openedByItself.current) {
       openedByItself.current = false;
       trackOnboardingSurface("dismissed", "setup_checklist");
     }
+  };
+  const collapse = () => {
+    closedByPerson();
     setView("beacon");
   };
 
@@ -315,7 +319,10 @@ function SchoolSetupWizardForAdmin({
         onConfirm={() =>
           void run(
             () => setSchoolSetupDismissed(true),
-            () => setConfirmDismiss(false),
+            () => {
+              closedByPerson();
+              setConfirmDismiss(false);
+            },
             // Der Grund steht in der Checkliste; der Dialog davor würde ihn
             // verdecken.
             () => setConfirmDismiss(false),
