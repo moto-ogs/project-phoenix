@@ -34,9 +34,9 @@ import {
 } from "@/components/students/students-list";
 import { CareExitModal } from "~/components/students/care-exit-modal";
 import { getDbOperationMessage } from "@/lib/use-notification";
-import { createCrudService } from "@/lib/database/service-factory";
 import { studentsConfig } from "@/components/database/configs/students.config";
 import type { Student } from "~/lib/student-helpers";
+import { createStudent, fetchStudents } from "~/lib/student-api";
 import type { StudentGuardianPayload } from "@/lib/guardian-helpers";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
@@ -149,7 +149,6 @@ function StudentsPageContent() {
     },
   });
 
-  const service = useMemo(() => createCrudService(studentsConfig), []);
   const tenantMutate = useTenantMutate();
 
   const {
@@ -157,13 +156,13 @@ function StudentsPageContent() {
     isLoading: loading,
     error: studentsError,
   } = useSWRAuth(tenantAdminKeys.students(), async () => {
-    const data = await service.getList({
+    const { students } = await fetchStudents({
       page: 1,
       pageSize: 1000,
-      include_arrival_times: true,
-      include_pending_withdrawals: true,
+      includeArrivalTimes: true,
+      includePendingWithdrawals: true,
     });
-    return Array.isArray(data.data) ? data.data : [];
+    return students;
   });
 
   // Kinderkontingent der Schule (#3569). Ein Fehler blendet die Zeile nur
@@ -374,7 +373,7 @@ function StudentsPageContent() {
         guardians?: StudentGuardianPayload[];
       } & CreateStudentSchedules,
     ) => {
-      const newStudent = await service.create(studentData);
+      const newStudent = await createStudent(studentData);
       const displayName = studentsConfig.list.item.title(newStudent);
       if (newStudent.privacy_consent_saved === false) {
         // The child exists, but the consent input is lost (#5970): the notice
@@ -404,7 +403,7 @@ function StudentsPageContent() {
         tenantMutate(tenantAdminKeys.studentChildQuota()),
       ]);
     },
-    [service, tenantMutate, toastSuccess, toastWarning, router, objectHref],
+    [tenantMutate, toastSuccess, toastWarning, router, objectHref],
   );
 
   // A child of the class without an OGS place (#4803): the same three fields

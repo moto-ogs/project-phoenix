@@ -1,14 +1,21 @@
-// The browser's client for the student: list, detail, update, check-in, photo,
-// deletion and privacy consent. Every call goes through the tenant BFF routes
-// under /api/students, which own the backend wire shape.
+// The browser's client for the student: list, detail, create, update,
+// check-in, photo, deletion and privacy consent. The calls go through the
+// staff portal's catalog proxy under /api/students; this module maps the
+// contract's shape (student-wire) onto the browser's Student once.
 
-import { apiErrorFromText } from "./api-error";
+import { ApiError, apiErrorFromResponse, apiErrorFromText } from "./api-error";
 import {
   mapAttendanceHistoryResponse,
   type AttendanceHistory,
   type BackendAttendanceHistoryResponse,
 } from "./attendance-history-helpers";
 import { bffJson } from "./bff-fetch";
+import type {
+  NameStudentResponse,
+  StudentDetailResponse,
+  StudentResponse,
+} from "./contract/students.generated";
+import { CONTRACT_WIRE } from "./contract/wire";
 import { createLogger } from "~/lib/logger";
 import { encodeMultiValueParam } from "./multi-value-param";
 import { sessionFetch } from "./session-cache";
@@ -22,9 +29,27 @@ import type {
 } from "./student-helpers";
 import { notifyStudentCompanionsChanged } from "./student-companion-api";
 import {
+  readConsentAfterWrite,
+  sentConsentPair,
+  writeStudentConsent,
+} from "./student-privacy-consent";
+import {
+  studentCreateRequest,
+  type StudentCreateBody,
+} from "./student-request";
+import {
   CompanionPlanConflictError,
   isCompanionPlanConflictResponse,
+  PRIVACY_CONSENT_SAVED_DETAIL,
 } from "./student-update-errors";
+import {
+  mapStudentDetailResponse,
+  mapStudentListRow,
+  mapStudentResponse,
+  prepareStudentForBackend,
+  writeMayChangeCompanions,
+  type StudentView,
+} from "./student-wire";
 
 const logger = createLogger({ component: "StudentAPI" });
 
@@ -66,6 +91,8 @@ export interface StudentFilters {
   includeArrivalTimes?: boolean;
   /** Companion links for the shown day; costs an extra query per page. */
   includeCompanions?: boolean;
+  /** Keeps children whose care ends with a pending withdrawal (#2487). */
+  includePendingWithdrawals?: boolean;
   /**
    * Wire projection. "slim" (#2097) drops address, health, guardian and
    * schedule fields; "names" (#4996) keeps only ID and name.
@@ -93,6 +120,7 @@ const QUERY_KEYS: Record<
   includePickupTimes: "include_pickup_times",
   includeArrivalTimes: "include_arrival_times",
   includeCompanions: "include_companions",
+  includePendingWithdrawals: "include_pending_withdrawals",
   view: "view",
 };
 
@@ -124,13 +152,30 @@ function studentQuery(filters: StudentFilters = {}): string {
   return query ? `?${query}` : "";
 }
 
+/**
+ * One page of children. Without a page size the backend answers every child
+ * up to its cap of 1000 in one page.
+ */
 export async function fetchStudents(
   filters?: StudentFilters,
 ): Promise<{ students: Student[]; pagination: StudentPage["pagination"] }> {
-  const page = await bffJson<StudentPage>(
-    `/api/students${studentQuery(filters)}`,
-  );
-  return { students: page.data, pagination: page.pagination };
+  const url = `/api/students${studentQuery(filters)}`;
+  const response = await sessionFetch(url, { headers: CONTRACT_WIRE });
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      `GET ${url} failed (${response.status})`,
+    );
+  }
+  const page = (await response.json()) as {
+    data: NameStudentResponse[];
+    pagination: StudentPage["pagination"];
+  };
+  const view: StudentView = filters?.view ?? "full";
+  return {
+    students: page.data.map((row) => mapStudentListRow(row, view)),
+    pagination: page.pagination,
+  };
 }
 
 export async function fetchSchoolClasses(): Promise<string[]> {
@@ -150,7 +195,64 @@ export async function fetchAllStudentNames(): Promise<Student[]> {
 
 /** One child with access flags, feature flags and privacy consent. */
 export async function fetchStudent(id: string): Promise<Student> {
-  return bffJson<Student>(`/api/students/${encodeURIComponent(id)}`);
+  // The detail read carries the consent: one read and no consent waterfall.
+  return mapStudentDetailResponse(
+    await bffJson<StudentDetailResponse>(
+      `/api/students/${encodeURIComponent(id)}?include_privacy_consent=true`,
+      { headers: CONTRACT_WIRE },
+    ),
+  );
+}
+
+/**
+ * Creates a child with its guardians and weekly schedules (one backend
+ * transaction), then the privacy consent the form changed. The consent lives
+ * at another backend endpoint, so it cannot join that transaction: when it
+ * fails, the child exists anyway and the answer carries the consent that is
+ * actually stored and `privacy_consent_saved: false`, so the form can say
+ * that the input was lost and the person can correct it on the child's page
+ * (#5970). The marker is absent whenever nothing was lost.
+ */
+export async function createStudent(body: StudentCreateBody): Promise<Student> {
+  const consent = sentConsentPair(body);
+  const created = await bffJson<StudentResponse>("/api/students", {
+    method: "POST",
+    body: studentCreateRequest(body),
+    headers: CONTRACT_WIRE,
+  });
+
+  let written = consent;
+  if (consent) {
+    try {
+      await writeStudentConsent(created.id, consent);
+    } catch (consentError) {
+      written = null;
+      logger.error("privacy_consent_write_failed_after_create", {
+        student_id: created.id,
+        error:
+          consentError instanceof Error
+            ? consentError.message
+            : String(consentError),
+      });
+    }
+  }
+
+  return {
+    ...mapStudentResponse(created),
+    ...(await readConsentAfterWrite(created.id, written)),
+    ...(consent && !written && { privacy_consent_saved: false }),
+  };
+}
+
+/**
+ * Marks a refused student write whose consent write had landed already, so
+ * the form says which half was saved (isPrivacyConsentSaved). Status, code,
+ * field errors and the companion conflict list stay as the backend sent them.
+ */
+function markPrivacyConsentSaved(error: unknown): unknown {
+  if (!(error instanceof ApiError)) return error;
+  error.details = { ...error.details, [PRIVACY_CONSENT_SAVED_DETAIL]: true };
+  return error;
 }
 
 /** The registration questions the child list can filter by (#6954). */
@@ -194,7 +296,7 @@ export async function fetchStudentEnrollmentExtraFields(
 }
 
 /**
- * Updates a child.
+ * Updates a child and, when the form changed it, the privacy consent.
  *
  * A 409 carrying a conflict list means a linked child's own departure plan
  * does not allow the requested "läuft mit" days. It is a question, not a
@@ -203,36 +305,62 @@ export async function fetchStudentEnrollmentExtraFields(
  * Every other refusal keeps code, field errors and request ID (#2513); the
  * predicates in student-update-errors recognise the companion ones by code.
  *
- * Mounted "läuft mit" views refetch when the write changed the links, as the
- * route reports. An open Laufgemeinschaft form answers that by discarding its
- * draft, so a write that changed none announces nothing.
+ * Consent BEFORE the student PUT, deliberately. Both writes can fail, so one
+ * of them has to run while the other is still undone, and the two are not
+ * interchangeable. The consent PUT is a plain upsert of the two values in
+ * this update: failing it leaves the student untouched, and a retry replays
+ * the identical write. The student PUT carries the companion fingerprint
+ * (#1694), so once it commits, a retry of the same payload is refused as
+ * `students.companions_changed`. Running it last means a reported failure
+ * never hides a committed companion write; a student PUT failing on top of a
+ * committed consent write says so (markPrivacyConsentSaved).
+ *
+ * The consequence for callers: a consent pair in the update is WRITTEN,
+ * refused student PUT or not, so only a save that actually changes it may
+ * send it.
+ *
+ * Mounted "läuft mit" views refetch when the write changed the links: the
+ * backend's verdict, or what the update can change when it sent none. An
+ * open Laufgemeinschaft form answers that by discarding its draft, so a
+ * write that changed none announces nothing.
  */
 export async function updateStudent(
   id: string,
   update: StudentUpdate,
 ): Promise<Student> {
-  const response = await sessionFetch(
-    `/api/students/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(update) },
-  );
+  const consent = sentConsentPair(update);
+  if (consent) await writeStudentConsent(id, consent);
+
+  let response: Response;
+  try {
+    response = await sessionFetch(`/api/students/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: CONTRACT_WIRE,
+      body: JSON.stringify(prepareStudentForBackend(update)),
+    });
+  } catch (error) {
+    throw consent ? markPrivacyConsentSaved(error) : error;
+  }
   if (!response.ok) {
     const body = await response.text();
-    if (response.status === 409 && isCompanionPlanConflictResponse(body)) {
-      throw new CompanionPlanConflictError(body);
-    }
-    throw apiErrorFromText(
-      `Student update failed (${response.status})`,
-      response.status,
-      body,
-    );
+    const error =
+      response.status === 409 && isCompanionPlanConflictResponse(body)
+        ? new CompanionPlanConflictError(body)
+        : apiErrorFromText(
+            `Student update failed (${response.status})`,
+            response.status,
+            body,
+          );
+    throw consent ? markPrivacyConsentSaved(error) : error;
   }
-  const { data } = (await response.json()) as {
-    data: Student & { companions_changed: boolean };
-  };
-  if (data.companions_changed) {
+  const { data } = (await response.json()) as { data: StudentResponse };
+  if (data.companions_changed ?? writeMayChangeCompanions(update)) {
     notifyStudentCompanionsChanged();
   }
-  return data;
+  return {
+    ...mapStudentResponse(data),
+    ...(await readConsentAfterWrite(id, consent)),
+  };
 }
 
 /** The latest recorded change of a tracked field (#1455). */
@@ -521,7 +649,7 @@ export async function deleteStudentWithData(
     completionId
       ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}`
       : `/api/students/${encodeURIComponent(id)}`,
-    { method: "DELETE", body: input },
+    { method: "DELETE", body: input, headers: CONTRACT_WIRE },
   );
 }
 

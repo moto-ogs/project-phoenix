@@ -1,7 +1,20 @@
+// Temporary (#7563): the current client reads and creates children through
+// the catalog proxy and maps the contract's shape itself (lib/student-api);
+// it marks its requests with the header of lib/contract/wire, which this file
+// hands to the proxy. Without the header, an installed app with an older
+// bundle still gets the shape this file builds: rows mapped onto the
+// browser's Student, the consent written and read beside the create. Delete
+// this file, its test and lib/contract/wire after the next production
+// deploy; the portal's catch-all then answers the path.
 import type { NextRequest } from "next/server";
 import { contractGet, contractWrite } from "~/lib/contract/client.server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
 import { routes } from "~/lib/contract/students.generated";
+import { asksForContractWire } from "~/lib/contract/wire";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import type { RouteContext } from "~/lib/route-wrapper-utils.server";
 import {
+  catalogProxy,
   createGetHandler,
   createPostHandler,
 } from "~/lib/route-wrapper.server";
@@ -43,7 +56,7 @@ function studentView(raw: string | null): StudentView {
   return raw === "slim" || raw === "names" ? raw : "full";
 }
 
-export const GET = createGetHandler(
+const legacyGet = createGetHandler(
   async (request: NextRequest, token: string): Promise<StudentPage> => {
     const query = new URLSearchParams(request.nextUrl.searchParams);
     query.set("page_size", String(pageSize(query.get("page_size"))));
@@ -84,7 +97,7 @@ export const GET = createGetHandler(
  * the input was lost and the person can correct it on the child's page (#5970).
  * The marker is absent whenever nothing was lost.
  */
-export const POST = createPostHandler<Student, StudentCreateBody>(
+const legacyPost = createPostHandler<Student, StudentCreateBody>(
   async (_request, body, token) => {
     const backendRequest = buildStudentCreateRequest(body);
     const consent = sentConsentPair(body);
@@ -119,4 +132,23 @@ export const POST = createPostHandler<Student, StudentCreateBody>(
       ...(consent && !written && { privacy_consent_saved: false }),
     };
   },
+);
+
+// The path the portal's catch-all would receive for /api/students.
+const catalogPath = { params: Promise.resolve({ path: ["students"] }) };
+const catalogGet = catalogProxy(portalRoutes.tenant, "GET");
+const catalogPost = catalogProxy(portalRoutes.tenant, "POST");
+
+export const GET = withPrivateNoStore(
+  (request: NextRequest, context: RouteContext) =>
+    asksForContractWire(request)
+      ? catalogGet(request, catalogPath)
+      : legacyGet(request, context),
+);
+
+export const POST = withPrivateNoStore(
+  (request: NextRequest, context: RouteContext) =>
+    asksForContractWire(request)
+      ? catalogPost(request, catalogPath)
+      : legacyPost(request, context),
 );

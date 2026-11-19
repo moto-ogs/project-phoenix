@@ -157,6 +157,7 @@ function dayCountStat(): string | null {
 }
 global.fetch = mockFetch;
 
+// The child as the contract answers it; the client maps it once.
 function mockStudentResponse(overrides?: Record<string, unknown>) {
   return {
     ok: true,
@@ -165,8 +166,7 @@ function mockStudentResponse(overrides?: Record<string, unknown>) {
       data: {
         id: "42",
         first_name: "Test",
-        second_name: "Student",
-        name: "Test Student",
+        last_name: "Student",
         school_class: "Klasse 2a",
         group_name: "Sterne",
         ...overrides,

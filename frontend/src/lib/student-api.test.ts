@@ -8,9 +8,12 @@ const { mockSessionFetch } = vi.hoisted(() => ({
 vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
 
 import { ApiError } from "./api-error";
-import { buildStudent } from "~/test/fixtures/students";
+import { buildBackendStudent } from "~/test/fixtures/students";
+import type { StudentDetailResponse } from "./contract/students.generated";
+import { CONTRACT_WIRE_HEADER } from "./contract/wire";
 import { subscribeStudentCompanionsChanged } from "./student-companion-api";
 import {
+  createStudent,
   deleteStudentPhoto,
   deleteStudentWithData,
   fetchPrivacyConsentDefaults,
@@ -30,6 +33,11 @@ import {
   isCompanionsChanged,
   isPrivacyConsentSaved,
 } from "./student-update-errors";
+import {
+  mapStudentDetailResponse,
+  mapStudentListRow,
+  mapStudentResponse,
+} from "./student-wire";
 
 /** A route-wrapper success answer. */
 function ok(data: unknown, status = 200): Response {
@@ -44,6 +52,17 @@ function problem(status: number, body: unknown): Response {
     status,
     headers: { "Content-Type": "application/problem+json" },
   });
+}
+
+/** A paginated answer of the catalog proxy: the page beside the data. */
+function pageOf(data: unknown[], pagination: unknown): Response {
+  return Response.json({ success: true, message: "Success", data, pagination });
+}
+
+/** Whether a call asked the temporary route for the contract's shape. */
+function askedForContract(index = 0): boolean {
+  const headers = new Headers(calledInit(index).headers);
+  return headers.get(CONTRACT_WIRE_HEADER) === "contract";
 }
 
 function calledUrl(index = 0): string {
@@ -67,34 +86,31 @@ beforeEach(() => {
 
 describe("fetchStudents", () => {
   it("loads every names page for a complete child selection", async () => {
-    const first = buildStudent({ id: "1", name: "Lina Muster" });
-    const last = buildStudent({ id: "501", name: "Zoe Weber" });
+    const first = { id: "1", first_name: "Lina", last_name: "Muster" };
+    const last = { id: "501", first_name: "Zoe", last_name: "Weber" };
     mockSessionFetch
       .mockResolvedValueOnce(
-        ok({
-          data: [first],
-          pagination: {
-            ...page,
-            page_size: 500,
-            total_pages: 2,
-            total_records: 501,
-          },
+        pageOf([first], {
+          ...page,
+          page_size: 500,
+          total_pages: 2,
+          total_records: 501,
         }),
       )
       .mockResolvedValueOnce(
-        ok({
-          data: [last],
-          pagination: {
-            ...page,
-            current_page: 2,
-            page_size: 500,
-            total_pages: 2,
-            total_records: 501,
-          },
+        pageOf([last], {
+          ...page,
+          current_page: 2,
+          page_size: 500,
+          total_pages: 2,
+          total_records: 501,
         }),
       );
 
-    await expect(fetchAllStudentNames()).resolves.toEqual([first, last]);
+    await expect(fetchAllStudentNames()).resolves.toEqual([
+      mapStudentListRow(first, "names"),
+      mapStudentListRow(last, "names"),
+    ]);
     expect(mockSessionFetch).toHaveBeenCalledTimes(2);
     for (const [index, expectedPage] of [
       [0, "1"],
@@ -106,13 +122,17 @@ describe("fetchStudents", () => {
         page_size: "500",
         view: "names",
       });
+      expect(askedForContract(index)).toBe(true);
     }
   });
 
   it("reports a later names-page failure instead of returning a partial selection", async () => {
     mockSessionFetch
       .mockResolvedValueOnce(
-        ok({ data: [buildStudent()], pagination: { ...page, total_pages: 2 } }),
+        pageOf([{ id: "1", first_name: "Lina", last_name: "Muster" }], {
+          ...page,
+          total_pages: 2,
+        }),
       )
       .mockResolvedValueOnce(
         problem(503, { status: 503, code: "general.unavailable" }),
@@ -120,21 +140,33 @@ describe("fetchStudents", () => {
     await expect(fetchAllStudentNames()).rejects.toBeInstanceOf(ApiError);
   });
 
-  it("answers the mapped students and the page of the route", async () => {
-    const student = buildStudent({ id: "1", name: "Max Mustermann" });
-    mockSessionFetch.mockResolvedValueOnce(
-      ok({ data: [student], pagination: page }),
-    );
+  it("maps the full rows once and keeps the page", async () => {
+    const row = buildBackendStudent({ id: "1", first_name: "Max" });
+    mockSessionFetch.mockResolvedValueOnce(pageOf([row], page));
 
     await expect(fetchStudents()).resolves.toEqual({
-      students: [student],
+      students: [mapStudentResponse(row)],
       pagination: page,
     });
     expect(calledUrl()).toBe("/api/students");
+    expect(askedForContract()).toBe(true);
+  });
+
+  it("maps a slim row as the slim projection", async () => {
+    const row = {
+      ...buildBackendStudent({ id: "7" }),
+      departure_modes: ["bus"],
+    };
+    mockSessionFetch.mockResolvedValueOnce(pageOf([row], page));
+
+    const { students } = await fetchStudents({ view: "slim" });
+    expect(students).toEqual([mapStudentListRow(row, "slim")]);
+    // The slim projection synthesizes no full-detail field.
+    expect(students[0]).not.toHaveProperty("bus_days");
   });
 
   it("sends every filter under its backend name", async () => {
-    mockSessionFetch.mockResolvedValueOnce(ok({ data: [], pagination: page }));
+    mockSessionFetch.mockResolvedValueOnce(pageOf([], page));
 
     await fetchStudents({
       search: "Max",
@@ -155,6 +187,7 @@ describe("fetchStudents", () => {
       includePickupTimes: true,
       includeArrivalTimes: true,
       includeCompanions: true,
+      includePendingWithdrawals: true,
       view: "slim",
     });
 
@@ -179,12 +212,13 @@ describe("fetchStudents", () => {
       include_pickup_times: "true",
       include_arrival_times: "true",
       include_companions: "true",
+      include_pending_withdrawals: "true",
       view: "slim",
     });
   });
 
   it("leaves unset and empty filters out", async () => {
-    mockSessionFetch.mockResolvedValueOnce(ok({ data: [], pagination: page }));
+    mockSessionFetch.mockResolvedValueOnce(pageOf([], page));
 
     await fetchStudents({
       search: "",
@@ -216,12 +250,27 @@ describe("single reads", () => {
     expect(calledUrl()).toBe("/api/students/school-classes");
   });
 
-  it("reads one child under its encoded id", async () => {
-    const student = buildStudent({ id: "7", has_write_access: true });
-    mockSessionFetch.mockResolvedValueOnce(ok(student));
+  it("reads one child with its consent under its encoded id", async () => {
+    const detail = {
+      ...buildBackendStudent({ id: "7" }),
+      has_write_access: true,
+      privacy_consent: { accepted: true, data_retention_days: 14 },
+    } as StudentDetailResponse;
+    mockSessionFetch.mockResolvedValueOnce(ok(detail));
 
-    await expect(fetchStudent("7/x")).resolves.toEqual(student);
-    expect(calledUrl()).toBe("/api/students/7%2Fx");
+    const student = await fetchStudent("7/x");
+    expect(student).toEqual(mapStudentDetailResponse(detail));
+    expect(student).toMatchObject({
+      has_write_access: true,
+      privacy_consent_accepted: true,
+      data_retention_days: 14,
+    });
+    // One read carries the consent: no second request.
+    expect(calledUrl()).toBe(
+      "/api/students/7%2Fx?include_privacy_consent=true",
+    );
+    expect(mockSessionFetch).toHaveBeenCalledOnce();
+    expect(askedForContract()).toBe(true);
   });
 
   it("reads the enrollment extra fields of a child", async () => {
@@ -237,9 +286,126 @@ describe("single reads", () => {
   });
 });
 
+/** The stored consent the backend answers after a write. */
+function consentAnswer(accepted: boolean, days: number): Response {
+  return ok({ accepted, data_retention_days: days });
+}
+
+describe("createStudent", () => {
+  const created = buildBackendStudent({ id: "55", first_name: "Mia" });
+
+  it("creates the child with the trimmed names and leaves an unchanged consent alone", async () => {
+    mockSessionFetch
+      .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(consentAnswer(false, 30));
+
+    const student = await createStudent({
+      first_name: "  Mia ",
+      second_name: " Muster",
+      school_class: "2b ",
+      guardians: [],
+    });
+
+    expect(calledUrl(0)).toBe("/api/students");
+    expect(calledInit(0)).toMatchObject({ method: "POST" });
+    expect(askedForContract(0)).toBe(true);
+    expect(JSON.parse(String(calledInit(0).body))).toMatchObject({
+      first_name: "Mia",
+      last_name: "Muster",
+      school_class: "2b",
+    });
+    // Without a changed consent only the read-back follows.
+    expect(calledUrl(1)).toBe("/api/students/55/privacy-consent");
+    expect(calledInit(1).method ?? "GET").toBe("GET");
+    expect(student).toEqual({
+      ...mapStudentResponse(created),
+      privacy_consent_accepted: false,
+      data_retention_days: 30,
+    });
+    expect(student).not.toHaveProperty("privacy_consent_saved");
+  });
+
+  it("writes the changed consent after the child and carries no marker", async () => {
+    mockSessionFetch
+      .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(consentAnswer(true, 14));
+
+    const student = await createStudent({
+      first_name: "Mia",
+      second_name: "Muster",
+      school_class: "2b",
+      privacy_consent_accepted: true,
+      data_retention_days: 14,
+    });
+
+    expect(calledUrl(1)).toBe("/api/students/55/privacy-consent");
+    expect(calledInit(1)).toMatchObject({ method: "PUT" });
+    expect(JSON.parse(String(calledInit(1).body))).toEqual({
+      policy_version: "1.0",
+      accepted: true,
+      data_retention_days: 14,
+    });
+    expect(student).toMatchObject({
+      privacy_consent_accepted: true,
+      data_retention_days: 14,
+    });
+    expect(student).not.toHaveProperty("privacy_consent_saved");
+  });
+
+  it("answers the child with the stored consent when the consent write fails", async () => {
+    mockSessionFetch
+      .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(
+        problem(500, { status: 500, code: "general.internal" }),
+      )
+      .mockResolvedValueOnce(consentAnswer(false, 30));
+
+    const student = await createStudent({
+      first_name: "Mia",
+      second_name: "Muster",
+      school_class: "2b",
+      privacy_consent_accepted: true,
+      data_retention_days: 14,
+    });
+
+    expect(student).toMatchObject({
+      id: "55",
+      privacy_consent_accepted: false,
+      data_retention_days: 30,
+      privacy_consent_saved: false,
+    });
+  });
+
+  it("keeps the field errors of a refused create", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      problem(400, {
+        status: 400,
+        code: "general.input",
+        errors: [{ field: "last_name", reason: "required" }],
+      }),
+    );
+
+    await expect(
+      createStudent({ first_name: "Mia", school_class: "2b" }),
+    ).rejects.toMatchObject({
+      status: 400,
+      errors: [{ field: "last_name", reason: "required" }],
+    });
+    expect(mockSessionFetch).toHaveBeenCalledOnce();
+  });
+});
+
 describe("updateStudent", () => {
   let listener: ReturnType<typeof vi.fn<() => void>>;
   let unsubscribe: () => void;
+  const updated = buildBackendStudent({
+    id: "1",
+    first_name: "Max",
+    last_name: "Mustermann",
+    tag_id: "TAG001",
+    sick: true,
+  });
 
   beforeEach(() => {
     listener = vi.fn<() => void>();
@@ -248,37 +414,97 @@ describe("updateStudent", () => {
 
   afterEach(() => unsubscribe());
 
-  it("sends the update and answers the route's child unchanged", async () => {
-    // The route already maps the child; mapping it again lost the surname
-    // and the tag id.
-    const routeStudent = buildStudent({
-      id: "1",
-      name: "Max Mustermann",
-      first_name: "Max",
-      second_name: "Mustermann",
-      studentId: "TAG001",
-      sick: true,
-    });
-    mockSessionFetch.mockResolvedValueOnce(ok(routeStudent));
+  it("sends the backend body and maps the answered child once", async () => {
+    mockSessionFetch
+      .mockResolvedValueOnce(ok(updated))
+      .mockResolvedValueOnce(problem(403, { status: 403 }));
 
     const result = await updateStudent("1", { sick: true });
 
-    expect(result).toEqual(routeStudent);
+    // A consent the caller may not read leaves the keys out.
+    expect(result).toEqual(mapStudentResponse(updated));
+    expect(result).toMatchObject({
+      second_name: "Mustermann",
+      studentId: "TAG001",
+    });
     expect(calledUrl()).toBe("/api/students/1");
     expect(calledInit()).toMatchObject({ method: "PUT" });
+    expect(askedForContract()).toBe(true);
     expect(JSON.parse(String(calledInit().body))).toEqual({ sick: true });
+  });
+
+  it("writes a sent consent pair before the child", async () => {
+    mockSessionFetch
+      .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(ok(updated))
+      .mockResolvedValueOnce(consentAnswer(true, 21));
+
+    const result = await updateStudent("1", {
+      first_name: "Max",
+      privacy_consent_accepted: true,
+      data_retention_days: 21,
+    });
+
+    expect(calledUrl(0)).toBe("/api/students/1/privacy-consent");
+    expect(calledInit(0)).toMatchObject({ method: "PUT" });
+    expect(calledUrl(1)).toBe("/api/students/1");
+    // The consent pair does not travel with the child.
+    expect(JSON.parse(String(calledInit(1).body))).toEqual({
+      first_name: "Max",
+    });
+    expect(result).toMatchObject({
+      privacy_consent_accepted: true,
+      data_retention_days: 21,
+    });
+  });
+
+  it("refuses a lone consent field instead of resetting the other", async () => {
+    await expect(
+      updateStudent("1", { privacy_consent_accepted: true }),
+    ).rejects.toBeInstanceOf(TypeError);
+    expect(mockSessionFetch).not.toHaveBeenCalled();
+  });
+
+  it("answers the consent refusal and does not touch the child", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      problem(400, { status: 400, code: "general.input" }),
+    );
+
+    const failure = await updateStudent("1", {
+      privacy_consent_accepted: true,
+      data_retention_days: 99,
+    }).catch((err: unknown) => err);
+
+    expect(failure).toMatchObject({ status: 400 });
+    expect(isPrivacyConsentSaved(failure)).toBe(false);
+    expect(mockSessionFetch).toHaveBeenCalledOnce();
+  });
+
+  it("still succeeds with the written pair when the read-back fails", async () => {
+    mockSessionFetch
+      .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(ok(updated))
+      .mockResolvedValueOnce(problem(503, { status: 503 }));
+
+    await expect(
+      updateStudent("1", {
+        privacy_consent_accepted: false,
+        data_retention_days: 7,
+      }),
+    ).resolves.toMatchObject({
+      privacy_consent_accepted: false,
+      data_retention_days: 7,
+    });
   });
 
   // An open Laufgemeinschaft form answers the announcement by discarding its
   // draft, so only a write that changed the links announces one.
-  it("follows the route's verdict on the companion links", async () => {
+  it("follows the backend's verdict on the companion links", async () => {
     mockSessionFetch
-      .mockResolvedValueOnce(
-        ok({ ...buildStudent(), companions_changed: false }),
-      )
-      .mockResolvedValueOnce(
-        ok({ ...buildStudent(), companions_changed: true }),
-      );
+      .mockResolvedValueOnce(ok({ ...updated, companions_changed: false }))
+      .mockResolvedValueOnce(problem(403, { status: 403 }))
+      .mockResolvedValueOnce(ok({ ...updated, companions_changed: true }))
+      .mockResolvedValueOnce(problem(403, { status: 403 }));
 
     await updateStudent("1", { departure_days: { mon: "accompanied" } });
     expect(listener).not.toHaveBeenCalled();
@@ -286,6 +512,22 @@ describe("updateStudent", () => {
     await updateStudent("1", { first_name: "Updated" });
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    [{ companions: [] }, true],
+    [{ departure_days: { mon: "bus" } }, true],
+    [{ first_name: "Updated" }, false],
+  ] as const)(
+    "judges from the update %j when the backend sends no verdict",
+    async (update, announced) => {
+      mockSessionFetch
+        .mockResolvedValueOnce(ok(updated))
+        .mockResolvedValueOnce(problem(403, { status: 403 }));
+
+      await updateStudent("1", update as never);
+      expect(listener).toHaveBeenCalledTimes(announced ? 1 : 0);
+    },
+  );
 
   // The student PUT answers 409 for several unrelated reasons. Only the one
   // carrying a conflict list is the question the caller can answer with
@@ -357,33 +599,55 @@ describe("updateStudent", () => {
     expect(isCompanionsChanged(stale)).toBe(true);
   });
 
-  // The proxy stamps the marker onto exactly these refusals when the consent
-  // half of the same request already committed.
-  it("keeps the half-saved consent marker on every refusal", async () => {
-    const details = { privacy_consent_saved: true };
+  // A refused child write on top of a committed consent write says which
+  // half landed; everything the form branches on stays as sent.
+  it("marks every refusal after a committed consent write", async () => {
+    const consent = { privacy_consent_accepted: true, data_retention_days: 30 };
     mockSessionFetch
+      .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(
         problem(409, {
           detail: "companion may not walk along on this day",
           conflicts: [{ student_id: 7, weekdays: ["mon"] }],
-          details,
+          details: { other: 1 },
         }),
       )
-      .mockResolvedValueOnce(
-        problem(409, { code: "students.companions_changed", details }),
-      )
+      .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(
         problem(409, { code: "students.companions_changed" }),
-      );
+      )
+      .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(problem(503, { status: 503 }));
 
-    const conflict = await updateStudent("1", {}).catch((err: unknown) => err);
-    const stale = await updateStudent("1", {}).catch((err: unknown) => err);
-    const unmarked = await updateStudent("1", {}).catch((err: unknown) => err);
+    const conflict = await updateStudent("1", consent).catch(
+      (err: unknown) => err,
+    );
+    const stale = await updateStudent("1", consent).catch(
+      (err: unknown) => err,
+    );
+    const unavailable = await updateStudent("1", consent).catch(
+      (err: unknown) => err,
+    );
 
     expect(conflict).toBeInstanceOf(CompanionPlanConflictError);
+    expect(conflict).toMatchObject({
+      status: 409,
+      details: { other: 1, privacy_consent_saved: true },
+    });
     expect(isPrivacyConsentSaved(conflict)).toBe(true);
+    expect(isCompanionsChanged(stale)).toBe(true);
     expect(isPrivacyConsentSaved(stale)).toBe(true);
-    expect(isPrivacyConsentSaved(unmarked)).toBe(false);
+    expect(unavailable).toMatchObject({ status: 503 });
+    expect(isPrivacyConsentSaved(unavailable)).toBe(true);
+  });
+
+  it("leaves a refusal unmarked when no consent was written", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      problem(409, { code: "students.companions_changed" }),
+    );
+
+    const failure = await updateStudent("1", {}).catch((err: unknown) => err);
+    expect(isPrivacyConsentSaved(failure)).toBe(false);
   });
 });
 
@@ -429,6 +693,7 @@ describe("guarded student deletion", () => {
       method: "DELETE",
       body: JSON.stringify(input),
     });
+    expect(askedForContract()).toBe(true);
   });
 
   it("keeps the conflict code and diagnostics of a stale preview", async () => {

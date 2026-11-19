@@ -1,5 +1,8 @@
-// The privacy consent of a student as the student BFF routes read and write
-// it. Student Presence owns the consent; without a stored one it answers with
+// Temporary (#7563): the privacy consent of a student as the student BFF
+// routes read and write it for an older app bundle; the current client uses
+// student-privacy-consent.ts. Delete with the two route files after the next
+// production deploy.
+// Student Presence owns the consent; without a stored one it answers with
 // the school's defaults (gdpr.privacy_consent_retention_days).
 
 import { apiGet, apiPut } from "~/lib/api-helpers.server";
@@ -11,7 +14,7 @@ const logger = createLogger({ component: "StudentPrivacyConsent" });
 /** The two consent fields a student form edits. */
 interface ConsentPair {
   privacy_consent_accepted: boolean;
-  data_retention_days: number;
+  data_retention_days: number | null;
 }
 
 /** A request carries the pair only when the person changed it. */
