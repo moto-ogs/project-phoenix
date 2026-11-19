@@ -47,6 +47,10 @@ import { staffConcept } from "~/lib/concepts/staff";
 import { foldForSearch } from "~/lib/search-fold";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const PERSONAL_INFO =
+  "Hier siehst du das Personal deiner Schule. Wähle eine Person, um ihre Angaben zu sehen und zu ändern. Über das Plus lädst du neue Personen ein oder legst sie an.";
+
 type StaffGroupingMode = "none" | "role";
 
 const STAFF_GROUPING_DEFAULT: StaffGroupingMode = "role";
@@ -418,6 +422,7 @@ function TeachersPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Personal",
+        info: PERSONAL_INFO,
         description: statusLine,
         // Ohne Hülle: TenantPage ordnet jede Aktion selbst an. Auf dem Handy
         // bleibt das Kebab-Menü dann neben dem Titel statt in einer eigenen,

@@ -38,6 +38,6 @@ quality_step production-unused-code pnpm knip:production
 # CI checks the guard inventory in test-frontend; a stale inventory failed 3 of
 # 9 red PR runs on 2026-10-31 and takes about 3 s here.
 [[ "${1:-quality}" == fast ]] && quality_step frontend-guards node ../scripts/test-frontend-changed.mjs --check-guards
-# Pre-push stops here; CI runs the whole-project analysis below.
-[[ "${1:-quality}" == fast ]] && exit 0
+# Layer and cycle rules (.dependency-cruiser.cjs) take about 4 s, so pre-push
+# and check-changed.mjs run them too instead of leaving them to CI.
 quality_step dependency-graph pnpm depcruise
