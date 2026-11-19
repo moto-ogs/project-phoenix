@@ -573,6 +573,52 @@ test('a failing prune does not fail the healthy release', t => {
 // the snapshot.
 const workerStack = 'services:\n  server:\n    image: ghcr.io/moto-ogs/phoenix-server:staging\n  worker:\n    image: ghcr.io/moto-ogs/phoenix-server:staging\n' +
   '  frontend:\n    image: ghcr.io/moto-ogs/phoenix-frontend:staging\n';
+test('deploy from a scaled stack retains images before pulling and saves a complete snapshot', t => {
+  const f = fixture(t);
+  writeFileSync(join(f.cwd, 'docker-compose.yml'), workerStack);
+  writeFileSync(join(f.cwd, 'docker-compose.yml.new'), workerStack);
+  const result = f.run('deploy-remote.sh', [], { RELEASE_TEST_REPLICAS: '2' });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const calls = f.calls().trim().split('\n');
+  const pull = calls.findIndex(line => line.endsWith(' pull'));
+  for (const service of ['server', 'frontend', 'worker']) {
+    assert.ok(calls.some((line, index) => index < pull && line.endsWith(`:moto-release-${service}`)), f.calls());
+    assert.ok(calls.includes(`inspect --format {{.State.Running}} ${service}-2`), f.calls());
+  }
+  const id = readFileSync(join(f.cwd, '.deploy-state'), 'utf8').match(/BACKUP_ID=(.+)/)[1];
+  const bundle = join(f.root, 'backups/staging', id);
+  assert.equal(readFileSync(join(bundle, 'complete'), 'utf8'), 'moto-release-backup-v1\n');
+  const manifest = readFileSync(join(bundle, 'images.tsv'), 'utf8');
+  for (const service of ['server', 'frontend', 'worker', 'migrate']) {
+    assert.equal(manifest.split('\n').filter(line => line.startsWith(`${service}\t`)).length, 1, manifest);
+  }
+  assert.equal(readFileSync(join(bundle, 'uploads-volume'), 'utf8'), 'test-uploads\n');
+});
+
+test('scaled S3 servers can snapshot and restore their shared bucket', t => {
+  const f = fixture(t);
+  const extra = { RELEASE_TEST_REPLICAS: '2', RELEASE_TEST_BUCKET: 'uploads' };
+  const created = f.run('release-backup.sh', ['create', f.bundle], extra);
+  assert.equal(created.status, 0, created.stdout + created.stderr);
+  assert.equal(readFileSync(join(f.bundle, 'uploads-volume'), 'utf8'), 'bucket:uploads\n');
+  const restored = f.run('restore-db.sh', [f.bundle], extra);
+  assert.equal(restored.status, 0, restored.stdout + restored.stderr);
+  assert.match(f.calls(), / sync \/tree uploads:uploads --checksum/);
+});
+
+for (const failure of ['replica-mismatch', 'replica-env', 'replica-volume']) {
+  test(`snapshot rejects ${failure} instead of choosing an inconsistent replica`, t => {
+    const f = fixture(t);
+    const result = f.run('release-backup.sh', ['create', f.bundle], {
+      RELEASE_TEST_REPLICAS: '2', RELEASE_TEST_FAIL: failure,
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /replicas differ/);
+    assert.equal(existsSync(join(f.bundle, 'complete')), false);
+    assert.doesNotMatch(f.calls(), /pg_dump /);
+  });
+}
+
 test('a standalone worker gates the release and is stopped before the snapshot', t => {
   const f = fixture(t);
   writeFileSync(join(f.cwd, 'docker-compose.yml.new'), workerStack);
