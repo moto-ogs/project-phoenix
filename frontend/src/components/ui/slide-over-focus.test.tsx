@@ -319,6 +319,9 @@ describe("SlideOver focus (#7502)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Vertretung" });
     await waitFor(() => expect(dialog).toHaveFocus());
 
+    const save = screen.getByRole("button", { name: "Speichern" });
+    const focus = vi.spyOn(save, "focus");
+
     // The panel is no tab stop: without help the focus trap pulls a reverse
     // Tab straight back onto it.
     const notPrevented = fireEvent.keyDown(dialog, {
@@ -327,7 +330,10 @@ describe("SlideOver focus (#7502)", () => {
     });
 
     expect(notPrevented).toBe(false);
-    expect(screen.getByRole("button", { name: "Speichern" })).toHaveFocus();
+    expect(save).toHaveFocus();
+    // In a long panel the last control is below the fold: the key press
+    // scrolls it into view, or Space would act on a control nobody sees.
+    expect(focus.mock.calls.at(-1)?.[0]?.preventScroll ?? false).toBe(false);
   });
 
   it("leaves Shift+Tab from a control inside to the focus loop", async () => {

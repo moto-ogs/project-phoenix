@@ -198,10 +198,17 @@ function tabStops(container: HTMLElement): HTMLElement[] {
   ).filter((control) => control.tabIndex >= 0);
 }
 
-/** The first of the controls that takes the focus; a hidden one refuses. */
-function focusFirstOf(controls: HTMLElement[]): HTMLElement | null {
+/**
+ * The first of the controls that takes the focus; a hidden one refuses.
+ * `preventScroll` only where the caller decides about scrolling afterwards:
+ * a key press must bring its target into view.
+ */
+function focusFirstOf(
+  controls: HTMLElement[],
+  options?: FocusOptions,
+): HTMLElement | null {
   for (const control of controls) {
-    control.focus({ preventScroll: true });
+    control.focus(options);
     if (document.activeElement === control) return control;
   }
   return null;
@@ -530,7 +537,9 @@ const SlideOverContent = React.forwardRef<
             const { scope } = state;
             const target =
               findReturnTarget(state.trigger) ??
-              (scope?.isConnected ? focusFirstOf(tabStops(scope)) : null) ??
+              (scope?.isConnected
+                ? focusFirstOf(tabStops(scope), { preventScroll: true })
+                : null) ??
               findReturnTarget(state.previous);
             state.trigger = null;
             state.scope = null;
