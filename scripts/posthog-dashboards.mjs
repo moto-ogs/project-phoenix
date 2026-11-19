@@ -103,6 +103,16 @@ export function readBrowserEvents(
   return events;
 }
 
+/** The allowed surfaces of the entry (ONBOARDING_SURFACES in analytics-policy.ts). */
+export function readOnboardingSurfaces(
+  source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
+) {
+  const body = /const ONBOARDING_SURFACES = \[([\s\S]*?)\] as const;/.exec(source)?.[1];
+  const surfaces = body ? [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, surface]) => surface) : [];
+  if (surfaces.length === 0) throw new Error('analytics-policy.ts has no ONBOARDING_SURFACES');
+  return surfaces;
+}
+
 // --- query builders ----------------------------------------------------------
 
 const sqlString = (value) => `'${String(value).replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`;
@@ -430,7 +440,11 @@ const quoted = (name) => `\`${name}\``;
 const ONBOARDING_SURFACE_EVENTS = ['onboarding_surface_shown', 'onboarding_surface_accepted', 'onboarding_surface_dismissed'];
 
 /** HogQL: the German name of an event's surface; an unknown value shows as itself. */
-const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlList(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlList(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
+const sqlArray = (values) => `[${values.map(sqlString).join(', ')}]`;
+const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlArray(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlArray(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
+
+/** HogQL: the product name of a school portal (`surface`). */
+const portalLabel = (surface) => `multiIf(${surface} = 'ogs', 'OGS-App', ${surface} = 'school', 'Schul-App', ${surface} = 'parents', 'Eltern-App', 'unbekannt')`;
 
 // --- definitions -------------------------------------------------------------
 
@@ -1124,7 +1138,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
           ...hogql('production', (where) => `
 select
   ${surfaceLabel} as ${quoted('Fläche')},
-  multiIf(properties.surface = 'ogs', 'OGS-App', properties.surface = 'school', 'Schul-App', properties.surface = 'parents', 'Eltern-App', 'unbekannt') as Portal,
+  ${portalLabel('properties.surface')} as Portal,
   countIf(event = 'onboarding_surface_shown') as Angezeigt,
   countIf(event = 'onboarding_surface_accepted') as Angenommen,
   countIf(event = 'onboarding_surface_dismissed') as Geschlossen,
@@ -1151,7 +1165,7 @@ select
 from (
   select
     properties.$session_id as Sitzung,
-    multiIf(any(properties.surface) = 'ogs', 'OGS-App', any(properties.surface) = 'school', 'Schul-App', any(properties.surface) = 'parents', 'Eltern-App', 'unbekannt') as Portal,
+    ${portalLabel('any(properties.surface)')} as Portal,
     uniq(toString(properties.onboarding_surface)) as Flaechen
   from events
   where ${where}

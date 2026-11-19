@@ -37,7 +37,8 @@ export type ChildScopeAnalyticsValue =
 
 /**
  * Selbstöffnende Flächen des Einstiegs (#7541). Ein Wert je Fläche; eine
- * neue Fläche braucht nur einen neuen Wert hier.
+ * neue Fläche braucht einen Wert hier und ihren Namen in
+ * ONBOARDING_SURFACE_LABELS (scripts/posthog-dashboards.mjs).
  */
 export const ONBOARDING_SURFACES = [
   "announcement",

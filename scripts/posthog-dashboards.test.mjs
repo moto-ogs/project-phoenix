@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   DEPLOYMENTS,
@@ -17,6 +16,7 @@ import {
   posthogClient,
   publicHolidays,
   readBrowserEvents,
+  readOnboardingSurfaces,
   readPageNames,
   readRouteTemplates,
   sync,
@@ -194,12 +194,12 @@ test('the entry dashboard counts self-opening surfaces from consenting browsers 
   assert.match(perSession.query.source.query, /uniq\(toString\(properties\.onboarding_surface\)\)/);
 
   // Every allowed surface of the browser filter has a German name on the tile.
-  const policy = readFileSync(new URL('../frontend/src/lib/analytics-policy.ts', import.meta.url), 'utf8');
-  const allowed = /ONBOARDING_SURFACES = \[([\s\S]*?)\] as const/.exec(policy)?.[1].match(/"([a-z_]+)"/g).map((value) => value.slice(1, -1));
-  assert.ok(allowed?.length > 0, 'analytics-policy.ts lists ONBOARDING_SURFACES');
-  assert.deepEqual(Object.keys(ONBOARDING_SURFACE_LABELS).sort(), [...allowed].sort());
+  assert.deepEqual(Object.keys(ONBOARDING_SURFACE_LABELS).sort(), readOnboardingSurfaces().sort());
+  assert.throws(() => readOnboardingSurfaces('const OTHER = 1;'), /ONBOARDING_SURFACES/);
+  const query = perSurface.query.source.query;
+  assert.match(query, /transform\(toString\(properties\.onboarding_surface\), \['/, 'transform takes arrays, not tuples');
   for (const [value, label] of Object.entries(ONBOARDING_SURFACE_LABELS)) {
-    assert.ok(perSurface.query.source.query.includes(`'${value}'`) && perSurface.query.source.query.includes(`'${label}'`), value);
+    assert.ok(query.includes(`'${value}'`) && query.includes(`'${label}'`), value);
   }
 
   // Surface events and the install dialog's answers fall outside „Sonstiges“.
@@ -208,7 +208,8 @@ test('the entry dashboard counts self-opening surfaces from consenting browsers 
   const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
   for (const event of ['onboarding_surface_shown', 'onboarding_surface_accepted', 'onboarding_surface_dismissed', 'pwa_install_prompt_shown', 'pwa_install_prompt_accepted', 'pwa_install_prompt_dismissed']) {
     assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
-    assert.ok(noFeature.includes(`'${event}'`) || /startsWith\(event, 'onboarding_'\)/.test(noFeature) && event.startsWith('onboarding_'), `${event} is no feature use`);
+    const byPrefix = event.startsWith('onboarding_') && noFeature.includes("startsWith(event, 'onboarding_')");
+    assert.ok(byPrefix || noFeature.includes(`'${event}'`), `${event} is no feature use`);
   }
 });
 
