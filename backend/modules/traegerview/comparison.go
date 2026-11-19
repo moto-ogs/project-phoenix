@@ -75,7 +75,7 @@ type ComparisonFilter struct {
 
 // ComparedSchool is one school with its figures.
 type ComparedSchool struct {
-	School
+	TraegerSchool
 	Values ComparisonValues `json:"values"`
 }
 

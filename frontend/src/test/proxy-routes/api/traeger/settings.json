@@ -1,5 +1,0 @@
-{
-  "api/traeger/settings/schema": [
-    "GET traeger /traeger/settings/schema"
-  ]
-}

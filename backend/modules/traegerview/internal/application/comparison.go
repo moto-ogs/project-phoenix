@@ -88,7 +88,7 @@ func compareSchools(schools []traegerview.SchoolUtilization, roster map[int64]ma
 	for _, school := range schools {
 		values := schoolFigures(school)
 		values[traegerview.ComparisonActiveStudents] = float64(len(roster[school.ID]))
-		compared := traegerview.ComparedSchool{School: school.School, Values: values}
+		compared := traegerview.ComparedSchool{TraegerSchool: school.TraegerSchool, Values: values}
 		result.Schools = append(result.Schools, compared)
 		if school.AttendanceFrom != nil && school.AttendanceFrom.After(from) &&
 			(result.AttendanceFrom == nil || school.AttendanceFrom.After(*result.AttendanceFrom)) {

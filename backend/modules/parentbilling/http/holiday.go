@@ -264,7 +264,7 @@ func (rs *HolidayResource) contribution(w http.ResponseWriter, r *http.Request) 
 		renderHolidayError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, contribution, "Holiday contribution retrieved successfully")
+	common.Respond(w, r, http.StatusOK, holidayContributionResponse(contribution), "Holiday contribution retrieved successfully")
 }
 
 // confirm confirms the registration and freezes its contribution. Any
@@ -287,7 +287,9 @@ func (rs *HolidayResource) confirm(w http.ResponseWriter, r *http.Request) {
 		renderHolidayError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, confirmation, "Holiday registration confirmed successfully")
+	common.Respond(w, r, http.StatusOK, HolidayConfirmationResponse{
+		RegistrationID: confirmation.RegistrationID, Status: confirmation.Status, Contribution: holidayContributionResponse(confirmation.Contribution),
+	}, "Holiday registration confirmed successfully")
 }
 
 // cancel cancels the registration and computes the rest of its sibling

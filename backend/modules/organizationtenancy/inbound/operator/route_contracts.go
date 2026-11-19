@@ -13,6 +13,7 @@ func BillingRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/key-day-overrides/organizations/{organizationId}", Portals: operator, Response: billingKeyDayResponse{}, Enums: overrideScopes},
 		{Method: "PUT", Pattern: "/key-day-overrides/schools/{schoolId}", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}, Enums: overrideScopes},
 		{Method: "DELETE", Pattern: "/key-day-overrides/schools/{schoolId}", Portals: operator, Response: billingKeyDayResponse{}, Enums: overrideScopes},
+		billingKeyDateCountContract(),
 	}
 }
 

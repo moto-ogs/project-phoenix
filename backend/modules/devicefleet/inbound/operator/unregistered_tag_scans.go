@@ -414,3 +414,7 @@ func resolveIsClientError(err error) bool {
 		errors.Is(err, devicefleet.ErrUnregisteredTagScanNotFound) || errors.Is(err, devicefleet.ErrUnregisteredTagScanResolved) ||
 		errors.Is(err, devicefleet.ErrInvalidUnregisteredTagScan)
 }
+
+// ListResponse is the answer of the list route, for the contract the root
+// registers (ADR 0270); this package names no contract types itself.
+func ListResponse() any { return []scanResponse{} }

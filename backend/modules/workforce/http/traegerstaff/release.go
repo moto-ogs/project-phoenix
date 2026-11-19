@@ -95,6 +95,11 @@ func (rs *ReleaseResource) Grant(w http.ResponseWriter, r *http.Request) {
 	}, func() { common.Respond(w, r, http.StatusCreated, release, "Staff release granted successfully") })
 }
 
+// withdrawnReleaseResponse names the Träger whose release ended.
+type withdrawnReleaseResponse struct {
+	OrganizationID int64 `json:"organization_id"`
+}
+
 // Withdraw answers DELETE /operator/organizations/{id}/staff-release.
 func (rs *ReleaseResource) Withdraw(w http.ResponseWriter, r *http.Request) {
 	organizationID, ok := common.ParseInt64IDWithError(w, r, "id", "invalid organization ID")
@@ -104,7 +109,7 @@ func (rs *ReleaseResource) Withdraw(w http.ResponseWriter, r *http.Request) {
 	rs.write(w, r, ReleaseWithdrawn, "", func(ctx context.Context, _ int64) error {
 		return rs.releases.WithdrawRelease(ctx, organizationID)
 	}, func() {
-		common.Respond(w, r, http.StatusOK, map[string]int64{"organization_id": organizationID}, "Staff release withdrawn successfully")
+		common.Respond(w, r, http.StatusOK, withdrawnReleaseResponse{OrganizationID: organizationID}, "Staff release withdrawn successfully")
 	})
 }
 

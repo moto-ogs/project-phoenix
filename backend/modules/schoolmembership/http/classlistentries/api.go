@@ -86,8 +86,8 @@ func (rs *Resource) Router() chi.Router {
 	return router
 }
 
-// EntryRequest is the create/update payload.
-type EntryRequest struct {
+// ClassListEntryRequest is the create/update payload.
+type ClassListEntryRequest struct {
 	FirstName   string `json:"first_name"`
 	LastName    string `json:"last_name"`
 	SchoolClass string `json:"school_class"`
@@ -96,7 +96,7 @@ type EntryRequest struct {
 // Bind validates the payload. Fields are trimmed here so a whitespace-only
 // value is rejected as the invalid request it is (400) instead of tripping
 // the owner-level validation later.
-func (req *EntryRequest) Bind(_ *http.Request) error {
+func (req *ClassListEntryRequest) Bind(_ *http.Request) error {
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
 	req.SchoolClass = strings.TrimSpace(req.SchoolClass)
@@ -106,33 +106,33 @@ func (req *EntryRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-func (req *EntryRequest) fields() schoolmembership.ClassListEntryFields {
+func (req *ClassListEntryRequest) fields() schoolmembership.ClassListEntryFields {
 	return schoolmembership.ClassListEntryFields{
 		FirstName: req.FirstName, LastName: req.LastName, SchoolClass: req.SchoolClass,
 	}
 }
 
-// AssignRequest names the student an entry is resolved into. StudentID binds
+// ClassListAssignRequest names the student an entry is resolved into. StudentID binds
 // via `,string` (the wire value is a quoted decimal): JavaScript clients and
 // the Next.js proxy round JSON numbers beyond 2^53, so 64-bit IDs must travel
 // as strings to stay lossless.
-type AssignRequest struct {
+type ClassListAssignRequest struct {
 	StudentID int64 `json:"student_id,string"`
 }
 
 // Bind validates the payload.
-func (req *AssignRequest) Bind(_ *http.Request) error {
+func (req *ClassListAssignRequest) Bind(_ *http.Request) error {
 	if req.StudentID <= 0 {
 		return errors.New("student_id ist erforderlich")
 	}
 	return nil
 }
 
-// EntryResponse is one entry on the wire. MatchingStudentIDs carries the IDs
+// ClassListEntryResponse is one entry on the wire. MatchingStudentIDs carries the IDs
 // of regular students sharing name and class — the hint for a deliberate
 // "Zuordnen" resolution, never an automatic merge. All IDs are serialized as
-// JSON strings for the same reason AssignRequest binds with `,string`.
-type EntryResponse struct {
+// JSON strings for the same reason ClassListAssignRequest binds with `,string`.
+type ClassListEntryResponse struct {
 	ID                 int64     `json:"id,string"`
 	FirstName          string    `json:"first_name"`
 	LastName           string    `json:"last_name"`
@@ -141,12 +141,12 @@ type EntryResponse struct {
 	MatchingStudentIDs []string  `json:"matching_student_ids"`
 }
 
-func entryResponse(entry schoolmembership.ClassListEntry, matches []int64) EntryResponse {
+func classListEntryResponse(entry schoolmembership.ClassListEntry, matches []int64) ClassListEntryResponse {
 	matchIDs := make([]string, 0, len(matches))
 	for _, id := range matches {
 		matchIDs = append(matchIDs, strconv.FormatInt(id, 10))
 	}
-	return EntryResponse{
+	return ClassListEntryResponse{
 		ID:                 entry.ID,
 		FirstName:          entry.FirstName,
 		LastName:           entry.LastName,
@@ -176,15 +176,15 @@ func (rs *Resource) listEntries(w http.ResponseWriter, r *http.Request) {
 		rs.failure(w, r, FailureInternal, err, "internal_error")
 		return
 	}
-	out := make([]EntryResponse, 0, len(entries))
+	out := make([]ClassListEntryResponse, 0, len(entries))
 	for i, entry := range entries {
-		out = append(out, entryResponse(entry, matches[i]))
+		out = append(out, classListEntryResponse(entry, matches[i]))
 	}
 	rs.respond(w, r, http.StatusOK, out, "Class list entries retrieved successfully")
 }
 
 func (rs *Resource) createEntry(w http.ResponseWriter, r *http.Request) {
-	req := &EntryRequest{}
+	req := &ClassListEntryRequest{}
 	if err := render.Bind(r, req); err != nil {
 		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
 		return
@@ -196,7 +196,7 @@ func (rs *Resource) createEntry(w http.ResponseWriter, r *http.Request) {
 		rs.writeFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusCreated, entryResponse(entry, nil), "Class list entry created successfully")
+	rs.respond(w, r, http.StatusCreated, classListEntryResponse(entry, nil), "Class list entry created successfully")
 }
 
 func (rs *Resource) updateEntry(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +204,7 @@ func (rs *Resource) updateEntry(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &EntryRequest{}
+	req := &ClassListEntryRequest{}
 	if err := render.Bind(r, req); err != nil {
 		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
 		return
@@ -216,7 +216,7 @@ func (rs *Resource) updateEntry(w http.ResponseWriter, r *http.Request) {
 		rs.writeFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusOK, entryResponse(entry, nil), "Class list entry updated successfully")
+	rs.respond(w, r, http.StatusOK, classListEntryResponse(entry, nil), "Class list entry updated successfully")
 }
 
 func (rs *Resource) deleteEntry(w http.ResponseWriter, r *http.Request) {
@@ -239,7 +239,7 @@ func (rs *Resource) assignEntry(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &AssignRequest{}
+	req := &ClassListAssignRequest{}
 	if err := render.Bind(r, req); err != nil {
 		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
 		return

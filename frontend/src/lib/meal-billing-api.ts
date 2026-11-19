@@ -85,7 +85,7 @@ interface BackendMonth {
   current?: BackendMonth | null;
   children:
     | {
-        student_id: number;
+        student_id: number | string;
         first_name: string;
         last_name: string;
         school_class: string;

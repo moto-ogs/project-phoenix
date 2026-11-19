@@ -82,6 +82,22 @@ export function object<T>(
   return z.object(shape) as unknown as z.ZodType<T, unknown>;
 }
 
+/**
+ * A value decoder inside a generated shape. The interface next to the shape
+ * says what the value is, so these helpers hand the type checker no types to
+ * derive (see `object`).
+ */
+type Field = z.ZodType<unknown, unknown>;
+
+export const str: Field = z.string();
+export const bool: Field = z.boolean();
+export const num: Field = z.number();
+export const json: Field = z.unknown();
+export const arr = (item: Field): Field => z.array(item);
+export const rec = (value: Field): Field => z.record(z.string(), value);
+export const nullable = (value: Field): Field => value.nullable();
+export const optional = (value: Field): Field => value.optional();
+
 /** common.Response */
 export function success<T>(
   data: z.ZodType<T, unknown>,

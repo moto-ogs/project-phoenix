@@ -49,7 +49,7 @@ func dailyAttendanceFixture(t *testing.T) dailyAttendanceData {
 	open := traegerview.ChildDay{SchoolID: 1, Date: friday, StudentID: 13, ArrivedAt: berlin(t, friday, 7, 5)}
 	return dailyAttendanceData{
 		from: friday, to: monday, other: 2,
-		schools: []traegerview.School{{ID: 2, Name: "Hort am Hafen"}, {ID: 1, Name: "Hort Warnowblick"}},
+		schools: []traegerview.TraegerSchool{{ID: 2, Name: "Hort am Hafen"}, {ID: 1, Name: "Hort Warnowblick"}},
 		days: []traegerview.ChildDay{
 			stay(1, 11, friday, [2]int{11, 45}, [2]int{16, 15}), // 270 minutes
 			stay(1, 12, friday, [2]int{7, 30}, [2]int{15, 0}),   // 450 minutes
@@ -112,7 +112,7 @@ func TestBuildDailyAttendanceCountsChildDaysAndSetsPresenceBeforeAbsence(t *test
 
 func TestBuildDailyAttendanceWithoutSchoolsInMecklenburgVorpommern(t *testing.T) {
 	t.Parallel()
-	result := buildDailyAttendance(dailyAttendanceData{from: calendar.NewDate(2026, 11, 2), to: calendar.NewDate(2026, 11, 6), other: 3, schools: []traegerview.School{}})
+	result := buildDailyAttendance(dailyAttendanceData{from: calendar.NewDate(2026, 11, 2), to: calendar.NewDate(2026, 11, 6), other: 3, schools: []traegerview.TraegerSchool{}})
 
 	assert.Empty(t, result.Schools)
 	assert.NotNil(t, result.Schools, "an empty list, never null")

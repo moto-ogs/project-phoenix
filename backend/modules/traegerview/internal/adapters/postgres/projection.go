@@ -71,8 +71,8 @@ const schoolsQuery = `SELECT "school".id, "school".name, "school".slug, "school"
 	ORDER BY "school".name, "school".id`
 
 // Schools lists the schools of the set, ordered by name.
-func (p *Projection) Schools(ctx context.Context, schools []int64) ([]traegerview.School, error) {
-	result := []traegerview.School{}
+func (p *Projection) Schools(ctx context.Context, schools []int64) ([]traegerview.TraegerSchool, error) {
+	result := []traegerview.TraegerSchool{}
 	if len(schools) == 0 {
 		return result, nil
 	}

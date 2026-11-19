@@ -321,9 +321,9 @@ func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
 		"  mode: OpenEnum<mode>;",
 		"  /** @deprecated leaves the contract with the next release */\n  nick?: string;",
 		"  legacy_id: int64StringOrNumber,",
-		"  friend_ids: z.array(int64String).optional(),",
-		"  day: calendarDate.nullable(),",
-		"  hint: z.string().optional(),",
+		"  friend_ids: optional(arr(int64String)),",
+		"  day: nullable(calendarDate),",
+		"  hint: optional(str),",
 		`  "GET /api/rows/{id}": {`,
 		"    response: success(rowSchema),",
 	} {
@@ -484,7 +484,7 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 	files, err := TypeScript(doc)
 	require.NoError(t, err)
 	assert.Contains(t, files["stored.generated.ts"], "  raw: unknown | null;")
-	assert.Contains(t, files["stored.generated.ts"], "raw: z.unknown().nullable(),")
+	assert.Contains(t, files["stored.generated.ts"], "raw: nullable(json),")
 	assert.Contains(t, files["rows.generated.ts"], "  track_id?: number | null;")
 
 	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers, NumericIDs: options.NumericIDs})

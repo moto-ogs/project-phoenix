@@ -48,7 +48,7 @@ const portals = [
     scope: "platform",
     cookie: "operator.session-token",
     logout: "/api/operator/auth/logout",
-    read: "/api/operator/provisioning/organizations",
+    read: "/api/operator/organizations",
   },
   {
     name: "Caterer",

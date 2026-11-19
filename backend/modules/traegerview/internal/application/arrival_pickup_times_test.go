@@ -34,9 +34,9 @@ func TestArrivalPickupPeriodEndsYesterdayAndRejectsInvalidPeriods(t *testing.T) 
 
 func TestBuildArrivalPickupTimesAveragesPerSchoolDayAndAddsTheSchools(t *testing.T) {
 	t.Parallel()
-	park := traegerview.School{ID: 1, Name: "OGS Am Park"}
-	wald := traegerview.School{ID: 2, Name: "OGS Waldweg"}
-	empty := traegerview.School{ID: 3, Name: "OGS Neu"}
+	park := traegerview.TraegerSchool{ID: 1, Name: "OGS Am Park"}
+	wald := traegerview.TraegerSchool{ID: 2, Name: "OGS Waldweg"}
+	empty := traegerview.TraegerSchool{ID: 3, Name: "OGS Neu"}
 	from, to := calendar.NewDate(2026, 10, 1), calendar.NewDate(2026, 10, 31)
 	counts := []traegerview.ArrivalPickupCount{
 		{SchoolID: park.ID, Weekday: 1, StartMinute: 7*60 + 30, Arrivals: 10},
@@ -52,7 +52,7 @@ func TestBuildArrivalPickupTimesAveragesPerSchoolDayAndAddsTheSchools(t *testing
 		{SchoolID: wald.ID, Weekday: 6, Days: 1, FirstDay: calendar.NewDate(2026, 10, 17)},
 	}
 
-	result := buildArrivalPickupTimes([]traegerview.School{park, wald, empty}, counts, days, from, to)
+	result := buildArrivalPickupTimes([]traegerview.TraegerSchool{park, wald, empty}, counts, days, from, to)
 
 	assert.Equal(t, 7*60, result.FirstMinute)
 	assert.Equal(t, 18*60, result.LastMinute, "a pickup at 18:00 widens the axis past 17:30")

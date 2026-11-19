@@ -89,6 +89,20 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	require.Len(t, groupMails.Messages, 1)
 	require.Equal(t, map[string]int{"queued": 1}, groupMails.Messages[group.Messages[0].ID], "one mail per family of the class")
 
+	// The list shows the group thread with its families, the reach names
+	// the child, and closing the thread ends it.
+	var listed []messaging.StaffGroupThreadSummaryResponse
+	read("GET", "/group-threads", "", &listed)
+	require.Len(t, listed, 1)
+	require.Equal(t, group.Thread.ID, listed[0].ID)
+	require.Equal(t, 1, listed[0].FamilyCount)
+	var reachable messaging.ReachableStudentsResponse
+	read("GET", "/reachable-students", "", &reachable)
+	require.Contains(t, reachable.StudentIDs, fmt.Sprint(chain.StudentID))
+	var closed messaging.GroupThreadDetailResponse
+	read("POST", "/group-threads/"+group.Thread.ID+"/close", "", &closed)
+	require.NotNil(t, closed.Thread.ClosedAt)
+
 	// Another school's administrator reads neither status.
 	foreignTenant, _ := testpkg.CreateTestTenant(t, db)
 	_, foreign := testpkg.CreateTestStaffWithAccountForTenant(t, db, foreignTenant, "Foreign", "Mail")

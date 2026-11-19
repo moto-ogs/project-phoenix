@@ -1,5 +1,0 @@
-{
-  "api/traeger/holiday-contributions/confirmation-settings": [
-    "GET traeger /traeger/holiday-contributions/confirmation-settings"
-  ]
-}

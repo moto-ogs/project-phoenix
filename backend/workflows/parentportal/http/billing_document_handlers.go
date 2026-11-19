@@ -28,7 +28,7 @@ type BillingDocumentResponse struct {
 	ServiceFrom    timezone.Date `json:"service_from"`
 	ServiceUntil   timezone.Date `json:"service_until"`
 	IssuedOn       timezone.Date `json:"issued_on"`
-	TotalCents     int64         `json:"total_cents"`
+	TotalCents     int           `json:"total_cents"`
 	ChildNames     []string      `json:"child_names"`
 	SentAt         time.Time     `json:"sent_at"`
 	// ContractStatus and SignedAt of a care contract (#4679).
@@ -76,7 +76,7 @@ func (rs *Resource) respondInbox(w http.ResponseWriter, r *http.Request, inbox p
 			ID: strconv.FormatInt(document.ID, 10), OrganizationID: strconv.FormatInt(document.OrganizationID, 10),
 			TraegerName: document.TraegerName, Kind: document.Kind, Number: document.Number, PeriodName: document.PeriodName,
 			ServiceFrom: document.ServiceFrom, ServiceUntil: document.ServiceUntil, IssuedOn: document.IssuedOn,
-			TotalCents: document.TotalCents, ChildNames: document.ChildNames, SentAt: document.SentAt,
+			TotalCents: int(document.TotalCents), ChildNames: document.ChildNames, SentAt: document.SentAt,
 			ContractStatus: document.ContractStatus, SignedAt: document.SignedAt, CanSign: document.CanSign, Replaced: document.Replaced,
 			SEPAMandate: document.SEPAMandate, EndsOn: document.EndsOn, CanEndContract: document.CanEndContract, CanWithdrawContract: document.CanWithdrawContract,
 		}

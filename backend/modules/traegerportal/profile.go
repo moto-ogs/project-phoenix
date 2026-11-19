@@ -30,17 +30,17 @@ func (rs *Resource) profileRouter(protectedTraegerRoutes func(chi.Router, func(c
 	return r
 }
 
-// NameRequest is the body of PUT /traeger/profile/name and PUT
+// TraegerNameRequest is the body of PUT /traeger/profile/name and PUT
 // /traeger/accounts/{accountId}/name. Identity & Access validates the name.
-type NameRequest struct {
+type TraegerNameRequest struct {
 	Name string `json:"name"`
 }
 
 // Bind accepts the body.
-func (req *NameRequest) Bind(_ *http.Request) error { return nil }
+func (req *TraegerNameRequest) Bind(_ *http.Request) error { return nil }
 
-// ProfileResponse is the signed-in person at the Träger of the session.
-type ProfileResponse struct {
+// TraegerProfileResponse is the signed-in person at the Träger of the session.
+type TraegerProfileResponse struct {
 	AccountID int64  `json:"account_id"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
@@ -64,7 +64,7 @@ func (rs *Resource) changeOwnName(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &NameRequest{}
+	req := &TraegerNameRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -87,7 +87,7 @@ func (rs *Resource) changeMemberName(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	req := &NameRequest{}
+	req := &TraegerNameRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -109,6 +109,6 @@ func (rs *Resource) profileActor(w http.ResponseWriter, r *http.Request) (identi
 	return sessionActor(w, r)
 }
 
-func profileResponse(member identityaccess.TraegerMember) ProfileResponse {
-	return ProfileResponse{AccountID: member.AccountID, Email: member.Email, Name: member.Name}
+func profileResponse(member identityaccess.TraegerMember) TraegerProfileResponse {
+	return TraegerProfileResponse{AccountID: member.AccountID, Email: member.Email, Name: member.Name}
 }

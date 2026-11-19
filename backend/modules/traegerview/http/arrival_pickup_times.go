@@ -47,7 +47,7 @@ func writeArrivalPickupExport(w http.ResponseWriter, r *http.Request, render com
 		common.WriteList(w, r, render, format, arrivalPickupTable(times, ""))
 		return
 	}
-	school, found := findSchool(times.Schools, schoolID, func(s traegerview.SchoolArrivalPickupTimes) traegerview.School { return s.School })
+	school, found := findSchool(times.Schools, schoolID, func(s traegerview.SchoolArrivalPickupTimes) traegerview.TraegerSchool { return s.TraegerSchool })
 	if !found {
 		renderSchoolNotFound(w, r)
 		return

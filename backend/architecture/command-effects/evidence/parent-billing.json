@@ -666,7 +666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.HolidayWeeks",
-      "binding_digest": "335ff4f4df193f046cdd84130bd028e9",
+      "binding_digest": "a889b75f68c2283c309a3fe8bb02d2a7",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.HolidayWeeks",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer",

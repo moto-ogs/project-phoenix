@@ -56,8 +56,8 @@ type TraegerOfferingFields struct {
 type TraegerCarePrice struct {
 	Weekday      string `json:"weekday,omitempty"`
 	DaysPerWeek  *int   `json:"days_per_week,omitempty"`
-	MonthlyCents int64  `json:"monthly_cents"`
-	SiblingCents *int64 `json:"sibling_cents,omitempty"`
+	MonthlyCents int    `json:"monthly_cents"`
+	SiblingCents *int   `json:"sibling_cents,omitempty"`
 	MealExtra    bool   `json:"meal_extra"`
 }
 
@@ -148,9 +148,9 @@ type TraegerOfferingCopy struct {
 	PhaseID int64
 }
 
-// TraegerFieldChange is one field of a copy in a preview or an apply; the
+// TraegerOfferingFieldChange is one field of a copy in a preview or an apply; the
 // states are those of Enrollment's Träger phase copy.
-type TraegerFieldChange struct {
+type TraegerOfferingFieldChange struct {
 	Field   string `json:"field"`
 	State   string `json:"state"`
 	Traeger any    `json:"traeger"`
@@ -159,10 +159,10 @@ type TraegerFieldChange struct {
 
 // TraegerOfferingApplied is the result of applying a Träger offering.
 type TraegerOfferingApplied struct {
-	SourceID int64                `json:"source_id"`
-	CopyID   int64                `json:"copy_id"`
-	Created  bool                 `json:"created"`
-	Fields   []TraegerFieldChange `json:"fields"`
+	SourceID int64                        `json:"source_id"`
+	CopyID   int64                        `json:"copy_id"`
+	Created  bool                         `json:"created"`
+	Fields   []TraegerOfferingFieldChange `json:"fields"`
 }
 
 // TraegerOfferingCopyState is the state of one copy a preview reads and an

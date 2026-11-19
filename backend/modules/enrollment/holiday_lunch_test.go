@@ -15,16 +15,16 @@ import (
 func TestHolidayLunchCountsOneLunchPerCareDay(t *testing.T) {
 	t.Parallel()
 	monday := calendar.NewDate(2027, 7, 12)
-	price := int64(430)
+	price := 430
 	week := enrollment.HolidayWeek{StartsOn: monday, EndsOn: monday.AddDays(4), LunchPriceCents: &price}
 
 	count, cents := enrollment.HolidayLunch(week, nil, true)
 	assert.Equal(t, 5, count)
-	assert.Equal(t, int64(2150), cents, "5 lunches at 4,30 € are 21,50 €")
+	assert.Equal(t, 2150, cents, "5 lunches at 4,30 € are 21,50 €")
 
 	count, cents = enrollment.HolidayLunch(week, []calendar.Date{monday, monday.AddDays(2)}, true)
 	assert.Equal(t, 2, count, "a booking of days eats on its days")
-	assert.Equal(t, int64(860), cents)
+	assert.Equal(t, 860, cents)
 
 	count, cents = enrollment.HolidayLunch(week, nil, false)
 	assert.Zero(t, count, "a booking without lunch has none")
@@ -44,7 +44,7 @@ func TestHolidayLunchCountsOneLunchPerCareDay(t *testing.T) {
 func TestHolidayLunchSkipsDaysWithoutCare(t *testing.T) {
 	t.Parallel()
 	monday := calendar.NewDate(2027, 7, 12)
-	price := int64(430)
+	price := 430
 	week := enrollment.HolidayWeek{
 		StartsOn: monday, EndsOn: monday.AddDays(4), LunchPriceCents: &price,
 		NoCareDays: []enrollment.HolidayNoCareDay{
@@ -55,7 +55,7 @@ func TestHolidayLunchSkipsDaysWithoutCare(t *testing.T) {
 
 	count, cents := enrollment.HolidayLunch(week, nil, true)
 	assert.Equal(t, 3, count, "a closing day planned after the booking and a public holiday take their lunch away")
-	assert.Equal(t, int64(1290), cents)
+	assert.Equal(t, 1290, cents)
 	assert.Equal(t, []calendar.Date{monday, monday.AddDays(1), monday.AddDays(3)}, enrollment.HolidayLunchDays(week, nil))
 
 	count, _ = enrollment.HolidayLunch(week, []calendar.Date{monday, monday.AddDays(2)}, true)

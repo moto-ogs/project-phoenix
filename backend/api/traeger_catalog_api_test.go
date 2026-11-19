@@ -192,6 +192,22 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	rollout := catalogRollout(t, router, office.token, phasePath, preview.Fingerprint)
 	assert.Equal(t, []catalogResult{{SchoolID: office.schools[0], Outcome: "applied"}, {SchoolID: office.schools[1], Outcome: "applied"}}, rollout.Schools)
 
+	// The list and the phase with its offerings, as the catalog page reads them.
+	rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/catalog/phases", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	phases := decodeSchoolPortalData[[]catalogPhaseBody](t, rec.Body.Bytes())
+	require.Len(t, phases, 1)
+	assert.Equal(t, phase.ID, phases[0].ID)
+	rec = traegerJSON(t, router, office.token, http.MethodGet, phasePath, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	detail := decodeSchoolPortalData[struct {
+		ID        int64                      `json:"id"`
+		Offerings []careplan.TraegerOffering `json:"offerings"`
+	}](t, rec.Body.Bytes())
+	assert.Equal(t, phase.ID, detail.ID)
+	require.Len(t, detail.Offerings, 1)
+	assert.Equal(t, offering.ID, detail.Offerings[0].ID)
+
 	// The list of the phases as a file (#4718).
 	export := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/catalog/phases/export", nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())

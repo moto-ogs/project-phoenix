@@ -1,0 +1,38 @@
+package traegerportal
+
+import "github.com/moto-ogs/project-phoenix/api/common"
+
+var traegerPortal = []common.PortalScope{common.PortalTraeger}
+
+// AccountRouteContracts registers the Träger-Büro's account management
+// (ADR 0270), with patterns relative to /traeger/accounts. The exports
+// answer files and keep their route files.
+func AccountRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: TraegerAccountsResponse{}},
+		{Method: "GET", Pattern: "/history", Portals: traegerPortal, Query: []common.QueryParam{{Name: "before", Kind: common.QueryID}}, Response: TraegerHistoryResponse{}},
+		{Method: "POST", Pattern: "/invitations", Portals: traegerPortal, Request: TraegerInviteRequest{}, Response: TraegerInvitationResponse{}},
+		{Method: "DELETE", Pattern: "/invitations/{invitationId}", Portals: traegerPortal, NoData: true},
+		{Method: "PUT", Pattern: "/{accountId}/roles", Portals: traegerPortal, Request: TraegerRolesRequest{}, Response: TraegerMemberResponse{}},
+		{Method: "PUT", Pattern: "/{accountId}/name", Portals: traegerPortal, Request: TraegerNameRequest{}, Response: TraegerMemberResponse{}},
+		{Method: "DELETE", Pattern: "/{accountId}", Portals: traegerPortal, NoData: true},
+	}
+}
+
+// ProfileRouteContracts registers the signed-in member's own profile, with
+// patterns relative to /traeger/profile.
+func ProfileRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: TraegerProfileResponse{}},
+		{Method: "PUT", Pattern: "/name", Portals: traegerPortal, Request: TraegerNameRequest{}, Response: TraegerProfileResponse{}},
+	}
+}
+
+// SchoolSessionRouteContracts registers the Absprung into a school, with
+// patterns relative to /traeger/school-sessions. It answers a handoff token
+// in the body; no cookie is set on the Träger host.
+func SchoolSessionRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: SchoolSessionRequest{}, Response: SchoolSessionResponse{}},
+	}
+}

@@ -1,8 +1,0 @@
-{
-  "api/holiday-closure-notices": [
-    "GET tenant /api/holiday-closure-notices"
-  ],
-  "api/holiday-closure-notices/[id]/notify": [
-    "POST tenant /api/holiday-closure-notices/id%2F1/notify"
-  ]
-}

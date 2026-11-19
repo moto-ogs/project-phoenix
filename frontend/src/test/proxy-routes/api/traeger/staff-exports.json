@@ -1,8 +1,0 @@
-{
-  "api/traeger/staff-exports/payroll": [
-    "GET traeger /traeger/staff-exports/payroll query=year,month,format"
-  ],
-  "api/traeger/staff-exports/times": [
-    "GET traeger /traeger/staff-exports/times query=year,month"
-  ]
-}

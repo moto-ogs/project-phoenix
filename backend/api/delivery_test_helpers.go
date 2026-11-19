@@ -79,8 +79,14 @@ type DeliveryTestModule struct {
 // included. The outer host's session-liveness and
 // module-booking middleware are outside this route-sized test root.
 func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
+	return m.NotificationRouterForTests(nil)
+}
+
+// NotificationRouterForTests is NotificationPreferenceRouterForTests with
+// dispatch: the test notification of both portals goes to dispatch.
+func (m DeliveryTestModule) NotificationRouterForTests(dispatch deliveryCompose.NotificationService) chi.Router {
 	router := chi.NewRouter()
-	notifications := NewNotificationHTTP(nil, m.PushSubscriptions, m.NotificationPreferences, m.Feed)
+	notifications := NewNotificationHTTP(dispatch, m.PushSubscriptions, m.NotificationPreferences, m.Feed)
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
 	parents := parentAPI.NewResource(parentAPI.ResourceConfig{

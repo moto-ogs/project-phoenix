@@ -96,7 +96,7 @@ var dailyAttendanceStatus = map[string]string{
 // arrival, pickup (Berlin wall clock) and the stay in minutes. The running
 // number counts rows, it identifies no child across days.
 func dailyAttendanceTable(export traegerview.DailyAttendanceExport) common.ListTable {
-	schools := make(map[int64]traegerview.School, len(export.Schools))
+	schools := make(map[int64]traegerview.TraegerSchool, len(export.Schools))
 	for _, school := range export.Schools {
 		schools[school.ID] = school
 	}

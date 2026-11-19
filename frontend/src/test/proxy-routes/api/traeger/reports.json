@@ -1,5 +1,0 @@
-{
-  "api/traeger/reports/key-date": [
-    "GET traeger /traeger/reports/key-date"
-  ]
-}

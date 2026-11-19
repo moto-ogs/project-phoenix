@@ -34,11 +34,11 @@ type Range struct {
 	EndDate   calendar.Date `json:"end_date"`
 }
 
-// Notice is what the school and the Träger-Büro see of a proposed or
+// ClosureNotice is what the school and the Träger-Büro see of a proposed or
 // confirmed notice. Families counts the families a click would tell now,
 // computed like the mails themselves; it is set while the notice waits for
 // a click and holds no name, contact or child (decision of 10.11.2026).
-type Notice struct {
+type ClosureNotice struct {
 	Token        string     `json:"token"`
 	ID           int64      `json:"id"`
 	SchoolID     int64      `json:"school_id"`
@@ -47,7 +47,7 @@ type Notice struct {
 	Reason       string     `json:"reason"`
 	Previous     *Range     `json:"previous"`
 	Current      *Range     `json:"current"`
-	Revision     int64      `json:"revision"`
+	Revision     int        `json:"revision"`
 	Status       string     `json:"status"`
 	Changed      bool       `json:"changed"`
 	CanNotify    bool       `json:"can_notify"`
@@ -59,7 +59,7 @@ type Notice struct {
 // TraegerNotice adds what the Träger-Büro sees of the affected bookings:
 // the weeks with their changed days and the children.
 type TraegerNotice struct {
-	Notice
+	ClosureNotice
 	Weeks    []enrollment.HolidayClosureWeek `json:"weeks"`
 	Children int                             `json:"children"`
 }
@@ -77,23 +77,23 @@ type Pending struct {
 
 // NotifiedPending is the answer of the Büro's click on the whole list.
 type NotifiedPending struct {
-	RetriedMails int64 `json:"retried_mails"`
-	Notices      int   `json:"notices"`
-	Families     int   `json:"families"`
+	RetriedMails int `json:"retried_mails"`
+	Notices      int `json:"notices"`
+	Families     int `json:"families"`
 }
 
 // Notifications is the workflow.
 type Notifications interface {
 	// SchoolNotices lists the notices of the school.
-	SchoolNotices(ctx context.Context, schoolID int64) ([]Notice, error)
+	SchoolNotices(ctx context.Context, schoolID int64) ([]ClosureNotice, error)
 	// NotifyFromSchool confirms a notice of the school, or takes its
 	// failed command up again, for accountID.
-	NotifyFromSchool(ctx context.Context, schoolID, accountID, noticeID, revision int64, token string) (Notice, error)
+	NotifyFromSchool(ctx context.Context, schoolID, accountID, noticeID int64, revision int, token string) (ClosureNotice, error)
 	// PendingHolidayClosures lists the notices of the Träger's schools.
 	PendingHolidayClosures(ctx context.Context, organizationID int64) (Pending, error)
 	// NotifyFromTraeger confirms a notice of a current school of the
 	// Träger, or takes its failed command up again, for accountID.
-	NotifyFromTraeger(ctx context.Context, organizationID, accountID, noticeID, revision int64, token string) (Notice, error)
+	NotifyFromTraeger(ctx context.Context, organizationID, accountID, noticeID int64, revision int, token string) (ClosureNotice, error)
 	// NotifyPendingHolidayClosures confirms every notice of the list the
 	// Büro saw, each under its own operation; token is that list's.
 	NotifyPendingHolidayClosures(ctx context.Context, organizationID, accountID int64, token string) (NotifiedPending, error)

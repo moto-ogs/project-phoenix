@@ -14,7 +14,7 @@ import (
 
 // SchoolRows reads the rows of a school set; the Postgres adapter serves it.
 type SchoolRows interface {
-	Schools(ctx context.Context, schools []int64) ([]traegerview.School, error)
+	Schools(ctx context.Context, schools []int64) ([]traegerview.TraegerSchool, error)
 	SchoolContacts(ctx context.Context, schools []int64) ([]traegerview.SchoolContact, error)
 }
 
@@ -69,11 +69,11 @@ func New(ports traegerview.Ports, rows SchoolRows, renderer ReportRenderer, with
 
 // Schools lists the schools of the Träger. A Träger that is deactivated or
 // deleted reaches no school.
-func (o *Overview) Schools(ctx context.Context, organizationID int64) ([]traegerview.School, error) {
+func (o *Overview) Schools(ctx context.Context, organizationID int64) ([]traegerview.TraegerSchool, error) {
 	if organizationID <= 0 {
 		return nil, traegerview.ErrTraegerRequired
 	}
-	var schools []traegerview.School
+	var schools []traegerview.TraegerSchool
 	err := o.withinAdmin(ctx, func(adminCtx context.Context) error {
 		ids, err := o.schoolIDs.ListTraegerSchoolIDs(adminCtx, organizationID)
 		if err != nil {

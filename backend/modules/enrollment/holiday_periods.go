@@ -103,7 +103,7 @@ type HolidayTimeModel struct {
 	Name       string `json:"name"`
 	StartsAt   string `json:"starts_at"`
 	EndsAt     string `json:"ends_at"`
-	PriceCents int64  `json:"price_cents"`
+	PriceCents int    `json:"price_cents"`
 	Archived   bool   `json:"archived"`
 	Protected  bool   `json:"protected"`
 }
@@ -131,8 +131,8 @@ type HolidayWeek struct {
 	// LunchPriceCents is the price of one lunch in the week, nil when the
 	// week offers no lunch (#5631). LunchBooked reports a booking with
 	// lunch in the week: the offer then stays, only its price changes.
-	LunchPriceCents *int64 `json:"lunch_price_cents"`
-	LunchBooked     bool   `json:"lunch_booked"`
+	LunchPriceCents *int `json:"lunch_price_cents"`
+	LunchBooked     bool `json:"lunch_booked"`
 	// LunchDays is the number of lunches a booking of the whole week takes:
 	// its care days without the days without care. Only the public offer
 	// fills it (#5631).
@@ -185,7 +185,7 @@ type HolidayTimeModelInput struct {
 	Name       string
 	StartsAt   string
 	EndsAt     string
-	PriceCents int64
+	PriceCents int
 	Archived   bool
 }
 
@@ -203,7 +203,7 @@ type HolidayWeekInput struct {
 	BookingUnit string
 	// LunchPriceCents is the price of one lunch, nil for a week without
 	// lunch (#5631). The offer goes only while no booking has lunch.
-	LunchPriceCents *int64
+	LunchPriceCents *int
 }
 
 // HolidayPeriodInput is the whole period as the Träger-Büro writes it.

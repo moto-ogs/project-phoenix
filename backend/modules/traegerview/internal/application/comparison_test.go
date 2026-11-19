@@ -15,14 +15,14 @@ func TestCompareSchoolsDerivesEveryFigureFromTheSeries(t *testing.T) {
 	late := date(t, "2026-09-08")
 	schools := []traegerview.SchoolUtilization{
 		{
-			School: traegerview.School{ID: 1, Name: "OGS Am Bach"},
-			Places: 20, Booked: []int{16, 17, 19}, BookedPlaces: []int{15, 16, 17},
+			TraegerSchool: traegerview.TraegerSchool{ID: 1, Name: "OGS Am Bach"},
+			Places:        20, Booked: []int{16, 17, 19}, BookedPlaces: []int{15, 16, 17},
 			Present:        []*int{intPtr(12), nil, intPtr(15)},
 			AttendanceFrom: &from,
 		},
 		{
-			School: traegerview.School{ID: 2, Name: "OGS Lindenweg"},
-			Booked: []int{4, 4, 2}, BookedPlaces: []int{0, 0, 0},
+			TraegerSchool: traegerview.TraegerSchool{ID: 2, Name: "OGS Lindenweg"},
+			Booked:        []int{4, 4, 2}, BookedPlaces: []int{0, 0, 0},
 			Present:        []*int{nil, intPtr(3), intPtr(5)},
 			AttendanceFrom: &late,
 		},
@@ -75,7 +75,7 @@ func TestCompareSchoolsWithOneWeekdayHasNoChange(t *testing.T) {
 	t.Parallel()
 	day := date(t, "2026-09-07")
 	got := compareSchools([]traegerview.SchoolUtilization{{
-		School: traegerview.School{ID: 1}, Places: 10, Booked: []int{5}, BookedPlaces: []int{5}, Present: []*int{nil},
+		TraegerSchool: traegerview.TraegerSchool{ID: 1}, Places: 10, Booked: []int{5}, BookedPlaces: []int{5}, Present: []*int{nil},
 	}}, nil, day, day, 1)
 	values := got.Schools[0].Values
 	assert.NotContains(t, values, traegerview.ComparisonBookedChange)
@@ -90,9 +90,9 @@ func TestCompareSchoolsWithOnlyWeekendDaysKeepsPlaces(t *testing.T) {
 	days := utilizationWeekdays(from, to)
 	require.Empty(t, days)
 	got := compareSchools([]traegerview.SchoolUtilization{
-		{School: traegerview.School{ID: 1}, Places: 10},
-		{School: traegerview.School{ID: 2}, Places: 20},
-		{School: traegerview.School{ID: 3}},
+		{TraegerSchool: traegerview.TraegerSchool{ID: 1}, Places: 10},
+		{TraegerSchool: traegerview.TraegerSchool{ID: 2}, Places: 20},
+		{TraegerSchool: traegerview.TraegerSchool{ID: 3}},
 	}, nil, from, to, len(days))
 
 	require.Len(t, got.Schools, 3)

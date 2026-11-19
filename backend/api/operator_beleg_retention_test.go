@@ -37,17 +37,20 @@ func TestOperatorRecordsBelegRetentionWithAudit(t *testing.T) {
 	operatorID := testpkg.CreateTestOperator(t, db).ID
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-belege")
 	ctx := provisioningContext(t, db)
-	operator := chi.NewRouter()
+	inner := chi.NewRouter()
 	// A fixed day after the instructions of 2026-11-09: none lies in the future (rule 14).
 	now := calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(12 * time.Hour)
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), func() time.Time { return now })
+	mountOperatorBelegRetentionRoutes(inner, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), func() time.Time { return now })
+	// Mounted under its production path, as the operator portal calls it.
+	operator := chi.NewRouter()
+	operator.Mount("/operator", inner)
 	call := func(method, path string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer
 		if body != nil {
 			require.NoError(t, json.NewEncoder(&payload).Encode(body))
 		}
-		req := httptest.NewRequest(method, path, &payload)
+		req := httptest.NewRequest(method, "/operator"+path, &payload)
 		req.Header.Set("Content-Type", "application/json")
 		req = req.WithContext(context.WithValue(ctx, sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(operatorID), Scope: "platform"}))
 		rec := httptest.NewRecorder()
@@ -183,15 +186,18 @@ func TestOperatorRecordsTheReviewOfAClarificationEntry(t *testing.T) {
 	operatorID := testpkg.CreateTestOperator(t, db).ID
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-klaerung")
 	ctx := provisioningContext(t, db)
+	inner := chi.NewRouter()
+	mountOperatorBelegRetentionRoutes(inner, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), time.Now)
+	// Mounted under its production path, as the operator portal calls it.
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), time.Now)
+	operator.Mount("/operator", inner)
 	call := func(method, path string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer
 		if body != nil {
 			require.NoError(t, json.NewEncoder(&payload).Encode(body))
 		}
-		req := httptest.NewRequest(method, path, &payload)
+		req := httptest.NewRequest(method, "/operator"+path, &payload)
 		req.Header.Set("Content-Type", "application/json")
 		req = req.WithContext(context.WithValue(ctx, sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(operatorID), Scope: "platform"}))
 		rec := httptest.NewRecorder()

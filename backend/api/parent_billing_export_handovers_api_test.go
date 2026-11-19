@@ -173,6 +173,15 @@ func TestFinanceExportHandoverOfARun(t *testing.T) {
 	require.Equal(t, http.StatusOK, page.Code)
 	assert.Equal(t, 5, strings.Count(page.Body.String(), `"state":"failed"`), "every attempt is in the journal of its recipient, and the last one on it")
 
+	renamed := readyRecipient()
+	renamed["name"] = "Kämmerei Nord"
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, recipientPath(recipient), renamed)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	saved := decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes())
+	assert.Equal(t, recipient, saved.ID)
+	assert.Equal(t, "Kämmerei Nord", saved.Name)
+	assert.True(t, saved.Ready, "a saved recipient with its password stays ready")
+
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, recipientPath(recipient), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	removed := decodeSchoolPortalData[recipientsPageBody](t, rec.Body.Bytes())

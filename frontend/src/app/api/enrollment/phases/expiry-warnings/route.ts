@@ -1,3 +1,16 @@
-import { proxyGet } from "~/lib/route-wrapper.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-export const GET = proxyGet("/api/enrollment/phases/expiry-warnings");
+const get = catalogProxy(portalRoutes.tenant, "GET");
+
+// Without this literal route, Next selects enrollment/phases/[id], not the portal's
+// catch-all. Delegate with the path that the catch-all would receive.
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, {
+    params: Promise.resolve({
+      path: ["enrollment", "phases", "expiry-warnings"],
+    }),
+  }),
+);

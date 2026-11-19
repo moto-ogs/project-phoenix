@@ -60,8 +60,9 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 
 // NotifyRequest confirms one notice at the revision the caller saw.
 type NotifyRequest struct {
-	Token    string `json:"token"`
-	Revision int64  `json:"revision"`
+	Token string `json:"token"`
+	// Revision counts the notice's changes; it is no identifier.
+	Revision int `json:"revision"`
 }
 
 // Bind accepts the body.
@@ -86,7 +87,7 @@ func (rs *Resource) schoolList(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, notices, "Holiday closure notices retrieved successfully")
+	common.Respond(w, r, http.StatusOK, toNoticeResponses(notices), "Holiday closure notices retrieved successfully")
 }
 
 func (rs *Resource) schoolNotifyOne(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +105,7 @@ func (rs *Resource) schoolNotifyOne(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, notice, "Parents' notice confirmed")
+	common.Respond(w, r, http.StatusOK, toNoticeResponse(notice), "Parents' notice confirmed")
 }
 
 func (rs *Resource) traegerList(w http.ResponseWriter, r *http.Request) {

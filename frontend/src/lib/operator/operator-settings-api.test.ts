@@ -41,7 +41,7 @@ describe("operator-settings-api", () => {
         plannedCompletions: [],
       });
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        `/api/operator/provisioning/schools/${SCHOOL_ID}/settings/booking-authority-impact`,
+        `/api/operator/schools/${SCHOOL_ID}/settings/booking-authority-impact`,
         { method: "GET" },
       );
     });

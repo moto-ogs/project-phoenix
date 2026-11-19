@@ -173,6 +173,20 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		assert.Len(t, decode[contractRecordBody](t, rec).Contracts[0].HolidayWeeks, 2)
 		assert.Equal(t, 2, staffSchoolValue(t, db, `SELECT COUNT(*) FROM config.staff_target_overrides
 			WHERE tenant_id = ? AND staff_id = ? AND traeger_contract_id = ? AND weekday_minutes = '{360,360,360,0,0}'`, north, miraNorth.ID, contractID))
+
+		// A week added by mistake goes again; the other weeks stay.
+		rec = traegerJSON(t, router, office.token, http.MethodPost, weeks, map[string]any{
+			"school_id": north, "staff_id": miraNorth.ID, "from_week": "2026-12-14", "to_week": "2026-12-14", "weekday_minutes": []int{120, 0, 0, 0, 0},
+		})
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		require.Len(t, decode[contractRecordBody](t, rec).Contracts[0].HolidayWeeks, 3)
+		rec = traegerJSON(t, router, office.token, http.MethodDelete, fmt.Sprintf("%s/%d/2026-12-14", weeks, north), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		kept := decode[contractRecordBody](t, rec).Contracts[0].HolidayWeeks
+		require.Len(t, kept, 2)
+		assert.NotContains(t, []string{kept[0].WeekStart, kept[1].WeekStart}, "2026-12-14")
+		assert.Zero(t, staffSchoolValue(t, db, `SELECT COUNT(*) FROM config.staff_target_overrides
+			WHERE tenant_id = ? AND staff_id = ? AND traeger_contract_id = ? AND weekday_minutes = '{120,0,0,0,0}'`, north, miraNorth.ID, contractID))
 	})
 
 	t.Run("the school reads the Soll of the Träger and changes none of it", func(t *testing.T) {

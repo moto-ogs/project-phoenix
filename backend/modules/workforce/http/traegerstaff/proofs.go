@@ -138,8 +138,8 @@ func (rs *ProofsResource) types(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, kinds, "Proof types retrieved successfully")
 }
 
-// proofTypeRequest creates or rewrites a kind.
-type proofTypeRequest struct {
+// ProofTypeRequest creates or rewrites a kind.
+type ProofTypeRequest struct {
 	Name              string `json:"name"`
 	ValidityMonths    *int   `json:"validity_months"`
 	ReminderLeadWeeks *int   `json:"reminder_lead_weeks"`
@@ -147,14 +147,14 @@ type proofTypeRequest struct {
 	Archived          bool   `json:"archived"`
 }
 
-func (req *proofTypeRequest) Bind(*http.Request) error {
+func (req *ProofTypeRequest) Bind(*http.Request) error {
 	if strings.TrimSpace(req.Name) == "" {
 		return errors.New("name is required")
 	}
 	return nil
 }
 
-func (req *proofTypeRequest) toInput() workforce.TraegerStaffProofTypeInput {
+func (req *ProofTypeRequest) toInput() workforce.TraegerStaffProofTypeInput {
 	lead := workforce.DefaultQualificationReminderLeadWeeks
 	if req.ReminderLeadWeeks != nil {
 		lead = *req.ReminderLeadWeeks
@@ -169,7 +169,7 @@ func (rs *ProofsResource) createType(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &proofTypeRequest{}
+	req := &ProofTypeRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerProofInvalid, "name"))
 		return
@@ -187,7 +187,7 @@ func (rs *ProofsResource) updateType(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &proofTypeRequest{}
+	req := &ProofTypeRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerProofInvalid, "name"))
 		return
@@ -213,15 +213,15 @@ func (rs *ProofsResource) schoolKinds(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, kinds, "School proof kinds retrieved successfully")
 }
 
-// mappingRequest maps one school kind onto a Träger kind; a null
+// ProofMappingRequest maps one school kind onto a Träger kind; a null
 // proof_type_id removes the mapping.
-type mappingRequest struct {
+type ProofMappingRequest struct {
 	SchoolID     int64  `json:"school_id"`
 	SchoolTypeID int64  `json:"school_type_id"`
 	ProofTypeID  *int64 `json:"proof_type_id"`
 }
 
-func (req *mappingRequest) Bind(*http.Request) error {
+func (req *ProofMappingRequest) Bind(*http.Request) error {
 	if req.SchoolID <= 0 || req.SchoolTypeID <= 0 {
 		return errors.New("school_id and school_type_id are required")
 	}
@@ -233,7 +233,7 @@ func (rs *ProofsResource) mapSchoolKind(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	req := &mappingRequest{}
+	req := &ProofMappingRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceTraegerProofMappingInvalid))
 		return
@@ -248,15 +248,15 @@ func (rs *ProofsResource) mapSchoolKind(w http.ResponseWriter, r *http.Request) 
 	common.Respond(w, r, http.StatusOK, kinds, "School proof kind mapped successfully")
 }
 
-// proofRequest records or renews the proof of one kind at a record.
-type proofRequest struct {
+// ProofRequest records or renews the proof of one kind at a record.
+type ProofRequest struct {
 	PresentedOn     string `json:"presented_on"`
 	IssuedOn        string `json:"issued_on"`
 	NoRelevantEntry bool   `json:"no_relevant_entry"`
 	ExpiresOn       string `json:"expires_on"`
 }
 
-func (req *proofRequest) Bind(*http.Request) error {
+func (req *ProofRequest) Bind(*http.Request) error {
 	if strings.TrimSpace(req.PresentedOn) == "" {
 		return errors.New("presented_on is required")
 	}
@@ -277,7 +277,7 @@ func (rs *ProofsResource) saveProof(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &proofRequest{}
+	req := &ProofRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerProofInvalid, "presented_on"))
 		return

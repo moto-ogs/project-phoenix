@@ -37,9 +37,9 @@ var ErrSchoolOutsideTraeger = errors.New("traeger view: the school does not belo
 // unknown: its session reaches no school any more (#4657).
 var ErrTraegerUnavailable = errors.New("traeger view: the Träger is deactivated or deleted")
 
-// School is one school of the Träger in the school list (#4649). It carries
+// TraegerSchool is one school of the Träger in the school list (#4649). It carries
 // no personal data.
-type School struct {
+type TraegerSchool struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
 	Slug      string `json:"slug"`
@@ -50,7 +50,7 @@ type School struct {
 // SchoolContact is one school with the contact data it is reachable under. It
 // names no child and no staff member.
 type SchoolContact struct {
-	School
+	TraegerSchool
 	Address string `json:"address"`
 	Zip     string `json:"zip"`
 	Phone   string `json:"phone"`
@@ -113,7 +113,7 @@ type AlertThresholds struct {
 // from and the hints that apply, in the order of the kinds above. It carries
 // no personal data.
 type SchoolAlerts struct {
-	School
+	TraegerSchool
 	Figures         SchoolFigures `json:"figures"`
 	OpenEnrollments int           `json:"open_enrollments"`
 	Alerts          []string      `json:"alerts"`
@@ -239,7 +239,7 @@ type Overview interface {
 	// an active member of it.
 	Traeger(ctx context.Context, organizationID, accountID int64) (Traeger, error)
 	// Schools lists the schools of the Träger, ordered by name.
-	Schools(ctx context.Context, organizationID int64) ([]School, error)
+	Schools(ctx context.Context, organizationID int64) ([]TraegerSchool, error)
 	// School returns one school of the Träger with its figures. Any other
 	// school is ErrSchoolOutsideTraeger.
 	School(ctx context.Context, organizationID, schoolID int64) (SchoolView, error)

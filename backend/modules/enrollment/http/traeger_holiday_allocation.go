@@ -150,7 +150,23 @@ func (rs *HolidayPeriodResource) decideAllocation(w http.ResponseWriter, r *http
 // HolidayCriteriaCheckRequest is the body of PUT
 // /traeger/holiday-periods/{id}/registrations/{registrationId}/criteria.
 type HolidayCriteriaCheckRequest struct {
-	Checks []capability.HolidayCriterionCheck `json:"checks"`
+	Checks []HolidayCriterionCheckRequest `json:"checks"`
+}
+
+// HolidayCriterionCheckRequest is one check of the body: the criterion, the
+// child for a criterion per child, and the day checked or null for unchecked.
+type HolidayCriterionCheckRequest struct {
+	CriterionID int64   `json:"criterion_id"`
+	ChildID     *int64  `json:"child_id"`
+	Checked     *string `json:"checked"`
+}
+
+func (req *HolidayCriteriaCheckRequest) checks() []capability.HolidayCriterionCheck {
+	checks := make([]capability.HolidayCriterionCheck, len(req.Checks))
+	for i, check := range req.Checks {
+		checks[i] = capability.HolidayCriterionCheck{CriterionID: check.CriterionID, ChildID: check.ChildID, Checked: check.Checked}
+	}
+	return checks
 }
 
 // Bind accepts the body; the Owner checks the checks.
@@ -166,7 +182,7 @@ func (rs *HolidayPeriodResource) checkCriteria(w http.ResponseWriter, r *http.Re
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	detail, err := rs.allocation.CheckHolidayCriteria(r.Context(), reviewer, periodID, registrationID, req.Checks)
+	detail, err := rs.allocation.CheckHolidayCriteria(r.Context(), reviewer, periodID, registrationID, req.checks())
 	if err != nil {
 		renderHolidayAllocationError(w, r, err)
 		return

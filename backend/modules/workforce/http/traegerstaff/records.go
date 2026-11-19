@@ -117,22 +117,22 @@ func (rs *RecordsResource) record(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, detail, "Staff record retrieved successfully")
 }
 
-// linkRequest names the employments to join and, per differing field, the
+// StaffLinkRequest names the employments to join and, per differing field, the
 // chosen source: "record" or the ID of a school.
-type linkRequest struct {
+type StaffLinkRequest struct {
 	StaffRecordID *int64                            `json:"staff_record_id"`
 	Members       []workforce.TraegerStaffMemberRef `json:"members"`
 	Choices       map[string]string                 `json:"choices"`
 }
 
-func (req *linkRequest) Bind(*http.Request) error {
+func (req *StaffLinkRequest) Bind(*http.Request) error {
 	if len(req.Members) == 0 {
 		return errors.New("members is required")
 	}
 	return nil
 }
 
-func (req *linkRequest) toInput() workforce.TraegerStaffLinkRequest {
+func (req *StaffLinkRequest) toInput() workforce.TraegerStaffLinkRequest {
 	return workforce.TraegerStaffLinkRequest{RecordID: req.StaffRecordID, Members: req.Members, Choices: req.Choices}
 }
 
@@ -141,7 +141,7 @@ func (rs *RecordsResource) preview(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &linkRequest{}
+	req := &StaffLinkRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerStaffLinkInvalid, "members"))
 		return
@@ -159,7 +159,7 @@ func (rs *RecordsResource) link(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &linkRequest{}
+	req := &StaffLinkRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerStaffLinkInvalid, "members"))
 		return
@@ -181,7 +181,7 @@ func (rs *RecordsResource) dissolve(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int64{"id": id}, "Staff record dissolved successfully")
+	common.Respond(w, r, http.StatusOK, IDResponse{ID: id}, "Staff record dissolved successfully")
 }
 
 // personnelNumberRequest sets or, with null, clears the Träger's number.
@@ -272,20 +272,20 @@ func (rs *RecordsResource) serveFinancial(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, http.StatusOK, financial, "Financial data retrieved successfully")
 }
 
-type financialRequest struct {
+type StaffFinancialRequest struct {
 	IBAN                 *string `json:"iban"`
 	TaxID                *string `json:"tax_id"`
 	SocialSecurityNumber *string `json:"social_security_number"`
 }
 
-func (req *financialRequest) Bind(*http.Request) error { return nil }
+func (req *StaffFinancialRequest) Bind(*http.Request) error { return nil }
 
 func (rs *RecordsResource) updateFinancial(w http.ResponseWriter, r *http.Request) {
 	session, id, ok := actorAndRecord(w, r)
 	if !ok {
 		return
 	}
-	req := &financialRequest{}
+	req := &StaffFinancialRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
 		return
@@ -297,7 +297,7 @@ func (rs *RecordsResource) updateFinancial(w http.ResponseWriter, r *http.Reques
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int64{"id": id}, "Financial data updated successfully")
+	common.Respond(w, r, http.StatusOK, IDResponse{ID: id}, "Financial data updated successfully")
 }
 
 // renderError maps the Personalstamm's refusals onto their codes.

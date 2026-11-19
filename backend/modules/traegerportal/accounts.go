@@ -55,9 +55,9 @@ func (rs *Resource) invitationRouter(authRateLimiter func(http.Handler) http.Han
 	return r
 }
 
-// MemberResponse is a person of the Träger-Büro with the name the person
+// TraegerMemberResponse is a person of the Träger-Büro with the name the person
 // carries at this Träger (#4693), empty until set.
-type MemberResponse struct {
+type TraegerMemberResponse struct {
 	AccountID   int64      `json:"account_id"`
 	Email       string     `json:"email"`
 	Name        string     `json:"name"`
@@ -65,8 +65,8 @@ type MemberResponse struct {
 	ActivatedAt *time.Time `json:"activated_at"`
 }
 
-// InvitationResponse is an open invitation.
-type InvitationResponse struct {
+// TraegerInvitationResponse is an open invitation.
+type TraegerInvitationResponse struct {
 	ID        int64     `json:"id"`
 	Email     string    `json:"email"`
 	Roles     []string  `json:"roles"`
@@ -74,14 +74,14 @@ type InvitationResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// AccountsResponse is the member list of the Träger-Büro.
-type AccountsResponse struct {
-	Members     []MemberResponse     `json:"members"`
-	Invitations []InvitationResponse `json:"invitations"`
+// TraegerAccountsResponse is the member list of the Träger-Büro.
+type TraegerAccountsResponse struct {
+	Members     []TraegerMemberResponse     `json:"members"`
+	Invitations []TraegerInvitationResponse `json:"invitations"`
 }
 
-// HistoryEntryResponse is one change of the Träger-Büro (#5474).
-type HistoryEntryResponse struct {
+// TraegerHistoryEntryResponse is one change of the Träger-Büro (#5474).
+type TraegerHistoryEntryResponse struct {
 	ID          int64     `json:"id"`
 	OccurredAt  time.Time `json:"occurred_at"`
 	Action      string    `json:"action"`
@@ -92,21 +92,21 @@ type HistoryEntryResponse struct {
 	RolesAfter  []string  `json:"roles_after"`
 }
 
-// HistoryResponse is one page of the history, newest first. The next page
+// TraegerHistoryResponse is one page of the history, newest first. The next page
 // passes the ID of the last entry as before.
-type HistoryResponse struct {
-	Entries []HistoryEntryResponse `json:"entries"`
-	HasMore bool                   `json:"has_more"`
+type TraegerHistoryResponse struct {
+	Entries []TraegerHistoryEntryResponse `json:"entries"`
+	HasMore bool                          `json:"has_more"`
 }
 
-// InviteRequest is the body of POST /traeger/accounts/invitations.
-type InviteRequest struct {
+// TraegerInviteRequest is the body of POST /traeger/accounts/invitations.
+type TraegerInviteRequest struct {
 	Email string   `json:"email"`
 	Roles []string `json:"roles"`
 }
 
 // Bind normalizes and validates the request.
-func (req *InviteRequest) Bind(_ *http.Request) error {
+func (req *TraegerInviteRequest) Bind(_ *http.Request) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
@@ -114,13 +114,13 @@ func (req *InviteRequest) Bind(_ *http.Request) error {
 	)
 }
 
-// RolesRequest is the body of PUT /traeger/accounts/{accountId}/roles.
-type RolesRequest struct {
+// TraegerRolesRequest is the body of PUT /traeger/accounts/{accountId}/roles.
+type TraegerRolesRequest struct {
 	Roles []string `json:"roles"`
 }
 
 // Bind validates the request.
-func (req *RolesRequest) Bind(_ *http.Request) error {
+func (req *TraegerRolesRequest) Bind(_ *http.Request) error {
 	return validation.ValidateStruct(req, validation.Field(&req.Roles, validation.Required))
 }
 
@@ -162,7 +162,7 @@ func (rs *Resource) listAccounts(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, renderAccountError(err))
 		return
 	}
-	response := AccountsResponse{Members: make([]MemberResponse, 0, len(buero.Members)), Invitations: make([]InvitationResponse, 0, len(buero.Invitations))}
+	response := TraegerAccountsResponse{Members: make([]TraegerMemberResponse, 0, len(buero.Members)), Invitations: make([]TraegerInvitationResponse, 0, len(buero.Invitations))}
 	for _, member := range buero.Members {
 		response.Members = append(response.Members, memberResponse(member))
 	}
@@ -193,9 +193,9 @@ func (rs *Resource) listHistory(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, renderAccountError(err))
 		return
 	}
-	response := HistoryResponse{Entries: make([]HistoryEntryResponse, 0, len(history.Entries)), HasMore: history.HasMore}
+	response := TraegerHistoryResponse{Entries: make([]TraegerHistoryEntryResponse, 0, len(history.Entries)), HasMore: history.HasMore}
 	for _, entry := range history.Entries {
-		response.Entries = append(response.Entries, HistoryEntryResponse{
+		response.Entries = append(response.Entries, TraegerHistoryEntryResponse{
 			ID: entry.ID, OccurredAt: entry.OccurredAt, Action: entry.Action,
 			ActorEmail: entry.ActorEmail, TargetEmail: entry.TargetEmail, TargetName: entry.TargetName,
 			RolesBefore: entry.RolesBefore, RolesAfter: entry.RolesAfter,
@@ -209,7 +209,7 @@ func (rs *Resource) inviteAccount(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &InviteRequest{}
+	req := &TraegerInviteRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -244,7 +244,7 @@ func (rs *Resource) changeRoles(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	req := &RolesRequest{}
+	req := &TraegerRolesRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -379,10 +379,10 @@ func renderAccountError(err error) render.Renderer {
 	return common.RenderWithRules(err, accountErrorRules, common.ErrorInternalServer)
 }
 
-func memberResponse(member identityaccess.TraegerMember) MemberResponse {
-	return MemberResponse{AccountID: member.AccountID, Email: member.Email, Name: member.Name, Roles: member.Roles, ActivatedAt: member.ActivatedAt}
+func memberResponse(member identityaccess.TraegerMember) TraegerMemberResponse {
+	return TraegerMemberResponse{AccountID: member.AccountID, Email: member.Email, Name: member.Name, Roles: member.Roles, ActivatedAt: member.ActivatedAt}
 }
 
-func invitationResponse(invitation identityaccess.TraegerInvitation) InvitationResponse {
-	return InvitationResponse{ID: invitation.ID, Email: invitation.Email, Roles: invitation.Roles, ExpiresAt: invitation.ExpiresAt, CreatedAt: invitation.CreatedAt}
+func invitationResponse(invitation identityaccess.TraegerInvitation) TraegerInvitationResponse {
+	return TraegerInvitationResponse{ID: invitation.ID, Email: invitation.Email, Roles: invitation.Roles, ExpiresAt: invitation.ExpiresAt, CreatedAt: invitation.CreatedAt}
 }

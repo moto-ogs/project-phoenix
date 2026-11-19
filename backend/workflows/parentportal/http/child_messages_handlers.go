@@ -12,13 +12,13 @@ import (
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
-// MessageResponse is one message in a conversation. IDs stringified per the
+// ParentMessageResponse is one message in a conversation. IDs stringified per the
 // int64 -> string frontend convention. sender_kind is "guardian" or "staff".
 // For staff messages sender_name is either the neutral OGS/school label or the
 // individual staff member as "first name + last initial", depending on whether
 // the message froze staff-name visibility on at send time (see toMessageResponses
 // and operations.parent_message_staff_name_visible).
-type MessageResponse struct {
+type ParentMessageResponse struct {
 	ClientMessageID string                     `json:"client_message_id,omitempty"`
 	ID              string                     `json:"id"`
 	SenderKind      string                     `json:"sender_kind"`
@@ -181,7 +181,7 @@ type ThreadViewResponse struct {
 	Audience         string                   `json:"audience"`
 	Readers          ParentReadersResponse    `json:"readers"`
 	LeadershipOption LeadershipOptionResponse `json:"leadership_option"`
-	Messages         []MessageResponse        `json:"messages"`
+	Messages         []ParentMessageResponse  `json:"messages"`
 }
 
 // PostMessageRequest is the wire shape for POST .../children/{studentId}.
@@ -225,8 +225,8 @@ func staffShortName(full string) string {
 // message froze StaffNameVisible=true at send time; otherwise it collapses to
 // the neutral "OGS [Schulname]" label. Guardian/system rows pass through
 // unchanged.
-func toMessageResponses(messages []*parentService.ParentMessage, counterpart string, viewer ...int64) []MessageResponse {
-	out := make([]MessageResponse, 0, len(messages))
+func toMessageResponses(messages []*parentService.ParentMessage, counterpart string, viewer ...int64) []ParentMessageResponse {
+	out := make([]ParentMessageResponse, 0, len(messages))
 	for _, m := range messages {
 		senderName := m.SenderName
 		if m.SenderKind == parentService.ParentMessageSenderStaff {
@@ -246,7 +246,7 @@ func toMessageResponses(messages []*parentService.ParentMessage, counterpart str
 		if m.RefID != nil {
 			refID = strconv.FormatInt(*m.RefID, 10)
 		}
-		out = append(out, MessageResponse{
+		out = append(out, ParentMessageResponse{
 			ID:              strconv.FormatInt(m.ID, 10),
 			SenderKind:      m.SenderKind,
 			SenderName:      senderName,
@@ -363,7 +363,7 @@ func (rs *Resource) unreadMessageCount(w http.ResponseWriter, r *http.Request) {
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"unread_count": count}, "Unread count retrieved")
+	common.Respond(w, r, http.StatusOK, UnreadCountResponse{UnreadCount: count}, "Unread count retrieved")
 }
 
 // getChildConversation returns the guardian's conversation about one owned
