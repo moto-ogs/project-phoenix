@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -290,19 +291,11 @@ func (r *CallerRows) StudentRows(ctx context.Context, ids []int64) (any, error) 
 	return result, nil
 }
 
-// CallerNavigationRow is the /api/me/navigation wire shape (#7563). The
+// CallerNavigationRow is the /api/me/navigation wire shape (#7563): the
+// navigation response of Identity & Access over the rows the root loads. The
 // supervised groups and the current staff member carry the rows SessionRows
-// and StaffRow load, like the routes that render them alone. The fields stand
-// in the order of their keys: the route rendered the row as a JSON object with
-// sorted keys before it had a type, and keeps those bytes.
-type CallerNavigationRow struct {
-	CurrentStaff        *peopleValues.Staff           `json:"current_staff"`
-	EducationalGroups   []*CallerGroupRow             `json:"educational_groups"`
-	Incomplete          bool                          `json:"incomplete"`
-	SchoolSwitches      identityaccess.SchoolSwitches `json:"school_switches"`
-	SupervisedGroups    []*presenceCompose.SessionRow `json:"supervised_groups"`
-	UnavailableSections []string                      `json:"unavailable_sections"`
-}
+// and StaffRow load, like the routes that render them alone.
+type CallerNavigationRow = identityaccess.NavigationResponse[peopleValues.Staff, *CallerGroupRow, *presenceCompose.SessionRow]
 
 // NavigationRow loads the rows of the caller's navigation context. A group
 // section whose rows fail to load is reported unavailable, like a section
@@ -320,7 +313,7 @@ func (r *CallerRows) navigationRow(ctx context.Context, navigation identityacces
 		row.UnavailableSections = append(row.UnavailableSections, "educational_groups")
 	}
 	row.EducationalGroups = groups
-	sessions, err := presenceCompose.SessionRowList(ctx, r.sessions, navigation.SupervisedSessionIDs)
+	sessions, err := r.supervisedSessionRows(ctx, navigation.SupervisedSessionIDs)
 	if err != nil {
 		r.logger.Warn("navigation context supervision unavailable", slog.String("error", err.Error()))
 		sessions = []*presenceCompose.SessionRow{}
@@ -336,4 +329,18 @@ func (r *CallerRows) navigationRow(ctx context.Context, navigation identityacces
 	}
 	row.Incomplete = len(row.UnavailableSections) > 0
 	return row, nil
+}
+
+// supervisedSessionRows returns the room sessions typed for the navigation
+// response (#7563): the composed session records answer SessionRow values.
+func (r *CallerRows) supervisedSessionRows(ctx context.Context, ids []int64) ([]*presenceCompose.SessionRow, error) {
+	rows, err := r.sessions.SessionRows(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	list, ok := rows.([]*presenceCompose.SessionRow)
+	if !ok {
+		return nil, fmt.Errorf("caller rows: session rows are %T, not the composed rows", rows)
+	}
+	return list, nil
 }

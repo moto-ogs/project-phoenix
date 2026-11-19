@@ -393,7 +393,10 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 }
 
 func (b *builder) object(t reflect.Type, where string, request bool) (string, error) {
-	name := t.Name()
+	// An instance of a generic type is named for the type: the owner of a
+	// route declares it, the root names the rows it carries (#7563). Two
+	// instances of one type collide below like any two types of one name.
+	name, _, _ := strings.Cut(t.Name(), "[")
 	if name == "" {
 		return "", fmt.Errorf("%s: anonymous struct is not supported", where)
 	}

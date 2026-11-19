@@ -1,9 +1,7 @@
 package compose
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -72,22 +70,4 @@ func NewSessionRecords(deps SessionRecordDependencies) (SessionRecords, error) {
 // SessionRepositories binds the native repositories of composed records.
 func SessionRepositories(records studentpresence.SessionRecords) (ports.ActiveGroupRepository, ports.GroupSupervisorRepository) {
 	return application.SessionRepositories(records)
-}
-
-// SessionRowList returns the sessions the caller-context routes render, typed
-// for the root's navigation response (#7563). records are the composed
-// session records, whose SessionRows answers SessionRow values.
-func SessionRowList(ctx context.Context, records interface {
-	SessionRows(ctx context.Context, ids []int64) (any, error)
-}, ids []int64,
-) ([]*SessionRow, error) {
-	rows, err := records.SessionRows(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	list, ok := rows.([]*SessionRow)
-	if !ok {
-		return nil, fmt.Errorf("student presence: session rows are %T, not the composed rows", rows)
-	}
-	return list, nil
 }

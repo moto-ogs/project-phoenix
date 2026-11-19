@@ -443,8 +443,8 @@ export const SchoolSwitchesSchema: z.ZodType<SchoolSwitches, unknown> = object<S
   timetable_day_end_time: str,
 });
 
-/** Go: owners.CallerNavigationRow */
-export interface CallerNavigationRow {
+/** Go: identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup] */
+export interface NavigationResponse {
   current_staff: Staff | null;
   educational_groups: (CallerGroupRow | null)[] | null;
   incomplete: boolean;
@@ -453,7 +453,7 @@ export interface CallerNavigationRow {
   unavailable_sections: string[] | null;
 }
 
-export const CallerNavigationRowSchema: z.ZodType<CallerNavigationRow, unknown> = object<CallerNavigationRow>({
+export const NavigationResponseSchema: z.ZodType<NavigationResponse, unknown> = object<NavigationResponse>({
   current_staff: nullable(StaffSchema),
   educational_groups: nullable(arr(nullable(CallerGroupRowSchema))),
   incomplete: bool,
@@ -518,7 +518,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/me/navigation",
     portals: ["tenant"],
-    response: success(CallerNavigationRowSchema),
+    response: success(NavigationResponseSchema),
   },
   "GET /api/me/profile": {
     method: "GET",

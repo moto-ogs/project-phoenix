@@ -2999,7 +2999,7 @@
       ],
       "response": {
         "kind": "ref",
-        "ref": "CallerNavigationRow"
+        "ref": "NavigationResponse"
       }
     },
     {
@@ -28982,67 +28982,6 @@
           "name": "via_substitution",
           "schema": {
             "kind": "bool"
-          }
-        }
-      ]
-    },
-    {
-      "name": "CallerNavigationRow",
-      "go_type": "owners.CallerNavigationRow",
-      "fields": [
-        {
-          "name": "current_staff",
-          "schema": {
-            "kind": "ref",
-            "nullable": true,
-            "ref": "Staff"
-          }
-        },
-        {
-          "name": "educational_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "CallerGroupRow"
-            }
-          }
-        },
-        {
-          "name": "incomplete",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "school_switches",
-          "schema": {
-            "kind": "ref",
-            "ref": "SchoolSwitches"
-          }
-        },
-        {
-          "name": "supervised_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "ActiveGroup"
-            }
-          }
-        },
-        {
-          "name": "unavailable_sections",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
           }
         }
       ]
@@ -57999,6 +57938,67 @@
           "optional": true,
           "schema": {
             "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "NavigationResponse",
+      "go_type": "identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup]",
+      "fields": [
+        {
+          "name": "current_staff",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Staff"
+          }
+        },
+        {
+          "name": "educational_groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "CallerGroupRow"
+            }
+          }
+        },
+        {
+          "name": "incomplete",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_switches",
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolSwitches"
+          }
+        },
+        {
+          "name": "supervised_groups",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "ActiveGroup"
+            }
+          }
+        },
+        {
+          "name": "unavailable_sections",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
             "elem": {
               "kind": "string"
             }

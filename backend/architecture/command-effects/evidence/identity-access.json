@@ -15282,7 +15282,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "d8d2562f3c221da55624a23c72856a4a",
+      "binding_digest": "b50f244f9fe97d28760131e93bb063a6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -15290,7 +15290,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "8c9d76a4dc760b0343fcec4b58ca5d7d",
+      "binding_digest": "0c7477758e55085768836182be56de81",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByID",
@@ -15298,7 +15298,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "1bc4214e84672dfce6437e4b96d1dc74",
+      "binding_digest": "563b22780feb242c70d531c83826e9c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaff",
@@ -15306,7 +15306,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "457ad336e23c0396fa14dc9fbf39f419",
+      "binding_digest": "dd0cf1c4145d670da94abaea63f9a285",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
@@ -15314,7 +15314,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "ea70f328ba34f410c268f6c6ce01d920",
+      "binding_digest": "5b9439088c346d9f541a8a15caa7a5a6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
@@ -15322,7 +15322,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "a100dfcda666417c275b09188e841799",
+      "binding_digest": "6a4e220a0383c3f49fd204b3be21676f",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.SessionRecords.SessionRows",
@@ -15330,7 +15330,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "b3e38cd63d2bc9eab9bd051bb7c9d16c",
+      "binding_digest": "d964a959087deb1fc45a93b9b4041fae",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose.SessionRecords.SessionRows",

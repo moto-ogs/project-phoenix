@@ -99,25 +99,11 @@ func TestCallerNavigationRowSendsTheBytesOfTheFormerMap(t *testing.T) {
 	sessions := []*presenceCompose.SessionRow{{ID: 9, CreatedAt: at, UpdatedAt: at, TenantID: 7, StartTime: at, LastActivity: at, TimeoutMinutes: 30, RoomID: 5}}
 	switches := identityaccess.SchoolSwitches{ParentNewsEnabled: true, ParentInviteMode: "staff_approval", TimetableDayStartTime: "07:30", TimetableDayEndTime: "16:00"}
 
-	cases := map[string]struct {
-		groups     groupRows
-		sessions   navigationSessions
-		navigation identityaccess.CallerNavigation
-	}{
-		"complete": {groups, navigationSessions{rows: sessions}, identityaccess.CallerNavigation{
-			Groups: []identityaccess.CallerGroup{{ID: 3, ViaSubstitution: true}, {ID: 4}}, SupervisedSessionIDs: []int64{9}, StaffID: 12, UnavailableSections: []string{},
-		}},
-		"incomplete": {navigationGroups(nil), navigationSessions{err: errors.New("sessions down")}, identityaccess.CallerNavigation{
-			Groups: []identityaccess.CallerGroup{{ID: 3}}, SupervisedSessionIDs: []int64{9}, StaffID: 12,
-		}},
-		"without staff": {groups, navigationSessions{rows: []*presenceCompose.SessionRow{}}, identityaccess.CallerNavigation{UnavailableSections: []string{}}},
-		"nil sections":  {groups, navigationSessions{rows: []*presenceCompose.SessionRow{}}, identityaccess.CallerNavigation{}},
-	}
-	for name, tc := range cases {
+	check := func(name string, groups groupRows, sessions navigationSessions, navigation identityaccess.CallerNavigation) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			rows := &CallerRows{groups: tc.groups, staff: navigationStaff{}, sessions: tc.sessions, logger: slog.New(slog.DiscardHandler)}
-			answer, err := rows.NavigationRow(context.Background(), tc.navigation, switches)
+			rows := &CallerRows{groups: groups, staff: navigationStaff{}, sessions: sessions, logger: slog.New(slog.DiscardHandler)}
+			answer, err := rows.NavigationRow(context.Background(), navigation, switches)
 			require.NoError(t, err)
 			row, ok := answer.(*CallerNavigationRow)
 			require.True(t, ok, "the navigation answers its registered type, got %T", answer)
@@ -125,4 +111,12 @@ func TestCallerNavigationRowSendsTheBytesOfTheFormerMap(t *testing.T) {
 			require.Equal(t, string(legacyNavigationJSON(t, row)), string(envelopeJSON(t, row)))
 		})
 	}
+	check("complete", groups, navigationSessions{rows: sessions}, identityaccess.CallerNavigation{
+		Groups: []identityaccess.CallerGroup{{ID: 3, ViaSubstitution: true}, {ID: 4}}, SupervisedSessionIDs: []int64{9}, StaffID: 12, UnavailableSections: []string{},
+	})
+	check("incomplete", navigationGroups(nil), navigationSessions{err: errors.New("sessions down")}, identityaccess.CallerNavigation{
+		Groups: []identityaccess.CallerGroup{{ID: 3}}, SupervisedSessionIDs: []int64{9}, StaffID: 12,
+	})
+	check("without staff", groups, navigationSessions{rows: []*presenceCompose.SessionRow{}}, identityaccess.CallerNavigation{UnavailableSections: []string{}})
+	check("nil sections", groups, navigationSessions{rows: []*presenceCompose.SessionRow{}}, identityaccess.CallerNavigation{})
 }

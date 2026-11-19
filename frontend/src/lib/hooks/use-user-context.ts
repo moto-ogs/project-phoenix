@@ -20,7 +20,7 @@
 "use client";
 
 import { apiErrorFromResponse } from "~/lib/api-error";
-import type { CallerNavigationRow } from "~/lib/contract/me.generated";
+import type { NavigationResponse } from "~/lib/contract/me.generated";
 import { useImmutableSWR } from "~/lib/swr";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { mapUserContext } from "~/lib/user-context-map";
@@ -74,7 +74,7 @@ export function useUserContext(enabled = true): UseUserContextReturn {
         );
       }
 
-      const json = (await response.json()) as { data: CallerNavigationRow };
+      const json = (await response.json()) as { data: NavigationResponse };
       const userContext = mapUserContext(json.data);
       if (userContext.incomplete) {
         throw new IncompleteUserContextError(userContext);

@@ -25,12 +25,12 @@ import {
   useUserContext,
 } from "../use-user-context";
 import { useImmutableSWR } from "~/lib/swr";
-import type { CallerNavigationRow } from "~/lib/contract/me.generated";
+import type { NavigationResponse } from "~/lib/contract/me.generated";
 
 // The navigation row as the catalog proxy hands it on (#7563).
 function navigationRow(
-  overrides: Partial<CallerNavigationRow> = {},
-): CallerNavigationRow {
+  overrides: Partial<NavigationResponse> = {},
+): NavigationResponse {
   return {
     current_staff: null,
     educational_groups: [],

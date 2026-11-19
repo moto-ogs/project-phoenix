@@ -9,7 +9,7 @@ import {
 import type { ShellBootstrap } from "~/lib/shell-seed";
 import { mutate } from "~/lib/swr";
 import { SWRConfig } from "~/lib/swr/testing";
-import type { CallerNavigationRow } from "~/lib/contract/me.generated";
+import type { NavigationResponse } from "~/lib/contract/me.generated";
 import type { UserContextResponse } from "~/lib/user-context-types";
 import { USER_CONTEXT_SWR_KEY, useUserContext } from "./use-user-context";
 
@@ -104,7 +104,7 @@ beforeEach(() => {
         },
         supervised_groups: [],
         unavailable_sections: [],
-      } satisfies CallerNavigationRow,
+      } satisfies NavigationResponse,
     }),
   );
   vi.stubGlobal("fetch", fetchMock);

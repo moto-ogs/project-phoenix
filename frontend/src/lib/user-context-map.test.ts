@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { CallerNavigationRow } from "~/lib/contract/me.generated";
+import type { NavigationResponse } from "~/lib/contract/me.generated";
 import { mapUserContext } from "./user-context-map";
 
 const AT = "2026-09-01T08:00:00Z";
 
-function row(
-  overrides: Partial<CallerNavigationRow> = {},
-): CallerNavigationRow {
+function row(overrides: Partial<NavigationResponse> = {}): NavigationResponse {
   return {
     current_staff: null,
     educational_groups: [],

@@ -7,7 +7,7 @@
 import type {
   ActiveGroup,
   CallerGroupRow,
-  CallerNavigationRow,
+  NavigationResponse,
   SchoolSwitches as WireSchoolSwitches,
 } from "~/lib/contract/me.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
@@ -57,7 +57,7 @@ const present = <T>(rows: readonly (T | null)[] | null): T[] =>
   (rows ?? []).filter((row): row is T => row !== null);
 
 /** Maps the contract's navigation row to the cached user context. */
-export function mapUserContext(data: CallerNavigationRow): UserContextResponse {
+export function mapUserContext(data: NavigationResponse): UserContextResponse {
   const educationalGroups = present(data.educational_groups).map(
     mapEducationalGroup,
   );
