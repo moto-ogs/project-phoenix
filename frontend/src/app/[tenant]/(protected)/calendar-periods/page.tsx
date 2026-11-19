@@ -23,6 +23,10 @@ import { useRequirePermission } from "~/lib/hooks/use-require-permission";
  * abgeschaltetem Planungsbereich ist dies zudem der einzige verbleibende
  * Eintrag der Planungsgruppe, eine Desktop-Sperre wäre dort eine Sackgasse.
  */
+// Info-Knopf am Titel (#7579): wofür die Seite da ist und was man zuerst tut.
+const CALENDAR_PERIODS_INFO =
+  "Hier legst du das Schuljahr, Halbjahre und Ferien als Zeiträume an. Hat die OGS geschlossen, trägst du unter „Schließtage“ einen Schließtag ein. Gesetzliche Feiertage musst du nicht eintragen.";
+
 export default function CalendarPeriodsPage() {
   // Dasselbe Recht wie der Eintrag in der Planungsgruppe (#3469): Zeiträume
   // und Schließtage pflegt, wer den Betreuungsplan verwaltet.
@@ -32,7 +36,12 @@ export default function CalendarPeriodsPage() {
   // Ladezustand; die Zeiträume werden erst danach abgerufen.
   if (!isReady) {
     return (
-      <TenantPage title="Schuljahr und Kalender" loading testId="loading" />
+      <TenantPage
+        title="Schuljahr und Kalender"
+        info={CALENDAR_PERIODS_INFO}
+        loading
+        testId="loading"
+      />
     );
   }
 
@@ -51,6 +60,7 @@ function CalendarPeriodsPageContent() {
   return (
     <TenantPage
       title="Schuljahr und Kalender"
+      info={CALENDAR_PERIODS_INFO}
       stats={state.statusLine}
       statsLoading={state.loading}
       actions={<CalendarPeriodsActions state={state} />}

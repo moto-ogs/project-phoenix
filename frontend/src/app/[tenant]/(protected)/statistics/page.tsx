@@ -972,6 +972,7 @@ export default function StatisticsPage() {
   return (
     <TenantPage
       title="Statistik"
+      info="Hier siehst du, wie oft Kinder in einem Zeitraum da waren. Wähle oben den Bereich, zum Beispiel „Gruppen“ oder „Kinder“. Dann wählst du den Zeitraum."
       stats={statusLine}
       statsLoading={loading}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett.

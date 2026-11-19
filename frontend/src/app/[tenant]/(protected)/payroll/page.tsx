@@ -401,6 +401,7 @@ export default function PayrollPage() {
   return (
     <TenantPage
       title="Abrechnung"
+      info="Hier bereitest du die Abrechnung für DATEV vor. Prüfe zuerst unter „Vollständigkeit“, was noch fehlt. Dann trägst du die Lohnarten und den DATEV-Mandanten ein."
       stats={statusLine}
       statsLoading={showSkeleton}
       loading={showSkeleton}

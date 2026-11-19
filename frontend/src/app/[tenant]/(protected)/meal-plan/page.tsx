@@ -596,6 +596,7 @@ export default function MealPlanPage() {
   return (
     <TenantPage
       title="Speiseplan"
+      info="Hier steht, was es in der gewählten Woche zu essen gibt. Oben wechselst du die Woche. Was du hier speicherst, sehen Eltern sofort."
       actions={<MealBillingReleaseLink />}
       stats={statusLine}
       statsLoading={initialLoading}
