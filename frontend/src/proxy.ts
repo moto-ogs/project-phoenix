@@ -350,12 +350,6 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       "/api/enrollment/requests/",
       /^\/api\/enrollment\/[^/]+\/uploads$/,
       "/api/demo/access/",
-      // Temporary (#2352): the paths of the route files an older bundle
-      // still calls; remove after the next production deploy.
-      "/api/tenant/list",
-      "/api/invitations/validate",
-      "/api/guardian-invitations/",
-      "/api/holiday-parent-setups/",
     ],
     localized: true,
     help: true,
@@ -367,10 +361,6 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       "/api/invitations/accept",
       // The invitation's school picker (#7369); attaches no session.
       "/api/auth/tenants",
-      // Temporary (#2352): the paths of the route files an older bundle
-      // still calls; remove after the next production deploy.
-      "/api/invitations/validate",
-      "/api/tenant/list",
     ],
     localized: false,
     help: true,

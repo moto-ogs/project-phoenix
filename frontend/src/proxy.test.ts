@@ -1110,11 +1110,9 @@ describe("proxy", () => {
 
     it("passes through the public invitation API routes", () => {
       for (const path of [
-        "/api/invitations/validate",
         "/api/invitations/accept",
-        // „Andere moto-Adresse wählen“ lists the schools (#7369).
-        "/api/tenant/list",
-        // The same through the staff proxy's public routes (#2352).
+        // The invitation link and „Andere moto-Adresse wählen“ (#7369)
+        // through the staff proxy's public routes (#2352).
         "/api/auth/invitations/tok",
         "/api/auth/tenants",
       ]) {
@@ -1944,19 +1942,15 @@ describe("proxy", () => {
         "/api/parent/auth/session",
         "/api/parent/me/children",
         "/api/tenant/resolve",
-        "/api/tenant/list",
         "/api/public/care-contract-signing/abc",
         "/api/public/login-image/a.webp",
-        "/api/invitations/validate",
         "/api/invitations/accept",
-        "/api/guardian-invitations/tok/accept",
         // The links and the school list through the staff proxy's public
         // routes (#2352).
         "/api/auth/invitations/tok",
         "/api/auth/tenants",
         "/api/auth/guardian-invitations/tok/accept",
         "/api/auth/holiday-parent-setups/tok",
-        "/api/holiday-parent-setups/tok",
         "/api/holiday-registrations/tok/uploads",
         "/api/enrollment/requests/tok/edit-bootstrap",
         "/api/enrollment/school-a/uploads",
@@ -2086,6 +2080,11 @@ describe("proxy", () => {
         "/api/enrollment/form-bootstrap/public/school-a/5",
         "/api/operator/auth/session",
         "/api/school/auth/session",
+        // The paths of the route files removed after the deploy (#2352).
+        "/api/tenant/list",
+        "/api/invitations/validate",
+        "/api/guardian-invitations/tok/accept",
+        "/api/holiday-parent-setups/tok",
       ]) {
         expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(404);
       }
