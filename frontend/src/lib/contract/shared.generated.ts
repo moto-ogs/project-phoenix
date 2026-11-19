@@ -487,6 +487,66 @@ export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown
   updated_at: instant,
 });
 
+/** Go: enrollment.LegalBlock */
+export interface LegalBlock {
+  attachments?: FormAttachment[];
+  key: string;
+  kind: string;
+  title: string;
+  label: string;
+  text: string;
+  required: boolean;
+  sort_order?: number;
+  source?: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  guardian_agreement?: boolean;
+}
+
+export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
+  attachments: optional(arr(FormAttachmentSchema)),
+  key: str,
+  kind: str,
+  title: str,
+  label: str,
+  text: str,
+  required: bool,
+  sort_order: optional(safeInt),
+  source: optional(str),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+  guardian_agreement: optional(bool),
+});
+
+/** Go: enrollmenthttp.PublicLegalTextsResponse */
+export interface PublicLegalTextsResponse {
+  agb: string;
+  agb_document_url: string;
+  agb_display_mode: string;
+  dsgvo: string;
+  email_contact: string;
+  photo: string;
+  terms_enabled: boolean;
+  dsgvo_enabled: boolean;
+  email_contact_enabled: boolean;
+  photo_enabled: boolean;
+  blocks: LegalBlock[] | null;
+  health_consent?: LegalBlock;
+}
+
+export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
+  agb: str,
+  agb_document_url: str,
+  agb_display_mode: str,
+  dsgvo: str,
+  email_contact: str,
+  photo: str,
+  terms_enabled: bool,
+  dsgvo_enabled: bool,
+  email_contact_enabled: bool,
+  photo_enabled: bool,
+  blocks: nullable(arr(LegalBlockSchema)),
+  health_consent: optional(LegalBlockSchema),
+});
+
 /** Go: enrollmenthttp.PublicPhase */
 export interface PublicPhase {
   id: string;
@@ -654,66 +714,6 @@ export const PublicCaptchaConfigResponseSchema: z.ZodType<PublicCaptchaConfigRes
   site_key: str,
 });
 
-/** Go: enrollment.LegalBlock */
-export interface LegalBlock {
-  attachments?: FormAttachment[];
-  key: string;
-  kind: string;
-  title: string;
-  label: string;
-  text: string;
-  required: boolean;
-  sort_order?: number;
-  source?: string;
-  translations?: Record<string, Record<string, TranslatedText> | null>;
-  guardian_agreement?: boolean;
-}
-
-export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
-  attachments: optional(arr(FormAttachmentSchema)),
-  key: str,
-  kind: str,
-  title: str,
-  label: str,
-  text: str,
-  required: bool,
-  sort_order: optional(safeInt),
-  source: optional(str),
-  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
-  guardian_agreement: optional(bool),
-});
-
-/** Go: enrollmenthttp.PublicLegalTextsResponse */
-export interface PublicLegalTextsResponse {
-  agb: string;
-  agb_document_url: string;
-  agb_display_mode: string;
-  dsgvo: string;
-  email_contact: string;
-  photo: string;
-  terms_enabled: boolean;
-  dsgvo_enabled: boolean;
-  email_contact_enabled: boolean;
-  photo_enabled: boolean;
-  blocks: LegalBlock[] | null;
-  health_consent?: LegalBlock;
-}
-
-export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
-  agb: str,
-  agb_document_url: str,
-  agb_display_mode: str,
-  dsgvo: str,
-  email_contact: str,
-  photo: str,
-  terms_enabled: bool,
-  dsgvo_enabled: bool,
-  email_contact_enabled: bool,
-  photo_enabled: bool,
-  blocks: nullable(arr(LegalBlockSchema)),
-  health_consent: optional(LegalBlockSchema),
-});
-
 /** Go: enrollmenthttp.PublicLateInvitePrefill */
 export interface PublicLateInvitePrefill {
   guardian_email: string;
@@ -825,6 +825,45 @@ export interface SubmitSignatureRequest {
   image_png?: string;
   typed_name?: string;
 }
+
+/** Go: enrollmenthttp.SubmitEnrollmentRequest */
+export interface SubmitEnrollmentRequest {
+  phase_id?: number;
+  guardian_first_name?: string;
+  guardian_last_name?: string;
+  guardian_email?: string;
+  guardian_phone?: string | null;
+  additional_guardians?: SubmitGuardianRequest[] | null;
+  consent_flags?: Record<string, unknown | null> | null;
+  form_schema_id?: number;
+  custom_data?: Record<string, unknown | null> | null;
+  children?: SubmitChildRequest[] | null;
+  captcha_token?: string;
+  late_invite_token?: string;
+  signature?: SubmitSignatureRequest | null;
+}
+
+/** Go: enrollment.SubmissionWarning */
+export interface SubmissionWarning {
+  code: string;
+}
+
+export const SubmissionWarningSchema: z.ZodType<SubmissionWarning, unknown> = object<SubmissionWarning>({
+  code: str,
+});
+
+/** Go: enrollmenthttp.SubmitEnrollmentResponse */
+export interface SubmitEnrollmentResponse {
+  request_id: string;
+  status_url: string;
+  warnings?: SubmissionWarning[];
+}
+
+export const SubmitEnrollmentResponseSchema: z.ZodType<SubmitEnrollmentResponse, unknown> = object<SubmitEnrollmentResponse>({
+  request_id: str,
+  status_url: str,
+  warnings: optional(arr(SubmissionWarningSchema)),
+});
 
 /** Go: peopledirectory.NewGuardianPhone */
 export interface NewGuardianPhone {
@@ -1920,6 +1959,86 @@ export interface ParentConferenceWindow {
 export const ParentConferenceWindowSchema: z.ZodType<ParentConferenceWindow, unknown> = object<ParentConferenceWindow>({
   start_time: str,
   end_time: str,
+});
+
+/** Go: carecontract.SigningService */
+export interface SigningService {
+  weekday: string;
+  module_name: string;
+  ends_at: string;
+  last_day: string | null;
+}
+
+export const SigningServiceSchema: z.ZodType<SigningService, unknown> = object<SigningService>({
+  weekday: str,
+  module_name: str,
+  ends_at: str,
+  last_day: nullable(calendarDate),
+});
+
+/** Go: carecontract.SigningContract */
+export interface SigningContract {
+  child_first_name: string;
+  child_last_name: string;
+  school_name: string;
+  phase_name: string;
+  effective_from: string | null;
+  ends_on: string | null;
+  price_cents: number | null;
+  services: SigningService[] | null;
+}
+
+export const SigningContractSchema: z.ZodType<SigningContract, unknown> = object<SigningContract>({
+  child_first_name: str,
+  child_last_name: str,
+  school_name: str,
+  phase_name: str,
+  effective_from: nullable(calendarDate),
+  ends_on: nullable(calendarDate),
+  price_cents: nullable(safeInt),
+  services: nullable(arr(SigningServiceSchema)),
+});
+
+/** Go: carecontract.SigningSignature */
+export interface SigningSignature {
+  method: string;
+  signer_name: string;
+  signed_at: string;
+  early_start_requested: boolean;
+  withdrawal_ends_on: string | null;
+}
+
+export const SigningSignatureSchema: z.ZodType<SigningSignature, unknown> = object<SigningSignature>({
+  method: str,
+  signer_name: str,
+  signed_at: instant,
+  early_start_requested: bool,
+  withdrawal_ends_on: nullable(calendarDate),
+});
+
+/** Go: carecontract.SigningView */
+export interface SigningView {
+  contract_id: string;
+  organization_id: string;
+  status: string;
+  traeger_name: string;
+  party_name: string;
+  version: SigningContract;
+  document_sha256: string;
+  withdrawal_notice: string[] | null;
+  signature: SigningSignature | null;
+}
+
+export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
+  contract_id: int64StringOrNumber,
+  organization_id: int64StringOrNumber,
+  status: str,
+  traeger_name: str,
+  party_name: str,
+  version: SigningContractSchema,
+  document_sha256: str,
+  withdrawal_notice: nullable(arr(str)),
+  signature: nullable(SigningSignatureSchema),
 });
 
 /** Go: schoolsetuphttp.dismissalRequest */

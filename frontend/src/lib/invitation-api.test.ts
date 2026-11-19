@@ -492,7 +492,7 @@ describe("invitation-api", () => {
       await findFormerEmployment("former@example.com", controller.signal);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/invitations/former-employment",
+        "/api/auth/invitations/former-employment",
         expect.objectContaining({ signal: controller.signal }),
       );
     });
@@ -579,10 +579,13 @@ describe("invitation-api", () => {
 
       await resendInvitation(123);
 
-      expect(global.fetch).toHaveBeenCalledWith("/api/invitations/123/resend", {
-        method: "POST",
-        credentials: "include",
-      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/auth/invitations/123/resend",
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
     });
 
     it("throws error when resend fails", async () => {
@@ -625,7 +628,7 @@ describe("invitation-api", () => {
 
       await revokeInvitation(123);
 
-      expect(global.fetch).toHaveBeenCalledWith("/api/invitations/123", {
+      expect(global.fetch).toHaveBeenCalledWith("/api/auth/invitations/123", {
         method: "DELETE",
         credentials: "include",
       });

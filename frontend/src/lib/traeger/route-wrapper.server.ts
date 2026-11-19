@@ -29,9 +29,14 @@ export const proxyFile: typeof traeger.proxyFile = (endpoint, options) =>
 
 /**
  * The Träger portal's proxy: forwards `/api/traeger/…` to the backend's `/traeger/…`
- * for the routes the contract registers for this portal.
+ * for the routes the contract registers for this portal, and the public
+ * routes under that mount without a session (`portalRoutes.public`).
  */
 export const catalogProxy = (
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
-) => makeCatalogProxy(traeger, "/traeger", routes, method);
+  publicRoutes: readonly CatalogRoute[] = [],
+) =>
+  makeCatalogProxy(traeger, "/traeger", routes, method, [], {
+    routes: publicRoutes,
+  });

@@ -92,8 +92,26 @@ func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
 		// One scope middleware admits one portal; a route for two portals
 		// needs a deliberate decision here first.
 		require.Lenf(t, route.Portals, 1, "%s names more than one portal", route.Key())
+		if common.PortalScope(route.Portals[0]) == common.PortalPublic {
+			assertRunsWithoutSession(t, route.Key(), strings.Split(chain, " > "))
+			continue
+		}
 		scope, mapped := portalScopeMiddleware[common.PortalScope(route.Portals[0])]
 		require.Truef(t, mapped, "%s: portal %q has no scope middleware in portalScopeMiddleware", route.Key(), route.Portals[0])
 		assert.Containsf(t, strings.Split(chain, " > "), scope, "%s is registered for portal %q but does not run behind %s", route.Key(), route.Portals[0], scope)
+	}
+}
+
+// sessionAuthenticator rejects a request without a session token.
+const sessionAuthenticator = "modules/identityaccess/sessiontoken.Authenticator"
+
+// assertRunsWithoutSession holds a public route to a chain that admits a
+// request without a session: the public proxy path sends no bearer, so a
+// scope middleware or the authenticator would refuse every call (#2352).
+func assertRunsWithoutSession(t *testing.T, key string, chain []string) {
+	t.Helper()
+	assert.NotContainsf(t, chain, sessionAuthenticator, "%s is registered as public but runs behind %s", key, sessionAuthenticator)
+	for portal, scope := range portalScopeMiddleware {
+		assert.NotContainsf(t, chain, scope, "%s is registered as public but runs behind the %s scope %s", key, portal, scope)
 	}
 }

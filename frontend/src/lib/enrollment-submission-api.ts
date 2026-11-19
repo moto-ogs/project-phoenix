@@ -761,6 +761,7 @@ export async function confirmRenewal(
   if (!response.ok) {
     throw await readError(response, "Bestätigung nicht möglich");
   }
-  const payload = (await response.json()) as { confirmed?: number };
+  // The count travels in the envelope's data (#2352 found the top-level read).
+  const payload = await readEnrollmentJSON<{ confirmed?: number }>(response);
   return payload.confirmed ?? 0;
 }

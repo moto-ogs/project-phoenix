@@ -4,7 +4,9 @@ import { routes as active } from "./active.generated";
 import { routes as analyticsConsent } from "./analytics-consent.generated";
 import { routes as analyticsPolicy } from "./analytics-policy.generated";
 import { routes as announcementAttachments } from "./announcement-attachments.generated";
+import { routes as authInvitations } from "./auth-invitations.generated";
 import { routes as calendar } from "./calendar.generated";
+import { routes as catererInvitations } from "./caterer-invitations.generated";
 import { routes as catererNotifications } from "./caterer-notifications.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
@@ -43,6 +45,7 @@ import { routes as parentHolidayRegistrations } from "./parent-holiday-registrat
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as parentNewsAttachments } from "./parent-news-attachments.generated";
 import { routes as platform } from "./platform.generated";
+import { routes as publicCareContractSigning } from "./public-care-contract-signing.generated";
 import { routes as pwa } from "./pwa.generated";
 import { routes as rooms } from "./rooms.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
@@ -99,6 +102,7 @@ import { routes as traegerFinanceHandovers } from "./traeger-finance-handovers.g
 import { routes as traegerHolidayClosures } from "./traeger-holiday-closures.generated";
 import { routes as traegerHolidayContributions } from "./traeger-holiday-contributions.generated";
 import { routes as traegerHolidayPeriods } from "./traeger-holiday-periods.generated";
+import { routes as traegerInvitations } from "./traeger-invitations.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerNumberRanges } from "./traeger-number-ranges.generated";
@@ -630,6 +634,32 @@ export const portalRoutes = {
     operatorUnregisteredTagScans["GET /operator/unregistered-tag-scans/"],
     operatorUnregisteredTagScans["POST /operator/unregistered-tag-scans/{id}/resolve"],
   ],
+  public: [
+    catererInvitations["GET /caterer/invitations/{schoolId}/{token}"],
+    catererInvitations["POST /caterer/invitations/{schoolId}/{token}/accept"],
+    enrollment["GET /api/enrollment/legal/{tenantSlug}"],
+    enrollment["GET /api/enrollment/legal/{tenantSlug}/{phaseId}"],
+    enrollment["GET /api/enrollment/phases/public/{tenantSlug}"],
+    enrollment["GET /api/enrollment/requests/{statusToken}"],
+    enrollment["GET /api/enrollment/requests/{statusToken}/change-requests"],
+    enrollment["GET /api/enrollment/requests/{statusToken}/edit-bootstrap"],
+    enrollment["GET /api/enrollment/requests/{statusToken}/family-children"],
+    enrollment["GET /api/enrollment/requests/{statusToken}/form-labels"],
+    enrollment["PATCH /api/enrollment/requests/{statusToken}"],
+    enrollment["POST /api/enrollment/requests/{statusToken}/change-requests"],
+    enrollment["POST /api/enrollment/requests/{statusToken}/change-requests/{changeRequestId}/messages"],
+    enrollment["POST /api/enrollment/requests/{statusToken}/confirm-renewal"],
+    enrollment["POST /api/enrollment/requests/{statusToken}/withdraw"],
+    enrollment["POST /api/enrollment/{tenantSlug}/submit"],
+    enrollment["PUT /api/enrollment/requests/{statusToken}"],
+    enrollment["PUT /api/enrollment/requests/{statusToken}/family-children"],
+    publicCareContractSigning["GET /public/care-contract-signing/{link}"],
+    publicCareContractSigning["GET /public/care-contract-signing/{link}/family-children"],
+    publicCareContractSigning["POST /public/care-contract-signing/{link}/sign"],
+    publicCareContractSigning["PUT /public/care-contract-signing/{link}/family-children"],
+    traegerInvitations["GET /traeger/invitations/{token}"],
+    traegerInvitations["POST /traeger/invitations/{token}/accept"],
+  ],
   school: [
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
@@ -734,6 +764,9 @@ export const portalRoutes = {
     analyticsConsent["GET /analytics-consent/"],
     analyticsConsent["PUT /analytics-consent/"],
     announcementAttachments["DELETE /api/announcement-attachments/{announcementId}/{attachmentId}"],
+    authInvitations["DELETE /auth/invitations/{id}/"],
+    authInvitations["POST /auth/invitations/former-employment"],
+    authInvitations["POST /auth/invitations/{id}/resend"],
     calendar["DELETE /api/calendar/appointments/{appointmentId}"],
     calendar["GET /api/calendar/appointments/{appointmentId}"],
     calendar["GET /api/calendar/appointments/{appointmentId}/mails"],

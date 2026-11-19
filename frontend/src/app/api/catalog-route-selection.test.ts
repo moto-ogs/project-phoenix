@@ -4,7 +4,10 @@ import { getRouteMatcher } from "next/dist/shared/lib/router/utils/route-matcher
 import { getRouteRegex } from "next/dist/shared/lib/router/utils/route-regex";
 import { getSortedRoutes } from "next/dist/shared/lib/router/utils/sorted-routes";
 import { describe, expect, it } from "vitest";
-import { CATALOG_OUTSIDE_MOUNTS } from "~/lib/contract/catalog-outside-mounts";
+import {
+  CATALOG_OUTSIDE_MOUNTS,
+  CATALOG_PUBLIC_OUTSIDE_MOUNTS,
+} from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
 
 /**
@@ -16,14 +19,24 @@ import { portalRoutes } from "~/lib/contract/portals.generated";
  * hands the request to the proxy.
  */
 
+type SessionPortal = Exclude<keyof typeof portalRoutes, "public">;
+
 /** The BFF prefix that stands for each portal's backend mount. */
-const BFF_PREFIX: Record<keyof typeof portalRoutes, [string, string]> = {
+const BFF_PREFIX: Record<SessionPortal, [string, string]> = {
   tenant: ["/api", "/api"],
   parent: ["/parent", "/api/parent"],
   school: ["/school", "/api/school"],
   org: ["/traeger", "/api/traeger"],
   caterer: ["/caterer", "/api/caterer"],
   platform: ["/operator", "/api/operator"],
+};
+
+/**
+ * Literal route files that hand a path Next would give another file to a
+ * portal's catalog proxy: `/api/auth/…` belongs to Auth.js otherwise.
+ */
+const HAND_OFFS: Record<string, SessionPortal> = {
+  "/api/auth/invitations/[...path]": "tenant",
 };
 
 const apiDir = path.dirname(new URL(import.meta.url).pathname);
@@ -48,28 +61,70 @@ const startsWithHead = (pattern: string, head: string) =>
  * whole path under the prefix: `/analytics-policy` →
  * `/api/school/analytics-policy`. Null for a pattern no BFF path reaches.
  */
-function bffPath(portal: keyof typeof portalRoutes, pattern: string) {
+function bffPath(
+  portal: SessionPortal,
+  pattern: string,
+  outside: readonly string[],
+) {
   const [mount, prefix] = BFF_PREFIX[portal];
   if (startsWithHead(pattern, mount)) {
     return prefix + pattern.slice(mount.length);
   }
-  const outside: readonly string[] = CATALOG_OUTSIDE_MOUNTS[portal];
   return outside.some((head) => startsWithHead(pattern, head))
     ? prefix + pattern
     : null;
 }
 
-const cases = Object.entries(portalRoutes).flatMap(([name, routes]) => {
-  const portal = name as keyof typeof portalRoutes;
-  const [, prefix] = BFF_PREFIX[portal];
-  return [...new Set(routes.map((route) => route.pattern))].map((pattern) => ({
-    portal,
-    pattern,
-    // Without a trailing slash, as the browser calls it.
-    bff: bffPath(portal, pattern)?.replace(/\/$/, "") ?? null,
-    catchAll: `${prefix}/[...path]`,
-  }));
-});
+const publicOutside: Partial<Record<SessionPortal, readonly string[]>> =
+  CATALOG_PUBLIC_OUTSIDE_MOUNTS;
+
+/**
+ * A public route is served by the catch-all of the portal whose mount, or
+ * whose public list of heads beside it, the pattern starts with.
+ */
+function publicPortalOf(pattern: string): SessionPortal | null {
+  const portals = Object.keys(BFF_PREFIX) as SessionPortal[];
+  return (
+    portals.find((portal) => startsWithHead(pattern, BFF_PREFIX[portal][0])) ??
+    portals.find((portal) =>
+      (publicOutside[portal] ?? []).some((head) =>
+        startsWithHead(pattern, head),
+      ),
+    ) ??
+    null
+  );
+}
+
+const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
+  [...new Set(routes.map((route) => route.pattern))].map((pattern) => {
+    const portal =
+      name === "public" ? publicPortalOf(pattern) : (name as SessionPortal);
+    const outside: readonly string[] =
+      portal === null
+        ? []
+        : name === "public"
+          ? (publicOutside[portal] ?? [])
+          : CATALOG_OUTSIDE_MOUNTS[portal];
+    return {
+      portal: name,
+      pattern,
+      // Without a trailing slash, as the browser calls it.
+      bff:
+        portal === null
+          ? null
+          : (bffPath(portal, pattern, outside)?.replace(/\/$/, "") ?? null),
+      catchAlls:
+        portal === null
+          ? []
+          : [
+              `${BFF_PREFIX[portal][1]}/[...path]`,
+              ...Object.keys(HAND_OFFS).filter(
+                (file) => HAND_OFFS[file] === portal,
+              ),
+            ],
+    };
+  }),
+);
 
 describe("registered route beside a portal's mount", () => {
   it.each(cases)("$portal $pattern has a BFF path", ({ bff }) => {
@@ -79,7 +134,13 @@ describe("registered route beside a portal's mount", () => {
   });
 
   it("names only heads the contract registers for the portal", () => {
-    for (const [name, heads] of Object.entries(CATALOG_OUTSIDE_MOUNTS)) {
+    const lists = [
+      ...Object.entries(CATALOG_OUTSIDE_MOUNTS),
+      ...Object.values(CATALOG_PUBLIC_OUTSIDE_MOUNTS).map(
+        (heads) => ["public", heads] as const,
+      ),
+    ];
+    for (const [name, heads] of lists) {
       const patterns = portalRoutes[name as keyof typeof portalRoutes].map(
         (route) => route.pattern,
       );
@@ -96,7 +157,7 @@ describe("registered route beside a portal's mount", () => {
 describe("route file in front of a portal's catalog proxy", () => {
   it.each(cases)(
     "$portal $bff is not shadowed by a dynamic route file",
-    ({ bff, catchAll }) => {
+    ({ bff, catchAlls }) => {
       if (bff === null) return;
       const pattern = bff.split("/");
       const sample = pattern
@@ -104,7 +165,7 @@ describe("route file in front of a portal's catalog proxy", () => {
         .join("/");
       const selected = routeFiles.find(({ match }) => match(sample))?.route;
       expect(selected).toBeDefined();
-      if (selected === catchAll) return;
+      if (catchAlls.includes(selected!)) return;
       // A file of its own is fine while each of its dynamic segments stands
       // where the registered pattern has a parameter too.
       const shadowing = selected!

@@ -1,7 +1,8 @@
 package common
 
-// PortalScope names a portal whose proxy may reach a route. The value is the
-// scope claim of that portal's session token.
+// PortalScope names a portal whose proxy may reach a route. For a session
+// portal the value is the scope claim of that portal's session token;
+// PortalPublic admits no session at all.
 type PortalScope string
 
 const (
@@ -17,6 +18,11 @@ const (
 	PortalCaterer PortalScope = "caterer"
 	// PortalOperator is the operator portal of the moto team.
 	PortalOperator PortalScope = "platform"
+	// PortalPublic is no portal of its own: the routes a request reaches
+	// without a session (a mailed link, a public form). Every portal's proxy
+	// serves those under its mount on a path that reads no session and sends
+	// no bearer (#2352). A public route names no other portal.
+	PortalPublic PortalScope = "public"
 )
 
 // RouteContract is the typed registration of one route (ADR 0270): what the

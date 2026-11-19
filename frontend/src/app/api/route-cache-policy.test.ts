@@ -58,6 +58,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createTenantJsonProxy",
     "createOptionalTenantJsonProxy",
     "catalogProxy",
+    "catalogProxyUnder",
     "proxyFile",
     "proxyUpload",
     "tenant.route",

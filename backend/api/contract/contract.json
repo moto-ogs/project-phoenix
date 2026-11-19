@@ -515,6 +515,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/auth/invitations/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/operator/accounts/{accountId}/tenants/{tenantId}",
       "portals": [
         "platform"
@@ -1723,6 +1731,40 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/legal/{tenantSlug}",
+      "portals": [
+        "public"
+      ],
+      "query": [
+        {
+          "name": "late_invite",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PublicLegalTextsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/legal/{tenantSlug}/{phaseId}",
+      "portals": [
+        "public"
+      ],
+      "query": [
+        {
+          "name": "late_invite",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PublicLegalTextsResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/phases/",
       "portals": [
         "tenant"
@@ -1746,6 +1788,20 @@
         "elem": {
           "kind": "ref",
           "ref": "PhaseExpiryWarningResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/public/{tenantSlug}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PublicPhase"
         }
       }
     },
@@ -1822,6 +1878,64 @@
       "response": {
         "kind": "ref",
         "ref": "RolloverPreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/requests/{statusToken}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/requests/{statusToken}/change-requests",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ChangeRequestResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/requests/{statusToken}/edit-bootstrap",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EditBootstrapResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/requests/{statusToken}/family-children",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RegistrationFamilyChildren"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/requests/{statusToken}/form-labels",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FormLabelsResponse"
       }
     },
     {
@@ -5350,6 +5464,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/caterer/invitations/{schoolId}/{token}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/caterer/notifications/feed/",
       "portals": [
         "caterer"
@@ -6725,6 +6850,28 @@
       "response": {
         "kind": "ref",
         "ref": "PushPublicKeyResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/care-contract-signing/{link}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SigningView"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/care-contract-signing/{link}/family-children",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SigningFamilyChildrenResponse"
       }
     },
     {
@@ -8165,6 +8312,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/invitations/{token}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InvitationPreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/master-data/",
       "portals": [
         "org"
@@ -8760,6 +8918,22 @@
     },
     {
       "method": "PATCH",
+      "pattern": "/api/enrollment/requests/{statusToken}",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "EditPatchRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "EditPatchResponse"
+      },
+      "max_body_bytes": 2097152
+    },
+    {
+      "method": "PATCH",
       "pattern": "/api/iot/{deviceId}/status",
       "portals": [
         "tenant"
@@ -9216,6 +9390,89 @@
         "kind": "ref",
         "ref": "RolloverCreateResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/requests/{statusToken}/change-requests",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateChangeRequestRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChangeRequestResponse"
+      },
+      "max_body_bytes": 2097152
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/requests/{statusToken}/change-requests/{changeRequestId}/messages",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChangeRequestMessageRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChangeRequestResponse"
+      },
+      "max_body_bytes": 65536
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/requests/{statusToken}/confirm-renewal",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ConfirmRenewalRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ConfirmRenewalResponse"
+      },
+      "max_body_bytes": 65536
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/requests/{statusToken}/withdraw",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "WithdrawRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/{tenantSlug}/submit",
+      "portals": [
+        "public"
+      ],
+      "query": [
+        {
+          "name": "late_invite",
+          "kind": "string"
+        }
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SubmitEnrollmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SubmitEnrollmentResponse"
+      },
+      "max_body_bytes": 2097152
     },
     {
       "method": "POST",
@@ -11244,6 +11501,45 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/invitations/former-employment",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "FormerEmploymentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "FormerEmploymentResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/invitations/{id}/resend",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InvitationResendResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/invitations/{schoolId}/{token}/accept",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "acceptRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
       "pattern": "/caterer/notifications/feed/read-all",
       "portals": [
         "caterer"
@@ -12074,6 +12370,22 @@
         "parent"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/public/care-contract-signing/{link}/sign",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SignRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SigningView"
+      },
+      "max_body_bytes": 409600
     },
     {
       "method": "POST",
@@ -13238,6 +13550,22 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/invitations/{token}/accept",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AcceptRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AcceptResponse"
+      },
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/master-data/bank-accounts",
       "portals": [
         "org"
@@ -13638,6 +13966,38 @@
         "kind": "ref",
         "ref": "PhaseUpdateResponse"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/enrollment/requests/{statusToken}",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SubmitEnrollmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SubmitEnrollmentResponse"
+      },
+      "max_body_bytes": 2097152
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/enrollment/requests/{statusToken}/family-children",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StatusFamilyChildrenRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RegistrationFamilyChildren"
+      },
+      "max_body_bytes": 4096
     },
     {
       "method": "PUT",
@@ -15087,6 +15447,22 @@
         "kind": "ref",
         "ref": "ParentProfileResponse"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/public/care-contract-signing/{link}/family-children",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SigningFamilyChildrenRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SigningFamilyChildrenResponse"
+      },
+      "max_body_bytes": 1024
     },
     {
       "method": "PUT",
@@ -16658,6 +17034,46 @@
           "schema": {
             "kind": "number",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptRequest",
+      "go_type": "traegerportal.AcceptRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptResponse",
+      "go_type": "traegerportal.AcceptResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -32666,6 +33082,51 @@
       ]
     },
     {
+      "name": "ConfirmRenewalRequest",
+      "go_type": "enrollmenthttp.ConfirmRenewalRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "consent_flags",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "form_schema_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "terms_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ConfirmRenewalResponse",
+      "go_type": "enrollmenthttp.ConfirmRenewalResponse",
+      "fields": [
+        {
+          "name": "confirmed",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "ConflictAckResponse",
       "go_type": "timetablehttp.ConflictAckResponse",
       "fields": [
@@ -34642,6 +35103,134 @@
             "elem": {
               "kind": "legacy_id"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CreateChangeRequestRequest",
+      "go_type": "enrollmenthttp.CreateChangeRequestRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "additional_guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SubmitGuardianRequest"
+            }
+          }
+        },
+        {
+          "name": "consent_flags",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "form_schema_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "children",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SubmitChildRequest"
+            }
+          }
+        },
+        {
+          "name": "captcha_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "late_invite_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signature",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "SubmitSignatureRequest"
+          }
+        },
+        {
+          "name": "parent_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -36897,6 +37486,101 @@
       ]
     },
     {
+      "name": "EditBootstrapResponse",
+      "go_type": "enrollmenthttp.EditBootstrapResponse",
+      "fields": [
+        {
+          "name": "phase",
+          "schema": {
+            "kind": "ref",
+            "ref": "PublicPhase"
+          }
+        },
+        {
+          "name": "schema",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "PublicFormSchemaResponse"
+          }
+        },
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "care_offering_selection_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "ref",
+            "ref": "PublicSchoolClassConfig"
+          }
+        },
+        {
+          "name": "collect_grade_level",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_offerings_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "grade_level_max",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "legal_texts",
+          "schema": {
+            "kind": "ref",
+            "ref": "PublicLegalTextsResponse"
+          }
+        },
+        {
+          "name": "draft",
+          "schema": {
+            "kind": "ref",
+            "ref": "EditDraftResponse"
+          }
+        },
+        {
+          "name": "edit_mode",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "EditCareScheduleRequestBody",
       "go_type": "parent.EditCareScheduleRequestBody",
       "request": true,
@@ -36927,6 +37611,262 @@
             "kind": "ref",
             "nullable": true,
             "ref": "declarationSignatureRequest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EditDraftChildResponse",
+      "go_type": "enrollmenthttp.EditDraftChildResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_of_birth",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "holiday_care_wish",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "custom_data",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "offering_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "offering_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "EditDraftOfferingDayResponse"
+            }
+          }
+        },
+        {
+          "name": "locked",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EditDraftGuardianResponse",
+      "go_type": "enrollmenthttp.EditDraftGuardianResponse",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EditDraftOfferingDayResponse",
+      "go_type": "enrollmenthttp.EditDraftOfferingDayResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "selected_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "manual_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "automatic_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EditDraftResponse",
+      "go_type": "enrollmenthttp.EditDraftResponse",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "consent_flags",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "custom_data",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "additional_guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "EditDraftGuardianResponse"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EditDraftChildResponse"
+            }
           }
         }
       ]
@@ -37037,6 +37977,73 @@
         {
           "name": "expected_version",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EditPatchRequest",
+      "go_type": "enrollmenthttp.EditPatchRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian_first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "consent_flags",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EditPatchResponse",
+      "go_type": "enrollmenthttp.EditPatchResponse",
+      "fields": [
+        {
+          "name": "message",
           "schema": {
             "kind": "string"
           }
@@ -39496,6 +40503,72 @@
             "elem": {
               "kind": "ref",
               "ref": "AssignmentRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormerEmploymentRequest",
+      "go_type": "account.FormerEmploymentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormerEmploymentResponse",
+      "go_type": "account.FormerEmploymentResponse",
+      "fields": [
+        {
+          "name": "former_employment",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormerEmploymentView"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormerEmploymentView",
+      "go_type": "account.FormerEmploymentView",
+      "fields": [
+        {
+          "name": "started_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ended_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "resumes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "not_returning",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }
@@ -47106,6 +48179,58 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "InvitationPreviewResponse",
+      "go_type": "traegerportal.InvitationPreviewResponse",
+      "fields": [
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "requires_existing_password",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InvitationResendResponse",
+      "go_type": "account.InvitationResendResponse",
+      "fields": [
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -58194,6 +59319,48 @@
       ]
     },
     {
+      "name": "PreviewResponse",
+      "go_type": "catererportalhttp.PreviewResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caterer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "has_caterer_account",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "address_taken",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "PrivacyConsentDefaultsResponse",
       "go_type": "studentpresencehttp.PrivacyConsentDefaultsResponse",
       "fields": [
@@ -59806,6 +60973,44 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RegistrationFamilyChildren",
+      "go_type": "enrollment.RegistrationFamilyChildren",
+      "fields": [
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "stated_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "asked",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_state",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "accepted",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -67234,6 +68439,48 @@
       ]
     },
     {
+      "name": "SignRequest",
+      "go_type": "carecontracthttp.SignRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "method",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "image_png",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "typed_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "withdrawal_notice_acknowledged",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "early_start_requested",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "SigningContract",
       "go_type": "carecontract.SigningContract",
       "fields": [
@@ -67291,6 +68538,74 @@
               "kind": "ref",
               "ref": "SigningService"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SigningFamilyChildrenRequest",
+      "go_type": "carecontracthttp.SigningFamilyChildrenRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "children",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SigningFamilyChildrenResponse",
+      "go_type": "carecontracthttp.SigningFamilyChildrenResponse",
+      "fields": [
+        {
+          "name": "confirmed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "stated_children",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "stated_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "confirmed_children",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "can_state",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -69866,6 +71181,49 @@
       ]
     },
     {
+      "name": "StatusChildResponse",
+      "go_type": "enrollmenthttp.StatusChildResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "locked",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "StatusDayDeletedResponse",
       "go_type": "studentpresencehttp.StatusDayDeletedResponse",
       "fields": [
@@ -69891,6 +71249,208 @@
           "name": "date_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StatusFamilyChildrenRequest",
+      "go_type": "enrollmenthttp.StatusFamilyChildrenRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "children",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StatusGuardianResponse",
+      "go_type": "enrollmenthttp.StatusGuardianResponse",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StatusRenewalTermsResponse",
+      "go_type": "enrollmenthttp.StatusRenewalTermsResponse",
+      "fields": [
+        {
+          "name": "form_schema_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "terms_fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "LegalBlock"
+            }
+          }
+        },
+        {
+          "name": "confirmed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StatusResponse",
+      "go_type": "enrollmenthttp.StatusResponse",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "withdrawn_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "edit_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StatusChildResponse"
+            }
+          }
+        },
+        {
+          "name": "additional_guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "StatusGuardianResponse"
+            }
+          }
+        },
+        {
+          "name": "has_parent_account",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "parent_portal_access",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signature_required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "signature",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "RequestSignatureResponse"
+          }
+        },
+        {
+          "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "renewal_terms",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StatusRenewalTermsResponse"
           }
         }
       ]
@@ -79222,6 +80782,21 @@
       ]
     },
     {
+      "name": "WithdrawRequest",
+      "go_type": "enrollmenthttp.WithdrawRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "child_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "WithdrawalContactRequest",
       "go_type": "traeger.WithdrawalContactRequest",
       "request": true,
@@ -79505,6 +81080,27 @@
           "name": "is_over_weekly_max",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "acceptRequest",
+      "go_type": "catererportalhttp.acceptRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

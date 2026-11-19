@@ -181,7 +181,7 @@ func (req *SignRequest) Bind(*http.Request) error { return nil }
 
 func (rs *SigningResource) sign(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
-	r.Body = http.MaxBytesReader(w, r.Body, 400<<10)
+	r.Body = http.MaxBytesReader(w, r.Body, signBodyBytes)
 	req := &SignRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
@@ -195,13 +195,17 @@ func (rs *SigningResource) sign(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, view, "Vertrag unterschrieben")
 }
 
-// FamilyChildrenRequest is the number of children the parents state on the
+// SigningFamilyChildrenRequest is the number of children the parents state on the
 // link (#6335).
-type FamilyChildrenRequest struct {
+type SigningFamilyChildrenRequest struct {
 	Children int `json:"children"`
 }
 
-func (req *FamilyChildrenRequest) Bind(*http.Request) error { return nil }
+func (req *SigningFamilyChildrenRequest) Bind(*http.Request) error { return nil }
+
+// SigningFamilyChildrenResponse is the family's number on the link, named
+// apart from the Träger-Büro's family types in the contract (#2352).
+type SigningFamilyChildrenResponse carecontract.FamilyChildren
 
 // familyChildren reads the number of the family of the link's contract;
 // like the contract it leaves the link open.
@@ -212,14 +216,14 @@ func (rs *SigningResource) familyChildren(w http.ResponseWriter, r *http.Request
 		renderSignatureError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, children, "Kinderzahl geladen")
+	common.Respond(w, r, http.StatusOK, SigningFamilyChildrenResponse(children), "Kinderzahl geladen")
 }
 
 // stateFamilyChildren stores the number the parents state on the link.
 func (rs *SigningResource) stateFamilyChildren(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
-	req := &FamilyChildrenRequest{}
+	r.Body = http.MaxBytesReader(w, r.Body, familyChildrenBodyBytes)
+	req := &SigningFamilyChildrenRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -229,5 +233,5 @@ func (rs *SigningResource) stateFamilyChildren(w http.ResponseWriter, r *http.Re
 		renderSignatureError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, children, "Kinderzahl gespeichert")
+	common.Respond(w, r, http.StatusOK, SigningFamilyChildrenResponse(children), "Kinderzahl gespeichert")
 }

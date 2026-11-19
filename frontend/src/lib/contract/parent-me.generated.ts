@@ -23,6 +23,7 @@ import {
   AppointmentOverviewSchema,
   EventSchema,
   ParentConferenceWindowSchema,
+  SigningViewSchema,
   type Event,
   type InvitationAnswer,
   type ParentConferenceWindow,
@@ -1205,86 +1206,6 @@ export const SEPAMandateViewSchema: z.ZodType<SEPAMandateView, unknown> = object
   creditor: nullable(SEPAMandateCreditorSchema),
   mandate: nullable(SEPAMandateSummarySchema),
   prefill: nullable(SEPAMandatePrefillSchema),
-});
-
-/** Go: carecontract.SigningService */
-export interface SigningService {
-  weekday: string;
-  module_name: string;
-  ends_at: string;
-  last_day: string | null;
-}
-
-export const SigningServiceSchema: z.ZodType<SigningService, unknown> = object<SigningService>({
-  weekday: str,
-  module_name: str,
-  ends_at: str,
-  last_day: nullable(calendarDate),
-});
-
-/** Go: carecontract.SigningContract */
-export interface SigningContract {
-  child_first_name: string;
-  child_last_name: string;
-  school_name: string;
-  phase_name: string;
-  effective_from: string | null;
-  ends_on: string | null;
-  price_cents: number | null;
-  services: SigningService[] | null;
-}
-
-export const SigningContractSchema: z.ZodType<SigningContract, unknown> = object<SigningContract>({
-  child_first_name: str,
-  child_last_name: str,
-  school_name: str,
-  phase_name: str,
-  effective_from: nullable(calendarDate),
-  ends_on: nullable(calendarDate),
-  price_cents: nullable(safeInt),
-  services: nullable(arr(SigningServiceSchema)),
-});
-
-/** Go: carecontract.SigningSignature */
-export interface SigningSignature {
-  method: string;
-  signer_name: string;
-  signed_at: string;
-  early_start_requested: boolean;
-  withdrawal_ends_on: string | null;
-}
-
-export const SigningSignatureSchema: z.ZodType<SigningSignature, unknown> = object<SigningSignature>({
-  method: str,
-  signer_name: str,
-  signed_at: instant,
-  early_start_requested: bool,
-  withdrawal_ends_on: nullable(calendarDate),
-});
-
-/** Go: carecontract.SigningView */
-export interface SigningView {
-  contract_id: string;
-  organization_id: string;
-  status: string;
-  traeger_name: string;
-  party_name: string;
-  version: SigningContract;
-  document_sha256: string;
-  withdrawal_notice: string[] | null;
-  signature: SigningSignature | null;
-}
-
-export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
-  contract_id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
-  status: str,
-  traeger_name: str,
-  party_name: str,
-  version: SigningContractSchema,
-  document_sha256: str,
-  withdrawal_notice: nullable(arr(str)),
-  signature: nullable(SigningSignatureSchema),
 });
 
 /** Go: parent.EnrollablePhaseResponse */

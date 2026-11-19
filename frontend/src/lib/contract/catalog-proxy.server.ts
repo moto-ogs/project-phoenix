@@ -1,12 +1,17 @@
 // The one proxy of a portal (#2352): it forwards a request only when the
 // generated contract lists the route for that portal, and checks the answer
 // against the route's decoder (ADR 0270).
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import type { z } from "zod";
 import { bffError, handleApiError } from "~/lib/api-response-error.server";
+import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
 import { applyPrivateNoStore } from "~/lib/private-no-store";
-import type { RouteContext } from "~/lib/route-wrapper-utils.server";
+import {
+  parseRequestBody,
+  wrapInApiResponse,
+  type RouteContext,
+} from "~/lib/route-wrapper-utils.server";
 import { decodeContract } from "./client.server";
 
 /** A generated route entry, as `portalRoutes` lists it. */
@@ -65,6 +70,27 @@ const startsWith = (path: readonly string[], head: readonly string[]) =>
   head.every((segment, index) => path[index] === segment);
 
 /**
+ * chi's order: where two patterns first differ in kind, the literal wins, so
+ * the proxy picks the route the backend runs.
+ */
+function literalFirst(a: readonly string[], b: readonly string[]) {
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    const order =
+      Number(isParam(a[index] ?? "")) - Number(isParam(b[index] ?? ""));
+    if (order !== 0) return order;
+  }
+  return 0;
+}
+
+/** The routes a request reaches without a session (#2352). */
+export interface PublicCatalog {
+  /** `portalRoutes.public`; the proxy serves those under its mount. */
+  readonly routes: readonly CatalogRoute[];
+  /** Backend prefixes beside the mount that public routes reach. */
+  readonly outside?: readonly string[];
+}
+
+/**
  * Builds the handler of one method for a portal's catch-all route
  * `app/api/<portal>/[...path]/route.ts`. `mount` is the backend prefix the
  * portal's BFF paths stand for: `/api/parent/x` reaches `/parent/x`.
@@ -78,6 +104,12 @@ const startsWith = (path: readonly string[], head: readonly string[]) =>
  * parameters travel. Session, the single 401 renewal and the response
  * envelope are the portal's own handlers; a route's contract can switch the
  * renewal's retry off and bound the body.
+ *
+ * `publics` names the routes of the pseudo-portal `public` (#2352). They run
+ * on a path of their own that never reads the session and sends no bearer:
+ * a link or a public form must not act as whoever is signed in on the
+ * device. Their write bodies are bounded by the contract, and every answer
+ * is private and uncached, because a link's answer is personal data.
  */
 export function makeCatalogProxy(
   portal: PortalHandlers,
@@ -85,24 +117,34 @@ export function makeCatalogProxy(
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
   outside: readonly string[] = [],
+  publics: PublicCatalog = { routes: [] },
 ) {
   const prefix = segmentsOf(mount);
   const heads = [prefix, ...outside.map(segmentsOf)];
-  const served = routes
-    .filter((route) => route.method === method)
-    .filter(hasOneDecoder)
-    .map((route) => ({ route, pattern: segmentsOf(route.pattern) }))
-    .filter(({ pattern }) => heads.some((head) => startsWith(pattern, head)))
-    // A literal segment wins over a parameter in the same place.
-    .sort(
-      (a, b) =>
-        a.pattern.filter(isParam).length - b.pattern.filter(isParam).length,
-    );
-  const outsideHeads = heads.slice(1);
+  const publicHeads = [prefix, ...(publics.outside ?? []).map(segmentsOf)];
+  const entries = (
+    list: readonly CatalogRoute[],
+    under: readonly (readonly string[])[],
+    isPublic: boolean,
+  ) =>
+    list
+      .filter((route) => route.method === method)
+      .filter(hasOneDecoder)
+      .map((route) => ({ route, pattern: segmentsOf(route.pattern), isPublic }))
+      .filter(({ pattern }) => under.some((head) => startsWith(pattern, head)));
+  // One table for both lists: a literal segment wins over a parameter in the
+  // same place, whichever list the route comes from.
+  const served = [
+    ...entries(routes, heads, false),
+    ...entries(publics.routes, publicHeads, true),
+  ].sort((a, b) => literalFirst(a.pattern, b.pattern));
+  const outsideHeads = [...heads.slice(1), ...publicHeads.slice(1)];
 
   function lookup(full: string[]) {
     const hit = served.find(({ pattern }) => matches(pattern, full));
-    return hit ? { route: hit.route, segments: full } : null;
+    return hit
+      ? { route: hit.route, segments: full, isPublic: hit.isPublic }
+      : null;
   }
 
   function find(path: unknown) {
@@ -222,13 +264,50 @@ export function makeCatalogProxy(
     return handler;
   }
 
+  /**
+   * A public route: no session read, no bearer, no renewal. The body is
+   * read within the route's limit; a write without one reads nothing.
+   */
+  async function servePublic(
+    request: NextRequest,
+    route: CatalogRoute & { response: Envelope },
+    context: RouteContext,
+  ): Promise<Response> {
+    const { endpoint } = target(request, (await context.params)?.path);
+    const json =
+      method === "GET"
+        ? undefined
+        : await parseRequestBody(request, route.maxBodyBytes ?? 0);
+    const answer = await readBackendJson<unknown>(
+      await sendBackend(endpoint, null, {
+        method,
+        json,
+        idempotencyKey: request.headers.get("Idempotency-Key"),
+        request,
+      }),
+    );
+    return NextResponse.json(wrapInApiResponse(decoded(route, answer)));
+  }
+
   return async (request: NextRequest, context: RouteContext) => {
     const found = find((await context.params)?.path);
-    if (!found) {
+    if (!found?.isPublic) {
+      if (found) return handlerOf(found.route)(request, context);
       const response = handleApiError(notFound(), request);
       applyPrivateNoStore(response.headers);
       return response;
     }
-    return handlerOf(found.route)(request, context);
+    let response: Response;
+    try {
+      response = await servePublic(
+        request,
+        found.route as CatalogRoute & { response: Envelope },
+        context,
+      );
+    } catch (error) {
+      response = handleApiError(error, request);
+    }
+    applyPrivateNoStore(response.headers);
+    return response;
   };
 }

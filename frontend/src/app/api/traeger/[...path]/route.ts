@@ -9,9 +9,11 @@ import { catalogProxy } from "~/lib/traeger/route-wrapper.server";
  * Next prefers that file over this one.
  */
 const routes = portalRoutes.org;
+// The routes of a link or a public form, served without a session.
+const publicRoutes = portalRoutes.public;
 
-export const GET = catalogProxy(routes, "GET");
-export const POST = catalogProxy(routes, "POST");
-export const PUT = catalogProxy(routes, "PUT");
-export const PATCH = catalogProxy(routes, "PATCH");
-export const DELETE = catalogProxy(routes, "DELETE");
+export const GET = catalogProxy(routes, "GET", publicRoutes);
+export const POST = catalogProxy(routes, "POST", publicRoutes);
+export const PUT = catalogProxy(routes, "PUT", publicRoutes);
+export const PATCH = catalogProxy(routes, "PATCH", publicRoutes);
+export const DELETE = catalogProxy(routes, "DELETE", publicRoutes);

@@ -186,6 +186,15 @@ func TestBuildRejects(t *testing.T) {
 	limitWithoutBody.MaxBodyBytes = 1024
 	negativeLimit := post(body{})
 	negativeLimit.MaxBodyBytes = -1
+	publicWrite := post(body{})
+	publicWrite.Portals = []string{PublicPortal}
+	publicRetry := get("/api/links/{token}", inner{})
+	publicRetry.Portals = []string{PublicPortal}
+	publicRetry.NoRetryAfterRenewal = "mails a code"
+	publicBeside := get("/api/links/{token}", inner{})
+	publicBeside.Portals = []string{PublicPortal, "tenant"}
+	publicLink := get("/api/rows/{token}", inner{})
+	publicLink.Portals = []string{PublicPortal}
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -212,6 +221,10 @@ func TestBuildRejects(t *testing.T) {
 		"an owner's day type without an entry":      {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
 		"a body limit on a route without a body":    {[]Registration{limitWithoutBody}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
 		"a negative body limit":                     {[]Registration{negativeLimit}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a public write without a body limit":       {[]Registration{publicWrite}, Options{Identifiers: identifiers}, "a public write needs MaxBodyBytes"},
+		"a public route that names a retry":         {[]Registration{publicRetry}, Options{Identifiers: identifiers}, "has no session to renew"},
+		"a public route beside a session portal":    {[]Registration{publicBeside}, Options{Identifiers: identifiers}, "names no session portal"},
+		"a public pattern a session pattern takes":  {[]Registration{publicLink, get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers}, "overlaps the session route GET /api/rows/{id}"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -543,4 +556,14 @@ func TestATypeOfACycleReadsTheLaterSchemaLazily(t *testing.T) {
 	require.True(t, first >= 0 && second > first, source)
 	assert.Contains(t, source, "  session: optional(lazy(() => sessionSchema)),")
 	assert.Contains(t, source, "  supervisors: optional(arr(nullable(supervisorSchema))),")
+}
+
+func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {
+	t.Parallel()
+	link := get("/api/rows/public/{token}", inner{})
+	link.Portals = []string{PublicPortal}
+	// /api/rows/public/x/ matches both; the literal "public" wins in chi
+	// and in the proxy, so the pair is ordered.
+	_, err := Build([]Registration{link, get("/api/rows/{id}/history", inner{})}, Options{Identifiers: identifiers})
+	assert.NoError(t, err)
 }
