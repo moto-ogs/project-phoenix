@@ -2264,6 +2264,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/signature-proof",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/admin/students/{studentId}/requests/",
       "portals": [
         "tenant"
@@ -3510,6 +3518,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/declaration-export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf"
+          ]
+        },
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/parent-announcements/{announcementId}/declaration-status",
       "portals": [
         "tenant"
@@ -3529,6 +3559,14 @@
         "kind": "ref",
         "ref": "letterStatusResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/parent-announcements/{announcementId}/letters-pdf",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -7898,6 +7936,24 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent-news-attachments/{announcementId}/{attachmentId}/download",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        },
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/enrollments/{tenantSlug}/bootstrap/{phaseId}",
       "portals": [
         "parent"
@@ -7955,6 +8011,14 @@
         "kind": "ref",
         "ref": "ParentCalendarResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/calendar/appointments/{appointmentId}/ics",
+      "portals": [
+        "parent"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -8235,6 +8299,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf",
+      "portals": [
+        "parent"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/children/{studentId}/related-accounts",
       "portals": [
         "parent"
@@ -8384,6 +8456,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+      "portals": [
+        "parent"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
       "portals": [
         "parent"
@@ -8403,6 +8483,22 @@
         "kind": "ref",
         "ref": "SigningView"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/documents/{organizationId}/shared/{documentId}/file",
+      "portals": [
+        "parent"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/documents/{organizationId}/{documentId}/pdf",
+      "portals": [
+        "parent"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -8590,6 +8686,20 @@
         "kind": "ref",
         "ref": "declarationProofResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/news/{announcementId}/declaration/proof/pdf",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -8814,6 +8924,36 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/class-day/absence-list/export",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "class",
+          "kind": "string"
+        },
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/school/class-day/arrival-exceptions",
       "portals": [
         "school"
@@ -8992,6 +9132,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/parent-letters/{announcementId}/declaration-export",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf"
+          ]
+        },
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/school/parent-letters/{announcementId}/declaration-status",
       "portals": [
         "school"
@@ -9011,6 +9173,14 @@
         "kind": "ref",
         "ref": "letterStatusResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/parent-letters/{announcementId}/letters-pdf",
+      "portals": [
+        "school"
+      ],
+      "file": true
     },
     {
       "method": "GET",

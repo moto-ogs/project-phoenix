@@ -91,6 +91,11 @@ func documentRouteContracts(signing any) []common.RouteContract {
 		{Method: "POST", Pattern: contract + "/sign", Portals: portals, Request: ContractSignRequest{}, Response: signing},
 		{Method: "POST", Pattern: contract + "/sepa-mandate/preview", Portals: portals, Request: parentService.SEPAMandateInput{}, Response: parentService.SEPAMandateText{}},
 		{Method: "POST", Pattern: contract + "/sepa-mandate/revoke", Portals: portals, Response: parentService.SEPAMandateView{}},
+		// The stored PDFs and the shared files of the inbox (#4671, #4678,
+		// #4692); the handlers refuse a non-numeric ID with 400.
+		{Method: "GET", Pattern: "/me/documents/{organizationId}/{documentId}/pdf", Portals: portals, File: true},
+		{Method: "GET", Pattern: contract + "/pdf", Portals: portals, File: true},
+		{Method: "GET", Pattern: "/me/documents/{organizationId}/shared/{documentId}/file", Portals: portals, File: true},
 	}
 }
 
@@ -121,10 +126,13 @@ func communicationRouteContracts() []common.RouteContract {
 			Request:             declarationRequest{}, Response: DeclarationRecordedResponse{},
 		},
 		{
-			// format=pdf answers a file; the proxy forwards only the JSON form.
 			Method: "GET", Pattern: news + "/declaration/proof", Portals: portals,
 			Query:    []common.QueryParam{{Name: "student_id", Kind: common.QueryID}},
 			Response: declarationProofResponse{},
+		},
+		{
+			Method: "GET", Pattern: news + "/declaration/proof/pdf", Portals: portals,
+			Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}}, File: true,
 		},
 	}
 }
@@ -193,6 +201,7 @@ func childMasterDataRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: guardian + "/pickup", Portals: portals, Request: updateGuardianRelationshipRequest{}, Response: childGuardianResponse{}},
 		{Method: "POST", Pattern: guardian + "/pickup-permission-requests", Portals: portals, Request: pickupPermissionRequestBody{}, Response: pickupPermissionRequestResponse{}},
 		{Method: "GET", Pattern: child + "/pickup-permission-requests", Portals: portals, Response: []pickupPermissionRequestResponse{}},
+		{Method: "GET", Pattern: child + "/pickup-requests/{requestId}/proof/pdf", Portals: portals, File: true},
 		{Method: "POST", Pattern: child + "/pickup-signature-statement", Portals: portals, Request: pickupSignatureStatementRequest{}, Response: pickupSignatureStatementResponse{}},
 	}
 }

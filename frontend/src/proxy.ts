@@ -247,7 +247,7 @@ const SANDBOXED_FILE_ROUTES: readonly RegExp[] = [
   // Managed files and announcement attachments, staff and parents.
   /^\/api\/files\/folders\/[^/]+\/files\/[^/]+\/download$/,
   /^\/api\/announcement-attachments\/[^/]+\/[^/]+\/download$/,
-  /^\/api\/parent\/me\/news\/[^/]+\/attachments\/[^/]+\/download$/,
+  /^\/api\/parent\/parent-news-attachments\/[^/]+\/[^/]+\/download$/,
   // Documents staff attach to a child (#777) or a staff member (#1424).
   /^\/api\/(?:students|staff)\/[^/]+\/documents\/[^/]+\/download$/,
   // The proof of a care schedule request a parent signed (#4780).

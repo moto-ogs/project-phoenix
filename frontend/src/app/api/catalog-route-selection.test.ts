@@ -293,6 +293,21 @@ describe("path freed from its own route file", () => {
     ["/api/activities/quick-create", "/api/[...path]"],
     ["/api/iot/device-slots", "/api/[...path]"],
     ["/api/search", "/api/[...path]"],
+    // Documents and proofs of the contract (#2352), beside dynamic
+    // neighbours that keep their route files.
+    ["/api/enrollment/admin/requests/1/signature-proof", "/api/[...path]"],
+    ["/api/parent-announcements/1/letters-pdf", "/api/[...path]"],
+    ["/api/parent/me/documents/1/2/pdf", "/api/parent/[...path]"],
+    ["/api/parent/me/news/1/declaration/proof/pdf", "/api/parent/[...path]"],
+    [
+      "/api/parent/me/children/1/pickup-requests/2/proof/pdf",
+      "/api/parent/[...path]",
+    ],
+    [
+      "/api/parent/parent-news-attachments/1/2/download",
+      "/api/parent/[...path]",
+    ],
+    ["/api/school/class-day/absence-list/export", "/api/school/[...path]"],
     // A list on the bare path reaches the portal's proxy, not Auth.js.
     ["/api/auth/passkeys", "/api/auth/passkeys/[[...path]]"],
     ["/api/auth/passkeys/register/options", "/api/auth/passkeys/[[...path]]"],

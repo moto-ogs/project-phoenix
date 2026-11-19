@@ -86,22 +86,6 @@ const routes: Array<
         .GET,
   ],
   [
-    "parent document",
-    "GET",
-    async () =>
-      (
-        await import("./parent/me/documents/[organizationId]/[documentId]/pdf/route")
-      ).GET,
-  ],
-  [
-    "school declaration",
-    "GET",
-    async () =>
-      (
-        await import("./school/parent-letters/[announcementId]/declaration-export/route")
-      ).GET,
-  ],
-  [
     "caterer export",
     "GET",
     async () => (await import("./caterer/orders/export/route")).GET,
@@ -113,6 +97,18 @@ const routes: Array<
       (await import("./operator/billing/key-date-counts/export/route")).GET,
   ],
   // A file the contract registers runs through the portal's catalog proxy.
+  [
+    "parent document",
+    "GET",
+    async () => (await import("./parent/[...path]/route")).GET,
+    { path: ["me", "documents", "1", "2", "pdf"] },
+  ],
+  [
+    "school declaration",
+    "GET",
+    async () => (await import("./school/[...path]/route")).GET,
+    { path: ["parent-letters", "3", "declaration-export"] },
+  ],
   [
     "Träger export",
     "GET",

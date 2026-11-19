@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
   int64StringOrNumber,
@@ -2640,6 +2641,11 @@ export interface GetParentMeNewsAnnouncementIdDeclarationProofQuery {
   student_id?: string;
 }
 
+/** Query of GET /parent/me/news/{announcementId}/declaration/proof/pdf */
+export interface GetParentMeNewsAnnouncementIdDeclarationProofPdfQuery {
+  student_id?: string;
+}
+
 /** Query of GET /parent/me/notifications/feed/ */
 export interface GetParentMeNotificationsFeedQuery {
   cursor?: string;
@@ -2703,6 +2709,12 @@ export const routes = {
     portals: ["parent"],
     query: ["from", "to"],
     response: success(ParentCalendarResponseSchema),
+  },
+  "GET /parent/me/calendar/appointments/{appointmentId}/ics": {
+    method: "GET",
+    pattern: "/parent/me/calendar/appointments/{appointmentId}/ics",
+    portals: ["parent"],
+    response: fileAnswer,
   },
   "GET /parent/me/calendar/appointments/{appointmentId}/overview": {
     method: "GET",
@@ -2823,6 +2835,12 @@ export const routes = {
     portals: ["parent"],
     response: success(z.array(pickupPermissionRequestResponseSchema)),
   },
+  "GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
   "GET /parent/me/children/{studentId}/related-accounts": {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/related-accounts",
@@ -2890,6 +2908,12 @@ export const routes = {
     portals: ["parent"],
     response: success(ContractNoticeOptionsSchema),
   },
+  "GET /parent/me/documents/{organizationId}/contracts/{contractId}/pdf": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
   "GET /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate": {
     method: "GET",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
@@ -2901,6 +2925,18 @@ export const routes = {
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/signing",
     portals: ["parent"],
     response: success(SigningViewSchema),
+  },
+  "GET /parent/me/documents/{organizationId}/shared/{documentId}/file": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/shared/{documentId}/file",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
+  "GET /parent/me/documents/{organizationId}/{documentId}/pdf": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/{documentId}/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
   },
   "GET /parent/me/enrollable-schools": {
     method: "GET",
@@ -2987,6 +3023,13 @@ export const routes = {
     portals: ["parent"],
     query: ["student_id"],
     response: success(declarationProofResponseSchema),
+  },
+  "GET /parent/me/news/{announcementId}/declaration/proof/pdf": {
+    method: "GET",
+    pattern: "/parent/me/news/{announcementId}/declaration/proof/pdf",
+    portals: ["parent"],
+    query: ["student_id"],
+    response: fileAnswer,
   },
   "GET /parent/me/news/{announcementId}/survey": {
     method: "GET",
