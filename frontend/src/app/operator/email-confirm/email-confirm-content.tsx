@@ -28,6 +28,35 @@ function extractToken(): string | null {
   return new URLSearchParams(window.location.search).get("token");
 }
 
+/**
+ * Marks this history entry as confirmed. The token is gone from the URL, so
+ * returning here (browser back after „Weiter“) shows the result again
+ * instead of claiming the link carried no code. The marker holds no secret.
+ */
+const CONFIRMED_STATE_KEY = "operatorEmailConfirmed";
+
+function markEntryConfirmed() {
+  const current: unknown = window.history.state;
+  const state =
+    current && typeof current === "object"
+      ? (current as Record<string, unknown>)
+      : {};
+  window.history.replaceState(
+    { ...state, [CONFIRMED_STATE_KEY]: true },
+    "",
+    window.location.pathname,
+  );
+}
+
+function entryConfirmed(): boolean {
+  const current: unknown = window.history.state;
+  return (
+    !!current &&
+    typeof current === "object" &&
+    (current as Record<string, unknown>)[CONFIRMED_STATE_KEY] === true
+  );
+}
+
 function ResultCard({ children }: { readonly children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
@@ -45,21 +74,39 @@ export function EmailConfirmContent() {
   const { show: showConfirmError, invalid: invalidConfirm } = confirmErrors;
   const { update: updateSession, status: sessionStatus } = useSession();
   const primaryRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+  // The token is read from the URL once and held here: the URL loses it at
+  // once, and the mount effect runs again whenever React re-attaches the
+  // component (StrictMode in development, a hidden and re-shown route).
+  const tokenRef = useRef<string | null>(null);
+  // One confirmation at a time, and none after it succeeded: the token is
+  // spent then, and a second request would report the spent link.
+  const confirmRef = useRef<"open" | "running" | "done">("open");
 
   // Extract token from URL query string on mount, then strip it from the URL
   // to prevent leaking via browser history or shoulder-surfing.
   useEffect(() => {
-    const extracted = extractToken();
-    if (extracted) {
-      setToken(extracted);
-      setState("idle");
-      window.history.replaceState({}, "", window.location.pathname);
-    } else {
-      invalidConfirm(
-        "Der Link enthält keinen Bestätigungscode. Bitte öffne den Link aus der E-Mail erneut.",
-      );
-      setState("error");
+    if (tokenRef.current === null) {
+      const extracted = extractToken();
+      if (extracted) {
+        tokenRef.current = extracted;
+        window.history.replaceState({}, "", window.location.pathname);
+      }
     }
+    if (tokenRef.current) {
+      setToken(tokenRef.current);
+      // A re-run keeps a state the person already reached.
+      setState((current) => (current === "loading" ? "idle" : current));
+      return;
+    }
+    if (entryConfirmed()) {
+      confirmRef.current = "done";
+      setState("success");
+      return;
+    }
+    invalidConfirm(
+      "Der Link enthält keinen Bestätigungscode. Bitte öffne den Link aus der E-Mail erneut.",
+    );
+    setState("error");
   }, [invalidConfirm]);
 
   useEffect(() => {
@@ -67,8 +114,9 @@ export function EmailConfirmContent() {
   }, [state]);
 
   const handleConfirm = useCallback(async () => {
-    if (!token || state === "confirming") return;
+    if (!token || confirmRef.current !== "open") return;
 
+    confirmRef.current = "running";
     setState("confirming");
     try {
       const response = await transportFetch(
@@ -87,6 +135,8 @@ export function EmailConfirmContent() {
         );
       }
 
+      confirmRef.current = "done";
+      markEntryConfirmed();
       setState("success");
       // If the user has an active session, force-expire the access token
       // so the next JWT callback triggers a proactive refresh — picking up
@@ -99,6 +149,7 @@ export function EmailConfirmContent() {
         }
       }
     } catch (err) {
+      confirmRef.current = "open";
       logger.warn("email_confirm_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
@@ -108,7 +159,7 @@ export function EmailConfirmContent() {
       });
       setState("error");
     }
-  }, [token, state, sessionStatus, updateSession, showConfirmError]);
+  }, [token, sessionStatus, updateSession, showConfirmError]);
 
   if (state === "loading") {
     return (

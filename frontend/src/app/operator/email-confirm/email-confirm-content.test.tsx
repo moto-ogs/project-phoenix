@@ -408,4 +408,61 @@ describe("EmailConfirmContent", () => {
       ).toBeInTheDocument();
     });
   });
+  // The mount effect runs twice under StrictMode (next dev) and again when a
+  // hidden route is shown. The first run strips the token from the real URL,
+  // so the second must keep the token it already read.
+  it("keeps the token when the mount effect runs again", async () => {
+    replaceStateSpy.mockRestore();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true }),
+    });
+    setQueryToken("strict-token");
+
+    // StrictMode at the root, as next dev renders the page.
+    renderPlain(<EmailConfirmContent />, {
+      wrapper: ToastProvider,
+      reactStrictMode: true,
+    });
+
+    expect(await screen.findByText("Jetzt bestätigen")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    expect(
+      screen.queryByText("Bestätigung fehlgeschlagen"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Jetzt bestätigen"));
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string)).toEqual({
+      token: "strict-token",
+    });
+  });
+
+  it("shows the result again when the person returns after confirming", async () => {
+    replaceStateSpy.mockRestore();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true }),
+    });
+    setQueryToken("back-token");
+
+    const first = render(<EmailConfirmContent />);
+    fireEvent.click(await screen.findByText("Jetzt bestätigen"));
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    first.unmount();
+
+    // Browser back to the same entry: no token in the URL any more.
+    render(<EmailConfirmContent />);
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
 });
