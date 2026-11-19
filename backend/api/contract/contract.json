@@ -17313,6 +17313,15 @@
       "portals": [
         "tenant"
       ],
+      "query": [
+        {
+          "name": "outcome",
+          "kind": "string",
+          "values": [
+            "completed"
+          ]
+        }
+      ],
       "request": {
         "kind": "ref",
         "ref": "dismissalRequest"

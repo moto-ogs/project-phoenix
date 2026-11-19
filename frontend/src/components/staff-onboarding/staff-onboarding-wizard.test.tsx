@@ -90,6 +90,12 @@ const api = vi.hoisted(() => ({
   setStaffOnboardingStepState: vi.fn(),
   setStaffOnboardingDismissed: vi.fn(),
 }));
+// Die Fläche meldet sich bei der Nutzungsanalyse (#7553); ob ohne
+// Einwilligung nichts hinausgeht, prüft trackOnboardingSurface selbst
+// (pwa-install-hint.analytics.test.tsx).
+const analytics = vi.hoisted(() => ({ trackOnboardingSurface: vi.fn() }));
+vi.mock("~/lib/analytics", () => analytics);
+
 vi.mock("~/lib/staff-onboarding-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/staff-onboarding-api")>()),
   ...api,
@@ -691,8 +697,11 @@ describe("StaffOnboardingWizard", () => {
       screen.queryByRole("button", { name: "Nicht mehr anzeigen" }),
     ).toBeNull();
     fireEvent.click(finish);
+    // Abschließen sagt der Nutzungsanalyse, dass die Liste fertig ist.
     await waitFor(() =>
-      expect(api.setStaffOnboardingDismissed).toHaveBeenCalledWith(true),
+      expect(api.setStaffOnboardingDismissed).toHaveBeenCalledWith(true, {
+        completed: true,
+      }),
     );
   });
 
@@ -712,6 +721,65 @@ describe("StaffOnboardingWizard", () => {
     await waitFor(() =>
       expect(api.setStaffOnboardingDismissed).toHaveBeenCalledWith(true),
     );
+  });
+
+  it("reports the checklist that opened itself and the first answer to it", () => {
+    const first = render(<StaffOnboardingWizard />);
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "staff_first_steps"],
+    ]);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+    // Wer die Liste selbst wieder öffnet und zuklappt, antwortet nicht mehr
+    // auf die Fläche, die sich von selbst geöffnet hat.
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 6 offen" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "staff_first_steps"],
+      ["dismissed", "staff_first_steps"],
+    ]);
+    first.unmount();
+
+    // Dieselbe Anmeldung: die Liste öffnet sich nicht noch einmal von selbst.
+    render(<StaffOnboardingWizard />);
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts starting a tour from the checklist that opened itself as accepted", () => {
+    render(<StaffOnboardingWizard />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "staff_first_steps"],
+      ["accepted", "staff_first_steps"],
+    ]);
+  });
+
+  it("leaves hiding the checklist for good to the server", async () => {
+    api.setStaffOnboardingDismissed.mockResolvedValue({
+      ...newPerson(),
+      dismissed: true,
+    });
+    render(<StaffOnboardingWizard />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Nicht mehr anzeigen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
+
+    await waitFor(() =>
+      expect(api.setStaffOnboardingDismissed).toHaveBeenCalledWith(true),
+    );
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "staff_first_steps"],
+    ]);
   });
 
   it("says so when a step could not be saved", async () => {

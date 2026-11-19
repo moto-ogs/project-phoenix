@@ -26,6 +26,7 @@ import {
   buildHelpHref,
   type HelpTopicId,
 } from "~/lib/help-topics";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import { createLogger } from "~/lib/logger";
 import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
@@ -112,6 +113,19 @@ function StaffOnboardingForPerson() {
   const { clear: clearError, show: showError } = formErrors;
   const latestRunRef = useRef<RunAction>(() => undefined);
   const [notice, setNotice] = useState<string | null>(null);
+  // Die Checkliste hat sich von selbst geöffnet, und die Person hat noch
+  // nicht reagiert. Ihre erste Reaktion meldet die Nutzungsanalyse (#7553):
+  // eine Tour starten oder zuklappen. Ausblenden und Abschließen zählt die
+  // Schule über den Server, nicht hier.
+  const selfOpened = useRef(false);
+  const answerSelfOpened = useCallback(
+    (action: "accepted" | "dismissed" | null) => {
+      if (!selfOpened.current) return;
+      selfOpened.current = false;
+      if (action) trackOnboardingSurface(action, "staff_first_steps");
+    },
+    [],
+  );
   const pathname = usePathname();
   const { data: session } = useSession();
   const nfcEnabled = useNFCEnabled();
@@ -232,6 +246,8 @@ function StaffOnboardingForPerson() {
       claimFirstOpen(tenantSlug, accountID)
     ) {
       setView("checklist");
+      selfOpened.current = true;
+      trackOnboardingSurface("shown", "staff_first_steps");
     }
   }, [visible, tenantSlug, accountID]);
 
@@ -323,6 +339,7 @@ function StaffOnboardingForPerson() {
           setExpandedByPerson(true);
         }}
         onStartTour={(step) => {
+          answerSelfOpened("accepted");
           setNotice(null);
           tour.start(step);
         }}
@@ -331,11 +348,19 @@ function StaffOnboardingForPerson() {
             setStaffOnboardingStepState(step, skipped ? "skipped" : "open"),
           )
         }
-        onCollapse={() => setView("beacon")}
+        onCollapse={() => {
+          answerSelfOpened("dismissed");
+          setView("beacon");
+        }}
         onDismiss={() => setConfirmDismiss(true)}
         finishLabel="Abschließen"
         finishTooltip="Blendet die Checkliste sofort für dich aus."
-        onFinish={() => void run(() => setStaffOnboardingDismissed(true))}
+        onFinish={() => {
+          answerSelfOpened(null);
+          void run(() =>
+            setStaffOnboardingDismissed(true, { completed: true }),
+          );
+        }}
         finished={
           <>
             <div className="flex flex-col gap-1">
@@ -364,15 +389,16 @@ function StaffOnboardingForPerson() {
       <ConfirmationModal
         isOpen={confirmDismiss}
         onClose={() => setConfirmDismiss(false)}
-        onConfirm={() =>
+        onConfirm={() => {
+          answerSelfOpened(null);
           void run(
             () => setStaffOnboardingDismissed(true),
             () => setConfirmDismiss(false),
             // Der Grund steht in der Checkliste; der Dialog davor würde ihn
             // verdecken.
             () => setConfirmDismiss(false),
-          )
-        }
+          );
+        }}
         title="Erste Schritte ausblenden?"
         confirmText="Ausblenden"
         isConfirmLoading={busy}

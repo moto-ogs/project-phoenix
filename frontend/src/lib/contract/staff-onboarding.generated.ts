@@ -33,6 +33,11 @@ export interface stepStateRequest {
   state?: string;
 }
 
+/** Query of PUT /api/staff-onboarding/dismissal */
+export interface PutStaffOnboardingDismissalQuery {
+  outcome?: "completed";
+}
+
 export const routes = {
   "GET /api/staff-onboarding/": {
     method: "GET",
@@ -44,6 +49,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/staff-onboarding/dismissal",
     portals: ["tenant"],
+    query: ["outcome"],
     request: requestBody<dismissalRequest>(),
     response: success(StaffStatusSchema),
   },
