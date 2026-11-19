@@ -51,6 +51,10 @@ import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const PERSONAL_IMPORT_INFO =
+  "Hier übernimmst du viele Personen auf einmal aus einer Datei. Lade zuerst die Vorlage herunter und fülle sie aus.";
+
 const logger = createLogger({ component: "StaffImportPage" });
 
 // Types matching the backend API response
@@ -430,6 +434,7 @@ export default function StaffImportPage() {
     return (
       <TenantPage
         title="Personal importieren"
+        info={PERSONAL_IMPORT_INFO}
         stats={statusLine}
         back
         backHref="/database/personal"
@@ -445,6 +450,7 @@ export default function StaffImportPage() {
   return (
     <TenantPage
       title="Personal importieren"
+      info={PERSONAL_IMPORT_INFO}
       stats={statusLine}
       back
       backHref="/database/personal"

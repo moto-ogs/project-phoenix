@@ -53,6 +53,10 @@ import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const OPENING_BALANCES_INFO =
+  "Hier übernimmst du Stundensaldo und Urlaub aus dem Altsystem. Lade zuerst die Vorlage herunter. Danach wählst du Stichtag und Begründung.";
+
 const OPENING_BALANCES_DESCRIPTION =
   "Übernimmt die Stände aus dem Altsystem: Stundenkonto-Saldo, Urlaubsanspruch samt Vorjahresübertrag und den Resturlaub zum Stichtag. Aus dem Resturlaub errechnet moto die vor der Einführung genommenen Urlaubstage. Pro Person ist nur eine Übernahme möglich.";
 
@@ -527,6 +531,7 @@ function OpeningBalanceImportPageContent() {
     return (
       <TenantPage
         title="Eröffnungssalden"
+        info={OPENING_BALANCES_INFO}
         stats={statusLine}
         back
         backHref="/database/personal"
@@ -558,6 +563,7 @@ function OpeningBalanceImportPageContent() {
   return (
     <TenantPage
       title="Eröffnungssalden"
+      info={OPENING_BALANCES_INFO}
       stats={statusLine}
       back
       backHref="/database/personal"
