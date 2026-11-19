@@ -14,7 +14,7 @@ import (
 // here is decoded by the frontend against these types.
 func StudentRouteContracts() []common.RouteContract {
 	tenant := []common.PortalScope{common.PortalTenant}
-	return []common.RouteContract{
+	return append([]common.RouteContract{
 		{
 			Method: "GET", Pattern: "/", Portals: tenant, Paginated: true,
 			Query: studentListQuery(),
@@ -40,26 +40,9 @@ func StudentRouteContracts() []common.RouteContract {
 			Response: attendanceHistoryResponse{},
 		},
 		{
-			Method: "GET", Pattern: "/{id}/attendance-history/export", Portals: tenant, File: true,
-			Query: []common.QueryParam{
-				{Name: "format", Kind: common.QueryString, Values: []string{string(lists.FormatPDF), string(lists.FormatDOCX), string(lists.FormatXLSX)}},
-				{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
-			},
-		},
-		// The filter and column choice of the export, bounded like the
-		// former route file's body (1 MiB).
-		{Method: "POST", Pattern: "/export", Portals: tenant, Request: studentExportRequest{}, MaxBodyBytes: 1 << 20, File: true},
-		{
 			Method: "GET", Pattern: "/day-log", Portals: tenant,
 			Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID}},
 			Response: dayLogResponse{},
-		},
-		{
-			Method: "GET", Pattern: "/day-log/export", Portals: tenant, File: true,
-			Query: []common.QueryParam{
-				{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID},
-				{Name: "format", Kind: common.QueryString, Values: []string{string(lists.FormatPDF), string(lists.FormatDOCX), string(lists.FormatXLSX)}},
-			},
 		},
 		{Method: "GET", Pattern: "/{id}/status-days", Portals: tenant, Query: statusDayRangeQuery(), Response: []studentpresence.StudentStatusDayResponse{}},
 		{
@@ -75,7 +58,7 @@ func StudentRouteContracts() []common.RouteContract {
 		// left in #7563.
 		{Method: "GET", Pattern: "/care-offerings", Portals: tenant, Response: []CareOfferingOptionResponse{}},
 		{Method: "GET", Pattern: "/enrollment-answer-filters", Portals: tenant, Response: []EnrollmentAnswerFilterResponse{}},
-	}
+	}, studentFileRouteContracts(tenant)...)
 }
 
 // statusDayRangeQuery is the day range both status-day reads take.
@@ -162,6 +145,31 @@ func studentEnums() []common.EnumContract {
 			Name:   "StudentConsentState",
 			Fields: []string{"StudentConsentResponse.state"},
 			Values: []string{peopleModule.StudentConsentStateGranted, peopleModule.StudentConsentStateWithdrawn, peopleModule.StudentConsentStateNotRecorded},
+		},
+	}
+}
+
+// studentFileRouteContracts registers the student files: exports that stream
+// through the portal's proxy (#2352).
+func studentFileRouteContracts(tenant []common.PortalScope) []common.RouteContract {
+	formats := []string{string(lists.FormatPDF), string(lists.FormatDOCX), string(lists.FormatXLSX)}
+	return []common.RouteContract{
+		{
+			Method: "GET", Pattern: "/{id}/attendance-history/export", Portals: tenant, File: true,
+			Query: []common.QueryParam{
+				{Name: "format", Kind: common.QueryString, Values: formats},
+				{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
+			},
+		},
+		// The filter and column choice of the export, bounded like the
+		// former route file's body (1 MiB).
+		{Method: "POST", Pattern: "/export", Portals: tenant, Request: studentExportRequest{}, MaxBodyBytes: 1 << 20, File: true},
+		{
+			Method: "GET", Pattern: "/day-log/export", Portals: tenant, File: true,
+			Query: []common.QueryParam{
+				{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID},
+				{Name: "format", Kind: common.QueryString, Values: formats},
+			},
 		},
 	}
 }
