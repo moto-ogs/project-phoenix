@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
   int64StringOrNumber,
@@ -1549,6 +1550,11 @@ export interface GetStaffIdAbsencesQuery {
   to?: string;
 }
 
+/** Query of GET /api/staff/{id}/avatar */
+export interface GetStaffIdAvatarQuery {
+  v?: string;
+}
+
 /** Query of GET /api/staff/{id}/time-tracking/adjustments */
 export interface GetStaffIdTimeTrackingAdjustmentsQuery {
   from?: string;
@@ -1803,6 +1809,14 @@ export const routes = {
     portals: ["tenant"],
     query: ["from", "to"],
     response: success(z.array(StaffAbsenceResponseSchema).nullable()),
+  },
+  "GET /api/staff/{id}/avatar": {
+    method: "GET",
+    pattern: "/api/staff/{id}/avatar",
+    portals: ["tenant"],
+    privateCache: true,
+    query: ["v"],
+    response: fileAnswer,
   },
   "GET /api/staff/{id}/payroll-number": {
     method: "GET",

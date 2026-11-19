@@ -362,6 +362,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields,
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile,
+		PrivateCache: route.PrivateCache,
 	}
 	for _, portal := range route.Portals {
 		registration.Portals = append(registration.Portals, string(portal))

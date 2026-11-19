@@ -293,6 +293,10 @@ describe("path freed from its own route file", () => {
     ["/api/activities/quick-create", "/api/[...path]"],
     ["/api/iot/device-slots", "/api/[...path]"],
     ["/api/search", "/api/[...path]"],
+    // Images the browser may keep (#2352).
+    ["/api/me/profile/avatar/a.png", "/api/[...path]"],
+    ["/api/staff/1/avatar", "/api/[...path]"],
+    ["/api/traeger/master-data/logo", "/api/traeger/[...path]"],
     // A list on the bare path reaches the portal's proxy, not Auth.js.
     ["/api/auth/passkeys", "/api/auth/passkeys/[[...path]]"],
     ["/api/auth/passkeys/register/options", "/api/auth/passkeys/[[...path]]"],

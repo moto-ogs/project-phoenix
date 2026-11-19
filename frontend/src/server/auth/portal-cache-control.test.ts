@@ -296,15 +296,24 @@ describe("tenant routes on a school subdomain (#5130)", () => {
 });
 
 describe("file and stream routes keep their own headers", () => {
-  it("serves a staff avatar with its image cache policy", async () => {
+  it("serves a staff avatar with the backend's private image cache policy", async () => {
     mockFetch.mockResolvedValue(
       new Response(new Uint8Array([1, 2, 3]), {
-        headers: { "Content-Type": "image/png" },
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "private, max-age=300",
+        },
       }),
     );
-    const { GET } = await import("~/app/api/staff/[id]/avatar/route");
+    // The catalog proxy serves it; the contract marks it `privateCache`.
+    const { GET } = await import("~/app/api/[...path]/route");
 
-    const response = await call(GET as Route, { id: "5" });
+    const response = await call(
+      GET as Route,
+      {
+        path: ["staff", "5", "avatar"],
+      } as unknown as Record<string, string>,
+    );
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
     expect(response.headers.get("Cache-Control")).toBe("private, max-age=300");

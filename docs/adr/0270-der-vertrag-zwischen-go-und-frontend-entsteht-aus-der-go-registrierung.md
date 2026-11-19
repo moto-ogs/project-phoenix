@@ -237,3 +237,23 @@ aus. Dieser Nachtrag ersetzt ihn für markierte Einzelrouten.
   Freigabe in `HOST_RULES` von `src/proxy.ts` für jeden Portal-Host, der sie
   öffnet, und die Log-Redaction ihres Pfads im BFF und im Backend.
 - Befristete oder signierte Datei-URLs sind nicht Teil dieser Entscheidung.
+
+## Nachtrag vom 2026-11-20: Bilder, die der Browser behalten darf
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Drei
+Datei-Routen hatten eine eigene Datei nur wegen ihres Cache-Headers: der eigene
+Avatar, der Avatar einer Mitarbeiterin und das Logo des Trägers. Ihre Adresse
+trägt die Version der Datei; ohne Cache lädt jede Liste jedes Bild neu.
+
+- **Das Backend setzt den Cache-Header.** Der Handler entscheidet, wie lange
+  der Browser die Datei behalten darf, auch abhängig von `?v`. Er setzt nur
+  `private`-Werte.
+- **Der Vertrag erlaubt das Durchreichen je Route.** `PrivateCache: true`
+  (nur zusammen mit `File`) lässt den Proxy das `Cache-Control` des Backends
+  durchreichen, wenn es `private` enthält und nicht `public`. Jeder andere
+  Wert, ein fehlender Header und jede Ablehnung oder fehlende Sitzung bleiben
+  `private, no-store`. Ohne das Merkmal gilt Punkt 2 des vorigen Nachtrags
+  unverändert.
+- Der Grenzfall „eigener Cache-Header für ein Logo“ ist damit keine eigene
+  Datei mehr.
+
