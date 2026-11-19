@@ -145,6 +145,7 @@ describe("Caterer-Konto (#4496)", () => {
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1), {
       timeout: 3000,
     });
+    expect(sessionStorage.getItem("passwordChanged")).toBe("1");
   });
 
   it("keeps a wrong current password in the dialog", async () => {

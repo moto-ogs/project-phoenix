@@ -78,6 +78,7 @@ const KEPT_LOCAL = {
 
 const KEPT_SESSION = {
   deliberateLogout: "1",
+  passwordChanged: "1",
   "tagesplan-scroll": '{"day":"2026-09-09","y":120}',
 };
 

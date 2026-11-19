@@ -178,6 +178,10 @@ function notBilledLabel(children: number, released = false): string {
   return `${children} Kinder mit doppeltem Vertrag ${released ? "sind" : "werden"} nicht abgerechnet.`;
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const CARE_RUN_INFO =
+  "Hier findest du die Rechnungen dieses Monats. Betreuungsmodule rechnet moto nach dem Vertrag ab. Bei „Je Essen“ rechnet moto die Mensa nach den gemeldeten Essen ab.";
+
 export default function TraegerCareRunPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -417,6 +421,7 @@ export default function TraegerCareRunPage() {
 
   return (
     <TenantPage
+      info={CARE_RUN_INFO}
       leading={<ConceptIconTile concept={billingConcept} size="page" />}
       title={
         run ? `Monatsbeitrag ${formatMonth(run.billingMonth)}` : "Monatslauf"

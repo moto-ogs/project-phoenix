@@ -30,13 +30,14 @@ function extractToken(): string | null {
 
 /**
  * Marks this history entry as confirmed. The token is gone from the URL, so
- * returning here shows the result again instead of claiming the link carried
- * no code. The marker holds no secret.
+ * returning here (browser back after „Weiter“) shows the result again
+ * instead of claiming the link carried no code. The marker holds no secret.
  */
 const CONFIRMED_STATE_KEY = "operatorEmailConfirmed";
 
 function markEntryConfirmed(entryUrl: string, entryState: unknown) {
   const current: unknown = window.history.state;
+  // A late response must not mark another entry, even one at the same URL.
   if (window.location.href !== entryUrl || current !== entryState) return;
 
   const state =
@@ -76,7 +77,12 @@ export function EmailConfirmContent() {
   const { show: showConfirmError, invalid: invalidConfirm } = confirmErrors;
   const { update: updateSession, status: sessionStatus } = useSession();
   const primaryRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
+  // The token is read from the URL once and held here: the URL loses it at
+  // once, and the mount effect runs again whenever React re-attaches the
+  // component (StrictMode in development, a hidden and re-shown route).
   const tokenRef = useRef<string | null>(null);
+  // One confirmation at a time, and none after it succeeded: the token is
+  // spent then, and a second request would report the spent link.
   const confirmRef = useRef<"open" | "running" | "done">("open");
 
   // Extract token from URL query string on mount, then strip it from the URL
@@ -91,6 +97,7 @@ export function EmailConfirmContent() {
     }
     if (tokenRef.current) {
       setToken(tokenRef.current);
+      // A re-run keeps a state the person already reached.
       setState((current) => (current === "loading" ? "idle" : current));
       return;
     }

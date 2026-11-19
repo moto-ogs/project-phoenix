@@ -6,6 +6,7 @@ import { hasSessionAccess } from "~/lib/session-access";
 import {
   DELIBERATE_LOGOUT_KEY,
   LOGOUT_NOT_REVOKED_KEY,
+  PASSWORD_CHANGED_KEY,
 } from "~/lib/session-cache";
 
 const SESSION_ERRORS = new Set(["SessionRequired", "SessionExpired"]);
@@ -76,6 +77,36 @@ export function useLogoutNotRevokedNotice() {
     setNotRevoked(true);
   }, []);
   return [notRevoked, setNotRevoked] as const;
+}
+
+/**
+ * Records that the logout running now follows the person's own password
+ * change, which ended every session of the account, this one too.
+ */
+export function markPasswordChanged(): void {
+  try {
+    sessionStorage.setItem(PASSWORD_CHANGED_KEY, "1");
+  } catch {
+    // sessionStorage unavailable: the login page then shows no notice.
+  }
+}
+
+/**
+ * Whether a login page says that the password was changed and asks for the
+ * new one. The marker is read once, so a reload drops it.
+ */
+export function usePasswordChangedNotice() {
+  const [passwordChanged, setPasswordChanged] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(PASSWORD_CHANGED_KEY) !== "1") return;
+      sessionStorage.removeItem(PASSWORD_CHANGED_KEY);
+    } catch {
+      return;
+    }
+    setPasswordChanged(true);
+  }, []);
+  return [passwordChanged, setPasswordChanged] as const;
 }
 
 interface StaleSessionSignOut {

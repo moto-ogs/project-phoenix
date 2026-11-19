@@ -37,17 +37,24 @@ func OrganizationRouteContracts() []common.RouteContract {
 }
 
 // AccessLogRouteContracts registers the access log of the Träger's schools,
-// with patterns relative to /traeger/access-log. The export answers a file.
+// with patterns relative to /traeger/access-log. The export answers a file
+// (#2352).
 func AccessLogRouteContracts() []common.RouteContract {
 	filter := append([]common.QueryParam{
-		{Name: "page", Kind: common.QueryInt}, {Name: "kind", Kind: common.QueryString}, {Name: "as_of", Kind: common.QueryString},
+		{Name: "kind", Kind: common.QueryString}, {Name: "as_of", Kind: common.QueryString},
 		{Name: "school_id", Kind: common.QueryID}, {Name: "account_id", Kind: common.QueryID},
 	}, window...)
+	page := append([]common.QueryParam{{Name: "page", Kind: common.QueryInt}}, filter...)
+	export := append([]common.QueryParam{{Name: "format", Kind: common.QueryString, Values: listFormats}}, filter...)
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: filter, Response: traegerview.AccessLogPage{}},
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: page, Response: traegerview.AccessLogPage{}},
 		{Method: "GET", Pattern: "/people", Portals: traegerPortal, Query: window, Response: []traegerview.AccessLogPerson{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: export, File: true},
 	}
 }
+
+// listFormats are the formats of common.ParseListFormat.
+var listFormats = []string{common.ListFormatCSV, common.ListFormatPDF, common.ListFormatXLSX}
 
 // ReportRouteContracts registers the key-date report, with patterns
 // relative to /traeger/reports. The export answers a file.

@@ -37,6 +37,9 @@ func (d Document) Violations(route Route, answer Answer) []string {
 	for _, object := range d.Types {
 		c.types[object.Name] = object
 	}
+	if route.File {
+		return []string{"the route registers a file, not the envelope"}
+	}
 	body := bytes.TrimSpace(answer.Body)
 	if route.NoData && len(body) == 0 {
 		return nil

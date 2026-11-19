@@ -105,6 +105,9 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Ebenso der Merker, dass der letzte Logout die Sitzung nur auf diesem
   // Gerät beendet hat (#7209); die Login-Seite liest ihn einmal.
   "logoutNotRevoked",
+  // Und der Merker, dass der Logout auf den eigenen Passwortwechsel folgt;
+  // die Login-Seite liest ihn einmal.
+  "passwordChanged",
   // „Mit Code neu anmelden“ (#6955) muss den Logout ebenso überleben: Die
   // nächste Träger-Anmeldung in diesem Tab fragt einmal nach dem Code. Nur
   // ein Merker ohne Konto; trifft er die nächste Person, fragt moto auch sie

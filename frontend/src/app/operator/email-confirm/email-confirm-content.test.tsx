@@ -409,7 +409,9 @@ describe("EmailConfirmContent", () => {
       ).toBeInTheDocument();
     });
   });
-
+  // The mount effect runs twice under StrictMode (next dev) and again when a
+  // hidden route is shown. The first run strips the token from the real URL,
+  // so the second must keep the token it already read.
   it("keeps the token when the mount effect runs again", async () => {
     replaceStateSpy.mockRestore();
     mockFetch.mockResolvedValueOnce({
@@ -419,6 +421,7 @@ describe("EmailConfirmContent", () => {
     });
     setQueryToken("strict-token");
 
+    // StrictMode at the root, as next dev renders the page.
     renderPlain(<EmailConfirmContent />, {
       wrapper: ToastProvider,
       reactStrictMode: true,
@@ -456,6 +459,7 @@ describe("EmailConfirmContent", () => {
     ).toBeInTheDocument();
     first.unmount();
 
+    // Browser back to the same entry: no token in the URL any more.
     render(<EmailConfirmContent />);
     expect(
       await screen.findByText("E-Mail-Adresse geändert"),
@@ -478,6 +482,7 @@ describe("EmailConfirmContent", () => {
 
       const page = render(<EmailConfirmContent />);
       fireEvent.click(await screen.findByText("Jetzt bestätigen"));
+      // Anker: confirmation is pending before navigation and unmount.
       expect(screen.getByText("E-Mail wird bestätigt...")).toBeInTheDocument();
       expect(mockFetch).toHaveBeenCalledTimes(1);
       page.unmount();
