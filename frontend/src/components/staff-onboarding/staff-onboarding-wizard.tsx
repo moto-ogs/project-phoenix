@@ -113,10 +113,11 @@ function StaffOnboardingForPerson() {
   const { clear: clearError, show: showError } = formErrors;
   const latestRunRef = useRef<RunAction>(() => undefined);
   const [notice, setNotice] = useState<string | null>(null);
-  // Die Checkliste hat sich von selbst geöffnet, und die Person hat noch
-  // nicht reagiert. Ihre erste Reaktion meldet die Nutzungsanalyse (#7553):
-  // eine Tour starten oder zuklappen. Ausblenden und Abschließen zählt die
-  // Schule über den Server, nicht hier.
+  // Die Checkliste hat sich von selbst geöffnet, wurde für die
+  // Nutzungsanalyse gezählt und die Person hat noch nicht reagiert. Ihre erste
+  // Reaktion meldet die Nutzungsanalyse (#7553): eine Tour starten oder
+  // zuklappen. Ausblenden und Abschließen zählt die Schule über den Server,
+  // nicht hier.
   const selfOpened = useRef(false);
   const answerSelfOpened = useCallback(
     (action: "accepted" | "dismissed" | null) => {
@@ -246,8 +247,7 @@ function StaffOnboardingForPerson() {
       claimFirstOpen(tenantSlug, accountID)
     ) {
       setView("checklist");
-      selfOpened.current = true;
-      trackOnboardingSurface("shown", "staff_first_steps");
+      selfOpened.current = trackOnboardingSurface("shown", "staff_first_steps");
     }
   }, [visible, tenantSlug, accountID]);
 

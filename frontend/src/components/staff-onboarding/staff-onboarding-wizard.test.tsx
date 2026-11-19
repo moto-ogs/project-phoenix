@@ -157,6 +157,7 @@ describe("StaffOnboardingWizard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    analytics.trackOnboardingSurface.mockReturnValue(true);
     sessionStorage.clear();
     document.body.innerHTML = "";
     shellUser = { id: "74" };
@@ -759,6 +760,19 @@ describe("StaffOnboardingWizard", () => {
     expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
       ["shown", "staff_first_steps"],
       ["accepted", "staff_first_steps"],
+    ]);
+  });
+
+  it("does not answer an auto-open that analytics could not record", () => {
+    analytics.trackOnboardingSurface.mockReturnValueOnce(false);
+    render(<StaffOnboardingWizard />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "staff_first_steps"],
     ]);
   });
 
