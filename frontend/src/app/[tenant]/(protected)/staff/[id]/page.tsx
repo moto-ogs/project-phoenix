@@ -105,6 +105,12 @@ import { StaffDetailSkeleton } from "./page-skeleton";
 
 const logger = createLogger({ component: "StaffDetailPage" });
 
+// Info-Knopf am Titel (#7566). Ohne geladene Person gibt es keine Reiter.
+const STAFF_DETAIL_MISSING_INFO =
+  "Hier stehen sonst die Angaben zu einer Person aus deinem Team.";
+const STAFF_DETAIL_INFO =
+  "Hier stehen alle Angaben zu dieser Person. Wähle unter dem Namen einen Bereich, etwa „Abwesenheiten“ oder „Stammdaten“. Welche Bereiche du siehst, hängt von deinen Rechten und deiner Schule ab.";
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function StaffDetailContent() {
@@ -539,6 +545,7 @@ export default function StaffDetailContent() {
     return (
       <TenantPage
         title="Mitarbeitende"
+        info={STAFF_DETAIL_MISSING_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -551,6 +558,7 @@ export default function StaffDetailContent() {
     return (
       <TenantPage
         title="Mitarbeitende"
+        info={STAFF_DETAIL_MISSING_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -741,6 +749,7 @@ export default function StaffDetailContent() {
           ? `${staff.firstName} ${staff.lastName}`
           : (preview?.name ?? "Mitarbeitende")
       }
+      info={STAFF_DETAIL_INFO}
       stats={staff ? statusLine : preview?.context}
       statsLoading={!staff && !preview?.context}
       back
@@ -750,11 +759,14 @@ export default function StaffDetailContent() {
         staff ? (
           // Kit-Avatar: hochgeladenes Profilbild, sonst Initialen (#4432).
           // Der Name steht direkt daneben, das Bild ist also rein schmückend.
+          // Auf dem Telefon entfällt es: neben Info-Knopf, Status und Menü
+          // bliebe dem Namen sonst nur Platz für zwei Buchstaben je Zeile.
           <Avatar
             imageUrl={staff.avatarUrl}
             name={`${staff.firstName} ${staff.lastName}`}
             size="lg"
             decorative
+            className="max-sm:hidden"
           />
         ) : undefined
       }

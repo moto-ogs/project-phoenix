@@ -6,13 +6,18 @@
 
 import { Suspense } from "react";
 
+import { DIENSTPLAN_INFO } from "~/components/staff/dienstplan-info";
 import { DienstplanView } from "~/components/staff/dienstplan-view";
 import { DienstplanPageSkeleton } from "~/components/staff/dienstplan-skeleton";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 
 export default function DienstplanPage() {
   return (
-    <ModuleRouteGuard module="dienstplan" title="Dienstplan">
+    <ModuleRouteGuard
+      module="dienstplan"
+      title="Dienstplan"
+      info={DIENSTPLAN_INFO}
+    >
       <Suspense fallback={<DienstplanPageSkeleton />}>
         <DienstplanView />
       </Suspense>
