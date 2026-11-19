@@ -13,6 +13,12 @@ import { cn } from "~/lib/utils";
 interface ListGroupHeaderCollapsible {
   readonly expanded: boolean;
   readonly onToggle: () => void;
+  /**
+   * `data-focus-return` keys of the rows a collapsed group hides, separated
+   * by spaces: a panel opened from a row that a save moves in here returns
+   * the focus to the group's name instead of losing it (`SlideOver`).
+   */
+  readonly focusReturn?: string;
 }
 
 interface ListGroupHeaderProps {
@@ -79,6 +85,7 @@ export function ListGroupHeader({
               size="compact"
               className="-ml-2 w-full min-w-0 justify-start"
               aria-expanded={collapsible.expanded}
+              data-focus-return={collapsible.focusReturn}
               noTooltip="Der Gruppenname klappt nur ihre Zeilen auf und zu; aria-expanded nennt den Zustand."
               aria-describedby={addon === undefined ? undefined : addonId}
               onClick={collapsible.onToggle}

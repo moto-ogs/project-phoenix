@@ -8,7 +8,7 @@ import { useEffect, useState, type RefObject } from "react";
  * `scrollable-region-focusable`); `Modal` and `SlideOverBody` put it into the
  * tab order only while it scrolls and holds no control of its own.
  */
-const FOCUSABLE =
+export const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
 export function useScrollRegion(
@@ -24,7 +24,7 @@ export function useScrollRegion(
     const measure = () =>
       setScrolls(
         element.scrollHeight > element.clientHeight + 1 &&
-          element.querySelector(FOCUSABLE) === null,
+          element.querySelector(FOCUSABLE_SELECTOR) === null,
       );
     const observer = new ResizeObserver(measure);
     observer.observe(element);

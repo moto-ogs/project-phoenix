@@ -244,6 +244,14 @@ export function classifyInstances(
 }
 
 /**
+ * Schlüssel, über den der Fokus den Zeilenknopf nach dem Speichern
+ * wiederfindet (`data-focus-return`, #7502).
+ */
+export function vertretungRowFocusKey(instanceId: string): string {
+  return `vertretung-row-${instanceId}`;
+}
+
+/**
  * Besetzung einer Zeile, wie Liste und Raster sie zeigen: „da von gebraucht“.
  * Eine offene Lücke hat zwei Ursachen. Fehlt eine geplante Person, lässt sie
  * sich hier besetzen (`canFill`). Ist niemand oder für einen Dienst zu wenig
@@ -482,21 +490,25 @@ export function VertretungDayList({
   }
 
   return (
-    <SectionCard
-      title={title}
-      description={
-        canManage
-          ? undefined
-          : "Nur zur Ansicht. Vertretungen trägt die Leitung ein."
-      }
-      action={filter}
-      // Die Platzhalter des Ladezustands behalten den Innenrand der Karte.
-      flush={!gapsLoading}
-      loading={gapsLoading}
-      className={className}
-    >
-      {body}
-    </SectionCard>
+    // Verlässt eine Zeile nach dem Speichern die Liste ganz, bleibt der Fokus
+    // in dieser Karte (#7502). `contents`: die Karte bleibt das Rasterkind.
+    <div className="contents" data-focus-return-scope="">
+      <SectionCard
+        title={title}
+        description={
+          canManage
+            ? undefined
+            : "Nur zur Ansicht. Vertretungen trägt die Leitung ein."
+        }
+        action={filter}
+        // Die Platzhalter des Ladezustands behalten den Innenrand der Karte.
+        flush={!gapsLoading}
+        loading={gapsLoading}
+        className={className}
+      >
+        {body}
+      </SectionCard>
+    </div>
   );
 }
 
@@ -610,6 +622,10 @@ function VertretungDayListRow({
               : "Zeigt Besetzung und Verlauf dieses Termins."
           }
           aria-label={`${rowAction}: ${instance.title}, ${instance.startTime}`}
+          // Nach dem Speichern wandert die Zeile oft in eine andere Gruppe
+          // und wird neu gebaut; der Fokus findet sie über diesen Schlüssel
+          // wieder (#7502).
+          data-focus-return={vertretungRowFocusKey(instance.id)}
           className="shrink-0"
           onClick={() => onEdit(instance.id)}
         >
