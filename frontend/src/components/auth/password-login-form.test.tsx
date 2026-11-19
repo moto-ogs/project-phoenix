@@ -55,6 +55,42 @@ describe("PasswordLoginForm", () => {
     ).not.toBeInTheDocument();
   });
 
+  // The own password change ended every session; the login asks once for
+  // the new password, instead of claiming the session expired.
+  it("says once that the password was changed", async () => {
+    sessionStorage.setItem("passwordChanged", "1");
+    window.history.replaceState({}, "", "/login?error=SessionRequired");
+    const { unmount } = render(
+      <PasswordLoginForm
+        portal="operator"
+        onSubmit={() => Promise.resolve()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "Dein Passwort ist geändert. Melde dich jetzt mit dem neuen Passwort an.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Deine Sitzung ist abgelaufen/),
+    ).not.toBeInTheDocument();
+    expect(sessionStorage.getItem("passwordChanged")).toBeNull();
+    unmount();
+
+    render(
+      <PasswordLoginForm
+        portal="operator"
+        onSubmit={() => Promise.resolve()}
+      />,
+    );
+    // Anker: das Formular steht, der Hinweis kommt nach einem Neuladen nicht wieder.
+    expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Dein Passwort ist geändert\./),
+    ).not.toBeInTheDocument();
+  });
+
   it("opens the reset with the typed address, also from a wrong password", async () => {
     await signIn(() =>
       Promise.reject(refused(401, "identity.invalid_credentials")),

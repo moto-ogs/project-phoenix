@@ -47,6 +47,7 @@ var operatorPublicSentinels = []error{
 	identityaccess.ErrOperatorInactive,
 	identityaccess.ErrOperatorNotFound,
 	identityaccess.ErrOperatorRefreshTokenInvalid,
+	identityaccess.ErrOperatorSessionEnded,
 	identityaccess.ErrOperatorPasswordMismatch,
 	identityaccess.ErrAccountTenantAccessNotFound,
 	identityaccess.ErrAccountTenantAccessExists,
