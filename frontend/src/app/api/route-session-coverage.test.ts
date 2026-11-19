@@ -144,8 +144,9 @@ describe("session reads of every BFF route", () => {
     expect(routes).toContain("auth/logout");
     expect(routes).toContain("traeger/auth/logout");
     // The catalog proxy took over the pass-through files (#2352); the walk
-    // still sees the routes with behaviour of their own.
-    expect(routes.length).toBeGreaterThan(200);
+    // still sees the routes with behaviour of their own. The floor only
+    // proves the walk reads the tree; #2352 keeps deleting route files.
+    expect(routes.length).toBeGreaterThan(150);
   });
 
   it("reads every session inside the portal's response wrapper", async () => {
