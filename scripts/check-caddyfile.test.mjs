@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
-  checkReverseProxies, defaultCaddyfile, diffRanges, formatRangeDiff, main, parseRangeList, trustedProxies,
+  checkReplicaPools, checkReverseProxies, defaultCaddyfile, diffRanges, formatRangeDiff, main, parseRangeList, trustedProxies,
 } from './check-caddyfile.mjs';
 
 const production = readFileSync(defaultCaddyfile, 'utf8');
@@ -87,4 +87,19 @@ test('--cloudflare passes when the published ranges match and fails with a diff 
   output.length = 0;
   assert.equal(await main(['--cloudflare'], { fetchImpl: fakeFetch(`${v4}\n198.51.100.0/24`, v6), ...sink }), 1);
   assert.match(output.join('\n'), /^\+ 198\.51\.100\.0\/24 /m);
+});
+
+test('the versioned Caddyfile balances every app over a replica pool (#7226)', () => {
+  assert.deepEqual(checkReplicaPools(production), []);
+});
+
+test('flags an app proxy with one upstream, a missing pool, an unflushed snippet and a short timeout', () => {
+  const pool = '(replica_pool) {\n\tlb_try_duration 5s\n\thealth_uri {args[0]}\n}\n';
+  const source = `{\n\tservers {\n\t\ttimeouts {\n\t\t\tidle 60s\n\t\t}\n\t}\n}\n${pool}a.example {\n\treverse_proxy localhost:8080 {\n\t\timport replica_pool /health\n\t}\n}\nb.example {\n\treverse_proxy localhost:3000 localhost:13000 {\n\t}\n}\nc.example {\n\treverse_proxy localhost:3003 {\n\t}\n}\n`;
+  assert.deepEqual(checkReplicaPools(source), [
+    'line 13: reverse_proxy localhost:8080 { names one upstream; an app proxy balances a replica pool.',
+    'line 18: reverse_proxy localhost:3000 localhost:13000 { does not import replica_pool with a health URI.',
+    'The (replica_pool) snippet lacks "flush_interval -1".',
+    'line 4: idle 60s ends streams within the 75 s client watchdog.',
+  ]);
 });

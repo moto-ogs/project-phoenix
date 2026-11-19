@@ -136,7 +136,8 @@ const demoStack = 'services:\n  server:\n    image: ghcr.io/moto-ogs/phoenix-ser
   '  demo-runtime:\n    image: ghcr.io/moto-ogs/phoenix-server:demo\n';
 // server and frontend gate the release; the sidecar follows, recreated because
 // it lives in the network namespace of the server container just replaced.
-const sidecarStart = /^compose up -d --wait --remove-orphans server frontend\ncompose up -d --no-deps --force-recreate demo-runtime$/m;
+// In between, only the replica check reads the started containers (#7226).
+const sidecarStart = /^compose up -d --wait --remove-orphans server frontend\n(?:(?:compose config --services|compose ps -q \S+|inspect --format \S+.*)\n)*compose up -d --no-deps --force-recreate demo-runtime$/m;
 test('first demo deploy with the sidecar starts it although the old stack never had it', t => {
   const f = fixture(t, 'demo');
   writeFileSync(join(f.cwd, 'docker-compose.yml.new'), demoStack);
@@ -241,7 +242,10 @@ test('failed demo deploy rolls back to a stack without the sidecar', t => {
   writeFileSync(join(f.cwd, 'docker-compose.yml.new'), demoStack);
   const result = f.run('deploy-remote.sh', [], { RELEASE_TEST_FAIL: 'migrate' });
   assert.equal(result.status, 10, result.stdout + result.stderr);
-  assert.equal(f.calls().trim().split('\n').at(-1), 'compose up -d --wait --remove-orphans server frontend');
+  // The restored stack's last start is the gated one, then only the replica check.
+  const calls = f.calls().trim().split('\n');
+  assert.equal(calls.filter(line => line.startsWith('compose up')).at(-1), 'compose up -d --wait --remove-orphans server frontend');
+  assert.doesNotMatch(calls.slice(calls.lastIndexOf('compose up -d --wait --remove-orphans server frontend')).join('\n'), /demo-runtime/);
 });
 for (const target of ['staging', 'production']) {
   test(`${target} deploy and rollback never name the demo sidecar`, t => {
@@ -562,4 +566,37 @@ test('a failing prune does not fail the healthy release', t => {
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stderr, /WARNING: image prune failed/);
   assert.match(readFileSync(join(f.cwd, '.deploy-state'), 'utf8'), /CURRENT_SHA=bbbbbbb/);
+});
+
+// Staging and production run the Worker as its own process (#7226): the first
+// deploy with it starts it with the gated services, later ones stop it before
+// the snapshot.
+const workerStack = 'services:\n  server:\n    image: ghcr.io/moto-ogs/phoenix-server:staging\n  worker:\n    image: ghcr.io/moto-ogs/phoenix-server:staging\n' +
+  '  frontend:\n    image: ghcr.io/moto-ogs/phoenix-frontend:staging\n';
+test('a standalone worker gates the release and is stopped before the snapshot', t => {
+  const f = fixture(t);
+  writeFileSync(join(f.cwd, 'docker-compose.yml.new'), workerStack);
+  const first = f.run('deploy-remote.sh');
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  assert.match(f.calls(), /^compose stop server frontend$/m);
+  assert.match(f.calls(), /^compose up -d --wait --remove-orphans server frontend worker$/m);
+  assert.match(readFileSync(join(f.cwd, 'docker-compose.yml'), 'utf8'), /worker:\n    image: ghcr.io\/moto-ogs\/phoenix-server:bbbbbbb/);
+
+  writeFileSync(f.log, '');
+  writeFileSync(join(f.cwd, '.env.new'), 'MODE=new\n');
+  writeFileSync(join(f.cwd, 'docker-compose.yml.new'), workerStack);
+  const second = f.run('deploy-remote.sh', [], { DEPLOY_SHA: 'ccccccc' });
+  assert.equal(second.status, 0, second.stdout + second.stderr);
+  const calls = f.calls().trim().split('\n');
+  const stop = calls.indexOf('compose stop server frontend worker');
+  const backup = calls.findIndex(line => line.includes('pg_dump '));
+  assert.ok(stop >= 0 && backup > stop, f.calls());
+});
+
+test('replicas of one service with different images fail the release', t => {
+  const f = fixture(t);
+  const result = f.run('deploy-remote.sh', [], { RELEASE_TEST_FAIL: 'replica-mismatch' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /frontend replicas differ in image or environment/);
+  assert.doesNotMatch(result.stderr + result.stdout, /sha256:|MODE=/);
 });

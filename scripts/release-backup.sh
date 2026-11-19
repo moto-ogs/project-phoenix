@@ -102,23 +102,60 @@ bucket_rclone() {
 }
 
 # Everything that writes to the database or uploads: server and frontend
-# everywhere, plus the demo stack's demo-runtime. Read from the current Compose
-# file, so staging, production and older demo snapshots never name the sidecar.
+# everywhere, the standalone worker where the stack has one (#7226), plus the
+# demo stack's demo-runtime. Read from the current Compose file, so older
+# snapshots never name a service they lack.
 app_services() {
-  local listed
+  local listed services='server frontend'
   listed=$(compose config --services)
-  if grep -qx demo-runtime <<< "$listed"; then echo 'server frontend demo-runtime'; else echo 'server frontend'; fi
+  if grep -qx worker <<< "$listed"; then services+=' worker'; fi
+  if grep -qx demo-runtime <<< "$listed"; then services+=' demo-runtime'; fi
+  echo "$services"
+}
+
+# The services whose health gates a release: server and frontend, plus the
+# standalone worker (#7226). The demo sidecar never gates one.
+gate_services() {
+  local service
+  for service in $(app_services); do
+    [ "$service" = demo-runtime ] || printf '%s ' "$service"
+  done
+  echo
+}
+
+# All replicas of a service must run one image with one environment (#7226):
+# Next.js replicas share NEXTAUTH_SECRET and the build, API replicas the JWT
+# key and limiter settings. A replica started from another tag or another
+# .env (a manual --scale after a config change) fails here, and the release
+# with it. Prints no values: environments are compared by hash only.
+check_replicas() {
+  local service container fingerprint first
+  for service in $(gate_services); do
+    first=
+    for container in $(compose ps -q "$service"); do
+      fingerprint=$( { docker inspect --format '{{.Image}}' "$container" &&
+        docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container" | LC_ALL=C sort; } |
+        sha256sum | cut -d' ' -f1) || fail "Cannot inspect a $service replica"
+      [ -n "$first" ] || first=$fingerprint
+      [ "$fingerprint" = "$first" ] || fail "$service replicas differ in image or environment; recreate them from one configuration"
+    done
+  done
 }
 
 ensure_stopped() {
-  local service container services
+  local service container containers services
   services=$(app_services)
   for service in $services; do
-    container=$(compose ps -a -q "$service")
-    # The sidecar has no container until its first deployment has started it.
-    [ -n "$container" ] || [ "$service" != demo-runtime ] || continue
-    [ -n "$container" ] || fail "Missing $service container"
-    [ "$(docker inspect --format '{{.State.Running}}' "$container")" = false ] || fail "$service is still running"
+    containers=$(compose ps -a -q "$service")
+    if [ -z "$containers" ]; then
+      # The sidecar and a new worker have no container until their first start.
+      case "$service" in demo-runtime|worker) continue;; esac
+      fail "Missing $service container"
+    fi
+    # One container per replica (#7226); every one must be stopped.
+    for container in $containers; do
+      [ "$(docker inspect --format '{{.State.Running}}' "$container")" = false ] || fail "$service is still running"
+    done
   done
 }
 
@@ -433,6 +470,8 @@ case "${1:-}" in
     if [ "$1" = verify-files ]; then verify_files; else "$1"; fi
     ;;
   app-services) app_services;;
+  gate-services) gate_services;;
+  check-replicas) check_replicas;;
   keep-images) keep_images;;
   prune)
     [ "$#" = 4 ] || [ "$#" = 5 ] || fail 'Usage: release-backup.sh prune /absolute/snapshot-root count max-age-days [current-snapshot]'
