@@ -490,21 +490,25 @@ export function VertretungDayList({
   }
 
   return (
-    <SectionCard
-      title={title}
-      description={
-        canManage
-          ? undefined
-          : "Nur zur Ansicht. Vertretungen trägt die Leitung ein."
-      }
-      action={filter}
-      // Die Platzhalter des Ladezustands behalten den Innenrand der Karte.
-      flush={!gapsLoading}
-      loading={gapsLoading}
-      className={className}
-    >
-      {body}
-    </SectionCard>
+    // Verlässt eine Zeile nach dem Speichern die Liste ganz, bleibt der Fokus
+    // in dieser Karte (#7502). `contents`: die Karte bleibt das Rasterkind.
+    <div className="contents" data-focus-return-scope="">
+      <SectionCard
+        title={title}
+        description={
+          canManage
+            ? undefined
+            : "Nur zur Ansicht. Vertretungen trägt die Leitung ein."
+        }
+        action={filter}
+        // Die Platzhalter des Ladezustands behalten den Innenrand der Karte.
+        flush={!gapsLoading}
+        loading={gapsLoading}
+        className={className}
+      >
+        {body}
+      </SectionCard>
+    </div>
   );
 }
 

@@ -157,7 +157,9 @@ export function VertretungWeekList({
           Scrollleiste innerhalb des Rahmens und die abgerundeten Ecken bleiben
           sauber, statt dass die Leiste auf dem Rand klebt. Die sticky
           Tageskopfzeilen kleben an diesem Container. */}
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-b-2xl">
+      {/* `scroll-pt`: was der Fokus in Sicht holt, landet unter der klebenden
+          Tageskopfzeile statt dahinter. */}
+      <div className="min-h-0 flex-1 scroll-pt-12 overflow-y-auto rounded-b-2xl">
         {weekDays.map((day) => {
           const iso = toISODate(day);
           const gapsAvailable =
@@ -199,6 +201,9 @@ export function VertretungWeekList({
             <section
               key={iso}
               data-testid={`vertretung-week-list-day-${iso}`}
+              // Verlässt eine Zeile nach dem Speichern die Liste ganz, bleibt
+              // der Fokus an ihrem Tag (#7502).
+              data-focus-return-scope=""
               className="border-b border-gray-100 last:border-b-0"
             >
               <button

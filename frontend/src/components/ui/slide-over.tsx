@@ -53,7 +53,10 @@
  * another group) carries a stable `data-focus-return` key; the focus then
  * goes to the element with that key. A control that hides such a trigger (the
  * name of a collapsed group) lists the keys of what it hides in the same
- * attribute, separated by spaces, and takes the focus in its place.
+ * attribute, separated by spaces, and takes the focus in its place. When
+ * neither exists any more (the row left the list), the focus goes to the
+ * first control of the trigger's `data-focus-return-scope` ancestor, so the
+ * keyboard stays in that part of the page.
  */
 
 import * as React from "react";
@@ -137,6 +140,8 @@ const SlideOverOpenContext = React.createContext(true);
  */
 type SlideOverReturnFocus = {
   trigger: HTMLElement | null;
+  /** The trigger's `data-focus-return-scope` ancestor, read while it exists. */
+  scope: HTMLElement | null;
   /**
    * The opener of an earlier opening whose focus was never handed back: a
    * panel opened from this one suspended it, and resuming it finds the focus
@@ -147,7 +152,7 @@ type SlideOverReturnFocus = {
 };
 const SlideOverReturnFocusContext = React.createContext<{
   readonly current: SlideOverReturnFocus;
-}>({ current: { trigger: null, previous: null, open: false } });
+}>({ current: { trigger: null, scope: null, previous: null, open: false } });
 
 /**
  * The element the focus returns to on close: the trigger, or, when a save
@@ -183,17 +188,23 @@ function focusReturnTarget(target: HTMLElement) {
   if (keyboard) target.scrollIntoView({ block: "nearest" });
 }
 
-/** The last control Tab reaches in the panel, for Shift+Tab from the panel. */
-function focusLastControl(panel: HTMLElement): boolean {
-  const controls = Array.from(
-    panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-  );
-  for (const control of controls.reverse()) {
-    control.focus();
-    // A hidden control refuses the focus; the one before it is the last.
-    if (document.activeElement === control) return true;
+/**
+ * The controls Tab reaches in a container, in order. `tabIndex` leaves out
+ * what only a script focuses (`tabindex="-1"`).
+ */
+function tabStops(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ).filter((control) => control.tabIndex >= 0);
+}
+
+/** The first of the controls that takes the focus; a hidden one refuses. */
+function focusFirstOf(controls: HTMLElement[]): HTMLElement | null {
+  for (const control of controls) {
+    control.focus({ preventScroll: true });
+    if (document.activeElement === control) return control;
   }
-  return false;
+  return null;
 }
 
 // Vaul's props are a union (with or without `fadeFromIndex`); a plain Omit
@@ -269,6 +280,7 @@ const SlideOver = ({
   // focus yet.
   const returnFocusRef = React.useRef<SlideOverReturnFocus>({
     trigger: null,
+    scope: null,
     previous: null,
     open: false,
   });
@@ -286,6 +298,8 @@ const SlideOver = ({
         if (findReturnTarget(state.trigger)) state.previous = state.trigger;
         state.trigger = opener;
       }
+      state.scope =
+        opener?.closest<HTMLElement>("[data-focus-return-scope]") ?? null;
     }
     state.open = open;
   }, [open]);
@@ -496,17 +510,30 @@ const SlideOverContent = React.forwardRef<
               active === document.body ||
               sheetRef.current?.contains(active) === true;
             // Still open: Vaul's instance was rebuilt for another breakpoint.
-            // Focus elsewhere: the page moved it on purpose, or a panel
-            // opened from this one suspends it; the opener then waits for
-            // the close that follows.
-            if (state.open || !focusLost) {
+            if (state.open) {
               event.preventDefault();
               return;
             }
+            // Focus elsewhere. Inside a second panel or dialog, that one
+            // suspends this panel and the opener waits for the close that
+            // follows. On the page, the caller moved it on purpose: the
+            // opener is done, or a later opening would return to it.
+            if (!focusLost) {
+              if (!active?.closest('[role="dialog"], [role="alertdialog"]')) {
+                state.trigger = null;
+                state.scope = null;
+                state.previous = null;
+              }
+              event.preventDefault();
+              return;
+            }
+            const { scope } = state;
             const target =
               findReturnTarget(state.trigger) ??
+              (scope?.isConnected ? focusFirstOf(tabStops(scope)) : null) ??
               findReturnTarget(state.previous);
             state.trigger = null;
+            state.scope = null;
             state.previous = null;
             // Without a target Radix keeps its own return: to a
             // `Drawer.Trigger` that opened the panel without taking focus.
@@ -527,7 +554,8 @@ const SlideOverContent = React.forwardRef<
             ) {
               return;
             }
-            if (focusLastControl(event.currentTarget)) event.preventDefault();
+            const stops = tabStops(event.currentTarget).reverse();
+            if (focusFirstOf(stops)) event.preventDefault();
           }}
           {...props}
         >

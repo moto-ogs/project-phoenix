@@ -23,10 +23,13 @@ import {
 function Harness({
   children,
   collapsedAfterSave = false,
+  goneAfterSave = false,
 }: {
   readonly children?: ReactNode;
   /** The saved row lands in a collapsed group: only its name is rendered. */
   readonly collapsedAfterSave?: boolean;
+  /** The saved row leaves the list: nothing carries its key any more. */
+  readonly goneAfterSave?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // A save moves the row to another group: React builds a new trigger.
@@ -42,14 +45,20 @@ function Harness({
   );
   return (
     <>
-      <section>{saved ? null : trigger}</section>
+      <section data-focus-return-scope="">
+        <button type="button" tabIndex={-1}>
+          Nur per Skript
+        </button>
+        <button type="button">Erste Zeile</button>
+        {saved ? null : trigger}
+      </section>
       <section>
         {saved && collapsedAfterSave ? (
           <button type="button" data-focus-return="row-0 row-1">
             Schon geregelt
           </button>
         ) : null}
-        {saved && !collapsedAfterSave ? trigger : null}
+        {saved && !collapsedAfterSave && !goneAfterSave ? trigger : null}
       </section>
       <button type="button">Weiter auf der Seite</button>
       <SlideOver open={open} onOpenChange={setOpen}>
@@ -61,6 +70,10 @@ function Harness({
             {children ?? <input aria-label="Notiz" />}
             <button type="button" onClick={() => setSaved(true)}>
               Speichern
+            </button>
+            {/* Focusable by script only: no stop for Tab or Shift+Tab. */}
+            <button type="button" tabIndex={-1}>
+              Nur per Skript
             </button>
           </SlideOverBody>
         </SlideOverContent>
@@ -129,6 +142,37 @@ function Suspending() {
           <SlideOverBody>
             <button type="button" onClick={() => setStep("parent")}>
               Abbrechen
+            </button>
+          </SlideOverBody>
+        </SlideOverContent>
+      </SlideOver>
+    </>
+  );
+}
+
+// One panel for every row, as the editor of the Vertretungsplan.
+function Reused() {
+  const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Zeile A
+      </button>
+      {saved ? null : (
+        <button type="button" onClick={() => setOpen(true)}>
+          Zeile B
+        </button>
+      )}
+      <button type="button">Weiter auf der Seite</button>
+      <SlideOver open={open} onOpenChange={setOpen}>
+        <SlideOverContent aria-describedby={undefined}>
+          <SlideOverHeader>
+            <SlideOverTitle>Vertretung</SlideOverTitle>
+          </SlideOverHeader>
+          <SlideOverBody>
+            <button type="button" onClick={() => setSaved(true)}>
+              Speichern
             </button>
           </SlideOverBody>
         </SlideOverContent>
@@ -314,6 +358,44 @@ describe("SlideOver focus (#7502)", () => {
         screen.getByRole("button", { name: "Schon geregelt" }),
       ).toHaveFocus(),
     );
+  });
+
+  it("keeps the focus in the trigger's scope when the row left the list", async () => {
+    render(<Harness goneAfterSave />);
+    openFromTrigger();
+    const dialog = await screen.findByRole("dialog", { name: "Vertretung" });
+    await waitFor(() => expect(dialog).toHaveFocus());
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await finishClosing();
+
+    // The first tab stop of the scope, not the button only a script focuses.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Erste Zeile" })).toHaveFocus(),
+    );
+  });
+
+  it("forgets an opener once the page moved the focus on", async () => {
+    render(<Reused />);
+    const rowA = clickFocused("Zeile A");
+    const first = await screen.findByRole("dialog", { name: "Vertretung" });
+    await waitFor(() => expect(first).toHaveFocus());
+    fireEvent.keyDown(first, { key: "Escape" });
+    screen.getByText("Weiter auf der Seite").focus();
+    await finishClosing();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    clickFocused("Zeile B");
+    const second = await screen.findByRole("dialog", { name: "Vertretung" });
+    await waitFor(() => expect(second).toHaveFocus());
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.keyDown(second, { key: "Escape" });
+    await finishClosing();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Row B is gone; row A opened an earlier, finished visit.
+    expect(rowA).not.toHaveFocus();
   });
 
   it.each([
