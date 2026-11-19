@@ -4,7 +4,9 @@ import { mapUserContext } from "./user-context-map";
 
 const AT = "2026-09-01T08:00:00Z";
 
-function row(overrides: Partial<CallerNavigationRow> = {}): CallerNavigationRow {
+function row(
+  overrides: Partial<CallerNavigationRow> = {},
+): CallerNavigationRow {
   return {
     current_staff: null,
     educational_groups: [],

@@ -220,8 +220,7 @@ describe("GET /api/user-context", () => {
   });
 
   it("answers 502 when the backend breaks the contract", async () => {
-    const { school_switches: _missing, ...withoutSwitches } =
-      navigation().data;
+    const { school_switches: _missing, ...withoutSwitches } = navigation().data;
     mockApiGet.mockResolvedValueOnce({
       ...navigation(),
       data: withoutSwitches,

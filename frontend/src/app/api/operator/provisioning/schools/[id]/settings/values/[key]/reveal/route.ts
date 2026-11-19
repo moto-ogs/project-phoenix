@@ -1,3 +1,7 @@
+// Temporary (#7563): the operator client calls GET /api/operator/schools/{id}/settings/values/{key}/reveal
+// through the operator portal's catalog proxy since #2352, which checks the
+// answer against the contract. This /provisioning/ path stays for an open tab
+// with an older bundle; delete the file after the next production deploy.
 import {
   encodePathSegment,
   requireStringParam,
