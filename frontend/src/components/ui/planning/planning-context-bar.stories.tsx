@@ -57,6 +57,35 @@ export const WithWeekStrip: Story = {
   },
 };
 
+/**
+ * Markierung ohne Zahl (#7493): Der gewählte Mittwoch trägt nur den Punkt,
+ * weil die Statuszeile seine Zahl schon nennt. Die übrigen Tage zeigen die
+ * Verteilung über die Woche. Die Ziffer hält ihren Platz, die Leiste springt
+ * beim Tageswechsel nicht.
+ */
+export const WithWeekStripCountDotOnly: Story = {
+  args: {
+    dateLabel: undefined,
+    navigationSlot: (
+      <div className="flex items-center gap-1">
+        {WEEK_DAYS.map((day, index) => (
+          <PlanningDayChip
+            key={day.weekdayLabel}
+            {...day}
+            selected={index === 2}
+            countDotOnly={index === 2}
+            aria-label={
+              index === 2
+                ? `${day.weekdayLabel} ${day.dateLabel}, 1 offene Lücke`
+                : undefined
+            }
+          />
+        ))}
+      </div>
+    ),
+  },
+};
+
 export const WithViewSwitcher: Story = {
   args: {
     viewSwitcher: (

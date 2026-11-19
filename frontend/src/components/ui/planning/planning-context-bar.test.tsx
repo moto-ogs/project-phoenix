@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
 import { PlanningContextBar, PlanningDayChip } from "./planning-context-bar";
+import { PLANNING_COLORS } from "./planning-colors";
 import { SegmentedControl } from "../segmented-control";
 import { CustomSelect } from "../custom-select";
 
@@ -251,6 +252,48 @@ describe("PlanningDayChip", () => {
     expect(screen.getByText("Sa")).toBeInTheDocument();
     expect(screen.getByText("18.07.")).toBeInTheDocument();
     expect(screen.queryByText("–")).not.toBeInTheDocument();
+  });
+
+  it("shows only the dot with countDotOnly and keeps the number's width", () => {
+    // Die Zahl nennt die Seite schon woanders (Statuszeile). Der Punkt sagt
+    // weiter, dass an dem Tag etwas offen ist; die Ziffer hält unsichtbar
+    // ihren Platz, damit die Leiste beim Tageswechsel nicht springt.
+    render(
+      <PlanningDayChip
+        weekdayLabel="Mi"
+        dateLabel="15.07."
+        count={1}
+        countDotOnly
+        selected
+        aria-label="Mi 15.07., 1 offene Lücke"
+      />,
+    );
+
+    const chip = screen.getByRole("button", {
+      name: "Mi 15.07., 1 offene Lücke",
+    });
+    const number = within(chip).getByText("1");
+    expect(number).toHaveClass("invisible");
+    expect(number).toHaveAttribute("aria-hidden", "true");
+    // Der Punkt steht vor der Ziffer, sichtbar.
+    expect(number.previousElementSibling).toHaveStyle({
+      backgroundColor: PLANNING_COLORS.gap,
+    });
+  });
+
+  it("stays quiet with countDotOnly on a day without open gaps", () => {
+    render(
+      <PlanningDayChip
+        weekdayLabel="Di"
+        dateLabel="14.07."
+        count={0}
+        countDotOnly
+        selected
+      />,
+    );
+
+    const chip = screen.getByRole("button", { pressed: true });
+    expect(chip).toHaveTextContent(/^Di 14\.07\.$/);
   });
 
   it("uses the dark fill instead of neutral gray when selected", () => {
