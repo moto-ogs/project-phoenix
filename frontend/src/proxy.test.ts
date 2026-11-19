@@ -7,6 +7,7 @@ import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { CATALOG_PUBLIC_OUTSIDE_MOUNTS } from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
+import { fileAnswer } from "~/lib/contract/runtime";
 
 const OPERATOR_HOSTNAME = "operator.localhost:3000";
 const PARENTS_HOSTNAME = "parents.localhost:3000";
@@ -322,12 +323,27 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
 
   // The proxy's CSP is the one the browser gets: Next sets it on the
   // response before the route runs and keeps it over the route's own
-  // (review L9). So this list alone sandboxes an uploaded file.
+  // (review L9). So this list alone sandboxes an uploaded file. A file the
+  // contract registers has no route file; the portal's catalog proxy serves
+  // it under the same BFF folder (`/traeger/x/{id}` → `traeger/x/[id]`).
   it("sandboxes exactly the routes that stream an uploaded file", () => {
     const apiDir = path.join(__dirname, "app", "api");
-    const sandboxed = readdirSync(apiDir, { recursive: true, encoding: "utf8" })
+    const routeFolders = readdirSync(apiDir, {
+      recursive: true,
+      encoding: "utf8",
+    })
       .filter((file) => file.endsWith("route.ts"))
-      .map((file) => path.dirname(file).split(path.sep).join("/"))
+      .map((file) => path.dirname(file).split(path.sep).join("/"));
+    const contractFiles = Object.values(portalRoutes)
+      .flat()
+      .filter((route) => route.response === fileAnswer)
+      .map((route) =>
+        route.pattern
+          .replace(/^\/(?:api\/)?/, "")
+          .replace(/\{([^}]+)\}/g, "[$1]")
+          .replace(/\/$/, ""),
+      );
+    const sandboxed = [...new Set([...routeFolders, ...contractFiles])]
       .filter((dir) => {
         const route =
           "/api/" +
