@@ -324,8 +324,8 @@ func (w *targetRiskWorkload) scenarios() []checkpointScenario {
 		{"device-scan.checkin-invalid-key", "POST", "/api/iot/checkin", 401, true, checkin},
 		{"device-scan.pickup-query", "POST", "/api/iot/pickup-query", 200, true, pickup},
 		{"device-scan.pickup-query-missing-pin", "POST", "/api/iot/pickup-query", 401, true, pickup},
-		{"device-scan.status", "GET", "/api/iot/status", 200, true, ""},
-		{"device-scan.status-wrong-pin", "GET", "/api/iot/status", 401, true, ""},
+		{"device-scan.config", "GET", "/api/iot/config", 200, true, ""},
+		{"device-scan.config-wrong-pin", "GET", "/api/iot/config", 401, true, ""},
 		{"device-scan.rfid-lookup", "GET", "/api/iot/rfid/" + w.studentTag, 200, true, ""},
 		{"device-scan.rfid-lookup-malformed-key", "GET", "/api/iot/rfid/" + w.studentTag, 401, false, ""},
 		{"device-scan.staff-clock", "POST", "/api/iot/staff-clock", 200, true, checkpointBodyPlaceholder},
@@ -362,7 +362,7 @@ func (w *targetRiskWorkload) headers(scenario checkpointScenario) map[string]str
 		return map[string]string{"Origin": "http://checkpoint-elsewhere.invalid"}
 	case "device-scan.pickup-query-missing-pin":
 		return nil
-	case "device-scan.status-wrong-pin", "device-scan.staff-clock-wrong-pin":
+	case "device-scan.config-wrong-pin", "device-scan.staff-clock-wrong-pin":
 		return map[string]string{"X-Staff-PIN": "0000"}
 	case "device-scan.rfid-lookup-malformed-key":
 		return map[string]string{"Authorization": "Token " + w.deviceKey, "X-Staff-PIN": "1234"}

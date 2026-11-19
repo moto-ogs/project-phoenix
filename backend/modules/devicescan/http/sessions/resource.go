@@ -31,14 +31,10 @@ func (rs *Resource) Router() chi.Router {
 	r.Post("/start", rs.startActivitySession)
 	r.Post("/end", rs.endActivitySession)
 	r.Get("/current", rs.getCurrentSession)
-	r.Post("/check-conflict", rs.checkSessionConflict)
 	r.Put("/{sessionId}/supervisors", rs.updateSessionSupervisors)
 
-	// Session timeout management
-	r.Post("/timeout", rs.processSessionTimeout)
+	// Session activity heartbeat
 	r.Post("/activity", rs.updateSessionActivity)
-	r.Post("/validate-timeout", rs.validateSessionTimeout)
-	r.Get("/timeout-info", rs.getSessionTimeoutInfo)
 
 	return r
 }

@@ -39,10 +39,7 @@ func TestComposedWorkflowServesTheKiosk(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, device.DeviceID, ping.Device.DeviceID)
 	assert.False(t, ping.SessionActive)
-
-	status, err := module.DeviceScan.Status(ctx)
-	require.NoError(t, err)
-	assert.True(t, status.Device.Active)
+	assert.True(t, ping.Device.Active)
 }
 
 func TestComposedWorkflowRejectsRequestsWithoutADevice(t *testing.T) {

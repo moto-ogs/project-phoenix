@@ -243,7 +243,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/dataimport":    1,
 	"modules/delivery":      4,
 	"modules/devicefleet":   32, // #7104: UpdateRoomID no longer stamps updated_at (-1)
-	"modules/devicescan":    35,
+	"modules/devicescan":    27,
 	// Raised by ADR 0105: the holiday period reads of the Träger-Portal; by
 	// ADR 0110: the retention of the public holiday registrations; by
 	// ADR 0116: the weeks the hosting school sees.

@@ -92,14 +92,6 @@ func sessionEndScanCases() []sessionEndScanCase {
 			_, err := f.active.EndActivitySession(ctx, f.scanStay)
 			return err
 		}},
-		{"timeout", func(ctx context.Context, t *testing.T, f bulkMoveScanFixture) error {
-			var id int64
-			if err := f.k.db.NewRaw("SELECT device_id FROM active.groups WHERE tenant_id = ? AND id = ?", testpkg.Tenant(t), f.scanStay).Scan(ctx, &id); err != nil {
-				return err
-			}
-			_, err := f.active.ProcessSessionTimeout(ctx, id)
-			return err
-		}},
 		{"nightly_end", func(ctx context.Context, _ *testing.T, f bulkMoveScanFixture) error {
 			_, err := f.active.EndDailySessions(ctx)
 			return err
