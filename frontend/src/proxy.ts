@@ -257,7 +257,7 @@ const SANDBOXED_FILE_ROUTES: readonly RegExp[] = [
   // Documents a Träger attaches to a holiday-period form, in the Träger
   // portal and on the public registration link (#6179).
   /^\/api\/traeger\/holiday-periods\/[^/]+\/form\/documents\/[^/]+$/,
-  /^\/api\/holiday-registrations\/[^/]+\/documents\/[^/]+$/,
+  /^\/api\/traeger\/holiday-registrations\/[^/]+\/documents\/[^/]+$/,
   // Träger documents, in the Träger portal and shared with a school (#4692).
   /^\/api\/(?:traeger-documents|traeger\/documents)\/[^/]+\/file$/,
   // Photos and files of chat messages (#6685): a PDF opens inline in a tab.

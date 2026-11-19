@@ -13,8 +13,9 @@ import { SectionCard } from "~/components/ui/section-card";
 import type { FormLegalBlock } from "~/lib/enrollment-form-schema-api";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
+// The Träger proxy's public file route (#2352): no session travels.
 function holidayPublicDocumentPath(token: string, id: string): string {
-  return `/api/holiday-registrations/${encodeURIComponent(token)}/documents/${encodeURIComponent(id)}`;
+  return `/api/traeger/holiday-registrations/${encodeURIComponent(token)}/documents/${encodeURIComponent(id)}`;
 }
 
 /** Required holiday blocks offer an explicit acknowledgement, including

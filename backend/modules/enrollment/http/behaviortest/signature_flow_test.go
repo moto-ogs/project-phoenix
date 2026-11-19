@@ -254,6 +254,8 @@ func TestEnrollmentSignature_StatusLinkAndStaffShowTheSignatureAndItsProof(t *te
 	assert.Empty(t, status.Data.Signature.ImagePNG, "the status page does not carry the image")
 
 	requirePDF(t, env.do(t, http.MethodGet, "/requests/"+token+"?format=pdf", "", ""))
+	// The path the frontend's catalog proxy serves without a session (#2352).
+	requirePDF(t, env.do(t, http.MethodGet, "/requests/"+token+"/signature-proof", "", ""))
 
 	staff := env.staff(t, env.tenantID)
 	detail := decodeStatusSignature(t, env.do(t, http.MethodGet, idPath(signed.Request.ID, "/"), staff, ""))
@@ -304,6 +306,12 @@ func TestEnrollmentSignature_ProofIsBoundToTheTokensSchoolAndRequest(t *testing.
 	require.NotNil(t, fromB.Data.Signature)
 	assert.Equal(t, "Bernd Beispiel", fromB.Data.Signature.SignerName)
 
+	// Both proof paths: the status read's ?format=pdf and the file route
+	// the catalog proxy serves without a session (#2352).
+	proofPaths := func(token string) []string {
+		return []string{"/requests/" + token + "?format=pdf", "/requests/" + token + "/signature-proof"}
+	}
+
 	// A manipulated or unknown token opens nothing.
 	for _, token := range []string{
 		signedA.Request.StatusToken + "x",
@@ -311,15 +319,19 @@ func TestEnrollmentSignature_ProofIsBoundToTheTokensSchoolAndRequest(t *testing.
 		signedA.Request.StatusToken[:len(signedA.Request.StatusToken)-1],
 		strconv.FormatInt(signedA.Request.ID, 10),
 	} {
-		requireErrorCode(t, schoolA.do(t, http.MethodGet, "/requests/"+token+"?format=pdf", "", ""),
-			http.StatusNotFound, "enrollment.status_link_invalid")
+		for _, path := range proofPaths(token) {
+			requireErrorCode(t, schoolA.do(t, http.MethodGet, path, "", ""),
+				http.StatusNotFound, "enrollment.status_link_invalid")
+		}
 	}
 
 	// Another request of the same school, unsigned, has no proof and does
 	// not show the signature of its neighbour.
 	unsigned := schoolA.unsignedRequest(t)
-	requireErrorCode(t, schoolA.do(t, http.MethodGet, "/requests/"+unsigned+"?format=pdf", "", ""),
-		http.StatusNotFound, "enrollment.signature_not_found")
+	for _, path := range proofPaths(unsigned) {
+		requireErrorCode(t, schoolA.do(t, http.MethodGet, path, "", ""),
+			http.StatusNotFound, "enrollment.signature_not_found")
+	}
 	neighbour := decodeStatusSignature(t, schoolA.do(t, http.MethodGet, "/requests/"+unsigned, "", ""))
 	assert.Nil(t, neighbour.Data.Signature)
 
@@ -338,6 +350,8 @@ func TestEnrollmentSignature_ProofIsBoundToTheTokensSchoolAndRequest(t *testing.
 		Set("status_token_expires = ?", time.Now().Add(-time.Hour)).
 		Where("id = ?", signedA.Request.ID).Exec(testpkg.TenantContext(schoolA.tenantID))
 	require.NoError(t, err)
-	requireErrorCode(t, schoolA.do(t, http.MethodGet, "/requests/"+signedA.Request.StatusToken+"?format=pdf", "", ""),
-		http.StatusNotFound, "enrollment.status_link_invalid")
+	for _, path := range proofPaths(signedA.Request.StatusToken) {
+		requireErrorCode(t, schoolA.do(t, http.MethodGet, path, "", ""),
+			http.StatusNotFound, "enrollment.status_link_invalid")
+	}
 }

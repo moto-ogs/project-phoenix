@@ -20,9 +20,17 @@ const SENSITIVE_LOG_KEYS = new Set([
   "x_staff_id",
 ]);
 
-// Public signing links are credentials, including in escaped referrers.
+// Public signing links and the payroll office's download link (#4805), on
+// the page and on the API path, are credentials, including in escaped
+// referrers. Their "<id>.<token>" form
+// carries a dot, so sanitizeEndpoint masks none of them.
 export const SIGNING_TOKEN_PATH_PATTERN = new RegExp(
-  `(${["/public/care-contract-signing/", "/vertrag-unterschreiben/"]
+  `(${[
+    "/public/care-contract-signing/",
+    "/vertrag-unterschreiben/",
+    "/public/payroll-download/",
+    "/lohnbuero/",
+  ]
     .map((path) =>
       [...path]
         .map((char) => `(?:${char}|%${char.charCodeAt(0).toString(16)})`)

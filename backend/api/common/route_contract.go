@@ -78,6 +78,13 @@ type RouteContract struct {
 	// body over MaxBodyBytes with: the code the backend answers a too large
 	// file with, so the client shows the same text.
 	TooLargeCode string
+	// PublicFile opens a file to the portal public, route by route
+	// (#2352, ADR 0270): it says why the link in the path alone may hand out
+	// the file. The proxy sends no session, no bearer and no body, and the
+	// backend's limiter of the link keys the request by client IP. Only a
+	// File route of the portal public names it; a public file without it is
+	// refused, as is a public upload.
+	PublicFile string
 }
 
 // QueryKind is the value form of a query parameter.

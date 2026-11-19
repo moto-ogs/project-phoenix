@@ -174,3 +174,66 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
 - Ein gestreamter Upload läuft unter dem Header-Timeout des Backend-Clients
   (90 s ab Beginn des Sendens). Bisher lief er erst nach dem vollständigen
   Lesen an.
+
+## Nachtrag vom 2026-11-19: Öffentliche Datei-Routen
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Vier
+Routendateien reichten nur die Datei hinter einem Link durch: das PDF des
+Vertragslinks (`/public/care-contract-signing/{link}/document`), die Datei
+des Lohnbüros (`POST /public/payroll-download/{link}`), den
+Unterschriftsnachweis des Anmelde-Statuslinks und die Formulardokumente des
+Ferienlinks. Der erste Punkt der Grenzen des vorigen Nachtrags schloss sie
+aus. Dieser Nachtrag ersetzt ihn für markierte Einzelrouten.
+
+### Entscheidung
+
+1. **Eine öffentliche Datei öffnet nur ein Merkmal ihrer Route.**
+   `common.RouteContract.PublicFile` nennt den Grund, warum der Link im Pfad
+   allein die Datei herausgeben darf. Es gibt keinen Schalter für ein Portal
+   oder einen Mount. Der Generator lehnt ab: eine öffentliche Datei ohne
+   Merkmal, das Merkmal an einer Route, die keine Datei oder nicht nur im
+   Portal `public` ist, eine öffentliche Datei mit Request-Body und jeden
+   öffentlichen Upload. Im Modell steht es als `public_file`, im erzeugten
+   Code als `publicFile`; der Proxy dient eine öffentliche Datei ohne diesen
+   Wert nicht, auch wenn ein Eintrag ihn verlöre.
+2. **Der Weg trägt keine Berechtigung des Geräts.** Der Proxy liest keine
+   Sitzung und ruft das Backend mit `sendBackend(…, null, …)`: kein Bearer,
+   keine Cookies, kein Body, kein `Idempotency-Key`. Ein angemeldetes
+   Schulgerät öffnet den Link also wie jeder andere Browser.
+3. **Die Grenze bleibt die des Backends.** Der BFF hatte für diese Links nie
+   ein eigenes Limit. Begrenzt wird je Client-IP im Backend:
+   `careContractSigningRateLimit`, `holidayRegistrationRateLimit`, das Limit
+   `enrollment-link` über `isPublicEnrollmentRequest` (es liest die
+   Routentabelle der Anmeldung, also auch die neue Route) und für das
+   Lohnbüro der allgemeine Limiter, der ohne Bearer nach IP zählt.
+   `sendBackend` gibt die IP weiter (`X-Forwarded-For`, siehe
+   `docs/agents/contracts.md`, Client IP and rate limits); ein 429 geht mit
+   `Retry-After` durch. Ein verstümmelter Link erreicht jetzt das Backend
+   statt einer BFF-Prüfung und verbraucht damit ein Token des Limits.
+4. **Status und Fehler sind die des Backends.** Das Backend antwortet einem
+   ungültigen, verbrauchten oder fehlerhaften Link schon mit dem Code, den
+   der BFF vorher selbst setzte: 410 `care_contract.signing_link_invalid`
+   (`parseLink` in Care Contract) und 404
+   `workforce.payroll_download_unavailable` (`parsePayrollLink`). Die
+   Vorprüfungen im BFF entfallen.
+5. **Jede Antwort ist privat und ungespeichert.** Datei, Ablehnung und
+   Fehler tragen `private, no-store`, gleich was das Backend sendet. Die
+   Datei geht mit `Content-Type`, `Content-Disposition`, `Content-Length` und
+   `X-Content-Type-Options` durch, ungepuffert.
+6. **Der Pfad ist der Backend-Pfad.** Der Nachweis bekommt die Route
+   `GET /api/enrollment/requests/{statusToken}/signature-proof`, denn
+   `?format=pdf` an der Statusroute kann der Katalog nicht als zweite
+   Antwortart führen; `?format=pdf` bleibt im Backend für Bestandsaufrufe.
+   Das Ferienformular ruft `/api/traeger/holiday-registrations/…` über den
+   Proxy des Trägers statt `/api/holiday-registrations/…`.
+
+### Grenzen
+
+- Ein Upload ohne Sitzung (Nachweise der Anmeldung und des Ferienlinks)
+  bleibt eine eigene Routendatei.
+- Ein Link, dessen Datei der BFF prüft oder umformt, bleibt eine eigene
+  Datei. Eine neue öffentliche Datei braucht das Merkmal, einen Kopf in
+  `CATALOG_PUBLIC_OUTSIDE_MOUNTS`, wenn sie neben dem Mount liegt, eine
+  Freigabe in `HOST_RULES` von `src/proxy.ts` für jeden Portal-Host, der sie
+  öffnet, und die Log-Redaction ihres Pfads im BFF und im Backend.
+- Befristete oder signierte Datei-URLs sind nicht Teil dieser Entscheidung.
