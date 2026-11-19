@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   json,
@@ -434,12 +435,24 @@ export const RolloutSchema: z.ZodType<Rollout, unknown> = object<Rollout>({
   schools: nullable(arr(SchoolResultSchema)),
 });
 
+/** Query of GET /traeger/catalog/phases/export */
+export interface GetTraegerCatalogPhasesExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "GET /traeger/catalog/phases": {
     method: "GET",
     pattern: "/traeger/catalog/phases",
     portals: ["org"],
     response: success(z.array(TraegerPhaseSchema)),
+  },
+  "GET /traeger/catalog/phases/export": {
+    method: "GET",
+    pattern: "/traeger/catalog/phases/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/catalog/phases/{id}": {
     method: "GET",
