@@ -40,8 +40,6 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/admin/enrollments/change-requests/[id]",
   "/admin/enrollments/phases/[phaseId]",
   "/admin/guardian-approvals",
-  "/anfragen",
-  "/betreuungsplan",
   "/calendar-periods",
   "/care-offerings",
   "/dashboard",
@@ -69,7 +67,6 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/database/work-time-models",
   "/dateien",
   "/day-log",
-  "/dienstplan",
   "/eltern/bankverbindungen",
   "/emergency",
   "/enrollment-form",
@@ -90,9 +87,6 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/reminders",
   "/rooms/[id]",
   "/rooms/unterwegs",
-  "/settings",
-  "/staff",
-  "/staff/[id]",
   "/statistics",
   "/students/[id]/change-history",
   "/students/[id]/feedback-history",
@@ -131,6 +125,7 @@ const FIRST_WEEK_PAGES = [
  */
 const PAGES_WITH_CONDITIONAL_INFO: readonly string[] = [
   "/home", // Nur beim Anordnen der Startseite erklärt der Knopf das Verschieben.
+  "/dienstplan", // Der Modulwächter erhält den Hinweis über seine Eigenschaft.
   "/mein-dienstplan", // Der Modulwächter erhält den Hinweis über seine Eigenschaft.
   "/parent-announcements", // Die Erklärung richtet sich nach der gewählten Mitteilungsart.
   "/students/[id]", // Ferienkinder haben keine Reiter; der normale Text wäre falsch.

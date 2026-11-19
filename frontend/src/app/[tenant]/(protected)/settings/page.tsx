@@ -11,6 +11,10 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { activeSettingsSectionId } from "~/components/settings/settings-nav-items";
 import { useSettingsTabs } from "~/components/settings/settings-page";
 
+// Info-Knopf am Titel (#7566), in jedem Bereich und Zustand derselbe.
+const SETTINGS_INFO =
+  "Hier stellst du ein, wie deine OGS arbeitet. Fang mit dem Bereich „Betrieb“ an, dort steht das Wichtigste. Die übrigen Bereiche passt du an, wenn du sie brauchst.";
+
 function SettingsContent() {
   const { data: session, status } = useSession({
     required: true,
@@ -62,7 +66,14 @@ function SettingsContent() {
   }, [activeTab, schema]);
 
   if (status === "loading" || schemaLoading) {
-    return <TenantPage title="Einstellungen" statsLoading loading />;
+    return (
+      <TenantPage
+        title="Einstellungen"
+        info={SETTINGS_INFO}
+        statsLoading
+        loading
+      />
+    );
   }
 
   if (!session?.user) {
@@ -76,6 +87,7 @@ function SettingsContent() {
     return (
       <TenantPage
         title="Einstellungen"
+        info={SETTINGS_INFO}
         statsLoading={!schemaLoadError}
         loading={!schemaLoadError}
         error={schemaLoadError}
@@ -87,6 +99,7 @@ function SettingsContent() {
     return (
       <TenantPage
         title="Einstellungen"
+        info={SETTINGS_INFO}
         stats="0 Bereiche"
         empty={{
           title: "Keine Einstellungen verfügbar.",
@@ -100,6 +113,7 @@ function SettingsContent() {
   return (
     <TenantPage
       title={activeSectionLabel ?? "Einstellungen"}
+      info={SETTINGS_INFO}
       stats={
         overrides === null
           ? undefined
@@ -122,7 +136,14 @@ function SettingsContent() {
 export default function SettingsPage() {
   return (
     <Suspense
-      fallback={<TenantPage title="Einstellungen" statsLoading loading />}
+      fallback={
+        <TenantPage
+          title="Einstellungen"
+          info={SETTINGS_INFO}
+          statsLoading
+          loading
+        />
+      }
     >
       <SettingsContent />
     </Suspense>

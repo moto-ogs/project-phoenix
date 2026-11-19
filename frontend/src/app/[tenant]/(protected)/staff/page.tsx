@@ -90,6 +90,15 @@ function StaffCardSurface({
   );
 }
 
+// Info-Knopf am Titel (#7566). Wer Zeitkonten prüft, sieht mehr Reiter und
+// öffnet die Personalakte; ohne diese Rechte führt nicht jede Karte weiter.
+const STAFF_INFO =
+  "Hier siehst du alle Personen aus deinem Team und ob sie gerade da sind. Suche nach einem Namen oder filtere nach dem Status.";
+const STAFF_MANAGE_INFO =
+  "Hier siehst du alle Personen aus deinem Team und ob sie gerade da sind. Unter „Zeitkonten“ prüfst du ihre Stunden. Wähle eine Person, um ihre Personalakte zu öffnen.";
+const STAFF_DOCUMENTS_INFO =
+  "Hier findest du die Unterlagen aus deinem Team, die für dich freigegeben sind. Wähle eine Person, um ihre Dokumente zu öffnen.";
+
 function DocumentDirectory({
   entries,
   failed,
@@ -162,6 +171,7 @@ function DocumentDirectory({
   return (
     <TenantPage
       title="Personalunterlagen"
+      info={STAFF_DOCUMENTS_INFO}
       // Ohne geladene Liste keine "0 Personen" neben dem Ladefehler (#2517).
       stats={
         failed
@@ -897,6 +907,7 @@ function StaffPageContent() {
   return (
     <TenantPage
       title="Mitarbeitende"
+      info={canManageTimeTracking ? STAFF_MANAGE_INFO : STAFF_INFO}
       stats={staffSummary}
       statsLoading={showSkeleton}
       search={
@@ -1276,7 +1287,7 @@ export default function StaffPage() {
   return (
     <Suspense
       fallback={
-        <TenantPage title="Mitarbeitende" statsLoading>
+        <TenantPage title="Mitarbeitende" info={STAFF_INFO} statsLoading>
           <StaffCardsSkeleton />
         </TenantPage>
       }

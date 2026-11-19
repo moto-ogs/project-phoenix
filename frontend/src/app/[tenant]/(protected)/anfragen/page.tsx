@@ -94,6 +94,15 @@ const STATUS_OPTIONS: readonly {
   { value: "withdrawn", label: "Zurückgezogen" },
 ];
 
+// Info-Knopf am Titel (#7566). Welche Reiter jemand sieht, hängt an den
+// Freigaberechten; der Text nennt nur, was auf der Seite auch steht.
+const ANFRAGEN_PARENTS_INFO =
+  "Hier landen Wünsche von Eltern, zum Beispiel eine neue Abholzeit. Wähle ein Kind und prüfe seine offenen Anfragen. Dann gibst du sie frei oder lehnst sie ab.";
+const ANFRAGEN_STAFF_INFO =
+  "Hier landen die Anträge aus deinem Team, zum Beispiel für Urlaub oder Fortbildung. Prüfe jeden offenen Antrag. Dann genehmigst du ihn oder lehnst ihn ab.";
+const ANFRAGEN_BOTH_INFO =
+  "Hier landen Wünsche von Eltern und Anträge aus deinem Team. Oben wählst du „Eltern“ oder „Mitarbeitende“. Prüfe jede offene Anfrage und triff deine Entscheidung.";
+
 /**
  * Anfragen-Modul (#2429): ein Ort für alle eingereichten Wünsche, mit Reitern
  * nach Herkunft. Der Eltern-Reiter zeigt seit #2432 EINE Liste über alle vier
@@ -439,6 +448,13 @@ export default function AnfragenPage() {
   return (
     <TenantPage
       title="Anfragen"
+      info={
+        showElternTab && showMitarbeitendeTab
+          ? ANFRAGEN_BOTH_INFO
+          : showMitarbeitendeTab
+            ? ANFRAGEN_STAFF_INFO
+            : ANFRAGEN_PARENTS_INFO
+      }
       error={pageError}
       stats={
         listCount.count === null

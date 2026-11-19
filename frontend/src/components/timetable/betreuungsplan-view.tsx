@@ -175,6 +175,13 @@ import {
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 
 const logger = createLogger({ component: "TimetablesPage" });
+
+// Info-Knopf am Titel (#7566). Ohne schedules:manage ist der Plan eine
+// Leseansicht, auch als Reiter in „Mein Kalender“.
+const BETREUUNGSPLAN_INFO =
+  "Hier legst du fest, wer wann welche Kinder betreut. Mit „Neu“ legst du einen Termin an, einmalig oder regelmäßig. Dein Team sieht seine Termine in „Mein Kalender“.";
+const BETREUUNGSPLAN_READ_INFO =
+  "Hier siehst du, wer wann welche Kinder betreut. Wähle oben die Ansicht und blättere zum gewünschten Tag. Ändern können den Plan nur Admins.";
 const PERIODS_SWR_KEY = databaseKeys.calendarPeriods();
 const PHASES_SWR_KEY = enrollmentKeys.phases();
 const CONFLICT_ACKS_SWR_KEY = tenantDailyKeys.conflictAcks();
@@ -2484,6 +2491,7 @@ function TimetablesContent() {
     <TenantPage
       overlays={overlays}
       title="Betreuungsplan"
+      info={canManageSchedules ? BETREUUNGSPLAN_INFO : BETREUUNGSPLAN_READ_INFO}
       stats={statusLine}
       statsLoading={statsLoading}
       actions={
