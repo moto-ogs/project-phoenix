@@ -46,7 +46,7 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const ROLES_INFO =
-  "Jede Person hat eine Rolle. Die Rolle legt fest, was die Person in moto sehen und tun darf. Rollen vom System kannst du nicht ändern, lege dafür mit „+ Rolle“ eine eigene an.";
+  "Die Rolle einer Person legt fest, was sie in moto sehen und tun darf. Rollen vom System kannst du nicht ändern. Lege dafür eine eigene Rolle an.";
 
 const NO_ROLES: Role[] = [];
 

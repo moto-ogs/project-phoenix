@@ -51,7 +51,7 @@ import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const SHIFT_TYPES_INFO =
-  "Hier legst du fest, welche Dienstarten es im Dienstplan gibt. Mit „Beispiele hinzufügen“ bekommst du typische Dienstarten auf einmal. Eigene Dienstarten legst du mit „+ Dienstart“ an.";
+  "Hier legst du fest, welche Dienstarten es im Dienstplan gibt. Mit „Beispiele hinzufügen“ bekommst du typische Dienstarten auf einmal. Fehlt dir eine, lege sie selbst an.";
 
 const logger = createLogger({ component: "DatabaseShiftTypesPage" });
 

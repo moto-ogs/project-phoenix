@@ -36,7 +36,7 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const ABSENCE_TYPES_INFO =
-  "Hier legst du fest, welche Arten von Abwesenheit es an deiner Schule gibt. Eine eigene Art legst du mit „+ Abwesenheitsart“ an. Wer eine Abwesenheit einträgt, wählt dann eine dieser Arten.";
+  "Hier legst du fest, welche Arten von Abwesenheit es an deiner Schule gibt. Fehlt dir eine Art, lege sie hier an. Beim Eintragen einer Abwesenheit stehen die Arten dann zur Auswahl.";
 
 const CACHE_KEY = tenantAdminKeys.absenceTypes();
 

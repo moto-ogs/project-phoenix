@@ -13,7 +13,7 @@ import { hasPermission } from "~/lib/auth-utils";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const GRADE_TRANSITIONS_INFO =
-  "Zum neuen Schuljahr übernimmst du hier alle Kinder in ihre nächste Klasse. Wähle dafür „Neuer Schuljahreswechsel“. moto schlägt für jede Klasse die nächste vor, du prüfst nur.";
+  "Zum neuen Schuljahr übernimmst du hier alle Kinder in ihre nächste Klasse. moto schlägt für jede Klasse die nächste vor, du prüfst nur. Das geht am Computer, nicht am Handy.";
 
 export default function GradeTransitionsPage() {
   const { data: session, status } = useSession();

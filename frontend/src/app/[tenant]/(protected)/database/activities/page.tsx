@@ -42,7 +42,7 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const ACTIVITIES_INFO =
-  "Aktivitäten sind Angebote neben der Gruppe, zum Beispiel eine AG. Lege mit „+ Aktivität“ ein Angebot an und wähle eine Kategorie. Dein Team kann die Aktivität danach am Tablet starten.";
+  "Aktivitäten sind Angebote neben der Gruppe, zum Beispiel eine AG. Lege hier jedes Angebot einmal an und wähle eine Kategorie. Dein Team kann die Aktivität danach am Tablet starten.";
 
 const logger = createLogger({ component: "DatabaseActivitiesPage" });
 

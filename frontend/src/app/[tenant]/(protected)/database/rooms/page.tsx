@@ -34,7 +34,7 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const ROOMS_INFO =
-  "Hier legst du jeden Raum deiner OGS einmal an. Wähle dafür „+ Raum“. Danach kannst du den Raum einer Gruppe zuweisen.";
+  "Hier legst du jeden Raum deiner OGS einmal an. Danach kannst du den Raum einer Gruppe zuweisen. Wähle einen Raum, um seine Angaben zu ändern.";
 
 type RoomsGroupingMode = "none" | "building" | "floor";
 
