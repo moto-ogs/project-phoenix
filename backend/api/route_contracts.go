@@ -185,6 +185,8 @@ func contractMounts() []contractMount {
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
 		{"/api/staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalTenant)},
+		// The school portal's chat files sit beside its mount (#6685, #2352).
+		{"/school-staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalSchool)},
 		{"/api/time-tracking", timeTrackingRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		{"/api/staff", timeTrackingHTTP.StaffAdminRouteContracts()},

@@ -260,7 +260,7 @@ const SANDBOXED_FILE_ROUTES: readonly RegExp[] = [
   // Träger documents, in the Träger portal and shared with a school (#4692).
   /^\/api\/(?:traeger-documents|traeger\/documents)\/[^/]+\/file$/,
   // Photos and files of chat messages (#6685): a PDF opens inline in a tab.
-  /^\/api\/(?:messages|staff-messages|school\/staff-messages)\/attachments\/[^/]+\/download$/,
+  /^\/api\/(?:messages|staff-messages|school\/school-staff-messages)\/attachments\/[^/]+\/download$/,
   /^\/api\/parent\/me\/messages\/children\/[^/]+\/attachments\/[^/]+\/download$/,
 ];
 

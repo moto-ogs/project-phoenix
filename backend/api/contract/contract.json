@@ -8863,6 +8863,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/school-staff-messages/attachments/{attachmentId}/download",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/school/auth/mfa/trusted-devices",
       "portals": [
         "school"
@@ -15453,6 +15467,20 @@
         "ref": "SigningView"
       },
       "max_body_bytes": 409600
+    },
+    {
+      "method": "POST",
+      "pattern": "/school-staff-messages/attachments",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
