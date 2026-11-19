@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { StrictMode, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -126,6 +132,7 @@ describe("AnnouncementModal analytics", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
@@ -151,6 +158,25 @@ describe("AnnouncementModal analytics", () => {
     rerender(strict());
     expect(mocks.markSeen).toHaveBeenCalledWith(2);
     expect(mocks.markSeen).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a failed seen report while the announcement stays open", async () => {
+    mocks.markSeen
+      .mockRejectedValueOnce(new Error("vorübergehend nicht erreichbar"))
+      .mockResolvedValueOnce(undefined);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { AnnouncementModal } = await setup(true);
+    render(<AnnouncementModal />);
+
+    await screen.findByText("Erste");
+    await waitFor(() => expect(mocks.markSeen).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+
+    expect(mocks.markSeen).toHaveBeenCalledTimes(2);
+    expect(mocks.markSeen).toHaveBeenLastCalledWith(1);
   });
 
   it("reports the announcement as shown once and accepted after the last „Verstanden“", async () => {

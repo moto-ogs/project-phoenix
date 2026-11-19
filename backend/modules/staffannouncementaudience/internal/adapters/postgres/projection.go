@@ -74,7 +74,7 @@ const unreadWhere = `
 		AND a.published_at <= CURRENT_TIMESTAMP
 		AND (a.expires_at IS NULL OR a.expires_at > CURRENT_TIMESTAMP)
 		AND a.published_at >= GREATEST(s.created_at, COALESCE(at.invited_at, at.created_at), acc.created_at)
-		AND v.seen_at IS NULL
+		AND COALESCE(v.dismissed, FALSE) = FALSE
 		AND (a.target_roles = '{}'
 			OR a.target_roles && ?::text[]
 			OR EXISTS (

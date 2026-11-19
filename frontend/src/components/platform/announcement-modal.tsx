@@ -17,6 +17,8 @@ import { IconTile } from "~/components/ui/icon-tile";
 
 const logger = createLogger({ component: "AnnouncementModal" });
 
+const SEEN_RETRY_DELAY_MS = 5_000;
+
 // Contextual headers that create a positive, informative feeling
 // title = small subtitle, subtitle = large main header
 const DEFAULT_HEADER = {
@@ -68,7 +70,21 @@ export function AnnouncementModal() {
   // of the modal was reported as shown. Refs survive re-renders, so neither
   // is sent twice.
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const seenInFlightIdsRef = useRef<Set<string>>(new Set());
+  const seenRetryTimersRef = useRef<Set<number>>(new Set());
+  const currentSeenIdRef = useRef<string | undefined>(undefined);
+  const [seenRetry, setSeenRetry] = useState(0);
   const shownReportedRef = useRef(false);
+
+  useEffect(() => {
+    const retryTimers = seenRetryTimersRef.current;
+    return () => {
+      for (const timer of retryTimers) {
+        window.clearTimeout(timer);
+      }
+      retryTimers.clear();
+    };
+  }, []);
 
   // Show modal when we have announcements - capture stable snapshot
   useEffect(() => {
@@ -93,6 +109,10 @@ export function AnnouncementModal() {
     ? queuedAnnouncements[currentIndex]?.id
     : undefined;
   useEffect(() => {
+    currentSeenIdRef.current =
+      currentId === undefined ? undefined : String(currentId);
+  }, [currentId]);
+  useEffect(() => {
     if (!isVisible) {
       shownReportedRef.current = false;
       return;
@@ -103,15 +123,33 @@ export function AnnouncementModal() {
     }
     if (currentId === undefined) return;
     const key = String(currentId);
-    if (seenIdsRef.current.has(key)) return;
-    seenIdsRef.current.add(key);
+    if (seenIdsRef.current.has(key) || seenInFlightIdsRef.current.has(key)) {
+      return;
+    }
+    seenInFlightIdsRef.current.add(key);
     // Fire-and-forget like dismiss: a failed report must not block reading.
-    markSeen(currentId).catch((error: unknown) => {
-      logger.error("announcement_seen_failed", {
-        error: error instanceof Error ? error.message : String(error),
+    void markSeen(currentId)
+      .then(() => {
+        seenIdsRef.current.add(key);
+      })
+      .catch((error: unknown) => {
+        logger.error("announcement_seen_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Retry only while this announcement remains open. A brief delay
+        // avoids a rapid request loop while the backend is unavailable.
+        const timer = window.setTimeout(() => {
+          seenRetryTimersRef.current.delete(timer);
+          if (currentSeenIdRef.current === key) {
+            setSeenRetry((attempt) => attempt + 1);
+          }
+        }, SEEN_RETRY_DELAY_MS);
+        seenRetryTimersRef.current.add(timer);
+      })
+      .finally(() => {
+        seenInFlightIdsRef.current.delete(key);
       });
-    });
-  }, [isVisible, currentId, markSeen]);
+  }, [isVisible, currentId, markSeen, seenRetry]);
 
   // Dismiss current and advance to next announcement ("Weiter" / "Verstanden")
   const handleDismiss = useCallback(async () => {

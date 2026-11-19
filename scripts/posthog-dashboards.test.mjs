@@ -225,6 +225,8 @@ test('the entry dashboard shows the announcement seen and closed from the server
   for (const event of ['announcement_seen', 'announcement_dismissed']) {
     assert.match(query, new RegExp(`'${event}'`), event);
   }
+  assert.doesNotMatch(query, /Geschlossen in Prozent/, 'bulk closing can include announcements not shown');
+  assert.match(tile.description, /keinen Prozentwert/);
   assert.doesNotMatch(query, /distinct_id|person|\$session_id/, 'no person and no session');
 
   const expression = featureExpression();

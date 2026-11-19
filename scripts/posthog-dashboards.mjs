@@ -1139,13 +1139,12 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
       insights: [
         {
           name: 'Einstieg: Ankündigung gesehen und geschlossen',
-          description: 'Letzte 30 Tage, auch ohne Einwilligung, je Schule gezählt, ohne Person oder Sitzung. Gesehen: eine Ankündigung erschien im OGS-Portal. Geschlossen: per „Verstanden“ oder X; das X schließt alle wartenden auf einmal. Zählt Anzeigen, nicht Personen: eine nicht geschlossene erscheint beim nächsten Laden wieder.',
+          description: 'Letzte 30 Tage, auch ohne Einwilligung, je Schule gezählt, ohne Person oder Sitzung. Gesehen: eine Ankündigung erschien im OGS-Portal. Geschlossen: per „Verstanden“ oder X; das X schließt alle wartenden auf einmal. Daher gibt es keinen Prozentwert. Zählt Anzeigen, nicht Personen: eine nicht geschlossene erscheint beim nächsten Laden wieder.',
           ...hogql('production', (where) => `
 select
   coalesce(properties.role, 'unbekannt') as Rolle,
   countIf(event = 'announcement_seen') as Gesehen,
   countIf(event = 'announcement_dismissed') as Geschlossen,
-  round(100 * countIf(event = 'announcement_dismissed') / greatest(countIf(event = 'announcement_seen'), 1), 1) as ${quoted('Geschlossen in Prozent')},
   uniq(toString(properties.school_id)) as Schulen
 from events
 where ${where}

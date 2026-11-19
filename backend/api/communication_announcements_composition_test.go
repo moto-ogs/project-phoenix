@@ -136,7 +136,7 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
 	count, err := module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
-	assert.Zero(t, count)
+	assert.Equal(t, 1, count, "seeing an announcement does not close it")
 
 	details, err := module.GetViewDetails(ctx, announcement.ID)
 	require.NoError(t, err)
@@ -148,6 +148,11 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	require.NoError(t, err)
 	assert.Equal(t, 1, stats.SeenCount)
 	assert.Equal(t, 1, stats.TargetCount)
+
+	require.NoError(t, module.MarkDismissed(ctx, account.ID, announcement.ID))
+	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
+	require.NoError(t, err)
+	assert.Zero(t, count, "dismissing an announcement closes it")
 }
 
 func TestAnnouncementWritesRollBackAfterAuditFailureAndRetryOnce(t *testing.T) {

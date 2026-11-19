@@ -110,6 +110,35 @@ func TestProjection_UnreadStaysInTheReadersSchool(t *testing.T) {
 	assert.Zero(t, crossedCount)
 }
 
+// TestProjection_UnreadKeepsSeenAnnouncementsUntilDismissal ensures reporting
+// that a person saw a message does not make it disappear before they close it.
+func TestProjection_UnreadKeepsSeenAnnouncementsUntilDismissal(t *testing.T) {
+	t.Parallel()
+	db, fix := setupAudience(t)
+	ctx := context.Background()
+
+	_, err := db.ExecContext(ctx, `INSERT INTO platform.announcement_views (user_id, announcement_id)
+		VALUES (?, ?)`, fix.readerID, fix.ownAnnouncement)
+	require.NoError(t, err)
+
+	unread, _, err := fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
+	require.NoError(t, err)
+	assert.Contains(t, announcementIDs(unread), fix.ownAnnouncement, "a seen announcement stays open until dismissal")
+
+	count, _, err := fix.projection.CountUnread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
+	require.NoError(t, err)
+	assert.Len(t, unread, count)
+
+	_, err = db.ExecContext(ctx, `UPDATE platform.announcement_views
+		SET dismissed = TRUE
+		WHERE user_id = ? AND announcement_id = ?`, fix.readerID, fix.ownAnnouncement)
+	require.NoError(t, err)
+
+	unread, _, err = fix.projection.Unread(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID)
+	require.NoError(t, err)
+	assert.NotContains(t, announcementIDs(unread), fix.ownAnnouncement, "a dismissed announcement stays closed")
+}
+
 // TestProjection_TargetsAndViewsStayInTheAddressedSchool pins the audience
 // count and the view details: neither counts nor lists a reader of another
 // school.
