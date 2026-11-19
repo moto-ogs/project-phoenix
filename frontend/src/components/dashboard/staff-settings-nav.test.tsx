@@ -29,6 +29,12 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantRoutingModeSafe: () => "subdomain",
 }));
 
+// The phone bar switches to the settings sections only in the school portal.
+vi.mock("~/lib/shell-auth-context", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/shell-auth-context")>()),
+  useShellAuth: () => ({ mode: "teacher" }),
+}));
+
 vi.mock("~/components/settings/settings-nav-items", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("~/components/settings/settings-nav-items")
