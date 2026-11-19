@@ -353,6 +353,16 @@ describe("PasswordChangeModal", () => {
         screen.getByText(/Passwort erfolgreich geändert!/i),
       ).toBeInTheDocument();
     });
+    // The backend's field names: the portals' catalog proxies pass the body
+    // on unchanged (#2352).
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/auth/password");
+    expect(JSON.parse(init.body as string)).toEqual({
+      current_password: "OldPass123!",
+      new_password: "NewPass123!",
+      confirm_password: "NewPass123!",
+    });
   });
 
   it("calls onClose when cancel button is clicked", () => {

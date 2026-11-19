@@ -15,13 +15,16 @@ var (
 	errCurrentPasswordWrong = errors.New("current password is incorrect")
 )
 
+// SwitchOffRequest is the body of a voluntary factor's switch-off.
+type SwitchOffRequest struct {
+	CurrentPassword string `json:"current_password"`
+}
+
 // SwitchOffFactor switches a voluntary second factor off once the owner
 // checked the current password. A wrong password answers on its field, like
 // the password change.
 func SwitchOffFactor(w http.ResponseWriter, r *http.Request, disable func(ctx context.Context, currentPassword string, client Client) error, refuse Refusal) {
-	var request struct {
-		CurrentPassword string `json:"current_password"`
-	}
+	var request SwitchOffRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.CurrentPassword == "" {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errPasswordRequired))
 		return

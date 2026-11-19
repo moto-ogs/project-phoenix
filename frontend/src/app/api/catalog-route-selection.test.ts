@@ -47,7 +47,18 @@ const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/link-to-tenant/[[...path]]": "tenant",
   "/api/auth/register/[[...path]]": "tenant",
   "/api/auth/staff-preview/[...path]": "tenant",
+  "/api/auth/password-reset/[[...path]]": "tenant",
   "/api/caterer/auth/mfa/trusted-devices/[...path]": "caterer",
+  "/api/caterer/auth/passkeys/[...path]": "caterer",
+  "/api/caterer/auth/password-reset/[[...path]]": "caterer",
+  "/api/parent/auth/password-reset/[[...path]]": "parent",
+  "/api/school/auth/mfa/[...path]": "school",
+  "/api/school/auth/password-reset/[[...path]]": "school",
+  "/api/traeger/auth/mfa/[...path]": "org",
+  "/api/traeger/auth/password-reset/[[...path]]": "org",
+  "/api/operator/auth/email-confirm/[[...path]]": "platform",
+  "/api/operator/auth/mfa/[...path]": "platform",
+  "/api/operator/auth/passkeys/[...path]": "platform",
 };
 
 const apiDir = path.dirname(new URL(import.meta.url).pathname);

@@ -38,13 +38,14 @@ const SIGN_IN_PATHS = [
   "/auth/mfa/enroll/confirm",
   "/auth/passkeys/login/options",
   "/auth/passkeys/login/verify",
-  "/auth/password-reset",
-  "/auth/password-reset/confirm",
   "/auth/switch-tenant",
 ];
 
+// The password reset mints no session: the backend answers its request and
+// its confirmation with a message only, so the proxy serves both as public
+// routes (#2352).
 const SIGN_IN_PATTERN =
-  /(?:^|\/)(?:login|token)(?:\/|$)|\/mfa\/verify(?:\/|$)|\/passkeys\/login(?:\/|$)|\/password-reset(?:\/|$)/;
+  /(?:^|\/)(?:login|token)(?:\/|$)|\/mfa\/verify(?:\/|$)|\/passkeys\/login(?:\/|$)/;
 
 const segmentsOf = (path: string) => path.split("/").filter(Boolean);
 

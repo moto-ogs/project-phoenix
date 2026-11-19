@@ -756,6 +756,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/caterer/auth/passkeys/{passkeyId}",
+      "portals": [
+        "caterer"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/operator/accounts/{accountId}/tenants/{tenantId}",
       "portals": [
         "platform"
@@ -771,6 +779,22 @@
     {
       "method": "DELETE",
       "pattern": "/operator/announcements/{id}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/auth/mfa/trusted-devices/{deviceId}",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/auth/passkeys/{passkeyId}",
       "portals": [
         "platform"
       ],
@@ -1014,6 +1038,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/school/auth/mfa/trusted-devices/{deviceId}",
+      "portals": [
+        "school"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/school/calendar/appointments/{appointmentId}",
       "portals": [
         "school"
@@ -1126,6 +1158,14 @@
     {
       "method": "DELETE",
       "pattern": "/traeger/accounts/{accountId}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/traeger/auth/mfa/trusted-devices/{deviceId}",
       "portals": [
         "org"
       ],
@@ -7068,6 +7108,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/caterer/auth/passkeys",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PasskeyCredentialSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/caterer/invitations/{schoolId}/{token}",
       "portals": [
         "public"
@@ -7247,6 +7301,34 @@
         "elem": {
           "kind": "ref",
           "ref": "AnnouncementViewDetailResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/auth/mfa/trusted-devices",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TrustedDeviceDTO"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/auth/passkeys",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PasskeyCredentialSummary"
         }
       }
     },
@@ -8529,6 +8611,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/auth/mfa/trusted-devices",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TrustedDeviceDTO"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/calendar/feed",
       "portals": [
         "school"
@@ -9057,6 +9153,20 @@
       "response": {
         "kind": "ref",
         "ref": "TraegerHistoryResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/auth/mfa/trusted-devices",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TrustedDeviceDTO"
+        }
       }
     },
     {
@@ -13770,6 +13880,45 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/password",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChangePasswordRequest"
+      },
+      "no_data": true,
+      "no_retry_after_renewal": "a renewed session would send the current password twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/password-reset",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/password-reset/confirm",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetConfirmRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/register",
       "portals": [
         "tenant"
@@ -13800,6 +13949,19 @@
     },
     {
       "method": "POST",
+      "pattern": "/caterer/account/mfa/disable",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SwitchOffRequest"
+      },
+      "no_data": true,
+      "no_retry_after_renewal": "a renewed session would send the current password twice"
+    },
+    {
+      "method": "POST",
       "pattern": "/caterer/account/mfa/start",
       "portals": [
         "caterer"
@@ -13809,6 +13971,88 @@
         "ref": "CatererMFAChallengeResponse"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/account/password",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "changePasswordRequest"
+      },
+      "no_data": true,
+      "no_retry_after_renewal": "a renewed session would send the current password twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/passkeys/enrollment/challenge",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyEnrollmentChallenge"
+      },
+      "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/passkeys/register/options",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyRegisterOptionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "no_retry_after_renewal": "a renewed session would send the mailed code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/passkeys/register/verify",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyRegisterVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCredentialSummary"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/password-reset",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/password-reset/confirm",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetConfirmRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
     },
     {
       "method": "POST",
@@ -13893,6 +14137,62 @@
         "platform"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/email-confirm",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ConfirmEmailChangeRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/passkeys/enrollment/challenge",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyEnrollmentChallenge"
+      },
+      "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/passkeys/register/options",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyRegisterOptionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "no_retry_after_renewal": "a renewed session would send the mailed code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/passkeys/register/verify",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyRegisterVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCredentialSummary"
+      }
     },
     {
       "method": "POST",
@@ -14177,6 +14477,19 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/profile/password",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OperatorPasswordChangeRequest"
+      },
+      "no_data": true,
+      "no_retry_after_renewal": "a renewed session would send the current password twice"
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/schools/",
       "portals": [
         "platform"
@@ -14268,6 +14581,32 @@
         "kind": "ref",
         "ref": "scanResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/auth/password-reset",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/auth/password-reset/confirm",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetConfirmRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
     },
     {
       "method": "POST",
@@ -14568,6 +14907,19 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/mfa/disable",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SwitchOffRequest"
+      },
+      "no_data": true,
+      "no_retry_after_renewal": "a renewed session would send the current password twice"
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/mfa/start",
       "portals": [
         "parent"
@@ -14711,6 +15063,32 @@
         "ref": "SigningView"
       },
       "max_body_bytes": 409600
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/password-reset",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/password-reset/confirm",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetConfirmRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
     },
     {
       "method": "POST",
@@ -15049,6 +15427,32 @@
         "ref": "StepUpStartResponse"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/password-reset",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/password-reset/confirm",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasswordResetConfirmRequest"
+      },
+      "no_data": true,
+      "max_body_bytes": 4096
     },
     {
       "method": "POST",
@@ -35271,6 +35675,34 @@
       ]
     },
     {
+      "name": "ChangePasswordRequest",
+      "go_type": "account.ChangePasswordRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "current_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ChangePickupOverride",
       "go_type": "carecontract.ChangePickupOverride",
       "fields": [
@@ -37333,6 +37765,20 @@
       "fields": [
         {
           "name": "account_start_date",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ConfirmEmailChangeRequest",
+      "go_type": "operator.ConfirmEmailChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -61089,6 +61535,27 @@
       ]
     },
     {
+      "name": "OperatorPasswordChangeRequest",
+      "go_type": "operator.OperatorPasswordChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "current_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperatorPerson",
       "go_type": "organizationtenancy.OperatorPerson",
       "fields": [
@@ -63721,6 +64188,48 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PasswordResetConfirmRequest",
+      "go_type": "common.PasswordResetConfirmRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PasswordResetRequest",
+      "go_type": "common.PasswordResetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -85339,6 +85848,20 @@
       ]
     },
     {
+      "name": "SwitchOffRequest",
+      "go_type": "portalauth.SwitchOffRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "current_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SystemRole",
       "go_type": "organizationtenancy.SystemRole",
       "fields": [
@@ -96014,6 +96537,34 @@
           "name": "changed_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "changePasswordRequest",
+      "go_type": "catererportalhttp.changePasswordRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "current_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

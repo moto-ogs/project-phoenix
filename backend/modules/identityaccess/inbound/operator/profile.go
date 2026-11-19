@@ -20,14 +20,14 @@ func (req *UpdateProfileRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// ChangePasswordRequest represents the password change request body
-type ChangePasswordRequest struct {
+// OperatorPasswordChangeRequest represents the password change request body
+type OperatorPasswordChangeRequest struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`
 }
 
 // Bind validates the change password request
-func (req *ChangePasswordRequest) Bind(_ *http.Request) error {
+func (req *OperatorPasswordChangeRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
@@ -58,7 +58,7 @@ func (rs *Resource) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 func (rs *Resource) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
 
-	req := &ChangePasswordRequest{}
+	req := &OperatorPasswordChangeRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return

@@ -62,6 +62,7 @@ export function catalogProxyUnder(
   head: HandOffHead,
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
+  publicRoutes: readonly CatalogRoute[] = [],
 ) {
-  return handOffUnder(head, catalogProxy(routes, method));
+  return handOffUnder(head, catalogProxy(routes, method, publicRoutes));
 }

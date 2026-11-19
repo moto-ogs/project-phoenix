@@ -4,6 +4,13 @@ import {
   operatorApiPost,
 } from "~/lib/operator/route-wrapper.server";
 
+/**
+ * Temporary (#2352): the operator portal's catalog proxy answers this path
+ * once this file is gone; the contract registers it. It stays one release
+ * for an installed app with an older bundle, which sends camelCase; the
+ * current client sends the backend's snake_case. Delete it after the next
+ * production deploy.
+ */
 interface ModalBody {
   currentPassword?: string;
   newPassword?: string;

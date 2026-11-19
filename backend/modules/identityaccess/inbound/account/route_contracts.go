@@ -66,9 +66,9 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 // SelfServiceRouteContracts registers the staff portal's own account routes
 // below /auth (#2352), each path on its own in the proxy's fixed list: the
 // remembered devices, the passkey management, the account's schools, the
-// staff-view preview's candidates and the account provisioning. The passkey
-// sign-in (/auth/passkeys/login/…) stays unregistered: it mints a session,
-// which only its own route file installs.
+// staff-view preview's candidates, the account provisioning and the own
+// password change. The passkey sign-in (/auth/passkeys/login/…) stays
+// unregistered: it mints a session, which only its own route file installs.
 func SelfServiceRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	route := func(method, pattern string, request, response any) common.RouteContract {
@@ -78,6 +78,8 @@ func SelfServiceRouteContracts() []common.RouteContract {
 	enrollment.NoRetryAfterRenewal = "a renewed session would mail the code twice"
 	registerOptions := route("POST", "/passkeys/register/options", passkeyRegisterOptionsRequest{}, identityaccess.PasskeyCeremonyOptions{})
 	registerOptions.NoRetryAfterRenewal = "a renewed session would send the mailed code twice"
+	changePassword := route("POST", "/password", ChangePasswordRequest{}, nil)
+	changePassword.NoRetryAfterRenewal = "a renewed session would send the current password twice"
 	return []common.RouteContract{
 		route("GET", "/mfa/trusted-devices", nil, []common.TrustedDeviceDTO{}),
 		route("DELETE", "/mfa/trusted-devices/{"+portalauth.TrustedDeviceIDParam+"}", nil, nil),
@@ -92,5 +94,6 @@ func SelfServiceRouteContracts() []common.RouteContract {
 		route("GET", "/staff-preview/candidates", nil, []identityaccess.StaffPreviewCandidate{}),
 		route("POST", "/register", RegisterRequest{}, AccountResponse{}),
 		route("POST", "/link-to-tenant", LinkToTenantRequest{}, LinkedAccountResponse{}),
+		changePassword,
 	}
 }

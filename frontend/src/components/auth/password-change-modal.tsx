@@ -131,10 +131,12 @@ export function PasswordChangeModal({
       const response = await transportFetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // The backend's field names (#2352): every portal's route passes
+        // the body on unchanged.
         body: JSON.stringify({
-          currentPassword,
-          newPassword,
-          confirmPassword,
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
         }),
       });
 

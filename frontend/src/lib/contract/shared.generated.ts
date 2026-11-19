@@ -99,6 +99,68 @@ export const TrustedDeviceDTOSchema: z.ZodType<TrustedDeviceDTO, unknown> = obje
   last_used_at: optional(str),
 });
 
+/** Go: identityaccess.PasskeyCredentialSummary */
+export interface PasskeyCredentialSummary {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at?: string;
+}
+
+export const PasskeyCredentialSummarySchema: z.ZodType<PasskeyCredentialSummary, unknown> = object<PasskeyCredentialSummary>({
+  id: str,
+  name: str,
+  created_at: instant,
+  last_used_at: optional(instant),
+});
+
+/** Go: identityaccess.PasskeyEnrollmentChallenge */
+export interface PasskeyEnrollmentChallenge {
+  challenge_token: string;
+  masked_email: string;
+}
+
+export const PasskeyEnrollmentChallengeSchema: z.ZodType<PasskeyEnrollmentChallenge, unknown> = object<PasskeyEnrollmentChallenge>({
+  challenge_token: str,
+  masked_email: str,
+});
+
+/** Go: common.PasskeyRegisterOptionsRequest */
+export interface PasskeyRegisterOptionsRequest {
+  code?: string;
+  name?: string;
+}
+
+/** Go: identityaccess.PasskeyCeremonyOptions */
+export interface PasskeyCeremonyOptions {
+  session_id: string;
+  options: unknown | null;
+}
+
+export const PasskeyCeremonyOptionsSchema: z.ZodType<PasskeyCeremonyOptions, unknown> = object<PasskeyCeremonyOptions>({
+  session_id: str,
+  options: nullable(json),
+});
+
+/** Go: common.PasskeyRegisterVerifyRequest */
+export interface PasskeyRegisterVerifyRequest {
+  session_id?: string;
+  name?: string;
+  response?: unknown | null;
+}
+
+/** Go: common.PasswordResetRequest */
+export interface PasswordResetRequest {
+  email?: string;
+}
+
+/** Go: common.PasswordResetConfirmRequest */
+export interface PasswordResetConfirmRequest {
+  token?: string;
+  new_password?: string;
+  confirm_password?: string;
+}
+
 /** Go: account.PermissionResponse */
 export interface PermissionResponse {
   id: string;
@@ -392,6 +454,11 @@ export const EventSchema: z.ZodType<Event, unknown> = object<Event>({
 export interface InvitationAnswer {
   status?: string;
   occurrence_date?: string | null;
+}
+
+/** Go: portalauth.SwitchOffRequest */
+export interface SwitchOffRequest {
+  current_password?: string;
 }
 
 /** Go: notifications.schoolFeedEntryResponse */

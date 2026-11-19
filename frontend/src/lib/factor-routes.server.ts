@@ -67,13 +67,18 @@ export function createFactorConfirmRoute({
 }
 
 /**
- * The body of the route that switches the factor off. The current password
- * is a credential check: a wrong one comes back as 401 with its own code and
- * stays on the form, like the password change.
+ * Temporary (#2352): the body of the route files that switch the factor off,
+ * which stay one release for an installed app with an older bundle. That
+ * bundle sends `currentPassword`; the current client sends the backend's
+ * `current_password`. Delete it with those files after the next production
+ * deploy.
  */
 export function currentPasswordBody(body: unknown) {
+  const fields = body as {
+    current_password?: string;
+    currentPassword?: string;
+  };
   return {
-    current_password:
-      (body as { currentPassword?: string }).currentPassword ?? "",
+    current_password: fields.current_password ?? fields.currentPassword ?? "",
   };
 }

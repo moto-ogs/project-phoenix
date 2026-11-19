@@ -174,7 +174,7 @@ func TestOperatorPasskeyAuthenticatedHandlers(t *testing.T) {
 	rs.PasskeyEnrollmentChallenge(w, withOperatorPasskeyClaims(operatorPasskeyJSONRequest("/auth/passkeys/enrollment/challenge", `{}`), claims))
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.EqualValues(t, claims.ID, svc.enrollmentOperatorID)
-	assert.JSONEq(t, `{"challenge_token":"operator-challenge-token","masked_email":"o***@example.test"}`, w.Body.String())
+	assert.JSONEq(t, `{"status":"success","message":"Passkey enrollment code sent","data":{"challenge_token":"operator-challenge-token","masked_email":"o***@example.test"}}`, w.Body.String())
 
 	w = httptest.NewRecorder()
 	req := withOperatorPasskeyClaims(operatorPasskeyJSONRequest("/auth/passkeys/register/options", `{"code":"654321","name":" Admin laptop "}`), claims)
@@ -188,13 +188,13 @@ func TestOperatorPasskeyAuthenticatedHandlers(t *testing.T) {
 	rs.PasskeyRegisterVerify(w, withOperatorPasskeyClaims(operatorPasskeyJSONRequest("/auth/passkeys/register/verify", `{"session_id":"operator-registration","name":"Phone","response":{"id":"credential"}}`), claims))
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "operator-registration", svc.finishRegistrationReq.SessionID)
-	assert.JSONEq(t, `{"id":"9","name":"Admin laptop","created_at":"1970-01-01T00:00:01Z"}`, w.Body.String())
+	assert.JSONEq(t, `{"status":"success","message":"Passkey registered","data":{"id":"9","name":"Admin laptop","created_at":"1970-01-01T00:00:01Z"}}`, w.Body.String())
 
 	w = httptest.NewRecorder()
 	rs.PasskeyList(w, withOperatorPasskeyClaims(httptest.NewRequest(http.MethodGet, "/auth/passkeys", nil), claims))
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.EqualValues(t, claims.ID, svc.listOperatorID)
-	assert.JSONEq(t, `[{"id":"10","name":"Phone","created_at":"1970-01-01T00:00:02Z"}]`, w.Body.String())
+	assert.JSONEq(t, `{"status":"success","message":"Passkeys retrieved","data":[{"id":"10","name":"Phone","created_at":"1970-01-01T00:00:02Z"}]}`, w.Body.String())
 
 	w = httptest.NewRecorder()
 	passkeyID := svc.enrollmentOperatorID + 1

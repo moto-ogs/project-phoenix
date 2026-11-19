@@ -22,6 +22,12 @@ func RouteContracts() []common.RouteContract {
 			Portals: []common.PortalScope{common.PortalCaterer},
 			NoData:  true,
 		},
+		{
+			Method: "POST", Pattern: "/account/password",
+			Portals: []common.PortalScope{common.PortalCaterer},
+			Request: changePasswordRequest{}, NoData: true,
+			NoRetryAfterRenewal: "a renewed session would send the current password twice",
+		},
 	}
 }
 

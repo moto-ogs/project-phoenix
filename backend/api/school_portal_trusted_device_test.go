@@ -108,8 +108,11 @@ func TestSchoolPortalListsAndRevokesItsRememberedDevices(t *testing.T) {
 	counter.Stop()
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	querybudgets.AssertQueryBudget(t, "api.school.auth.mfa.trusted_devices", counter.Measurement(counter.Queries()))
-	var devices []common.TrustedDeviceDTO
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &devices))
+	var answer struct {
+		Data []common.TrustedDeviceDTO `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &answer))
+	devices := answer.Data
 	require.Len(t, devices, 1, "the device of the account at the session's school")
 
 	for name, token := range map[string]string{
@@ -131,6 +134,6 @@ func TestSchoolPortalListsAndRevokesItsRememberedDevices(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	rec = schoolDeviceRequest(t, router, http.MethodGet, schoolTrustedDevicesPath, session.AccessToken, "", nil, nil)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, "[]", rec.Body.String())
+	assert.JSONEq(t, `{"status":"success","message":"Trusted devices retrieved","data":[]}`, rec.Body.String())
 	assert.Equal(t, "mfa_required", login(cookie)["status"], "a revoked device asks for the code again")
 }

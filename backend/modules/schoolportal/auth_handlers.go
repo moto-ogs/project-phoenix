@@ -232,7 +232,7 @@ func (rs *Resource) listTrustedDevices(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	portalauth.ListTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
+	portalauth.RespondTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
 		return rs.MFAService.ListTrustedDevices(ctx, int64(claims.ID), claims.TenantID)
 	}, portalauth.RefuseMFA)
 }

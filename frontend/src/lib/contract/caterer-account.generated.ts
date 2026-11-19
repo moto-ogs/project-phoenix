@@ -2,10 +2,15 @@
 import { z } from "zod";
 import {
   bool,
+  noData,
   object,
+  requestBody,
   str,
   success,
 } from "./runtime";
+import {
+  type SwitchOffRequest,
+} from "./shared.generated";
 
 /** Go: catererauth.CatererMFAStatusResponse */
 export interface CatererMFAStatusResponse {
@@ -29,6 +34,13 @@ export const CatererMFAChallengeResponseSchema: z.ZodType<CatererMFAChallengeRes
   masked_email: str,
 });
 
+/** Go: catererportalhttp.changePasswordRequest */
+export interface changePasswordRequest {
+  current_password?: string;
+  new_password?: string;
+  confirm_password?: string;
+}
+
 export const routes = {
   "GET /caterer/account/mfa": {
     method: "GET",
@@ -36,11 +48,27 @@ export const routes = {
     portals: ["caterer"],
     response: success(CatererMFAStatusResponseSchema),
   },
+  "POST /caterer/account/mfa/disable": {
+    method: "POST",
+    pattern: "/caterer/account/mfa/disable",
+    portals: ["caterer"],
+    noRetryAfterRenewal: "a renewed session would send the current password twice",
+    request: requestBody<SwitchOffRequest>(),
+    response: noData,
+  },
   "POST /caterer/account/mfa/start": {
     method: "POST",
     pattern: "/caterer/account/mfa/start",
     portals: ["caterer"],
     noRetryAfterRenewal: "a renewed session would mail the code twice",
     response: success(CatererMFAChallengeResponseSchema),
+  },
+  "POST /caterer/account/password": {
+    method: "POST",
+    pattern: "/caterer/account/password",
+    portals: ["caterer"],
+    noRetryAfterRenewal: "a renewed session would send the current password twice",
+    request: requestBody<changePasswordRequest>(),
+    response: noData,
   },
 } as const;

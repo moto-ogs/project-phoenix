@@ -30,6 +30,7 @@ export const CATALOG_OUTSIDE_MOUNTS = {
     "/auth/link-to-tenant",
     "/auth/register",
     "/auth/staff-preview/candidates",
+    "/auth/password/",
   ],
   parent: [
     "/analytics-consent",
@@ -46,7 +47,9 @@ export const CATALOG_OUTSIDE_MOUNTS = {
  * The same for the routes without a session (`portalRoutes.public`): the
  * one-time link of a care contract mail lives at
  * `/public/care-contract-signing`, and the staff portal's proxy serves it as
- * `/api/public/care-contract-signing/…`, the path the link's page calls.
+ * `/api/public/care-contract-signing/…`, the path the link's page calls. The
+ * staff portal's password reset lives at `/auth/password-reset` beside
+ * `/api`; its hand-off file below `/api/auth` reaches it.
  *
  * The link's page lives under `/parents/…` on the parents host, yet the staff
  * portal's proxy (`app/api/[...path]`) serves it on purpose: its public path
@@ -56,7 +59,7 @@ export const CATALOG_OUTSIDE_MOUNTS = {
  * have to name the head as well, for no gain.
  */
 export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
-  tenant: ["/public/care-contract-signing"],
+  tenant: ["/public/care-contract-signing", "/auth/password-reset"],
 } as const satisfies Record<string, readonly string[]>;
 
 const isParam = (segment: string) =>

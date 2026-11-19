@@ -108,7 +108,7 @@ func (rs *Resource) listPasskeys(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, passkeys)
+	common.Respond(w, r, http.StatusOK, passkeys, "Passkeys retrieved")
 }
 
 func (rs *Resource) revokePasskey(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +131,7 @@ func (rs *Resource) passkeyEnrollmentChallenge(w http.ResponseWriter, r *http.Re
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, challenge)
+	common.Respond(w, r, http.StatusOK, challenge, "Passkey enrollment code sent")
 }
 
 func (rs *Resource) passkeyRegisterOptions(w http.ResponseWriter, r *http.Request) {
@@ -147,7 +147,7 @@ func (rs *Resource) passkeyRegisterOptions(w http.ResponseWriter, r *http.Reques
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, options)
+	common.Respond(w, r, http.StatusOK, options, "Passkey registration started")
 }
 
 func (rs *Resource) passkeyRegisterVerify(w http.ResponseWriter, r *http.Request) {
@@ -163,5 +163,5 @@ func (rs *Resource) passkeyRegisterVerify(w http.ResponseWriter, r *http.Request
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, summary)
+	common.Respond(w, r, http.StatusOK, summary, "Passkey registered")
 }

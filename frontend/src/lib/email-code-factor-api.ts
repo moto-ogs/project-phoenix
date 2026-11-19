@@ -76,7 +76,7 @@ export function emailCodeFactorApi(base: string): EmailCodeFactorApi {
     async disable(currentPassword) {
       await authFetch<unknown>(`${base}/disable`, {
         method: "POST",
-        body: { currentPassword },
+        body: { current_password: currentPassword },
       });
     },
   };
