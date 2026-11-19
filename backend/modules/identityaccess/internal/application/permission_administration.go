@@ -12,6 +12,28 @@ import (
 
 const opAssignPermissionToRole = "assign permission to role"
 
+func (r *RoleAdministration) GetPermission(ctx context.Context, id int64) (value0 identityaccess.Permission, err error) {
+	if r == nil {
+		return identityaccess.Permission{}, errRoleAdministrationUnavailable
+	}
+	operation := func(ctx context.Context) (domain.ManagedPermission, error) {
+		permission, found, err := r.store.FindPermission(ctx, id)
+		if err != nil {
+			return domain.ManagedPermission{}, failed("get permission", err)
+		}
+		if !found {
+			return domain.ManagedPermission{}, failed("get permission", identityaccess.ErrPermissionNotFound)
+		}
+		return permission, nil
+	}
+	err = r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
+		result, err := operation(bindRuntime(r.attach, txCtx))
+		value0 = identityaccess.Permission(result)
+		return roleError(err)
+	})
+	return
+}
+
 func (r *RoleAdministration) GetPermissionByName(ctx context.Context, name string) (value0 identityaccess.Permission, err error) {
 	if r == nil {
 		return identityaccess.Permission{}, errRoleAdministrationUnavailable

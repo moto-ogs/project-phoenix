@@ -301,6 +301,22 @@ func (rs *Resource) createPermission(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusCreated, toPermissionResponse(permission), "Permission created successfully")
 }
 
+// getPermissionByID handles getting a permission by ID
+func (rs *Resource) getPermissionByID(w http.ResponseWriter, r *http.Request) {
+	id, ok := common.ParseIntIDWithError(w, r, "id", common.MsgInvalidPermissionID)
+	if !ok {
+		return
+	}
+
+	permission, err := rs.Sessions.GetPermission(r.Context(), int64(id))
+	if err != nil {
+		common.RenderError(w, r, common.ErrorNotFound(errors.New("permission not found")))
+		return
+	}
+
+	common.Respond(w, r, http.StatusOK, toPermissionResponse(permission), "Permission retrieved successfully")
+}
+
 // listPermissions handles listing permissions
 func (rs *Resource) listPermissions(w http.ResponseWriter, r *http.Request) {
 	filter := identityaccess.PermissionFilter{

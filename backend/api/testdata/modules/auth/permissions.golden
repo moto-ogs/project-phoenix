@@ -1,2 +1,3 @@
 GET /auth/permissions/ -> basis
+GET /auth/permissions/{id}/ -> basis
 POST /auth/permissions/ -> basis

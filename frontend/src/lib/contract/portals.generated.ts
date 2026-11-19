@@ -903,6 +903,7 @@ export const portalRoutes = {
     authPasskeys["POST /auth/passkeys/register/verify"],
     authPassword["POST /auth/password"],
     authPermissions["GET /auth/permissions/"],
+    authPermissions["GET /auth/permissions/{id}/"],
     authRegister["POST /auth/register"],
     authRoles["DELETE /auth/roles/{id}/"],
     authRoles["GET /auth/roles/"],

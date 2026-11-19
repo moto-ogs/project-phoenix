@@ -87,6 +87,29 @@ func TestPermissionPersistence_Create(t *testing.T) {
 	})
 }
 
+func TestPermissionPersistence_FindByID(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+
+	repo := roleAdministrationOf(t, setupAuthService(t, db))
+	ctx := testpkg.Ctx(t)
+
+	t.Run("finds existing permission", func(t *testing.T) {
+		permission := testpkg.CreateTestPermission(t, db, "FindByID", "resource", "read")
+
+		found, err := repo.GetPermission(ctx, permission.ID)
+		require.NoError(t, err)
+		assert.Equal(t, permission.ID, found.ID)
+		assert.Contains(t, found.Name, "FindByID")
+	})
+
+	t.Run("returns error for non-existent permission", func(t *testing.T) {
+		_, err := repo.GetPermission(ctx, 0)
+		require.Error(t, err)
+	})
+}
+
 func TestPermissionPersistence_FindByName(t *testing.T) {
 	t.Parallel()
 
