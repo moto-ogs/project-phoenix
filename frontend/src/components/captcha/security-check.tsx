@@ -170,7 +170,7 @@ export function SecurityCheck({
             scriptOptions={{ id: SCRIPT_ID, onError: () => fail("script") }}
             options={{ theme: "light" }}
             onBeforeInteractive={() => setReadyAttempt(attempt)}
-            onSuccess={(value) => {
+            onSuccess={(value: string) => {
               setReadyAttempt(attempt);
               setFailedAttempt(-1);
               onToken(value);

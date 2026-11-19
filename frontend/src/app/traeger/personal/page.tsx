@@ -8,20 +8,21 @@
 import {
   IdentificationCardIcon,
   LinkSimpleIcon,
-  LockKeyIcon,
+  MagnifyingGlassIcon,
   UploadSimpleIcon,
   UserPlusIcon,
 } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
+import { StaffNotReleasedPage } from "~/components/traeger/staff/staff-not-released-page";
 import {
   parseStaffCreateRecord,
   parseStaffOverviewTab,
   staffSubpageHref,
   type StaffOverviewTab,
 } from "~/components/traeger/staff/staff-overview-tab";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
   STAFF_MATCH_LABELS,
@@ -29,15 +30,17 @@ import {
 } from "~/components/traeger/staff/staff-record-format";
 import { ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
+import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
-import { IconTile } from "~/components/ui/icon-tile";
-import { SectionCard } from "~/components/ui/section-card";
+import type {
+  ActiveFilter,
+  FilterConfig,
+} from "~/components/ui/page-header/types";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
-import { peopleConcept } from "~/lib/concepts/people";
-import { staffConcept } from "~/lib/concepts/staff";
 import { formatDate } from "~/lib/date-helpers";
+import { foldForSearch } from "~/lib/search-fold";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   downloadStaffRecordList,
@@ -49,8 +52,48 @@ import {
   type StaffSuggestion,
 } from "~/lib/traeger-staff-api";
 
-const INFO =
-  "Hier führst du jede Person, die dein Träger beschäftigt, mit einer Akte über alle Schulen. moto schlägt vor, welche Beschäftigungen an verschiedenen Schulen dieselbe Person sind. Du prüfst jeden Vorschlag und verknüpfst ihn. Die Akte führt die Personalnummer des Trägers und die Bank- und Steuerdaten. Die Schulen arbeiten weiter mit ihrem Personal wie bisher. Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte.";
+const INFO = (
+  <div className="space-y-2">
+    <p>
+      Hier führst du jede Person, die dein Träger beschäftigt, mit einer Akte
+      über alle Schulen. Die Akte führt die Personalnummer des Trägers und die
+      Bank- und Steuerdaten. Die Schulen arbeiten weiter mit ihrem Personal wie
+      bisher. Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine
+      Akte.
+    </p>
+    <p>
+      Unter „Vorschläge“ stehen Beschäftigungen, die wohl dieselbe Person sind.
+      Öffne einen Vorschlag, prüfe die Werte und lege die Akte an.
+    </p>
+    <p>
+      Unter „Akten“ gilt jede Akte für alle Schulen. Öffne eine Akte für
+      Personalnummer, Bank und Steuer und den Verlauf.
+    </p>
+    <p>
+      Unter „Ohne Akte“ stehen Personen, die an einer Schule arbeiten und noch
+      keine Akte haben. Öffne eine Person, um ihre Akte anzulegen.
+    </p>
+  </div>
+);
+
+/** Passt der Name (oder die Personalnummer) zur Suche? */
+function matchesSearch(
+  query: string,
+  person: {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly personnelNumber?: string | null;
+  },
+): boolean {
+  if (query === "") return true;
+  const haystack = foldForSearch(
+    `${person.firstName} ${person.lastName} ${person.lastName} ${person.firstName} ${person.personnelNumber ?? ""}`,
+  );
+  return foldForSearch(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => haystack.includes(word));
+}
 
 const RECORD_COLUMNS: DataTableColumn<StaffRecordSummary>[] = [
   {
@@ -86,22 +129,25 @@ const RECORD_COLUMNS: DataTableColumn<StaffRecordSummary>[] = [
   {
     key: "employments",
     header: "Einsatzorte",
-    render: (record) => (
-      <span className="flex max-w-full min-w-0 flex-wrap gap-1.5">
-        {record.employments.map((employment) => (
-          <StatusBadge
-            key={`${employment.schoolId}-${employment.staffId}`}
-            label={
-              employment.active
-                ? employment.schoolName
-                : `${employment.schoolName} (beendet)`
-            }
-            tone={employment.active ? "outline" : "gray"}
-            wrap
-          />
-        ))}
-      </span>
-    ),
+    render: (record) =>
+      record.employments.length === 0 ? (
+        <span className="text-sm text-gray-500">–</span>
+      ) : (
+        <span className="flex max-w-full min-w-0 flex-wrap gap-1.5">
+          {record.employments.map((employment) => (
+            <StatusBadge
+              key={`${employment.schoolId}-${employment.staffId}`}
+              label={
+                employment.active
+                  ? employment.schoolName
+                  : `${employment.schoolName} (beendet)`
+              }
+              tone={employment.active ? "outline" : "gray"}
+              wrap
+            />
+          ))}
+        </span>
+      ),
     sortValue: (record) => record.employments.length,
     stacked: "field",
   },
@@ -247,6 +293,10 @@ function StaffRecordsContent() {
     StaffLinkInput,
     "choices"
   > | null>(null);
+  // Suche nach Name oder Personalnummer und Filter nach Schule (#7415), wie
+  // die Personalliste der Schule. Sie gelten in allen drei Reitern.
+  const [query, setQuery] = useState("");
+  const [schoolId, setSchoolId] = useState("");
   // „Akte anlegen“ aus der Rückfrage beim Einstellen (#7378) öffnet den
   // Dialog für genau diese Person; die Adresse trägt sie, bis er schließt.
   const requested = parseStaffCreateRecord(searchParams);
@@ -288,6 +338,43 @@ function StaffRecordsContent() {
         .flatMap((suggestion) => suggestion.members),
     [overview],
   );
+  const shownProposals = useMemo(
+    () =>
+      proposals.filter((suggestion) => {
+        const record = suggestion.recordId
+          ? records.get(suggestion.recordId)
+          : undefined;
+        const inSchool =
+          schoolId === "" ||
+          suggestion.members.some((member) => member.schoolId === schoolId);
+        const found =
+          (record !== undefined && matchesSearch(query, record)) ||
+          suggestion.members.some((member) => matchesSearch(query, member));
+        return inSchool && found;
+      }),
+    [proposals, records, query, schoolId],
+  );
+  const shownRecords = useMemo(
+    () =>
+      (overview?.records ?? []).filter(
+        (record) =>
+          matchesSearch(query, record) &&
+          (schoolId === "" ||
+            record.employments.some(
+              (employment) => employment.schoolId === schoolId,
+            )),
+      ),
+    [overview, query, schoolId],
+  );
+  const shownSingles = useMemo(
+    () =>
+      singles.filter(
+        (candidate) =>
+          matchesSearch(query, candidate) &&
+          (schoolId === "" || candidate.schoolId === schoolId),
+      ),
+    [singles, query, schoolId],
+  );
   const columns = useMemo(() => suggestionColumns(records), [records]);
   const released = overview?.release != null;
   const active: StaffOverviewTab =
@@ -325,12 +412,90 @@ function StaffRecordsContent() {
   const recordHref = (id: string) =>
     staffSubpageHref(`/traeger/personal/${id}`, active);
 
+  const exportItems = useTraegerListExportItems({
+    download: downloadStaffRecordList,
+    scope:
+      "Alle Akten, ohne Suche und Filter. Jeder Download steht im Zugriffsprotokoll der Schulen.",
+    fallbackName: "personalakten",
+    errorObject: "die Personalakten",
+    unavailable: !overview || overview.records.length === 0,
+  });
+
+  if (overview && !released) {
+    return (
+      <StaffNotReleasedPage
+        title="Personalakten"
+        description="Bis zur Freischaltung führt jede Schule ihr Personal selbst."
+      />
+    );
+  }
+
+  const schools = overview?.schools ?? [];
+  const chosenSchool = schools.find((school) => school.id === schoolId);
+  const filters: FilterConfig[] =
+    schools.length > 1
+      ? [
+          {
+            id: "school",
+            label: "Schule",
+            type: "dropdown",
+            value: schoolId,
+            onChange: (value) => setSchoolId(value as string),
+            options: [
+              { value: "", label: "Alle Schulen" },
+              ...schools.map((school) => ({
+                value: school.id,
+                label: school.name,
+              })),
+            ],
+          },
+        ]
+      : [];
+  const activeFilters: ActiveFilter[] = [
+    ...(query
+      ? [{ id: "search", label: `„${query}“`, onRemove: () => setQuery("") }]
+      : []),
+    ...(chosenSchool
+      ? [
+          {
+            id: "school",
+            label: chosenSchool.name,
+            onRemove: () => setSchoolId(""),
+          },
+        ]
+      : []),
+  ];
+  const filtering = activeFilters.length > 0;
+  const clearFilters = () => {
+    setQuery("");
+    setSchoolId("");
+  };
+  // Findet die Suche nichts, nennt der Leerzustand das und setzt zurück.
+  const noMatch = (
+    <EmptyState
+      icon={<MagnifyingGlassIcon className="h-12 w-12" aria-hidden="true" />}
+      title="Kein Treffer."
+      description="Niemand passt zu Suche und Schule. Prüfe die Schreibweise oder wähle alle Schulen."
+      action={
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          onClick={clearFilters}
+          noTooltip="Filter zurücksetzen sagt, was passiert; es ändert keine Daten."
+        >
+          Filter zurücksetzen
+        </Button>
+      }
+    />
+  );
+
   return (
     <TenantPage
       title="Personalakten"
       info={INFO}
       stats={
-        overview && released ? (
+        overview ? (
           <TenantPageStats
             items={[
               {
@@ -351,44 +516,51 @@ function StaffRecordsContent() {
       }
       statsLoading={loading}
       actions={
-        overview && released ? (
-          <>
-            <TraegerListExportMenu
-              download={downloadStaffRecordList}
-              scope="Alle Akten"
-              ariaLabel="Personalakten herunterladen"
-              tooltip="Zeigt die Formate für alle Akten. Jeder Download steht im Zugriffsprotokoll der Schulen."
-              fallbackName="personalakten"
-              errorObject="die Personalakten"
-              unavailable={overview.records.length === 0}
-            />
-            <ButtonLink
-              href={staffSubpageHref("/traeger/personal/import", active)}
-              className="gap-2"
-              variant="outline"
-              size="md"
-              tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
-            >
-              <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-              Personal importieren
-            </ButtonLink>
-            <ButtonLink
-              href={staffSubpageHref("/traeger/personal/einstellen", active)}
-              className="gap-2"
-              variant="primary"
-              size="md"
-              tooltip="Öffnet das Formular für eine neue Person mit Akte, Vertrag und Schulen."
-            >
-              <UserPlusIcon className="h-4 w-4" aria-hidden="true" />
-              Person einstellen
-            </ButtonLink>
-          </>
+        overview ? (
+          <ButtonLink
+            href={staffSubpageHref("/traeger/personal/einstellen", active)}
+            className="gap-2"
+            variant="primary"
+            size="md"
+            tooltip="Öffnet das Formular für eine neue Person mit Akte, Vertrag und Schulen."
+          >
+            <UserPlusIcon className="h-4 w-4" aria-hidden="true" />
+            Person einstellen
+          </ButtonLink>
         ) : undefined
+      }
+      search={
+        overview
+          ? {
+              value: query,
+              onChange: setQuery,
+              placeholder: "Name oder Nummer suchen…",
+            }
+          : undefined
+      }
+      filters={filters}
+      activeFilters={activeFilters}
+      onClearAllFilters={clearFilters}
+      overflowMenu={
+        overview
+          ? [
+              {
+                label: "Personal importieren",
+                description: "Übernimmt Personal aus einer CSV-Datei.",
+                icon: (
+                  <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+                ),
+                href: staffSubpageHref("/traeger/personal/import", active),
+                onClick: () => undefined,
+              },
+              ...exportItems,
+            ]
+          : undefined
       }
       error={error}
       loading={loading}
       tabs={
-        released
+        overview
           ? {
               value: active,
               onChange: changeTab,
@@ -420,39 +592,21 @@ function StaffRecordsContent() {
         />
       }
     >
-      {overview && !released ? (
-        <SectionCard>
-          <EmptyState
-            icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
-            title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei, sobald dein Träger bestätigt hat: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung. Bis dahin führt jede Schule ihr Personal selbst."
-          />
-        </SectionCard>
-      ) : null}
-
-      {overview && released && active === "vorschlaege" ? (
-        <SectionCard
-          leading={
-            <IconTile
-              size="section"
-              tone="neutral"
-              icon={<LinkSimpleIcon className="h-5 w-5" aria-hidden="true" />}
-            />
+      {overview && active === "vorschlaege" ? (
+        <DataTable
+          columns={columns}
+          rows={[...shownProposals]}
+          getRowKey={(suggestion) =>
+            suggestion.members
+              .map((member) => `${member.schoolId}-${member.staffId}`)
+              .join("+")
           }
-          title="Vorschläge zum Verknüpfen"
-          description="moto hat diese Beschäftigungen gefunden, die wohl dieselbe Person sind. Öffne einen Vorschlag, prüfe die Werte und lege die Akte an."
-        >
-          <DataTable
-            columns={columns}
-            rows={[...proposals]}
-            getRowKey={(suggestion) =>
-              suggestion.members
-                .map((member) => `${member.schoolId}-${member.staffId}`)
-                .join("+")
-            }
-            stackedOnMobile
-            onRowClick={(suggestion) => setLinking(linkRequestOf(suggestion))}
-            emptyState={
+          stackedOnMobile
+          onRowClick={(suggestion) => setLinking(linkRequestOf(suggestion))}
+          emptyState={
+            filtering && proposals.length > 0 ? (
+              noMatch
+            ) : (
               <EmptyState
                 icon={
                   <LinkSimpleIcon className="h-12 w-12" aria-hidden="true" />
@@ -460,24 +614,22 @@ function StaffRecordsContent() {
                 title="Kein offener Vorschlag."
                 description="Sobald dieselbe Person an zwei Schulen arbeitet, steht der Vorschlag hier."
               />
-            }
-          />
-        </SectionCard>
+            )
+          }
+        />
       ) : null}
 
-      {overview && released && active === "akten" ? (
-        <SectionCard
-          concept={staffConcept}
-          title="Akten"
-          description="Jede Akte gilt für alle Schulen. Öffne eine Akte für Personalnummer, Bank und Steuer und den Verlauf."
-        >
-          <DataTable
-            columns={RECORD_COLUMNS}
-            rows={[...overview.records]}
-            getRowKey={(record) => record.id}
-            stackedOnMobile
-            onRowClick={(record) => router.push(recordHref(record.id))}
-            emptyState={
+      {overview && active === "akten" ? (
+        <DataTable
+          columns={RECORD_COLUMNS}
+          rows={[...shownRecords]}
+          getRowKey={(record) => record.id}
+          stackedOnMobile
+          onRowClick={(record) => router.push(recordHref(record.id))}
+          emptyState={
+            filtering && overview.records.length > 0 ? (
+              noMatch
+            ) : (
               <EmptyState
                 icon={
                   <IdentificationCardIcon
@@ -486,42 +638,40 @@ function StaffRecordsContent() {
                   />
                 }
                 title="Noch keine Akte."
-                description="Stelle oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfe einen Vorschlag, lege unter „Ohne Akte“ eine Akte an, oder nutze „Personal importieren“."
+                description="Stelle oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfe einen Vorschlag, lege unter „Ohne Akte“ eine Akte an, oder wähle im Menü mit den drei Punkten „Personal importieren“."
               />
-            }
-          />
-        </SectionCard>
+            )
+          }
+        />
       ) : null}
 
-      {overview && released && active === "ohne-akte" ? (
-        <SectionCard
-          concept={peopleConcept}
-          title="Personal ohne Akte"
-          description="Diese Personen arbeiten an einer Schule und haben noch keine Akte. Öffne eine Person, um ihre Akte anzulegen."
-        >
-          <DataTable
-            columns={CANDIDATE_COLUMNS}
-            rows={[...singles]}
-            getRowKey={(candidate) =>
-              `${candidate.schoolId}-${candidate.staffId}`
-            }
-            stackedOnMobile
-            onRowClick={(candidate) =>
-              setLinking({
-                recordId: null,
-                members: [
-                  { schoolId: candidate.schoolId, staffId: candidate.staffId },
-                ],
-              })
-            }
-            emptyState={
+      {overview && active === "ohne-akte" ? (
+        <DataTable
+          columns={CANDIDATE_COLUMNS}
+          rows={[...shownSingles]}
+          getRowKey={(candidate) =>
+            `${candidate.schoolId}-${candidate.staffId}`
+          }
+          stackedOnMobile
+          onRowClick={(candidate) =>
+            setLinking({
+              recordId: null,
+              members: [
+                { schoolId: candidate.schoolId, staffId: candidate.staffId },
+              ],
+            })
+          }
+          emptyState={
+            filtering && singles.length > 0 ? (
+              noMatch
+            ) : (
               <EmptyState
                 title="Alle Personen haben eine Akte."
                 description="Personal, das eine Schule selbst anlegt, erscheint hier."
               />
-            }
-          />
-        </SectionCard>
+            )
+          }
+        />
       ) : null}
     </TenantPage>
   );

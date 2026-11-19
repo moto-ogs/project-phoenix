@@ -379,7 +379,7 @@ describe("TraegerStaffRecordPage", () => {
     ).closest("section");
     expect(card).not.toBeNull();
     expect(within(card!).getByText("02.04.1990")).toBeInTheDocument();
-    fireEvent.click(within(card!).getByRole("button", { name: /Ändern/ }));
+    fireEvent.click(within(card!).getByRole("button", { name: /Bearbeiten/ }));
 
     const firstName = within(card!).getByLabelText(/Vorname/);
     fireEvent.change(firstName, { target: { value: "  " } });
@@ -434,10 +434,10 @@ describe("TraegerStaffRecordPage", () => {
     const card = (
       await screen.findByText("Person", { selector: "h2" })
     ).closest("section");
-    fireEvent.click(within(card!).getByRole("button", { name: /Ändern/ }));
+    fireEvent.click(within(card!).getByRole("button", { name: /Bearbeiten/ }));
     fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
     expect(
-      await within(card!).findByRole("button", { name: /Ändern/ }),
+      await within(card!).findByRole("button", { name: /Bearbeiten/ }),
     ).toBeInTheDocument();
     expect(api.updateStaffPerson).not.toHaveBeenCalled();
   });

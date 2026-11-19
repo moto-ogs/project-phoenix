@@ -64,7 +64,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
           "Für den Start mit moto: du übernimmst dein Personal aus dem Lohnprogramm oder aus einer Liste. moto erkennt jede Person an der Personalnummer.",
         steps: [
           "Speichere dein Personal als CSV-Datei. Eine Zeile je Person, Überschriften in der ersten Zeile. Pflicht sind Personalnummer, Vorname und Nachname. Eine Vorlage bekommst du mit `Beispieldatei`.",
-          "Wähle in der Navigation `Personalakten` und oben `Personal importieren`.",
+          "Wähle in der Navigation `Personalakten`. Wähle oben rechts das Menü mit den drei Punkten und dann `Personal importieren`.",
           "Wähle bei `Datei wählen` deine Datei.",
           "Prüfe bei `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt.",
           "Prüfe bei `Prüfen und übernehmen` jede Zeile. `Zu prüfen` zeigt, warum eine Zeile draußen bleibt.",
@@ -76,8 +76,8 @@ export function traegerStaffRecordsTopic(): HelpTopic {
         title: "Die Liste der Akten herunterladen",
         steps: [
           "Wähle in der Navigation `Personalakten`.",
-          "Wähle oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
-          "Die Datei enthält alle Akten mit Personalnummer und Einsatzorten. Bank- und Steuerdaten stehen nicht darin.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+          "Die Datei enthält alle Akten mit Personalnummer und Einsatzorten, ohne Suche und Filter. Bank- und Steuerdaten stehen nicht darin.",
         ],
       },
       {
@@ -86,7 +86,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
           "Zum Beispiel, wenn der Geburtstag fehlt oder ein Name falsch geschrieben ist. Die Angaben an den Schulen ändern sich dadurch nicht.",
         steps: [
           "Öffne die Akte im Reiter `Akten`.",
-          "Wähle bei `Person` den Knopf `Ändern`.",
+          "Wähle bei `Person` den Knopf `Bearbeiten`.",
           "Korrigiere Vorname, Nachname oder Geburtstag. Den Geburtstag tippst du als TT.MM.JJJJ, auf dem Handy auch ohne Punkte.",
           "Wähle `Speichern`.",
         ],
@@ -122,6 +122,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
     result:
       "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher. Vertrag und Soll trägst du danach in der Akte ein.",
     notes: [
+      "Über der Liste suchst du nach Name oder Personalnummer. Mit `Schule` zeigst du nur die Personen einer Schule. Suche und Schule gelten in allen drei Reitern.",
       "Du kannst dieselbe Datei noch einmal laden. Eine neue Personalnummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende IBAN, Steuer-ID oder SV-Nummer ein. Bestehende Werte ändert der Import nie. Führende Nullen zählen nicht: 00123 und 123 sind dieselbe Nummer.",
       "Eine eingestellte Person hat an der Schule noch keinen Zugang. Die Schule lädt sie ein und gibt ihr eine Rolle. Die E-Mail-Adresse aus dem Formular steht dafür in den Stammdaten der Schule.",
       "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigst du unter `Vorschläge`.",

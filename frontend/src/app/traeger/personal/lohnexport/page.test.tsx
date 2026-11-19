@@ -37,6 +37,7 @@ const navigation = vi.hoisted(() => ({
 }));
 const download = vi.hoisted(() => ({ downloadBlob: vi.fn() }));
 
+vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-staff-exports-api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...api,
@@ -461,9 +462,13 @@ describe("TraegerPayrollExportPage", () => {
       }),
     );
     renderPage();
+    // #7415: die Bauart „Funktion nicht eingeschaltet“ mit dem Satz der Seite.
     expect(
-      await screen.findByText(
-        "Personal beim Träger ist noch nicht freigeschaltet.",
+      await screen.findByText("Diese Funktion ist nicht eingeschaltet"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        /Bis zur Freischaltung rechnet jede Schule ihren Lohn selbst ab\. Das moto-Team schaltet/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Herunterladen/ })).toBeNull();

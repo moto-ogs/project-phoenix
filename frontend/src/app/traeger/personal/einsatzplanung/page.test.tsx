@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   fetchTraegerFutureShifts: vi.fn(),
 }));
 
+vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-planning-api", () => api);
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -293,9 +294,13 @@ describe("TraegerStaffPlanningPage", () => {
       }),
     );
     renderPage();
+    // #7415: die Bauart „Funktion nicht eingeschaltet“ mit dem Satz der Seite.
     expect(
-      await screen.findByText(
-        "Personal beim Träger ist noch nicht freigeschaltet.",
+      await screen.findByText("Diese Funktion ist nicht eingeschaltet"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        /Bis zur Freischaltung plant jede Schule ihren Dienstplan selbst\. Das moto-Team schaltet/,
       ),
     ).toBeInTheDocument();
   });

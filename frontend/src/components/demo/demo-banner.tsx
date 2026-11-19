@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import {
   ArrowCounterClockwiseIcon,
   CaretDownIcon,
@@ -312,7 +318,7 @@ function ActiveDemoBanner() {
         // `compact`: Höhe des schmalen Streifens (#4346), dichte Leiste (#5529).
         size="compact"
         className="ml-auto shrink-0"
-        onClick={(event) => {
+        onClick={(event: MouseEvent<HTMLAnchorElement>) => {
           trackDemoEvent("demo_start_clicked", visit ?? null);
           // A modified click still opens the calendar in a new tab.
           if (

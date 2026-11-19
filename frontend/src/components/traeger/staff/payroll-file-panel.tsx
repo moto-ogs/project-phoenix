@@ -6,6 +6,7 @@
 // verhindert, steht als Liste mit dem nächsten Schritt darunter.
 
 import { DownloadSimpleIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { CONTRACT_KIND_LABELS } from "~/components/traeger/staff/staff-contract-format";
@@ -31,6 +32,7 @@ import {
   type PayrollKindCount,
   type PayrollReport,
 } from "~/lib/traeger-staff-exports-api";
+import { traegerPath } from "~/lib/traeger-url";
 
 const FORMAT_ITEMS: readonly { value: PayrollFormat; label: string }[] = [
   { value: "datev_lodas", label: "LODAS" },
@@ -94,7 +96,9 @@ function blockersOf(
       text: `${personName(person)} hat noch keine Personalnummer.`,
       action: (
         <ButtonLink
-          href={`/traeger/personal/${encodeURIComponent(person.recordId)}`}
+          href={traegerPath(
+            `/traeger/personal/${encodeURIComponent(person.recordId)}`,
+          )}
           variant="surface"
           size="compact"
           aria-label={`Personalakte von ${personName(person)} öffnen`}
@@ -142,8 +146,8 @@ function BlockerList({ blockers }: Readonly<{ blockers: readonly Blocker[] }>) {
         <Button
           type="button"
           variant="ghost"
-          size="compact"
-          className="mt-3"
+          size="md"
+          className="mt-2 w-full"
           aria-expanded={expanded}
           aria-controls="payroll-blockers"
           tooltip={
@@ -153,7 +157,17 @@ function BlockerList({ blockers }: Readonly<{ blockers: readonly Blocker[] }>) {
           }
           onClick={() => setExpanded((current) => !current)}
         >
-          {expanded ? "Weniger anzeigen" : `${hidden} weitere anzeigen`}
+          {expanded ? (
+            <>
+              Weniger anzeigen
+              <ChevronUp className="size-4" aria-hidden="true" />
+            </>
+          ) : (
+            <>
+              {hidden} weitere anzeigen
+              <ChevronDown className="size-4" aria-hidden="true" />
+            </>
+          )}
         </Button>
       ) : null}
     </SectionCard>

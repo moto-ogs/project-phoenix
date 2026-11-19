@@ -6,16 +6,15 @@
 // des Vertrags. Ein Monat gilt für alle drei Reiter; Standard ist der
 // Vormonat, denn den rechnet das Lohnbüro ab.
 
-import { LockKeyIcon } from "@phosphor-icons/react";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { PayrollFilePanel } from "~/components/traeger/staff/payroll-file-panel";
 import { PayrollSettingsPanel } from "~/components/traeger/staff/payroll-settings-panel";
+import { StaffNotReleasedPage } from "~/components/traeger/staff/staff-not-released-page";
 import { TimeExportPanel } from "~/components/traeger/staff/time-export-panel";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { EmptyState } from "~/components/ui/empty-state";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
@@ -171,6 +170,15 @@ function PayrollExportContent() {
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
+  if (notReleased) {
+    return (
+      <StaffNotReleasedPage
+        title="Lohnexport"
+        description="Bis zur Freischaltung rechnet jede Schule ihren Lohn selbst ab."
+      />
+    );
+  }
+
   const isThisMonth = sameMonth(shown, thisMonth);
   const contextBar = (
     <PlanningContextBar
@@ -197,37 +205,22 @@ function PayrollExportContent() {
     <TenantPage
       title="Lohnexport"
       info={INFO}
-      searchSlot={notReleased ? undefined : contextBar}
-      tabs={
-        notReleased
-          ? undefined
-          : {
-              value: tab,
-              onChange: changeTab,
-              items: TABS,
-              label: "Bereiche des Lohnexports",
-              inUrl: true,
-            }
-      }
+      searchSlot={contextBar}
+      tabs={{
+        value: tab,
+        onChange: changeTab,
+        items: TABS,
+        label: "Bereiche des Lohnexports",
+        inUrl: true,
+      }}
       error={
-        notReleased
-          ? null
-          : tab === "zeitexport"
-            ? timesLoad.error
-            : (payrollLoad.error ??
-              (tab === "lohnarten" ? settings.loadError : null))
+        tab === "zeitexport"
+          ? timesLoad.error
+          : (payrollLoad.error ??
+            (tab === "lohnarten" ? settings.loadError : null))
       }
     >
-      {notReleased ? (
-        <SectionCard>
-          <EmptyState
-            icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
-            title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei. Bis dahin rechnet jede Schule ihren Lohn selbst ab."
-          />
-        </SectionCard>
-      ) : null}
-      {!notReleased && tab === "lohndatei" ? (
+      {tab === "lohndatei" ? (
         <PayrollFilePanel
           report={payroll}
           monthLabel={shownLabel}
@@ -238,7 +231,7 @@ function PayrollExportContent() {
           onOpenWageTypes={() => changeTab("lohnarten")}
         />
       ) : null}
-      {!notReleased && tab === "zeitexport" ? (
+      {tab === "zeitexport" ? (
         <TimeExportPanel
           report={times}
           monthLabel={shownLabel}
@@ -246,13 +239,10 @@ function PayrollExportContent() {
           downloading={downloading === "times"}
         />
       ) : null}
-      {!notReleased &&
-      tab === "lohnarten" &&
-      !settings.data &&
-      !settings.loadError ? (
+      {tab === "lohnarten" && !settings.data && !settings.loadError ? (
         <SectionCard title="Lohnarten je Art des Vertrags" loading />
       ) : null}
-      {!notReleased && tab === "lohnarten" && settings.data ? (
+      {tab === "lohnarten" && settings.data ? (
         <PayrollSettingsPanel
           schema={settings.data}
           gaps={payroll?.unconfigured ?? []}

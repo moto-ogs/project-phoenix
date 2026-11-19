@@ -27,7 +27,7 @@ export function traegerAbsenceTypesTopic(): HelpTopic {
         title: "Eine Abwesenheitsart anlegen",
         steps: [
           "Wähle in der Navigation `Abwesenheitsarten`.",
-          "Wähle oben `Abwesenheitsart`.",
+          "Wähle oben `Abwesenheitsart anlegen`.",
           "Gib einen Namen ein, zum Beispiel Regenerationstag.",
           "Lasse `Tage je Person zählen (Kontingent)` an und trage die Tage je Jahr ein.",
           "Wähle bei `Rest verfällt`, wie lange ein Rest ins neue Jahr geht.",

@@ -62,7 +62,7 @@ export function traegerStaffPlanningTopic(): HelpTopic {
         title: "Die Woche herunterladen",
         steps: [
           "Wähle die Woche mit den Pfeilen.",
-          "Wähle oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei hat eine Zeile je Person und eine Spalte je Tag.",
         ],
       },
