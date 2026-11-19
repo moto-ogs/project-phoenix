@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Geschlecht aus der Einladung nutzt den Beobachter der Stammdaten
