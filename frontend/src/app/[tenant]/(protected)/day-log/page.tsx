@@ -73,10 +73,14 @@ import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useMinuteClock } from "~/lib/pickup-helpers";
+import { useOpenCareGroupMode } from "~/lib/tenant-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
 const DAY_LOG_INFO =
-  "Hier siehst du für heute, welche Kinder anwesend sind und welche fehlen. Wähle ein Kind, um seine Angaben zu öffnen. Mit „Drucken“ gibst du die Auswertung aus.";
+  "Hier siehst du für heute, welche Kinder anwesend sind und welche fehlen. Mit „Details“ siehst du die Kinder einer Gruppe. Mit „Drucken“ gibst du die Auswertung aus.";
+// Ohne feste Gruppen zeigt die Seite eine gemeinsame Liste (wie die Hilfe).
+const DAY_LOG_OPEN_CARE_INFO =
+  "Hier siehst du für heute, welche Kinder anwesend sind und welche fehlen. Mit „Drucken“ gibst du die Auswertung aus.";
 
 const logger = createLogger({ component: "DayLogPage" });
 
@@ -304,6 +308,7 @@ export default function DayLogPage() {
   // must not default to a day the server considers future or already past.
   const now = useMinuteClock();
   const todayISO = berlinTodayISO(now);
+  const openCare = useOpenCareGroupMode();
   const [dateISO, setDateISO] = useState<string>(() => berlinTodayISO());
   const discard = useDiscardRefusedEntity();
   const key = tenantStudentKeys.dayLog(dateISO);
@@ -505,7 +510,7 @@ export default function DayLogPage() {
   return (
     <TenantPage
       title="Tagesauswertung"
-      info={DAY_LOG_INFO}
+      info={openCare ? DAY_LOG_OPEN_CARE_INFO : DAY_LOG_INFO}
       stats={statusLine}
       statsLoading={loading}
       loading={loading || (failed && load.error === null)}
