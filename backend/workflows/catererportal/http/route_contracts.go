@@ -42,3 +42,16 @@ func SchoolRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/supply", Portals: portals, Response: SupplyEndedResponse{}},
 	}
 }
+
+// acceptBodyBytes bounds the accept body: a password and its repetition.
+const acceptBodyBytes = 4 << 10
+
+// PublicRouteContracts registers the mailed invitation link, which a caterer
+// opens without a session (#2352), relative to the /caterer mount.
+func PublicRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalPublic}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/invitations/{schoolId}/{token}", Portals: portals, Response: PreviewResponse{}},
+		{Method: "POST", Pattern: "/invitations/{schoolId}/{token}/accept", Portals: portals, Request: acceptRequest{}, NoData: true, MaxBodyBytes: acceptBodyBytes},
+	}
+}

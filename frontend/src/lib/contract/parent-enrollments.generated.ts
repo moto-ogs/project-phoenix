@@ -13,9 +13,8 @@ import {
 } from "./runtime";
 import {
   PublicEnrollmentFormBootstrapResponseSchema,
-  type SubmitChildRequest,
-  type SubmitGuardianRequest,
-  type SubmitSignatureRequest,
+  SubmitEnrollmentResponseSchema,
+  type SubmitEnrollmentRequest,
 } from "./shared.generated";
 
 /** Go: common.GuardianProfileGuardian */
@@ -63,45 +62,6 @@ export interface GuardianProfileResponse {
 export const GuardianProfileResponseSchema: z.ZodType<GuardianProfileResponse, unknown> = object<GuardianProfileResponse>({
   guardian: GuardianProfileGuardianSchema,
   children: nullable(arr(GuardianProfileChildSchema)),
-});
-
-/** Go: enrollmenthttp.SubmitEnrollmentRequest */
-export interface SubmitEnrollmentRequest {
-  phase_id?: number;
-  guardian_first_name?: string;
-  guardian_last_name?: string;
-  guardian_email?: string;
-  guardian_phone?: string | null;
-  additional_guardians?: SubmitGuardianRequest[] | null;
-  consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
-  custom_data?: Record<string, unknown | null> | null;
-  children?: SubmitChildRequest[] | null;
-  captcha_token?: string;
-  late_invite_token?: string;
-  signature?: SubmitSignatureRequest | null;
-}
-
-/** Go: enrollment.SubmissionWarning */
-export interface SubmissionWarning {
-  code: string;
-}
-
-export const SubmissionWarningSchema: z.ZodType<SubmissionWarning, unknown> = object<SubmissionWarning>({
-  code: str,
-});
-
-/** Go: enrollmenthttp.SubmitEnrollmentResponse */
-export interface SubmitEnrollmentResponse {
-  request_id: string;
-  status_url: string;
-  warnings?: SubmissionWarning[];
-}
-
-export const SubmitEnrollmentResponseSchema: z.ZodType<SubmitEnrollmentResponse, unknown> = object<SubmitEnrollmentResponse>({
-  request_id: str,
-  status_url: str,
-  warnings: optional(arr(SubmissionWarningSchema)),
 });
 
 /** Query of GET /parent/enrollments/{tenantSlug}/bootstrap/{phaseId} */

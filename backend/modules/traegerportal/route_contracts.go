@@ -48,3 +48,17 @@ func StepUpRouteContracts() []common.RouteContract {
 		},
 	}
 }
+
+// invitationAcceptBodyBytes bounds the accept body: a name and two passwords.
+const invitationAcceptBodyBytes = 4 << 10
+
+// InvitationRouteContracts registers the mailed invitation into the
+// Träger-Büro, which its link opens without a session (#2352), with patterns
+// relative to /traeger/invitations.
+func InvitationRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalPublic}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{token}", Portals: portals, Response: InvitationPreviewResponse{}},
+		{Method: "POST", Pattern: "/{token}/accept", Portals: portals, Request: AcceptRequest{}, Response: AcceptResponse{}, MaxBodyBytes: invitationAcceptBodyBytes},
+	}
+}

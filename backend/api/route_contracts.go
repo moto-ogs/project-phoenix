@@ -2,12 +2,12 @@ package api
 
 import (
 	"fmt"
-	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	"reflect"
 	"strings"
 
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
+	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
@@ -118,6 +118,8 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, staffPortalCalendarContractMounts()...)
 	mounts = append(mounts, staffPortalLiveContractMounts()...)
 	mounts = append(mounts, rootContractMounts()...)
+	mounts = append(mounts, publicContractMounts()...)
+	mounts = append(mounts, staffPortalInvitationContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err

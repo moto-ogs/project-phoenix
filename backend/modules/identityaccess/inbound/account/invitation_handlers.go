@@ -559,6 +559,11 @@ func (rs *Resource) resendInvitation(w http.ResponseWriter, r *http.Request) {
 		"invitation resend requested", "Invitation resent", "Invitation resent successfully")
 }
 
+// InvitationResendResponse confirms a resent invitation.
+type InvitationResendResponse struct {
+	Message string `json:"message"`
+}
+
 // resendInvitationHandler is the shared body of the staff and guardian
 // invitation resend endpoints: parse id, run the resend inside the tenant
 // tx (when transactions are wired), map expired/known errors, log, respond.
@@ -597,7 +602,7 @@ func (rs *Resource) resendInvitationHandler(w http.ResponseWriter, r *http.Reque
 	slog.Default().Info(logMsg,
 		slog.Int64("invitation_id", invitationID),
 		slog.Int64("account_id", int64(claims.ID)))
-	common.Respond(w, r, http.StatusOK, map[string]string{"message": message}, respondMsg)
+	common.Respond(w, r, http.StatusOK, InvitationResendResponse{Message: message}, respondMsg)
 }
 
 func (rs *Resource) revokeInvitation(w http.ResponseWriter, r *http.Request) {

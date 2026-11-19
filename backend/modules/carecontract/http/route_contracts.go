@@ -70,3 +70,23 @@ func OverrunRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/children", Portals: traegerPortal, Query: window, Response: carecontract.OverrunEvaluation{}},
 	}
 }
+
+// The bodies the link reads: the drawn signature as base64 PNG, and a number.
+const (
+	signBodyBytes           = 400 << 10
+	familyChildrenBodyBytes = 1 << 10
+)
+
+// SigningRouteContracts registers the one-time link of a contract mail,
+// which the parents open without a session (#2352), with patterns relative
+// to /public/care-contract-signing. The frozen PDF answers a file and keeps
+// its route file.
+func SigningRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalPublic}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{link}", Portals: portals, Response: carecontract.SigningView{}},
+		{Method: "POST", Pattern: "/{link}/sign", Portals: portals, Request: SignRequest{}, Response: carecontract.SigningView{}, MaxBodyBytes: signBodyBytes},
+		{Method: "GET", Pattern: "/{link}/family-children", Portals: portals, Response: SigningFamilyChildrenResponse{}},
+		{Method: "PUT", Pattern: "/{link}/family-children", Portals: portals, Request: SigningFamilyChildrenRequest{}, Response: SigningFamilyChildrenResponse{}, MaxBodyBytes: familyChildrenBodyBytes},
+	}
+}

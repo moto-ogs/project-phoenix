@@ -474,9 +474,10 @@ export async function fetchPublicLegalTexts(
   phaseId?: string,
   options: { lateInviteToken?: string } = {},
 ): Promise<PublicLegalTexts> {
+  // The phase is a path segment, as the backend serves it (#2352).
   const path = `/api/enrollment/legal/${encodeURIComponent(tenantSlug)}`;
   const url = withLateInviteQuery(
-    phaseId ? `${path}?phaseId=${encodeURIComponent(phaseId)}` : path,
+    phaseId ? `${path}/${encodeURIComponent(phaseId)}` : path,
     options.lateInviteToken,
   );
   const response = await sendEnrollmentRequest(url, { cache: "no-store" });

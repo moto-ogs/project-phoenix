@@ -22,16 +22,26 @@ import {
   FormAttachmentSchema,
   FormFieldSchema,
   FormLegalBlockSchema,
+  LegalBlockSchema,
   PublicEnrollmentFormBootstrapResponseSchema,
+  PublicFormSchemaResponseSchema,
+  PublicLegalTextsResponseSchema,
+  PublicPhaseSchema,
   PublicSchoolClassConfigSchema,
   RequestMailOutcomeSchema,
+  SubmitEnrollmentResponseSchema,
   TranslatedTextSchema,
   type CareOfferingResponse,
   type FormAttachment,
   type FormField,
   type FormLegalBlock,
+  type LegalBlock,
+  type PublicFormSchemaResponse,
+  type PublicLegalTextsResponse,
+  type PublicPhase,
   type PublicSchoolClassConfig,
   type SubmitChildRequest,
+  type SubmitEnrollmentRequest,
   type SubmitGuardianRequest,
   type SubmitSignatureRequest,
   type TranslatedText,
@@ -1162,6 +1172,236 @@ export const RolloverPreviewResponseSchema: z.ZodType<RolloverPreviewResponse, u
   request_count: safeInt,
 });
 
+/** Go: enrollmenthttp.StatusChildResponse */
+export interface StatusChildResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  status_reason?: string;
+  locked: boolean;
+}
+
+export const StatusChildResponseSchema: z.ZodType<StatusChildResponse, unknown> = object<StatusChildResponse>({
+  id: str,
+  first_name: str,
+  last_name: str,
+  status: str,
+  status_reason: optional(str),
+  locked: bool,
+});
+
+/** Go: enrollmenthttp.StatusGuardianResponse */
+export interface StatusGuardianResponse {
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+}
+
+export const StatusGuardianResponseSchema: z.ZodType<StatusGuardianResponse, unknown> = object<StatusGuardianResponse>({
+  first_name: str,
+  last_name: str,
+  email: optional(str),
+  phone: optional(str),
+});
+
+/** Go: enrollmenthttp.StatusRenewalTermsResponse */
+export interface StatusRenewalTermsResponse {
+  form_schema_id: string;
+  terms_fingerprint: string;
+  blocks: LegalBlock[] | null;
+  confirmed_at?: string;
+}
+
+export const StatusRenewalTermsResponseSchema: z.ZodType<StatusRenewalTermsResponse, unknown> = object<StatusRenewalTermsResponse>({
+  form_schema_id: str,
+  terms_fingerprint: str,
+  blocks: nullable(arr(LegalBlockSchema)),
+  confirmed_at: optional(instant),
+});
+
+/** Go: enrollmenthttp.StatusResponse */
+export interface StatusResponse {
+  request_id: string;
+  guardian_first_name: string;
+  guardian_last_name: string;
+  guardian_email: string;
+  guardian_phone?: string;
+  submitted_at: string;
+  withdrawn_at?: string;
+  edit_mode: string;
+  children: StatusChildResponse[] | null;
+  additional_guardians?: StatusGuardianResponse[];
+  has_parent_account?: boolean;
+  parent_portal_access?: string;
+  signature_required: boolean;
+  signature?: RequestSignatureResponse;
+  care_facility_term: string;
+  renewal_terms?: StatusRenewalTermsResponse;
+}
+
+export const StatusResponseSchema: z.ZodType<StatusResponse, unknown> = object<StatusResponse>({
+  request_id: str,
+  guardian_first_name: str,
+  guardian_last_name: str,
+  guardian_email: str,
+  guardian_phone: optional(str),
+  submitted_at: instant,
+  withdrawn_at: optional(instant),
+  edit_mode: str,
+  children: nullable(arr(StatusChildResponseSchema)),
+  additional_guardians: optional(arr(StatusGuardianResponseSchema)),
+  has_parent_account: optional(bool),
+  parent_portal_access: optional(str),
+  signature_required: bool,
+  signature: optional(RequestSignatureResponseSchema),
+  care_facility_term: str,
+  renewal_terms: optional(StatusRenewalTermsResponseSchema),
+});
+
+/** Go: enrollmenthttp.EditDraftGuardianResponse */
+export interface EditDraftGuardianResponse {
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+}
+
+export const EditDraftGuardianResponseSchema: z.ZodType<EditDraftGuardianResponse, unknown> = object<EditDraftGuardianResponse>({
+  first_name: str,
+  last_name: str,
+  email: optional(str),
+  phone: optional(str),
+});
+
+/** Go: enrollmenthttp.EditDraftOfferingDayResponse */
+export interface EditDraftOfferingDayResponse {
+  offering_id: string;
+  selected_days: string[] | null;
+  manual_selected_days?: string[];
+  automatic_selected_days?: string[];
+}
+
+export const EditDraftOfferingDayResponseSchema: z.ZodType<EditDraftOfferingDayResponse, unknown> = object<EditDraftOfferingDayResponse>({
+  offering_id: str,
+  selected_days: nullable(arr(str)),
+  manual_selected_days: optional(arr(str)),
+  automatic_selected_days: optional(arr(str)),
+});
+
+/** Go: enrollmenthttp.EditDraftChildResponse */
+export interface EditDraftChildResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  target_grade_level?: number;
+  target_school_class?: string;
+  holiday_care_wish?: boolean;
+  custom_data: unknown | null;
+  offering_ids: string[] | null;
+  offering_days?: EditDraftOfferingDayResponse[];
+  locked: boolean;
+}
+
+export const EditDraftChildResponseSchema: z.ZodType<EditDraftChildResponse, unknown> = object<EditDraftChildResponse>({
+  id: str,
+  first_name: str,
+  last_name: str,
+  date_of_birth: str,
+  target_grade_level: optional(safeInt),
+  target_school_class: optional(str),
+  holiday_care_wish: optional(bool),
+  custom_data: nullable(json),
+  offering_ids: nullable(arr(str)),
+  offering_days: optional(arr(EditDraftOfferingDayResponseSchema)),
+  locked: bool,
+});
+
+/** Go: enrollmenthttp.EditDraftResponse */
+export interface EditDraftResponse {
+  request_id: string;
+  status_token: string;
+  tenant_id: string;
+  tenant_subdomain: string;
+  phase_id: string;
+  guardian_first_name: string;
+  guardian_last_name: string;
+  guardian_email: string;
+  guardian_phone?: string;
+  consent_flags: unknown | null;
+  custom_data: unknown | null;
+  additional_guardians?: EditDraftGuardianResponse[];
+  children: EditDraftChildResponse[] | null;
+}
+
+export const EditDraftResponseSchema: z.ZodType<EditDraftResponse, unknown> = object<EditDraftResponse>({
+  request_id: str,
+  status_token: str,
+  tenant_id: str,
+  tenant_subdomain: str,
+  phase_id: str,
+  guardian_first_name: str,
+  guardian_last_name: str,
+  guardian_email: str,
+  guardian_phone: optional(str),
+  consent_flags: nullable(json),
+  custom_data: nullable(json),
+  additional_guardians: optional(arr(EditDraftGuardianResponseSchema)),
+  children: nullable(arr(EditDraftChildResponseSchema)),
+});
+
+/** Go: enrollmenthttp.EditBootstrapResponse */
+export interface EditBootstrapResponse {
+  phase: PublicPhase;
+  schema: PublicFormSchemaResponse | null;
+  offerings: CareOfferingResponse[] | null;
+  care_offering_selection_mode: string;
+  care_required: boolean;
+  school_class: PublicSchoolClassConfig;
+  collect_grade_level: boolean;
+  care_offerings_enabled: boolean;
+  grade_level_max: number;
+  care_facility_term: string;
+  legal_texts: PublicLegalTextsResponse;
+  draft: EditDraftResponse;
+  edit_mode: string;
+}
+
+export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unknown> = object<EditBootstrapResponse>({
+  phase: PublicPhaseSchema,
+  schema: nullable(PublicFormSchemaResponseSchema),
+  offerings: nullable(arr(CareOfferingResponseSchema)),
+  care_offering_selection_mode: str,
+  care_required: bool,
+  school_class: PublicSchoolClassConfigSchema,
+  collect_grade_level: bool,
+  care_offerings_enabled: bool,
+  grade_level_max: safeInt,
+  care_facility_term: str,
+  legal_texts: PublicLegalTextsResponseSchema,
+  draft: EditDraftResponseSchema,
+  edit_mode: str,
+});
+
+/** Go: enrollment.RegistrationFamilyChildren */
+export interface RegistrationFamilyChildren {
+  children: number | null;
+  stated_at: string | null;
+  asked: boolean;
+  can_state: boolean;
+  accepted: boolean;
+}
+
+export const RegistrationFamilyChildrenSchema: z.ZodType<RegistrationFamilyChildren, unknown> = object<RegistrationFamilyChildren>({
+  children: nullable(safeInt),
+  stated_at: nullable(instant),
+  asked: bool,
+  can_state: bool,
+  accepted: bool,
+});
+
 /** Go: enrollmenthttp.PublicCareOfferingsResponse */
 export interface PublicCareOfferingsResponse {
   offerings: CareOfferingResponse[] | null;
@@ -1223,6 +1463,24 @@ export const SchemaPreviewBootstrapResponseSchema: z.ZodType<SchemaPreviewBootst
   schema: nullable(FormSchemaResponseSchema),
   assigned_phase_count: safeInt,
   active_assigned_phase_count: safeInt,
+});
+
+/** Go: enrollmenthttp.EditPatchRequest */
+export interface EditPatchRequest {
+  guardian_first_name?: string | null;
+  guardian_last_name?: string | null;
+  guardian_phone?: string | null;
+  consent_flags?: Record<string, unknown | null> | null;
+  custom_data?: Record<string, unknown | null> | null;
+}
+
+/** Go: enrollmenthttp.EditPatchResponse */
+export interface EditPatchResponse {
+  message: string;
+}
+
+export const EditPatchResponseSchema: z.ZodType<EditPatchResponse, unknown> = object<EditPatchResponse>({
+  message: str,
 });
 
 /** Go: enrollmenthttp.ReviewChangeRequestRequest */
@@ -1453,6 +1711,45 @@ export const RolloverCreateResponseSchema: z.ZodType<RolloverCreateResponse, unk
   summary: RolloverSummarySchema,
 });
 
+/** Go: enrollmenthttp.CreateChangeRequestRequest */
+export interface CreateChangeRequestRequest {
+  phase_id?: number;
+  guardian_first_name?: string;
+  guardian_last_name?: string;
+  guardian_email?: string;
+  guardian_phone?: string | null;
+  additional_guardians?: SubmitGuardianRequest[] | null;
+  consent_flags?: Record<string, unknown | null> | null;
+  form_schema_id?: number;
+  custom_data?: Record<string, unknown | null> | null;
+  children?: SubmitChildRequest[] | null;
+  captcha_token?: string;
+  late_invite_token?: string;
+  signature?: SubmitSignatureRequest | null;
+  parent_note?: string;
+}
+
+/** Go: enrollmenthttp.ConfirmRenewalRequest */
+export interface ConfirmRenewalRequest {
+  consent_flags?: Record<string, unknown | null> | null;
+  form_schema_id?: string;
+  terms_fingerprint?: string;
+}
+
+/** Go: enrollmenthttp.ConfirmRenewalResponse */
+export interface ConfirmRenewalResponse {
+  confirmed: number;
+}
+
+export const ConfirmRenewalResponseSchema: z.ZodType<ConfirmRenewalResponse, unknown> = object<ConfirmRenewalResponse>({
+  confirmed: safeInt,
+});
+
+/** Go: enrollmenthttp.WithdrawRequest */
+export interface WithdrawRequest {
+  child_id?: string | null;
+}
+
 /** Go: enrollmenthttp.CareBeyondEndResponse */
 export interface CareBeyondEndResponse {
   student_id: string;
@@ -1533,6 +1830,11 @@ export const PhaseUpdateResponseSchema: z.ZodType<PhaseUpdateResponse, unknown> 
   care_beyond_end: nullable(arr(CareBeyondEndResponseSchema)),
 });
 
+/** Go: enrollmenthttp.StatusFamilyChildrenRequest */
+export interface StatusFamilyChildrenRequest {
+  children?: number;
+}
+
 /** Query of GET /api/enrollment/admin/change-requests/ */
 export interface GetEnrollmentAdminChangeRequestsQuery {
   request_id?: string;
@@ -1579,6 +1881,16 @@ export interface GetEnrollmentCareOfferingsBookingStatsQuery {
   phase_id?: string;
 }
 
+/** Query of GET /api/enrollment/legal/{tenantSlug} */
+export interface GetEnrollmentLegalTenantSlugQuery {
+  late_invite?: string;
+}
+
+/** Query of GET /api/enrollment/legal/{tenantSlug}/{phaseId} */
+export interface GetEnrollmentLegalTenantSlugPhaseIdQuery {
+  late_invite?: string;
+}
+
 /** Query of GET /api/enrollment/phases/{id}/rollover-preview */
 export interface GetEnrollmentPhasesIdRolloverPreviewQuery {
   bumps_grade?: string;
@@ -1589,6 +1901,11 @@ export interface GetEnrollmentSchemaPreviewQuery {
   base?: string;
   phaseId?: string;
   schemaId?: string;
+}
+
+/** Query of POST /api/enrollment/{tenantSlug}/submit */
+export interface PostEnrollmentTenantSlugSubmitQuery {
+  late_invite?: string;
 }
 
 export const routes = {
@@ -1732,6 +2049,20 @@ export const routes = {
     portals: ["tenant"],
     response: success(CareOfferingResponseSchema),
   },
+  "GET /api/enrollment/legal/{tenantSlug}": {
+    method: "GET",
+    pattern: "/api/enrollment/legal/{tenantSlug}",
+    portals: ["public"],
+    query: ["late_invite"],
+    response: success(PublicLegalTextsResponseSchema),
+  },
+  "GET /api/enrollment/legal/{tenantSlug}/{phaseId}": {
+    method: "GET",
+    pattern: "/api/enrollment/legal/{tenantSlug}/{phaseId}",
+    portals: ["public"],
+    query: ["late_invite"],
+    response: success(PublicLegalTextsResponseSchema),
+  },
   "GET /api/enrollment/phases/": {
     method: "GET",
     pattern: "/api/enrollment/phases/",
@@ -1743,6 +2074,12 @@ export const routes = {
     pattern: "/api/enrollment/phases/expiry-warnings",
     portals: ["tenant"],
     response: success(z.array(PhaseExpiryWarningResponseSchema)),
+  },
+  "GET /api/enrollment/phases/public/{tenantSlug}": {
+    method: "GET",
+    pattern: "/api/enrollment/phases/public/{tenantSlug}",
+    portals: ["public"],
+    response: success(z.array(PublicPhaseSchema)),
   },
   "GET /api/enrollment/phases/{id}/": {
     method: "GET",
@@ -1781,6 +2118,36 @@ export const routes = {
     query: ["bumps_grade"],
     response: success(RolloverPreviewResponseSchema),
   },
+  "GET /api/enrollment/requests/{statusToken}": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}",
+    portals: ["public"],
+    response: success(StatusResponseSchema),
+  },
+  "GET /api/enrollment/requests/{statusToken}/change-requests": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/change-requests",
+    portals: ["public"],
+    response: success(z.array(ChangeRequestResponseSchema)),
+  },
+  "GET /api/enrollment/requests/{statusToken}/edit-bootstrap": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/edit-bootstrap",
+    portals: ["public"],
+    response: success(EditBootstrapResponseSchema),
+  },
+  "GET /api/enrollment/requests/{statusToken}/family-children": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/family-children",
+    portals: ["public"],
+    response: success(RegistrationFamilyChildrenSchema),
+  },
+  "GET /api/enrollment/requests/{statusToken}/form-labels": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/form-labels",
+    portals: ["public"],
+    response: success(FormLabelsResponseSchema),
+  },
   "GET /api/enrollment/schema/preview": {
     method: "GET",
     pattern: "/api/enrollment/schema/preview",
@@ -1793,6 +2160,14 @@ export const routes = {
     pattern: "/api/enrollment/schema/versions",
     portals: ["tenant"],
     response: success(z.array(FormSchemaResponseSchema)),
+  },
+  "PATCH /api/enrollment/requests/{statusToken}": {
+    method: "PATCH",
+    pattern: "/api/enrollment/requests/{statusToken}",
+    portals: ["public"],
+    maxBodyBytes: 2097152,
+    request: requestBody<EditPatchRequest>(),
+    response: success(EditPatchResponseSchema),
   },
   "POST /api/enrollment/admin/change-requests/{id}/approve": {
     method: "POST",
@@ -1876,6 +2251,47 @@ export const routes = {
     request: requestBody<RolloverCreateRequest>(),
     response: success(RolloverCreateResponseSchema),
   },
+  "POST /api/enrollment/requests/{statusToken}/change-requests": {
+    method: "POST",
+    pattern: "/api/enrollment/requests/{statusToken}/change-requests",
+    portals: ["public"],
+    maxBodyBytes: 2097152,
+    request: requestBody<CreateChangeRequestRequest>(),
+    response: success(ChangeRequestResponseSchema),
+  },
+  "POST /api/enrollment/requests/{statusToken}/change-requests/{changeRequestId}/messages": {
+    method: "POST",
+    pattern: "/api/enrollment/requests/{statusToken}/change-requests/{changeRequestId}/messages",
+    portals: ["public"],
+    maxBodyBytes: 65536,
+    request: requestBody<ChangeRequestMessageRequest>(),
+    response: success(ChangeRequestResponseSchema),
+  },
+  "POST /api/enrollment/requests/{statusToken}/confirm-renewal": {
+    method: "POST",
+    pattern: "/api/enrollment/requests/{statusToken}/confirm-renewal",
+    portals: ["public"],
+    maxBodyBytes: 65536,
+    request: requestBody<ConfirmRenewalRequest>(),
+    response: success(ConfirmRenewalResponseSchema),
+  },
+  "POST /api/enrollment/requests/{statusToken}/withdraw": {
+    method: "POST",
+    pattern: "/api/enrollment/requests/{statusToken}/withdraw",
+    portals: ["public"],
+    maxBodyBytes: 4096,
+    request: requestBody<WithdrawRequest>(),
+    response: noData,
+  },
+  "POST /api/enrollment/{tenantSlug}/submit": {
+    method: "POST",
+    pattern: "/api/enrollment/{tenantSlug}/submit",
+    portals: ["public"],
+    maxBodyBytes: 2097152,
+    query: ["late_invite"],
+    request: requestBody<SubmitEnrollmentRequest>(),
+    response: success(SubmitEnrollmentResponseSchema),
+  },
   "PUT /api/enrollment/admin/requests/{id}/read": {
     method: "PUT",
     pattern: "/api/enrollment/admin/requests/{id}/read",
@@ -1895,5 +2311,21 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<EnrollmentPhaseRequest>(),
     response: success(PhaseUpdateResponseSchema),
+  },
+  "PUT /api/enrollment/requests/{statusToken}": {
+    method: "PUT",
+    pattern: "/api/enrollment/requests/{statusToken}",
+    portals: ["public"],
+    maxBodyBytes: 2097152,
+    request: requestBody<SubmitEnrollmentRequest>(),
+    response: success(SubmitEnrollmentResponseSchema),
+  },
+  "PUT /api/enrollment/requests/{statusToken}/family-children": {
+    method: "PUT",
+    pattern: "/api/enrollment/requests/{statusToken}/family-children",
+    portals: ["public"],
+    maxBodyBytes: 4096,
+    request: requestBody<StatusFamilyChildrenRequest>(),
+    response: success(RegistrationFamilyChildrenSchema),
   },
 } as const;
