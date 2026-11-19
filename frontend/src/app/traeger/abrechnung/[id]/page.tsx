@@ -186,7 +186,7 @@ function PaymentTextWarningLinks({
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const HOLIDAY_RUN_INFO =
-  "Hier rechnest du einen Ferienzeitraum ab. Prüfe zuerst die Rechnungen, dann gibst du den Lauf frei. Danach erstellst du die Schreiben an die Familien.";
+  "Hier findest du die Rechnungen dieses Ferienzeitraums. Vor der Freigabe kannst du sie prüfen und ändern. Danach bleiben sie festgeschrieben.";
 
 export default function TraegerBillingRunPage() {
   const params = useParams<{ id: string }>();

@@ -19,7 +19,7 @@ import { traegerPath } from "~/lib/traeger-url";
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const DUE_DATES_INFO =
-  "Hier legst du fest, wann die Rechnungen dieses Laufs fällig sind. Wähle je Zahlungsweg ein Datum und dann „Speichern“. Das geht nur, bis der Lauf freigegeben ist.";
+  "Hier legst du fest, wann die Rechnungen dieses Laufs fällig sind. Ohne Datum gilt je Zahlungsweg das Zahlungsziel der Leistung. Das geht nur, bis der Lauf freigegeben ist.";
 
 export default function TraegerCareRunDueDatesPage() {
   const params = useParams<{ id: string }>();

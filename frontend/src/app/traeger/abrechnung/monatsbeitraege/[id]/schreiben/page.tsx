@@ -82,7 +82,7 @@ function seriesMessage(series: CareLetterSeries): string {
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const LETTERS_INFO =
-  "Hier sendest du die Schreiben zu den Rechnungen an die Familien. Gibt es noch keine, wählst du zuerst „Schreiben erstellen“. Danach schickst du sie mit „An alle senden“.";
+  "Hier sendest du die Schreiben zu den Rechnungen an die Familien. Das geht erst, wenn der Monatslauf freigegeben ist. Gibt es noch keine, wählst du „Schreiben erstellen“.";
 
 export default function TraegerCareRunLettersPage() {
   const params = useParams<{ id: string }>();
