@@ -11913,6 +11913,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/platform/announcements/{id}/seen",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/pwa/usage",
       "portals": [
         "tenant"

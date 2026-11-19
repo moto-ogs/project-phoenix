@@ -11,6 +11,7 @@ import { Button } from "~/components/ui/button";
 import { Modal } from "~/components/ui/modal";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { useAnnouncements } from "~/lib/hooks/use-announcements";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import { createLogger } from "~/lib/logger";
 import { IconTile } from "~/components/ui/icon-tile";
 
@@ -52,7 +53,8 @@ interface UnreadAnnouncement {
 }
 
 export function AnnouncementModal() {
-  const { announcements, dismiss, isLoading, refresh } = useAnnouncements();
+  const { announcements, dismiss, markSeen, isLoading, refresh } =
+    useAnnouncements();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   // Keep a stable snapshot of announcements when modal opens
@@ -62,6 +64,11 @@ export function AnnouncementModal() {
   const dismissedIdsRef = useRef<Set<string>>(new Set());
   // Track IDs the user has seen (closed without dismissing) to avoid re-opening
   const closedIdsRef = useRef<Set<string>>(new Set());
+  // Einstieg (#7555): IDs already reported as seen, and whether this opening
+  // of the modal was reported as shown. Refs survive re-renders, so neither
+  // is sent twice.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const shownReportedRef = useRef(false);
 
   // Show modal when we have announcements - capture stable snapshot
   useEffect(() => {
@@ -79,6 +86,32 @@ export function AnnouncementModal() {
       }
     }
   }, [announcements, isLoading, isVisible]);
+
+  // Report each announcement once when it is on screen: the backend stores
+  // seen_at and counts it for the school; the browser reports the surface.
+  const currentId = isVisible
+    ? queuedAnnouncements[currentIndex]?.id
+    : undefined;
+  useEffect(() => {
+    if (!isVisible) {
+      shownReportedRef.current = false;
+      return;
+    }
+    if (!shownReportedRef.current) {
+      shownReportedRef.current = true;
+      trackOnboardingSurface("shown", "announcement");
+    }
+    if (currentId === undefined) return;
+    const key = String(currentId);
+    if (seenIdsRef.current.has(key)) return;
+    seenIdsRef.current.add(key);
+    // Fire-and-forget like dismiss: a failed report must not block reading.
+    markSeen(currentId).catch((error: unknown) => {
+      logger.error("announcement_seen_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }, [isVisible, currentId, markSeen]);
 
   // Dismiss current and advance to next announcement ("Weiter" / "Verstanden")
   const handleDismiss = useCallback(async () => {
@@ -99,6 +132,8 @@ export function AnnouncementModal() {
     if (currentIndex < queuedAnnouncements.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
+      // "Verstanden" on the last one: the person took the announcement in.
+      trackOnboardingSurface("accepted", "announcement");
       setIsVisible(false);
       // Refresh data after all announcements processed
       void refresh();
@@ -108,6 +143,7 @@ export function AnnouncementModal() {
   // Close modal entirely (X button, backdrop, Escape key)
   // Dismiss all queued announcements on the backend so they don't reappear on next login
   const handleClose = useCallback(() => {
+    trackOnboardingSurface("dismissed", "announcement");
     for (const a of queuedAnnouncements) {
       closedIdsRef.current.add(String(a.id));
       if (!dismissedIdsRef.current.has(String(a.id))) {

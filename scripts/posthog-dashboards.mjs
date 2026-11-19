@@ -357,6 +357,9 @@ export const NO_FEATURE_PAGES = Object.freeze({
   school: ['/login', '/invite', '/reset-password'],
 });
 
+/** Backend events of the announcement (#7555): seen, closed (core_actions.go). */
+const ANNOUNCEMENT_EVENTS = ['announcement_seen', 'announcement_dismissed'];
+
 /**
  * Events that are no feature use: sessions, devices, the demo funnel, and
  * what the school's caterer saves (an outside party; the caterer dashboard
@@ -367,6 +370,8 @@ const NO_FEATURE_EVENTS = [
   // The install hint and its browser dialog: getting in, not using a feature.
   'pwa_installed', 'pwa_install_prompt_shown', 'pwa_install_prompt_accepted', 'pwa_install_prompt_dismissed',
   'caterer_invite_accepted', 'meal_order_confirmed',
+  // The announcement of the entry (#7555): backend events of its routes.
+  ...ANNOUNCEMENT_EVENTS,
   // Clicks inside a page the browser reports (tab, bell): the page view
   // already counts the feature, a click is no action of its own.
   'child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read',
@@ -1130,8 +1135,26 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
     },
     {
       name: 'Nutzungsanalyse: Einstieg',
-      description: 'Was beim Einstieg in moto von selbst aufgeht und was Personen damit tun, in echten Schulen (deployment = moto-app.de). Die Flächen meldet der Browser, also nur mit Einwilligung: Personen ohne Einwilligung und die allererste Sitzung vor der Einwilligung fehlen. Die Werte sind deshalb verzerrt und kein Gesamtwert. ' + WORKDAYS_NOTE,
+      description: 'Was beim Einstieg in moto von selbst aufgeht und was Personen damit tun, in echten Schulen (deployment = moto-app.de). Die Flächen meldet der Browser, also nur mit Einwilligung: Personen ohne Einwilligung und die allererste Sitzung vor der Einwilligung fehlen. Diese Kacheln sind deshalb verzerrt und kein Gesamtwert. Nur „Ankündigung gesehen und geschlossen“ kommt vom Server und zählt auch ohne Einwilligung. ' + WORKDAYS_NOTE,
       insights: [
+        {
+          name: 'Einstieg: Ankündigung gesehen und geschlossen',
+          description: 'Letzte 30 Tage, auch ohne Einwilligung: der Server zählt jede Ankündigung, die im OGS-Portal erschien (gesehen), und jede, die die Person mit „Verstanden“ oder dem X schloss (geschlossen), für ihre Schule. Ohne Bezug zu Person oder Sitzung, daher Anzeigen statt Personen. Eine nicht geschlossene Ankündigung erscheint beim nächsten Laden wieder und zählt dann erneut als gesehen.',
+          ...hogql('production', (where) => `
+select
+  coalesce(properties.role, 'unbekannt') as Rolle,
+  countIf(event = 'announcement_seen') as Gesehen,
+  countIf(event = 'announcement_dismissed') as Geschlossen,
+  round(100 * countIf(event = 'announcement_dismissed') / greatest(countIf(event = 'announcement_seen'), 1), 1) as ${quoted('Geschlossen in Prozent')},
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and event in ${sqlList(ANNOUNCEMENT_EVENTS)}
+  and ${SCHOOL_EVENT}
+  and timestamp > now() - interval 30 day
+group by Rolle
+order by Gesehen desc`),
+        },
         {
           name: 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)',
           description: 'Nur mit Einwilligung, letzte 30 Tage. Je Fläche und Portal: wie oft sie erschien, wie oft die Person ihr Angebot annahm und wie oft sie sie schloss. Die Antwort im Installations-Dialog des Browsers steht nicht hier.',

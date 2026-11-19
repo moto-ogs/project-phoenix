@@ -1136,6 +1136,7 @@ export const portalRoutes = {
     parentAnnouncements["PUT /api/parent-announcements/{announcementId}/reminder"],
     platform["GET /api/platform/announcements/unread"],
     platform["POST /api/platform/announcements/{id}/dismiss"],
+    platform["POST /api/platform/announcements/{id}/seen"],
     pwa["POST /api/pwa/usage"],
     reminders["GET /api/reminders/"],
     rooms["DELETE /api/rooms/{id}"],
