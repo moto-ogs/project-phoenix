@@ -44,6 +44,7 @@ export default function SchoolNoticesPage() {
   return (
     <TenantPage
       title="Hinweise der Leitung"
+      info="Hier stehen die Hinweise der OGS-Leitung für heute. Die Leitung legt sie in der OGS an. Verlangt ein Hinweis eine Bestätigung, wähle „Zur Kenntnis nehmen“."
       loading={isLoading && notices.length === 0}
       loadingLabel="Hinweise der Leitung werden geladen…"
       error={error ? load.error : null}
@@ -56,10 +57,7 @@ export default function SchoolNoticesPage() {
           : null
       }
     >
-      <SectionCard
-        title="Heute"
-        description="Hinweise der OGS-Leitung an die Lehrkräfte. Sie werden im OGS-Büro angelegt; hier liest du, was heute gilt."
-      >
+      <SectionCard title="Heute">
         <TodayNoticeList
           notices={notices}
           onChanged={mutate}

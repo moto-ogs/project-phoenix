@@ -25,6 +25,11 @@ import {
   withdrawClassHandoverSchool,
 } from "~/lib/school-class-day-api";
 
+// Erklärung der Klassenseite für neue Lehrkräfte (#7567), im Laden wie in
+// der fertigen Seite.
+const CLASS_PAGE_INFO =
+  "Hier siehst du deine Klasse an einem Tag. Die Abschnitte zeigen, wer in der Betreuung bleibt und wer nach Hause geht. Lies sie zuerst von oben nach unten.";
+
 // Die Schreibwege der Hausaufgaben (#4796), einmal für alle Renders.
 const homeworkApi = {
   add: addHomeworkSchool,
@@ -46,6 +51,7 @@ function ClassFromAddress() {
       homework={homeworkApi}
       handOverClass={handOverClassSchool}
       withdrawClassHandover={withdrawClassHandoverSchool}
+      info={CLASS_PAGE_INFO}
     />
   );
 }
@@ -54,7 +60,9 @@ export default function SchoolClassDayPage() {
   return (
     // useSearchParams (Klasse und Tag stehen in der Adresse) braucht eine
     // Suspense-Grenze.
-    <Suspense fallback={<TenantPage title="Klasse" loading />}>
+    <Suspense
+      fallback={<TenantPage title="Klasse" info={CLASS_PAGE_INFO} loading />}
+    >
       <ClassFromAddress />
     </Suspense>
   );
