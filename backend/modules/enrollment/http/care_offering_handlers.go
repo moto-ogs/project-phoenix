@@ -190,25 +190,25 @@ func careOfferingPublicTranslations(offering *CareOffering) (capability.Translat
 
 // CareOfferingRequest is the wire shape POST + PUT accept.
 type CareOfferingRequest struct {
-	PhaseID             int64                         `json:"phase_id"`
-	ActivityGroupID     *int64                        `json:"activity_group_id,omitempty"`
-	Name                string                        `json:"name"`
-	Description         *string                       `json:"description,omitempty"`
-	DaysOfWeekMode      string                        `json:"days_of_week_mode"`
-	AvailableDays       []string                      `json:"available_days"`
-	IncludesHolidayCare bool                          `json:"includes_holiday_care"`
-	IncludesLunch       bool                          `json:"includes_lunch"`
-	Capacity            *int                          `json:"capacity,omitempty"`
-	PriceCents          *int                          `json:"price_cents,omitempty"`
-	IsActive            bool                          `json:"is_active"`
-	IsRequired          bool                          `json:"is_required"`
-	CountsAsCare        *bool                         `json:"counts_as_care"`
-	AutoAddGradeLevels  []int                         `json:"auto_add_grade_levels"`
-	AvailabilityRule    *CareOfferingAvailabilityRule `json:"availability_rule,omitempty"`
-	AutoAddTriggerIDs   []string                      `json:"auto_add_trigger_offering_ids"`
-	SortOrder           int                           `json:"sort_order"`
-	SelectionGroup      string                        `json:"selection_group,omitempty"`
-	SelectionRule       string                        `json:"selection_rule,omitempty"`
+	PhaseID             int64                                `json:"phase_id"`
+	ActivityGroupID     *int64                               `json:"activity_group_id,omitempty"`
+	Name                string                               `json:"name"`
+	Description         *string                              `json:"description,omitempty"`
+	DaysOfWeekMode      string                               `json:"days_of_week_mode"`
+	AvailableDays       []string                             `json:"available_days"`
+	IncludesHolidayCare bool                                 `json:"includes_holiday_care"`
+	IncludesLunch       bool                                 `json:"includes_lunch"`
+	Capacity            *int                                 `json:"capacity,omitempty"`
+	PriceCents          *int                                 `json:"price_cents,omitempty"`
+	IsActive            bool                                 `json:"is_active"`
+	IsRequired          bool                                 `json:"is_required"`
+	CountsAsCare        *bool                                `json:"counts_as_care"`
+	AutoAddGradeLevels  []int                                `json:"auto_add_grade_levels"`
+	AvailabilityRule    *CareOfferingAvailabilityRuleRequest `json:"availability_rule,omitempty"`
+	AutoAddTriggerIDs   []string                             `json:"auto_add_trigger_offering_ids"`
+	SortOrder           int                                  `json:"sort_order"`
+	SelectionGroup      string                               `json:"selection_group,omitempty"`
+	SelectionRule       string                               `json:"selection_rule,omitempty"`
 	// PickupTimes is the booking-derived pickup baseline per weekday. Active
 	// offerings that count as care require a value for every selected weekday.
 	PickupTimes map[string]string `json:"pickup_times,omitempty"`
@@ -230,6 +230,37 @@ func (req *CareOfferingRequest) Bind(_ *http.Request) error {
 		req.AutoAddTriggerIDs = []string{}
 	}
 	return nil
+}
+
+// CareOfferingAvailabilityRuleRequest is the availability rule a care
+// offering body carries; it reads like CareOfferingAvailabilityRule, and the
+// contract keeps request and answer types apart.
+type CareOfferingAvailabilityRuleRequest struct {
+	Match      string                                     `json:"match"`
+	Conditions []CareOfferingAvailabilityConditionRequest `json:"conditions"`
+}
+
+// CareOfferingAvailabilityConditionRequest is one condition of the rule in a
+// care offering body.
+type CareOfferingAvailabilityConditionRequest struct {
+	Source   string `json:"source"`
+	Operator string `json:"operator"`
+	Value    []int  `json:"value"`
+}
+
+// rule converts the body's rule; an absent rule stays nil.
+func (req *CareOfferingAvailabilityRuleRequest) rule() *CareOfferingAvailabilityRule {
+	if req == nil {
+		return nil
+	}
+	rule := &CareOfferingAvailabilityRule{Match: req.Match}
+	if req.Conditions != nil {
+		rule.Conditions = make([]CareOfferingAvailabilityCondition, 0, len(req.Conditions))
+	}
+	for _, condition := range req.Conditions {
+		rule.Conditions = append(rule.Conditions, CareOfferingAvailabilityCondition(condition))
+	}
+	return rule
 }
 
 func (req *CareOfferingRequest) toModel(existingID int64) (*CareOffering, error) {
@@ -256,7 +287,7 @@ func (req *CareOfferingRequest) toModel(existingID int64) (*CareOffering, error)
 		IsRequired:                req.IsRequired,
 		CountsAsCare:              countsAsCare,
 		AutoAddGradeLevels:        req.AutoAddGradeLevels,
-		AvailabilityRule:          req.AvailabilityRule,
+		AvailabilityRule:          req.AvailabilityRule.rule(),
 		SortOrder:                 req.SortOrder,
 		SelectionGroup:            req.SelectionGroup,
 		SelectionRule:             req.SelectionRule,

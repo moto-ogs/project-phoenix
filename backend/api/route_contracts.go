@@ -114,6 +114,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, staffPortalEnrollmentContractMounts()...)
 	mounts = append(mounts, staffPortalCalendarContractMounts()...)
 	mounts = append(mounts, staffPortalLiveContractMounts()...)
 	mounts = append(mounts, rootContractMounts()...)
@@ -228,6 +229,9 @@ func ContractDocument() (contract.Document, error) {
 	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,
 		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
+		// The answers of an enrollment form: an object of the form's own
+		// fields, whatever the school's schema asks for.
+		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
 		// The substitution bodies take an id as a number or a decimal string.
 		reflect.TypeOf(substitutions.LaxID): contract.KindLaxID,
 	})
@@ -251,6 +255,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():  contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStringSlice](): contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStr]():         contract.ReadsValue,
+		// A phase body tells an absent calendar_period_id from null.
+		reflect.TypeFor[enrollmentHTTP.EnrollmentPhaseRequest](): contract.ReadsFields,
 		// A school update tells an absent child quota from null (#3567).
 		reflect.TypeFor[provisioningOperatorAPI.ChildQuotaField](): contract.ReadsValue,
 	}
@@ -577,5 +583,25 @@ func staffPortalCalendarContractMounts() []contractMount {
 		{"/api/calendar", calendarAPI.StaffRouteContracts()},
 		{"/api/messages", parentMessagingAPI.InboxRouteContracts()},
 		{"/api/iot", devices},
+	}
+}
+
+// staffPortalEnrollmentContractMounts lists the staff portal's enrollment,
+// holiday week and holiday guest routes and the guardian invitation
+// decisions that left their pass-through route files in #2352.
+func staffPortalEnrollmentContractMounts() []contractMount {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []contractMount{
+		{"/api/enrollment", enrollmentHTTP.ConfigRouteContracts()},
+		{"/api/enrollment", enrollmentHTTP.AdminRequestRouteContracts()},
+		{"/api/enrollment", enrollmentHTTP.AdminReviewRouteContracts()},
+		{"/api/holiday-weeks", enrollmentHTTP.HolidayHostRouteContracts()},
+		{"/api/holiday-guests", enrollmentHTTP.HolidayGuestRouteContracts()},
+		// People Directory's http role may not import the contract types;
+		// both decisions answer no data.
+		{"/api/guardians", []common.RouteContract{
+			{Method: "POST", Pattern: "/invitations/{invitationId}/approve", Portals: portals, NoData: true},
+			{Method: "POST", Pattern: "/invitations/{invitationId}/reject", Portals: portals, NoData: true},
+		}},
 	}
 }

@@ -32,6 +32,68 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/enrollment/admin/requests/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AdminEnrollmentDeleteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AdminEnrollmentDeletionImpact"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/enrollment/admin/requests/{id}/children/{childId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AdminEnrollmentDeleteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AdminEnrollmentDeletionImpact"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/enrollment/admin/requests/{id}/read",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/enrollment/care-offerings/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/enrollment/legal-documents/{filename}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/enrollment/phases/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/files/folders/{folderId}",
       "portals": [
         "tenant"
@@ -1366,6 +1428,315 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/admin/change-requests/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "request_id",
+          "kind": "id"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ChangeRequestResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/change-requests/list",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        },
+        {
+          "name": "view",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChangeRequestReviewPage"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/change-requests/pending-count",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollmentChangeRequestPendingCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/change-requests/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChangeRequestResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/reports/care-usage",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "care_offering_id",
+          "kind": "id"
+        },
+        {
+          "name": "care_offering_ids",
+          "kind": "id",
+          "repeated": true
+        },
+        {
+          "name": "day_count",
+          "kind": "int"
+        },
+        {
+          "name": "grade_level",
+          "kind": "int"
+        },
+        {
+          "name": "phase_id",
+          "kind": "id"
+        },
+        {
+          "name": "pickup_time",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        },
+        {
+          "name": "weekday",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CareUsageReportResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "child_status",
+          "kind": "string"
+        },
+        {
+          "name": "phase_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AdminRequestSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/unread-count",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AdminUnreadRequestCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AdminRequestDetail"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/children/{childId}/delete-impact",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AdminEnrollmentDeletionImpact"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/delete-impact",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AdminEnrollmentDeletionImpact"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/form-labels",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FormLabelsResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/mails",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RequestMailOutcome"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/admin/students/{studentId}/requests/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AdminRequestSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/care-offerings/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "phase_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CareOfferingResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/care-offerings/booking-stats",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "phase_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "CareOfferingBookingStatsResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/care-offerings/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CareOfferingResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PhaseResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/phases/expiry-warnings",
       "portals": [
         "tenant"
@@ -1375,6 +1746,120 @@
         "elem": {
           "kind": "ref",
           "ref": "PhaseExpiryWarningResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PhaseResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/{id}/delete-impact",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PhaseDeleteImpactResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/{id}/manual-bootstrap",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PublicEnrollmentFormBootstrapResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/{id}/responses",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PhaseResponseOverviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/{id}/review",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ReviewItemResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/phases/{id}/rollover-preview",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "bumps_grade",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RolloverPreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/schema/preview",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "base",
+          "kind": "string"
+        },
+        {
+          "name": "phaseId",
+          "kind": "id"
+        },
+        {
+          "name": "schemaId",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchemaPreviewBootstrapResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/schema/versions",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "FormSchemaResponse"
         }
       }
     },
@@ -1544,6 +2029,126 @@
           "kind": "ref",
           "ref": "NoticeResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-guests/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayGuestBadge"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-guests/groups",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayGuestGroup"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-guests/{studentId}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayGuestSheet"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-weeks/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HostedHolidayWeek"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-weeks/home-school-children",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayHomeSchoolBooking"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-weeks/students/{studentId}/health",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayStudentHealth"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-weeks/students/{studentId}/registration",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayStudentRegistration"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-weeks/{weekId}/own-children",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "HolidayOwnChildAssignment"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/holiday-weeks/{weekId}/participants",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayParticipantListResponse"
       }
     },
     {
@@ -8445,6 +9050,175 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/enrollment/admin/change-requests/{id}/approve",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReviewChangeRequestRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChangeRequestResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/change-requests/{id}/question",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChangeRequestMessageRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChangeRequestResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/change-requests/{id}/reject",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReviewChangeRequestRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChangeRequestResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/request-children/{id}/rollover-review",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RolloverReviewDecisionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RolloverReviewDecisionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/requests/mark-all-read",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/requests/{id}/restore",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AdminRestoreResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/care-offerings/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CareOfferingRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CareOfferingResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/care-offerings/{id}/clone",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CloneCareOfferingRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CareOfferingResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/phases/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "EnrollmentPhaseRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PhaseResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/phases/{id}/late-invites",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AdminCreateLateInviteRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AdminCreateLateInviteResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/phases/{id}/manual-approved-enrollments",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AdminManualApprovedEnrollmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AdminManualApprovedEnrollmentResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/phases/{id}/rollover",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RolloverCreateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RolloverCreateResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/files/folders",
       "portals": [
         "tenant"
@@ -8472,6 +9246,22 @@
         "kind": "ref",
         "ref": "bulkInviteResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/invitations/{invitationId}/approve",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/invitations/{invitationId}/reject",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
     },
     {
       "method": "POST",
@@ -12813,6 +13603,44 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/enrollment/admin/requests/{id}/read",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/enrollment/care-offerings/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CareOfferingRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CareOfferingResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/enrollment/phases/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "EnrollmentPhaseRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PhaseUpdateResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/files/folders/{folderId}",
       "portals": [
         "tenant"
@@ -12890,6 +13718,21 @@
       "response": {
         "kind": "ref",
         "ref": "PhoneNumberResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/holiday-weeks/{weekId}/guest-group",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayGuestGroupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayGuestTransfer"
       }
     },
     {
@@ -16537,6 +17380,142 @@
       ]
     },
     {
+      "name": "AdminCandidatePhaseRequest",
+      "go_type": "enrollmenthttp.AdminCandidatePhaseRequest",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminCreateLateInviteRequest",
+      "go_type": "enrollmenthttp.AdminCreateLateInviteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminCreateLateInviteResponse",
+      "go_type": "enrollmenthttp.AdminCreateLateInviteResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "AdminCreateSessionRequest",
       "go_type": "workforce.AdminCreateSessionRequest",
       "request": true,
@@ -16581,6 +17560,1287 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminEnrollmentDeleteRequest",
+      "go_type": "enrollmenthttp.AdminEnrollmentDeleteRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminEnrollmentDeletionCounts",
+      "go_type": "enrollmenthttp.AdminEnrollmentDeletionCounts",
+      "fields": [
+        {
+          "name": "requests",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "request_children",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "request_child_offerings",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "request_guardians",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "change_requests",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "change_request_messages",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "late_invites",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "offering_adjustments",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "email_outbox",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rollover_links_cleared",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "student_source_links_cleared",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminEnrollmentDeletionImpact",
+      "go_type": "enrollmenthttp.AdminEnrollmentDeletionImpact",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deletes_request",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_delete",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "AdminEnrollmentDeletionCounts"
+          }
+        },
+        {
+          "name": "blocking_student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "preserved_guardian_profiles",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "preserved_parent_accounts",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unlinked_guardian_profiles",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "parent_accounts_without_students",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminExistingChildCandidate",
+      "go_type": "enrollmenthttp.AdminExistingChildCandidate",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_of_birth",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_request",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "AdminCandidatePhaseRequest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminLegalEvidenceEntry",
+      "go_type": "enrollmenthttp.AdminLegalEvidenceEntry",
+      "fields": [
+        {
+          "name": "wording_unavailable",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "snapshot_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "LegalBlockSnapshot"
+            }
+          }
+        },
+        {
+          "name": "consent_flags",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "version_unknown",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "version_mismatch",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "staff_recorded",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_request",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminManualApprovedEnrollmentRequest",
+      "go_type": "enrollmenthttp.AdminManualApprovedEnrollmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "additional_guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SubmitGuardianRequest"
+            }
+          }
+        },
+        {
+          "name": "consent_flags",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "form_schema_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "children",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SubmitChildRequest"
+            }
+          }
+        },
+        {
+          "name": "captcha_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "late_invite_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signature",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "SubmitSignatureRequest"
+          }
+        },
+        {
+          "name": "external_consent_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "send_notification",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "existing_student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "create_new_student",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "shown_existing_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminManualApprovedEnrollmentResponse",
+      "go_type": "enrollmenthttp.AdminManualApprovedEnrollmentResponse",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status_url",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestChild",
+      "go_type": "enrollmenthttp.AdminRequestChild",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_of_birth",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "holiday_care_wish",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activation_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "matched_student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "possible_existing_children",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminExistingChildCandidate"
+            }
+          }
+        },
+        {
+          "name": "existing_child_choice_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "existing_child_only",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "review_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekly_plan_on",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "offerings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestChildOffering"
+            }
+          }
+        },
+        {
+          "name": "upcoming_offerings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestChildOffering"
+            }
+          }
+        },
+        {
+          "name": "offerings_unavailable",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestChildOffering",
+      "go_type": "enrollmenthttp.AdminRequestChildOffering",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "offering_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days_of_week_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "manual_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "automatic_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "available_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "includes_lunch",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "includes_holiday_care",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "price_cents",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_later",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "submitted_terms",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "AdminSubmittedOfferingTerms"
+          }
+        },
+        {
+          "name": "changed_terms",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestDetail",
+      "go_type": "enrollmenthttp.AdminRequestDetail",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_selection_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "withdrawn_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "consent_flags",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schema_fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestSchemaField"
+            }
+          }
+        },
+        {
+          "name": "schema_legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestSchemaLegalBlock"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestChild"
+            }
+          }
+        },
+        {
+          "name": "additional_guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestGuardian"
+            }
+          }
+        },
+        {
+          "name": "is_unread",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "legal_blocks_snapshot",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminLegalEvidenceEntry"
+            }
+          }
+        },
+        {
+          "name": "status_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "late_invite_guardian_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "late_invite_email_mismatch",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_view_uploads",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "uploads",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestUpload"
+            }
+          }
+        },
+        {
+          "name": "signature",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "RequestSignatureResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestGuardian",
+      "go_type": "enrollmenthttp.AdminRequestGuardian",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestSchemaField",
+      "go_type": "enrollmenthttp.AdminRequestSchemaField",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applies_to_child",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestSchemaFieldOption"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestSchemaFieldOption",
+      "go_type": "enrollmenthttp.AdminRequestSchemaFieldOption",
+      "fields": [
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestSchemaLegalBlock",
+      "go_type": "enrollmenthttp.AdminRequestSchemaLegalBlock",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestSummary",
+      "go_type": "enrollmenthttp.AdminRequestSummary",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_selection_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "withdrawn_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "consent_flags",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schema_fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestSchemaField"
+            }
+          }
+        },
+        {
+          "name": "schema_legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestSchemaLegalBlock"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestChild"
+            }
+          }
+        },
+        {
+          "name": "additional_guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminRequestGuardian"
+            }
+          }
+        },
+        {
+          "name": "is_unread",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRequestUpload",
+      "go_type": "enrollmenthttp.AdminRequestUpload",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "field_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "uploaded_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminRestoreResponse",
+      "go_type": "enrollmenthttp.AdminRestoreResponse",
+      "fields": [
+        {
+          "name": "restored_children",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "waitlisted_children",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -16680,6 +18940,53 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminSubmittedOfferingTerms",
+      "go_type": "enrollmenthttp.AdminSubmittedOfferingTerms",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "price_cents",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "days_of_week_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "available_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminUnreadRequestCountResponse",
+      "go_type": "enrollmenthttp.AdminUnreadRequestCountResponse",
+      "fields": [
+        {
+          "name": "unread_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -22785,6 +25092,48 @@
       ]
     },
     {
+      "name": "CareBeyondEndResponse",
+      "go_type": "enrollmenthttp.CareBeyondEndResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_end",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_end",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CareCancellationRequest",
       "go_type": "parentbillinghttp.CareCancellationRequest",
       "request": true,
@@ -25521,6 +27870,38 @@
       ]
     },
     {
+      "name": "CareOfferingAvailabilityConditionRequest",
+      "go_type": "enrollmenthttp.CareOfferingAvailabilityConditionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "operator",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CareOfferingAvailabilityRule",
       "go_type": "enrollmenthttp.CareOfferingAvailabilityRule",
       "fields": [
@@ -25539,6 +27920,73 @@
               "kind": "ref",
               "ref": "CareOfferingAvailabilityCondition"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareOfferingAvailabilityRuleRequest",
+      "go_type": "enrollmenthttp.CareOfferingAvailabilityRuleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "match",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "conditions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareOfferingAvailabilityConditionRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareOfferingBookingStatsResponse",
+      "go_type": "enrollmenthttp.CareOfferingBookingStatsResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "booked",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "grade_levels",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "unknown_grade_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -25613,6 +28061,184 @@
           "name": "starts_later",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareOfferingRequest",
+      "go_type": "enrollmenthttp.CareOfferingRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "days_of_week_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "available_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "includes_holiday_care",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "includes_lunch",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "price_cents",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_active",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts_as_care",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "auto_add_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "availability_rule",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "CareOfferingAvailabilityRuleRequest"
+          }
+        },
+        {
+          "name": "auto_add_trigger_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "selection_group",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "selection_rule",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_times",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
           }
         }
       ]
@@ -27696,6 +30322,98 @@
       ]
     },
     {
+      "name": "CareUsageReportResponse",
+      "go_type": "enrollmenthttp.CareUsageReportResponse",
+      "fields": [
+        {
+          "name": "phase",
+          "schema": {
+            "kind": "ref",
+            "ref": "careUsagePhaseResponse"
+          }
+        },
+        {
+          "name": "filters",
+          "schema": {
+            "kind": "ref",
+            "ref": "careUsageAppliedFiltersResponse"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "CareUsageTotals"
+          }
+        },
+        {
+          "name": "by_offering",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "careUsageOfferingStatResponse"
+            }
+          }
+        },
+        {
+          "name": "filter_options",
+          "schema": {
+            "kind": "ref",
+            "ref": "careUsageFilterOptionsResponse"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "careUsageRowResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareUsageTotals",
+      "go_type": "enrollment.CareUsageTotals",
+      "fields": [
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "by_day_count",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "by_weekday_pickup_time",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "int"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CareWeekdayPrice",
       "go_type": "parentbilling.CareWeekdayPrice",
       "fields": [
@@ -28083,6 +30801,63 @@
       ]
     },
     {
+      "name": "ChangeRequestMessageRequest",
+      "go_type": "enrollmenthttp.ChangeRequestMessageRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestMessageResponse",
+      "go_type": "enrollmenthttp.ChangeRequestMessageResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "author_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "author_account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "internal_only",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "ChangeRequestPendingCountResponse",
       "go_type": "requestreviewhttp.ChangeRequestPendingCountResponse",
       "fields": [
@@ -28090,6 +30865,348 @@
           "name": "pending_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestResponse",
+      "go_type": "enrollmenthttp.ChangeRequestResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "origin",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "parent_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "admin_decision_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "base_snapshot",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "proposed_snapshot",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_by_account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "request",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "AdminRequestSummary"
+          }
+        },
+        {
+          "name": "messages",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ChangeRequestMessageResponse"
+            }
+          }
+        },
+        {
+          "name": "roster_impacts",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "enrollmentChildRosterImpactResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestReviewChildEntry",
+      "go_type": "enrollmenthttp.ChangeRequestReviewChildEntry",
+      "fields": [
+        {
+          "name": "case_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestReviewEntry",
+      "go_type": "enrollmenthttp.ChangeRequestReviewEntry",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "origin",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "child_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChangeRequestReviewChildEntry"
+            }
+          }
+        },
+        {
+          "name": "guardian_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "parent_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "decision_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "base_snapshot",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "proposed_snapshot",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestReviewItem",
+      "go_type": "enrollmenthttp.ChangeRequestReviewItem",
+      "fields": [
+        {
+          "name": "request_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "occurred_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "data",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChangeRequestReviewEntry"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestReviewPage",
+      "go_type": "enrollmenthttp.ChangeRequestReviewPage",
+      "fields": [
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChangeRequestReviewItem"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -29101,6 +32218,20 @@
           "name": "can_view_school_day",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CloneCareOfferingRequest",
+      "go_type": "enrollmenthttp.CloneCareOfferingRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "target_phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
           }
         }
       ]
@@ -34122,6 +37253,178 @@
       ]
     },
     {
+      "name": "EnrollmentChangeRequestPendingCountResponse",
+      "go_type": "enrollmenthttp.EnrollmentChangeRequestPendingCountResponse",
+      "fields": [
+        {
+          "name": "pending_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentPhaseRequest",
+      "go_type": "enrollmenthttp.EnrollmentPhaseRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_open_at",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "enrollment_close_at",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "form_schema_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "show_status_reason_to_parent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_overflow_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_selection_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_active",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "available_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "require_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "audience",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "eligible_school_classes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "eligible_grade_levels",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "PhaseTranslatedTextRequest"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "EntryRequest",
       "go_type": "worktimemodels.EntryRequest",
       "request": true,
@@ -35853,6 +39156,151 @@
       ]
     },
     {
+      "name": "FormLabelField",
+      "go_type": "enrollmenthttp.FormLabelField",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applies_to_child",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLabelOption"
+            }
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedText"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormLabelLegalBlock",
+      "go_type": "enrollmenthttp.FormLabelLegalBlock",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedText"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormLabelOption",
+      "go_type": "enrollmenthttp.FormLabelOption",
+      "fields": [
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedText"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormLabelsResponse",
+      "go_type": "enrollmenthttp.FormLabelsResponse",
+      "fields": [
+        {
+          "name": "fields",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLabelField"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLabelLegalBlock"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "FormLegalBlock",
       "go_type": "enrollment.FormLegalBlock",
       "fields": [
@@ -35956,6 +39404,80 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormSchemaResponse",
+      "go_type": "enrollmenthttp.FormSchemaResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fields",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormField"
+            }
+          }
+        },
+        {
+          "name": "core_requirements",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlock"
+            }
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -39362,6 +42884,25 @@
       ]
     },
     {
+      "name": "HolidayDayCount",
+      "go_type": "enrollment.HolidayDayCount",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayDayPlaces",
       "go_type": "enrollment.HolidayDayPlaces",
       "fields": [
@@ -39712,6 +43253,477 @@
       ]
     },
     {
+      "name": "HolidayGuestBadge",
+      "go_type": "enrollment.HolidayGuestBadge",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayGuestContact",
+      "go_type": "enrollment.HolidayGuestContact",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayGuestGroup",
+      "go_type": "enrollment.HolidayGuestGroup",
+      "fields": [
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guests",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayGuestGroupRequest",
+      "go_type": "enrollmenthttp.HolidayGuestGroupRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayGuestSheet",
+      "go_type": "enrollment.HolidayGuestSheet",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "time_model_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_starts_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "lunch",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "home_school_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guest_school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "emergency_contacts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayGuestContact"
+            }
+          }
+        },
+        {
+          "name": "pickup_contacts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayGuestContact"
+            }
+          }
+        },
+        {
+          "name": "answers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayHostAnswer"
+            }
+          }
+        },
+        {
+          "name": "health",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "HolidayHostHealth"
+          }
+        },
+        {
+          "name": "read_only",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayGuestTransfer",
+      "go_type": "enrollment.HolidayGuestTransfer",
+      "fields": [
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "guests",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "own_children",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayHomeSchoolBooking",
+      "go_type": "enrollment.HolidayHomeSchoolBooking",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "period_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "host_school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "host_school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_starts_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "lunch",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "assignment",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayHostAnswer",
+      "go_type": "enrollment.HolidayHostAnswer",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayHostGuardian",
+      "go_type": "enrollment.HolidayHostGuardian",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayHostHealth",
+      "go_type": "enrollment.HolidayHostHealth",
+      "fields": [
+        {
+          "name": "allergies",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "medication",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_notes",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "answers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayHostAnswer"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayHostQuestion",
+      "go_type": "enrollment.HolidayHostQuestion",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayKnownChild",
       "go_type": "enrollment.HolidayKnownChild",
       "fields": [
@@ -39790,6 +43802,88 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayOwnChildAssignment",
+      "go_type": "enrollment.HolidayOwnChildAssignment",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "assignment",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayParticipantListResponse",
+      "go_type": "enrollmenthttp.HolidayParticipantListResponse",
+      "fields": [
+        {
+          "name": "week",
+          "schema": {
+            "kind": "ref",
+            "ref": "HostedHolidayWeek"
+          }
+        },
+        {
+          "name": "time_models",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayTimeModelCount"
+            }
+          }
+        },
+        {
+          "name": "home_schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayHomeSchoolResponse"
+            }
+          }
+        },
+        {
+          "name": "questions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayHostQuestion"
+            }
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "holidayParticipantResponse"
+            }
           }
         }
       ]
@@ -41748,6 +45842,134 @@
       ]
     },
     {
+      "name": "HolidayStudentHealth",
+      "go_type": "enrollment.HolidayStudentHealth",
+      "fields": [
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "period_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "health",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayHostHealth"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayStudentRegistration",
+      "go_type": "enrollment.HolidayStudentRegistration",
+      "fields": [
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "period_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "time_model_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_starts_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "lunch",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "emergency_contacts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayGuestContact"
+            }
+          }
+        },
+        {
+          "name": "pickup_contacts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayGuestContact"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayTimeModel",
       "go_type": "enrollment.HolidayTimeModel",
       "fields": [
@@ -41791,6 +46013,42 @@
           "name": "protected",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayTimeModelCount",
+      "go_type": "enrollment.HolidayTimeModelCount",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -42404,6 +46662,103 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HostedHolidayWeek",
+      "go_type": "enrollment.HostedHolidayWeek",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "period_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "starts_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "booking_unit",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_starts_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "day_participants",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayDayCount"
+            }
+          }
+        },
+        {
+          "name": "guest_group_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guests",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "lunch_offered",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "lunches",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayDayCount"
+            }
           }
         }
       ]
@@ -43713,6 +48068,104 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "LegalBlockSnapshot",
+      "go_type": "enrollment.LegalBlockSnapshot",
+      "fields": [
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "FormAttachment"
+            }
+          }
+        },
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pdf_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "string"
+              }
+            }
+          }
+        },
+        {
+          "name": "guardian_agreement_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -51567,6 +56020,30 @@
       ]
     },
     {
+      "name": "PhaseDeleteImpactResponse",
+      "go_type": "enrollmenthttp.PhaseDeleteImpactResponse",
+      "fields": [
+        {
+          "name": "requests",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "care_offerings",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_kept",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "PhaseDetail",
       "go_type": "traegercataloghttp.PhaseDetail",
       "fields": [
@@ -51802,6 +56279,545 @@
             "nullable": true,
             "elem": {
               "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhaseResponse",
+      "go_type": "enrollmenthttp.PhaseResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_open_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_close_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "form_schema_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "show_status_reason_to_parent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_overflow_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_selection_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "rollover_source_phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_auto_approve",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "rollover_deadline",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_bumps_grade",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "available_school_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "require_school_class",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "eligible_school_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "eligible_grade_levels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedText"
+              }
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhaseResponseExclusionResponse",
+      "go_type": "enrollmenthttp.PhaseResponseExclusionResponse",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhaseResponseOverviewResponse",
+      "go_type": "enrollmenthttp.PhaseResponseOverviewResponse",
+      "fields": [
+        {
+          "name": "applicable",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "expected",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "responded",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PhaseResponseRowResponse"
+            }
+          }
+        },
+        {
+          "name": "excluded",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PhaseResponseExclusionResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhaseResponseRowResponse",
+      "go_type": "enrollmenthttp.PhaseResponseRowResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_parent_app",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "responded",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "request_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pending_request_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhaseTranslatedTextRequest",
+      "go_type": "enrollmenthttp.PhaseTranslatedTextRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PhaseUpdateResponse",
+      "go_type": "enrollmenthttp.PhaseUpdateResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_end_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_open_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_close_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "form_schema_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "show_status_reason_to_parent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_overflow_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_selection_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "rollover_source_phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_auto_approve",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "rollover_deadline",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_bumps_grade",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "available_school_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "require_school_class",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "eligible_school_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "eligible_grade_levels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedText"
+              }
+            }
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_beyond_end",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareBeyondEndResponse"
             }
           }
         }
@@ -53615,6 +58631,64 @@
       ]
     },
     {
+      "name": "PublicCareOfferingsResponse",
+      "go_type": "enrollmenthttp.PublicCareOfferingsResponse",
+      "fields": [
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "care_offering_selection_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_required",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "ref",
+            "ref": "PublicSchoolClassConfig"
+          }
+        },
+        {
+          "name": "collect_grade_level",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_offerings_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "eligible_grade_levels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PublicEnrollmentFormBootstrapResponse",
       "go_type": "enrollmenthttp.PublicEnrollmentFormBootstrapResponse",
       "fields": [
@@ -54973,6 +60047,56 @@
       ]
     },
     {
+      "name": "RequestSignatureResponse",
+      "go_type": "enrollmenthttp.RequestSignatureResponse",
+      "fields": [
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "typed_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "document_sha256",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "integrity_ok",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "image_png",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "RequestVacationRequest",
       "go_type": "workforce.RequestVacationRequest",
       "request": true,
@@ -55524,6 +60648,109 @@
       ]
     },
     {
+      "name": "ReviewChangeRequestRequest",
+      "go_type": "enrollmenthttp.ReviewChangeRequestRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReviewItemResponse",
+      "go_type": "enrollmenthttp.ReviewItemResponse",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "review_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "source_first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source_last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status_token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoleOption",
       "go_type": "operator.RoleOption",
       "fields": [
@@ -55592,6 +60819,256 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolloverCreateRequest",
+      "go_type": "enrollmenthttp.RolloverCreateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service_end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_open_at",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "enrollment_close_at",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "form_schema_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "rollover_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_auto_approve",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "rollover_deadline",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rollover_bumps_grade",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolloverCreateResponse",
+      "go_type": "enrollmenthttp.RolloverCreateResponse",
+      "fields": [
+        {
+          "name": "phase",
+          "schema": {
+            "kind": "ref",
+            "ref": "PhaseResponse"
+          }
+        },
+        {
+          "name": "summary",
+          "schema": {
+            "kind": "ref",
+            "ref": "RolloverSummary"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolloverPreviewResponse",
+      "go_type": "enrollmenthttp.RolloverPreviewResponse",
+      "fields": [
+        {
+          "name": "carry_candidate_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "carried_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "review_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "review_by_reason",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "excluded_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "excluded_by_status",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "request_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolloverReviewDecisionRequest",
+      "go_type": "enrollmenthttp.RolloverReviewDecisionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "decision",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolloverReviewDecisionResponse",
+      "go_type": "enrollmenthttp.RolloverReviewDecisionResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolloverSummary",
+      "go_type": "enrollmenthttp.RolloverSummary",
+      "fields": [
+        {
+          "name": "source_child_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rolled_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "review_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "review_by_reason",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "request_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "enqueued_emails",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_empty_email",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -57906,6 +63383,47 @@
               "nullable": true,
               "ref": "ResolvedSetting"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchemaPreviewBootstrapResponse",
+      "go_type": "enrollmenthttp.SchemaPreviewBootstrapResponse",
+      "fields": [
+        {
+          "name": "enrollment_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "phase_offerings",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "PublicCareOfferingsResponse"
+          }
+        },
+        {
+          "name": "schema",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormSchemaResponse"
+          }
+        },
+        {
+          "name": "assigned_phase_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "active_assigned_phase_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -76083,6 +81601,366 @@
       ]
     },
     {
+      "name": "careUsageAppliedFiltersResponse",
+      "go_type": "enrollmenthttp.careUsageAppliedFiltersResponse",
+      "fields": [
+        {
+          "name": "phase_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "day_count",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "search",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsageFilterOptionsResponse",
+      "go_type": "enrollmenthttp.careUsageFilterOptionsResponse",
+      "fields": [
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "careUsageOfferingOptionResponse"
+            }
+          }
+        },
+        {
+          "name": "grade_levels",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "pickup_times",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsageOfferingOptionResponse",
+      "go_type": "enrollmenthttp.careUsageOfferingOptionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counts_as_care",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsageOfferingStatResponse",
+      "go_type": "enrollmenthttp.careUsageOfferingStatResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "offering_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "by_day_count",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsagePhaseResponse",
+      "go_type": "enrollmenthttp.careUsagePhaseResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsageRowOfferingResponse",
+      "go_type": "enrollmenthttp.careUsageRowOfferingResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "days_source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days_of_week_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "manual_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "automatic_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsageRowResponse",
+      "go_type": "enrollmenthttp.careUsageRowResponse",
+      "fields": [
+        {
+          "name": "request_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_of_birth",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "offerings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "careUsageRowOfferingResponse"
+            }
+          }
+        },
+        {
+          "name": "effective_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "day_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pickup_by_day",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "careWithdrawalExitRequest",
       "go_type": "careplanhttp.careWithdrawalExitRequest",
       "request": true,
@@ -79690,6 +85568,197 @@
       ]
     },
     {
+      "name": "enrollmentAdjustedRosterTemplateResponse",
+      "go_type": "enrollmenthttp.enrollmentAdjustedRosterTemplateResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "removed_weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "added_weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "enrollmentChildRosterImpactResponse",
+      "go_type": "enrollmenthttp.enrollmentChildRosterImpactResponse",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roster_impact",
+          "schema": {
+            "kind": "ref",
+            "ref": "enrollmentRosterImpactResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "enrollmentManualRosterTemplateResponse",
+      "go_type": "enrollmenthttp.enrollmentManualRosterTemplateResponse",
+      "fields": [
+        {
+          "name": "template_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "via_target",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "enrollmentPickupOverrideResponse",
+      "go_type": "enrollmenthttp.enrollmentPickupOverrideResponse",
+      "fields": [
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "stored_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "booked_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reset_now",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "enrollmentRosterImpactResponse",
+      "go_type": "enrollmenthttp.enrollmentRosterImpactResponse",
+      "fields": [
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "adjusted",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "enrollmentAdjustedRosterTemplateResponse"
+            }
+          }
+        },
+        {
+          "name": "not_adjusted",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "enrollmentManualRosterTemplateResponse"
+            }
+          }
+        },
+        {
+          "name": "pickup_overrides",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "enrollmentPickupOverrideResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "familyChildrenRequest",
       "go_type": "parent.familyChildrenRequest",
       "request": true,
@@ -80293,6 +86362,131 @@
         {
           "name": "phone",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "holidayHomeSchoolResponse",
+      "go_type": "enrollmenthttp.holidayHomeSchoolResponse",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "holidayParticipantResponse",
+      "go_type": "enrollmenthttp.holidayParticipantResponse",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "home_school_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guest_school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time_model_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "lunch",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "second_guardian",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "HolidayHostGuardian"
+          }
+        },
+        {
+          "name": "answers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayHostAnswer"
+            }
+          }
+        },
+        {
+          "name": "health",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "HolidayHostHealth"
+          }
+        },
+        {
+          "name": "home_school_name",
           "schema": {
             "kind": "string"
           }

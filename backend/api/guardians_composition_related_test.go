@@ -67,3 +67,24 @@ func TestGuardianComposition_InviteGates(t *testing.T) {
 	testutil.AssertBadRequest(t, ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, "/invitations/99999/approve", nil))
 	testutil.AssertBadRequest(t, ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, "/invitations/99999/reject", nil))
 }
+
+// Staff decide a parent's request to invite another guardian (#2172) at the
+// production mount: approve releases it, reject closes it.
+func TestGuardianComposition_DecidePendingInvitation(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	studentID, _ := ctx.createStudent("Pending", "Approval", "8d")
+	requester := ctx.account("pending-approval-requester")
+	staff := testutil.AdminTestClaims(int(ctx.staffAccount("Sina", "Freigabe")))
+
+	for _, decision := range []struct{ action, status string }{
+		{"approve", "approved"},
+		{"reject", "rejected"},
+	} {
+		guardianID, _ := ctx.createGuardian("pending-" + decision.action)
+		invitationID := ctx.pendingInvitation(studentID, guardianID, requester)
+		rr := ctx.do(t, staff, http.MethodPost, fmt.Sprintf("/invitations/%d/%s", invitationID, decision.action), nil)
+		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+		assert.Equal(t, decision.status, ctx.invitationApproval(invitationID), decision.action)
+	}
+}
