@@ -28,7 +28,7 @@ import {
 // Erklärung der Klassenseite für neue Lehrkräfte (#7567), im Laden wie in
 // der fertigen Seite.
 const CLASS_PAGE_INFO =
-  "Hier siehst du deine Klasse an einem Tag. Die Abschnitte zeigen, wer in der Betreuung bleibt und wer geht. Lies sie zuerst von oben nach unten.";
+  "Hier siehst du deine Klasse an einem Tag. Die Abschnitte zeigen, wer in der Betreuung bleibt und wer nach Hause geht. Lies sie zuerst von oben nach unten.";
 
 // Die Schreibwege der Hausaufgaben (#4796), einmal für alle Renders.
 const homeworkApi = {
