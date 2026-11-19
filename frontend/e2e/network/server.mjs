@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { createAppWorkspace } from "./app-workspace.mjs";
+import { catalogReads, profile } from "./catalog-fixtures.mjs";
 import { networkPorts } from "./ports.mjs";
 import { realClock } from "../real-clock.mjs";
 
@@ -77,38 +78,9 @@ const familyRoutes = (path) =>
 // One protected read per other portal, through its BFF (the operator's
 // through the catalog proxy, #2352).
 const portalReads = new Set(["/operator/organizations"]);
-// Reads that reach the API through a portal's catalog proxy (#2352), not a
-// route file: the proxy checks each answer against the route's contract.
-const catalogReads = new Map([
-  ["/caterer/schools", { caterer_name: "Fixture-Küche", schools: [] }],
-  ["/parent/me/calendar", { from: "2026-11-02", to: "2026-11-08", events: [] }],
-  ["/school/staff-messages/unread-count", { unread_count: 2, internal: 1 }],
-  // The proxy builds the path from segments: no trailing slash.
-  ["/school/supervisions", { instances: [] }],
-  [
-    "/operator/billing/key-day",
-    {
-      key_day: 15,
-      next_key_date: "2026-12-15",
-      updated_at: "2026-11-01T08:00:00Z",
-    },
-  ],
-]);
 const refuse = (res, body) => {
   res.writeHead(401, { "Content-Type": "application/problem+json" });
   res.end(JSON.stringify(body));
-};
-// The shape of GET /api/me/profile in the contract: the catalog proxy checks
-// the answer (#2352).
-const profile = {
-  id: 1,
-  first_name: "Test",
-  last_name: "Fixture",
-  email: "fixture@example.invalid",
-  username: null,
-  last_login: null,
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
 };
 const api = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${apiPort}`);
