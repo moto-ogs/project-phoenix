@@ -91,24 +91,29 @@ function staffRecord(): Record<string, unknown> {
   const cacheKey = `${detailRequest.endedOn}|${detailRequest.avatarUrl}|${detailRequest.plannedExitDate}`;
   const cached = staffRecords.get(cacheKey);
   if (cached) return cached;
+  // In der Form des Vertrags (#7563): Person verschachtelt.
   const record = {
     id: "42",
+    person_id: "9",
+    is_teacher: false,
+    was_present_today: false,
+    is_external: false,
     started_on: "2024-09-02",
     ended_on: detailRequest.endedOn,
-    planned_exit_date: detailRequest.plannedExitDate,
-    avatar: detailRequest.avatarUrl ?? null,
-    name: "Mila Muster",
-    firstName: "Mila",
-    lastName: "Muster",
-    first_name: "Mila",
-    last_name: "Muster",
+    planned_exit_date: detailRequest.plannedExitDate ?? undefined,
+    person: {
+      id: "9",
+      first_name: "Mila",
+      last_name: "Muster",
+      email: "mila@example.test",
+      avatar: detailRequest.avatarUrl,
+      tag_id: "ABC123",
+      account_id: "7",
+      created_at: "2024-09-02T08:00:00Z",
+      updated_at: "2024-09-02T08:00:00Z",
+    },
     account_role: "teacher",
     role: "Betreuung",
-    qualifications: null,
-    staff_notes: null,
-    email: "mila@example.test",
-    tag_id: "ABC123",
-    account_id: "7",
     created_at: "2024-09-02T08:00:00Z",
     updated_at: "2024-09-02T08:00:00Z",
   };

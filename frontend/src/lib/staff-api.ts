@@ -9,6 +9,14 @@ import {
   apiErrorFromText,
 } from "~/lib/api-error";
 import type { MailOutcome } from "~/lib/email-delivery-status";
+import {
+  EXTERNAL_ACCOUNT_STATUS_VALUES,
+  type ExternalStaffResponse,
+  type FormerStaffResponse,
+  ROLE_FORM_VALUES,
+  type StaffRecordResponse,
+} from "~/lib/contract/staff.generated";
+import { knownEnum } from "~/lib/contract/runtime";
 
 const logger = createLogger({ component: "StaffAPI" });
 
@@ -29,42 +37,12 @@ export function staffAvatarUrl(
   return version ? `${base}?v=${encodeURIComponent(version)}` : base;
 }
 
-// Backend response types (already mapped by the API route handler)
-export interface BackendStaffResponse {
-  started_on?: string;
-  ended_on?: string | null;
-  id: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-  specialization?: string | null;
-  role: string | null;
-  /** Form der Position aus den Stammdaten (`feminine`/`masculine`), fehlt ohne Angabe. */
-  role_form?: RoleForm | null;
-  qualifications: string | null;
-  account_role?: string | null;
-  /** Gespeicherter Avatar-Pfad des Kontos; nur ob er da ist, zählt. */
-  avatar?: string | null;
-  tag_id: string | null;
-  staff_notes: string | null;
-  created_at: string;
-  updated_at: string;
-  staff_id?: string;
-  teacher_id?: string;
-  employment_type?: string | null;
-  was_present_today?: boolean;
-  work_status?: string;
-  absence_type?: string;
-  /** The school's own Abwesenheitsart wording for today's absence (#2403). */
-  absence_type_label?: string;
-  /** External caregiver, with or without a moto account (#3823, #4573). */
-  is_external?: boolean;
-  external_organization?: string | null;
-  /** Account state of an external caregiver; absent for everyone else. */
-  external_account_status?: ExternalAccountStatus | null;
-  /** Geplanter letzter Arbeitstag, "YYYY-MM-DD" (#4809). */
-  planned_exit_date?: string | null;
-}
+/**
+ * A staff record as the contract delivers it (#7563): the person nested,
+ * ids as decimal strings. The external caregiver writes answer the same
+ * record without the teacher fields.
+ */
+export type StaffRecord = StaffRecordResponse | ExternalStaffResponse;
 
 /**
  * Account state of an external caregiver (#4573): `account` signs in,
@@ -192,14 +170,6 @@ export interface FormerStaff {
   endedOn: string;
 }
 
-export interface BackendFormerStaff {
-  id: string;
-  first_name: string;
-  last_name: string;
-  started_on: string;
-  ended_on: string;
-}
-
 /** Active group with supervisors and room info */
 interface ActiveGroupInfo {
   supervisors?: Array<{
@@ -228,26 +198,6 @@ interface ActiveGroupWithId extends ActiveGroupInfo {
  */
 interface SupervisedGroupEntryWithId extends SupervisedGroupEntry {
   groupId?: number | string;
-}
-
-/**
- * Extracts staff list from various API response formats
- */
-function extractStaffList(
-  data: BackendStaffResponse[] | { data: BackendStaffResponse[] },
-): BackendStaffResponse[] {
-  if (Array.isArray(data)) {
-    return data;
-  }
-  if (
-    data &&
-    typeof data === "object" &&
-    "data" in data &&
-    Array.isArray(data.data)
-  ) {
-    return data.data;
-  }
-  return [];
 }
 
 /**
@@ -388,16 +338,61 @@ function getSupervisionInfo(
   return { isSupervising, currentLocation, supervisionRole, supervisions };
 }
 
+/** First and last name of a record's person, empty without a person. */
+function personNames(staff: StaffRecord) {
+  const firstName = staff.person?.first_name ?? "";
+  const lastName = staff.person?.last_name ?? "";
+  return {
+    name: staff.person ? `${firstName} ${lastName}` : "",
+    firstName,
+    lastName,
+  };
+}
+
+/** The teacher fields; the external caregiver writes answer without them. */
+function teacherFields(staff: StaffRecord): Partial<StaffRecordResponse> {
+  return staff;
+}
+
+/** The fields the staff list and the record header share. */
+function mapStaffFields(staff: StaffRecord) {
+  const teacher = teacherFields(staff);
+  return {
+    ...personNames(staff),
+    email: undefined,
+    role: teacher.role,
+    roleForm: knownEnum(ROLE_FORM_VALUES, teacher.role_form),
+    accountRole: staff.account_role,
+    specialization: teacher.specialization?.trim(),
+    qualifications: teacher.qualifications,
+    staffNotes: staff.staff_notes,
+    hasRfid: !!staff.person?.tag_id,
+    isTeacher: !!teacher.teacher_id,
+    wasPresentToday: staff.was_present_today,
+    workStatus: staff.work_status,
+    absenceType: staff.absence_type,
+    absenceTypeLabel: staff.absence_type_label,
+    isExternal: staff.is_external,
+    externalOrganization: staff.external_organization,
+    externalAccountStatus:
+      knownEnum(
+        EXTERNAL_ACCOUNT_STATUS_VALUES,
+        staff.external_account_status,
+      ) ?? null,
+    plannedExitDate: staff.planned_exit_date,
+  };
+}
+
 /**
- * Maps a backend staff response to frontend Staff type
+ * Maps a staff record of the contract to the frontend Staff type
  */
 function mapStaffMember(
-  staff: BackendStaffResponse,
+  staff: StaffRecord,
   staffGroupsMap: Record<string, SupervisedGroupEntryWithId[]>,
 ): Staff {
   const { isSupervising, currentLocation, supervisionRole, supervisions } =
     getSupervisionInfo(
-      staff.staff_id,
+      staff.id,
       staffGroupsMap,
       staff.was_present_today,
       staff.work_status,
@@ -405,31 +400,12 @@ function mapStaffMember(
     );
 
   return {
+    ...mapStaffFields(staff),
     id: staff.id,
-    name: staff.name,
-    firstName: staff.firstName,
-    lastName: staff.lastName,
-    email: undefined,
-    role: staff.role ?? undefined,
-    roleForm: staff.role_form ?? undefined,
-    accountRole: staff.account_role ?? undefined,
-    specialization: staff.specialization?.trim() ?? undefined,
-    qualifications: staff.qualifications ?? undefined,
-    staffNotes: staff.staff_notes ?? undefined,
-    hasRfid: !!staff.tag_id,
-    isTeacher: !!staff.teacher_id,
     isSupervising,
     currentLocation,
     supervisionRole,
     supervisions,
-    wasPresentToday: staff.was_present_today,
-    workStatus: staff.work_status,
-    absenceType: staff.absence_type,
-    absenceTypeLabel: staff.absence_type_label,
-    isExternal: staff.is_external ?? false,
-    externalOrganization: staff.external_organization ?? undefined,
-    externalAccountStatus: staff.external_account_status ?? null,
-    plannedExitDate: staff.planned_exit_date ?? undefined,
   };
 }
 
@@ -471,44 +447,36 @@ async function fetchActiveGroups(): Promise<ActiveGroupWithId[]> {
 }
 
 /** Kopf der Personalakte aus dem Datensatz von GET /api/staff/{id}. */
-export function mapStaffRecord(staff: BackendStaffResponse): Staff {
+export function mapStaffRecord(staff: StaffRecordResponse): Staff {
   const { currentLocation, supervisionRole } = getSupervisionInfo(
-    staff.staff_id,
+    staff.id,
     {},
     staff.was_present_today,
     staff.work_status,
     staff.absence_type,
   );
   return {
+    ...mapStaffFields(staff),
     id: staff.id,
-    startedOn: staff.started_on,
+    startedOn: staff.started_on ?? undefined,
     endedOn: staff.ended_on,
-    name: staff.name,
-    firstName: staff.firstName ?? staff.name?.split(" ")[0] ?? "",
-    lastName: staff.lastName ?? staff.name?.split(" ").slice(1).join(" ") ?? "",
-    email: undefined,
-    avatarUrl: staffAvatarUrl(staff.id, staff.avatar),
-    role: staff.role ?? undefined,
-    roleForm: staff.role_form ?? undefined,
-    accountRole: staff.account_role ?? undefined,
-    specialization: staff.specialization?.trim() ?? undefined,
-    qualifications: staff.qualifications ?? undefined,
-    staffNotes: staff.staff_notes ?? undefined,
-    employmentType: staff.employment_type ?? undefined,
-    hasRfid: !!staff.tag_id,
-    isTeacher: !!staff.teacher_id,
+    avatarUrl: staffAvatarUrl(staff.id, staff.person?.avatar),
+    employmentType: staff.employment_type,
     isSupervising: false,
     currentLocation,
     supervisionRole,
     supervisions: [],
-    wasPresentToday: staff.was_present_today,
-    workStatus: staff.work_status,
-    absenceType: staff.absence_type,
-    absenceTypeLabel: staff.absence_type_label,
-    isExternal: staff.is_external ?? false,
-    externalOrganization: staff.external_organization ?? undefined,
-    externalAccountStatus: staff.external_account_status ?? null,
-    plannedExitDate: staff.planned_exit_date ?? undefined,
+  };
+}
+
+/** A former employment of the Ehemalige filter (#3403). */
+function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
+  return {
+    id: entry.id,
+    firstName: entry.first_name,
+    lastName: entry.last_name,
+    startedOn: entry.started_on ?? "",
+    endedOn: entry.ended_on ?? "",
   };
 }
 
@@ -535,7 +503,8 @@ class StaffService {
         `Failed to fetch former staff: ${response.statusText}`,
       );
     }
-    return ((await response.json()) as { data: FormerStaff[] }).data;
+    const json = (await response.json()) as { data: FormerStaffResponse[] };
+    return json.data.map(mapFormerStaff);
   }
 
   // Get all staff members with their current supervision status.
@@ -568,9 +537,9 @@ class StaffService {
       );
     }
 
-    const staffData = (await staffResponse.json()) as
-      BackendStaffResponse[] | { data: BackendStaffResponse[] };
-    const staffList = extractStaffList(staffData);
+    const staffList = (
+      (await staffResponse.json()) as { data: StaffRecordResponse[] }
+    ).data;
     const staffGroupsMap = buildStaffGroupsMap(activeGroups);
 
     const mappedStaff = staffList.map((staff) =>
@@ -604,7 +573,7 @@ class StaffService {
         `Failed to create external caregiver: ${response.statusText}`,
       );
     }
-    const payload = (await response.json()) as { data: BackendStaffResponse };
+    const payload = (await response.json()) as { data: ExternalStaffResponse };
     return mapStaffMember(payload.data, {});
   }
 
@@ -630,13 +599,13 @@ class StaffService {
         `Failed to invite external caregiver: ${response.statusText}`,
       );
     }
-    const payload = (await response.json()) as { data: BackendStaffResponse };
+    const payload = (await response.json()) as { data: ExternalStaffResponse };
     return mapStaffMember(payload.data, {});
   }
 
   // Rohdaten von GET /api/staff/{id}. Kopf der Personalakte (mapStaffRecord)
   // und Konto-Reiter leiten ihre Abbildungen aus demselben Abruf ab (#4993).
-  async getStaffRecord(id: string): Promise<BackendStaffResponse> {
+  async getStaffRecord(id: string): Promise<StaffRecordResponse> {
     const response = await sessionFetch(`/api/staff/${id}`);
     if (!response.ok) {
       throw await apiErrorFromResponse(
@@ -644,7 +613,7 @@ class StaffService {
         `Failed to fetch staff member: ${response.statusText}`,
       );
     }
-    const json = (await response.json()) as { data: BackendStaffResponse };
+    const json = (await response.json()) as { data: StaffRecordResponse };
     return json.data;
   }
 

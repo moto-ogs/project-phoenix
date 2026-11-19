@@ -1,3 +1,5 @@
+// Temporary (#7563): tests of the route file that serves bundles built
+// before #7563. Delete this file with the route.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import type { ExtendedSession } from "~/test/route-test-helpers";
@@ -42,6 +44,7 @@ describe("GET /api/staff/former", () => {
 
   it("reads the backend's former employments and maps them", async () => {
     mockApiGet.mockResolvedValueOnce({
+      status: "success",
       data: [
         {
           id: "42",
@@ -55,15 +58,18 @@ describe("GET /api/staff/former", () => {
 
     const response = await GET(request(), context);
 
-    expect(mockApiGet).toHaveBeenCalledWith(
-      "/api/staff?employment=former",
-      "test-token",
-    );
+    expect(mockApiGet).toHaveBeenCalledWith("/api/staff/former", "test-token");
     expect(response.status).toBe(200);
     const json = (await response.json()) as { data: unknown };
+    // The contract's fields and, beside them, the camel-case ones older
+    // bundles read (#7563).
     expect(json.data).toEqual([
       {
         id: "42",
+        first_name: "Grace",
+        last_name: "Hopper",
+        started_on: "2024-09-02",
+        ended_on: "2026-07-31",
         firstName: "Grace",
         lastName: "Hopper",
         startedOn: "2024-09-02",
@@ -74,6 +80,7 @@ describe("GET /api/staff/former", () => {
 
   it("keeps a bigint identifier exact", async () => {
     mockApiGet.mockResolvedValueOnce({
+      status: "success",
       data: [
         {
           id: "9223372036854775807",
@@ -91,14 +98,5 @@ describe("GET /api/staff/former", () => {
       data: Array<{ id: string }>;
     };
     expect(json.data[0]?.id).toBe("9223372036854775807");
-  });
-
-  it("answers an empty list when the backend has none", async () => {
-    mockApiGet.mockResolvedValueOnce({ data: null });
-
-    const response = await GET(request(), context);
-
-    const json = (await response.json()) as { data: unknown };
-    expect(json.data).toEqual([]);
   });
 });

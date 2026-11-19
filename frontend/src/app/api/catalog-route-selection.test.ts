@@ -36,7 +36,7 @@ const BFF_PREFIX: Record<SessionPortal, [string, string]> = {
  * portal's catalog proxy: `/api/auth/…` belongs to Auth.js otherwise.
  */
 const HAND_OFFS: Record<string, SessionPortal> = {
-  "/api/auth/invitations/[...path]": "tenant",
+  "/api/auth/invitations/[[...path]]": "tenant",
 };
 
 const apiDir = path.dirname(new URL(import.meta.url).pathname);

@@ -11,6 +11,8 @@ import {
 import { createLogger } from "~/lib/logger";
 import type { Activity } from "./activity-helpers";
 import type { ExternalAccountStatus } from "./staff-api";
+import type { StaffRecordResponse } from "./contract/staff.generated";
+import { mapTeacherResponse } from "./teacher-helpers";
 
 const logger = createLogger({ component: "TeacherAPI" });
 
@@ -96,33 +98,6 @@ function buildStaffRequestBody(
     );
   }
   return JSON.stringify({ person_id: personId, ...fields });
-}
-
-/**
- * Extracts Teacher data from potentially double-wrapped response
- */
-function extractTeacherData(responseData: unknown): Teacher {
-  if (!responseData || typeof responseData !== "object") {
-    return responseData as Teacher;
-  }
-
-  const response = responseData as {
-    data?: { data?: Teacher } | Teacher;
-  };
-
-  if ("data" in response && response.data) {
-    const backendResponse = response.data;
-    if (
-      backendResponse &&
-      typeof backendResponse === "object" &&
-      "data" in backendResponse
-    ) {
-      return (backendResponse as { data: Teacher }).data;
-    }
-    return backendResponse as Teacher;
-  }
-
-  return responseData as Teacher;
 }
 
 // Define Teacher interface aligned with staff API response structure
@@ -384,8 +359,8 @@ class TeacherService {
       );
     }
 
-    const data: unknown = await response.json();
-    return extractTeacherData(data);
+    const json = (await response.json()) as { data: StaffRecordResponse };
+    return mapTeacherResponse(json.data);
   }
 
   // Update an existing teacher
@@ -548,7 +523,8 @@ class TeacherService {
       );
     }
 
-    return (await response.json()) as Teacher;
+    const json = (await response.json()) as { data: StaffRecordResponse };
+    return mapTeacherResponse(json.data);
   }
 
   // Delete a teacher

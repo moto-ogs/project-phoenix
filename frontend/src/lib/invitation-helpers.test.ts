@@ -1,9 +1,8 @@
+import type { SchoolInvitationResponse } from "./contract/auth-invitations.generated";
 import { describe, it, expect } from "vitest";
-import type {
-  BackendInvitationValidation,
-  BackendInvitation,
-} from "./invitation-helpers";
+import type { BackendInvitationValidation } from "./invitation-helpers";
 import {
+  toCreateInvitationBody,
   mapInvitationValidationResponse,
   mapPendingInvitationResponse,
 } from "./invitation-helpers";
@@ -119,15 +118,26 @@ describe("invitation-helpers", () => {
   });
 
   describe("mapPendingInvitationResponse", () => {
+    // The fields every invitation of the contract carries (#7563).
+    const invitationDefaults = {
+      employment_action: "",
+      reset_master_data: false,
+      reset_qualifications: false,
+      reset_work_time: false,
+      delivery_status: "sent",
+      email_retry_count: 0,
+    };
+
     it("should map all fields from backend to frontend format", () => {
-      const backendData: BackendInvitation = {
-        id: 123,
+      const backendData: SchoolInvitationResponse = {
+        ...invitationDefaults,
+        id: "123",
         email: "teacher@school.com",
         role_id: "5",
         role_name: "Teacher",
         token: "abc123xyz",
         expires_at: "2024-12-31T23:59:59Z",
-        created_by: 1,
+        created_by: "1",
         first_name: "John",
         last_name: "Smith",
         position: "Science Teacher",
@@ -137,11 +147,11 @@ describe("invitation-helpers", () => {
       const result = mapPendingInvitationResponse(backendData);
 
       expect(result).toEqual({
-        id: 123,
+        id: "123",
         email: "teacher@school.com",
         roleId: "5",
         roleName: "Teacher",
-        createdBy: 1,
+        createdBy: "1",
         creatorEmail: "admin@school.com",
         expiresAt: "2024-12-31T23:59:59Z",
         token: "abc123xyz",
@@ -152,13 +162,14 @@ describe("invitation-helpers", () => {
     });
 
     it("should handle missing role_name by using empty string", () => {
-      const backendData: BackendInvitation = {
-        id: 456,
+      const backendData: SchoolInvitationResponse = {
+        ...invitationDefaults,
+        id: "456",
         email: "teacher@school.com",
         role_id: "5",
         role_name: undefined,
         expires_at: "2024-12-31T23:59:59Z",
-        created_by: 1,
+        created_by: "1",
       };
 
       const result = mapPendingInvitationResponse(backendData);
@@ -166,47 +177,16 @@ describe("invitation-helpers", () => {
       expect(result.roleName).toBe("");
     });
 
-    it("should handle all optional fields as null", () => {
-      const backendData: BackendInvitation = {
-        id: 789,
+    it("should leave absent optional fields undefined", () => {
+      const backendData: SchoolInvitationResponse = {
+        ...invitationDefaults,
+        id: "789",
         email: "teacher@school.com",
         role_id: "5",
         role_name: "Teacher",
         token: undefined,
         expires_at: "2024-12-31T23:59:59Z",
-        created_by: 1,
-        first_name: null,
-        last_name: null,
-        position: null,
-        creator: undefined,
-      };
-
-      const result = mapPendingInvitationResponse(backendData);
-
-      expect(result).toEqual({
-        id: 789,
-        email: "teacher@school.com",
-        roleId: "5",
-        roleName: "Teacher",
-        createdBy: 1,
-        creatorEmail: undefined,
-        expiresAt: "2024-12-31T23:59:59Z",
-        token: undefined,
-        firstName: null,
-        lastName: null,
-        position: null,
-      });
-    });
-
-    it("should handle all optional fields as undefined", () => {
-      const backendData: BackendInvitation = {
-        id: 101,
-        email: "admin@school.com",
-        role_id: "1",
-        role_name: "Admin",
-        token: undefined,
-        expires_at: "2024-06-30T12:00:00Z",
-        created_by: 1,
+        created_by: "1",
         first_name: undefined,
         last_name: undefined,
         position: undefined,
@@ -216,11 +196,44 @@ describe("invitation-helpers", () => {
       const result = mapPendingInvitationResponse(backendData);
 
       expect(result).toEqual({
-        id: 101,
+        id: "789",
+        email: "teacher@school.com",
+        roleId: "5",
+        roleName: "Teacher",
+        createdBy: "1",
+        creatorEmail: undefined,
+        expiresAt: "2024-12-31T23:59:59Z",
+        token: undefined,
+        firstName: undefined,
+        lastName: undefined,
+        position: undefined,
+      });
+    });
+
+    it("should handle all optional fields as undefined", () => {
+      const backendData: SchoolInvitationResponse = {
+        ...invitationDefaults,
+        id: "101",
+        email: "admin@school.com",
+        role_id: "1",
+        role_name: "Admin",
+        token: undefined,
+        expires_at: "2024-06-30T12:00:00Z",
+        created_by: "1",
+        first_name: undefined,
+        last_name: undefined,
+        position: undefined,
+        creator: undefined,
+      };
+
+      const result = mapPendingInvitationResponse(backendData);
+
+      expect(result).toEqual({
+        id: "101",
         email: "admin@school.com",
         roleId: "1",
         roleName: "Admin",
-        createdBy: 1,
+        createdBy: "1",
         creatorEmail: undefined,
         expiresAt: "2024-06-30T12:00:00Z",
         token: undefined,
@@ -231,16 +244,17 @@ describe("invitation-helpers", () => {
     });
 
     it("should handle mix of present and missing optional fields", () => {
-      const backendData: BackendInvitation = {
-        id: 202,
+      const backendData: SchoolInvitationResponse = {
+        ...invitationDefaults,
+        id: "202",
         email: "staff@school.com",
         role_id: "3",
         role_name: "Staff",
         token: "token123",
         expires_at: "2024-08-15T10:00:00Z",
-        created_by: 2,
+        created_by: "2",
         first_name: "Alice",
-        last_name: null,
+        last_name: undefined,
         position: undefined,
         creator: "supervisor@school.com",
       };
@@ -248,29 +262,30 @@ describe("invitation-helpers", () => {
       const result = mapPendingInvitationResponse(backendData);
 
       expect(result).toEqual({
-        id: 202,
+        id: "202",
         email: "staff@school.com",
         roleId: "3",
         roleName: "Staff",
-        createdBy: 2,
+        createdBy: "2",
         creatorEmail: "supervisor@school.com",
         expiresAt: "2024-08-15T10:00:00Z",
         token: "token123",
         firstName: "Alice",
-        lastName: null,
+        lastName: undefined,
         position: undefined,
       });
     });
 
     it("should preserve special characters in fields", () => {
-      const backendData: BackendInvitation = {
-        id: 303,
+      const backendData: SchoolInvitationResponse = {
+        ...invitationDefaults,
+        id: "303",
         email: "teacher+special@example.com",
         role_id: "5",
         role_name: "Teacher (Substitute)",
         token: "abc-123-xyz",
         expires_at: "2024-12-31T23:59:59Z",
-        created_by: 1,
+        created_by: "1",
         first_name: "José",
         last_name: "O'Connor",
         position: "PE & Sports",
@@ -288,20 +303,69 @@ describe("invitation-helpers", () => {
     });
 
     it("should preserve role IDs as decimal strings", () => {
-      const backendData: BackendInvitation = {
-        id: 999999,
+      const backendData: SchoolInvitationResponse = {
+        ...invitationDefaults,
+        id: "999999",
         email: "test@example.com",
         role_id: "9007199254740993",
         role_name: "Role",
         expires_at: "2024-12-31T23:59:59Z",
-        created_by: 777777,
+        created_by: "777777",
       };
 
       const result = mapPendingInvitationResponse(backendData);
 
-      expect(result.id).toBe(999999);
+      expect(result.id).toBe("999999");
       expect(result.roleId).toBe("9007199254740993");
-      expect(result.createdBy).toBe(777777);
+      expect(result.createdBy).toBe("777777");
     });
+  });
+
+  // The role and body checks of the former /api/invitations route file
+  // (#2511, #7563): the client names the contract fields once.
+  describe("toCreateInvitationBody", () => {
+    const base = { email: "neu@example.test", roleId: "2" };
+
+    it("names the contract's fields and keeps false reset choices", () => {
+      expect(
+        toCreateInvitationBody({
+          ...base,
+          firstName: "Neu",
+          lastName: "Kraft",
+          position: "Leitung",
+          gender: "female",
+          employmentAction: "resume",
+          resetMasterData: false,
+          resetQualifications: true,
+          resetWorkTime: false,
+        }),
+      ).toEqual({
+        email: "neu@example.test",
+        role_id: "2",
+        first_name: "Neu",
+        last_name: "Kraft",
+        position: "Leitung",
+        gender: "female",
+        employment_action: "resume",
+        reset_master_data: false,
+        reset_qualifications: true,
+        reset_work_time: false,
+      });
+    });
+
+    it("keeps a role id above JavaScript's safe range digit for digit", () => {
+      expect(
+        toCreateInvitationBody({ ...base, roleId: "9007199254740993" }).role_id,
+      ).toBe("9007199254740993");
+    });
+
+    it.each([undefined, "", "0", "007", "abc", "2.5"])(
+      "leaves an unusable role id %j out, so the backend names the field",
+      (roleId) => {
+        expect(toCreateInvitationBody({ ...base, roleId })).not.toHaveProperty(
+          "role_id",
+        );
+      },
+    );
   });
 });
