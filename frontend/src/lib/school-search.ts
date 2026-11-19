@@ -8,8 +8,6 @@ import {
 import type { SchoolSearchResult } from "~/lib/school-search-types";
 
 export type {
-  SchoolSearchMatchField,
-  SchoolSearchMatch,
   SchoolSearchChild,
   SchoolSearchContact,
   SchoolSearchScope,
