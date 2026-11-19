@@ -53,6 +53,7 @@ import (
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
+	gradeTransitionHTTP "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 	deleteStudentsHTTP "github.com/moto-ogs/project-phoenix/workflows/studentdeletion/http"
@@ -495,5 +496,6 @@ func mealPlanRouteContracts() []common.RouteContract {
 func staffPortalAdminContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/staff", timeTrackingHTTP.StaffAdminWorkflowRouteContracts()},
+		{"/api/admin/grade-transitions", gradeTransitionHTTP.RouteContracts()},
 	}
 }

@@ -486,7 +486,9 @@ func TestGradeTransitionResource_Delete(t *testing.T) {
 
 	account := testpkg.CreateTestAccount(t, tc.db, "delete-test@example.com")
 
-	router := tc.resource.Router(rootAPI.ProtectedTenantRoutes)
+	// Mounted under its production path: the catalog proxy forwards the
+	// delete there (#2352), and the request paths below get the prefix.
+	router := testpkg.MountedQueryBudgetRouter("/api/admin/grade-transitions", tc.resource.Router(rootAPI.ProtectedTenantRoutes))
 	token := mintAdminToken(t, account.ID)
 
 	t.Run("delete draft transition", func(t *testing.T) {
@@ -500,6 +502,9 @@ func TestGradeTransitionResource_Delete(t *testing.T) {
 
 		rr := testutil.ExecuteRequest(router, req)
 		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+
+		rr = testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", url, nil, testutil.WithJWTBearer(token)))
+		assert.Equal(t, http.StatusNotFound, rr.Code, "the deleted transition is gone: %s", rr.Body.String())
 	})
 
 	t.Run("delete non-existent transition returns error", func(t *testing.T) {

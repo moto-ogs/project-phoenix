@@ -2,6 +2,14 @@
   "routes": [
     {
       "method": "DELETE",
+      "pattern": "/api/admin/grade-transitions/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/announcement-attachments/{announcementId}/{attachmentId}",
       "portals": [
         "tenant"
@@ -834,6 +842,106 @@
       "response": {
         "kind": "ref",
         "ref": "AllowancePreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/admin/grade-transitions/",
+      "portals": [
+        "tenant"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "academic_year",
+          "kind": "string"
+        },
+        {
+          "name": "after_id",
+          "kind": "id"
+        },
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "page_size",
+          "kind": "int"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TransitionResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/admin/grade-transitions/classes",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/admin/grade-transitions/suggest",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SuggestedMappingResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/admin/grade-transitions/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TransitionResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/admin/grade-transitions/{id}/history",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TransitionHistoryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/admin/grade-transitions/{id}/preview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TransitionPreviewResponse"
       }
     },
     {
@@ -7346,6 +7454,47 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/admin/grade-transitions/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TransitionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TransitionResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/admin/grade-transitions/{id}/apply",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TransitionApplyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TransitionResultResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/admin/grade-transitions/{id}/revert",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TransitionResultResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/class-list-entries/",
       "portals": [
         "tenant"
@@ -11427,6 +11576,21 @@
       "response": {
         "kind": "ref",
         "ref": "AbsenceTypeResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/admin/grade-transitions/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TransitionRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TransitionResponse"
       }
     },
     {
@@ -60212,6 +60376,44 @@
       ]
     },
     {
+      "name": "SuggestedMappingResponse",
+      "go_type": "gradetransitionhttp.SuggestedMappingResponse",
+      "fields": [
+        {
+          "name": "from_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_graduating",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "ambiguous",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "SupervisionContact",
       "go_type": "classday.SupervisionContact",
       "fields": [
@@ -65412,6 +65614,444 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionApplyRequest",
+      "go_type": "gradetransitionhttp.TransitionApplyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionHistoryResponse",
+      "go_type": "gradetransitionhttp.TransitionHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "transition_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "person_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "from_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "from_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_state",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionMappingPreviewResponse",
+      "go_type": "gradetransitionhttp.TransitionMappingPreviewResponse",
+      "fields": [
+        {
+          "name": "from_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionMappingRequest",
+      "go_type": "gradetransitionhttp.TransitionMappingRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionMappingResponse",
+      "go_type": "gradetransitionhttp.TransitionMappingResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "from_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionPreviewResponse",
+      "go_type": "gradetransitionhttp.TransitionPreviewResponse",
+      "fields": [
+        {
+          "name": "transition_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "academic_year",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "total_students",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "to_promote",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "to_graduate",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "by_mapping",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TransitionMappingPreviewResponse"
+            }
+          }
+        },
+        {
+          "name": "unmapped_classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TransitionUnmappedClassResponse"
+            }
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionRequest",
+      "go_type": "gradetransitionhttp.TransitionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "academic_year",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "mappings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TransitionMappingRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionResponse",
+      "go_type": "gradetransitionhttp.TransitionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "academic_year",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied_by",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "reverted_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reverted_by",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mappings",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "TransitionMappingResponse"
+            }
+          }
+        },
+        {
+          "name": "can_modify",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_apply",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_revert",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionResultResponse",
+      "go_type": "gradetransitionhttp.TransitionResultResponse",
+      "fields": [
+        {
+          "name": "transition_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "students_promoted",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "students_graduated",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "can_revert",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TransitionUnmappedClassResponse",
+      "go_type": "gradetransitionhttp.TransitionUnmappedClassResponse",
+      "fields": [
+        {
+          "name": "class_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
