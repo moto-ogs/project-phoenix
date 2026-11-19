@@ -42,6 +42,7 @@ import (
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
 	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
@@ -498,5 +499,6 @@ func staffPortalAdminContractMounts() []contractMount {
 		{"/api/staff", timeTrackingHTTP.StaffAdminWorkflowRouteContracts()},
 		{"/api/admin/grade-transitions", gradeTransitionHTTP.RouteContracts()},
 		{"/api/staff-notices", timetableHTTP.StaffNoticeRouteContracts()},
+		{"/api/statistics", statisticsHTTP.RouteContracts()},
 	}
 }

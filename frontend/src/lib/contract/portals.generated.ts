@@ -47,6 +47,7 @@ import { routes as staffNotices } from "./staff-notices.generated";
 import { routes as staffOnboarding } from "./staff-onboarding.generated";
 import { routes as staffPool } from "./staff-pool.generated";
 import { routes as staffShifts } from "./staff-shifts.generated";
+import { routes as statistics } from "./statistics.generated";
 import { routes as students } from "./students.generated";
 import { routes as surveys } from "./surveys.generated";
 import { routes as timeTracking } from "./time-tracking.generated";
@@ -846,6 +847,9 @@ export const portalRoutes = {
     staffShifts["PUT /api/staff-shifts/{id}"],
     staffShifts["PUT /api/staff-shifts/{id}/cancellation"],
     staffShifts["PUT /api/staff-shifts/{id}/move"],
+    statistics["GET /api/statistics/care-time-overruns"],
+    statistics["GET /api/statistics/report"],
+    statistics["GET /api/statistics/students/{id}/care-times"],
     students["DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}"],
     students["DELETE /api/students/{id}/arrival-exceptions/{exceptionId}"],
     students["DELETE /api/students/{id}/arrival-notes/{noteId}"],
