@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CoachMark } from "~/components/ui/coach-mark";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { ProgressBar } from "~/components/ui/progress-bar";
+import {
+  trackOnboardingChecklist,
+  trackOnboardingSurface,
+} from "~/lib/analytics";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import {
   buildHelpHref,
@@ -15,6 +19,7 @@ import {
 } from "~/lib/help-topics";
 import {
   completeParentFirstStep,
+  PARENT_FIRST_STEP_ANALYTICS_KEYS,
   readParentFirstStepsState,
   writeParentFirstStepsState,
   type ParentFirstStepsState,
@@ -69,6 +74,14 @@ export function ParentFirstSteps({
   const [expanded, setExpanded] = useState<ParentFirstStepKey | null>(null);
   const [confirmDismiss, setConfirmDismiss] = useState(false);
   const hasChild = childCount > 0;
+  // Letzter gespeicherter Zustand, damit ein erledigter Schritt genau einmal
+  // gemeldet wird, auch wenn React einen Zustandswechsel doppelt ausführt.
+  const stateRef = useRef<ParentFirstStepsState | null>(null);
+  // Die Liste ging von selbst auf, „angezeigt“ ist gezählt und die Person hat
+  // noch nicht reagiert (Fläche `parent_first_steps`, #7557). War die
+  // Erfassung beim Öffnen noch aus (Schulfreigabe noch nicht geladen), zählt
+  // auch die Antwort nicht, sonst gäbe es mehr Antworten als Anzeigen.
+  const autoOpenRef = useRef(false);
 
   const steps = useMemo<readonly StepContent[]>(() => {
     const list: StepContent[] = [
@@ -210,31 +223,55 @@ export function ParentFirstSteps({
 
   useEffect(() => {
     const stored = readParentFirstStepsState(accountId);
+    stateRef.current = stored;
+    autoOpenRef.current = false;
     setState(stored);
     if (!stored.dismissed && !stored.finished && claimFirstOpen(accountId)) {
       setView("checklist");
+      autoOpenRef.current = trackOnboardingSurface(
+        "shown",
+        "parent_first_steps",
+      );
     }
   }, [accountId]);
 
   const updateState = useCallback(
     (next: ParentFirstStepsState) => {
+      stateRef.current = next;
       setState(next);
       writeParentFirstStepsState(accountId, next);
     },
     [accountId],
   );
 
+  const completeStep = useCallback(
+    (key: ParentFirstStepKey) => {
+      const current = stateRef.current ?? EMPTY_STATE;
+      const next = completeParentFirstStep(current, key);
+      if (next === current) return;
+      updateState(next);
+      trackOnboardingChecklist("parent_first_steps", {
+        action: "step_done",
+        step: PARENT_FIRST_STEP_ANALYTICS_KEYS[key],
+      });
+    },
+    [updateState],
+  );
+
+  /** Die Person reagiert auf die von selbst geöffnete Liste. */
+  const answerAutoOpen = useCallback((action: "accepted" | "dismissed") => {
+    if (!autoOpenRef.current) return;
+    autoOpenRef.current = false;
+    trackOnboardingSurface(action, "parent_first_steps");
+  }, []);
+
   const onTourFinished = useCallback(
     (key: ParentFirstStepKey) => {
-      setState((current) => {
-        const next = completeParentFirstStep(current ?? EMPTY_STATE, key);
-        writeParentFirstStepsState(accountId, next);
-        return next;
-      });
+      completeStep(key);
       setExpanded(key);
       setView("checklist");
     },
-    [accountId],
+    [completeStep],
   );
   const tour = useParentFirstStepsTour(definitions, onTourFinished);
 
@@ -353,7 +390,10 @@ export function ParentFirstSteps({
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() => setView("beacon")}
+              onClick={() => {
+                answerAutoOpen("dismissed");
+                setView("beacon");
+              }}
               aria-label={t("collapse")}
               tooltip={t("tooltips.collapse")}
             >
@@ -380,7 +420,12 @@ export function ParentFirstSteps({
               <Button
                 type="button"
                 size="md"
-                onClick={() => updateState({ ...state, finished: true })}
+                onClick={() => {
+                  updateState({ ...state, finished: true });
+                  trackOnboardingChecklist("parent_first_steps", {
+                    action: "completed",
+                  });
+                }}
                 tooltip={t("tooltips.complete")}
               >
                 {t("complete.action")}
@@ -448,6 +493,7 @@ export function ParentFirstSteps({
                             type="button"
                             size="md"
                             onClick={() => {
+                              answerAutoOpen("accepted");
                               setView("beacon");
                               tour.start(step.key);
                             }}
@@ -469,10 +515,9 @@ export function ParentFirstSteps({
                                   : t("tooltips.guide")
                               }
                               onClick={() => {
+                                answerAutoOpen("accepted");
                                 if (step.key !== "installApp") return;
-                                updateState(
-                                  completeParentFirstStep(state, step.key),
-                                );
+                                completeStep(step.key);
                               }}
                             >
                               {help.label}
@@ -507,7 +552,11 @@ export function ParentFirstSteps({
         isOpen={confirmDismiss}
         onClose={() => setConfirmDismiss(false)}
         onConfirm={() => {
+          answerAutoOpen("dismissed");
           updateState({ ...state, dismissed: true });
+          trackOnboardingChecklist("parent_first_steps", {
+            action: "dismissed",
+          });
           setConfirmDismiss(false);
         }}
         title={t("dismiss.title")}
