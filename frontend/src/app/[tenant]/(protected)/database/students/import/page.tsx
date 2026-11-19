@@ -52,6 +52,10 @@ import {
 } from "~/lib/import-request";
 import { createLogger } from "~/lib/logger";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const STUDENTS_IMPORT_INFO =
+  "Hier legst du viele Kinder auf einmal aus einer Datei an. Lade zuerst die Vorlage herunter und fülle sie aus.";
+
 const logger = createLogger({ component: "StudentImportPage" });
 
 // Types matching backend API response
@@ -523,6 +527,7 @@ export default function StudentImportPage() {
     return (
       <TenantPage
         title="Kinder importieren"
+        info={STUDENTS_IMPORT_INFO}
         stats={statusLine}
         back
         backHref="/database/students"
@@ -538,6 +543,7 @@ export default function StudentImportPage() {
   return (
     <TenantPage
       title="Kinder importieren"
+      info={STUDENTS_IMPORT_INFO}
       stats={statusLine}
       back
       backHref="/database/students"

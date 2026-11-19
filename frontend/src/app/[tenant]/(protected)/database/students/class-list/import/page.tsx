@@ -43,6 +43,10 @@ import {
 } from "~/lib/import-batch-result";
 import { createLogger } from "~/lib/logger";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const CLASS_LIST_IMPORT_INFO =
+  "Hier setzt du viele Kinder auf einmal auf die Klassenliste. Lade zuerst die Vorlage herunter.";
+
 const logger = createLogger({ component: "ClassListImportPage" });
 
 interface ImportError {
@@ -361,6 +365,7 @@ export default function ClassListImportPage() {
     return (
       <TenantPage
         title="Klassenliste importieren"
+        info={CLASS_LIST_IMPORT_INFO}
         stats={statusLine}
         back
         backHref="/database/students/class-list"
@@ -376,6 +381,7 @@ export default function ClassListImportPage() {
   return (
     <TenantPage
       title="Klassenliste importieren"
+      info={CLASS_LIST_IMPORT_INFO}
       stats={statusLine}
       back
       backHref="/database/students/class-list"

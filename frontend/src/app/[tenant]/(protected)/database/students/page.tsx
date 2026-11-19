@@ -51,6 +51,10 @@ import { childrenConcept } from "~/lib/concepts/children";
 import { foldForSearch } from "~/lib/search-fold";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const STUDENTS_INFO =
+  "Hier pflegst du die Daten der Kinder. Wähle ein Kind, um seine Angaben zu sehen und zu ändern. Über das Plus legst du ein neues Kind an.";
+
 const logger = createLogger({ component: "DatabaseStudentsPage" });
 
 const STUDENTS_GROUPING_DEFAULT: GroupingMode = "class";
@@ -525,6 +529,7 @@ function StudentsPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Kinder",
+        info: STUDENTS_INFO,
         description: (
           <>
             {statusLine}

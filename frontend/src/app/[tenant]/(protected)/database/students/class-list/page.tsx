@@ -58,6 +58,10 @@ import { Alert } from "~/components/ui/alert";
 import { fetchSchoolClasses, fetchStudents } from "~/lib/student-api";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const CLASS_LIST_INFO =
+  "Hier siehst du alle Kinder im Klassenverband, nach Klassen sortiert. So sind die Klassenlisten vollständig. Über „Alle Klassen“ wählst du eine einzelne Klasse.";
+
 const logger = createLogger({ component: "ClassListEntriesPage" });
 
 const SWR_KEY = tenantStudentKeys.classListEntries();
@@ -566,6 +570,7 @@ export default function ClassListEntriesPage() {
   return (
     <TenantPage
       title="Klassenliste"
+      info={CLASS_LIST_INFO}
       stats={statusLine}
       statsLoading={isLoading && entries === undefined}
       // Ein Ladefehler ist ein Fehlerzustand des Geruests, kein Kasten im

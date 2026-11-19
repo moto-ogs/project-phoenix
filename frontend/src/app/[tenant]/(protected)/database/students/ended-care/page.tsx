@@ -45,6 +45,10 @@ import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useDebounce } from "~/lib/use-debounce";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const ENDED_CARE_INFO =
+  "Hier stehen Kinder, deren Betreuung beendet ist. Über die drei Punkte in einer Zeile nimmst du ein Kind wieder auf oder löschst es endgültig.";
+
 const ENDED_CARE_DESCRIPTION =
   "Kinder, die nicht mehr in der OGS sind. Die Daten dieser Kinder bleiben erhalten. Sie stehen in keiner normalen Liste mehr und in keinem Export. Abgänge aus dem Schuljahreswechsel stehen weiterhin dort.";
 
@@ -244,6 +248,7 @@ export default function EndedCarePage() {
   return (
     <TenantPage
       title="Beendete Betreuungen"
+      info={ENDED_CARE_INFO}
       stats={statusLine}
       statsLoading={status === "loading" || (isLoading && data === undefined)}
       search={
