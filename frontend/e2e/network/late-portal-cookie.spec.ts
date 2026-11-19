@@ -369,6 +369,7 @@ const catalogReads = {
       key_day: 15,
       next_key_date: "2026-12-15",
       updated_at: "2026-11-01T08:00:00Z",
+      overrides: [],
     },
   },
   Caterer: {
