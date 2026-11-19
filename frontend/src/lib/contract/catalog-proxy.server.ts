@@ -69,17 +69,16 @@ function matches(pattern: readonly string[], path: readonly string[]) {
 const startsWith = (path: readonly string[], head: readonly string[]) =>
   head.every((segment, index) => path[index] === segment);
 
-/**
- * chi's order: where two patterns first differ in kind, the literal wins, so
- * the proxy picks the route the backend runs.
- */
+/** Compare path segments lexicographically, with parameters after literals. */
 function literalFirst(a: readonly string[], b: readonly string[]) {
   for (let index = 0; index < Math.min(a.length, b.length); index++) {
-    const order =
-      Number(isParam(a[index] ?? "")) - Number(isParam(b[index] ?? ""));
+    const left = a[index] ?? "";
+    const right = b[index] ?? "";
+    const order = Number(isParam(left)) - Number(isParam(right));
     if (order !== 0) return order;
+    if (!isParam(left) && left !== right) return left < right ? -1 : 1;
   }
-  return 0;
+  return a.length - b.length;
 }
 
 /** The routes a request reaches without a session (#2352). */
