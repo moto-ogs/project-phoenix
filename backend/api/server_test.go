@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -263,3 +264,53 @@ func TestRuntimeServeReturnsNilAfterCancellation(t *testing.T) {
 	cancel()
 	require.NoError(t, <-serveDone)
 }
+
+// A stopping replica first fails its probes, ends its realtime streams and
+// closes connections after each response, keeps serving for the drain delay,
+// and only then closes its listener (#7226).
+func TestRuntimeServeDrainsBeforeShutdown(t *testing.T) {
+	t.Parallel()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	address := "http://" + listener.Addr().String()
+	streams := &recordingDrainer{}
+	runtime := &Runtime{logger: slog.Default(), streams: streams, drainDelay: 300 * time.Millisecond}
+	runtime.listen = func(string, string) (net.Listener, error) { return listener, nil }
+	runtime.server = &http.Server{Handler: drainingProbes(&runtime.draining, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("OK"))
+	}))}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	serveDone := make(chan error, 1)
+	go func() { serveDone <- runtime.Serve(ctx) }()
+	client := http.Client{Timeout: time.Second}
+	require.Eventually(t, func() bool {
+		response, err := client.Get(address + "/health")
+		if err != nil {
+			return false
+		}
+		_ = response.Body.Close()
+		return response.StatusCode == http.StatusOK
+	}, 2*time.Second, 10*time.Millisecond)
+
+	cancel()
+	require.Eventually(t, func() bool { return streams.drained.Load() }, time.Second, 5*time.Millisecond)
+	health, err := client.Get(address + "/health")
+	require.NoError(t, err)
+	require.NoError(t, health.Body.Close())
+	require.Equal(t, http.StatusServiceUnavailable, health.StatusCode)
+	work, err := client.Get(address + "/api/anything")
+	require.NoError(t, err, "the replica keeps serving during the drain delay")
+	require.NoError(t, work.Body.Close())
+	require.Equal(t, http.StatusOK, work.StatusCode)
+	require.True(t, work.Close, "responses close their connection while draining")
+
+	require.NoError(t, <-serveDone)
+	_, err = client.Get(address + "/health")
+	require.Error(t, err, "the listener is closed after the drain delay")
+}
+
+type recordingDrainer struct{ drained atomic.Bool }
+
+func (drainer *recordingDrainer) Drain() { drainer.drained.Store(true) }

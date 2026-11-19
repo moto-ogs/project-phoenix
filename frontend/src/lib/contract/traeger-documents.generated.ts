@@ -116,6 +116,12 @@ export const routes = {
     portals: ["org"],
     response: success(z.array(TraegerDocumentSchoolSchema)),
   },
+  "GET /traeger/documents/{id}/file": {
+    method: "GET",
+    pattern: "/traeger/documents/{id}/file",
+    portals: ["org"],
+    response: fileAnswer,
+  },
   "POST /traeger/documents/{id}/releases": {
     method: "POST",
     pattern: "/traeger/documents/{id}/releases",

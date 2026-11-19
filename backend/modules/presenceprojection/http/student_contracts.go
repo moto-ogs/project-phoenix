@@ -54,6 +54,13 @@ func StudentRouteContracts() []common.RouteContract {
 			Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID}},
 			Response: dayLogResponse{},
 		},
+		{
+			Method: "GET", Pattern: "/day-log/export", Portals: tenant, File: true,
+			Query: []common.QueryParam{
+				{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID},
+				{Name: "format", Kind: common.QueryString, Values: []string{string(lists.FormatPDF), string(lists.FormatDOCX), string(lists.FormatXLSX)}},
+			},
+		},
 		{Method: "GET", Pattern: "/{id}/status-days", Portals: tenant, Query: statusDayRangeQuery(), Response: []studentpresence.StudentStatusDayResponse{}},
 		{
 			Method: "GET", Pattern: "/status-days", Portals: tenant,

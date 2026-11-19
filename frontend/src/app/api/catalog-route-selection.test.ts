@@ -278,6 +278,14 @@ describe("path freed from its own route file", () => {
     ],
     ["/api/operator/schools/1/pwa-usage", "/api/operator/[...path]"],
     ["/api/parent/me/calendar", "/api/parent/[...path]"],
+    // Files and an upload of the contract (#2352).
+    ["/api/students/day-log/export", "/api/[...path]"],
+    ["/api/traeger/access-log/export", "/api/traeger/[...path]"],
+    ["/api/traeger/documents/1/file", "/api/traeger/[...path]"],
+    [
+      "/api/traeger/holiday-periods/1/registrations/2/proofs",
+      "/api/traeger/[...path]",
+    ],
   ])("%s goes to %s", (sample, expected) => {
     expect(routeFiles.find(({ match }) => match(sample))?.route).toBe(expected);
   });

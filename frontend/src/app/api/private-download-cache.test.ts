@@ -63,7 +63,6 @@ const downloadParams = {
 const routes: Array<
   [string, string, () => Promise<Route>, Record<string, unknown>?]
 > = [
-  // A file the contract registers runs through the portal's catalog proxy.
   [
     "student export",
     "POST",
@@ -114,10 +113,18 @@ const routes: Array<
     async () => (await import("./operator/[...path]/route")).GET,
     { path: ["billing", "key-date-counts", "export"] },
   ],
+  // A file the contract registers runs through the portal's catalog proxy.
   [
     "Träger export",
     "GET",
-    async () => (await import("./traeger/access-log/export/route")).GET,
+    async () => (await import("./traeger/[...path]/route")).GET,
+    { path: ["access-log", "export"] },
+  ],
+  [
+    "staff export",
+    "GET",
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["students", "day-log", "export"] },
   ],
   [
     "token-bound proof",

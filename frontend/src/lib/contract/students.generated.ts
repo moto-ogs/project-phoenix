@@ -3319,6 +3319,13 @@ export interface GetStudentsDayLogQuery {
   group_id?: string;
 }
 
+/** Query of GET /api/students/day-log/export */
+export interface GetStudentsDayLogExportQuery {
+  date?: string;
+  format?: "docx" | "pdf" | "xlsx";
+  group_id?: string;
+}
+
 /** Query of GET /api/students/ended-care */
 export interface GetStudentsEndedCareQuery {
   page?: number;
@@ -3583,6 +3590,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["date", "group_id"],
     response: success(dayLogResponseSchema),
+  },
+  "GET /api/students/day-log/export": {
+    method: "GET",
+    pattern: "/api/students/day-log/export",
+    portals: ["tenant"],
+    query: ["date", "format", "group_id"],
+    response: fileAnswer,
   },
   "GET /api/students/ended-care": {
     method: "GET",

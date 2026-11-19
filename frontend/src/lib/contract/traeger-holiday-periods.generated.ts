@@ -7,6 +7,7 @@ import {
   instant,
   int64StringOrNumber,
   json,
+  multipart,
   nullable,
   object,
   optional,
@@ -713,6 +714,15 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/freeze",
     portals: ["org"],
+    response: success(HolidayRegistrationDetailSchema),
+  },
+  "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs": {
+    method: "POST",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/proofs",
+    portals: ["org"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "enrollment.upload_invalid",
+    request: multipart,
     response: success(HolidayRegistrationDetailSchema),
   },
   "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/reopen": {

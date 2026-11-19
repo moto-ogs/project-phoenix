@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -71,6 +72,17 @@ export interface GetTraegerAccessLogQuery {
   to?: string;
 }
 
+/** Query of GET /traeger/access-log/export */
+export interface GetTraegerAccessLogExportQuery {
+  account_id?: string;
+  as_of?: string;
+  format?: "csv" | "pdf" | "xlsx";
+  from?: string;
+  kind?: string;
+  school_id?: string;
+  to?: string;
+}
+
 /** Query of GET /traeger/access-log/people */
 export interface GetTraegerAccessLogPeopleQuery {
   from?: string;
@@ -84,6 +96,13 @@ export const routes = {
     portals: ["org"],
     query: ["account_id", "as_of", "from", "kind", "page", "school_id", "to"],
     response: success(AccessLogPageSchema),
+  },
+  "GET /traeger/access-log/export": {
+    method: "GET",
+    pattern: "/traeger/access-log/export",
+    portals: ["org"],
+    query: ["account_id", "as_of", "format", "from", "kind", "school_id", "to"],
+    response: fileAnswer,
   },
   "GET /traeger/access-log/people": {
     method: "GET",

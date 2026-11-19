@@ -5386,6 +5386,33 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/day-log/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "docx",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "group_id",
+          "kind": "id"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/ended-care",
       "portals": [
         "tenant"
@@ -9330,6 +9357,49 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/access-log/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "account_id",
+          "kind": "id"
+        },
+        {
+          "name": "as_of",
+          "kind": "string"
+        },
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "kind",
+          "kind": "string"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/access-log/people",
       "portals": [
         "org"
@@ -9931,6 +10001,14 @@
           "ref": "TraegerDocumentSchool"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/documents/{id}/file",
+      "portals": [
+        "org"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -16577,6 +16655,20 @@
         "kind": "ref",
         "ref": "HolidayRegistrationDetail"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}/proofs",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationDetail"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "enrollment.upload_invalid"
     },
     {
       "method": "POST",

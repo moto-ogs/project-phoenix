@@ -10,6 +10,10 @@ export async function register() {
     const { installSessionCookieExit } =
       await import("./lib/session-cookie-exit.server");
     installSessionCookieExit();
+    // A stopping replica ends its event streams so browsers reconnect to
+    // another replica (#7226).
+    const { installProcessDrain } = await import("./lib/process-drain.server");
+    installProcessDrain();
     await import("./sentry.server.config");
   }
 
