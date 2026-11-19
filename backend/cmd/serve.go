@@ -29,11 +29,15 @@ var serveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		drainDelay, err := cmd.Flags().GetDuration("drain-delay")
+		if err != nil {
+			return err
+		}
 		process := api.ServeAPIWithWorker
 		if !embeddedWorker {
 			process = api.ServeAPIOnly
 		}
-		return runServeRoot(cmd, process)
+		return runServeRoot(cmd, process, drainDelay)
 	},
 }
 
@@ -41,7 +45,7 @@ var serveCmd = &cobra.Command{
 // Sentry, and runs one Serve root until SIGINT or SIGTERM. The HTTP server
 // and the standalone Worker share it, so both fail on the same missing
 // configuration and connect to the database the same way.
-func runServeRoot(cmd *cobra.Command, process api.ServeProcess) error {
+func runServeRoot(cmd *cobra.Command, process api.ServeProcess, drainDelay time.Duration) error {
 	config := currentServeConfig()
 	if err := validateServeConfig(config); err != nil {
 		return fmt.Errorf("invalid server configuration: %w", err)
@@ -69,6 +73,7 @@ func runServeRoot(cmd *cobra.Command, process api.ServeProcess) error {
 		SentryPyrePortalDSN: config.SentryPyrePortalDSN,
 		Turnstile:           api.TurnstileKeys{SiteKey: config.TurnstileSiteKey, SecretKey: config.TurnstileSecretKey},
 		Process:             process,
+		DrainDelay:          drainDelay,
 	}, func(runtime *api.Runtime) error {
 		return runtime.Serve(ctx)
 	}); err != nil {
@@ -207,6 +212,10 @@ func init() {
 	// in standby while this process leads. Then restart serve with
 	// --embedded-worker=false and the standalone worker takes over.
 	serveCmd.Flags().Bool("embedded-worker", true, "run the background jobs in this process; turn off once a standalone worker runs them")
+	// Replicas behind a load balancer (#7226): on SIGTERM keep serving with
+	// failing /health for this long, so the balancer drops the replica before
+	// its listener closes. Deployments set it; local runs stop at once.
+	serveCmd.Flags().Duration("drain-delay", 0, "on stop, answer /health with 503 and keep serving this long before closing the listener (max 15s)")
 	// Capacity of the public demo (#3466); required under APP_ENV=demo.
 	serveCmd.Flags().Int("demo-max-active-schools", 0, "public demo: how many demo schools may exist at once; further requests answer 503")
 	_ = viper.BindPFlag("demo_max_active_schools", serveCmd.Flags().Lookup("demo-max-active-schools"))
