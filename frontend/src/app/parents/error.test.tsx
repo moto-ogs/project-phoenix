@@ -51,4 +51,23 @@ describe("parents error boundary", () => {
     expect(JSON.stringify(warn.mock.calls)).not.toContain("Anna");
     warn.mockRestore();
   });
+
+  it("reloads for a chunk load error instead of reporting it", () => {
+    sessionStorage.clear();
+    captureException.mockClear();
+    const reload = vi
+      .spyOn(globalThis.location, "reload")
+      .mockImplementation(() => undefined);
+    const chunkError = new Error(
+      "Failed to load chunk /_next/static/chunks/a.js",
+    );
+    chunkError.name = "ChunkLoadError";
+
+    render(<ParentError error={chunkError} retry={vi.fn()} />);
+
+    expect(reload).toHaveBeenCalledOnce();
+    expect(captureException).not.toHaveBeenCalled();
+    reload.mockRestore();
+    sessionStorage.clear();
+  });
 });
