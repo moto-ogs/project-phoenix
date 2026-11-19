@@ -73,4 +73,29 @@ describe("GlobalError", () => {
     expect(Sentry.captureException).toHaveBeenCalledTimes(2);
     expect(Sentry.captureException).toHaveBeenLastCalledWith(newError);
   });
+
+  it("reloads once for a chunk load error, then reports a repeat", () => {
+    sessionStorage.clear();
+    const reload = vi
+      .spyOn(globalThis.location, "reload")
+      .mockImplementation(() => undefined);
+    const chunkError = new Error(
+      "Failed to load chunk /_next/static/chunks/a.js",
+    );
+    chunkError.name = "ChunkLoadError";
+
+    const { unmount } = render(
+      <GlobalError error={chunkError} reset={mockReset} />,
+    );
+    expect(reload).toHaveBeenCalledOnce();
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+    unmount();
+
+    render(<GlobalError error={chunkError} reset={mockReset} />);
+    expect(reload).toHaveBeenCalledOnce();
+    expect(Sentry.captureException).toHaveBeenCalledWith(chunkError);
+
+    reload.mockRestore();
+    sessionStorage.clear();
+  });
 });

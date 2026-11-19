@@ -137,7 +137,18 @@ export function scrubClientEvent(event: ErrorEvent): ErrorEvent | null {
         )) ||
       (exception.type === "AxiosError" && exception.value === "Network Error"),
   );
-  return isNetworkFailure ? null : scrubEvent(event);
+  if (isNetworkFailure) return null;
+  // Every build names its chunks anew, so Sentry would open a new issue (and
+  // send a new alert) per chunk file. A chunk that stays unloadable after the
+  // automatic reload (~/lib/chunk-load-recovery) is one fault: one issue.
+  if (
+    event.exception?.values?.some(
+      (exception) => exception.type === "ChunkLoadError",
+    )
+  ) {
+    event.fingerprint = ["ChunkLoadError"];
+  }
+  return scrubEvent(event);
 }
 
 function scrubRequestAndUser(event: Event): void {

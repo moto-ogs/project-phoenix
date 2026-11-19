@@ -3,6 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect, type CSSProperties } from "react";
 import { logDisplayedCrash } from "~/lib/error-log";
+import { reloadAfterChunkLoadError } from "~/lib/chunk-load-recovery";
 
 const PAGE_STYLE: CSSProperties = {
   display: "flex",
@@ -44,6 +45,10 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A chunk that failed to load usually loads after a fresh page load
+    // (weak network, or a deploy replaced the build); only a repeat failure
+    // is reported.
+    if (reloadAfterChunkLoadError(error)) return;
     Sentry.captureException(error);
     logDisplayedCrash(error);
   }, [error]);

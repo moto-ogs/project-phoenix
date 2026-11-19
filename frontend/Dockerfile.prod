@@ -67,10 +67,14 @@ ARG SENTRY_PROJECT
 ARG SENTRY_RELEASE
 
 # Build the app. Runtime secrets are validated when the container starts.
+# NEXT_DEPLOYMENT_ID (the release's commit SHA) is Next.js' version-skew
+# protection: a tab still running the previous build does a full page load on
+# its next navigation instead of requesting chunks the new image no longer
+# has. Empty (a local build without SENTRY_RELEASE) switches it off.
 RUN --mount=type=cache,target=/app/.next/cache \
     --mount=type=secret,id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
     SENTRY_ORG="$SENTRY_ORG" SENTRY_PROJECT="$SENTRY_PROJECT" \
-    SENTRY_RELEASE="$SENTRY_RELEASE" \
+    SENTRY_RELEASE="$SENTRY_RELEASE" NEXT_DEPLOYMENT_ID="$SENTRY_RELEASE" \
     SKIP_ENV_VALIDATION=true pnpm run build
 
 FROM node:26-alpine AS runner

@@ -112,6 +112,9 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   "moto.traeger.sign-in-with-code",
   "lastSuccessfulRefresh",
   "tagesplan-scroll",
+  // Zeitpunkt des letzten automatischen Neuladens nach einem nicht geladenen
+  // Programmteil; verhindert eine Neulade-Schleife. Ohne Konto und Daten.
+  "moto:chunk-load-reload-at",
   // Sperrzeiten für „Passwort vergessen“ je Adresse (#7213); entstehen vor
   // der Anmeldung. Je Eintrag ein Zeitpunkt unter einem 32-Bit-Hash der
   // Adresse, kein Konto und keine Adresse im Klartext. Wer eine Adresse
