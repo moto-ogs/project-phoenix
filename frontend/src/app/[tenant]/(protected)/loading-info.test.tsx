@@ -1,13 +1,20 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ActivitiesLoading from "./activities/loading";
+import MessagesLoading from "./messages/loading";
+import GroupMessagesLoading from "./messages/groups/loading";
+import GroupMessageLoading from "./messages/groups/[groupThreadId]/loading";
+import MessageThreadLoading from "./messages/[threadId]/loading";
+import AnnouncementDetailLoading from "./parent-announcements/[id]/loading";
+import { AnnouncementDetailLoadingPage } from "./parent-announcements/[id]/page-skeleton";
 import TransitLoading from "./rooms/unterwegs/loading";
 import { ChangeHistorySkeleton } from "./students/[id]/change-history/page-skeleton";
 import { FeedbackHistorySkeleton } from "./students/[id]/feedback-history/page-skeleton";
 import { RoomHistorySkeleton } from "./students/[id]/room-history/page-skeleton";
 import AccidentReportLoading from "./students/[id]/unfallanzeigen/[reportId]/loading";
+import WeekProtocolLoading from "./wochenprotokolle/[protocolId]/loading";
 
 const { nfcBookedState, presenceModeState, tenantState } = vi.hoisted(() => ({
   nfcBookedState: { value: true },
@@ -49,6 +56,16 @@ vi.mock("~/components/ui/section-card", () => ({
 
 vi.mock("~/components/ui/skeleton", () => ({
   Skeleton: () => null,
+}));
+
+vi.mock("~/components/announcements/announcement-detail", () => ({
+  AnnouncementDetailSkeleton: () => null,
+}));
+
+vi.mock("./messages/page-skeleton", () => ({
+  MessagesSkeleton: () => null,
+  ThreadSkeleton: () => null,
+  ThreadComposerSkeleton: () => null,
 }));
 
 vi.mock("./students/[id]/student-history-loading-back", () => ({
@@ -112,6 +129,62 @@ describe("Info-Knopf in Ladeansichten", () => {
     expect(screen.getByTestId("tenant-page")).toHaveAttribute(
       "data-info",
       "Hier steht die Unfallanzeige zu einem Unfall dieses Kindes. Unterschrieben wird sie unter „Unterschrift der Leitung“. Danach gibst du das PDF selbst an die Unfallkasse weiter.",
+    );
+  });
+
+  it.each([
+    [
+      "Nachrichten",
+      MessagesLoading,
+      "Hier schreibst du mit den Eltern der Kinder. Jede Unterhaltung gehört zu einer Person und ihrem Kind. Tippe auf eine Unterhaltung, um sie zu öffnen.",
+    ],
+    [
+      "Unterhaltung",
+      MessageThreadLoading,
+      "Hier liest du die Unterhaltung mit den Eltern eines Kindes. Die neueste Nachricht steht unten. Wenn Eltern-Nachrichten eingeschaltet sind, kannst du darunter antworten.",
+    ],
+    [
+      "Gruppennachrichten",
+      GroupMessagesLoading,
+      "Hier schreibst du allen Eltern einer Gruppe, Klasse oder AG auf einmal. Die Eltern antworten nur der OGS, nicht den anderen Familien. Ihre Antworten findest du unter „Unterhaltungen“.",
+    ],
+    [
+      "Gruppennachricht",
+      GroupMessageLoading,
+      "Hier liest du die Nachricht an alle Eltern dieser Gruppe. Solange sie offen ist und Eltern-Nachrichten eingeschaltet sind, kannst du etwas dazuschreiben. Unter „Gelesen“ siehst du je Kind, ob ein Elternteil die neueste Nachricht gelesen hat.",
+    ],
+    [
+      "Wochenprotokoll",
+      WeekProtocolLoading,
+      "Hier siehst du, was moto in dieser Woche festgehalten hat. Bei einem Entwurf kannst du mit „Ergänzen“ etwas dazuschreiben und es abschließen. Ein abgeschlossenes Protokoll lädst du als PDF herunter.",
+    ],
+  ] as ReadonlyArray<readonly [string, ComponentType, string]>)(
+    "zeigt für %s denselben Erklärungstext während die Route lädt",
+    (_, Page, info) => {
+      render(<Page />);
+
+      expect(screen.getByTestId("tenant-page")).toHaveAttribute(
+        "data-info",
+        info,
+      );
+    },
+  );
+
+  it("zeigt den Erklärungstext der Mitteilung im Routen- und SWR-Skelett", () => {
+    const info =
+      "Hier siehst du, was die Eltern bekommen. Unter dem Titel steht, ob es schon veröffentlicht ist. Unter „Zielgruppen und Zustellung“ steht, an wen es geht.";
+    const { rerender } = render(<AnnouncementDetailLoading />);
+
+    expect(screen.getByTestId("tenant-page")).toHaveAttribute(
+      "data-info",
+      info,
+    );
+
+    rerender(<AnnouncementDetailLoadingPage info={info} />);
+
+    expect(screen.getByTestId("tenant-page")).toHaveAttribute(
+      "data-info",
+      info,
     );
   });
 

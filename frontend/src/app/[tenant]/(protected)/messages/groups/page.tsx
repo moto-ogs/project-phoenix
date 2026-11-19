@@ -26,6 +26,10 @@ import { useTenant } from "~/lib/tenant-context";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { groupsConcept } from "~/lib/concepts/groups";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const GROUP_MESSAGES_INFO =
+  "Hier schreibst du allen Eltern einer Gruppe, Klasse oder AG auf einmal. Die Eltern antworten nur der OGS, nicht den anderen Familien. Ihre Antworten findest du unter „Unterhaltungen“.";
+
 const logger = createLogger({ component: "GroupMessagesPage" });
 
 /**
@@ -97,6 +101,7 @@ function GroupMessagesContent() {
 
   return (
     <TenantPage
+      info={GROUP_MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("groups")}
       stats={summary}
