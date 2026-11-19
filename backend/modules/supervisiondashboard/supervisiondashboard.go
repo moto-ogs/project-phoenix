@@ -288,22 +288,22 @@ type Capabilities struct {
 type DashboardProjection struct {
 	BusinessDay                  Date                         `json:"business_day"`
 	SpontaneousStartAvailability SpontaneousStartAvailability `json:"spontaneous_start_availability"`
-	Groups                       []DashboardGroup                      `json:"groups"`
+	Groups                       []DashboardGroup             `json:"groups"`
 	SelectedGroupID              *int64                       `json:"selected_group_id,string,omitempty"`
 	UnclaimedGroups              []UnclaimedGroup             `json:"unclaimed_groups"`
 	CurrentStaffID               *int64                       `json:"current_staff_id,string,omitempty"`
 	EducationalGroups            []EducationalGroup           `json:"educational_groups"`
 	// Schulhof is nil only when the caller has no staff identity (and thus no
 	// Schulhof workflow) — never because a sub-load failed.
-	Schulhof           *SchulhofStatus    `json:"schulhof_status"`
-	OpenRooms          []OpenRoom         `json:"open_rooms"`
-	Capabilities       Capabilities       `json:"capabilities"`
-	ActiveSessions     []ActiveSession    `json:"active_sessions"`
-	PlannedNow         []PlannedInstance  `json:"planned_now"`
-	Visits             []Visit            `json:"visits"`
+	Schulhof           *SchulhofStatus             `json:"schulhof_status"`
+	OpenRooms          []OpenRoom                  `json:"open_rooms"`
+	Capabilities       Capabilities                `json:"capabilities"`
+	ActiveSessions     []ActiveSession             `json:"active_sessions"`
+	PlannedNow         []PlannedInstance           `json:"planned_now"`
+	Visits             []Visit                     `json:"visits"`
 	TrackingIndicators DashboardTrackingIndicators `json:"tracking_indicators"`
 	PickupTimes        []DashboardPickupTime       `json:"pickup_times"`
-	ArrivalTimes       []ArrivalTime      `json:"arrival_times"`
+	ArrivalTimes       []ArrivalTime               `json:"arrival_times"`
 	// TeacherHints are today's hints of the Lehrkraft (#4795) for the
 	// children in the projection, oldest first; with users:read only.
 	TeacherHints []SupervisionTeacherHint `json:"teacher_hints"`

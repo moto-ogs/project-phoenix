@@ -11,12 +11,12 @@ import (
 // DashboardPickupTime / ArrivalTime keep the field names of the bulk endpoints they
 // replace so the frontend mapping stays identical.
 type DashboardPickupTime struct {
-	StudentID   int64     `json:"student_id,string"`
-	Date        string    `json:"date"`
-	WeekdayName string    `json:"weekday_name"`
-	PickupTime  *string   `json:"pickup_time,omitempty"`
-	IsException bool      `json:"is_exception"`
-	Notes       string    `json:"notes,omitempty"`
+	StudentID   int64              `json:"student_id,string"`
+	Date        string             `json:"date"`
+	WeekdayName string             `json:"weekday_name"`
+	PickupTime  *string            `json:"pickup_time,omitempty"`
+	IsException bool               `json:"is_exception"`
+	Notes       string             `json:"notes,omitempty"`
 	DayNotes    []DashboardDayNote `json:"day_notes,omitempty"`
 
 	// DayDepartureMode is the Abholart set for this day only (#3946).
@@ -24,12 +24,12 @@ type DashboardPickupTime struct {
 }
 
 type ArrivalTime struct {
-	StudentID       int64     `json:"student_id,string"`
-	Date            string    `json:"date"`
-	WeekdayName     string    `json:"weekday_name"`
-	ExpectedArrival *string   `json:"expected_arrival,omitempty"`
-	IsException     bool      `json:"is_exception"`
-	Notes           string    `json:"notes,omitempty"`
+	StudentID       int64              `json:"student_id,string"`
+	Date            string             `json:"date"`
+	WeekdayName     string             `json:"weekday_name"`
+	ExpectedArrival *string            `json:"expected_arrival,omitempty"`
+	IsException     bool               `json:"is_exception"`
+	Notes           string             `json:"notes,omitempty"`
 	DayNotes        []DashboardDayNote `json:"day_notes,omitempty"`
 }
 
