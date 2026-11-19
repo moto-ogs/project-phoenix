@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   render as renderPlain,
+  act,
   screen,
   fireEvent,
   waitFor,
@@ -408,4 +409,90 @@ describe("EmailConfirmContent", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("keeps the token when the mount effect runs again", async () => {
+    replaceStateSpy.mockRestore();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true }),
+    });
+    setQueryToken("strict-token");
+
+    renderPlain(<EmailConfirmContent />, {
+      wrapper: ToastProvider,
+      reactStrictMode: true,
+    });
+
+    expect(await screen.findByText("Jetzt bestätigen")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    expect(
+      screen.queryByText("Bestätigung fehlgeschlagen"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Jetzt bestätigen"));
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string)).toEqual({
+      token: "strict-token",
+    });
+  });
+
+  it("shows the result again when the person returns after confirming", async () => {
+    replaceStateSpy.mockRestore();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true }),
+    });
+    setQueryToken("back-token");
+
+    const first = render(<EmailConfirmContent />);
+    fireEvent.click(await screen.findByText("Jetzt bestätigen"));
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    first.unmount();
+
+    render(<EmailConfirmContent />);
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["/operator/settings?tab=profile#email", "/operator/email-confirm"])(
+    "leaves the destination entry unchanged after navigating to %s",
+    async (url) => {
+      replaceStateSpy.mockRestore();
+      replaceStateSpy = vi.spyOn(window.history, "replaceState");
+      let resolveResponse!: (value: Response) => void;
+      mockFetch.mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveResponse = resolve;
+        }),
+      );
+      setQueryToken("pending-token");
+
+      const page = render(<EmailConfirmContent />);
+      fireEvent.click(await screen.findByText("Jetzt bestätigen"));
+      expect(screen.getByText("E-Mail wird bestätigt...")).toBeInTheDocument();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      page.unmount();
+      window.history.pushState({}, "", url);
+      const destinationUrl = window.location.href;
+      const destinationState: unknown = window.history.state;
+      replaceStateSpy.mockClear();
+
+      await act(async () => {
+        resolveResponse(new Response(null, { status: 200 }));
+      });
+
+      expect(window.location.href).toBe(destinationUrl);
+      expect(window.history.state).toBe(destinationState);
+      expect(replaceStateSpy).not.toHaveBeenCalled();
+    },
+  );
 });
