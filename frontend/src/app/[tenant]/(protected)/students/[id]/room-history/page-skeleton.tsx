@@ -19,7 +19,11 @@ export function RoomHistorySkeleton() {
       className="w-full"
     >
       {/* Spiegelt die Kopfkarte des geladenen Zustands. */}
-      <TenantPageHeaderSkeleton leading back={<StudentHistoryLoadingBack />} />
+      <TenantPageHeaderSkeleton
+        leading
+        info
+        back={<StudentHistoryLoadingBack />}
+      />
 
       <div className="mb-4 grid grid-cols-1 gap-4 md:mb-6 md:grid-cols-2 md:gap-6">
         {Array.from({ length: 2 }, (_, i) => (

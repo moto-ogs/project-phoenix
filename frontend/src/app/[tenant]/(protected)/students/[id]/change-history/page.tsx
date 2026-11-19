@@ -25,6 +25,9 @@ import { formatDate, formatTime } from "~/lib/date-helpers";
 import { ChangeHistorySkeleton } from "./page-skeleton";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 
+const CHANGE_HISTORY_INFO =
+  "Hier siehst du, wer wann welche Angaben zu diesem Kind geändert hat. Ändern kannst du hier nichts.";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 // German labels for the tracked fields. The backend stores the raw field token
@@ -205,6 +208,7 @@ function StudentChangeHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={changeHistoryConcept} size="page" />}
         title={displayName || "Änderungsverlauf"}
+        info={CHANGE_HISTORY_INFO}
         stats={studentMeta ?? entryLine}
         statsLoading={loading}
         loading={loading}

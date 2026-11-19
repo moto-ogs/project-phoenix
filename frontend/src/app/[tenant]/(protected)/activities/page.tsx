@@ -42,6 +42,11 @@ import { activitiesConcept } from "~/lib/concepts/activities";
 import { foldForSearch } from "~/lib/search-fold";
 import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
+const ACTIVITIES_INFO =
+  "Hier stehen die Aktivitäten, die am Tablet zur Wahl stehen. Eine neue erstellst du mit „Aktivität erstellen“, am Handy mit dem Plus. Eine eigene Aktivität öffnest du, um sie zu ändern.";
+const ACTIVITIES_OFF_INFO =
+  "Hier wären die Aktivitäten für das Tablet. Deine Schule nutzt sie zurzeit nicht.";
+
 const logger = createLogger({ component: "ActivitiesPage" });
 
 // SWR cache key for activities page data
@@ -58,8 +63,12 @@ interface ActivitiesPageData {
 // page's main function — React rules forbid conditional hooks.
 export default function ActivitiesPage() {
   return (
-    <ModuleRouteGuard module="nfc_anwesenheit" title="Aktivitäten">
-      <BinaryModeGuard title="Aktivitäten">
+    <ModuleRouteGuard
+      module="nfc_anwesenheit"
+      title="Aktivitäten"
+      info={ACTIVITIES_OFF_INFO}
+    >
+      <BinaryModeGuard title="Aktivitäten" info={ACTIVITIES_OFF_INFO}>
         <ActivitiesPageContent />
       </BinaryModeGuard>
     </ModuleRouteGuard>
@@ -325,6 +334,7 @@ function ActivitiesPageContent() {
     <>
       <TenantPage
         title="Aktivitäten"
+        info={ACTIVITIES_INFO}
         stats={stats}
         statsLoading={showSkeleton}
         actions={

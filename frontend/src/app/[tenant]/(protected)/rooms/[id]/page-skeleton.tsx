@@ -13,14 +13,18 @@ export function RoomDetailLoadingPage({
   referrer = "/rooms",
   backLabel = "Zurück zu den Räumen",
   preview,
+  info,
 }: Readonly<{
   referrer?: string;
   backLabel?: string;
   preview?: { name: string; context?: string };
+  /** Erklärung der Raumseite; die Ladeseite der Route kennt sie noch nicht. */
+  info?: string;
 }>) {
   return (
     <TenantPage
       title={preview?.name ?? "Raum"}
+      info={info}
       back
       backHref={referrer}
       backLabel={backLabel}

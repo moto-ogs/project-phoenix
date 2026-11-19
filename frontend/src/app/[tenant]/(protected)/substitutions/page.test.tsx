@@ -291,6 +291,30 @@ describe("SubstitutionPage", () => {
     expect(screen.getByText("Lesezeit")).toBeInTheDocument();
   });
 
+  it("names the group handover in the explanation only with fixed groups", () => {
+    const { unmount } = render(<SubstitutionPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Übergaben" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt. Unter „Laufende Betreuungen“ holst du mit „Betreuer hinzufügen“ jemanden dazu. Mit „Gruppe übergeben“ gibst du eine Gruppe an eine andere Person.",
+      ),
+    ).toBeInTheDocument();
+    unmount();
+
+    mocks.openCare = true;
+    render(<SubstitutionPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Übergaben" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier siehst du, wer heute eine Aufsicht oder einen Termin übernimmt. Unter „Laufende Betreuungen“ holst du mit „Betreuer hinzufügen“ jemanden dazu.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   // #4365: die Übergaben füllen die Breite der Karte „Gruppen“ als Raster.
   it("lays the group handovers out as a grid", () => {
     render(<SubstitutionPage />);

@@ -49,11 +49,18 @@ import {
   type CorrectableSlot,
 } from "~/components/students/attendance-correction-modal";
 import { hasPermission } from "~/lib/auth-utils";
+import { usePresenceMode } from "~/lib/tenant-context";
 import { RoomHistorySkeleton } from "./page-skeleton";
 import type { HistoryChartPoint } from "./history-charts";
 import { Button } from "~/components/ui/button";
 import { AttendanceExportDialog } from "~/components/students/attendance-export-dialog";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+
+const ROOM_HISTORY_INFO =
+  "Hier siehst du, wann dieses Kind kam und ging. Du siehst auch, in welchen Räumen es war. Bei jedem Tag steht, wer es an- und abgemeldet hat.";
+// Bei einfacher Anwesenheit führt die Schule keine Räume.
+const ROOM_HISTORY_BINARY_MODE_INFO =
+  "Hier siehst du, wann dieses Kind kam und ging. Bei jedem Tag steht, wer es an- und abgemeldet hat.";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -724,6 +731,7 @@ export default function StudentRoomHistoryPage() {
 
 function StudentRoomHistoryPageContent() {
   const today = useBerlinToday();
+  const presenceMode = usePresenceMode();
   const params = useParams();
   const searchParams = useSearchParams();
   const studentId = params.id as string;
@@ -815,6 +823,11 @@ function StudentRoomHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={changeHistoryConcept} size="page" />}
         title={displayName || "Anwesenheitsprotokoll"}
+        info={
+          presenceMode === "binary"
+            ? ROOM_HISTORY_BINARY_MODE_INFO
+            : ROOM_HISTORY_INFO
+        }
         stats={studentMeta ?? dayLine}
         statsLoading={loading}
         loading={loading}
