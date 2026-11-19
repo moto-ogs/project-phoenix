@@ -253,6 +253,7 @@ var legacyNumericIDsPToZ = []string{
 	"presence.claimedSupervisionResponse.TenantID",
 	"presence.moveStudentsToActiveGroupRequest.StudentIDs",
 	"presence.moveStudentsToActiveGroupRequest.TargetActiveGroupID",
+	"presenceprojectionhttp.CareOfferingOptionResponse.ID",
 	"presenceprojectionhttp.NameStudentResponse.ID",
 	"presenceprojectionhttp.SlimStudentResponse.CompanionStudentIDs",
 	"presenceprojectionhttp.SlimStudentResponse.GroupID",

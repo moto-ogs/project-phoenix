@@ -1,3 +1,8 @@
+// Temporary (#7563): the current client reads
+// GET /api/students/ogs-group-navigation through the portal's catalog proxy.
+// An installed bundle of the previous release still calls this path and
+// reads the groups under `groups`. Delete this file and its test after the
+// next production deploy.
 import { createGetHandler } from "~/lib/route-wrapper.server";
 import { apiGet } from "~/lib/api-helpers.server";
 

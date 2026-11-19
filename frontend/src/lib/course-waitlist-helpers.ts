@@ -1,3 +1,5 @@
+import type { CourseWaitlistResponse } from "~/lib/contract/students.generated";
+
 /**
  * Warteliste je AG für das Team (#4767). Die Reihenfolge rechnet das Backend
  * nach derselben Regel wie den Wartelistenplatz im Elternportal: die älteste
@@ -5,23 +7,8 @@
  * normale Freigabe der ersten Anfrage in /anfragen.
  */
 
-interface CourseWaitlistEntryWire {
-  readonly request_id: string;
-  readonly student_id: string;
-  readonly student_name: string;
-  readonly rank: number;
-  readonly submitted_at: string;
-}
-
-export interface CourseWaitlistWire {
-  readonly activity_group_id: string;
-  readonly name: string;
-  readonly participant_limit: number | null;
-  readonly participants: number;
-  readonly free_slots: number | null;
-  readonly slot_free_for_next: boolean;
-  readonly entries: readonly CourseWaitlistEntryWire[];
-}
+/** The contract's waiting list of one AG (GET …/course-waitlists). */
+export type CourseWaitlistWire = CourseWaitlistResponse;
 
 interface CourseWaitlistEntry {
   readonly requestId: string;

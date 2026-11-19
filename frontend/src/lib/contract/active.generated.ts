@@ -7,6 +7,7 @@ import {
   int64String,
   int64StringOrNumber,
   nullable,
+  num,
   object,
   optional,
   rec,
@@ -15,6 +16,112 @@ import {
   str,
   success,
 } from "./runtime";
+
+/** Go: presence.RecentActivityItem */
+export interface RecentActivityItem {
+  type: string;
+  group_name: string;
+  room_name: string;
+  count: number;
+  timestamp: string;
+}
+
+export const RecentActivityItemSchema: z.ZodType<RecentActivityItem, unknown> = object<RecentActivityItem>({
+  type: str,
+  group_name: str,
+  room_name: str,
+  count: safeInt,
+  timestamp: instant,
+});
+
+/** Go: presence.CurrentActivityItem */
+export interface CurrentActivityItem {
+  id: string;
+  name: string;
+  category: string;
+  participants: number;
+  max_capacity: number | null;
+  status: string;
+}
+
+export const CurrentActivityItemSchema: z.ZodType<CurrentActivityItem, unknown> = object<CurrentActivityItem>({
+  id: str,
+  name: str,
+  category: str,
+  participants: safeInt,
+  max_capacity: nullable(safeInt),
+  status: str,
+});
+
+/** Go: presence.ActiveGroupSummary */
+export interface ActiveGroupSummary {
+  name: string;
+  type: string;
+  student_count: number;
+  max_capacity?: number;
+  location: string;
+  status: string;
+}
+
+export const ActiveGroupSummarySchema: z.ZodType<ActiveGroupSummary, unknown> = object<ActiveGroupSummary>({
+  name: str,
+  type: str,
+  student_count: safeInt,
+  max_capacity: optional(safeInt),
+  location: str,
+  status: str,
+});
+
+/** Go: presence.DashboardAnalyticsResponse */
+export interface DashboardAnalyticsResponse {
+  students_present: number;
+  students_in_transit: number;
+  students_on_playground: number;
+  students_in_rooms: number;
+  students_sick: number;
+  students_excused: number;
+  students_home: number;
+  students_at_school: number;
+  students_in_class: number;
+  active_activities: number;
+  free_rooms: number;
+  total_rooms: number;
+  capacity_utilization: number;
+  activity_categories: number;
+  active_ogs_groups: number;
+  students_in_group_rooms: number;
+  supervisors_today: number;
+  students_in_home_room: number;
+  recent_activity: RecentActivityItem[] | null;
+  current_activities: CurrentActivityItem[] | null;
+  active_groups_summary: ActiveGroupSummary[] | null;
+  last_updated: string;
+}
+
+export const DashboardAnalyticsResponseSchema: z.ZodType<DashboardAnalyticsResponse, unknown> = object<DashboardAnalyticsResponse>({
+  students_present: safeInt,
+  students_in_transit: safeInt,
+  students_on_playground: safeInt,
+  students_in_rooms: safeInt,
+  students_sick: safeInt,
+  students_excused: safeInt,
+  students_home: safeInt,
+  students_at_school: safeInt,
+  students_in_class: safeInt,
+  active_activities: safeInt,
+  free_rooms: safeInt,
+  total_rooms: safeInt,
+  capacity_utilization: num,
+  activity_categories: safeInt,
+  active_ogs_groups: safeInt,
+  students_in_group_rooms: safeInt,
+  supervisors_today: safeInt,
+  students_in_home_room: safeInt,
+  recent_activity: nullable(arr(RecentActivityItemSchema)),
+  current_activities: nullable(arr(CurrentActivityItemSchema)),
+  active_groups_summary: nullable(arr(ActiveGroupSummarySchema)),
+  last_updated: instant,
+});
 
 /** Go: presence.GroupSupervisorSimple */
 export interface GroupSupervisorSimple {
@@ -923,6 +1030,12 @@ export interface GetActiveVisitsQuery {
 }
 
 export const routes = {
+  "GET /api/active/analytics/dashboard": {
+    method: "GET",
+    pattern: "/api/active/analytics/dashboard",
+    portals: ["tenant"],
+    response: success(DashboardAnalyticsResponseSchema),
+  },
   "GET /api/active/groups/": {
     method: "GET",
     pattern: "/api/active/groups/",

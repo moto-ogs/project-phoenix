@@ -1,4 +1,10 @@
 import { bffJson } from "~/lib/bff-fetch";
+import type { SchoolSearchRequest } from "~/lib/contract/search.generated";
+import { CONTRACT_WIRE } from "~/lib/contract/wire";
+import {
+  mapSchoolSearchResult,
+  type BackendSchoolSearchResult,
+} from "~/lib/school-search-wire";
 
 /**
  * The school search (#6954, ADR 0231). The query travels in a POST body and
@@ -98,16 +104,21 @@ export const SCHOOL_SEARCH_MIN_LENGTH = 2;
 /** Longest query the backend accepts. */
 export const SCHOOL_SEARCH_MAX_LENGTH = 100;
 
-/** Runs one search through the BFF. */
-export function searchSchool(
+/**
+ * Runs one search through the portal's catalog proxy (#7563) and maps the
+ * contract's answer. The query stays in the body.
+ */
+export async function searchSchool(
   query: string,
   signal?: AbortSignal,
 ): Promise<SchoolSearchResult> {
-  return bffJson<SchoolSearchResult>("/api/search", {
+  const result = await bffJson<BackendSchoolSearchResult>("/api/search", {
     method: "POST",
-    body: { query },
+    body: { query } satisfies SchoolSearchRequest,
     signal,
+    headers: CONTRACT_WIRE,
   });
+  return mapSchoolSearchResult(result);
 }
 
 /** Fewest digits a phone query keeps after its prefixes go. */

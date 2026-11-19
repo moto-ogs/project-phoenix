@@ -23,7 +23,7 @@ type staffCheck struct {
 
 func (s staffCheck) HasCurrentStaff(context.Context) (bool, error) { return s.staff, s.err }
 
-func scopeFor(t *testing.T, staff staffCheck, granted ...string) schoolsearchview.Scope {
+func scopeFor(t *testing.T, staff staffCheck, granted ...string) schoolsearchview.SearchScope {
 	t.Helper()
 	resource := &Resource{staff: staff}
 	scope, err := resource.scope(context.WithValue(context.Background(), sessiontoken.CtxPermissions, granted))
@@ -34,25 +34,25 @@ func scopeFor(t *testing.T, staff staffCheck, granted ...string) schoolsearchvie
 func TestScopeOpensEachKindWithThePermissionOfItsPage(t *testing.T) {
 	t.Parallel()
 	staff := staffCheck{staff: true}
-	require.Equal(t, schoolsearchview.Scope{Children: true, ChildDetails: true, Contacts: true, Staff: true},
+	require.Equal(t, schoolsearchview.SearchScope{Children: true, ChildDetails: true, Contacts: true, Staff: true},
 		scopeFor(t, staff, permissions.UsersRead), "users:read opens children, their details, contacts and the staff list")
-	require.Equal(t, schoolsearchview.Scope{Children: true},
+	require.Equal(t, schoolsearchview.SearchScope{Children: true},
 		scopeFor(t, staff, permissions.StudentsRead), "the guest reads names, never contact data or answers")
-	require.Equal(t, schoolsearchview.Scope{Rooms: true},
+	require.Equal(t, schoolsearchview.SearchScope{Rooms: true},
 		scopeFor(t, staff, permissions.RoomsRead))
-	require.Equal(t, schoolsearchview.Scope{},
+	require.Equal(t, schoolsearchview.SearchScope{},
 		scopeFor(t, staff, permissions.GroupsRead), "a group hit leads to the child list, so it needs a child read")
-	require.Equal(t, schoolsearchview.Scope{Children: true, Groups: true},
+	require.Equal(t, schoolsearchview.SearchScope{Children: true, Groups: true},
 		scopeFor(t, staff, permissions.StudentsRead, permissions.GroupsRead))
-	require.Equal(t, schoolsearchview.Scope{Staff: true},
+	require.Equal(t, schoolsearchview.SearchScope{Staff: true},
 		scopeFor(t, staff, permissions.StaffStammdaten))
-	require.Equal(t, schoolsearchview.Scope{Children: true, ChildDetails: true, Contacts: true, Staff: true, Rooms: true, Groups: true},
+	require.Equal(t, schoolsearchview.SearchScope{Children: true, ChildDetails: true, Contacts: true, Staff: true, Rooms: true, Groups: true},
 		scopeFor(t, staffCheck{}, permissions.AdminWildcard), "an administrator reads everything without a staff record")
 }
 
 func TestScopeClosesChildDataToAccountsWithoutAStaffRecord(t *testing.T) {
 	t.Parallel()
-	require.Equal(t, schoolsearchview.Scope{Staff: true}, scopeFor(t, staffCheck{}, permissions.UsersRead))
+	require.Equal(t, schoolsearchview.SearchScope{Staff: true}, scopeFor(t, staffCheck{}, permissions.UsersRead))
 	resource := &Resource{staff: staffCheck{err: errors.New("lookup failed")}}
 	_, err := resource.scope(context.WithValue(context.Background(), sessiontoken.CtxPermissions, []string{permissions.UsersRead}))
 	require.Error(t, err, "an unknown staff check never widens the scope")
@@ -61,9 +61,9 @@ func TestScopeClosesChildDataToAccountsWithoutAStaffRecord(t *testing.T) {
 // recordingSearch answers every query with its scope and hands the query on.
 type recordingSearch func(schoolsearchview.Query)
 
-func (record recordingSearch) SearchSchool(_ context.Context, query schoolsearchview.Query) (schoolsearchview.Result, error) {
+func (record recordingSearch) SearchSchool(_ context.Context, query schoolsearchview.Query) (schoolsearchview.SearchResult, error) {
 	record(query)
-	return schoolsearchview.Result{Scope: query.Scope}, nil
+	return schoolsearchview.SearchResult{Scope: query.Scope}, nil
 }
 
 // fixedNotes answers the note audience and reports each question.

@@ -75,6 +75,7 @@ import { routes as schoolSetup } from "./school-setup.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
 import { routes as schoolStaffNotices } from "./school-staff-notices.generated";
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
+import { routes as search } from "./search.generated";
 import { routes as settings } from "./settings.generated";
 import { routes as shiftTypes } from "./shift-types.generated";
 import { routes as staff } from "./staff.generated";
@@ -788,6 +789,7 @@ export const portalRoutes = {
     absenceTypes["POST /api/absence-types/"],
     absenceTypes["PUT /api/absence-types/{id}"],
     absenceTypes["PUT /api/absence-types/{id}/allowances/{staffId}"],
+    active["GET /api/active/analytics/dashboard"],
     active["GET /api/active/groups/"],
     active["GET /api/active/groups/{id}/supervisors"],
     active["GET /api/active/schulhof/status"],
@@ -1093,6 +1095,7 @@ export const portalRoutes = {
     schoolSetup["POST /api/school-setup/complete"],
     schoolSetup["PUT /api/school-setup/dismissal"],
     schoolSetup["PUT /api/school-setup/steps/{step}"],
+    search["POST /api/search/"],
     settings["DELETE /api/settings/home-layout"],
     settings["GET /api/settings/device-pin-status"],
     settings["GET /api/settings/home-layout"],
@@ -1248,6 +1251,7 @@ export const portalRoutes = {
     students["DELETE /api/students/{id}/status-days/{statusDayId}"],
     students["GET /api/students/"],
     students["GET /api/students/arrival-settings"],
+    students["GET /api/students/care-offerings"],
     students["GET /api/students/care-schedule-change-requests/{requestId}"],
     students["GET /api/students/care-withdrawals"],
     students["GET /api/students/care-withdrawals/{completionId}/deletion-impact"],
@@ -1260,7 +1264,10 @@ export const portalRoutes = {
     students["GET /api/students/class-arrival-times/{schoolClass}"],
     students["GET /api/students/day-log"],
     students["GET /api/students/ended-care"],
+    students["GET /api/students/enrollment-answer-filters"],
+    students["GET /api/students/offering-change-requests/course-waitlists"],
     students["GET /api/students/ogs-group-live"],
+    students["GET /api/students/ogs-group-navigation"],
     students["GET /api/students/pickup-change-notices"],
     students["GET /api/students/privacy-consent/defaults"],
     students["GET /api/students/school-classes"],

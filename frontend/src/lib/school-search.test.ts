@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { CONTRACT_WIRE_HEADER } from "./contract/wire";
 
 const { mockBffJson } = vi.hoisted(() => ({ mockBffJson: vi.fn() }));
 vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
@@ -87,15 +88,22 @@ describe("looksLikePhoneNumber", () => {
 });
 
 describe("searchSchool", () => {
-  it("posts the query in the body, never in the address", async () => {
-    mockBffJson.mockResolvedValueOnce({});
+  it("posts the query in the body, never in the address, and asks for the contract", async () => {
+    mockBffJson.mockResolvedValueOnce({
+      staff: [{ id: "31", first_name: "Greta", last_name: "Wiesenthal" }],
+      scope: { staff: true },
+    });
     const controller = new AbortController();
-    await searchSchool("0170 1234567", controller.signal);
+    const result = await searchSchool("0170 1234567", controller.signal);
     expect(mockBffJson).toHaveBeenCalledWith("/api/search", {
       method: "POST",
       body: { query: "0170 1234567" },
       signal: controller.signal,
+      headers: { [CONTRACT_WIRE_HEADER]: "contract" },
     });
+    expect(result.staff).toEqual([
+      { id: "31", firstName: "Greta", lastName: "Wiesenthal" },
+    ]);
   });
 });
 

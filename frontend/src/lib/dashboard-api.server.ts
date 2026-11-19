@@ -9,6 +9,10 @@ import { createLogger } from "~/lib/logger";
 const logger = createLogger({ component: "DashboardAPI" });
 
 /**
+ * Temporary (#7563): only the temporary route file app/api/dashboard/analytics
+ * uses this; the current client maps the contract itself (lib/dashboard-api).
+ * Delete both after the next production deploy.
+ *
  * Fetches dashboard analytics data from the backend (server-side, used by BFF route)
  *
  * Every figure including studentsHome comes from the single analytics

@@ -368,6 +368,17 @@ export const arrivalSettingsResponseSchema: z.ZodType<arrivalSettingsResponse, u
   default_pickup_time: str,
 });
 
+/** Go: presenceprojectionhttp.CareOfferingOptionResponse */
+export interface CareOfferingOptionResponse {
+  id: string;
+  name: string;
+}
+
+export const CareOfferingOptionResponseSchema: z.ZodType<CareOfferingOptionResponse, unknown> = object<CareOfferingOptionResponse>({
+  id: int64StringOrNumber,
+  name: str,
+});
+
 /** Go: requestreview.CareRequestDiffResponse */
 export interface CareRequestDiffResponse {
   label: string;
@@ -841,8 +852,74 @@ export const endedCarePageResponseSchema: z.ZodType<endedCarePageResponse, unkno
   page_size: safeInt,
 });
 
-/** Go: grouplive.Group */
-export interface Group {
+/** Go: presenceprojectionhttp.EnrollmentAnswerOptionResponse */
+export interface EnrollmentAnswerOptionResponse {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export const EnrollmentAnswerOptionResponseSchema: z.ZodType<EnrollmentAnswerOptionResponse, unknown> = object<EnrollmentAnswerOptionResponse>({
+  value: str,
+  label: str,
+  count: safeInt,
+});
+
+/** Go: presenceprojectionhttp.EnrollmentAnswerFilterResponse */
+export interface EnrollmentAnswerFilterResponse {
+  key: string;
+  label: string;
+  type: string;
+  options: EnrollmentAnswerOptionResponse[] | null;
+}
+
+export const EnrollmentAnswerFilterResponseSchema: z.ZodType<EnrollmentAnswerFilterResponse, unknown> = object<EnrollmentAnswerFilterResponse>({
+  key: str,
+  label: str,
+  type: str,
+  options: nullable(arr(EnrollmentAnswerOptionResponseSchema)),
+});
+
+/** Go: careplanhttp.CourseWaitlistEntryResponse */
+export interface CourseWaitlistEntryResponse {
+  request_id: string;
+  student_id: string;
+  student_name: string;
+  rank: number;
+  submitted_at: string;
+}
+
+export const CourseWaitlistEntryResponseSchema: z.ZodType<CourseWaitlistEntryResponse, unknown> = object<CourseWaitlistEntryResponse>({
+  request_id: str,
+  student_id: str,
+  student_name: str,
+  rank: safeInt,
+  submitted_at: instant,
+});
+
+/** Go: careplanhttp.CourseWaitlistResponse */
+export interface CourseWaitlistResponse {
+  activity_group_id: string;
+  name: string;
+  participant_limit: number | null;
+  participants: number;
+  free_slots: number | null;
+  slot_free_for_next: boolean;
+  entries: CourseWaitlistEntryResponse[] | null;
+}
+
+export const CourseWaitlistResponseSchema: z.ZodType<CourseWaitlistResponse, unknown> = object<CourseWaitlistResponse>({
+  activity_group_id: str,
+  name: str,
+  participant_limit: nullable(safeInt),
+  participants: safeInt,
+  free_slots: nullable(safeInt),
+  slot_free_for_next: bool,
+  entries: nullable(arr(CourseWaitlistEntryResponseSchema)),
+});
+
+/** Go: grouplive.NavigationGroup */
+export interface NavigationGroup {
   id: string;
   name: string;
   room_id?: string;
@@ -852,7 +929,7 @@ export interface Group {
   leaders?: string[];
 }
 
-export const GroupSchema: z.ZodType<Group, unknown> = object<Group>({
+export const NavigationGroupSchema: z.ZodType<NavigationGroup, unknown> = object<NavigationGroup>({
   id: int64String,
   name: str,
   room_id: optional(int64String),
@@ -1037,7 +1114,7 @@ export const TransferSchema: z.ZodType<Transfer, unknown> = object<Transfer>({
 
 /** Go: grouplive.Projection */
 export interface Projection {
-  groups: Group[] | null;
+  groups: NavigationGroup[] | null;
   group_id?: string;
   students: Student[] | null;
   room_status: Record<string, RoomStatus> | null;
@@ -1047,7 +1124,7 @@ export interface Projection {
 }
 
 export const ProjectionSchema: z.ZodType<Projection, unknown> = object<Projection>({
-  groups: nullable(arr(GroupSchema)),
+  groups: nullable(arr(NavigationGroupSchema)),
   group_id: optional(int64String),
   students: nullable(arr(StudentSchema)),
   room_status: nullable(rec(RoomStatusSchema)),
@@ -3217,6 +3294,11 @@ export interface GetStudentsEndedCareQuery {
   search?: string;
 }
 
+/** Query of GET /api/students/offering-change-requests/course-waitlists */
+export interface GetStudentsOfferingChangeRequestsCourseWaitlistsQuery {
+  activity_group_id?: string;
+}
+
 /** Query of GET /api/students/ogs-group-live */
 export interface GetStudentsOgsGroupLiveQuery {
   group_id?: string;
@@ -3379,6 +3461,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(arrivalSettingsResponseSchema),
   },
+  "GET /api/students/care-offerings": {
+    method: "GET",
+    pattern: "/api/students/care-offerings",
+    portals: ["tenant"],
+    response: success(z.array(CareOfferingOptionResponseSchema)),
+  },
   "GET /api/students/care-schedule-change-requests/{requestId}": {
     method: "GET",
     pattern: "/api/students/care-schedule-change-requests/{requestId}",
@@ -3457,12 +3545,31 @@ export const routes = {
     query: ["page", "page_size", "school_class", "search"],
     response: success(endedCarePageResponseSchema),
   },
+  "GET /api/students/enrollment-answer-filters": {
+    method: "GET",
+    pattern: "/api/students/enrollment-answer-filters",
+    portals: ["tenant"],
+    response: success(z.array(EnrollmentAnswerFilterResponseSchema)),
+  },
+  "GET /api/students/offering-change-requests/course-waitlists": {
+    method: "GET",
+    pattern: "/api/students/offering-change-requests/course-waitlists",
+    portals: ["tenant"],
+    query: ["activity_group_id"],
+    response: success(z.array(CourseWaitlistResponseSchema)),
+  },
   "GET /api/students/ogs-group-live": {
     method: "GET",
     pattern: "/api/students/ogs-group-live",
     portals: ["tenant"],
     query: ["group_id"],
     response: success(ProjectionSchema),
+  },
+  "GET /api/students/ogs-group-navigation": {
+    method: "GET",
+    pattern: "/api/students/ogs-group-navigation",
+    portals: ["tenant"],
+    response: success(z.array(NavigationGroupSchema)),
   },
   "GET /api/students/pickup-change-notices": {
     method: "GET",

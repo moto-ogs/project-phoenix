@@ -16,6 +16,8 @@ import {
   createStudent,
   deleteStudentPhoto,
   deleteStudentWithData,
+  fetchCareOfferingOptions,
+  fetchEnrollmentAnswerFilters,
   fetchPrivacyConsentDefaults,
   fetchSchoolClasses,
   fetchStudent,
@@ -239,6 +241,53 @@ describe("fetchStudents", () => {
       status: 403,
       code: "general.permission",
     });
+  });
+});
+
+describe("child list filter options", () => {
+  const answer = (data: unknown) =>
+    new Response(JSON.stringify({ status: "success", data }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  it("maps the care offerings of the contract with string ids", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      answer([{ id: 12, name: "OGS Ganztag" }]),
+    );
+
+    await expect(fetchCareOfferingOptions()).resolves.toEqual([
+      { id: "12", name: "OGS Ganztag" },
+    ]);
+    expect(mockSessionFetch.mock.calls[0]![0]).toBe(
+      "/api/students/care-offerings",
+    );
+  });
+
+  it("maps the registration questions without their type", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      answer([
+        {
+          key: "bus",
+          label: "Fährt mit dem Bus",
+          type: "boolean",
+          options: [{ value: "true", label: "Ja", count: 3 }],
+        },
+        { key: "lunch", label: "Mittagessen", type: "choice", options: null },
+      ]),
+    );
+
+    await expect(fetchEnrollmentAnswerFilters()).resolves.toEqual([
+      {
+        key: "bus",
+        label: "Fährt mit dem Bus",
+        options: [{ value: "true", label: "Ja", count: 3 }],
+      },
+      { key: "lunch", label: "Mittagessen", options: [] },
+    ]);
+    expect(mockSessionFetch.mock.calls[0]![0]).toBe(
+      "/api/students/enrollment-answer-filters",
+    );
   });
 });
 

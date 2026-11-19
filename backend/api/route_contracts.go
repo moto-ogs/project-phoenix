@@ -21,6 +21,7 @@ import (
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
+	schoolSearchHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsearchview/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
 
@@ -173,6 +174,7 @@ func contractMounts() []contractMount {
 		{"/api/students", reviewStudentsHTTP.StudentRouteContracts()},
 		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
 		{"/api/students", groupLiveHTTP.RouteContracts()},
+		{"/api/search", schoolSearchHTTP.RouteContracts()},
 		{"/parent", parentAPI.MeRouteContracts()},
 		{"/parent", parentPortalRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},

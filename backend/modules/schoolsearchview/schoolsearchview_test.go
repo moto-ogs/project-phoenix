@@ -112,7 +112,7 @@ func TestValidateQueryTextTrimsAndBoundsTheQuery(t *testing.T) {
 // can find from the server's own decision, never from a guess of its own.
 func TestResultStatesTheGrantedScope(t *testing.T) {
 	t.Parallel()
-	body, err := json.Marshal(Result{Scope: Scope{Children: true, Staff: true}})
+	body, err := json.Marshal(SearchResult{Scope: SearchScope{Children: true, Staff: true}})
 	require.NoError(t, err)
 	require.JSONEq(t, `{"children":null,"contacts":null,"staff":null,"rooms":null,"groups":null,
 		"scope":{"children":true,"child_details":false,"contacts":false,"staff":true,"rooms":false,"groups":false}}`, string(body))

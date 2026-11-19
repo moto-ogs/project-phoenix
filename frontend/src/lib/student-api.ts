@@ -11,6 +11,8 @@ import {
 } from "./attendance-history-helpers";
 import { bffJson } from "./bff-fetch";
 import type {
+  CareOfferingOptionResponse,
+  EnrollmentAnswerFilterResponse,
   NameStudentResponse,
   StudentDetailResponse,
   StudentResponse,
@@ -255,20 +257,45 @@ function markPrivacyConsentSaved(error: unknown): unknown {
   return error;
 }
 
-/** The registration questions the child list can filter by (#6954). */
+/**
+ * The registration questions the child list can filter by (#6954), read
+ * through the portal's catalog proxy since #7563.
+ */
 export async function fetchEnrollmentAnswerFilters(): Promise<
   EnrollmentAnswerFilter[]
 > {
-  return bffJson<EnrollmentAnswerFilter[]>(
+  const filters = await bffJson<EnrollmentAnswerFilterResponse[] | null>(
     "/api/students/enrollment-answer-filters",
   );
+  return (filters ?? []).map(mapEnrollmentAnswerFilter);
 }
 
 /** The school's active care offerings that count as care (#4571). */
 export async function fetchCareOfferingOptions(): Promise<
   CareOfferingOption[]
 > {
-  return bffJson<CareOfferingOption[]>("/api/students/care-offerings");
+  const offerings = await bffJson<CareOfferingOptionResponse[] | null>(
+    "/api/students/care-offerings",
+  );
+  return (offerings ?? []).map((offering) => ({
+    id: String(offering.id),
+    name: offering.name,
+  }));
+}
+
+/** A filter question of the contract, without the type the list needs not. */
+export function mapEnrollmentAnswerFilter(
+  filter: EnrollmentAnswerFilterResponse,
+): EnrollmentAnswerFilter {
+  return {
+    key: filter.key,
+    label: filter.label,
+    options: (filter.options ?? []).map((option) => ({
+      value: option.value,
+      label: option.label,
+      count: option.count,
+    })),
+  };
 }
 
 interface StudentEnrollmentExtraField {

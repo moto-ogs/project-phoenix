@@ -6,7 +6,7 @@ import (
 	"slices"
 )
 
-func (s *service) ListGroups(ctx context.Context) ([]Group, error) {
+func (s *service) ListGroups(ctx context.Context) ([]NavigationGroup, error) {
 	if err := s.validateGroupDependencies(); err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (s *service) ListGroups(ctx context.Context) ([]Group, error) {
 // attachLeaders names each group's Gruppenleitung with one bulk lookup. Like
 // the room names, a failed lookup degrades to groups without leadership: the
 // navigation must not fail over a display line.
-func (s *service) attachLeaders(ctx context.Context, groups []Group) {
+func (s *service) attachLeaders(ctx context.Context, groups []NavigationGroup) {
 	if len(groups) == 0 {
 		return
 	}
@@ -59,7 +59,7 @@ func (s *service) sortGroups(groups []GroupRecord) {
 	slices.SortStableFunc(groups, func(a, b GroupRecord) int { return s.deps.Collate(a.Name, b.Name) })
 }
 
-func (s *service) resolveGroups(ctx context.Context, caller Caller, requestedGroupID int64, allowMissingRoomNames bool) ([]Group, *GroupRecord, error) {
+func (s *service) resolveGroups(ctx context.Context, caller Caller, requestedGroupID int64, allowMissingRoomNames bool) ([]NavigationGroup, *GroupRecord, error) {
 	visibleGroups, personalIDs, err := s.loadVisibleGroups(ctx, caller)
 	if err != nil {
 		return nil, nil, err
@@ -140,7 +140,7 @@ func selectGroup(groups []GroupRecord, personalIDs map[int64]bool, requestedGrou
 	return nil
 }
 
-func (s *service) mapGroups(ctx context.Context, groups []GroupRecord, personalIDs, substituted map[int64]bool, allowMissingRoomNames bool) ([]Group, error) {
+func (s *service) mapGroups(ctx context.Context, groups []GroupRecord, personalIDs, substituted map[int64]bool, allowMissingRoomNames bool) ([]NavigationGroup, error) {
 	// One bulk lookup resolves every room name; a per-group lookup loop would
 	// run on every aggregate refresh including SSE revalidations.
 	roomGroupIDs := make([]int64, 0, len(groups))
@@ -164,9 +164,9 @@ func (s *service) mapGroups(ctx context.Context, groups []GroupRecord, personalI
 		}
 	}
 
-	result := make([]Group, 0, len(groups))
+	result := make([]NavigationGroup, 0, len(groups))
 	for _, group := range groups {
-		result = append(result, Group{
+		result = append(result, NavigationGroup{
 			ID: group.ID, Name: group.Name, RoomID: group.RoomID, RoomName: roomNames[group.ID],
 			ViaSubstitution: substituted[group.ID], IsPersonal: personalIDs[group.ID],
 		})
