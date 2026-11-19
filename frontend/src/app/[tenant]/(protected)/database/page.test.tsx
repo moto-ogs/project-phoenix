@@ -147,7 +147,7 @@ describe("DatabasePage", () => {
   });
 
   // The counts come through the catalog proxy under the backend's path
-  // (#2352); /api/database/counts only stays for older bundles.
+  // (#2352).
   it("reads the counts from the stats route", async () => {
     render(<DatabasePage />);
 

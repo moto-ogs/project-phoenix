@@ -1,5 +1,0 @@
-{
-  "api/database/counts": [
-    "GET tenant /api/database/stats"
-  ]
-}

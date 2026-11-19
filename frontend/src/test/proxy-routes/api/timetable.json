@@ -1,5 +1,0 @@
-{
-  "api/timetable/conflict-check": [
-    "GET tenant /api/timetable/conflicts"
-  ]
-}

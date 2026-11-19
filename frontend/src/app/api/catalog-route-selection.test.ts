@@ -202,3 +202,32 @@ describe("route file in front of a portal's catalog proxy", () => {
     },
   );
 });
+
+/**
+ * Paths whose own route file is gone (#2352, #7563): Next must hand them to
+ * the portal's catch-all, not to a dynamic neighbour or Auth.js. Before,
+ * `time-tracking/[id]` caught `time-tracking/current` and literal hand-off
+ * files had to stand beside it.
+ */
+describe("path freed from its own route file", () => {
+  it.each([
+    ["/api/time-tracking/current", "/api/[...path]"],
+    ["/api/time-tracking/check-in", "/api/[...path]"],
+    ["/api/time-tracking/month-summary", "/api/[...path]"],
+    ["/api/time-tracking/1", "/api/[...path]"],
+    ["/api/users/1", "/api/[...path]"],
+    ["/api/substitutions", "/api/[...path]"],
+    ["/api/enrollment/legal/schule", "/api/[...path]"],
+    ["/api/enrollment/legal/schule/1", "/api/[...path]"],
+    ["/api/staff/shifts/overview", "/api/[...path]"],
+    ["/api/timetable/conflict-check", "/api/[...path]"],
+    [
+      "/api/traeger/billing-families/debtor-number-format",
+      "/api/traeger/billing-families/debtor-number-format",
+    ],
+    ["/api/operator/schools/1/pwa-usage", "/api/operator/[...path]"],
+    ["/api/parent/me/calendar", "/api/parent/[...path]"],
+  ])("%s goes to %s", (sample, expected) => {
+    expect(routeFiles.find(({ match }) => match(sample))?.route).toBe(expected);
+  });
+});
