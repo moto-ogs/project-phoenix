@@ -23,7 +23,7 @@ func (s *service) applyClassHandovers(ctx context.Context, projection *Projectio
 	if len(handovers) == 0 {
 		return nil
 	}
-	mark := func(studentID int64) *ClassHandover {
+	mark := func(studentID int64) *SupervisionClassHandover {
 		if handover, ok := handovers[studentID]; ok {
 			return &handover
 		}

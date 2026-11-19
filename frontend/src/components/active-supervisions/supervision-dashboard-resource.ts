@@ -4,10 +4,14 @@ import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { TeacherHint } from "~/lib/student-helpers";
+import type { ClassHandover } from "~/lib/class-handover";
+import type { Projection } from "~/lib/contract/active.generated";
+import { mapSupervisionDashboard } from "./supervision-dashboard-wire";
 import type { OpenRoomView, SchulhofStatusResponse } from "./view-model";
 const logger = createLogger({ component: "useSupervisionDashboard" });
 
-// BFF response type for consolidated dashboard data
+// The page's view of the supervision projection (#2096), mapped once from
+// the contract shape by mapSupervisionDashboard.
 export interface BFFDashboardResponse {
   businessDay: string;
   spontaneousStartAvailability: {
@@ -51,6 +55,8 @@ export interface BFFDashboardResponse {
     excusedSince?: string;
     class_trip?: boolean;
     class_trip_since?: string;
+    // Übergabe nach dem Unterricht (#4794).
+    classHandover?: ClassHandover;
     // Authenticated proxy URL — backend rewrites the raw /uploads path
     // to /api/students/{id}/photo/{filename} before sending it down.
     photoUrl?: string;
@@ -116,8 +122,9 @@ export async function fetchSupervisionDashboard(
       groupId && /^[1-9]\d{0,18}$/.test(groupId)
         ? `?group_id=${encodeURIComponent(groupId)}`
         : "";
-    // The route reads the session cookie.
-    return transportFetch(`/api/active-supervision-dashboard${query}`, {
+    // The catalog proxy reads the session cookie and checks the answer
+    // against the contract (#7563).
+    return transportFetch(`/api/active/supervision-dashboard${query}`, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -142,12 +149,10 @@ export async function fetchSupervisionDashboard(
     );
   }
 
-  const bffData = (await response.json()) as {
-    data: BFFDashboardResponse;
-  };
+  const body = (await response.json()) as { data: Projection };
 
   logger.debug("SWR fetch complete", {
     duration_ms: Math.round(performance.now() - start),
   });
-  return bffData.data;
+  return mapSupervisionDashboard(body.data);
 }

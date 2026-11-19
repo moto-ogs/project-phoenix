@@ -57,7 +57,7 @@ func TestTeacherHintBindings(t *testing.T) {
 		t.Parallel()
 		got, err := supervisionTeacherHints{hints: directory()}.TeacherHints(context.Background(), []int64{7, 8}, supervisiondashboard.Date(day))
 		require.NoError(t, err)
-		assert.Equal(t, []supervisiondashboard.TeacherHint{
+		assert.Equal(t, []supervisiondashboard.SupervisionTeacherHint{
 			{StudentID: 7, Body: "Heute Sportfest", AuthorName: "Lena Lehrerin", SchoolClass: "3b"},
 			{StudentID: 8, Body: "Hat Bauchweh", AuthorName: "Lena Lehrerin"},
 			{StudentID: 7, Body: "Sportzeug fehlt", AuthorName: "Tom Lehrer"},

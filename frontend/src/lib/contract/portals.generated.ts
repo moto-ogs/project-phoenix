@@ -786,6 +786,7 @@ export const portalRoutes = {
     active["GET /api/active/groups/"],
     active["GET /api/active/groups/{id}/supervisors"],
     active["GET /api/active/schulhof/status"],
+    active["GET /api/active/supervision-dashboard"],
     active["GET /api/active/supervisors/all"],
     active["GET /api/active/supervisors/staff/{staffId}/active"],
     active["GET /api/active/visits/"],

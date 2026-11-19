@@ -775,7 +775,7 @@ type supervisionTeacherHints struct {
 	hints peopledirectory.SchoolDayHintQuery
 }
 
-func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []int64, date supervisiondashboard.Date) ([]supervisiondashboard.TeacherHint, error) {
+func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []int64, date supervisiondashboard.Date) ([]supervisiondashboard.SupervisionTeacherHint, error) {
 	day, err := calendarpkg.ParseDate(string(date))
 	if err != nil {
 		return nil, err
@@ -784,9 +784,9 @@ func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []
 	if err != nil {
 		return nil, err
 	}
-	result := make([]supervisiondashboard.TeacherHint, 0, len(rows))
+	result := make([]supervisiondashboard.SupervisionTeacherHint, 0, len(rows))
 	for _, hint := range rows {
-		result = append(result, supervisiondashboard.TeacherHint{
+		result = append(result, supervisiondashboard.SupervisionTeacherHint{
 			StudentID: hint.StudentID, Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
 		})
 	}
