@@ -12,13 +12,13 @@ import (
 
 // handoverReaderFake answers the class handover port (#4794).
 type handoverReaderFake struct {
-	handovers map[int64]ClassHandover
+	handovers map[int64]SupervisionClassHandover
 	err       error
 	asked     []int64
 	calls     int
 }
 
-func (h *handoverReaderFake) ClassHandovers(_ context.Context, ids []int64, _ Date) (map[int64]ClassHandover, error) {
+func (h *handoverReaderFake) ClassHandovers(_ context.Context, ids []int64, _ Date) (map[int64]SupervisionClassHandover, error) {
 	h.calls++
 	h.asked = ids
 	return h.handovers, h.err
@@ -31,8 +31,8 @@ func (h *handoverReaderFake) ClassHandovers(_ context.Context, ids []int64, _ Da
 func TestDashboardCarriesTheClassHandover(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, time.August, 19, 11, 45, 0, 0, time.UTC)
-	absent := ClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft", Absent: true}
-	present := ClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft"}
+	absent := SupervisionClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft", Absent: true}
+	present := SupervisionClassHandover{SchoolClass: "2b", HandedOverAt: at, HandedOverBy: "Petra Lehrkraft"}
 	projection := func() *Projection {
 		p := emptyProjection()
 		p.Visits = []Visit{{StudentID: 1, SchoolClass: "1a"}, {StudentID: 2, SchoolClass: "2b"}}
@@ -41,7 +41,7 @@ func TestDashboardCarriesTheClassHandover(t *testing.T) {
 		return p
 	}
 
-	reader := &handoverReaderFake{handovers: map[int64]ClassHandover{2: absent, 3: present}}
+	reader := &handoverReaderFake{handovers: map[int64]SupervisionClassHandover{2: absent, 3: present}}
 	got := projection()
 	require.NoError(t, (&service{deps: Dependencies{Handovers: reader}}).applyClassHandovers(context.Background(), got, Caller{CanReadStudents: true}, "2026-08-19"))
 	assert.Equal(t, []int64{1, 2, 3}, reader.asked, "one read over the union")

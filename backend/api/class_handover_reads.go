@@ -138,14 +138,14 @@ func (h studentListHandovers) ClassHandovers(ctx context.Context, studentIDs []i
 // supervisionHandovers serves the supervision dashboard's handover port.
 type supervisionHandovers struct{ reads classHandoverReads }
 
-func (h supervisionHandovers) ClassHandovers(ctx context.Context, studentIDs []int64, day supervisiondashboard.Date) (map[int64]supervisiondashboard.ClassHandover, error) {
+func (h supervisionHandovers) ClassHandovers(ctx context.Context, studentIDs []int64, day supervisiondashboard.Date) (map[int64]supervisiondashboard.SupervisionClassHandover, error) {
 	loaded, err := loadClassHandovers(ctx, h.reads, studentIDs, calendar.Date(day))
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[int64]supervisiondashboard.ClassHandover, len(loaded))
+	result := make(map[int64]supervisiondashboard.SupervisionClassHandover, len(loaded))
 	for id, c := range loaded {
-		result[id] = supervisiondashboard.ClassHandover{SchoolClass: c.schoolClass, HandedOverAt: c.handedOverAt, HandedOverBy: c.handedOverBy, Absent: c.absent}
+		result[id] = supervisiondashboard.SupervisionClassHandover{SchoolClass: c.schoolClass, HandedOverAt: c.handedOverAt, HandedOverBy: c.handedOverBy, Absent: c.absent}
 	}
 	return result, nil
 }

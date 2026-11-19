@@ -215,7 +215,7 @@ type RosterRow struct {
 	ParallelPresentIn *ParallelPresence `json:"parallel_present_in,omitempty"`
 	CareDayStatus     string            `json:"care_day_status"`
 	// ClassHandover: today's handover of the child to the OGS (#4794).
-	ClassHandover *ClassHandover `json:"class_handover,omitempty"`
+	ClassHandover *SupervisionClassHandover `json:"class_handover,omitempty"`
 }
 
 // RosterWarning is one arrival or group warning on a roster row.
@@ -268,7 +268,7 @@ type Visit struct {
 	ExcusedSince      *time.Time `json:"excused_since,omitempty"`
 	PhotoURL          string     `json:"photo_url,omitempty"`
 	// ClassHandover: today's handover of the child to the OGS (#4794).
-	ClassHandover *ClassHandover `json:"class_handover,omitempty"`
+	ClassHandover *SupervisionClassHandover `json:"class_handover,omitempty"`
 }
 
 type TrackingIndicators struct {
@@ -306,7 +306,7 @@ type Projection struct {
 	ArrivalTimes       []ArrivalTime      `json:"arrival_times"`
 	// TeacherHints are today's hints of the Lehrkraft (#4795) for the
 	// children in the projection, oldest first; with users:read only.
-	TeacherHints []TeacherHint `json:"teacher_hints"`
+	TeacherHints []SupervisionTeacherHint `json:"teacher_hints"`
 }
 
 func emptyProjection() *Projection {
@@ -321,7 +321,7 @@ func emptyProjection() *Projection {
 		TrackingIndicators: TrackingIndicators{Labels: []string{}, Results: map[int64][]bool{}},
 		PickupTimes:        []PickupTime{},
 		ArrivalTimes:       []ArrivalTime{},
-		TeacherHints:       []TeacherHint{},
+		TeacherHints:       []SupervisionTeacherHint{},
 	}
 }
 
