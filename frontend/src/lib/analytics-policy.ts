@@ -40,7 +40,7 @@ export type ChildScopeAnalyticsValue =
  * neue Fläche braucht einen Wert hier und ihren Namen in
  * ONBOARDING_SURFACE_LABELS (scripts/posthog-dashboards.mjs).
  */
-export const ONBOARDING_SURFACES = [
+const ONBOARDING_SURFACES = [
   "announcement",
   "setup_checklist",
   "staff_first_steps",
