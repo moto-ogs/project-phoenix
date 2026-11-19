@@ -2,12 +2,13 @@ package api
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
 	groupsHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
 	gradeTransitionHTTP "github.com/moto-ogs/project-phoenix/workflows/gradetransition/http"
-	"reflect"
-	"strings"
 
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
@@ -16,6 +17,7 @@ import (
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
@@ -241,6 +243,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
 		// The substitution bodies take an id as a number or a decimal string.
 		reflect.TypeOf(substitutions.LaxID): contract.KindLaxID,
+		// A staff body names its person as a number or a decimal string.
+		reflect.TypeFor[staffHTTP.JSONID](): contract.KindLaxID,
 	})
 	// Both student bodies only refuse retired keys before the plain decode;
 	// CompanionEntry takes its companion id as a number or a decimal string.

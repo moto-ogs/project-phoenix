@@ -18,6 +18,7 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
 import {
   DailyProjectionSchema,
@@ -32,6 +33,12 @@ import {
   type StaffAbsenceResponse,
 } from "./shared.generated";
 
+export const EXTERNAL_ACCOUNT_STATUS_VALUES = ["account", "invitation_pending", "none"] as const;
+export type ExternalAccountStatus = (typeof EXTERNAL_ACCOUNT_STATUS_VALUES)[number];
+
+export const ROLE_FORM_VALUES = ["feminine", "masculine"] as const;
+export type RoleForm = (typeof ROLE_FORM_VALUES)[number];
+
 /** Go: timetracking.StammdatenAck */
 export interface StammdatenAck {
   staff_id: string;
@@ -39,6 +46,86 @@ export interface StammdatenAck {
 
 export const StammdatenAckSchema: z.ZodType<StammdatenAck, unknown> = object<StammdatenAck>({
   staff_id: int64StringOrNumber,
+});
+
+/** Go: staff.StaffPersonResponse */
+export interface StaffPersonResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  avatar?: string;
+  tag_id?: string;
+  account_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const StaffPersonResponseSchema: z.ZodType<StaffPersonResponse, unknown> = object<StaffPersonResponse>({
+  id: int64StringOrNumber,
+  first_name: str,
+  last_name: str,
+  email: optional(str),
+  avatar: optional(str),
+  tag_id: optional(str),
+  account_id: optional(int64StringOrNumber),
+  created_at: instant,
+  updated_at: instant,
+});
+
+/** Go: staff.StaffRecordResponse */
+export interface StaffRecordResponse {
+  started_on: string | null;
+  ended_on: string | null;
+  id: string;
+  person_id: string;
+  staff_notes?: string;
+  person?: StaffPersonResponse;
+  is_teacher: boolean;
+  was_present_today: boolean;
+  work_status?: string;
+  absence_type?: string;
+  absence_type_label?: string;
+  account_role?: string;
+  employment_type?: string;
+  is_external: boolean;
+  external_organization?: string;
+  external_account_status?: OpenEnum<ExternalAccountStatus>;
+  planned_exit_date?: string;
+  created_at: string;
+  updated_at: string;
+  teacher_id?: string;
+  specialization?: string;
+  role?: string;
+  role_form?: OpenEnum<RoleForm>;
+  qualifications?: string;
+}
+
+export const StaffRecordResponseSchema: z.ZodType<StaffRecordResponse, unknown> = object<StaffRecordResponse>({
+  started_on: nullable(calendarDate),
+  ended_on: nullable(calendarDate),
+  id: int64String,
+  person_id: int64String,
+  staff_notes: optional(str),
+  person: optional(StaffPersonResponseSchema),
+  is_teacher: bool,
+  was_present_today: bool,
+  work_status: optional(str),
+  absence_type: optional(str),
+  absence_type_label: optional(str),
+  account_role: optional(str),
+  employment_type: optional(str),
+  is_external: bool,
+  external_organization: optional(str),
+  external_account_status: optional(str),
+  planned_exit_date: optional(calendarDate),
+  created_at: instant,
+  updated_at: instant,
+  teacher_id: optional(int64StringOrNumber),
+  specialization: optional(str),
+  role: optional(str),
+  role_form: optional(str),
+  qualifications: optional(str),
 });
 
 /** Go: timetracking.AbsenceDecisionMailsResponse */
@@ -225,6 +312,23 @@ export const MinimalStaffProfileResponseSchema: z.ZodType<MinimalStaffProfileRes
   lastName: str,
   started_on: optional(calendarDate),
   ended_on: optional(calendarDate),
+});
+
+/** Go: staff.FormerStaffResponse */
+export interface FormerStaffResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+  started_on: string | null;
+  ended_on: string | null;
+}
+
+export const FormerStaffResponseSchema: z.ZodType<FormerStaffResponse, unknown> = object<FormerStaffResponse>({
+  id: int64String,
+  first_name: str,
+  last_name: str,
+  started_on: nullable(calendarDate),
+  ended_on: nullable(calendarDate),
 });
 
 /** Go: timetracking.QualificationEntryResponse */
@@ -907,6 +1011,16 @@ export const TraegerProofResponseSchema: z.ZodType<TraegerProofResponse, unknown
   expires_on: nullable(calendarDate),
 });
 
+/** Go: staff.StaffRequest */
+export interface StaffRequest {
+  person_id?: string;
+  staff_notes?: string;
+  is_teacher?: boolean;
+  specialization?: string;
+  role?: string;
+  qualifications?: string;
+}
+
 /** Go: workforce.VacationDecisionRequest */
 export interface VacationDecisionRequest {
   decision_note?: string;
@@ -920,6 +1034,69 @@ export interface absencePlanSyncResponse {
 export const absencePlanSyncResponseSchema: z.ZodType<absencePlanSyncResponse, unknown> = object<absencePlanSyncResponse>({
   applied: bool,
 });
+
+/** Go: staff.ExternalStaffRequest */
+export interface ExternalStaffRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  organization?: string;
+  gender?: string;
+  access?: string;
+}
+
+/** Go: staff.ExternalStaffResponse */
+export interface ExternalStaffResponse {
+  started_on: string | null;
+  ended_on: string | null;
+  id: string;
+  person_id: string;
+  staff_notes?: string;
+  person?: StaffPersonResponse;
+  is_teacher: boolean;
+  was_present_today: boolean;
+  work_status?: string;
+  absence_type?: string;
+  absence_type_label?: string;
+  account_role?: string;
+  employment_type?: string;
+  is_external: boolean;
+  external_organization?: string;
+  external_account_status?: OpenEnum<ExternalAccountStatus>;
+  planned_exit_date?: string;
+  created_at: string;
+  updated_at: string;
+  invitation_token?: string;
+}
+
+export const ExternalStaffResponseSchema: z.ZodType<ExternalStaffResponse, unknown> = object<ExternalStaffResponse>({
+  started_on: nullable(calendarDate),
+  ended_on: nullable(calendarDate),
+  id: int64String,
+  person_id: int64String,
+  staff_notes: optional(str),
+  person: optional(StaffPersonResponseSchema),
+  is_teacher: bool,
+  was_present_today: bool,
+  work_status: optional(str),
+  absence_type: optional(str),
+  absence_type_label: optional(str),
+  account_role: optional(str),
+  employment_type: optional(str),
+  is_external: bool,
+  external_organization: optional(str),
+  external_account_status: optional(str),
+  planned_exit_date: optional(calendarDate),
+  created_at: instant,
+  updated_at: instant,
+  invitation_token: optional(str),
+});
+
+/** Go: staff.ExternalInvitationRequest */
+export interface ExternalInvitationRequest {
+  email?: string;
+  access?: string;
+}
 
 /** Go: timetracking.QualificationTypeRequest */
 export interface QualificationTypeRequest {
@@ -1278,6 +1455,14 @@ export interface DeleteStaffIdVacationOpeningQuery {
   year?: number;
 }
 
+/** Query of GET /api/staff/ */
+export interface GetStaffQuery {
+  first_name?: string;
+  last_name?: string;
+  role?: string;
+  teachers_only?: boolean;
+}
+
 /** Query of GET /api/staff/absences/mails */
 export interface GetStaffAbsencesMailsQuery {
   ids?: string;
@@ -1299,6 +1484,14 @@ export interface GetStaffByRoleQuery {
 /** Query of GET /api/staff/dashboard-summary */
 export interface GetStaffDashboardSummaryQuery {
   period?: string;
+}
+
+/** Query of GET /api/staff/former */
+export interface GetStaffFormerQuery {
+  first_name?: string;
+  last_name?: string;
+  role?: string;
+  teachers_only?: boolean;
 }
 
 /** Query of GET /api/staff/time-tracking/audit-log */
@@ -1405,6 +1598,12 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/staff/{id}": {
+    method: "DELETE",
+    pattern: "/api/staff/{id}",
+    portals: ["tenant"],
+    response: noData,
+  },
   "DELETE /api/staff/{id}/absences/{absenceId}": {
     method: "DELETE",
     pattern: "/api/staff/{id}/absences/{absenceId}",
@@ -1441,6 +1640,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["year"],
     response: noData,
+  },
+  "GET /api/staff/": {
+    method: "GET",
+    pattern: "/api/staff/",
+    portals: ["tenant"],
+    query: ["first_name", "last_name", "role", "teachers_only"],
+    response: success(z.array(StaffRecordResponseSchema)),
   },
   "GET /api/staff/absences/mails": {
     method: "GET",
@@ -1499,6 +1705,13 @@ export const routes = {
     pattern: "/api/staff/financial-profile/{id}",
     portals: ["tenant"],
     response: success(MinimalStaffProfileResponseSchema),
+  },
+  "GET /api/staff/former": {
+    method: "GET",
+    pattern: "/api/staff/former",
+    portals: ["tenant"],
+    query: ["first_name", "last_name", "role", "teachers_only"],
+    response: success(z.array(FormerStaffResponseSchema)),
   },
   "GET /api/staff/me/qualifications": {
     method: "GET",
@@ -1577,6 +1790,12 @@ export const routes = {
     portals: ["tenant"],
     query: ["month", "year"],
     response: success(TargetCoverageSchema),
+  },
+  "GET /api/staff/{id}": {
+    method: "GET",
+    pattern: "/api/staff/{id}",
+    portals: ["tenant"],
+    response: success(StaffRecordResponseSchema),
   },
   "GET /api/staff/{id}/absences": {
     method: "GET",
@@ -1681,6 +1900,13 @@ export const routes = {
     query: ["year"],
     response: success(VacationQuotaSummarySchema),
   },
+  "POST /api/staff/": {
+    method: "POST",
+    pattern: "/api/staff/",
+    portals: ["tenant"],
+    request: requestBody<StaffRequest>(),
+    response: success(StaffRecordResponseSchema),
+  },
   "POST /api/staff/absences/{absenceId}/approve": {
     method: "POST",
     pattern: "/api/staff/absences/{absenceId}/approve",
@@ -1707,6 +1933,20 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<VacationDecisionRequest>(),
     response: success(StaffAbsenceResponseSchema),
+  },
+  "POST /api/staff/externals": {
+    method: "POST",
+    pattern: "/api/staff/externals",
+    portals: ["tenant"],
+    request: requestBody<ExternalStaffRequest>(),
+    response: success(ExternalStaffResponseSchema),
+  },
+  "POST /api/staff/externals/{id}/invitation": {
+    method: "POST",
+    pattern: "/api/staff/externals/{id}/invitation",
+    portals: ["tenant"],
+    request: requestBody<ExternalInvitationRequest>(),
+    response: success(ExternalStaffResponseSchema),
   },
   "POST /api/staff/qualification-types": {
     method: "POST",
@@ -1839,6 +2079,13 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<PayrollWageTypeRequest>(),
     response: success(PayrollWageTypeResponseSchema),
+  },
+  "PUT /api/staff/{id}": {
+    method: "PUT",
+    pattern: "/api/staff/{id}",
+    portals: ["tenant"],
+    request: requestBody<StaffRequest>(),
+    response: success(StaffRecordResponseSchema),
   },
   "PUT /api/staff/{id}/payroll-number": {
     method: "PUT",

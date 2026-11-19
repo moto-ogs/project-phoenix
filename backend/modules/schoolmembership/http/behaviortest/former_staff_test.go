@@ -87,12 +87,12 @@ func TestListStaffFormerShowsEachPersonsLatestEmploymentOnce(t *testing.T) {
 	h := withFormerPersons(newHarness(t, formerStaffFixture()))
 	h.allow("users:read")
 
-	recorder := h.do(t, http.MethodGet, "/staff?employment=former", nil)
+	recorder := h.do(t, http.MethodGet, "/staff/former", nil)
 	require.Equal(t, http.StatusOK, recorder.Code)
 	assert.Equal(t, "Former staff members retrieved successfully", decode(t, recorder).Message)
 	assert.Equal(t, 1, h.txCalls, "the read stays inside the caller's school transaction")
 
-	rows := decodeFormer(t, h, "/staff?employment=former")
+	rows := decodeFormer(t, h, "/staff/former")
 	assert.Equal(t, []formerStaffRow{
 		{ID: "2", FirstName: "Grace", LastName: "Hopper", StartedOn: "2024-09-02", EndedOn: "2026-07-31"},
 		{ID: "4", FirstName: "Katherine", LastName: "Johnson", StartedOn: "2024-02-01", EndedOn: "2025-01-31"},
@@ -116,12 +116,12 @@ func TestListStaffFormerKeepsBigIDsAndAppliesDirectoryFilters(t *testing.T) {
 	}
 	h.roles[102] = "teacher"
 
-	rows := decodeFormer(t, h, "/staff?employment=former&teachers_only=true&role=teacher")
+	rows := decodeFormer(t, h, "/staff/former?teachers_only=true&role=teacher")
 	require.Len(t, rows, 1)
 	assert.Equal(t, "9223372036854775807", rows[0].ID)
 	assert.Equal(t, "Grace", rows[0].FirstName)
 
-	assert.Empty(t, decodeFormer(t, h, "/staff?employment=former&role=admin"))
+	assert.Empty(t, decodeFormer(t, h, "/staff/former?role=admin"))
 }
 
 func TestListStaffFormerAppliesTheNameFilters(t *testing.T) {
@@ -129,7 +129,7 @@ func TestListStaffFormerAppliesTheNameFilters(t *testing.T) {
 	h := withFormerPersons(newHarness(t, formerStaffFixture()))
 	h.allow("staff:stammdaten")
 
-	rows := decodeFormer(t, h, "/staff?employment=former&last_name=JOHN")
+	rows := decodeFormer(t, h, "/staff/former?last_name=JOHN")
 	require.Len(t, rows, 1)
 	assert.Equal(t, "Katherine", rows[0].FirstName)
 	assert.Equal(t, "2025-01-31", rows[0].EndedOn, "the latest of her two employments")
@@ -140,7 +140,7 @@ func TestListStaffFormerSkipsPersonsTheDirectoryNoLongerHolds(t *testing.T) {
 	h := newHarness(t, formerStaffFixture())
 	h.allow("users:read")
 
-	assert.Empty(t, decodeFormer(t, h, "/staff?employment=former"), "a deleted person is no row, not an empty name")
+	assert.Empty(t, decodeFormer(t, h, "/staff/former"), "a deleted person is no row, not an empty name")
 }
 
 func TestListStaffFormerNeedsTheListPermission(t *testing.T) {
@@ -148,7 +148,7 @@ func TestListStaffFormerNeedsTheListPermission(t *testing.T) {
 	h := withFormerPersons(newHarness(t, formerStaffFixture()))
 	h.allow("time_tracking:manage", "staff:documents")
 
-	recorder := h.do(t, http.MethodGet, "/staff?employment=former", nil)
+	recorder := h.do(t, http.MethodGet, "/staff/former", nil)
 	assert.Equal(t, http.StatusForbidden, recorder.Code)
 	assert.Zero(t, h.txCalls)
 }
@@ -159,17 +159,17 @@ func TestListStaffFormerReportsLookupFailures(t *testing.T) {
 	membership.listErr = assert.AnError
 	h := newHarness(t, membership)
 	h.allow("users:read")
-	assert.Equal(t, http.StatusInternalServerError, h.do(t, http.MethodGet, "/staff?employment=former", nil).Code)
+	assert.Equal(t, http.StatusInternalServerError, h.do(t, http.MethodGet, "/staff/former", nil).Code)
 
 	h = newHarness(t, formerStaffFixture())
 	h.allow("users:read")
 	h.personsErr = assert.AnError
-	assert.Equal(t, http.StatusInternalServerError, h.do(t, http.MethodGet, "/staff?employment=former", nil).Code)
+	assert.Equal(t, http.StatusInternalServerError, h.do(t, http.MethodGet, "/staff/former", nil).Code)
 
 	h = withFormerPersons(newHarness(t, formerStaffFixture()))
 	h.allow("users:read")
 	h.roleMatchesErr = assert.AnError
-	assert.Equal(t, http.StatusInternalServerError, h.do(t, http.MethodGet, "/staff?employment=former&role=teacher", nil).Code)
+	assert.Equal(t, http.StatusInternalServerError, h.do(t, http.MethodGet, "/staff/former?role=teacher", nil).Code)
 }
 
 func TestFormerEmploymentDetailRetainsPeriodAndPermissionGates(t *testing.T) {

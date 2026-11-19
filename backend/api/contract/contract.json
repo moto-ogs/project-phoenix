@@ -313,6 +313,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/staff/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/staff/{id}/absences/{absenceId}",
       "portals": [
         "tenant"
@@ -3413,6 +3421,38 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "first_name",
+          "kind": "string"
+        },
+        {
+          "name": "last_name",
+          "kind": "string"
+        },
+        {
+          "name": "role",
+          "kind": "string"
+        },
+        {
+          "name": "teachers_only",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffRecordResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/absences/mails",
       "portals": [
         "tenant"
@@ -3561,6 +3601,38 @@
       "response": {
         "kind": "ref",
         "ref": "MinimalStaffProfileResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/former",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "first_name",
+          "kind": "string"
+        },
+        {
+          "name": "last_name",
+          "kind": "string"
+        },
+        {
+          "name": "role",
+          "kind": "string"
+        },
+        {
+          "name": "teachers_only",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "FormerStaffResponse"
+        }
       }
     },
     {
@@ -3818,6 +3890,17 @@
       "response": {
         "kind": "ref",
         "ref": "TargetCoverage"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffRecordResponse"
       }
     },
     {
@@ -6128,6 +6211,20 @@
       "response": {
         "kind": "ref",
         "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/invitations/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SchoolInvitationResponse"
+        }
       }
     },
     {
@@ -10783,6 +10880,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/staff/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StaffRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffRecordResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/staff/absences/{absenceId}/approve",
       "portals": [
         "tenant"
@@ -10835,6 +10947,36 @@
       "response": {
         "kind": "ref",
         "ref": "StaffAbsenceResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/externals",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ExternalStaffRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ExternalStaffResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff/externals/{id}/invitation",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ExternalInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ExternalStaffResponse"
       }
     },
     {
@@ -12417,6 +12559,21 @@
       "response": {
         "kind": "ref",
         "ref": "ModelResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/invitations/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateSchoolInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolInvitationResponse"
       }
     },
     {
@@ -15400,6 +15557,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/staff/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StaffRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffRecordResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/staff/{id}/payroll-number",
       "portals": [
         "tenant"
@@ -17561,6 +17733,14 @@
       ]
     },
     {
+      "name": "ExternalAccountStatus",
+      "values": [
+        "account",
+        "invitation_pending",
+        "none"
+      ]
+    },
+    {
       "name": "GuardianContactMethod",
       "values": [
         "email",
@@ -17593,6 +17773,13 @@
         "Geht alleine nach Hause",
         "Geht mit anderem Kind",
         "Wird abgeholt"
+      ]
+    },
+    {
+      "name": "RoleForm",
+      "values": [
+        "feminine",
+        "masculine"
       ]
     },
     {
@@ -36585,6 +36772,83 @@
       ]
     },
     {
+      "name": "CreateSchoolInvitationRequest",
+      "go_type": "account.CreateSchoolInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "employment_action",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reset_master_data",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reset_qualifications",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reset_work_time",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "gender",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CreateSkip",
       "go_type": "carecontract.CreateSkip",
       "fields": [
@@ -40403,6 +40667,217 @@
       ]
     },
     {
+      "name": "ExternalInvitationRequest",
+      "go_type": "staff.ExternalInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ExternalStaffRequest",
+      "go_type": "staff.ExternalStaffRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "gender",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ExternalStaffResponse",
+      "go_type": "staff.ExternalStaffResponse",
+      "fields": [
+        {
+          "name": "started_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ended_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "staff_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "person",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffPersonResponse"
+          }
+        },
+        {
+          "name": "is_teacher",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "was_present_today",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "work_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employment_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_external",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "external_organization",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "external_account_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ExternalAccountStatus"
+          }
+        },
+        {
+          "name": "planned_exit_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "invitation_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "FamilyBilling",
       "go_type": "parentbilling.FamilyBilling",
       "fields": [
@@ -41892,6 +42367,44 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormerStaffResponse",
+      "go_type": "staff.FormerStaffResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "started_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ended_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]
@@ -67168,6 +67681,155 @@
       ]
     },
     {
+      "name": "SchoolInvitationResponse",
+      "go_type": "account.SchoolInvitationResponse",
+      "fields": [
+        {
+          "name": "employment_action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reset_master_data",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reset_qualifications",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reset_work_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "role_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_by",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "creator",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delivery_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_sent_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_error",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_retry_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "mail_outcome",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_mark",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "provider_block",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolOccupancy",
       "go_type": "traegerview.SchoolOccupancy",
       "fields": [
@@ -71767,6 +72429,70 @@
       ]
     },
     {
+      "name": "StaffPersonResponse",
+      "go_type": "staff.StaffPersonResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "avatar",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffPoolAssignmentResponse",
       "go_type": "timetablehttp.StaffPoolAssignmentResponse",
       "fields": [
@@ -71920,6 +72646,176 @@
       ]
     },
     {
+      "name": "StaffRecordResponse",
+      "go_type": "staff.StaffRecordResponse",
+      "fields": [
+        {
+          "name": "started_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ended_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "staff_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "person",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffPersonResponse"
+          }
+        },
+        {
+          "name": "is_teacher",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "was_present_today",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "work_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employment_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_external",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "external_organization",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "external_account_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ExternalAccountStatus"
+          }
+        },
+        {
+          "name": "planned_exit_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "teacher_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "specialization",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_form",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "RoleForm"
+          }
+        },
+        {
+          "name": "qualifications",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffRef",
       "go_type": "workforce.StaffRef",
       "fields": [
@@ -72012,6 +72908,55 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffRequest",
+      "go_type": "staff.StaffRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "person_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "staff_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_teacher",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "specialization",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "qualifications",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

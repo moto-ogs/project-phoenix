@@ -23,7 +23,7 @@ import (
 // Error messages (S1192 - avoid duplicate string literals)
 const errInvitationServiceUnavailable = "invitation service unavailable"
 
-type CreateInvitationRequest struct {
+type CreateSchoolInvitationRequest struct {
 	EmploymentAction    identityaccess.EmploymentAction `json:"employment_action"`
 	ResetMasterData     bool                            `json:"reset_master_data"`
 	ResetQualifications bool                            `json:"reset_qualifications"`
@@ -37,7 +37,7 @@ type CreateInvitationRequest struct {
 	Gender string `json:"gender"`
 }
 
-func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
+func (req *CreateSchoolInvitationRequest) Bind(_ *http.Request) error {
 	noResetForNew := validation.By(func(value interface{}) error {
 		if reset, ok := value.(bool); ok && reset && req.EmploymentAction == identityaccess.EmploymentActionNew {
 			return errors.New("resets require resumption")
@@ -70,7 +70,7 @@ func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
 	)
 }
 
-type InvitationResponse struct {
+type SchoolInvitationResponse struct {
 	EmploymentAction    identityaccess.EmploymentAction `json:"employment_action"`
 	ResetMasterData     bool                            `json:"reset_master_data"`
 	ResetQualifications bool                            `json:"reset_qualifications"`
@@ -118,7 +118,7 @@ func (rs *Resource) createInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := &CreateInvitationRequest{}
+	req := &CreateSchoolInvitationRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -142,7 +142,7 @@ func (rs *Resource) createInvitation(w http.ResponseWriter, r *http.Request) {
 // buildInvitationRequest maps the wire request into the module's invitation
 // request, resolving the tenant display name for the invitation email and
 // copying the optional name/position fields.
-func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateInvitationRequest, claims sessiontoken.AppClaims) identityaccess.SchoolInvitationRequest {
+func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateSchoolInvitationRequest, claims sessiontoken.AppClaims) identityaccess.SchoolInvitationRequest {
 	invitationReq := identityaccess.SchoolInvitationRequest{
 		EmploymentAction: req.EmploymentAction,
 		ResetMasterData:  req.ResetMasterData, ResetQualifications: req.ResetQualifications, ResetWorkTime: req.ResetWorkTime,
@@ -218,8 +218,8 @@ func renderCreateInvitationError(w http.ResponseWriter, r *http.Request, err err
 }
 
 // toInvitationResponse maps an invitation to its wire response shape.
-func toInvitationResponse(invitation identityaccess.SchoolInvitation) InvitationResponse {
-	return InvitationResponse{
+func toInvitationResponse(invitation identityaccess.SchoolInvitation) SchoolInvitationResponse {
+	return SchoolInvitationResponse{
 		EmploymentAction: invitation.EmploymentAction,
 		ResetMasterData:  invitation.ResetMasterData, ResetQualifications: invitation.ResetQualifications, ResetWorkTime: invitation.ResetWorkTime,
 		ID:              invitation.ID,
@@ -511,7 +511,7 @@ func (rs *Resource) listPendingInvitations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	responses := make([]InvitationResponse, 0, len(invitations))
+	responses := make([]SchoolInvitationResponse, 0, len(invitations))
 	for _, invitation := range invitations {
 		resp := toInvitationResponse(invitation)
 		// Copyable creation links are membership offers, not existing-account

@@ -96,7 +96,7 @@ func (rs *Resource) getAvailableStaff(w http.ResponseWriter, r *http.Request) {
 	for _, teacher := range teachers {
 		staffIDs = append(staffIDs, teacher.StaffID)
 	}
-	responses := make([]TeacherResponse, 0, len(teachers))
+	responses := make([]StaffRecordResponse, 0, len(teachers))
 	if len(staffIDs) == 0 {
 		rs.respond(w, r, http.StatusOK, responses, "Available staff members retrieved successfully")
 		return
@@ -127,7 +127,7 @@ func (rs *Resource) getAvailableStaff(w http.ResponseWriter, r *http.Request) {
 		if person == nil {
 			continue
 		}
-		responses = append(responses, buildTeacherResponse(access, staff, person, teacher, enrichment{}))
+		responses = append(responses, buildStaffRecordResponse(access, staff, person, teacher, enrichment{}))
 	}
 	rs.respond(w, r, http.StatusOK, responses, "Available staff members retrieved successfully")
 }
