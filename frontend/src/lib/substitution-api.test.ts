@@ -222,14 +222,13 @@ describe("substitutionService", () => {
   });
 
   // The catalog proxy hands over the backend's answer, which names its
-  // shape in `type` (#2352); the route file kept for one release answers
-  // the bare result. Both reach the same mapped result.
+  // shape in `type` (#2352); a bare result maps the same way.
   it.each([
     [
       "the named shape of the proxy",
       { type: "group_handover", group_handover: handover },
     ],
-    ["the bare result of the kept route file", handover],
+    ["a bare result", handover],
   ])("maps a group handover from %s", async (_label, data) => {
     sessionFetch.mockResolvedValue({ ok: true, json: async () => ({ data }) });
 

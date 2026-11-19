@@ -90,7 +90,6 @@ export interface SubstitutionOverview {
 }
 
 interface BackendScheduleAppointment {
-  /** A number from the route file kept one release, a string via the proxy. */
   id: number | string;
   type: "schedule_substitution";
   date: string;
@@ -146,9 +145,8 @@ export type SubstitutionAssignmentKind =
 
 /**
  * The result of an assignment. The backend names its shape in `type` and
- * carries the result under the member of that name (#2352); the route file
- * kept for one release answers the bare result, as it did before. Both
- * shapes land here at the bare result of the kind the caller asked for.
+ * carries the result under the member of that name (#2352). A body without
+ * that member is taken as the bare result of the kind the caller asked for.
  */
 export function substitutionAssignmentResult<T>(
   data: unknown,
@@ -304,16 +302,6 @@ export interface CreateSubstitutionRequest {
     target_staff_id: string;
     start_date: string;
     end_date: string;
-  };
-}
-
-export interface AddSupervisorRequest {
-  type: "additional_supervision";
-  additional_supervision: {
-    active_group_id: string;
-    target_staff_id: string;
-    /** Ends the caller's own supervision once the target joined (#4763). */
-    hand_over?: boolean;
   };
 }
 
