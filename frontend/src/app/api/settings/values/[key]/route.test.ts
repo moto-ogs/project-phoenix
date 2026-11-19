@@ -144,7 +144,12 @@ describe("settings values tenant cache busting", () => {
     else process.env.TENANT_DOMAIN = ORIGINAL_TENANT_DOMAIN;
   });
 
-  it.each(["operations.student_photos_enabled", "analytics.enabled"])(
+  it.each([
+    "operations.student_photos_enabled",
+    "analytics.enabled",
+    // Unlocks the Info-Displays page at once after the switch.
+    "display.enabled",
+  ])(
     "revalidates tenant tag + path on PUT for %s with subdomain host",
     async (key) => {
       await (PUT as Function)(

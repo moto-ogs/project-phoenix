@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { NextURL } from "next/dist/server/web/next-url";
 import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { CATALOG_PUBLIC_OUTSIDE_MOUNTS } from "~/lib/contract/catalog-outside-mounts";
@@ -416,7 +417,25 @@ describe("trailing slash", () => {
     );
 
     expect(res.status).toBe(308);
-    expect(res.headers.get("location")).toBe("/students/42?tab=akte");
+    expect(res.headers.get("location")).toBe(
+      "http://school-a.localhost:3000/students/42?tab=akte",
+    );
+  });
+
+  // Next.js reads the proxy's Location with `new NextURL(location)` and no
+  // base before it relativizes a same-host target. A relative Location threw
+  // there, so every path ending in "/" answered 500 (/api/display/).
+  it("answers a Location that Next.js can parse without a base", () => {
+    const res = proxy(
+      makeRequest(
+        "http://school-a.localhost:3000/api/display/",
+        "school-a.localhost:3000",
+      ),
+    );
+
+    const location = res.headers.get("location") ?? "";
+    expect(() => new NextURL(location)).not.toThrow();
+    expect(new NextURL(location).pathname).toBe("/api/display");
   });
 
   it("leaves the root path alone", () => {
