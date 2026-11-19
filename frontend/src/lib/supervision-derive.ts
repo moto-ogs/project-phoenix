@@ -36,7 +36,8 @@ export interface SupervisedRoom {
  * (GET /api/rooms?is_open_room=true).
  */
 export interface OpenRoomPayload {
-  id: number;
+  /** A decimal string through the catalog proxy (#7563). */
+  id: number | string;
   name: string;
 }
 

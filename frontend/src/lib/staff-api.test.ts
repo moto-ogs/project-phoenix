@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { BackendStaffResponse, StaffFilters } from "./staff-api";
+import type { StaffFilters } from "./staff-api";
+import type { StaffRecordResponse } from "./contract/staff.generated";
 import { ApiError } from "./api-error";
 import { suppressConsole } from "~/test/helpers/console";
 import { mockSessionData } from "~/test/mocks/next-auth";
@@ -48,36 +49,50 @@ import {
 // Type for mocked functions
 const mockedGetSession = vi.mocked(getCachedSession);
 
-// Sample backend staff data
-const sampleBackendStaff: BackendStaffResponse = {
+// Staff records as the contract delivers them (#7563): the person nested,
+// ids as decimal strings.
+const sampleBackendStaff: StaffRecordResponse = {
+  started_on: "2024-01-01",
+  ended_on: null,
   id: "1",
-  name: "Max Mustermann",
-  firstName: "Max",
-  lastName: "Mustermann",
+  person_id: "101",
+  person: {
+    id: "101",
+    first_name: "Max",
+    last_name: "Mustermann",
+    tag_id: "TAG001",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-15T00:00:00Z",
+  },
   specialization: "Mathematics",
   role: "Teacher",
   qualifications: "M.Ed",
-  tag_id: "TAG001",
   staff_notes: "Senior staff member",
+  is_teacher: true,
+  was_present_today: false,
+  is_external: false,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-15T00:00:00Z",
-  staff_id: "1",
   teacher_id: "10",
 };
 
-const sampleBackendStaffWithoutTeacher: BackendStaffResponse = {
+const sampleBackendStaffWithoutTeacher: StaffRecordResponse = {
+  started_on: "2024-01-01",
+  ended_on: null,
   id: "2",
-  name: "Anna Schmidt",
-  firstName: "Anna",
-  lastName: "Schmidt",
-  specialization: "Administration",
-  role: "Staff",
-  qualifications: null,
-  tag_id: null,
-  staff_notes: null,
+  person_id: "102",
+  person: {
+    id: "102",
+    first_name: "Anna",
+    last_name: "Schmidt",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-15T00:00:00Z",
+  },
+  is_teacher: false,
+  was_present_today: false,
+  is_external: false,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-15T00:00:00Z",
-  staff_id: "2",
 };
 
 // Sample active groups for supervision testing
@@ -221,7 +236,7 @@ describe("staff-api", () => {
         if (url === "/api/staff") {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -286,7 +301,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -314,7 +329,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -341,7 +356,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -369,10 +384,9 @@ describe("staff-api", () => {
           return Promise.resolve({
             ok: true,
             json: () =>
-              Promise.resolve([
-                sampleBackendStaff,
-                sampleBackendStaffWithoutTeacher,
-              ]),
+              Promise.resolve({
+                data: [sampleBackendStaff, sampleBackendStaffWithoutTeacher],
+              }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -405,10 +419,9 @@ describe("staff-api", () => {
           return Promise.resolve({
             ok: true,
             json: () =>
-              Promise.resolve([
-                sampleBackendStaff,
-                sampleBackendStaffWithoutTeacher,
-              ]),
+              Promise.resolve({
+                data: [sampleBackendStaff, sampleBackendStaffWithoutTeacher],
+              }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -431,34 +444,6 @@ describe("staff-api", () => {
       expect(staffOnlyResult.every((s) => !s.isTeacher)).toBe(true);
     });
 
-    it("handles wrapped response format", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                data: [sampleBackendStaff],
-              }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve([]),
-          } as Response);
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
-
-      const result = await staffService.getAllStaff();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.id).toBe("1");
-    });
-
     it("correctly identifies supervising staff with room location", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
 
@@ -466,7 +451,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -496,7 +481,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -522,7 +507,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -540,7 +525,7 @@ describe("staff-api", () => {
     });
 
     it("trims specialization whitespace", async () => {
-      const staffWithWhitespace: BackendStaffResponse = {
+      const staffWithWhitespace: StaffRecordResponse = {
         ...sampleBackendStaff,
         specialization: "  Mathematics  ",
       };
@@ -551,7 +536,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffWithWhitespace]),
+            json: () => Promise.resolve({ data: [staffWithWhitespace] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -568,10 +553,10 @@ describe("staff-api", () => {
       expect(result[0]?.specialization).toBe("Mathematics");
     });
 
-    it("handles staff without staff_id", async () => {
-      const staffWithoutStaffId: BackendStaffResponse = {
+    it("finds no supervision for a record no group names", async () => {
+      const staffWithoutStaffId: StaffRecordResponse = {
         ...sampleBackendStaff,
-        staff_id: undefined,
+        id: "99",
       };
 
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
@@ -580,7 +565,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffWithoutStaffId]),
+            json: () => Promise.resolve({ data: [staffWithoutStaffId] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -599,7 +584,7 @@ describe("staff-api", () => {
     });
 
     it("returns Anwesend location for staff with was_present_today true and not supervising", async () => {
-      const staffPresentToday: BackendStaffResponse = {
+      const staffPresentToday: StaffRecordResponse = {
         ...sampleBackendStaff,
         was_present_today: true,
       };
@@ -610,7 +595,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffPresentToday]),
+            json: () => Promise.resolve({ data: [staffPresentToday] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -630,7 +615,7 @@ describe("staff-api", () => {
     });
 
     it("returns Abwesend location for staff with was_present_today false", async () => {
-      const staffNotPresentToday: BackendStaffResponse = {
+      const staffNotPresentToday: StaffRecordResponse = {
         ...sampleBackendStaff,
         was_present_today: false,
       };
@@ -641,7 +626,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffNotPresentToday]),
+            json: () => Promise.resolve({ data: [staffNotPresentToday] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -661,7 +646,7 @@ describe("staff-api", () => {
     });
 
     it("returns Anwesend location when supervising with was_present_today true (legacy)", async () => {
-      const staffSupervisingAndPresent: BackendStaffResponse = {
+      const staffSupervisingAndPresent: StaffRecordResponse = {
         ...sampleBackendStaff,
         was_present_today: true,
       };
@@ -672,7 +657,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffSupervisingAndPresent]),
+            json: () => Promise.resolve({ data: [staffSupervisingAndPresent] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -693,10 +678,10 @@ describe("staff-api", () => {
       expect(result[0]?.supervisions).toHaveLength(2);
     });
 
-    it("returns Anwesend for staff without staff_id but with was_present_today true", async () => {
-      const staffNoIdButPresent: BackendStaffResponse = {
+    it("returns Anwesend for an unsupervised record with was_present_today true", async () => {
+      const staffNoIdButPresent: StaffRecordResponse = {
         ...sampleBackendStaff,
-        staff_id: undefined,
+        id: "99",
         was_present_today: true,
       };
 
@@ -706,7 +691,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffNoIdButPresent]),
+            json: () => Promise.resolve({ data: [staffNoIdButPresent] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -855,7 +840,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -888,7 +873,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -915,7 +900,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -935,7 +920,7 @@ describe("staff-api", () => {
 
   describe("getSupervisionInfo priority hierarchy", () => {
     it("returns absence status when absence_type is provided and not clocked in", async () => {
-      const staffWithAbsence: BackendStaffResponse = {
+      const staffWithAbsence: StaffRecordResponse = {
         ...sampleBackendStaff,
         absence_type: "sick",
         // Note: NO work_status - absence shown when not clocked in
@@ -947,7 +932,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffWithAbsence]),
+            json: () => Promise.resolve({ data: [staffWithAbsence] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -968,7 +953,7 @@ describe("staff-api", () => {
     });
 
     it("returns Urlaub for vacation absence", async () => {
-      const staffOnVacation: BackendStaffResponse = {
+      const staffOnVacation: StaffRecordResponse = {
         ...sampleBackendStaff,
         absence_type: "vacation",
       };
@@ -979,7 +964,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffOnVacation]),
+            json: () => Promise.resolve({ data: [staffOnVacation] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -997,7 +982,7 @@ describe("staff-api", () => {
     });
 
     it("returns Fortbildung for training absence", async () => {
-      const staffInTraining: BackendStaffResponse = {
+      const staffInTraining: StaffRecordResponse = {
         ...sampleBackendStaff,
         absence_type: "training",
       };
@@ -1008,7 +993,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffInTraining]),
+            json: () => Promise.resolve({ data: [staffInTraining] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1026,7 +1011,7 @@ describe("staff-api", () => {
     });
 
     it("returns Freizeitausgleich for comp-time absence", async () => {
-      const staffOnCompTime: BackendStaffResponse = {
+      const staffOnCompTime: StaffRecordResponse = {
         ...sampleBackendStaff,
         absence_type: "comp_time",
       };
@@ -1035,7 +1020,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffOnCompTime]),
+            json: () => Promise.resolve({ data: [staffOnCompTime] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1054,7 +1039,7 @@ describe("staff-api", () => {
     });
 
     it("returns Abwesend for other absence type", async () => {
-      const staffAbsent: BackendStaffResponse = {
+      const staffAbsent: StaffRecordResponse = {
         ...sampleBackendStaff,
         absence_type: "other",
       };
@@ -1065,7 +1050,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffAbsent]),
+            json: () => Promise.resolve({ data: [staffAbsent] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1083,7 +1068,7 @@ describe("staff-api", () => {
     });
 
     it("returns Abwesend for checked_out status", async () => {
-      const staffCheckedOut: BackendStaffResponse = {
+      const staffCheckedOut: StaffRecordResponse = {
         ...sampleBackendStaff,
         work_status: "checked_out",
         was_present_today: true, // Should be overridden by checked_out
@@ -1095,7 +1080,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffCheckedOut]),
+            json: () => Promise.resolve({ data: [staffCheckedOut] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1116,7 +1101,7 @@ describe("staff-api", () => {
     });
 
     it("returns Anwesend for present work status without supervision (priority 4)", async () => {
-      const staffPresent: BackendStaffResponse = {
+      const staffPresent: StaffRecordResponse = {
         ...sampleBackendStaff,
         work_status: "present",
       };
@@ -1127,7 +1112,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffPresent]),
+            json: () => Promise.resolve({ data: [staffPresent] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1147,7 +1132,7 @@ describe("staff-api", () => {
     });
 
     it("returns Unterwegs for home_office work status (priority 4)", async () => {
-      const staffHomeOffice: BackendStaffResponse = {
+      const staffHomeOffice: StaffRecordResponse = {
         ...sampleBackendStaff,
         work_status: "home_office",
       };
@@ -1158,7 +1143,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([staffHomeOffice]),
+            json: () => Promise.resolve({ data: [staffHomeOffice] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1193,7 +1178,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1231,7 +1216,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1266,7 +1251,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1293,7 +1278,7 @@ describe("staff-api", () => {
         if (url.includes("/api/staff")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([sampleBackendStaff]),
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
@@ -1316,9 +1301,11 @@ describe("staff-api", () => {
     const externalRecord = {
       ...sampleBackendStaff,
       id: "88",
-      name: "Lea Gast",
-      firstName: "Lea",
-      lastName: "Gast",
+      person: {
+        ...sampleBackendStaff.person!,
+        first_name: "Lea",
+        last_name: "Gast",
+      },
       is_external: true,
       external_organization: "Musikschule",
       external_account_status: "invitation_pending" as const,
@@ -1443,6 +1430,42 @@ describe("staff-api", () => {
     });
   });
 
+  // The cases of the former /api/staff/former route file (#3403, #7563).
+  describe("staffService.getFormerStaff", () => {
+    it("reads the former employments of the contract and maps them", async () => {
+      const mockFetch = vi.mocked(globalThis.fetch);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: [
+              {
+                id: "9007199254740993",
+                first_name: "Erika",
+                last_name: "Ehemals",
+                started_on: "2024-08-01",
+                ended_on: "2026-07-31",
+              },
+            ],
+          }),
+      } as Response);
+
+      await expect(staffService.getFormerStaff()).resolves.toEqual([
+        {
+          id: "9007199254740993",
+          firstName: "Erika",
+          lastName: "Ehemals",
+          startedOn: "2024-08-01",
+          endedOn: "2026-07-31",
+        },
+      ]);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/staff/former",
+        expect.any(Object),
+      );
+    });
+  });
+
   describe("staffService.getStaffRecord + mapStaffRecord", () => {
     it("maps the retained employment period without converting calendar dates", async () => {
       vi.mocked(globalThis.fetch).mockResolvedValueOnce({
@@ -1496,7 +1519,10 @@ describe("staff-api", () => {
           Promise.resolve({
             data: {
               ...sampleBackendStaff,
-              avatar: "/uploads/avatars/global/lea.png",
+              person: {
+                ...sampleBackendStaff.person!,
+                avatar: "/uploads/avatars/global/lea.png",
+              },
             },
           }),
       } as Response);
@@ -1509,13 +1535,46 @@ describe("staff-api", () => {
     it("leaves the profile picture empty without a stored avatar", async () => {
       vi.mocked(globalThis.fetch).mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ data: { ...sampleBackendStaff, avatar: null } }),
+        json: () => Promise.resolve({ data: sampleBackendStaffWithoutTeacher }),
       } as Response);
 
       const staff = mapStaffRecord(await staffService.getStaffRecord("1"));
 
       expect(staff.avatarUrl).toBeUndefined();
+    });
+
+    // The record's person is nested in the contract (#7563); the header reads
+    // the names, the card and the role from there once. These cases were the
+    // tests of the former /api/staff/[id] route file.
+    it("flattens the nested person and keeps bigint ids exact", () => {
+      const staff = mapStaffRecord({
+        ...sampleBackendStaff,
+        id: "9007199254740993",
+        person_id: "9007199254740995",
+        role_form: "feminine",
+      });
+      expect(staff.id).toBe("9007199254740993");
+      expect(staff.name).toBe("Max Mustermann");
+      expect(staff.firstName).toBe("Max");
+      expect(staff.lastName).toBe("Mustermann");
+      expect(staff.hasRfid).toBe(true);
+      expect(staff.isTeacher).toBe(true);
+      expect(staff.roleForm).toBe("feminine");
+    });
+
+    it("reads a record without a person or teacher profile as empty", () => {
+      const staff = mapStaffRecord({
+        ...sampleBackendStaffWithoutTeacher,
+        person: undefined,
+        role_form: "unknown-form",
+        external_account_status: "unknown-state",
+      });
+      expect(staff.name).toBe("");
+      expect(staff.firstName).toBe("");
+      expect(staff.hasRfid).toBe(false);
+      expect(staff.isTeacher).toBe(false);
+      expect(staff.roleForm).toBeUndefined();
+      expect(staff.externalAccountStatus).toBeNull();
     });
 
     it("throws when the staff member request fails", async () => {

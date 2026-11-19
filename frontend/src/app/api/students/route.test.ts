@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 import { ApiResponseError } from "~/lib/api-response-error.server";
 import { GET, POST } from "./route";
 import { suppressConsole } from "~/test/helpers/console";
@@ -41,6 +42,30 @@ vi.mock("~/lib/api-helpers.server", async (importOriginal) => ({
     (await import("~/test/helpers/handle-api-error")).mockHandleApiError,
   ),
 }));
+
+// The catalog proxy answers the requests that ask for the contract's shape;
+// the stand-in records what it was handed.
+const { catalogCalls } = vi.hoisted(() => ({
+  catalogCalls: [] as Array<[string, unknown]>,
+}));
+vi.mock("~/lib/route-wrapper.server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/route-wrapper.server")>()),
+  catalogProxy:
+    (_routes: unknown, method: string) =>
+    async (_request: Request, context: { params: Promise<unknown> }) => {
+      catalogCalls.push([method, await context.params]);
+      return Response.json({ success: true, data: { via: "catalog" } });
+    },
+}));
+
+/** A request of the current client, which asks for the contract's shape. */
+function contractRequest(path: string, method = "GET", body?: unknown) {
+  return new NextRequest(new URL(path, "http://localhost:3000"), {
+    method,
+    headers: { "X-Moto-Wire": "contract" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
 
 // ============================================================================
 // Test Helpers
@@ -508,4 +533,34 @@ describe("POST /api/students", () => {
     expect(data).toMatchObject({ id: "46", data_retention_days: 7 });
     expect(data).not.toHaveProperty("privacy_consent_saved");
   });
+});
+
+describe("the contract's shape (#7563)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    catalogCalls.length = 0;
+    mockAuth.mockResolvedValue(defaultSession);
+  });
+
+  it.each([
+    ["GET", GET, undefined],
+    ["POST", POST, { first_name: "Mia" }],
+  ] as const)(
+    "hands a %s with the header to the catalog proxy",
+    async (method, handler, body) => {
+      const response = await handler(
+        contractRequest("/api/students?view=slim", method, body),
+        createMockContext(),
+      );
+
+      expect(await response.json()).toEqual({
+        success: true,
+        data: { via: "catalog" },
+      });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(catalogCalls).toEqual([[method, { path: ["students"] }]]);
+      expect(mockApiGet).not.toHaveBeenCalled();
+      expect(mockApiPost).not.toHaveBeenCalled();
+    },
+  );
 });

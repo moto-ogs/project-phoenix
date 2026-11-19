@@ -1,9 +1,10 @@
 import { ApiError, enrichApiError, problemDetail } from "./api-error";
 // API clients for planned staff shifts (Dienstplan, #1376 core slice).
-// Admin CRUD goes through /api/staff-shifts (time_tracking:manage); the
-// series read and end keep their routes under /api/staff/shifts. Staff read
-// their own shifts via /api/time-tracking/shifts (time_tracking:own).
+// Admin CRUD, the series rule and its end go through /api/staff-shifts
+// (time_tracking:manage) and the catalog proxy. Staff read their own shifts
+// via /api/time-tracking/shifts (time_tracking:own).
 
+import type { SeriesDetailResponse } from "./contract/staff-shifts.generated";
 import { sessionFetch } from "./session-cache";
 import {
   mapOwnAssignment,
@@ -160,21 +161,6 @@ export interface SeriesRule {
   includeSchoolBreaks: boolean;
 }
 
-interface BackendSeriesRule {
-  id: string;
-  staff_id: number;
-  weekdays: number[] | null;
-  start_time: string;
-  end_time: string;
-  break_minutes: number;
-  shift_type_id: number | null;
-  calendar_period_id: number;
-  week_pattern: number;
-  valid_from: string;
-  valid_until: string | null;
-  include_school_breaks?: boolean;
-}
-
 export interface SeriesResult {
   seriesId: string;
   created: number;
@@ -191,21 +177,20 @@ interface BackendSeriesResult {
   skipped_non_working_days?: number;
 }
 
-function mapSeriesRule(data: BackendSeriesRule): SeriesRule {
+function mapSeriesRule(data: SeriesDetailResponse): SeriesRule {
   return {
-    id: data.id.toString(),
-    staffId: data.staff_id.toString(),
+    id: data.id,
+    staffId: data.staff_id,
     weekdays: data.weekdays ?? [],
     startTime: data.start_time,
     endTime: data.end_time,
     breakMinutes: data.break_minutes,
-    shiftTypeId:
-      data.shift_type_id != null ? data.shift_type_id.toString() : null,
-    calendarPeriodId: data.calendar_period_id.toString(),
+    shiftTypeId: data.shift_type_id,
+    calendarPeriodId: data.calendar_period_id,
     weekPattern: data.week_pattern,
     validFrom: data.valid_from,
     validUntil: data.valid_until,
-    includeSchoolBreaks: data.include_school_breaks ?? false,
+    includeSchoolBreaks: data.include_school_breaks,
   };
 }
 
@@ -517,17 +502,19 @@ class StaffShiftSeriesService {
   /** The stored rule behind a series shift, so the modal can show and edit
    *  weekdays, rhythm, and validity instead of only one occurrence (#2028). */
   async getSeries(seriesId: string): Promise<SeriesRule> {
-    const response = await sessionFetch(`/api/staff/shifts/series/${seriesId}`);
+    const response = await sessionFetch(
+      `/api/staff-shifts/series/${encodeURIComponent(seriesId)}`,
+    );
     if (!response.ok) {
       throw await readShiftError(response, "Serie konnte nicht geladen werden");
     }
-    const json = (await response.json()) as { data: BackendSeriesRule };
+    const json = (await response.json()) as { data: SeriesDetailResponse };
     return mapSeriesRule(json.data);
   }
 
   async endSeries(seriesId: string, from: string): Promise<void> {
     const response = await sessionFetch(
-      `/api/staff/shifts/series/${seriesId}?from=${from}`,
+      `/api/staff-shifts/series/${encodeURIComponent(seriesId)}?from=${encodeURIComponent(from)}`,
       { method: "DELETE" },
     );
     if (!response.ok) {

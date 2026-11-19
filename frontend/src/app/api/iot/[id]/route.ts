@@ -4,12 +4,20 @@ import {
   createDeleteHandler,
 } from "@/lib/route-wrapper.server";
 import { apiGet, apiPut, apiDelete } from "~/lib/api-helpers.server";
-import type { BackendDevice } from "@/lib/iot-helpers";
+import type { DeviceResponse } from "~/lib/contract/iot.generated";
 import { mapDeviceResponse } from "@/lib/iot-helpers";
+
+/**
+ * Temporary (#7563): GET, PUT and DELETE /api/iot/{id} are registered in the
+ * contract, and the portal's catalog proxy answers them once this file is
+ * gone. It stays one release for an installed app with an older bundle; the
+ * current client reads both shapes. Delete this file after the next
+ * production deploy.
+ */
 
 export const GET = createGetHandler(async (request, token, params) => {
   const id = params.id as string;
-  const response = await apiGet<{ data: BackendDevice }>(
+  const response = await apiGet<{ data: DeviceResponse }>(
     `/api/iot/${encodeURIComponent(id)}`,
     token,
   );
@@ -23,7 +31,7 @@ export const GET = createGetHandler(async (request, token, params) => {
 
 export const PUT = createPutHandler(async (request, body, token, params) => {
   const id = params.id as string;
-  const response = await apiPut<{ data: BackendDevice }>(
+  const response = await apiPut<{ data: DeviceResponse }>(
     `/api/iot/${encodeURIComponent(id)}`,
     token,
     body,

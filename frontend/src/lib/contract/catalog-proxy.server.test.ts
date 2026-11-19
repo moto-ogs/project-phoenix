@@ -8,7 +8,7 @@ import {
   type CatalogMethod,
   type CatalogRoute,
 } from "./catalog-proxy.server";
-import { noData, success } from "./runtime";
+import { noData, paginated, success } from "./runtime";
 import {
   CATALOG_OUTSIDE_MOUNTS,
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
@@ -69,6 +69,17 @@ const routes: CatalogRoute[] = [
   { method: "PUT", pattern: "/parent/rows/{id}/seen", response: noData },
   // A legacy route with response variants has no single decoder.
   { method: "GET", pattern: "/parent/variants/", response: { full: row } },
+  {
+    method: "GET",
+    pattern: "/parent/pages/",
+    query: ["page", "view"],
+    variantParam: "view",
+    defaultVariant: "full",
+    response: {
+      full: paginated(z.array(z.object({ name: z.string(), age: z.number() }))),
+      names: paginated(z.array(z.object({ name: z.string() }))),
+    },
+  },
   { method: "GET", pattern: "/parent/files/*", response: row },
   {
     method: "POST",
@@ -166,6 +177,56 @@ describe("makeCatalogProxy", () => {
       undefined,
       { request: expect.any(NextRequest) },
     );
+  });
+
+  describe("a route with response variants and pages", () => {
+    const pagination = {
+      current_page: 2,
+      page_size: 1,
+      total_pages: 3,
+      total_records: 3,
+    };
+
+    it("decodes the variant the query asks for and keeps the page", async () => {
+      api.mockResolvedValueOnce({
+        status: "success",
+        data: [{ name: "Ada", age: 7 }],
+        pagination,
+      });
+      const response = await call("GET", ["pages"], "?view=names&page=2");
+      // The names variant drops what it does not declare; the portal's
+      // handler passes this envelope through as it is.
+      expect(await data(response)).toEqual({
+        success: true,
+        message: "Success",
+        data: [{ name: "Ada" }],
+        pagination,
+      });
+      expect(api.mock.calls[0]?.[1]).toBe("/parent/pages?page=2&view=names");
+    });
+
+    it("holds an answer without the parameter to the default variant", async () => {
+      api.mockResolvedValueOnce({
+        status: "success",
+        data: [{ name: "Ada" }],
+        pagination,
+      });
+      await expect(call("GET", ["pages"])).rejects.toMatchObject({
+        status: 502,
+      });
+    });
+
+    it("holds an unknown variant to the default one", async () => {
+      api.mockResolvedValueOnce({
+        status: "success",
+        data: [{ name: "Ada", age: 7 }],
+        pagination,
+      });
+      const response = await call("GET", ["pages"], "?view=other");
+      expect(await data(response)).toMatchObject({
+        data: [{ name: "Ada", age: 7 }],
+      });
+    });
   });
 
   it("forwards only the registered query parameters, every occurrence", async () => {

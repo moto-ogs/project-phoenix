@@ -1,4 +1,11 @@
 // app/api/rooms/[id]/history/route.ts
+//
+// Temporary (#7563): GET /api/rooms/{id}/history is registered in the
+// contract, and the portal's catalog proxy answers it once this file is gone.
+// It stays one release for an installed app with an older bundle, which
+// reads a switched-off history only as `status: "feature_disabled"`; the
+// current client also reads the backend's 403 with attendance.log_disabled.
+// Delete this file after the next production deploy.
 import { wireErrorCode } from "~/lib/api-error";
 import { apiGet, problemResponse } from "~/lib/api-helpers.server";
 import { ApiResponseError } from "~/lib/api-response-error.server";

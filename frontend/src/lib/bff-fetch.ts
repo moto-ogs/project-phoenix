@@ -6,6 +6,7 @@ interface BffRequest {
   /** JSON-serialized, or sent as is when it is FormData. */
   body?: unknown;
   signal?: AbortSignal;
+  headers?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -16,11 +17,12 @@ interface BffRequest {
  */
 export async function bffJson<T>(
   url: string,
-  { method = "GET", body, signal }: BffRequest = {},
+  { method = "GET", body, signal, headers }: BffRequest = {},
 ): Promise<T> {
   const response = await sessionFetch(url, {
     method,
     signal,
+    ...(headers && { headers }),
     ...(body !== undefined && {
       body: body instanceof FormData ? body : JSON.stringify(body),
     }),

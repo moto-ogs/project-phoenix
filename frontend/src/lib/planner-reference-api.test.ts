@@ -59,6 +59,36 @@ describe("planner reference lists", () => {
     );
   });
 
+  it("asks for the next page after a full page without pagination", async () => {
+    // The catalog proxy hands on the list without its pagination (#7563).
+    const fullPage = Array.from({ length: 1000 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Raum ${index + 1}`,
+    }));
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: fullPage }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [{ id: "1001", name: "Aula" }],
+          }),
+          { status: 200 },
+        ),
+      ) as unknown as typeof fetch;
+
+    const rooms = await fetchPlannerRooms();
+
+    expect(rooms).toHaveLength(1001);
+    expect(rooms.at(-1)).toEqual({ id: "1001", name: "Aula" });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps code and request ID of a failed answer", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       new Response(

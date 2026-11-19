@@ -1,6 +1,7 @@
 // lib/room-helpers.ts
 // Type definitions and helper functions for rooms
 
+import type { RoomRequest, RoomResponse } from "~/lib/contract/rooms.generated";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { createLogger } from "~/lib/logger";
 
@@ -21,45 +22,21 @@ const ROOM_CATEGORY_COLORS: Record<string, string> = {
 
 const ROOM_CATEGORY_FALLBACK_COLOR = MOTO_COLOR_PALETTE.neutral.base;
 
-// Status sentinel the /api/rooms/[id]/history proxy emits when the backend
-// has gated the endpoint off via gdpr.attendance_log_enabled (issue #1425).
-// The drawer reads this to hide the "Belegungshistorie" section deliberately
-// rather than letting it collapse incidentally on an empty history array.
-// Shared so the proxy route and the drawer can't drift; both sides import
-// from here.
+// Status sentinel the temporary /api/rooms/[id]/history route file emits
+// when the backend has gated the endpoint off via gdpr.attendance_log_enabled
+// (issue #1425). Through the catalog proxy the backend's 403 with the code
+// ROOM_HISTORY_DISABLED_CODE arrives instead (#7563); the room page reads both
+// to hide the "Belegungshistorie" section deliberately.
 export const ROOM_HISTORY_STATUS_FEATURE_DISABLED = "feature_disabled";
+
+/** The backend's code for a room history the school switched off. */
+export const ROOM_HISTORY_DISABLED_CODE = "attendance.log_disabled";
 
 export function getRoomCategoryColor(
   category: string | null | undefined,
 ): string {
   if (!category) return ROOM_CATEGORY_FALLBACK_COLOR;
   return ROOM_CATEGORY_COLORS[category] ?? ROOM_CATEGORY_FALLBACK_COLOR;
-}
-
-// Backend types (from Go structs)
-export interface BackendRoom {
-  id: number;
-  name: string; // Changed to match backend API which uses "name"
-  building?: string;
-  floor?: number | null; // Optional (nullable in DB)
-  capacity?: number | null; // Optional (nullable in DB)
-  category?: string | null; // Optional (nullable in DB)
-  color?: string | null; // Optional (nullable in DB)
-  device_id?: string;
-  is_occupied: boolean;
-  is_system?: boolean;
-  // Whether the OGS administration has permanently released this room for use
-  // ("offener Raum"). Owned by the backend's Facilities module (#3064).
-  is_open_room?: boolean;
-  // Set once a removed room was kept for its history (#6845).
-  archived_at?: string;
-  activity_name?: string;
-  group_name?: string;
-  supervisor_name?: string; // Legacy singular field
-  supervisor_names?: string; // New: comma-separated list of supervisors
-  student_count?: number;
-  created_at: string;
-  updated_at: string;
 }
 
 // Frontend types
@@ -132,105 +109,96 @@ export function isColorLockedRoom(room: Room | null | undefined): boolean {
 }
 
 // Mapping functions
-export function mapRoomResponse(backendRoom: BackendRoom): Room {
+
+/**
+ * Maps a room of the contract (`RoomResponse`, via the catalog proxy) onto the
+ * frontend room. The identifier arrives as a decimal string; the temporary
+ * route files of #7563 still hand on the backend's number, which String()
+ * reads the same.
+ */
+export function mapRoomResponse(room: RoomResponse): Room {
   return {
-    id: String(backendRoom.id),
-    name: backendRoom.name, // Changed from room_name to name to match backend API
-    building: backendRoom.building,
-    // Convert null to undefined for optional fields
-    floor: backendRoom.floor ?? undefined,
+    id: String(room.id),
+    name: room.name,
+    building: room.building,
+    floor: room.floor ?? undefined,
     capacity:
-      backendRoom.capacity !== null &&
-      backendRoom.capacity !== undefined &&
-      backendRoom.capacity > 0
-        ? backendRoom.capacity
+      room.capacity !== null && room.capacity !== undefined && room.capacity > 0
+        ? room.capacity
         : undefined,
-    category: backendRoom.category ?? undefined,
-    color: backendRoom.color ?? undefined,
-    deviceId: backendRoom.device_id,
-    isOccupied: backendRoom.is_occupied,
-    isSystem: backendRoom.is_system,
-    isOpenRoom: backendRoom.is_open_room,
-    archivedAt: backendRoom.archived_at,
-    activityName: backendRoom.activity_name,
-    groupName: backendRoom.group_name,
-    supervisorName: backendRoom.supervisor_names ?? backendRoom.supervisor_name,
-    studentCount: backendRoom.student_count,
-    createdAt: backendRoom.created_at,
-    updatedAt: backendRoom.updated_at,
+    category: room.category ?? undefined,
+    color: room.color ?? undefined,
+    isOccupied: room.is_occupied,
+    isSystem: room.is_system,
+    isOpenRoom: room.is_open_room,
+    archivedAt: room.archived_at,
+    groupName: room.group_name,
+    supervisorName: room.supervisor_names,
+    studentCount: room.student_count,
+    createdAt: room.created_at,
+    updatedAt: room.updated_at,
   };
 }
 
 export function mapRoomsResponse(
-  backendRooms: BackendRoom[] | null | { data: BackendRoom[] },
+  rooms: RoomResponse[] | null | { data: RoomResponse[] },
 ): Room[] {
-  // Handle nested API response structure (from server API)
+  // The list arrives inside its envelope ({ data: [...] }).
   if (
-    backendRooms &&
-    typeof backendRooms === "object" &&
-    "data" in backendRooms &&
-    Array.isArray(backendRooms.data)
+    rooms &&
+    typeof rooms === "object" &&
+    "data" in rooms &&
+    Array.isArray(rooms.data)
   ) {
     logger.debug("handling nested API response for rooms");
-    return backendRooms.data.map(mapRoomResponse);
+    return rooms.data.map(mapRoomResponse);
   }
 
-  // Handle null, undefined or non-array responses
-  if (!backendRooms || !Array.isArray(backendRooms)) {
+  if (!rooms || !Array.isArray(rooms)) {
     logger.warn("received invalid response format for rooms", {
-      received: typeof backendRooms,
+      received: typeof rooms,
     });
     return [];
   }
 
-  // Standard array response
-  return backendRooms.map(mapRoomResponse);
+  return rooms.map(mapRoomResponse);
 }
 
-// Prepare frontend room for backend
-export function prepareRoomForBackend(
-  room: Partial<Room>,
-): Partial<BackendRoom> {
+/** Prepares a frontend room as the body of POST and PUT /api/rooms. */
+export function prepareRoomForBackend(room: Partial<Room>): RoomRequest {
   // Make sure we don't send an empty name
   if (room.name === "") return {};
 
-  const backendRoom: Partial<BackendRoom> = {
-    id: room.id ? Number.parseInt(room.id, 10) : undefined,
-    name: room.name, // Changed from room_name to name to match backend API
-    is_occupied: room.isOccupied ?? false,
-  };
+  const body: RoomRequest = { name: room.name };
 
   // Only include optional fields if they have non-empty values
   if (room.building !== undefined && room.building !== "") {
-    backendRoom.building = room.building;
+    body.building = room.building;
   }
   if (room.floor !== undefined) {
-    backendRoom.floor = room.floor;
+    body.floor = room.floor;
   }
   const capacity = (room as { capacity?: unknown }).capacity;
   if (typeof capacity === "number") {
-    backendRoom.capacity = capacity;
+    body.capacity = capacity;
   } else if (capacity === null || capacity === "") {
-    backendRoom.capacity = null;
+    body.capacity = null;
   }
   if (room.category !== undefined && room.category !== "") {
-    backendRoom.category = room.category;
+    body.category = room.category;
   }
   if (room.color !== undefined && room.color !== "") {
-    backendRoom.color = room.color;
-  }
-  if (room.deviceId !== undefined && room.deviceId !== "") {
-    backendRoom.device_id = room.deviceId;
+    body.color = room.color;
   }
   // Sent only when the form actually carries a value. The backend treats an
   // omitted is_open_room as "leave the release as it is", which is what keeps
   // an unrelated edit from revoking a standing release (#3064). false is a
   // real answer here and must survive the check.
   if (typeof room.isOpenRoom === "boolean") {
-    backendRoom.is_open_room = room.isOpenRoom;
+    body.is_open_room = room.isOpenRoom;
   }
 
-  return backendRoom;
+  return body;
 }
 
 // Request/Response types

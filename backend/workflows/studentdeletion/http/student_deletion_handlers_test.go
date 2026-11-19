@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -78,13 +80,20 @@ func TestStudentDeletionHandlers_RequirePreviewAndExplicitConfirmation(t *testin
 	require.Equal(t, http.StatusBadRequest, wrongNameResponse.Code, "Body: %s", wrongNameResponse.Body.String())
 	assert.Equal(t, 1, studentDeletionRowCount(t, tc, "users.student_profiles", target.ID))
 
-	deleteRequest := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/%d", target.ID), map[string]any{
+	// The confirmed deletion runs through the production path, which the
+	// staff portal's catalog proxy forwards (#7563).
+	deleteRequest := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/api/students/%d", target.ID), map[string]any{
 		"expected_fingerprint": previewBody.Data.Fingerprint,
 		"confirmation_name":    previewBody.Data.ConfirmationName,
 		"reason":               studentdeletion.ReasonTestData,
 		"acknowledged":         true,
 	})
-	deleteResponse := authExec(t, tc, deleteRequest, claims, []string{"admin:*"})
+	deleteClaims := claims
+	deleteClaims.Permissions = []string{"admin:*"}
+	deleteRequest.Header.Set("Authorization", "Bearer "+testutil.MintTestJWT(t, deleteClaims))
+	production := chi.NewRouter()
+	production.Mount("/api/students", tc.router())
+	deleteResponse := testutil.ExecuteRequestForTest(t, production, deleteRequest)
 	require.Equal(t, http.StatusOK, deleteResponse.Code, "Body: %s", deleteResponse.Body.String())
 
 	assert.Zero(t, studentDeletionRowCount(t, tc, "users.student_profiles", target.ID))

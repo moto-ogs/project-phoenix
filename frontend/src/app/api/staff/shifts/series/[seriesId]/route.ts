@@ -5,6 +5,11 @@ import {
 } from "~/lib/route-wrapper-utils.server";
 import { createDeleteHandler, proxyGet } from "~/lib/route-wrapper.server";
 
+// Temporary (#7563): the client reads and ends a series through
+// /api/staff-shifts/series/{id} and the catalog proxy since this release. This
+// path stays for an installed app with an older bundle; delete the file after
+// the next production deploy.
+
 /**
  * GET /api/staff/shifts/series/{seriesId}
  * The stored rule behind a shift (weekdays, rhythm, validity) — what the

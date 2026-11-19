@@ -1,8 +1,107 @@
 // app/api/activities/supervisors/route.ts
+//
+// Temporary (#7563): the current client reads the contract's
+// GET /api/activities/supervisors/available through the catalog proxy. An
+// installed bundle of the previous release still calls this path and reads
+// {id, name}. Delete this file after the next production deploy.
 import type { NextRequest } from "next/server";
 import { apiGet } from "~/lib/api-helpers.server";
 import { createGetHandler } from "~/lib/route-wrapper.server";
-import { mapSupervisorResponse } from "~/lib/activity-helpers";
+
+// Helper: Safely extract ID from unknown object
+function extractIdFromUnknown(data: unknown): string {
+  if (!data || typeof data !== "object" || !("id" in data)) {
+    return "0";
+  }
+  const rawId = data.id;
+  if (rawId === undefined || rawId === null) {
+    return "0";
+  }
+  if (typeof rawId === "string" || typeof rawId === "number") {
+    return String(rawId);
+  }
+  return "0";
+}
+
+// Helper: Format first and last name safely
+function formatFullNameSafe(firstName: unknown, lastName: unknown): string {
+  const first = typeof firstName === "string" ? firstName : "";
+  const last = typeof lastName === "string" ? lastName : "";
+  return `${first} ${last}`.trim();
+}
+
+// Helper: Check if object has person property with names
+function hasPersonWithNames(
+  data: unknown,
+): data is { person: { first_name: unknown; last_name: unknown } } {
+  if (data == null || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as { person?: unknown };
+  return (
+    "person" in obj &&
+    obj.person != null &&
+    typeof obj.person === "object" &&
+    "first_name" in obj.person &&
+    "last_name" in obj.person
+  );
+}
+
+// Helper: Check if object has direct first_name/last_name
+function hasDirectNames(
+  data: unknown,
+): data is { first_name: unknown; last_name: unknown } {
+  if (data == null || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as { first_name?: unknown; last_name?: unknown };
+  return (
+    "first_name" in obj &&
+    "last_name" in obj &&
+    !!obj.first_name &&
+    !!obj.last_name
+  );
+}
+
+// Helper: Check if object has name property
+function hasNameProperty(data: unknown): data is { name: unknown } {
+  if (data == null || typeof data !== "object") {
+    return false;
+  }
+  const obj = data as { name?: unknown };
+  return "name" in obj && !!obj.name;
+}
+
+// Helper: Extract name from unknown supervisor data
+function extractSupervisorName(data: unknown, id: string): string {
+  if (hasPersonWithNames(data)) {
+    return formatFullNameSafe(data.person.first_name, data.person.last_name);
+  }
+  if (hasDirectNames(data)) {
+    return formatFullNameSafe(data.first_name, data.last_name);
+  }
+  if (hasNameProperty(data)) {
+    const name = data.name;
+    if (typeof name === "string") return name;
+    if (typeof name === "number") return String(name);
+    return "Unknown";
+  }
+  return `Supervisor ${id}`;
+}
+
+function mapSupervisorResponse(backendSupervisor: unknown): {
+  id: string;
+  name: string;
+} {
+  if (!backendSupervisor) {
+    return { id: "0", name: "Unknown Supervisor" };
+  }
+
+  const id = extractIdFromUnknown(backendSupervisor);
+  const name = extractSupervisorName(backendSupervisor, id);
+
+  return { id, name };
+}
 
 interface FallbackSupervisor {
   id: number | string;

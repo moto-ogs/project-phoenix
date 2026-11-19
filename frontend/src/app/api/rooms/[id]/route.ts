@@ -1,4 +1,11 @@
 // app/api/rooms/[id]/route.ts
+//
+// Temporary (#7563): GET, PUT and DELETE /api/rooms/{id} are registered in
+// the contract, and the portal's catalog proxy answers them once this file is
+// gone. It stays one release for an installed app with an older bundle, which
+// reads the room with a numeric id and may send the camelCase deviceId; the
+// current client reads both shapes. Delete this file after the next
+// production deploy.
 import {
   encodePathSegment,
   requireStringParam,
@@ -10,7 +17,7 @@ import {
   createPutHandler,
   createDeleteHandler,
 } from "~/lib/route-wrapper.server";
-import type { BackendRoom } from "~/lib/room-helpers";
+import type { RoomResponse } from "~/lib/contract/rooms.generated";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "RoomDetailRoute" });
@@ -160,7 +167,7 @@ export const GET = createGetHandler(
   },
 );
 
-export const PUT = createPutHandler<BackendRoom, RoomUpdateRequest>(
+export const PUT = createPutHandler<RoomResponse, RoomUpdateRequest>(
   async (
     _request: NextRequest,
     body: RoomUpdateRequest,
@@ -196,7 +203,7 @@ export const PUT = createPutHandler<BackendRoom, RoomUpdateRequest>(
       };
 
       // Update the room via the API and get the updated room data
-      const updatedRoom = await apiPut<BackendRoom>(
+      const updatedRoom = await apiPut<RoomResponse>(
         `/api/rooms/${encodePathSegment(id)}`,
         token,
         backendBody,
@@ -205,7 +212,7 @@ export const PUT = createPutHandler<BackendRoom, RoomUpdateRequest>(
       logger.debug("room updated successfully", { room_id: id });
 
       // Make sure we return a properly formatted response with all fields
-      // Return the result directly as a BackendRoom
+      // Return the result directly as a RoomResponse
       return updatedRoom;
     } catch (error) {
       logger.error("room update failed", {

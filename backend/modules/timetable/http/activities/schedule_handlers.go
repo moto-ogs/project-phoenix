@@ -52,7 +52,7 @@ func (rs *Resource) getActivitySchedules(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Convert to response objects
-	responses := make([]ScheduleResponse, 0, len(schedules))
+	responses := make([]ActivityScheduleResponse, 0, len(schedules))
 	for _, schedule := range schedules {
 		if schedule == nil {
 			continue // Skip nil schedules to prevent panic

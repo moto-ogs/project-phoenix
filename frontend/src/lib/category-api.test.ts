@@ -6,21 +6,23 @@ vi.mock("./session-cache", () => ({
   sessionFetch: mockSessionFetch,
 }));
 
+import { mapActivityCategoryResponse } from "./activity-helpers";
 import { ApiError } from "./api-error";
 import { categoryService } from "./category-api";
+import type { ActivityCategoryResponse } from "./contract/activities.generated";
 
-// The proxy routes already map to the frontend shape, so the client passes
-// `data` through untouched.
-const category = {
+// The catalog proxy answers the contract's shape; the client maps it once.
+const category: ActivityCategoryResponse = {
   id: "7",
   name: "Essen",
   description: "Mittagessen",
   color: "#F78C10",
-  isSystem: false,
-  usageCount: 3,
+  is_system: false,
+  usage_count: 3,
   created_at: "2026-08-01T10:00:00Z",
   updated_at: "2026-08-01T10:00:00Z",
 };
+const mapped = mapActivityCategoryResponse(category);
 
 const payload = {
   name: "Essen",
@@ -39,7 +41,7 @@ describe("categoryService requests", () => {
     );
 
     await expect(categoryService.getManagedCategories()).resolves.toEqual([
-      category,
+      mapped,
     ]);
     // Archived rows are what the restore action needs; system rows are shown
     // read-only; the usage counts drive the "wird verwendet" hint. The
@@ -48,6 +50,18 @@ describe("categoryService requests", () => {
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/activities/categories?include_archived=true&include_system=true&with_usage=true",
     );
+  });
+
+  // Temporary (#7563): the previous release's route file answers the mapped
+  // shape until the next production deploy.
+  it("takes the mapped shape of the previous release's route file", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      Response.json({ data: [mapped] }, { status: 200 }),
+    );
+
+    await expect(categoryService.getManagedCategories()).resolves.toEqual([
+      mapped,
+    ]);
   });
 
   it("maps a nullable list to an empty list", async () => {
@@ -64,7 +78,7 @@ describe("categoryService requests", () => {
     );
 
     await expect(categoryService.createCategory(payload)).resolves.toEqual(
-      category,
+      mapped,
     );
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/activities/categories",
@@ -81,7 +95,7 @@ describe("categoryService requests", () => {
     );
 
     await expect(categoryService.updateCategory("7", payload)).resolves.toEqual(
-      category,
+      mapped,
     );
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/activities/categories/7",
@@ -107,9 +121,7 @@ describe("categoryService requests", () => {
       Response.json({ data: category }, { status: 200 }),
     );
 
-    await expect(categoryService.restoreCategory("7")).resolves.toEqual(
-      category,
-    );
+    await expect(categoryService.restoreCategory("7")).resolves.toEqual(mapped);
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/activities/categories/7/restore",
       { method: "POST" },

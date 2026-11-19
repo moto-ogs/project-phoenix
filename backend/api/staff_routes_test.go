@@ -35,6 +35,7 @@ var staffRouteSurface = []string{
 	"GET /documents-directory",
 	"GET /documents-profile/{id}",
 	"GET /financial-profile/{id}",
+	"GET /former",
 	"GET /me/qualifications",
 	"GET /qualification-types",
 	"GET /qualifications",

@@ -18,6 +18,7 @@ import (
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
@@ -56,6 +57,7 @@ import (
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+	timetableActivitiesHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
 	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
 	statsContract "github.com/moto-ogs/project-phoenix/modules/transactionruntime/stats"
@@ -240,11 +242,15 @@ func ContractDocument() (contract.Document, error) {
 	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,
 		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
+		// The device management renders its instants in whole seconds.
+		reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
 		// The answers of an enrollment form: an object of the form's own
 		// fields, whatever the school's schema asks for.
 		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
 		// The substitution bodies take an id as a number or a decimal string.
 		reflect.TypeOf(substitutions.LaxID): contract.KindLaxID,
+		// A staff body names its person as a number or a decimal string.
+		reflect.TypeFor[staffHTTP.JSONID](): contract.KindLaxID,
 	})
 	// Both student bodies only refuse retired keys before the plain decode;
 	// CompanionEntry takes its companion id as a number or a decimal string.
@@ -273,6 +279,8 @@ func ContractDocument() (contract.Document, error) {
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
+	// The timeframe list writes its instants through common.Time (RFC 3339).
+	options.Instants = []reflect.Type{reflect.TypeFor[common.Time]()}
 	return contract.Build(registrations, options)
 }
 
@@ -427,6 +435,8 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/enrollment/phases", enrollmentHTTP.PhaseRouteContracts()},
 		{"/api/holiday-closure-notices", holidayClosureHTTP.SchoolRouteContracts()},
 		{"/api/rooms", roomsHTTP.RouteContracts()},
+		{"/api/activities", timetableActivitiesHTTP.RouteContracts()},
+		{"/api/schedules", timetableActivitiesHTTP.ScheduleRouteContracts()},
 		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
 		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
 		{"/api/class-list-entries", classListEntryRouteContracts()},
@@ -584,9 +594,21 @@ func requestFeedRouteContracts() []common.RouteContract {
 func staffPortalCalendarContractMounts() []contractMount {
 	portals := []common.PortalScope{common.PortalTenant}
 	// Device Fleet's http role may not import the contract types; the root
-	// names the history and the status body. The kiosk's device API is not
-	// part of this mount.
+	// names the device management's answers and bodies. The kiosk's device
+	// API (PyrePortal) is not part of this mount and stays unregistered.
+	list := []common.QueryParam{
+		{Name: "device_type", Kind: common.QueryString},
+		{Name: "status", Kind: common.QueryString},
+		{Name: "registered_by_id", Kind: common.QueryString},
+		{Name: "search", Kind: common.QueryString},
+	}
 	devices := []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Query: list, Response: []devicesAPI.DeviceResponse{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: devicesAPI.DeviceRequest{}, Response: devicesAPI.DeviceCreationResponse{}},
+		{Method: "GET", Pattern: "/device-slots", Portals: portals, Response: devicesAPI.DeviceSlotsResponse{}},
+		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: devicesAPI.DeviceResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: devicesAPI.DeviceRequest{}, Response: devicesAPI.DeviceResponse{}},
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Response: []devicesAPI.LifecycleEventResponse{}},
 		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},
 	}

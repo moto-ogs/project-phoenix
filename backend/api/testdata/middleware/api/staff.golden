@@ -10,6 +10,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /api/staff/{id}/planned-exit
 	GET /api/staff/absences/mails
 	GET /api/staff/absences/plan-gaps
+	GET /api/staff/former
 	GET /api/staff/qualification-types
 	GET /api/staff/qualifications
 	GET /api/staff/time-tracking/month-close/traeger-staff

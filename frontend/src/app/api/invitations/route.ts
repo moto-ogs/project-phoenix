@@ -1,3 +1,7 @@
+// Temporary (#7563): the client lists and creates invitations at
+// /api/auth/invitations through the staff portal's catalog proxy now, in the
+// contract's field names. This file serves bundles built before that change
+// for one production deploy; delete it afterwards, together with its test.
 import type { NextRequest } from "next/server";
 import { apiPost } from "~/lib/api-helpers.server";
 import { createPostHandler, proxyGet } from "~/lib/route-wrapper.server";

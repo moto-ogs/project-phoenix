@@ -20,9 +20,24 @@ func tenantRoute(method, pattern string, request, response any, query ...common.
 }
 
 // staffMembershipRouteContracts registers the School Membership half of
-// /api/staff.
+// /api/staff. The staff directory and the staff record left their reshaping
+// route files in #7563; the list's filters are the ones the handler reads.
 func staffMembershipRouteContracts() []common.RouteContract {
+	listFilters := []common.QueryParam{
+		{Name: "first_name", Kind: common.QueryString},
+		{Name: "last_name", Kind: common.QueryString},
+		{Name: "teachers_only", Kind: common.QueryBool},
+		{Name: "role", Kind: common.QueryString},
+	}
 	return []common.RouteContract{
+		staffRecordRoute(tenantRoute("GET", "/", nil, []staffHTTP.StaffRecordResponse{}, listFilters...)),
+		tenantRoute("GET", "/former", nil, []staffHTTP.FormerStaffResponse{}, listFilters...),
+		staffRecordRoute(tenantRoute("POST", "/", staffHTTP.StaffRequest{}, staffHTTP.StaffRecordResponse{})),
+		staffRecordRoute(tenantRoute("GET", "/{id}", nil, staffHTTP.StaffRecordResponse{})),
+		staffRecordRoute(tenantRoute("PUT", "/{id}", staffHTTP.StaffRequest{}, staffHTTP.StaffRecordResponse{})),
+		tenantRoute("DELETE", "/{id}", nil, nil),
+		staffRecordRoute(tenantRoute("POST", "/externals", staffHTTP.ExternalStaffRequest{}, staffHTTP.ExternalStaffResponse{})),
+		staffRecordRoute(tenantRoute("POST", "/externals/{id}/invitation", staffHTTP.ExternalInvitationRequest{}, staffHTTP.ExternalStaffResponse{})),
 		tenantRoute("GET", "/financial-profile/{id}", nil, staffHTTP.MinimalStaffProfileResponse{}),
 		tenantRoute("GET", "/documents-profile/{id}", nil, staffHTTP.MinimalStaffProfileResponse{}),
 		tenantRoute("GET", "/{id}/school-classes", nil, staffHTTP.SchoolClassesResponse{}),
@@ -30,6 +45,17 @@ func staffMembershipRouteContracts() []common.RouteContract {
 		tenantRoute("PUT", "/{id}/planned-exit", staffHTTP.PlannedExitRequest{}, staffHTTP.PlannedExitResponse{}),
 		tenantRoute("DELETE", "/{id}/planned-exit", nil, nil),
 	}
+}
+
+// staffRecordRoute names the closed value sets of a staff record: the
+// account state of an external caregiver (#4573) and the grammatical form of
+// the position.
+func staffRecordRoute(route common.RouteContract) common.RouteContract {
+	route.Enums = []common.EnumContract{
+		{Name: "ExternalAccountStatus", Fields: []string{"StaffResponse.external_account_status"}, Values: []string{"account", "invitation_pending", "none"}},
+		{Name: "RoleForm", Fields: []string{"StaffRecordResponse.role_form"}, Values: []string{"feminine", "masculine"}},
+	}
+	return route
 }
 
 // absenceTypeRouteContracts registers /api/absence-types.
@@ -66,6 +92,8 @@ func staffShiftRouteContracts() []common.RouteContract {
 		tenantRoute("PUT", "/{id}/move", nil, staffshiftsHTTP.ShiftResponse{}),
 		tenantRoute("PUT", "/{id}/cancellation", nil, staffshiftsHTTP.CancellationResponse{}),
 		tenantRoute("POST", "/series", nil, staffshiftsHTTP.SeriesResponse{}),
+		tenantRoute("GET", "/series/{id}", nil, staffshiftsHTTP.SeriesDetailResponse{}),
 		tenantRoute("PUT", "/series/{id}/split", nil, staffshiftsHTTP.SeriesResponse{}),
+		tenantRoute("DELETE", "/series/{id}", nil, staffshiftsHTTP.SeriesResponse{}, common.QueryParam{Name: "from", Kind: common.QueryDate}),
 	}
 }

@@ -384,7 +384,7 @@ func TestResolveGroupsSupervisedScope(t *testing.T) {
 func TestSelectGroup(t *testing.T) {
 	t.Parallel()
 
-	groups := []Group{{ID: 10}, {ID: 20}}
+	groups := []DashboardGroup{{ID: 10}, {ID: 20}}
 	yardGroupID := int64(30)
 
 	tests := []struct {
@@ -423,7 +423,7 @@ func TestSelectGroup(t *testing.T) {
 func TestSelectGroupPrefersOwnSessionForOverviewCaller(t *testing.T) {
 	t.Parallel()
 
-	groups := []Group{
+	groups := []DashboardGroup{
 		{ID: 10, RoomName: "Atelier"},
 		{ID: 20, RoomName: "Bibliothek", IsCurrentUserSupervising: true},
 		{ID: 30, RoomName: "Werkraum", IsCurrentUserSupervising: true},
@@ -545,18 +545,18 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 
 	pickup := "15:30"
 	pickupItem := pickupTimeFromEffective(1, Pickup{
-		Date: "2026-08-19", PickupTime: &pickup, WeekdayName: "Mittwoch", IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 3, Content: "Klingeln"}},
+		Date: "2026-08-19", PickupTime: &pickup, WeekdayName: "Mittwoch", IsException: true, Notes: "Oma", DayNotes: []DashboardDayNote{{ID: 3, Content: "Klingeln"}},
 	})
 	assert.Equal(t, "15:30", *pickupItem.PickupTime)
 	assert.Equal(t, "2026-08-19", pickupItem.Date)
-	assert.Equal(t, []DayNote{{ID: 3, Content: "Klingeln"}}, pickupItem.DayNotes)
+	assert.Equal(t, []DashboardDayNote{{ID: 3, Content: "Klingeln"}}, pickupItem.DayNotes)
 
 	arrival := "11:45"
 	arrivalItem := arrivalTimeFromEffective(1, Arrival{
-		Date: "2026-08-19", ArrivalTime: &arrival, WeekdayName: "Mittwoch", Notes: "Bus", DayNotes: []DayNote{{ID: 4, Content: "Verspätung"}},
+		Date: "2026-08-19", ArrivalTime: &arrival, WeekdayName: "Mittwoch", Notes: "Bus", DayNotes: []DashboardDayNote{{ID: 4, Content: "Verspätung"}},
 	})
 	assert.Equal(t, "11:45", *arrivalItem.ExpectedArrival)
-	assert.Equal(t, []DayNote{{ID: 4, Content: "Verspätung"}}, arrivalItem.DayNotes)
+	assert.Equal(t, []DashboardDayNote{{ID: 4, Content: "Verspätung"}}, arrivalItem.DayNotes)
 }
 
 func TestBuildPhotoURL(t *testing.T) {
@@ -898,7 +898,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection := emptyProjection()
 	projection.BusinessDay = "2026-08-19"
 	projection.SpontaneousStartAvailability = SpontaneousStartAvailability{Available: true}
-	projection.Groups = []Group{{ID: 11, Name: "Malen", RoomID: &roomID, RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
+	projection.Groups = []DashboardGroup{{ID: 11, Name: "Malen", RoomID: &roomID, RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
 	projection.SelectedGroupID = int64Ptr(11)
 	projection.UnclaimedGroups = []UnclaimedGroup{{ID: 13, RoomName: "Igel"}}
 	projection.CurrentStaffID = int64Ptr(7)
@@ -916,10 +916,10 @@ func TestProjectionWireShape(t *testing.T) {
 		AssignedStaffIDs: []int64{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
 		PickupTimesLoaded: true, Warnings: []ConflictWarning{}, StartAvailableAt: "13:45", StartExpiresAt: "15:00"}}
 	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoURL: "/api/students/1/photo/p.jpg"}}
-	projection.TrackingIndicators = TrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}
-	projection.PickupTimes = []PickupTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 3, Content: "Klingeln"}}}}
+	projection.TrackingIndicators = DashboardTrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}
+	projection.PickupTimes = []DashboardPickupTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma", DayNotes: []DashboardDayNote{{ID: 3, Content: "Klingeln"}}}}
 	projection.ArrivalTimes = []ArrivalTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch"}}
-	projection.TeacherHints = []TeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
+	projection.TeacherHints = []SupervisionTeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
 
 	got, err := json.Marshal(projection)
 	require.NoError(t, err)

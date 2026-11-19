@@ -1,7 +1,13 @@
 // Activity Entity Configuration
 
 import { defineEntityConfig } from "@/lib/database/types";
-import type { Activity, ActivitySupervisor } from "@/lib/activity-helpers";
+import {
+  mapSupervisorOption,
+  readActivity,
+  type Activity,
+  type ActivitySupervisor,
+} from "@/lib/activity-helpers";
+import type { ActivitySupervisorResponse } from "~/lib/contract/activities.generated";
 import { apiErrorFromResponse } from "~/lib/api-error";
 import { sessionFetch } from "~/lib/session-cache";
 import { createLogger } from "~/lib/logger";
@@ -140,11 +146,11 @@ export const activitiesConfig = defineEntityConfig<Activity>({
                 );
               }
               const result = (await response.json()) as
-                | { data?: Array<{ id: number; name: string }> }
-                | Array<{ id: number; name: string }>;
+                | { data?: Array<{ id: number | string; name: string }> }
+                | Array<{ id: number | string; name: string }>;
 
               // Handle both wrapped and direct response formats
-              let categories: Array<{ id: number; name: string }>;
+              let categories: Array<{ id: number | string; name: string }>;
               if (Array.isArray(result)) {
                 categories = result;
               } else if (
@@ -157,7 +163,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
                 categories = [];
               }
               return categories.map((cat) => ({
-                value: cat.id.toString(),
+                value: String(cat.id),
                 label: cat.name,
               }));
             },
@@ -187,7 +193,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
               // Not getSupervisors(): it answers a failure with an empty
               // list, which would look like a school without supervisors.
               const response = await sessionFetch(
-                "/api/activities/supervisors",
+                "/api/activities/supervisors/available",
               );
               if (!response.ok) {
                 throw await apiErrorFromResponse(
@@ -195,16 +201,15 @@ export const activitiesConfig = defineEntityConfig<Activity>({
                   "failed to load supervisors",
                 );
               }
-              const result = (await response.json()) as
-                | { data?: Array<{ id: string; name: string }> }
-                | Array<{ id: string; name: string }>;
-              const supervisors = Array.isArray(result)
-                ? result
-                : (result.data ?? []);
-              return supervisors.map((sup) => ({
-                value: sup.id,
-                label: sup.name,
-              }));
+              const result = (await response.json()) as {
+                data?: ActivitySupervisorResponse[] | null;
+              };
+              return (result.data ?? [])
+                .map(mapSupervisorOption)
+                .map((sup) => ({
+                  value: sup.id,
+                  label: sup.name,
+                }));
             },
           },
         ],
@@ -319,7 +324,9 @@ export const activitiesConfig = defineEntityConfig<Activity>({
           try {
             // Fetch supervisors from API; the route reads the session
             // cookie (#5005).
-            const response = await fetch("/api/activities/supervisors");
+            const response = await fetch(
+              "/api/activities/supervisors/available",
+            );
 
             if (!response.ok) {
               logger.error("failed to fetch supervisors", {
@@ -328,25 +335,10 @@ export const activitiesConfig = defineEntityConfig<Activity>({
               return [];
             }
 
-            const result = (await response.json()) as
-              | { data?: Array<{ id: string; name: string }> }
-              | Array<{ id: string; name: string }>;
-
-            // Handle wrapped response from route wrapper
-            let supervisors: Array<{ id: string; name: string }> = [];
-            if (Array.isArray(result)) {
-              // Direct array response
-              supervisors = result;
-            } else if (
-              result &&
-              typeof result === "object" &&
-              "data" in result
-            ) {
-              // Response is wrapped in ApiResponse format
-              supervisors = result.data ?? [];
-            }
-
-            return supervisors.map((sup) => ({
+            const result = (await response.json()) as {
+              data?: ActivitySupervisorResponse[] | null;
+            };
+            return (result.data ?? []).map(mapSupervisorOption).map((sup) => ({
               value: sup.id,
               label: sup.name,
             }));
@@ -404,11 +396,8 @@ export const activitiesConfig = defineEntityConfig<Activity>({
       return request;
     },
 
-    mapResponse: (responseData: unknown): Activity => {
-      // Simply cast the response data to Activity
-      // Supervisor data is preserved for display in detail view but not used for editing
-      return responseData as Activity;
-    },
+    // Supervisor data is kept for the detail view but not used for editing.
+    mapResponse: readActivity,
   },
 
   labels: {

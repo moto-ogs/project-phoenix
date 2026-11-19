@@ -5,7 +5,7 @@ import {
   mapRoomResponse,
   prepareRoomForBackend,
 } from "./room-helpers";
-import { buildBackendRoom } from "~/test/fixtures/rooms";
+import { buildRoomResponse } from "~/test/fixtures/rooms";
 
 // Behaviour of the room release ("offener Raum", #3064) on the client side.
 // The load-bearing rule is what an OMITTED value means: the backend leaves a
@@ -37,26 +37,29 @@ describe("isToiletRoom", () => {
 describe("mapRoomResponse with the room release", () => {
   it("carries a released room through", () => {
     const result = mapRoomResponse(
-      buildBackendRoom({ id: 1, name: "Turnhalle", is_open_room: true }),
+      buildRoomResponse({ id: "1", name: "Turnhalle", is_open_room: true }),
     );
     expect(result.isOpenRoom).toBe(true);
   });
 
   it("carries an unreleased room through as false", () => {
     const result = mapRoomResponse(
-      buildBackendRoom({ id: 2, name: "Werkraum", is_open_room: false }),
+      buildRoomResponse({ id: "2", name: "Werkraum", is_open_room: false }),
     );
     expect(result.isOpenRoom).toBe(false);
   });
 
-  it("leaves the release undefined when the backend did not send it", () => {
-    const result = mapRoomResponse(buildBackendRoom({ id: 3, name: "Mensa" }));
-    expect(result.isOpenRoom).toBeUndefined();
+  it("reads an unreleased room as not released", () => {
+    // The contract always carries is_open_room (#7563).
+    const result = mapRoomResponse(
+      buildRoomResponse({ id: "3", name: "Mensa" }),
+    );
+    expect(result.isOpenRoom).toBe(false);
   });
 
   it("carries the system-room flag too", () => {
     const result = mapRoomResponse(
-      buildBackendRoom({ id: 4, name: "Schulhof", is_system: true }),
+      buildRoomResponse({ id: "4", name: "Schulhof", is_system: true }),
     );
     expect(result.isSystem).toBe(true);
   });

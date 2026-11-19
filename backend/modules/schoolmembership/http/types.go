@@ -62,8 +62,8 @@ func (id JSONID) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.FormatInt(int64(id), 10)), nil
 }
 
-// PersonResponse represents a simplified person response.
-type PersonResponse struct {
+// StaffPersonResponse represents a simplified person response.
+type StaffPersonResponse struct {
 	ID        int64     `json:"id"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
@@ -90,13 +90,13 @@ type StaffResponse struct {
 	// proxy, before any mapper could preserve it, and the rounded value is a
 	// valid id for a different person (#2222). The request side takes either
 	// form (JSONID), so no client breaks on this.
-	PersonID        int64           `json:"person_id,string"`
-	StaffNotes      string          `json:"staff_notes,omitempty"`
-	Person          *PersonResponse `json:"person,omitempty"`
-	IsTeacher       bool            `json:"is_teacher"`
-	WasPresentToday bool            `json:"was_present_today"`
-	WorkStatus      string          `json:"work_status,omitempty"`
-	AbsenceType     string          `json:"absence_type,omitempty"`
+	PersonID        int64                `json:"person_id,string"`
+	StaffNotes      string               `json:"staff_notes,omitempty"`
+	Person          *StaffPersonResponse `json:"person,omitempty"`
+	IsTeacher       bool                 `json:"is_teacher"`
+	WasPresentToday bool                 `json:"was_present_today"`
+	WorkStatus      string               `json:"work_status,omitempty"`
+	AbsenceType     string               `json:"absence_type,omitempty"`
 	// AbsenceTypeLabel carries the school's own Abwesenheitsart wording for
 	// today's absence (#2403). Empty for the five standard types — the client
 	// keeps deriving those labels from AbsenceType itself.
@@ -118,10 +118,14 @@ type StaffResponse struct {
 	UpdatedAt       time.Time      `json:"updated_at"`
 }
 
-// TeacherResponse represents a teacher response (extends staff).
-type TeacherResponse struct {
+// StaffRecordResponse is the wire shape of one staff record (#7563): the
+// staff fields, and for a staff member with a caregiver profile the teacher
+// fields. Without a profile every teacher field is empty and omitted, so a
+// plain staff member answers exactly the StaffResponse bytes. Teacher IDs
+// start at 1, so omitempty never drops a real one.
+type StaffRecordResponse struct {
 	StaffResponse
-	TeacherID      int64  `json:"teacher_id"`
+	TeacherID      int64  `json:"teacher_id,omitempty"`
 	Specialization string `json:"specialization,omitempty"`
 	Role           string `json:"role,omitempty"`
 	// RoleForm names the grammatical form the free-text Role takes for this
@@ -170,6 +174,9 @@ func (req *StaffRequest) Bind(*http.Request) error {
 	if req.PersonID <= 0 {
 		return errors.New("person ID is required")
 	}
+	// The staff route file trimmed the notes before #7563; the proxy forwards
+	// the body as sent, so the trim lives here now.
+	req.StaffNotes = strings.TrimSpace(req.StaffNotes)
 	req.Specialization = strings.TrimSpace(req.Specialization)
 	req.Role = strings.TrimSpace(req.Role)
 	req.Qualifications = strings.TrimSpace(req.Qualifications)
@@ -302,7 +309,7 @@ type enrichment struct {
 	// invitationPending: an open invitation names the staff member's person
 	// (#4573); only read for external caregivers without an account.
 	invitationPending bool
-	// roleForm: see TeacherResponse.RoleForm.
+	// roleForm: see StaffRecordResponse.RoleForm.
 	roleForm string
 }
 
@@ -318,11 +325,11 @@ func roleFormFor(gender string) string {
 	return ""
 }
 
-func newPersonResponse(person *Person, email, avatar string) *PersonResponse {
+func newStaffPersonResponse(person *Person, email, avatar string) *StaffPersonResponse {
 	if person == nil {
 		return nil
 	}
-	return &PersonResponse{
+	return &StaffPersonResponse{
 		ID:        person.ID,
 		FirstName: person.FirstName,
 		LastName:  person.LastName,
@@ -364,7 +371,7 @@ func buildStaffResponse(access staffFieldAccess, staff schoolmembership.Staff, p
 		response.ExternalAccountStatus = schoolmembership.ExternalAccountStatus(person.AccountID != nil, data.invitationPending)
 	}
 	if person != nil {
-		response.Person = newPersonResponse(person, data.email, data.avatar)
+		response.Person = newStaffPersonResponse(person, data.email, data.avatar)
 	}
 	redactStaffFields(&response, access)
 	return response
@@ -390,8 +397,8 @@ func redactStaffFields(response *StaffResponse, access staffFieldAccess) {
 	}
 }
 
-func buildTeacherResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, teacher schoolmembership.Teacher, data enrichment) TeacherResponse {
-	response := TeacherResponse{
+func buildStaffRecordResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, teacher schoolmembership.Teacher, data enrichment) StaffRecordResponse {
+	response := StaffRecordResponse{
 		StaffResponse:  buildStaffResponse(access, staff, person, true, data),
 		TeacherID:      teacher.ID,
 		Specialization: strings.TrimSpace(teacher.Specialization),
@@ -409,13 +416,18 @@ func buildTeacherResponse(access staffFieldAccess, staff schoolmembership.Staff,
 	return response
 }
 
-// buildResponse returns the teacher shape when the staff member carries a
-// teacher profile and the plain staff shape otherwise.
-func buildResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, teacher *schoolmembership.Teacher, data enrichment) any {
+// buildResponse fills the teacher fields when the staff member carries a
+// teacher profile and leaves them empty otherwise.
+func buildResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, teacher *schoolmembership.Teacher, data enrichment) StaffRecordResponse {
 	if teacher != nil {
-		return buildTeacherResponse(access, staff, person, *teacher, data)
+		return buildStaffRecordResponse(access, staff, person, *teacher, data)
 	}
-	return buildStaffResponse(access, staff, person, false, data)
+	return plainStaffRecord(access, staff, person, data)
+}
+
+// plainStaffRecord is the record of a staff member without a teacher profile.
+func plainStaffRecord(access staffFieldAccess, staff schoolmembership.Staff, person *Person, data enrichment) StaffRecordResponse {
+	return StaffRecordResponse{StaffResponse: buildStaffResponse(access, staff, person, false, data)}
 }
 
 func plannedExitDate(staff schoolmembership.Staff) *calendar.Date {

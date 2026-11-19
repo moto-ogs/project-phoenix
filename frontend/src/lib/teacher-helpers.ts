@@ -1,97 +1,54 @@
-import type { Teacher } from "./teacher-api";
-import { createLogger } from "./logger";
-import type { ExternalAccountStatus } from "./staff-api";
-import type { WireID } from "./wire-id";
-import { toOptionalIdString } from "./wire-id";
+import type { Teacher } from "./teacher-types";
+import type { StaffRecordResponse } from "./contract/staff.generated";
+import { EXTERNAL_ACCOUNT_STATUS_VALUES } from "./staff-wire-enums";
+import { knownEnum } from "./contract/known-enum";
 
-const logger = createLogger({ component: "TeachersConfig" });
-
-// Map teacher response from backend to frontend format
-export function mapTeacherResponse(data: unknown): Teacher {
-  const typedData = data as Record<string, unknown>;
-
-  // Extract person data if nested
-  const person = typedData.person as Record<string, unknown> | undefined;
-
-  // Get account_id from either direct data or nested person object
-  const accountId =
-    toOptionalIdString(typedData.account_id as WireID | undefined) ??
-    toOptionalIdString(typedData.accountId as WireID | undefined) ??
-    toOptionalIdString(person?.account_id as WireID | undefined) ??
-    toOptionalIdString(person?.accountId as WireID | undefined);
-
-  // Get email from either direct data or nested person object
-  const email =
-    (typedData.email as string | undefined) ??
-    (person?.email as string | undefined);
-
-  // The list endpoint (/api/staff) returns camelCase firstName/lastName, while
-  // the detail endpoint and nested person objects use snake_case. Accept both
-  // so list-side selections render names in the detail panel and edit modal.
-  const firstName =
-    (typedData.first_name as string | undefined) ??
-    (typedData.firstName as string | undefined) ??
-    (person?.first_name as string | undefined) ??
-    (person?.firstName as string | undefined) ??
-    "";
-  const lastName =
-    (typedData.last_name as string | undefined) ??
-    (typedData.lastName as string | undefined) ??
-    (person?.last_name as string | undefined) ??
-    (person?.lastName as string | undefined) ??
-    "";
-
-  // Get tag_id from either direct data or nested person object
-  const tagId =
-    (typedData.tag_id as string | null | undefined) ??
-    (typedData.tagId as string | null | undefined) ??
-    (person?.tag_id as string | null | undefined) ??
-    (person?.tagId as string | null | undefined);
-
-  // Get avatar from either direct data or nested person object
-  const avatar =
-    (typedData.avatar as string | null | undefined) ??
-    (person?.avatar as string | null | undefined);
-
-  logger.debug("teacher_mapped", {
-    teacher_id: typedData.id?.toString(),
-    account_id: accountId,
-  });
+/**
+ * Maps a staff record of the contract (GET /api/staff, /api/staff/{id}) to
+ * the Teacher shape of the database pages and the Konto tab. The record is
+ * mapped once, here, from the form the backend sends (#7563): the person
+ * nested, ids as decimal strings. An absent free-text field stays null, as
+ * the screens have always read it.
+ */
+export function mapTeacherResponse(data: StaffRecordResponse): Teacher {
+  const person = data.person;
+  const firstName = person?.first_name ?? "";
+  const lastName = person?.last_name ?? "";
 
   return {
-    id: typedData.id?.toString() ?? "",
-    name: (typedData.name as string) ?? `${firstName} ${lastName}`,
+    id: data.id,
+    name: person ? `${firstName} ${lastName}` : "",
     first_name: firstName,
     last_name: lastName,
-    email: email,
-    avatar: avatar,
-    specialization: (typedData.specialization as string) ?? "",
-    role: typedData.role as string | null | undefined,
-    account_role: typedData.account_role as string | null | undefined,
-    qualifications: typedData.qualifications as string | null | undefined,
-    tag_id: tagId,
-    staff_notes: typedData.staff_notes as string | null | undefined,
-    created_at: typedData.created_at as string | undefined,
-    updated_at: typedData.updated_at as string | undefined,
+    email: person?.email,
+    avatar: person?.avatar ?? null,
+    specialization: data.specialization ?? "",
+    role: data.role ?? null,
+    account_role: data.account_role ?? null,
+    qualifications: data.qualifications ?? null,
+    tag_id: person?.tag_id ?? null,
+    staff_notes: data.staff_notes ?? null,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
     // Decimal string — the id is a bigint and travels back untouched (#2222).
-    person_id: toOptionalIdString(typedData.person_id as WireID | undefined),
-    account_id: accountId,
-    is_teacher: typedData.is_teacher as boolean | undefined,
+    person_id: data.person_id,
+    account_id: person?.account_id,
+    is_teacher: data.is_teacher,
     // Nur für externe Kräfte (#3823), damit bestehende Formen gleich bleiben.
-    ...(typedData.is_external === true
+    ...(data.is_external
       ? {
           is_external: true,
-          external_organization:
-            (typedData.external_organization as string | null | undefined) ??
-            null,
+          external_organization: data.external_organization ?? null,
           // Kontostand für „Kein Konto“ / „Einladung offen“ (#4573).
           external_account_status:
-            (typedData.external_account_status as
-              ExternalAccountStatus | null | undefined) ?? null,
+            knownEnum(
+              EXTERNAL_ACCOUNT_STATUS_VALUES,
+              data.external_account_status,
+            ) ?? null,
         }
       : {}),
-    staff_id: typedData.staff_id as string | undefined,
-    teacher_id: typedData.teacher_id as string | undefined,
-    person: person,
+    staff_id: data.id,
+    teacher_id: data.teacher_id,
+    person,
   };
 }
