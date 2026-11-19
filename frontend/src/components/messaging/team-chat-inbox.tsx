@@ -324,6 +324,7 @@ export function TeamChatInbox({
 
   const parts: TeamChatInboxParts = {
     title: portal.title,
+    info: chatEnabled ? portal.info : undefined,
     stats,
     statsLoading: showSkeleton,
     chatEnabled,

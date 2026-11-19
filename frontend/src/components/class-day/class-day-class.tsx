@@ -13,7 +13,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -199,6 +199,9 @@ export interface ClassDayClassProps {
     date: string,
   ) => Promise<void>;
 
+  /** Erklärung der Seite hinter dem Info-Knopf am Titel (#7567). */
+  readonly info?: ReactNode;
+
   /** Nur für Tests: fixiert den Vergleichstag für "Heute gemeldet". */
   readonly now?: Date;
 }
@@ -214,7 +217,7 @@ export function ClassDayClass({
   homework,
   handOverClass,
   withdrawClassHandover,
-
+  info,
   now,
 }: ClassDayClassProps) {
   // Kein Default-Prop: eine `new Date()` in der Signatur bricht die
@@ -699,6 +702,7 @@ export function ClassDayClass({
       back
       backHref={schoolPath(schoolDayListPath(dateISO, openList))}
       backLabel="Alle Klassen"
+      info={info}
       stats={
         report && !weekend ? (
           <TenantPageStats items={statusItems(dateISO, report, changes)} />

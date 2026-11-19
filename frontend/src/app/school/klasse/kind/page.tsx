@@ -34,6 +34,11 @@ import { schoolPath } from "~/lib/school-url";
 import { IsolatedSWRCache, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 
+// Erklärung der Seite für neue Lehrkräfte (#7567), im Laden wie in der
+// fertigen Seite.
+const SHARED_NOTES_INFO =
+  "Hier liest du, was die OGS über dieses Kind notiert hat. Die neueste Notiz steht oben. Fragen dazu klärst du direkt mit der OGS.";
+
 /** Wann und von wem: der beschriebene Tag oder „Dauerhafter Hinweis“. */
 function noteMeta(note: SharedNote): string {
   const parts = [
@@ -108,6 +113,7 @@ function SharedNotes({
   return (
     <TenantPage
       title={name || "Beobachtungen der OGS"}
+      info={SHARED_NOTES_INFO}
       back
       backHref={schoolPath(classDayPath(schoolClass, dateISO))}
       backLabel={`Zurück zur ${schoolClassLabel(schoolClass) || "Klasse"}`}
@@ -156,7 +162,15 @@ export default function SchoolSharedNotesPage() {
   return (
     // useSearchParams (Klasse, Kind und Tag stehen in der Adresse) braucht
     // eine Suspense-Grenze.
-    <Suspense fallback={<TenantPage title="Beobachtungen der OGS" loading />}>
+    <Suspense
+      fallback={
+        <TenantPage
+          title="Beobachtungen der OGS"
+          info={SHARED_NOTES_INFO}
+          loading
+        />
+      }
+    >
       <SharedNotesFromAddress />
     </Suspense>
   );

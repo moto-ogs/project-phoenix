@@ -37,6 +37,7 @@ export function useSchoolTeamChatPortal(): TeamChatPortal {
       title: "Nachrichten",
       emptyDescription:
         "Hier stehen deine Unterhaltungen mit der OGS. Du schreibst an die Leitung oder an eine Betreuungskraft deiner Schule. Eltern sehen davon nichts.",
+      info: "Hier schreibst du mit der Leitung und den Betreuungskräften deiner OGS. Wähle eine Unterhaltung, um zu lesen und zu antworten. Mit „Neue Nachricht“ schreibst du jemandem zum ersten Mal.",
       recipientHint:
         "Du schreibst an Personen der OGS deiner Schule. Die Nachricht kommt in deren Team-Chat an.",
     }),

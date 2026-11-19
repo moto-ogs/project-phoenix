@@ -408,6 +408,7 @@ export function SchoolSupervisionsView() {
   return (
     <TenantPage
       title={introInstance?.title ?? "Meine Aufsichten"}
+      info="Hier stehen deine Aufsichten von heute. Wähle eine Aufsicht, um Zeit, Raum und Kinder zu sehen. Eingeteilt wirst du vom OGS-Team."
       stats={
         introInstance ? (
           <TenantPageStats

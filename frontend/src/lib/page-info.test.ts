@@ -103,12 +103,8 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/umfragen/[id]",
   "/vertretung",
   "/wochenprotokolle/[protocolId]",
-  "school:/aufsichten",
   "school:/einstellungen",
   "school:/elternbriefe/[id]",
-  "school:/klasse",
-  "school:/klasse/kind",
-  "school:/tagesinformationen",
 ];
 
 /** Die Einstiegsseiten der Betreuung, die #7565 erklärt. */
@@ -136,7 +132,7 @@ const PAGES_WITH_CONDITIONAL_INFO: readonly string[] = [
   "/students/[id]", // Ferienkinder haben keine Reiter; der normale Text wäre falsch.
   "/team-chat", // Der Posteingang hat keinen einheitlichen Erklärungstext.
   "/team-chat/[threadID]", // Gesperrte und fehlerhafte Unterhaltungen erklären sich selbst.
-  "school:/nachrichten", // Der Posteingang hat keinen einheitlichen Erklärungstext.
+  "school:/nachrichten", // Ist der Team-Chat aus, erklärt sich die Seite selbst.
   "school:/nachrichten/[threadID]", // Gesperrte und fehlerhafte Unterhaltungen erklären sich selbst.
 ];
 
