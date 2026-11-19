@@ -183,7 +183,7 @@ describe("Statistik — Bereich Kurse (#2891)", () => {
     mockFetchReport.mockResolvedValue(report());
   });
 
-  it("zeigt bei fehlendem Zugriff weiterhin die bisherige Meldung", async () => {
+  it("zeigt bei fehlendem Zugriff die Meldung und die Erklärung", async () => {
     mockFetchReport.mockRejectedValueOnce(new ApiError("forbidden", 403));
     render(<StatisticsPage />);
 
@@ -193,6 +193,14 @@ describe("Statistik — Bereich Kurse (#2891)", () => {
           "Dein Konto darf die Statistik nicht sehen. Bitte wende dich an deine Administration.",
         ),
       ).toBeVisible(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Statistik" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Erklärung zu Statistik" }),
+    ).toHaveTextContent(
+      "Hier siehst du, wie oft Kinder in einem Zeitraum da waren. Wähle oben den Bereich, zum Beispiel „Gruppen“ oder „Kinder“. Dann wählst du den Zeitraum.",
     );
   });
 

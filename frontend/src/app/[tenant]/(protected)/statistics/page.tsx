@@ -118,6 +118,8 @@ const COURSE_VIEW_ITEMS: readonly { value: CourseView; label: string }[] = [
 /** Fehlendes Recht ist ein Zustand mit eigener Seite, kein Ladefehler. */
 const FORBIDDEN_MESSAGE =
   "Dein Konto darf die Statistik nicht sehen. Bitte wende dich an deine Administration.";
+const STATISTICS_INFO =
+  "Hier siehst du, wie oft Kinder in einem Zeitraum da waren. Wähle oben den Bereich, zum Beispiel „Gruppen“ oder „Kinder“. Dann wählst du den Zeitraum.";
 
 function addDays(d: Date, days: number): Date {
   const r = new Date(d);
@@ -966,13 +968,19 @@ export default function StatisticsPage() {
   // Fehlendes Recht ist ein Zustand, kein Fehler: eigener ruhiger Leerzustand
   // statt einer roten Fehlermeldung (Querregel "Zustände").
   if (forbidden) {
-    return <ForbiddenPage title="Statistik" message={FORBIDDEN_MESSAGE} />;
+    return (
+      <ForbiddenPage
+        title="Statistik"
+        info={STATISTICS_INFO}
+        message={FORBIDDEN_MESSAGE}
+      />
+    );
   }
 
   return (
     <TenantPage
       title="Statistik"
-      info="Hier siehst du, wie oft Kinder in einem Zeitraum da waren. Wähle oben den Bereich, zum Beispiel „Gruppen“ oder „Kinder“. Dann wählst du den Zeitraum."
+      info={STATISTICS_INFO}
       stats={statusLine}
       statsLoading={loading}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett.
