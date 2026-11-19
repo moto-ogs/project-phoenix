@@ -18,5 +18,35 @@
     "scenario": "api.traeger.key_date_counts",
     "route": "GET /traeger/schools/key-date-counts",
     "issue": 7301
+  },
+  {
+    "scenario": "api.iot.devices.list.type",
+    "route": "GET /api/iot/type/{type}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.status",
+    "route": "GET /api/iot/status/{status}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.registered_by",
+    "route": "GET /api/iot/registered-by/{personId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.active",
+    "route": "GET /api/iot/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.maintenance",
+    "route": "GET /api/iot/maintenance",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.offline",
+    "route": "GET /api/iot/offline",
+    "issue": 2352
   }
 ]

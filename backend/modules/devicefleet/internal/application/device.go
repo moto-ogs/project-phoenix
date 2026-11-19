@@ -262,24 +262,6 @@ func (s *Service) ListDevices(ctx context.Context, filter devicefleet.DeviceFilt
 	return devices, err
 }
 
-// ListOfflineDevices reads devices unseen for at least offlineSince.
-func (s *Service) ListOfflineDevices(ctx context.Context, offlineSince time.Duration) ([]devicefleet.Device, error) {
-	if offlineSince <= 0 {
-		return nil, s.reject("list_offline_devices", devicefleet.ErrInvalidDevice)
-	}
-	var devices []devicefleet.Device
-	err := s.runInTenant(ctx, "list_offline_devices", func(ctx context.Context, stats *domain.OperationStats) error {
-		found, queryStats, err := s.deps.Devices.ListOffline(ctx, s.deps.Now().Add(-offlineSince))
-		stats.Add(queryStats)
-		devices = found
-		return err
-	})
-	if devices == nil {
-		devices = []devicefleet.Device{}
-	}
-	return devices, err
-}
-
 // CountDevicesByTenant counts live devices grouped by tenant.
 func (s *Service) CountDevicesByTenant(ctx context.Context) (map[int64]int, error) {
 	var counts map[int64]int

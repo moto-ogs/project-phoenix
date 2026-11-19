@@ -242,7 +242,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/communication": 55,
 	"modules/dataimport":    1,
 	"modules/delivery":      4,
-	"modules/devicefleet":   32, // #7104: UpdateRoomID no longer stamps updated_at (-1)
+	"modules/devicefleet":   24, // #2352: dead device-management routes removed (-8)
 	"modules/devicescan":    35,
 	// Raised by ADR 0105: the holiday period reads of the Träger-Portal; by
 	// ADR 0110: the retention of the public holiday registrations; by
