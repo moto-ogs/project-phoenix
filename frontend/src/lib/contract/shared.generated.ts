@@ -42,6 +42,84 @@ export const AllowanceCarryResponseSchema: z.ZodType<AllowanceCarryResponse, unk
   expires_on: str,
 });
 
+/** Go: account.RoleResponse */
+export interface RoleResponse {
+  id: string;
+  name: string;
+  description: string;
+  is_system: boolean;
+  base_role?: string;
+  school_portal: boolean;
+  created_at: string;
+  updated_at: string;
+  permissions?: string[];
+}
+
+export const RoleResponseSchema: z.ZodType<RoleResponse, unknown> = object<RoleResponse>({
+  id: int64String,
+  name: str,
+  description: str,
+  is_system: bool,
+  base_role: optional(str),
+  school_portal: bool,
+  created_at: str,
+  updated_at: str,
+  permissions: optional(arr(str)),
+});
+
+/** Go: account.SchoolIdentityResponse */
+export interface SchoolIdentityResponse {
+  person_id: string;
+  staff_id: string;
+  teacher_id?: string;
+}
+
+export const SchoolIdentityResponseSchema: z.ZodType<SchoolIdentityResponse, unknown> = object<SchoolIdentityResponse>({
+  person_id: int64String,
+  staff_id: int64String,
+  teacher_id: optional(int64String),
+});
+
+/** Go: common.TrustedDeviceDTO */
+export interface TrustedDeviceDTO {
+  id: string;
+  user_agent?: string;
+  ip_address?: string;
+  created_at: string;
+  expires_at: string;
+  last_used_at?: string;
+}
+
+export const TrustedDeviceDTOSchema: z.ZodType<TrustedDeviceDTO, unknown> = object<TrustedDeviceDTO>({
+  id: int64StringOrNumber,
+  user_agent: optional(str),
+  ip_address: optional(str),
+  created_at: str,
+  expires_at: str,
+  last_used_at: optional(str),
+});
+
+/** Go: account.PermissionResponse */
+export interface PermissionResponse {
+  id: string;
+  name: string;
+  description: string;
+  resource: string;
+  action: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PermissionResponseSchema: z.ZodType<PermissionResponse, unknown> = object<PermissionResponse>({
+  id: int64String,
+  name: str,
+  description: str,
+  resource: str,
+  action: str,
+  created_at: str,
+  updated_at: str,
+});
+
 /** Go: staffcalendarhttp.CalendarStatusResponse */
 export interface CalendarStatusResponse {
   status: string;

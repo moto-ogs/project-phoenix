@@ -510,7 +510,8 @@ function delay(ms: number): Promise<void> {
  * Requires an authenticated session.
  */
 export async function listAvailableTenants(): Promise<TenantSummary[]> {
-  const response = await sessionFetch("/api/auth/account-tenants");
+  // The backend path, through the staff portal's catalog proxy (#2352).
+  const response = await sessionFetch("/api/auth/account/tenants");
   if (!response.ok) {
     return [];
   }

@@ -5,6 +5,7 @@ import {
   type EnvelopableAuthStep,
   type PortalKey,
 } from "./portal-paths";
+import { dataOrBare } from "./envelope-or-bare";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 export type LoginScope = PortalKey;
@@ -234,16 +235,28 @@ export interface TrustedDeviceDTO {
   last_used_at?: string;
 }
 
+/**
+ * The remembered devices of a portal. The parents portal reads them under
+ * the backend's path through its catalog proxy (#2352); its old path under
+ * `auth` stays one release for older app bundles.
+ */
 function trustedDevicesUrl(scope: LoginScope, suffix = ""): string {
+  if (scope === "parent") {
+    return `/api/parent/me/mfa/trusted-devices${suffix}`;
+  }
   return portalAuthPath(scope, `mfa/trusted-devices${suffix}`);
 }
 
 export async function listTrustedDevices(
   scope: LoginScope,
 ): Promise<TrustedDeviceDTO[]> {
-  return postStep<TrustedDeviceDTO[]>(scope, "mfa/trusted-devices", undefined, {
-    method: "GET",
-  });
+  // The staff, caterer and parents portals answer in the envelope through
+  // their catalog proxies, their temporary route files bare (#2352).
+  return dataOrBare<TrustedDeviceDTO[]>(
+    await postJson<unknown>(trustedDevicesUrl(scope), undefined, {
+      method: "GET",
+    }),
+  );
 }
 
 export async function revokeTrustedDevice(
@@ -283,9 +296,13 @@ export async function adminResetMFA(
 export async function adminGetMFAState(
   accountId: string,
 ): Promise<MFAAdminState> {
-  return postJson<MFAAdminState>(adminMFAUrl(accountId, ""), undefined, {
-    method: "GET",
-  });
+  // Bare from the temporary route file, in the envelope through the staff
+  // portal's catalog proxy (#2352).
+  return dataOrBare<MFAAdminState>(
+    await postJson<unknown>(adminMFAUrl(accountId, ""), undefined, {
+      method: "GET",
+    }),
+  );
 }
 
 export async function adminSetMFAOverride(

@@ -49,7 +49,7 @@ func TestMFAAdminHandlers_ServiceUnavailableWhenNotWired(t *testing.T) {
 	}{
 		{"admin-disable", http.MethodDelete, mustJSON(MFAAdminOverrideRequest{Reason: "lost mailbox"}), rs.mfaAdminDisable},
 		{"admin-get-state", http.MethodGet, nil, rs.mfaAdminGetState},
-		{"admin-set-override", http.MethodPut, mustJSON(MFAAdminOverrideSetRequest{Override: "none", Reason: "test"}), rs.mfaAdminSetOverride},
+		{"admin-set-override", http.MethodPut, mustJSON(AccountMFAAdminOverrideSetRequest{Override: "none", Reason: "test"}), rs.mfaAdminSetOverride},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -77,29 +77,29 @@ func TestMFAAdminOverrideSetRequest_Bind(t *testing.T) {
 	t.Parallel()
 
 	t.Run("rejects unknown override value", func(t *testing.T) {
-		req := MFAAdminOverrideSetRequest{Override: "yes-please", Reason: "test"}
+		req := AccountMFAAdminOverrideSetRequest{Override: "yes-please", Reason: "test"}
 		assert.Error(t, req.Bind(nil))
 	})
 	t.Run("rejects empty reason", func(t *testing.T) {
-		req := MFAAdminOverrideSetRequest{Override: "force_off", Reason: ""}
+		req := AccountMFAAdminOverrideSetRequest{Override: "force_off", Reason: ""}
 		assert.Error(t, req.Bind(nil))
 	})
 	t.Run("rejects short reason", func(t *testing.T) {
-		req := MFAAdminOverrideSetRequest{Override: "force_off", Reason: "ab"}
+		req := AccountMFAAdminOverrideSetRequest{Override: "force_off", Reason: "ab"}
 		assert.Error(t, req.Bind(nil))
 	})
 	t.Run("accepts force_off + trimmed reason", func(t *testing.T) {
-		req := MFAAdminOverrideSetRequest{Override: " force_off ", Reason: "  user lost mailbox  "}
+		req := AccountMFAAdminOverrideSetRequest{Override: " force_off ", Reason: "  user lost mailbox  "}
 		require.NoError(t, req.Bind(nil))
 		assert.Equal(t, "force_off", req.Override)
 		assert.Equal(t, "user lost mailbox", req.Reason)
 	})
 	t.Run("accepts force_on", func(t *testing.T) {
-		req := MFAAdminOverrideSetRequest{Override: "force_on", Reason: "must always 2FA"}
+		req := AccountMFAAdminOverrideSetRequest{Override: "force_on", Reason: "must always 2FA"}
 		require.NoError(t, req.Bind(nil))
 	})
 	t.Run("accepts none (clear override)", func(t *testing.T) {
-		req := MFAAdminOverrideSetRequest{Override: "none", Reason: "user got mailbox back"}
+		req := AccountMFAAdminOverrideSetRequest{Override: "none", Reason: "user got mailbox back"}
 		require.NoError(t, req.Bind(nil))
 	})
 }

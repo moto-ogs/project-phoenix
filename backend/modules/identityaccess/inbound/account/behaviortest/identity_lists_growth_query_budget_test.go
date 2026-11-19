@@ -159,7 +159,8 @@ func TestIdentityAccountPasskeysGrowthQueryBudget(t *testing.T) {
 		}
 		rr, queries := f.get(t, "/auth/passkeys/", f.token)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-		raw, err := json.Marshal(want)
+		// The list answers in the envelope the catalog proxy reads (#2352).
+		raw, err := json.Marshal(map[string]any{"status": "success", "data": want, "message": "Passkeys retrieved"})
 		require.NoError(t, err)
 		require.JSONEq(t, string(raw), rr.Body.String())
 		t.Logf("identity passkeys N%d statements=%d", n, len(queries.Statements))
@@ -188,8 +189,12 @@ func TestIdentityTrustedDevicesGrowthQueryBudget(t *testing.T) {
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		raw, err := json.Marshal(want)
 		require.NoError(t, err)
-		var rows []map[string]any
-		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &rows))
+		// The list answers in the envelope the catalog proxy reads (#2352).
+		var envelope struct {
+			Data []map[string]any `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
+		rows := envelope.Data
 		require.ElementsMatch(t, want, rows, string(raw))
 		t.Logf("identity trusted devices N%d statements=%d", n, len(queries.Statements))
 		querybudgets.AssertQueryBudget(t, "api.auth.mfa.trusted_devices.positive_growth", queries)

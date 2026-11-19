@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   int64StringOrNumber,
+  noData,
   object,
   requestBody,
   str,
@@ -21,6 +22,12 @@ export const OperatorResponseSchema: z.ZodType<OperatorResponse, unknown> = obje
   display_name: str,
 });
 
+/** Go: operator.InitiateEmailChangeRequest */
+export interface InitiateEmailChangeRequest {
+  new_email?: string;
+  current_password?: string;
+}
+
 /** Go: operator.UpdateProfileRequest */
 export interface UpdateProfileRequest {
   display_name?: string;
@@ -32,6 +39,14 @@ export const routes = {
     pattern: "/operator/profile/",
     portals: ["platform"],
     response: success(OperatorResponseSchema),
+  },
+  "POST /operator/profile/email-change": {
+    method: "POST",
+    pattern: "/operator/profile/email-change",
+    portals: ["platform"],
+    noRetryAfterRenewal: "a renewed session would send the current password twice",
+    request: requestBody<InitiateEmailChangeRequest>(),
+    response: noData,
   },
   "PUT /operator/profile/": {
     method: "PUT",

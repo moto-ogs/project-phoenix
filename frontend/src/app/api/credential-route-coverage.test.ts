@@ -90,7 +90,6 @@ describe("routes that forward a password or a code", () => {
       expect.arrayContaining([
         "auth/password",
         "operator/profile/password",
-        "operator/profile/email-change",
         "caterer/account/password",
         "caterer/account/mfa/disable",
         "caterer/account/mfa/confirm",
@@ -121,6 +120,7 @@ describe("catalog routes that forward a password or a code", () => {
   it.each([
     ["parent", "POST /parent/me/news/{announcementId}/declaration"],
     ["org", "POST /traeger/auth/mfa/step-up"],
+    ["platform", "POST /operator/profile/email-change"],
   ] as const)("%s %s turns the retry off", (portal, key) => {
     const route = portalRoutes[portal].find(
       (entry) => `${entry.method} ${entry.pattern}` === key,

@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -384,14 +385,18 @@ func TestInitiateEmailChange_Success(t *testing.T) {
 		"current_password": "currentpass",
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/profile/email-change", bytes.NewReader(jsonBody))
+	// Under its production path, as the operator's catalog proxy reaches it
+	// (#2352).
+	req := httptest.NewRequest(http.MethodPost, "/operator/profile/email-change", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	claims := routetest.Claims{ID: 123}
 	ctx := routetest.WithAuthenticatedContext(req.Context(), claims, nil)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
+	router := chi.NewRouter()
+	router.Post("/operator/profile/email-change", resource.InitiateEmailChange)
 
-	resource.InitiateEmailChange(rr, req)
+	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Verification email will be sent shortly")

@@ -1,19 +1,16 @@
-import type { NextRequest } from "next/server";
 import { tenantPortal } from "~/server/auth";
-import { sendBackend } from "./backend-client.server";
-import { forwardJsonRequest, type JsonProxyOptions } from "./json-proxy.server";
 import {
+  handOffUnder,
   makeCatalogProxy,
   type CatalogMethod,
   type CatalogRoute,
+  type HandOffHead,
 } from "./contract/catalog-proxy.server";
 import {
   CATALOG_OUTSIDE_MOUNTS,
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
 } from "./contract/catalog-outside-mounts";
 import { makePortalHandlers } from "./portal-handlers.server";
-
-import type { RouteContext } from "./route-wrapper-utils.server";
 
 export { isStringParam } from "./route-wrapper-utils.server";
 
@@ -36,19 +33,6 @@ export const {
   proxyPatch,
   proxyDelete,
 } = tenant;
-
-/**
- * Registration may carry a tenant session (admin role checks) or none; the
- * backend decides. No retry: without a session there is nothing to renew.
- */
-export function createOptionalTenantJsonProxy(options: JsonProxyOptions) {
-  return tenantPortal.withAuth(async (request: NextRequest, context) => {
-    const token = (await tenantPortal.auth())?.user?.token;
-    return forwardJsonRequest(request, context, options, (path, call) =>
-      sendBackend(path, token, { ...call, request }),
-    );
-  });
-}
 
 /**
  * The staff portal's proxy: forwards `/api/…` to the backend's `/api/…`
@@ -75,17 +59,9 @@ export const catalogProxy = (
  * head, so the head goes in front again before the proxy matches it.
  */
 export function catalogProxyUnder(
-  head: readonly string[],
+  head: HandOffHead,
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
 ) {
-  const handler = catalogProxy(routes, method);
-  return (request: NextRequest, context: RouteContext) =>
-    handler(request, {
-      params: context.params.then((params) => {
-        const tail = params.path;
-        const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
-        return { ...params, path: [...head, ...rest] };
-      }),
-    });
+  return handOffUnder(head, catalogProxy(routes, method));
 }

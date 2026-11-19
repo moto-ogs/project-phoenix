@@ -569,9 +569,64 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/auth/accounts/{accountId}/caregiver-capability",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CaregiverCapabilityState"
+      }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/auth/accounts/{accountId}/mfa/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAAdminOverrideRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/auth/invitations/{id}/",
       "portals": [
         "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/auth/mfa/trusted-devices/{deviceId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/auth/passkeys/{passkeyId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/auth/roles/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/caterer/auth/mfa/trusted-devices/{deviceId}",
+      "portals": [
+        "caterer"
       ],
       "no_data": true
     },
@@ -798,6 +853,14 @@
     {
       "method": "DELETE",
       "pattern": "/parent/me/children/{studentId}/related-accounts/{guardianProfileId}",
+      "portals": [
+        "parent"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/parent/me/mfa/trusted-devices/{deviceId}",
       "portals": [
         "parent"
       ],
@@ -6132,6 +6195,203 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/account/tenants",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "AccountTenantResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/accounts/{accountId}/caregiver-capability",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CaregiverCapabilityState"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/accounts/{accountId}/mfa/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AccountMFAAdminStateResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/accounts/{accountId}/roles/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoleResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/mfa/trusted-devices",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TrustedDeviceDTO"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/passkeys/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PasskeyCredentialSummary"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/permissions/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "action",
+          "kind": "string"
+        },
+        {
+          "name": "resource",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PermissionResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/permissions/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PermissionResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/roles/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "name",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoleResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/roles/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RoleResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/roles/{roleId}/permissions/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PermissionResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/staff-preview/candidates",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffPreviewCandidate"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/caterer/account/mfa",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CatererMFAStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/caterer/auth/mfa/trusted-devices",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TrustedDeviceDTO"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/caterer/invitations/{schoolId}/{token}",
       "portals": [
         "public"
@@ -7400,6 +7660,31 @@
       "response": {
         "kind": "ref",
         "ref": "UnreadCountResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/mfa",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentMFAStatusResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/mfa/trusted-devices",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TrustedDeviceDTO"
+        }
       }
     },
     {
@@ -12421,6 +12706,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/accounts/{accountId}/caregiver-capability",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "EnableCaregiverCapabilityRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CaregiverCapabilityState"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/invitations/former-employment",
       "portals": [
         "tenant"
@@ -12444,6 +12744,106 @@
         "kind": "ref",
         "ref": "InvitationResendResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/link-to-tenant",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "LinkToTenantRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LinkedAccountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/passkeys/enrollment/challenge",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyEnrollmentChallenge"
+      },
+      "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/passkeys/register/options",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyRegisterOptionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "no_retry_after_renewal": "a renewed session would send the mailed code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/passkeys/register/verify",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyRegisterVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCredentialSummary"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/register",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RegisterRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AccountResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/roles/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CreateRoleRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoleResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/account/mfa/start",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CatererMFAChallengeResponse"
+      },
+      "no_retry_after_renewal": "a renewed session would mail the code twice"
     },
     {
       "method": "POST",
@@ -12796,6 +13196,19 @@
         "kind": "ref",
         "ref": "TraegerInvitation"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/profile/email-change",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "InitiateEmailChangeRequest"
+      },
+      "no_data": true,
+      "no_retry_after_renewal": "a renewed session would send the current password twice"
     },
     {
       "method": "POST",
@@ -13172,6 +13585,18 @@
         "kind": "ref",
         "ref": "ThreadViewResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/me/mfa/start",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ParentMFAChallengeResponse"
+      },
+      "no_retry_after_renewal": "a renewed session would mail the code twice"
     },
     {
       "method": "POST",
@@ -16041,6 +16466,54 @@
     },
     {
       "method": "PUT",
+      "pattern": "/auth/accounts/{accountId}/mfa/override",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AccountMFAAdminOverrideSetRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/auth/accounts/{accountId}/roles/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReplaceAccountRoleRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/auth/roles/{id}/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateRoleRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/auth/roles/{roleId}/permissions/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReplaceRolePermissionsRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
       "pattern": "/operator/accounts/{accountId}/mfa/global-override",
       "portals": [
         "platform"
@@ -18484,6 +18957,104 @@
       ]
     },
     {
+      "name": "AccountMFAAdminOverrideSetRequest",
+      "go_type": "account.AccountMFAAdminOverrideSetRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "override",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AccountMFAAdminStateResponse",
+      "go_type": "account.AccountMFAAdminStateResponse",
+      "fields": [
+        {
+          "name": "enrolled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "override",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AccountResponse",
+      "go_type": "account.AccountResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "active",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "roles",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "permissions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "school_identity",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolIdentityResponse"
+          }
+        }
+      ]
+    },
+    {
       "name": "AccountTenantAccessEntry",
       "go_type": "operator.AccountTenantAccessEntry",
       "fields": [
@@ -18564,6 +19135,48 @@
               "kind": "ref",
               "ref": "AccountTenantRole"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AccountTenantResponse",
+      "go_type": "account.AccountTenantResponse",
+      "fields": [
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -25230,6 +25843,130 @@
               "kind": "ref",
               "ref": "Row"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BlockerActivity",
+      "go_type": "peopledirectory.BlockerActivity",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BlockerGroup",
+      "go_type": "peopledirectory.BlockerGroup",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "teacher_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "teacher_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BlockerSubstitution",
+      "go_type": "peopledirectory.BlockerSubstitution",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BlockerSupervision",
+      "go_type": "peopledirectory.BlockerSupervision",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -31912,6 +32649,195 @@
       ]
     },
     {
+      "name": "CaregiverCapabilityState",
+      "go_type": "peopledirectory.CaregiverCapabilityState",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "person_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "teacher_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "has_admin_role",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_user_role",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_person",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_staff",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_teacher",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_caregiver_profile",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_active_caregiver",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "disable_blocked",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "disable_blockers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "active_supervisions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "BlockerSupervision"
+            }
+          }
+        },
+        {
+          "name": "active_substitutions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "BlockerSubstitution"
+            }
+          }
+        },
+        {
+          "name": "activity_supervisions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "BlockerActivity"
+            }
+          }
+        },
+        {
+          "name": "group_assignments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "BlockerGroup"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CatererMFAChallengeResponse",
+      "go_type": "catererauth.CatererMFAChallengeResponse",
+      "fields": [
+        {
+          "name": "challenge_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CatererMFAStatusResponse",
+      "go_type": "catererauth.CatererMFAStatusResponse",
+      "fields": [
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "masked_email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CatererSecurityResponse",
       "go_type": "operator.CatererSecurityResponse",
       "fields": [
@@ -36585,6 +37511,43 @@
       ]
     },
     {
+      "name": "CreateRoleRequest",
+      "go_type": "account.CreateRoleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "base_role",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "template",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "CreateSkip",
       "go_type": "carecontract.CreateSkip",
       "fields": [
@@ -39393,6 +40356,34 @@
           "schema": {
             "kind": "instant",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnableCaregiverCapabilityRequest",
+      "go_type": "account.EnableCaregiverCapabilityRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -49363,6 +50354,27 @@
       ]
     },
     {
+      "name": "InitiateEmailChangeRequest",
+      "go_type": "operator.InitiateEmailChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "new_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "InstanceConflictWarning",
       "go_type": "timetable.InstanceConflictWarning",
       "fields": [
@@ -50796,6 +51808,76 @@
       ]
     },
     {
+      "name": "LinkToTenantRequest",
+      "go_type": "account.LinkToTenantRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "LinkedAccountResponse",
+      "go_type": "account.LinkedAccountResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_identity",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "SchoolIdentityResponse"
+          }
+        }
+      ]
+    },
+    {
       "name": "ListKindOption",
       "go_type": "classday.ListKindOption",
       "fields": [
@@ -50827,6 +51909,20 @@
           "name": "row_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAAdminOverrideRequest",
+      "go_type": "account.MFAAdminOverrideRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -57001,6 +58097,48 @@
       ]
     },
     {
+      "name": "ParentMFAChallengeResponse",
+      "go_type": "parentauth.ParentMFAChallengeResponse",
+      "fields": [
+        {
+          "name": "challenge_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ParentMFAStatusResponse",
+      "go_type": "parentauth.ParentMFAStatusResponse",
+      "fields": [
+        {
+          "name": "enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "masked_email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ParentMessageAttachmentResponse",
       "go_type": "messaging.ParentMessageAttachmentResponse",
       "fields": [
@@ -57485,6 +58623,124 @@
           "name": "has_account",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PasskeyCeremonyOptions",
+      "go_type": "identityaccess.PasskeyCeremonyOptions",
+      "fields": [
+        {
+          "name": "session_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PasskeyCredentialSummary",
+      "go_type": "identityaccess.PasskeyCredentialSummary",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "last_used_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PasskeyEnrollmentChallenge",
+      "go_type": "identityaccess.PasskeyEnrollmentChallenge",
+      "fields": [
+        {
+          "name": "challenge_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PasskeyRegisterOptionsRequest",
+      "go_type": "common.PasskeyRegisterOptionsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PasskeyRegisterVerifyRequest",
+      "go_type": "common.PasskeyRegisterVerifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "session_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "response",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
           }
         }
       ]
@@ -58408,6 +59664,54 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PermissionResponse",
+      "go_type": "account.PermissionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "resource",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -62509,6 +63813,71 @@
       ]
     },
     {
+      "name": "RegisterRequest",
+      "go_type": "account.RegisterRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "RegistrationFamilyChildren",
       "go_type": "enrollment.RegistrationFamilyChildren",
       "fields": [
@@ -62601,6 +63970,21 @@
       ]
     },
     {
+      "name": "ReplaceAccountRoleRequest",
+      "go_type": "account.ReplaceAccountRoleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "role_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "ReplaceMealParticipationRequest",
       "go_type": "parent.ReplaceMealParticipationRequest",
       "request": true,
@@ -62613,6 +63997,24 @@
             "nullable": true,
             "elem": {
               "kind": "int"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReplaceRolePermissionsRequest",
+      "go_type": "account.ReplaceRolePermissionsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "permission_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "lax_id"
             }
           }
         }
@@ -63448,6 +64850,71 @@
           "name": "school_portal",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoleResponse",
+      "go_type": "account.RoleResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "base_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_portal",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "permissions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -67163,6 +68630,31 @@
           "name": "as_of",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolIdentityResponse",
+      "go_type": "account.SchoolIdentityResponse",
+      "fields": [
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "teacher_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
           }
         }
       ]
@@ -71914,6 +73406,46 @@
             "elem": {
               "kind": "ref",
               "ref": "StaffPoolEntryResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPreviewCandidate",
+      "go_type": "identityaccess.StaffPreviewCandidate",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }
@@ -81969,6 +83501,51 @@
       ]
     },
     {
+      "name": "TrustedDeviceDTO",
+      "go_type": "common.TrustedDeviceDTO",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "user_agent",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ip_address",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_used_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "UnreadCountResponse",
       "go_type": "parent.UnreadCountResponse",
       "fields": [
@@ -82258,6 +83835,35 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UpdateRoleRequest",
+      "go_type": "account.UpdateRoleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "base_role",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         }
       ]

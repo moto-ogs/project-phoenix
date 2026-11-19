@@ -24,6 +24,7 @@ import {
   EventSchema,
   ParentConferenceWindowSchema,
   SigningViewSchema,
+  TrustedDeviceDTOSchema,
   type Event,
   type InvitationAnswer,
   type ParentConferenceWindow,
@@ -1593,6 +1594,19 @@ export const UnreadCountResponseSchema: z.ZodType<UnreadCountResponse, unknown> 
   unread_count: safeInt,
 });
 
+/** Go: parentauth.ParentMFAStatusResponse */
+export interface ParentMFAStatusResponse {
+  enabled: boolean;
+  available: boolean;
+  masked_email: string;
+}
+
+export const ParentMFAStatusResponseSchema: z.ZodType<ParentMFAStatusResponse, unknown> = object<ParentMFAStatusResponse>({
+  enabled: bool,
+  available: bool,
+  masked_email: str,
+});
+
 /** Go: parent.AnnouncementOption */
 export interface AnnouncementOption {
   id: string;
@@ -2293,6 +2307,17 @@ export interface PostMessageRequest {
   audience?: string;
 }
 
+/** Go: parentauth.ParentMFAChallengeResponse */
+export interface ParentMFAChallengeResponse {
+  challenge_token: string;
+  masked_email: string;
+}
+
+export const ParentMFAChallengeResponseSchema: z.ZodType<ParentMFAChallengeResponse, unknown> = object<ParentMFAChallengeResponse>({
+  challenge_token: str,
+  masked_email: str,
+});
+
 /** Go: parent.stampRequest */
 export interface stampRequest {
   published_at?: string | null;
@@ -2606,6 +2631,12 @@ export const routes = {
     portals: ["parent"],
     response: noData,
   },
+  "DELETE /parent/me/mfa/trusted-devices/{deviceId}": {
+    method: "DELETE",
+    pattern: "/parent/me/mfa/trusted-devices/{deviceId}",
+    portals: ["parent"],
+    response: noData,
+  },
   "DELETE /parent/me/notification-preferences/": {
     method: "DELETE",
     pattern: "/parent/me/notification-preferences/",
@@ -2872,6 +2903,18 @@ export const routes = {
     portals: ["parent"],
     response: success(UnreadCountResponseSchema),
   },
+  "GET /parent/me/mfa": {
+    method: "GET",
+    pattern: "/parent/me/mfa",
+    portals: ["parent"],
+    response: success(ParentMFAStatusResponseSchema),
+  },
+  "GET /parent/me/mfa/trusted-devices": {
+    method: "GET",
+    pattern: "/parent/me/mfa/trusted-devices",
+    portals: ["parent"],
+    response: success(z.array(TrustedDeviceDTOSchema)),
+  },
   "GET /parent/me/news": {
     method: "GET",
     pattern: "/parent/me/news",
@@ -3057,6 +3100,13 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<PostMessageRequest>(),
     response: success(ThreadViewResponseSchema),
+  },
+  "POST /parent/me/mfa/start": {
+    method: "POST",
+    pattern: "/parent/me/mfa/start",
+    portals: ["parent"],
+    noRetryAfterRenewal: "a renewed session would mail the code twice",
+    response: success(ParentMFAChallengeResponseSchema),
   },
   "POST /parent/me/news/{announcementId}/acknowledge": {
     method: "POST",

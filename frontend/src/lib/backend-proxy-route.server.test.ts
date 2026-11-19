@@ -3,10 +3,7 @@ import { NextRequest } from "next/server";
 import { suppressConsole } from "~/test/helpers/console";
 import { createPublicJsonProxy } from "./backend-proxy-route.server";
 import { createOperatorJsonProxy } from "./operator/route-wrapper.server";
-import {
-  createOptionalTenantJsonProxy,
-  createTenantJsonProxy,
-} from "./route-wrapper.server";
+import { createTenantJsonProxy } from "./route-wrapper.server";
 
 /**
  * Owner test for the shared JSON proxy request pipeline: URL and query
@@ -538,41 +535,6 @@ describe("createOperatorJsonProxy", () => {
     expect(fetchHeaders(1).Authorization).toBe("Bearer operator-new");
     expect(mockUncachedAuth).not.toHaveBeenCalled();
     expect(response.status).toBe(200);
-  });
-});
-
-describe("createOptionalTenantJsonProxy", () => {
-  it("calls the backend without Authorization when no session exists", async () => {
-    mockAuth.mockResolvedValueOnce(null);
-    const POST = createOptionalTenantJsonProxy({
-      method: "POST",
-      path: "/auth/register",
-    });
-
-    const response = await POST(
-      request("/api/auth/register", { method: "POST", body: "{}" }),
-      context(),
-    );
-
-    expect(response.status).toBe(200);
-    expect(fetchHeaders()).toEqual({
-      ...ORIGIN,
-      "Content-Type": "application/json",
-    });
-  });
-
-  it("attaches the session token when a session exists", async () => {
-    const POST = createOptionalTenantJsonProxy({
-      method: "POST",
-      path: "/auth/register",
-    });
-
-    await POST(
-      request("/api/auth/register", { method: "POST", body: "{}" }),
-      context(),
-    );
-
-    expect(fetchHeaders().Authorization).toBe("Bearer tenant-token");
   });
 });
 

@@ -158,17 +158,17 @@ func (rs *Resource) resendMFA(w http.ResponseWriter, r *http.Request) {
 	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
-// MFAStatusResponse is the second factor as the portal's settings show it.
+// ParentMFAStatusResponse is the second factor as the portal's settings show it.
 // Available is false for an account that is a parent at no school: its
 // factor stays off.
-type MFAStatusResponse struct {
+type ParentMFAStatusResponse struct {
 	Enabled     bool   `json:"enabled"`
 	Available   bool   `json:"available"`
 	MaskedEmail string `json:"masked_email"`
 }
 
-// MFAChallengeResponse names the code mailed to switch the factor on.
-type MFAChallengeResponse struct {
+// ParentMFAChallengeResponse names the code mailed to switch the factor on.
+type ParentMFAChallengeResponse struct {
 	ChallengeToken string `json:"challenge_token"`
 	MaskedEmail    string `json:"masked_email"`
 }
@@ -179,7 +179,7 @@ func (rs *Resource) mfaStatus(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, MFAStatusResponse(state))
+	common.Respond(w, r, http.StatusOK, ParentMFAStatusResponse(state), "MFA status retrieved")
 }
 
 // startMFA mails the code that switches the second factor on.
@@ -189,7 +189,7 @@ func (rs *Resource) startMFA(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, MFAChallengeResponse(challenge))
+	common.Respond(w, r, http.StatusOK, ParentMFAChallengeResponse(challenge), "MFA code sent")
 }
 
 // confirmMFA switches the second factor on and answers with a session
@@ -219,7 +219,7 @@ func (rs *Resource) disableMFA(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs *Resource) listTrustedDevices(w http.ResponseWriter, r *http.Request) {
-	portalauth.ListTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
+	portalauth.RespondTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
 		return rs.secondFactor.ListParentTrustedDevices(ctx, currentAccountID(ctx))
 	}, renderFailure)
 }
