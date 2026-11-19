@@ -63,7 +63,7 @@ const logger = createLogger({ component: "TraegerStaffRecordPage" });
 
 /** Was die Seite ist und was man dort zuerst tut (#7595). */
 const RECORD_INFO =
-  "Hier siehst du die Akte einer Person über alle ihre Schulen. Prüfe unter „Stammdaten“ zuerst die „Personalnummer“ und die „Einsatzorte“. Verträge, Nachweise sowie Bank- und Steuerdaten findest du in den anderen Reitern.";
+  "Hier siehst du die Akte einer Person über alle ihre Schulen. Prüfe unter „Stammdaten“ zuerst die „Personalnummer“ und die „Einsatzorte“. „Verträge und Zeit“, „Nachweise“ und „Bank und Steuer“ findest du in den Reitern daneben.";
 
 /**
  * Was mit einem Einsatzort aus dem Vertretungspool als Nächstes passiert
