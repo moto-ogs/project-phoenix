@@ -105,12 +105,14 @@ const (
 
 // SigningRouteContracts registers the one-time link of a contract mail,
 // which the parents open without a session (#2352), with patterns relative
-// to /public/care-contract-signing. The frozen PDF answers a file and keeps
-// its route file.
+// to /public/care-contract-signing. The frozen PDF is a public file of the
+// link; reading it leaves the link open.
 func SigningRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalPublic}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{link}", Portals: portals, Response: carecontract.SigningView{}},
+		{Method: "GET", Pattern: "/{link}/document", Portals: portals, File: true,
+			PublicFile: "the one-time link of the contract mail is the parents' only credential for the contract it names"},
 		{Method: "POST", Pattern: "/{link}/sign", Portals: portals, Request: SignRequest{}, Response: carecontract.SigningView{}, MaxBodyBytes: signBodyBytes},
 		{Method: "GET", Pattern: "/{link}/family-children", Portals: portals, Response: SigningFamilyChildrenResponse{}},
 		{Method: "PUT", Pattern: "/{link}/family-children", Portals: portals, Request: SigningFamilyChildrenRequest{}, Response: SigningFamilyChildrenResponse{}, MaxBodyBytes: familyChildrenBodyBytes},

@@ -70,6 +70,7 @@ import { routes as parentMe } from "./parent-me.generated";
 import { routes as parentNewsAttachments } from "./parent-news-attachments.generated";
 import { routes as platform } from "./platform.generated";
 import { routes as publicCareContractSigning } from "./public-care-contract-signing.generated";
+import { routes as publicPayrollDownload } from "./public-payroll-download.generated";
 import { routes as pwa } from "./pwa.generated";
 import { routes as reminders } from "./reminders.generated";
 import { routes as rooms } from "./rooms.generated";
@@ -800,6 +801,7 @@ export const portalRoutes = {
     enrollment["GET /api/enrollment/requests/{statusToken}/edit-bootstrap"],
     enrollment["GET /api/enrollment/requests/{statusToken}/family-children"],
     enrollment["GET /api/enrollment/requests/{statusToken}/form-labels"],
+    enrollment["GET /api/enrollment/requests/{statusToken}/signature-proof"],
     enrollment["PATCH /api/enrollment/requests/{statusToken}"],
     enrollment["POST /api/enrollment/requests/{statusToken}/change-requests"],
     enrollment["POST /api/enrollment/requests/{statusToken}/change-requests/{changeRequestId}/messages"],
@@ -812,9 +814,11 @@ export const portalRoutes = {
     parentAuth["POST /parent/auth/password-reset"],
     parentAuth["POST /parent/auth/password-reset/confirm"],
     publicCareContractSigning["GET /public/care-contract-signing/{link}"],
+    publicCareContractSigning["GET /public/care-contract-signing/{link}/document"],
     publicCareContractSigning["GET /public/care-contract-signing/{link}/family-children"],
     publicCareContractSigning["POST /public/care-contract-signing/{link}/sign"],
     publicCareContractSigning["PUT /public/care-contract-signing/{link}/family-children"],
+    publicPayrollDownload["POST /public/payroll-download/{link}"],
     schoolAuth["POST /school/auth/password-reset"],
     schoolAuth["POST /school/auth/password-reset/confirm"],
     traegerAuth["POST /traeger/auth/password-reset"],
@@ -822,6 +826,7 @@ export const portalRoutes = {
     traegerHolidayQuotes["POST /traeger/holiday-quotes/{token}"],
     traegerHolidayRegistrations["GET /traeger/holiday-registrations/status/{statusToken}"],
     traegerHolidayRegistrations["GET /traeger/holiday-registrations/{token}"],
+    traegerHolidayRegistrations["GET /traeger/holiday-registrations/{token}/documents/{documentId}"],
     traegerHolidayRegistrations["POST /traeger/holiday-registrations/{token}"],
     traegerInvitations["GET /traeger/invitations/{token}"],
     traegerInvitations["POST /traeger/invitations/{token}/accept"],
