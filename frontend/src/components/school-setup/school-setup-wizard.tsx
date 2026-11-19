@@ -27,7 +27,7 @@ import {
 } from "~/lib/school-setup-api";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { staffWithoutTargetHref } from "~/lib/time-account-links";
-import { useNFCEnabled } from "~/lib/tenant-context";
+import { useNFCEnabled, useTenantSlugSafe } from "~/lib/tenant-context";
 import { SetupBeacon, SchoolSetupChecklist } from "./school-setup-checklist";
 import {
   applicableSteps,
@@ -58,9 +58,9 @@ type RunAction = (
 /** Knopf unten rechts oder offene Checkliste. */
 type View = "beacon" | "checklist";
 
-/** Einmal pro Anmeldung öffnet sich der Assistent von selbst. */
-function claimFirstOpen(accountID: string): boolean {
-  const key = `school-setup-opened:${accountID}`;
+/** Einmal pro Anmeldung und Schule öffnet sich der Assistent von selbst. */
+function claimFirstOpen(tenantSlug: string, accountID: string): boolean {
+  const key = `school-setup-opened:${tenantSlug}:${accountID}`;
   try {
     if (sessionStorage.getItem(key)) return false;
     sessionStorage.setItem(key, "1");
@@ -179,19 +179,41 @@ function SchoolSetupWizardForAdmin({
   // danach zum ersten Mal ein oder blendet sie aus, hat sie die Fläche
   // geschlossen. Abschließen, Überspringen und Ausblenden als Kernaktion
   // zählt das Backend.
-  const openedByItself = useRef(false);
+  const openedByItself = useRef<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
+  const tenantSlug = useTenantSlugSafe();
   useEffect(() => {
-    if (visible && accountID && claimFirstOpen(accountID)) {
+    const opened = openedByItself.current;
+    if (
+      opened &&
+      (opened.accountID !== accountID || opened.tenantSlug !== tenantSlug)
+    ) {
+      openedByItself.current = null;
+    }
+    if (
+      visible &&
+      tenantSlug &&
+      accountID &&
+      claimFirstOpen(tenantSlug, accountID)
+    ) {
       setView("checklist");
-      openedByItself.current = true;
-      trackOnboardingSurface("shown", "setup_checklist");
+      if (trackOnboardingSurface("shown", "setup_checklist")) {
+        openedByItself.current = { accountID, tenantSlug };
+      }
     }
-  }, [visible, accountID]);
+  }, [visible, tenantSlug, accountID]);
   const closedByPerson = () => {
-    if (openedByItself.current) {
-      openedByItself.current = false;
-      trackOnboardingSurface("dismissed", "setup_checklist");
-    }
+    const opened = openedByItself.current;
+    if (
+      !opened ||
+      opened.accountID !== accountID ||
+      opened.tenantSlug !== tenantSlug
+    )
+      return;
+    openedByItself.current = null;
+    trackOnboardingSurface("dismissed", "setup_checklist");
   };
   const collapse = () => {
     closedByPerson();

@@ -44,7 +44,10 @@ vi.mock("~/lib/shell-auth-context", () => ({
     isViaTraeger: false,
   }),
 }));
-vi.mock("~/lib/tenant-context", () => ({ useNFCEnabled: () => false }));
+vi.mock("~/lib/tenant-context", () => ({
+  useNFCEnabled: () => false,
+  useTenantSlugSafe: () => "school-a",
+}));
 vi.mock("~/lib/tenant-router", () => ({
   useTenantRouter: () => ({ push: vi.fn() }),
 }));
@@ -160,7 +163,7 @@ describe("SchoolSetupWizard analytics", () => {
   });
 
   it("reports nothing when the checklist already opened itself in this session", async () => {
-    sessionStorage.setItem("school-setup-opened:73", "1");
+    sessionStorage.setItem("school-setup-opened:school-a:73", "1");
     const { SchoolSetupWizard } = await setup(true);
     render(<SchoolSetupWizard />);
 
