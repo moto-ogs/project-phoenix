@@ -75,6 +75,9 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
+const DAY_LOG_INFO =
+  "Hier siehst du für heute, welche Kinder anwesend sind und welche fehlen. Mit „Details“ siehst du die Kinder einer Gruppe. Mit „Drucken“ gibst du die Auswertung aus.";
+
 const logger = createLogger({ component: "DayLogPage" });
 
 /**
@@ -502,6 +505,7 @@ export default function DayLogPage() {
   return (
     <TenantPage
       title="Tagesauswertung"
+      info={DAY_LOG_INFO}
       stats={statusLine}
       statsLoading={loading}
       loading={loading || (failed && load.error === null)}

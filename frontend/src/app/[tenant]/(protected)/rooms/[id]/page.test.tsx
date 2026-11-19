@@ -17,6 +17,7 @@ const {
   exportPlanMock,
   showErrorMock,
   supervisionState,
+  suspendSearchParamsState,
   weekendOpenState,
 } = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
@@ -31,6 +32,7 @@ const {
   exportPlanMock: vi.fn(() => Promise.resolve()),
   showErrorMock: vi.fn(() => Promise.resolve()),
   supervisionState: { overviewEnabled: false },
+  suspendSearchParamsState: { value: false },
   weekendOpenState: { value: false },
 }));
 
@@ -40,7 +42,10 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7" }),
   usePathname: () => "/rooms/7",
   useRouter: () => ({ replace: replaceMock }),
-  useSearchParams: () => searchParams,
+  useSearchParams: () => {
+    if (suspendSearchParamsState.value) throw new Promise(() => {});
+    return searchParams;
+  },
 }));
 
 vi.mock("~/lib/tenant-router", () => ({
@@ -228,8 +233,18 @@ vi.mock("~/components/ui/confirm-delete-modal", () => ({
 }));
 
 vi.mock("./page-skeleton", () => ({
-  RoomDetailLoadingPage: ({ backLabel }: { backLabel?: string }) => (
-    <div data-testid="room-loading" data-back-label={backLabel} />
+  RoomDetailLoadingPage: ({
+    backLabel,
+    info,
+  }: {
+    backLabel?: string;
+    info?: string;
+  }) => (
+    <div
+      data-testid="room-loading"
+      data-back-label={backLabel}
+      data-info={info}
+    />
   ),
 }));
 
@@ -263,6 +278,7 @@ describe("RoomDetailPage", () => {
     searchParams.delete("view");
     presenceModeState.mode = "detailed";
     supervisionState.overviewEnabled = false;
+    suspendSearchParamsState.value = false;
     weekendOpenState.value = false;
     useRoomDetailMock.mockReturnValue({
       room,
@@ -519,6 +535,30 @@ describe("RoomDetailPage", () => {
     expect(screen.queryByTestId("room-stammdaten")).not.toBeInTheDocument();
   });
 
+  it("explains the room's occupancy, or only its record in binary mode", () => {
+    const { unmount } = render(<RoomDetailPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Gruppenraum Sonne" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
+      ),
+    ).toBeInTheDocument();
+    unmount();
+
+    presenceModeState.mode = "binary";
+    render(<RoomDetailPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Gruppenraum Sonne" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier stehen die Angaben zu diesem Raum. Deine Schule erfasst nicht, welche Kinder in welchem Raum sind.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("falls back to the room list for an external referrer", () => {
     searchParams.set("from", "//attacker.example");
     render(<RoomDetailPage />);
@@ -542,6 +582,20 @@ describe("RoomDetailPage", () => {
     expect(screen.getByTestId("room-loading")).toHaveAttribute(
       "data-back-label",
       "Zurück zu den Räumen der Datenverwaltung",
+    );
+    expect(screen.getByTestId("room-loading")).toHaveAttribute(
+      "data-info",
+      "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
+    );
+  });
+
+  it("explains room occupancy while the page is suspended", () => {
+    suspendSearchParamsState.value = true;
+    render(<RoomDetailPage />);
+
+    expect(screen.getByTestId("room-loading")).toHaveAttribute(
+      "data-info",
+      "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
     );
   });
 

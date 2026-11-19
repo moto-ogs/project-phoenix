@@ -40,6 +40,11 @@ import type { StaffNotice, StaffNoticeInput } from "~/lib/staff-notices-api";
 import { useSWRAuth } from "~/lib/swr";
 import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 
+const NOTICES_INFO =
+  "Hier stehen die Hinweise der Leitung an das Team. Unter „Heute“ siehst du, was heute gilt. Verlangt ein Hinweis eine Bestätigung, wähle „Zur Kenntnis nehmen“.";
+const NOTICES_ADMIN_INFO =
+  "Hier schreibst du Hinweise an das Team. Unter „Heute“ steht, was heute gilt, unter „Alle Hinweise“ jeder Hinweis. Einen neuen legst du mit „Neuer Hinweis“ an.";
+
 const logger = createLogger({ component: "TagesinformationenPage" });
 
 /**
@@ -226,6 +231,7 @@ function TagesinformationenContent() {
   return (
     <TenantPage
       title="Hinweise der Leitung"
+      info={isAdmin ? NOTICES_ADMIN_INFO : NOTICES_INFO}
       stats={statusLine}
       statsLoading={todayLoading && todayNotices.length === 0}
       actions={
@@ -422,7 +428,13 @@ export default function TagesinformationenPage() {
   return (
     <Suspense
       fallback={
-        <TenantPage title="Hinweise der Leitung" statsLoading loading />
+        <TenantPage
+          title="Hinweise der Leitung"
+          // Vor dem Laden ist die Rolle offen; den Lesetext sehen alle.
+          info={NOTICES_INFO}
+          statsLoading
+          loading
+        />
       }
     >
       <TagesinformationenContent />

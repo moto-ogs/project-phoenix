@@ -17,7 +17,11 @@ export function FeedbackHistorySkeleton() {
       className="w-full"
     >
       {/* Spiegelt die Kopfkarte des geladenen Zustands. */}
-      <TenantPageHeaderSkeleton leading back={<StudentHistoryLoadingBack />} />
+      <TenantPageHeaderSkeleton
+        leading
+        info
+        back={<StudentHistoryLoadingBack />}
+      />
 
       <div className="mb-6">
         <Skeleton shape="round" className="h-9 w-full max-w-md" />

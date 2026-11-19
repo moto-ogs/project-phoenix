@@ -14,6 +14,9 @@ import {
 import { emergencyConcept } from "~/lib/concepts/emergency";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
+const EMERGENCY_INFO =
+  "Hier druckst du die Liste der Kinder, die gerade anwesend sind. Du brauchst sie zum Beispiel bei einem Feueralarm am Sammelplatz.";
+
 export default function EmergencyPage() {
   const { status } = useSession({ required: true });
   const [isExporting, setIsExporting] = useState(false);
@@ -45,6 +48,7 @@ export default function EmergencyPage() {
   return (
     <TenantPage
       title="Notfallliste"
+      info={EMERGENCY_INFO}
       loading={status === "loading"}
       loadingLabel="Notfallliste wird geladen…"
     >

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -111,6 +111,39 @@ describe("Tagesinformationen: Statuszeile bei Ladefehler (#2517)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("0 heute")).toBeInTheDocument();
     expect(screen.queryByText(/insgesamt/)).not.toBeInTheDocument();
+  });
+});
+
+describe("Tagesinformationen: Info-Knopf (#7577)", () => {
+  beforeEach(() => {
+    state.search = "";
+    state.today = slot([]);
+    state.all = slot([]);
+  });
+
+  it("explains reading to the team and writing to the Leitung", () => {
+    state.isAdmin = false;
+    const { unmount } = renderPage();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Hinweise der Leitung" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier stehen die Hinweise der Leitung an das Team. Unter „Heute“ siehst du, was heute gilt. Verlangt ein Hinweis eine Bestätigung, wähle „Zur Kenntnis nehmen“.",
+      ),
+    ).toBeInTheDocument();
+    unmount();
+
+    state.isAdmin = true;
+    renderPage();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Hinweise der Leitung" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier schreibst du Hinweise an das Team. Unter „Heute“ steht, was heute gilt, unter „Alle Hinweise“ jeder Hinweis. Einen neuen legst du mit „Neuer Hinweis“ an.",
+      ),
+    ).toBeInTheDocument();
   });
 });
 

@@ -38,6 +38,9 @@ import { feedbackConcept } from "~/lib/concepts/feedback";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 
+const FEEDBACK_INFO =
+  "Hier siehst du, wie dieses Kind seine Tage bewertet hat. Das Feedback gibt das Kind freiwillig nach dem Abmelden am Tablet. Wähle oben den Zeitraum.";
+
 const FEATURE_DISABLED_DESCRIPTION =
   "Die Feedbackhistorie ist für deine Schule ausgeschaltet. Sie lässt sich in den Einstellungen unter Datenschutz einschalten.";
 
@@ -297,6 +300,7 @@ function StudentFeedbackHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={feedbackConcept} size="page" />}
         title={student?.name ?? "Feedbackhistorie"}
+        info={FEEDBACK_INFO}
         stats={studentMeta ?? feedbackLine}
         statsLoading={loading}
         loading={loading}
