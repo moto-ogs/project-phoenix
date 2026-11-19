@@ -264,7 +264,7 @@ function mergeOfferedClasses(
   return merged;
 }
 
-export function PhasesEditor() {
+export function PhasesEditor({ info }: { readonly info?: string }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -975,6 +975,7 @@ export function PhasesEditor() {
   return (
     <TenantPage
       title="Anmeldephasen"
+      info={info}
       // Die Kopfkarte lebt hier und nicht in page.tsx, weil „Neue
       // Anmeldephase“ an den Editor-Zustand gebunden ist (beim Bearbeiten
       // oder Übertragen wird die Aktion ausgeblendet).

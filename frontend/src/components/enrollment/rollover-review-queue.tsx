@@ -31,6 +31,8 @@ const REVIEW_REASON_LABELS: Record<string, string> = {
 
 interface Props {
   readonly phaseID: string;
+  /** Erklärung hinter dem Info-Knopf am Seitentitel; die Seite liefert sie. */
+  readonly info?: string;
 }
 
 const REVIEW_QUEUE_DESCRIPTION =
@@ -40,7 +42,7 @@ function gradeFieldName(childId: string): string {
   return `grade-${childId}`;
 }
 
-export function RolloverReviewQueue({ phaseID }: Props) {
+export function RolloverReviewQueue({ phaseID, info }: Props) {
   const refreshPhaseExpiryWarnings = useRefreshPhaseExpiryWarnings();
   const toast = useToast();
   const activePhase = useRef(phaseID);
@@ -175,6 +177,7 @@ export function RolloverReviewQueue({ phaseID }: Props) {
     return (
       <TenantPage
         title="Prüfliste"
+        info={info}
         back
         backHref="/enrollment-phases"
         backLabel="Zurück zu den Anmeldephasen"
@@ -187,6 +190,7 @@ export function RolloverReviewQueue({ phaseID }: Props) {
   return (
     <TenantPage
       title="Prüfliste"
+      info={info}
       back
       backHref="/enrollment-phases"
       backLabel="Zurück zu den Anmeldephasen"

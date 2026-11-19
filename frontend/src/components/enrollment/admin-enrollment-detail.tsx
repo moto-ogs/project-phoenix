@@ -150,9 +150,11 @@ const ACTIONS: ActionDef[] = [
 
 interface Props {
   readonly requestId: string;
+  /** Erklärung hinter dem Info-Knopf am Seitentitel; die Seite liefert sie. */
+  readonly info?: string;
 }
 
-export function AdminEnrollmentDetail({ requestId }: Props) {
+export function AdminEnrollmentDetail({ requestId, info }: Props) {
   const {
     mails: requestMails,
     loadError: requestMailsError,
@@ -436,6 +438,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     return (
       <TenantPage
         title="Anmeldung"
+        info={info}
         back
         backHref="/admin/enrollments"
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -448,6 +451,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     return (
       <TenantPage
         title="Anmeldung"
+        info={info}
         back
         backHref="/admin/enrollments"
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -556,6 +560,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   return (
     <TenantPage
       title={`${data.guardian_first_name} ${data.guardian_last_name}`}
+      info={info}
       back
       backHref={`/admin/enrollments/phases/${encodeURIComponent(data.phase_id)}`}
       backLabel="Zurück zur Anmeldephase"

@@ -16,6 +16,9 @@ import { useTenantMutate } from "~/lib/swr";
 // Staff approval queue for parent-initiated guardian invitations. Only
 // relevant when a school sets guardians.parent_invite_mode = staff_approval;
 // otherwise the queue is simply empty.
+const GUARDIAN_APPROVALS_INFO =
+  "Hier landen Anfragen von Eltern, die einer weiteren Person Zugang zu ihrem Kind geben möchten. Prüfe die Person und wähle „Freigeben“ oder „Ablehnen“.";
+
 export default function GuardianApprovalsPage() {
   // Lesen verlangt users:manage, Annehmen und Ablehnen users:update;
   // dieselbe Regel zeigt den Eintrag in der Elterngruppe (#3469).
@@ -60,6 +63,7 @@ export default function GuardianApprovalsPage() {
   return (
     <TenantPage
       title="Elternzugänge"
+      info={GUARDIAN_APPROVALS_INFO}
       stats={pendingCount === null ? null : `${pendingCount} offen`}
       statsLoading={pendingCount === null}
       loading={!isReady}

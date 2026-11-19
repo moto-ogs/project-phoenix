@@ -5,6 +5,9 @@ import { AdminEnrollmentPhaseDetail } from "~/components/enrollment/admin-enroll
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
+const PHASE_DETAIL_INFO =
+  "Hier siehst du alle Anmeldungen einer Anmeldephase und die freien Plätze je Angebot. Öffne eine Anmeldung aus der Liste, um sie zu prüfen.";
+
 interface PageProps {
   readonly params: Promise<{ tenant: string; phaseId: string }>;
 }
@@ -17,6 +20,7 @@ export default function AdminEnrollmentPhasePage({ params }: PageProps) {
     return (
       <TenantPage
         title="Anmeldephase"
+        info={PHASE_DETAIL_INFO}
         back
         backHref="/admin/enrollments"
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -26,5 +30,7 @@ export default function AdminEnrollmentPhasePage({ params }: PageProps) {
     );
   }
 
-  return <AdminEnrollmentPhaseDetail phaseId={phaseId} />;
+  return (
+    <AdminEnrollmentPhaseDetail phaseId={phaseId} info={PHASE_DETAIL_INFO} />
+  );
 }

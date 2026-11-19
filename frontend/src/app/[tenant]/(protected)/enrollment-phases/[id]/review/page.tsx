@@ -5,6 +5,9 @@ import { RolloverReviewQueue } from "~/components/enrollment/rollover-review-que
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
+const ROLLOVER_REVIEW_INFO =
+  "Hier stehen Kinder, die moto nicht selbst in die nächste Phase übernehmen konnte. Du entscheidest je Kind. Ist die Liste leer, gibt es nichts zu tun.";
+
 interface PageProps {
   readonly params: Promise<{ tenant: string; id: string }>;
 }
@@ -22,6 +25,7 @@ export default function RolloverReviewPage({ params }: PageProps) {
     return (
       <TenantPage
         title="Prüfliste"
+        info={ROLLOVER_REVIEW_INFO}
         back
         backHref="/enrollment-phases"
         backLabel="Zurück zu den Anmeldephasen"
@@ -31,5 +35,5 @@ export default function RolloverReviewPage({ params }: PageProps) {
     );
   }
 
-  return <RolloverReviewQueue phaseID={id} />;
+  return <RolloverReviewQueue phaseID={id} info={ROLLOVER_REVIEW_INFO} />;
 }

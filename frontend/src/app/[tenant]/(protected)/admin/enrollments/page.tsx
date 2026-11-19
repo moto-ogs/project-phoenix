@@ -23,6 +23,9 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 /** E-Mail „Neue Anmeldung" an die Person selbst, zum Einschalten (#3780). */
 const ENROLLMENT_EMAIL = "enrollment_submitted";
 
+const ENROLLMENTS_OVERVIEW_INFO =
+  "Hier siehst du alle Anmeldephasen mit ihren Anmeldungen. Wähle bei einer Phase „Anmeldungen ansehen“, um die Anmeldungen zu prüfen.";
+
 export default function AdminEnrollmentsPage() {
   // Jede Anmeldungsroute verlangt config:manage (#3469).
   const { isReady } = useRequirePermission("config:manage");
@@ -115,6 +118,7 @@ export default function AdminEnrollmentsPage() {
   return (
     <TenantPage
       title="Überblick"
+      info={ENROLLMENTS_OVERVIEW_INFO}
       stats={statusLine}
       statsLoading={summary === null}
       loading={!isReady}

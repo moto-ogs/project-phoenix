@@ -5,11 +5,21 @@ import { PhasesEditor } from "~/components/enrollment/phases-editor";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
+const ENROLLMENT_PHASES_INFO =
+  "Eine Anmeldephase legt fest, für welchen Betreuungszeitraum Eltern ihr Kind anmelden. Lege sie mit „Neue Anmeldephase“ an. Anmeldungen kommen nur in einer aktiven Phase an.";
+
 /** Kopfkarte samt Aktion trägt der Editor, weil „Neue Anmeldephase“ an seinen
  *  Zustand gebunden ist. Solange die Berechtigung geprüft wird, steht hier das
  *  Gerüst mit demselben Titel. */
 function PhasesPageSkeleton() {
-  return <TenantPage title="Anmeldephasen" statsLoading loading />;
+  return (
+    <TenantPage
+      title="Anmeldephasen"
+      info={ENROLLMENT_PHASES_INFO}
+      statsLoading
+      loading
+    />
+  );
 }
 
 export default function EnrollmentPhasesPage() {
@@ -19,7 +29,7 @@ export default function EnrollmentPhasesPage() {
 
   return (
     <Suspense fallback={<PhasesPageSkeleton />}>
-      <PhasesEditor />
+      <PhasesEditor info={ENROLLMENT_PHASES_INFO} />
     </Suspense>
   );
 }
