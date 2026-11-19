@@ -180,7 +180,7 @@ function notBilledLabel(children: number, released = false): string {
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const CARE_RUN_INFO =
-  "Hier rechnest du die Monatsbeiträge eines Monats ab. Es zählt der Vertrag, nicht die Anwesenheit. Prüfe zuerst die Vorschau, bevor du „Lauf freigeben“ wählst.";
+  "Hier rechnest du die Monatsbeiträge eines Monats ab. Es zählt der Vertrag, nicht die Anwesenheit. Prüfe zuerst die Rechnungen, bevor du den Lauf freigibst.";
 
 export default function TraegerCareRunPage() {
   const params = useParams<{ id: string }>();

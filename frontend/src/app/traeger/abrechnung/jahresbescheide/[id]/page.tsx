@@ -143,7 +143,7 @@ function childrenLabel(count: number): string {
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const NOTICE_RUN_INFO =
-  "Hier setzt du mit Jahresbescheiden den Beitrag für mehrere Monate fest. Die Familien zahlen ihn in monatlichen Raten. Prüfe zuerst die Zeilen, bevor du „Bescheide ausstellen“ wählst.";
+  "Hier setzt du mit Jahresbescheiden den Beitrag für mehrere Monate fest. Die Familien zahlen ihn in monatlichen Raten. Prüfe zuerst die Zeilen, bevor du die Bescheide ausstellst.";
 
 export default function TraegerCareNoticeRunPage() {
   const router = useRouter();

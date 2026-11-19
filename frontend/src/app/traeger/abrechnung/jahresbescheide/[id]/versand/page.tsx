@@ -255,7 +255,7 @@ function noticeColumns(
 
 /** Was die Seite ist und was man dort zuerst tut (#7596). */
 const NOTICE_DISPATCH_INFO =
-  "Hier sendest du die ausgestellten Jahresbescheide an die Familien. Wähle zuerst „Originale speichern“ und danach „An alle senden“.";
+  "Hier sendest du die ausgestellten Jahresbescheide an die Familien. Zuerst speicherst du die Originale, dann wählst du „An alle senden“.";
 
 export default function TraegerCareNoticeDeliveryPage() {
   const params = useParams<{ id: string }>();
