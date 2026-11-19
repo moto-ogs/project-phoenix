@@ -7,8 +7,13 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { TransitStudentsSection } from "~/components/rooms/transit-students-section";
 import { resolveDetailReferrer } from "~/lib/tenant-path";
-import { RoomsGridSkeleton } from "../page-skeleton";
 import { transitConcept } from "~/lib/concepts/transit";
+import TransitLoading from "./loading";
+
+const TRANSIT_INFO =
+  "Hier stehen Kinder, die da sind, aber in keinem Raum. Darfst du sie zuweisen, wählst du sie aus und setzt sie in einen Raum.";
+const TRANSIT_BINARY_MODE_INFO =
+  "Hier wären Kinder, die da sind, aber in keinem Raum. Deine Schule nutzt das zurzeit nicht.";
 
 /** Der Rückweg der Kindakte aus dieser Liste. */
 const TRANSIT_PATH = "/rooms/unterwegs";
@@ -37,8 +42,8 @@ function transitDayStatusFromReferrer(
  */
 export default function TransitPage() {
   return (
-    <BinaryModeGuard title="Unterwegs">
-      <Suspense fallback={<RoomsGridSkeleton />}>
+    <BinaryModeGuard title="Unterwegs" info={TRANSIT_BINARY_MODE_INFO}>
+      <Suspense fallback={<TransitLoading />}>
         <TransitPageContent />
       </Suspense>
     </BinaryModeGuard>
@@ -63,6 +68,7 @@ function TransitPageContent() {
   return (
     <TenantPage
       title="Unterwegs"
+      info={TRANSIT_INFO}
       stats={
         totalCount === null
           ? undefined

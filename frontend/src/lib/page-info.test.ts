@@ -31,8 +31,6 @@ const PORTALS = [
  * heraus. Lehrer-Seiten tragen das Präfix `school:`.
  */
 const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
-  "/absences",
-  "/activities",
   "/calendar-periods",
   "/dashboard",
   "/database/personal",
@@ -44,8 +42,6 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/database/students/ended-care",
   "/database/students/import",
   "/dateien",
-  "/day-log",
-  "/emergency",
   "/info-displays",
   "/lists",
   "/meal-plan",
@@ -54,19 +50,10 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/messages/groups",
   "/messages/groups/[groupThreadId]",
   "/parent-announcements/[id]",
-  "/parent-attention/[studentId]",
   "/payroll",
   "/profile",
   "/reminders",
-  "/rooms/[id]",
-  "/rooms/unterwegs",
   "/statistics",
-  "/students/[id]/change-history",
-  "/students/[id]/feedback-history",
-  "/students/[id]/room-history",
-  "/students/[id]/unfallanzeigen/[reportId]",
-  "/substitutions",
-  "/tagesinformationen",
   "/umfragen/[id]",
   "/vertretung",
   "/wochenprotokolle/[protocolId]",
@@ -82,6 +69,8 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
 const PAGES_WITHOUT_OWN_HEAD: Readonly<Record<string, string>> = {
   "/admin/change-requests": "Leitet zu /anfragen weiter (#2429).",
   "/admin/enrollments/change-requests": "Leitet zu /anfragen weiter (#2429).",
+  "/parent-attention/[studentId]":
+    "Leitet beim Neuladen in die Kindakte weiter (#7577).",
 };
 
 /** Die Einstiegsseiten der Betreuung, die #7565 erklärt. */

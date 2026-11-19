@@ -36,6 +36,9 @@ import { useSWRAuth } from "~/lib/swr";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { studentKeys } from "~/lib/swr/portal-keys";
 
+const ABSENCES_INFO =
+  "Hier siehst du, welche Kinder krank, entschuldigt oder auf Klassenfahrt sind. Wähle oben den Zeitraum. Eine neue Abwesenheit trägst du beim Kind ein.";
+
 const logger = createLogger({ component: "AbsencesPage" });
 
 const STATUS_COLORS: Record<StudentStatusKind, string> = {
@@ -304,6 +307,7 @@ export default function AbsencesPage() {
   return (
     <TenantPage
       title="Abwesenheiten"
+      info={ABSENCES_INFO}
       stats={statusLine}
       statsLoading={isLoading || !entries}
       actions={
