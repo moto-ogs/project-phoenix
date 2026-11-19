@@ -8,7 +8,7 @@ import type {
 } from "~/lib/staff-api";
 
 const quota: StaffVacationQuotaSummary = {
-  staff_id: 1,
+  staff_id: "1",
   year: storyNow().getFullYear(),
   entitled_days: 30,
   carryover_days: 2,
@@ -37,8 +37,8 @@ const quotaWithOpening: StaffVacationQuotaSummary = {
 };
 
 const pendingAbsence: StaffAbsenceRow = {
-  id: 1,
-  staff_id: 1,
+  id: "1",
+  staff_id: "1",
   absence_type: "vacation",
   date_start: "2026-08-10",
   date_end: "2026-08-12",
@@ -50,8 +50,8 @@ const pendingAbsence: StaffAbsenceRow = {
 };
 
 const upcomingAbsence: StaffAbsenceRow = {
-  id: 2,
-  staff_id: 1,
+  id: "2",
+  staff_id: "1",
   absence_type: "training",
   date_start: "2026-09-01",
   date_end: "2026-09-01",
@@ -62,8 +62,8 @@ const upcomingAbsence: StaffAbsenceRow = {
 };
 
 const historyAbsence: StaffAbsenceRow = {
-  id: 3,
-  staff_id: 1,
+  id: "3",
+  staff_id: "1",
   absence_type: "sick",
   date_start: "2026-05-02",
   date_end: "2026-05-03",

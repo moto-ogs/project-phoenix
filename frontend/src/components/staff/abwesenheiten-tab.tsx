@@ -284,9 +284,9 @@ export function AbwesenheitenTab({
   // Art ändern (#3258): erst Einträge in der Historie ankreuzen, dann den
   // Dialog öffnen. `null` heißt: kein Auswahlmodus.
   const [rebookSelection, setRebookSelection] =
-    useState<ReadonlySet<number> | null>(null);
+    useState<ReadonlySet<string> | null>(null);
   const [rebookOpen, setRebookOpen] = useState(false);
-  const [pendingActionId, setPendingActionId] = useState<number | null>(null);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [denyModal, setDenyModal] = useState<StaffAbsenceRow | null>(null);
   const [questionModal, setQuestionModal] = useState<StaffAbsenceRow | null>(
     null,
@@ -493,7 +493,7 @@ export function AbwesenheitenTab({
         : [],
     [history, rebookSelection],
   );
-  const toggleRebook = (id: number) =>
+  const toggleRebook = (id: string) =>
     setRebookSelection((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
@@ -1066,7 +1066,7 @@ function PendingAbsences({
 }: {
   readonly rows: StaffAbsenceRow[];
   readonly canEdit: boolean;
-  readonly pendingActionId: number | null;
+  readonly pendingActionId: string | null;
   readonly onApprove: (row: StaffAbsenceRow) => Promise<void>;
   readonly onDeny: (row: StaffAbsenceRow) => void;
   readonly onQuestion: (row: StaffAbsenceRow) => void;

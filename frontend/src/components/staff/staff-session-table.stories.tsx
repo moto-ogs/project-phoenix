@@ -71,8 +71,8 @@ const sessions: StaffHistorySession[] = [
 
 const absences: StaffAbsenceRow[] = [
   {
-    id: 1,
-    staff_id: 1,
+    id: "1",
+    staff_id: "1",
     absence_type: "sick",
     date_start: "2026-06-11",
     date_end: "2026-06-11",
