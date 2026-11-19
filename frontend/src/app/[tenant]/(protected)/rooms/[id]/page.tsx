@@ -90,8 +90,11 @@ function backLabelFor(referrer: string): string {
 }
 
 export default function RoomDetailPage() {
+  const roomInfo =
+    usePresenceMode() === "binary" ? ROOM_RECORD_INFO : ROOM_INFO;
+
   return (
-    <Suspense fallback={<RoomDetailLoadingPage />}>
+    <Suspense fallback={<RoomDetailLoadingPage info={roomInfo} />}>
       <RoomDetailPageContent />
     </Suspense>
   );
