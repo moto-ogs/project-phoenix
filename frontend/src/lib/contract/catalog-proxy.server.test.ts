@@ -15,27 +15,33 @@ let sessionReads = 0;
 type Handler = (...args: unknown[]) => Promise<unknown>;
 
 // Stands for the portal's handlers: each reads the session, then runs the
-// handler with the session's token. makePortalHandlers has its own tests.
+// handler with the session's token. makePortalHandlers has its own tests;
+// here each request records the options its handler was built with.
+let usedOptions: unknown;
 const noBody =
-  (handler: Handler) =>
+  (handler: Handler, options?: unknown) =>
   async (request: NextRequest, context: { params: Promise<unknown> }) => {
     sessionReads++;
+    usedOptions = options;
     return Response.json({
       data: await handler(request, "token", await context.params),
     });
   };
 const withBody =
-  (handler: Handler) =>
+  (handler: Handler, options?: unknown) =>
   async (request: NextRequest, context: { params: Promise<unknown> }) => {
     sessionReads++;
-    const body: unknown = await request.json();
+    usedOptions = options;
+    // Like parseRequestBody: an empty body reads as {}.
+    const text = await request.text();
+    const body: unknown = text ? JSON.parse(text) : {};
     return Response.json({
       data: await handler(request, body, "token", await context.params),
     });
   };
 const portal = {
   get: noBody,
-  del: noBody,
+  delWithBody: withBody,
   post: withBody,
   put: withBody,
   patch: withBody,
@@ -58,6 +64,30 @@ const routes: CatalogRoute[] = [
   // A legacy route with response variants has no single decoder.
   { method: "GET", pattern: "/parent/variants/", response: { full: row } },
   { method: "GET", pattern: "/parent/files/*", response: row },
+  {
+    method: "POST",
+    pattern: "/parent/codes",
+    noRetryAfterRenewal: "a renewed session would mail the code twice",
+    response: row,
+  },
+  {
+    method: "POST",
+    pattern: "/parent/batches",
+    maxBodyBytes: 64,
+    response: row,
+  },
+  // Backend paths beside the mount; the proxy reaches only the listed ones.
+  { method: "GET", pattern: "/analytics-policy", response: row },
+  { method: "GET", pattern: "/news-attachments/{id}", response: row },
+  { method: "GET", pattern: "/unlisted/{id}", response: row },
+  { method: "GET", pattern: "/rows/{id}", response: row },
+];
+
+const OUTSIDE = [
+  "/analytics-policy",
+  "/news-attachments",
+  "/parent-x",
+  "/rows",
 ];
 
 function call(
@@ -79,6 +109,7 @@ function call(
     "/parent",
     routes,
     method,
+    OUTSIDE,
   )(request, {
     params: Promise.resolve({ path }),
   });
@@ -93,6 +124,7 @@ describe("makeCatalogProxy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionReads = 0;
+    usedOptions = undefined;
   });
 
   it("forwards a registered read and answers its decoded data", async () => {
@@ -143,6 +175,12 @@ describe("makeCatalogProxy", () => {
     ["a dot segment in place of a parameter", "GET", ["rows", ".."]],
     ["a route with response variants", "GET", ["variants"]],
     ["a wildcard pattern", "GET", ["files", "a"]],
+    [
+      "a path beside the mount the list does not name",
+      "GET",
+      ["unlisted", "1"],
+    ],
+    ["a listed head the contract does not register", "GET", ["parent-x"]],
   ] as const)(
     "answers 404 for %s without reading the session",
     async (_name, method, path) => {
@@ -176,6 +214,13 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce(undefined);
     expect(await data(await call("DELETE", ["rows", "1"]))).toBeNull();
     expect(sessionReads).toBe(1);
+    expect(api.mock.calls[0]?.[3]).toBeUndefined();
+  });
+
+  it("sends the body of a DELETE that carries one", async () => {
+    api.mockResolvedValueOnce(undefined);
+    await call("DELETE", ["rows", "1"], "", { reason: "lost phone" });
+    expect(api.mock.calls[0]?.[3]).toEqual({ reason: "lost phone" });
   });
 
   it.each([
@@ -207,5 +252,44 @@ describe("makeCatalogProxy", () => {
     await expect(call("GET", ["rows", "1"])).rejects.toMatchObject({
       status: 502,
     });
+  });
+
+  it("runs a route with the no-retry trait once, also after a renewal", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    await call("POST", ["codes"], "", {});
+    expect(usedOptions).toEqual({
+      retry: { off: "a renewed session would mail the code twice" },
+    });
+  });
+
+  it("bounds the body of a route with a body limit", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    await call("POST", ["batches"], "", { ids: ["1"] });
+    expect(usedOptions).toEqual({ maxBodyBytes: 64 });
+  });
+
+  it("keeps the portal's defaults for a route without traits", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    await call("POST", ["rows"], "", { name: "Ada" });
+    expect(usedOptions).toEqual({});
+  });
+
+  it.each([
+    [["analytics-policy"], "/analytics-policy"],
+    [["news-attachments", "7"], "/news-attachments/7"],
+  ])(
+    "reaches the listed backend path %j beside the mount",
+    async (path, endpoint) => {
+      api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+      const response = await call("GET", path);
+      expect(await data(response)).toEqual({ name: "Ada" });
+      expect(api.mock.calls[0]?.[1]).toBe(endpoint);
+    },
+  );
+
+  it("prefers the route under the mount over one beside it", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    await call("GET", ["rows", "1"]);
+    expect(api.mock.calls[0]?.[1]).toBe("/parent/rows/1");
   });
 });

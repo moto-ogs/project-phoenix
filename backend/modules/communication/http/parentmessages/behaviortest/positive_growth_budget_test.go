@@ -79,7 +79,7 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 			}
 			opened := request("POST", "/threads", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q,"body":"message-%02d"}`, fmt.Sprint(chain.StudentID), fmt.Sprint(guardian.AccountID), created), false)
 			var detail struct {
-				Data messaging.ThreadDetailResponse
+				Data messaging.ParentChatThreadDetailResponse
 			}
 			require.NoError(t, json.Unmarshal(opened.Body.Bytes(), &detail))
 			threadIDs = append(threadIDs, detail.Data.ThreadID)
@@ -107,7 +107,9 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 			t.Logf("MEASURE parent_messages %s N%d=%d", entry.name, n, counter.Total())
 			switch entry.name {
 			case "guardians":
-				var out struct{ Data []messaging.GuardianResponse }
+				var out struct {
+					Data []messaging.MessageableGuardianResponse
+				}
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n)
 				for _, row := range out.Data {
@@ -115,7 +117,7 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "student_threads":
 				var out struct {
-					Data []messaging.InboxThreadResponse
+					Data []messaging.ParentChatInboxThreadResponse
 				}
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n)
@@ -125,7 +127,7 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "thread":
 				var out struct {
-					Data messaging.ThreadDetailResponse
+					Data messaging.ParentChatThreadDetailResponse
 				}
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data.Messages, n)

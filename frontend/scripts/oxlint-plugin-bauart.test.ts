@@ -162,6 +162,30 @@ describe.concurrent("bauart rules", () => {
       expect(output).toContain("bearbeiten");
     });
 
+    it("rejects „Ändern“ as the edit label of a row, not „nicht ändern“", async () => {
+      const { status, output } = await lintSource(
+        `import { Button } from "~/components/ui/button";
+      export function Probe({ rows }: { rows: { id: string; name: string }[] }) {
+        return (
+          <ul>
+            {rows.map((row) => (
+              <li key={row.id}>
+                <Button type="button" size="compact" aria-label={\`\${row.name} ändern\`}>Ändern</Button>
+                <Button type="button" size="compact">Ändern</Button>
+                <Button type="button" size="compact" aria-label={\`\${row.name} nicht ändern\`}>Nicht ändern</Button>
+                <Button type="button" size="compact">Änderung speichern</Button>
+              </li>
+            ))}
+          </ul>
+        );
+      }`,
+      );
+
+      expect(status).toBe(1);
+      expect(output.match(/bauart\(no-row-action-buttons\)/g)).toHaveLength(2);
+      expect(output).not.toContain("nicht ändern“");
+    });
+
     it("rejects text buttons in a DataTable column render", async () => {
       const { status, output } = await lintSource(
         `import { Button } from "~/components/ui/button";

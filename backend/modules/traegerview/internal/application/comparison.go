@@ -12,8 +12,8 @@ var _ traegerview.SchoolComparisons = (*Overview)(nil)
 
 // SchoolComparison returns the key figures of the chosen schools of the
 // Träger side by side (#4715, ADR 0245). It reads the series of the
-// utilization without the rooms and the captured Stichtagszahlen in one
-// administrative transaction, so the read costs the same statements for 3
+// utilization without the rooms and the roster of the window's last day in
+// one administrative transaction, so the read costs the same statements for 3
 // and for 100 schools. The answer holds counts only and is not written to the
 // access log (ADR 0084 section 7).
 func (o *Overview) SchoolComparison(ctx context.Context, organizationID int64, filter traegerview.ComparisonFilter) (traegerview.SchoolComparison, error) {
@@ -27,7 +27,7 @@ func (o *Overview) SchoolComparison(ctx context.Context, organizationID int64, f
 	}
 	days := utilizationWeekdays(filter.From, filter.To)
 	var schools []traegerview.SchoolUtilization
-	var keyDates []traegerview.SchoolKeyDateCount
+	var roster map[int64]map[int64]int64
 	err := o.read(ctx, organizationID, func(adminCtx context.Context, ids []int64) error {
 		scope, err := comparisonScope(ids, filter.SchoolIDs)
 		if err != nil || len(scope) == 0 {
@@ -41,7 +41,7 @@ func (o *Overview) SchoolComparison(ctx context.Context, organizationID int64, f
 		if err != nil {
 			return err
 		}
-		if keyDates, err = o.keyDates.ListTraegerKeyDateCounts(adminCtx, organizationID); err != nil {
+		if roster, err = o.rosters.ActiveStudentMembershipsByTenant(adminCtx, scope, filter.To.BerlinMidnight()); err != nil {
 			return err
 		}
 		for _, row := range rows {
@@ -52,7 +52,7 @@ func (o *Overview) SchoolComparison(ctx context.Context, organizationID int64, f
 	if err != nil {
 		return traegerview.SchoolComparison{}, err
 	}
-	result := compareSchools(schools, keyDates, filter.From, filter.To, len(days))
+	result := compareSchools(schools, roster, filter.From, filter.To, len(days))
 	result.AsOf = now
 	return result, nil
 }
@@ -80,20 +80,15 @@ func comparisonScope(ids, chosen []int64) ([]int64, error) {
 
 // compareSchools applies the definitions of traegerview.SchoolComparison to
 // the series of the chosen schools.
-func compareSchools(schools []traegerview.SchoolUtilization, keyDates []traegerview.SchoolKeyDateCount, from, to calendar.Date, days int) traegerview.SchoolComparison {
+func compareSchools(schools []traegerview.SchoolUtilization, roster map[int64]map[int64]int64, from, to calendar.Date, days int) traegerview.SchoolComparison {
 	result := traegerview.SchoolComparison{
 		From: from, To: to, Days: days,
 		Schools: make([]traegerview.ComparedSchool, 0, len(schools)),
 	}
-	newest := newestKeyDates(keyDates, from, to)
 	for _, school := range schools {
 		values := schoolFigures(school)
-		compared := traegerview.ComparedSchool{School: school.School, Values: values}
-		if count, ok := newest[school.ID]; ok {
-			values[traegerview.ComparisonActiveStudents] = float64(count.ActiveStudents)
-			keyDate := count.KeyDate
-			compared.KeyDate = &keyDate
-		}
+		values[traegerview.ComparisonActiveStudents] = float64(len(roster[school.ID]))
+		compared := traegerview.ComparedSchool{TraegerSchool: school.TraegerSchool, Values: values}
 		result.Schools = append(result.Schools, compared)
 		if school.AttendanceFrom != nil && school.AttendanceFrom.After(from) &&
 			(result.AttendanceFrom == nil || school.AttendanceFrom.After(*result.AttendanceFrom)) {
@@ -104,21 +99,6 @@ func compareSchools(schools []traegerview.SchoolUtilization, keyDates []traegerv
 	result.Average = averageFigures(result.Schools)
 	result.Together = togetherFigures(schools, result.Schools)
 	return result
-}
-
-// newestKeyDates picks, per school, the newest captured Stichtagszahl whose
-// key date lies in the window.
-func newestKeyDates(counts []traegerview.SchoolKeyDateCount, from, to calendar.Date) map[int64]traegerview.KeyDateCount {
-	newest := map[int64]traegerview.KeyDateCount{}
-	for _, count := range counts {
-		if count.KeyDate.Before(from) || count.KeyDate.After(to) {
-			continue
-		}
-		if current, ok := newest[count.SchoolID]; !ok || count.KeyDate.After(current.KeyDate) {
-			newest[count.SchoolID] = count.KeyDateCount
-		}
-	}
-	return newest
 }
 
 // schoolFigures derives the figures of one school from its series.

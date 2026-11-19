@@ -71,7 +71,22 @@ func (req *RecipientRequest) Bind(*http.Request) error { return nil }
 // FormatsRequest is the body of PUT /formats: the recipient of each named
 // format, null for the download.
 type FormatsRequest struct {
-	Assignments []exporttransfer.TraegerAssignment `json:"assignments"`
+	Assignments []AssignmentRequest `json:"assignments"`
+}
+
+// AssignmentRequest is one format of the body and its recipient, null for
+// the download.
+type AssignmentRequest struct {
+	Format      string `json:"format"`
+	RecipientID *int64 `json:"recipient_id"`
+}
+
+func (req *FormatsRequest) assignments() []exporttransfer.TraegerAssignment {
+	assignments := make([]exporttransfer.TraegerAssignment, len(req.Assignments))
+	for i, assignment := range req.Assignments {
+		assignments[i] = exporttransfer.TraegerAssignment{Format: assignment.Format, RecipientID: assignment.RecipientID}
+	}
+	return assignments
 }
 
 // Bind requires the list.
@@ -231,7 +246,7 @@ func (rs *RecipientResource) assign(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingExportFormatsInvalid))
 		return
 	}
-	page, err := rs.transfers.AssignFormats(r.Context(), organizationID, accountID, req.Assignments)
+	page, err := rs.transfers.AssignFormats(r.Context(), organizationID, accountID, req.assignments())
 	if err != nil {
 		renderError(w, r, err)
 		return

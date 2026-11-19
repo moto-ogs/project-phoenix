@@ -29,8 +29,8 @@ type ArrivalScheduleResponse struct {
 	UpdatedAt   string `json:"updated_at"`
 }
 
-// ArrivalExceptionResponse represents an arrival exception in API responses
-type ArrivalExceptionResponse struct {
+// StudentArrivalExceptionResponse represents an arrival exception in API responses
+type StudentArrivalExceptionResponse struct {
 	ID              int64   `json:"id"`
 	StudentID       int64   `json:"student_id"`
 	ExceptionDate   string  `json:"exception_date"`             // YYYY-MM-DD format
@@ -55,9 +55,9 @@ type ArrivalNoteResponse struct {
 
 // ArrivalDataResponse represents combined arrival data
 type ArrivalDataResponse struct {
-	Schedules  []ArrivalScheduleResponse  `json:"schedules"`
-	Exceptions []ArrivalExceptionResponse `json:"exceptions"`
-	Notes      []ArrivalNoteResponse      `json:"notes"`
+	Schedules  []ArrivalScheduleResponse         `json:"schedules"`
+	Exceptions []StudentArrivalExceptionResponse `json:"exceptions"`
+	Notes      []ArrivalNoteResponse             `json:"notes"`
 }
 
 // BulkArrivalScheduleRequest represents a request to update all weekly arrival schedules for a student
@@ -72,8 +72,8 @@ type ArrivalScheduleRequestItem struct {
 	Notes           *string `json:"notes,omitempty"`
 }
 
-// ArrivalExceptionRequest represents a request to create/update an arrival exception
-type ArrivalExceptionRequest struct {
+// StudentArrivalExceptionRequest represents a request to create/update an arrival exception
+type StudentArrivalExceptionRequest struct {
 	ExceptionDate        string  `json:"exception_date"`             // YYYY-MM-DD format
 	ExpectedArrival      *string `json:"expected_arrival,omitempty"` // HH:MM or null (null = absent)
 	ClearExpectedArrival bool    `json:"clear_expected_arrival,omitempty"`
@@ -146,8 +146,8 @@ func toArrivalScheduleModels(items []ArrivalScheduleRequestItem, studentID, staf
 	return schedules
 }
 
-// Bind implements render.Binder for ArrivalExceptionRequest
-func (r *ArrivalExceptionRequest) Bind(_ *http.Request) error {
+// Bind implements render.Binder for StudentArrivalExceptionRequest
+func (r *StudentArrivalExceptionRequest) Bind(_ *http.Request) error {
 	return validateCareExceptionRequest(
 		r.ExceptionDate,
 		r.ExpectedArrival,
@@ -247,8 +247,8 @@ func mapArrivalScheduleToResponse(s *careplan.ArrivalSchedule) ArrivalScheduleRe
 }
 
 // mapArrivalExceptionToResponse converts an arrival exception model to API response
-func mapArrivalExceptionToResponse(e *careplan.ArrivalException) ArrivalExceptionResponse {
-	resp := ArrivalExceptionResponse{
+func mapArrivalExceptionToResponse(e *careplan.ArrivalException) StudentArrivalExceptionResponse {
+	resp := StudentArrivalExceptionResponse{
 		ID:            e.ID,
 		StudentID:     e.StudentID,
 		ExceptionDate: e.ExceptionDate.Format(dateFormatISO),

@@ -38,7 +38,7 @@ export interface ContributionRule {
 export type ContributionRuleInput = Omit<ContributionRule, "id">;
 
 interface BackendRule {
-  id: number;
+  id: number | string;
   kind: ContributionRuleKind;
   valid_from: string;
   valid_until: string | null;
@@ -128,7 +128,7 @@ export interface CostBearer {
 export type CostBearerInput = Omit<CostBearer, "id" | "inUse">;
 
 interface BackendCostBearer {
-  id: number;
+  id: number | string;
   name: string;
   address: string;
   file_reference: string;
@@ -185,8 +185,10 @@ export async function deleteCostBearer(id: string): Promise<void> {
   );
 }
 
+// The Elternabrechnung of a holiday registration, at the backend path the
+// catalog proxy forwards (#2352).
 const registrationPath = (periodId: string, registrationId: string) =>
-  `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}`;
+  `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}`;
 
 /**
  * The frozen contribution of a registration, or what a confirmation would
@@ -207,7 +209,7 @@ export async function fetchHolidayContribution(
   const query = params.size > 0 ? `?${params.toString()}` : "";
   return contributionFromBackend(
     await traegerRequest<BackendContribution>(
-      `${registrationPath(periodId, registrationId)}/contribution${query}`,
+      `${registrationPath(periodId, registrationId)}${query}`,
     ),
   );
 }
@@ -256,7 +258,7 @@ export async function cancelHolidayRegistration(
   periodId: string,
   registrationId: string,
 ): Promise<void> {
-  await traegerRequest<{ id: number; status: string }>(
+  await traegerRequest<{ id: number | string; status: string }>(
     `${registrationPath(periodId, registrationId)}/cancel`,
     { method: "POST", body: {} },
   );
@@ -321,7 +323,7 @@ export interface HolidayFamilyDebtorNumbers {
 }
 
 interface BackendChildDebtorNumber {
-  child_id: number;
+  child_id: number | string;
   first_name: string;
   last_name: string;
   debtor_number: string;
@@ -340,7 +342,7 @@ function childNumberFromBackend(
 
 function childNumbersToBackend(
   numbers: readonly HolidayChildDebtorNumberInput[],
-): { child_id: number; debtor_number: string }[] {
+): { child_id: number | string; debtor_number: string }[] {
   return numbers.map((number) => ({
     child_id: Number(number.childId),
     debtor_number: number.debtorNumber,

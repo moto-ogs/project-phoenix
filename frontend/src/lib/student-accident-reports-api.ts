@@ -112,7 +112,7 @@ async function writeReport(
   method: "POST" | "PUT",
   body: unknown,
 ): Promise<string> {
-  const report = await bffJson<{ id: number }>(url, { method, body });
+  const report = await bffJson<{ id: number | string }>(url, { method, body });
   return report.id.toString();
 }
 

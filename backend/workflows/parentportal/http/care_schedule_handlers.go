@@ -51,15 +51,15 @@ type CareScheduleWeekdayResponse struct {
 // PendingCareRequestResponse is the child's open change request on the read
 // view, with the same "current → requested" diff staff see.
 type PendingCareRequestResponse struct {
-	ID              string                    `json:"id"`
-	CreatedAt       string                    `json:"created_at"`
-	Diff            []CareRequestDiffResponse `json:"diff"`
-	SubmittedBySelf bool                      `json:"submitted_by_self"`
+	ID              string                          `json:"id"`
+	CreatedAt       string                          `json:"created_at"`
+	Diff            []ParentCareRequestDiffResponse `json:"diff"`
+	SubmittedBySelf bool                            `json:"submitted_by_self"`
 }
 
-// CareRequestDiffResponse mirrors the messaging diff wire shape so the
+// ParentCareRequestDiffResponse mirrors the messaging diff wire shape so the
 // frontend's RequestDiffPanel renders it unchanged.
-type CareRequestDiffResponse struct {
+type ParentCareRequestDiffResponse struct {
 	Label    string   `json:"label"`
 	Old      string   `json:"old"`
 	New      string   `json:"new"`
@@ -77,10 +77,10 @@ type CareScheduleRequestBody struct {
 	Signature *declarationSignatureRequest `json:"signature,omitempty"`
 }
 
-func toCareRequestDiffResponses(entries []parentService.CareRequestDiffEntry) []CareRequestDiffResponse {
-	out := make([]CareRequestDiffResponse, 0, len(entries))
+func toCareRequestDiffResponses(entries []parentService.CareRequestDiffEntry) []ParentCareRequestDiffResponse {
+	out := make([]ParentCareRequestDiffResponse, 0, len(entries))
 	for _, e := range entries {
-		out = append(out, CareRequestDiffResponse{
+		out = append(out, ParentCareRequestDiffResponse{
 			Label:    e.Label,
 			Old:      e.Old,
 			New:      e.New,

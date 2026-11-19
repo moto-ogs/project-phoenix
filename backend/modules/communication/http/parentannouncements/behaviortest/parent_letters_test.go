@@ -25,6 +25,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -153,9 +154,11 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 
 	resource := announcement.NewResource(service, nil, time.Now)
 	resource.Letters = owners.NewParentLetterPrinter()
+	resource.Classes = classReach{classes: []string{"1a"}}
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
-	router.Mount("/api/parent-announcements", resource.Router(api.ProtectedTenantRoutes))
+	router.Mount(staffMount, resource.Router(api.ProtectedTenantRoutes))
+	router.Mount(schoolMount, resource.SchoolRouter(api.ProtectedSchoolRoutes))
 	send := func(method, path, bearer string, body any) *httptest.ResponseRecorder {
 		var reader *bytes.Reader
 		if body != nil {
@@ -273,4 +276,15 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	var left int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM users.parent_announcement_letter_copies WHERE announcement_id = ?`, created.Data.ID).Scan(ctx, &left))
 	require.Zero(t, left)
+
+	// A Lehrkraft in moto schule finds the same placeholders and previews
+	// the letter of a child of her class.
+	teacher := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(staff.ID), Sub: staff.Email, TenantID: testpkg.Tenant(t), Roles: []string{"lehrkraft"},
+		Scope: tenant.ScopeSchool, Permissions: []string{permissions.ClassDayParentLetterWrite}})
+	rec = send(http.MethodGet, schoolMount+"/letter-placeholders", teacher, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), `"name":"vorname"`)
+	rec = send(http.MethodPost, schoolMount+"/letter-preview", teacher, map[string]any{"body": "Hallo {{vorname}}", "student_id": fmt.Sprint(lina.StudentID)})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), "Hallo Lina")
 }

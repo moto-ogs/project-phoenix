@@ -46,16 +46,16 @@ type parentPreferences struct {
 	source deliveryModule.NotificationPreferences
 }
 
-func (s parentPreferences) GetForParent(ctx context.Context, accountID int64) (*parentAPI.PreferenceOverview, error) {
+func (s parentPreferences) GetForParent(ctx context.Context, accountID int64) (*parentAPI.ParentPreferenceOverview, error) {
 	row, err := s.source.GetForParent(ctx, accountID)
 	if row == nil {
 		return nil, err
 	}
-	out := &parentAPI.PreferenceOverview{TenantEnabled: row.TenantEnabled}
+	out := &parentAPI.ParentPreferenceOverview{TenantEnabled: row.TenantEnabled}
 	if row.Types != nil {
-		out.Types = make([]parentAPI.PreferenceState, len(row.Types))
+		out.Types = make([]parentAPI.ParentPreferenceState, len(row.Types))
 		for i, item := range row.Types {
-			out.Types[i] = parentAPI.PreferenceState(item)
+			out.Types[i] = parentAPI.ParentPreferenceState(item)
 		}
 	}
 	return out, err

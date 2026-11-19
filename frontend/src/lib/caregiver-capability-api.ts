@@ -331,7 +331,7 @@ class CaregiverCapabilityService {
 
   getOperatorAccountCapability(schoolId: string, accountId: string) {
     return requestCapability(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
     );
   }
 
@@ -341,7 +341,7 @@ class CaregiverCapabilityService {
     body: EnableCaregiverCapabilityRequest,
   ) {
     return requestCapability(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
       {
         method: "POST",
         body: JSON.stringify(body),
@@ -351,7 +351,7 @@ class CaregiverCapabilityService {
 
   disableOperatorAccountCapability(schoolId: string, accountId: string) {
     return requestCapability(
-      `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
+      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
       {
         method: "DELETE",
       },

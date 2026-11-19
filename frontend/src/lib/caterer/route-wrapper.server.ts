@@ -17,9 +17,14 @@ export const {
 
 /**
  * The caterer portal's proxy: forwards `/api/caterer/…` to the backend's `/caterer/…`
- * for the routes the contract registers for this portal.
+ * for the routes the contract registers for this portal, and the public
+ * routes under that mount without a session (`portalRoutes.public`).
  */
 export const catalogProxy = (
   routes: readonly CatalogRoute[],
   method: CatalogMethod,
-) => makeCatalogProxy(caterer, "/caterer", routes, method);
+  publicRoutes: readonly CatalogRoute[] = [],
+) =>
+  makeCatalogProxy(caterer, "/caterer", routes, method, [], {
+    routes: publicRoutes,
+  });

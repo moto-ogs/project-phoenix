@@ -29,6 +29,12 @@ import { createLogger } from "~/lib/logger";
 import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDebounce } from "~/lib/use-debounce";
+import type { StammdatenGender } from "~/lib/staff-api";
+import {
+  isStaffGender,
+  STAFF_GENDER_HINT,
+  STAFF_GENDER_OPTIONS,
+} from "~/lib/staff-gender";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
@@ -175,6 +181,7 @@ export function InvitationForm({
   existingPositions = EMPTY_POSITIONS,
 }: InvitationFormProps) {
   const [form, setForm] = useState<CreateInvitationRequest>(initialForm);
+  const [gender, setGender] = useState<"" | StammdatenGender>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Every failure of this form, validation included, comes from the server
   // and is shown on the shared error path (#2511): the message in the alert
@@ -261,6 +268,7 @@ export function InvitationForm({
         firstName: toOptional(form.firstName),
         lastName: toOptional(form.lastName),
         position: toOptional(form.position),
+        ...(gender === "" ? {} : { gender }),
         ...(formerEmployment
           ? {
               employmentAction: form.employmentAction ?? "resume",
@@ -281,6 +289,7 @@ export function InvitationForm({
       setSuccessInfo({ email: invitation.email, link });
       toastSuccess(`Einladung an ${invitation.email} wurde gesendet.`);
       setForm(() => initialForm);
+      setGender("");
       if (onCreated) {
         onCreated(invitation);
       }
@@ -420,6 +429,18 @@ export function InvitationForm({
             disabled={isSubmitting}
           />
         </div>
+
+        <CustomSelect
+          id="invitation-gender"
+          name="gender"
+          label="Geschlecht (optional)"
+          hint={STAFF_GENDER_HINT}
+          value={gender}
+          options={STAFF_GENDER_OPTIONS}
+          onChange={(value) => setGender(isStaffGender(value) ? value : "")}
+          disabled={isSubmitting}
+          error={errors.fieldError("gender")}
+        />
 
         <Button
           type="submit"

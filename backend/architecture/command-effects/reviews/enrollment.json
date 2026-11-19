@@ -2545,7 +2545,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolNames.HolidaySchoolNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/traegerview.Overview.Schools. ADR 0114: the export of the holiday registrations names the Träger's schools from the projection's school list, read in the projection's own administrative unit before the route opens the Träger transaction.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/traegerview.Overview.Schools. ADR 0114: the export of the holiday registrations names the Träger's schools from the projection's school list, read in the projection's own administrative unit before the route opens the Träger transaction. Re-reviewed for #2352: the projection's school type is named TraegerSchool now, the binding reads the same list.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/traegerview.Overview.Schools",
       "target_owner": "traeger-view"

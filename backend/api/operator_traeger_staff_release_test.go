@@ -33,17 +33,20 @@ func TestOperatorGrantsTheStaffReleaseWithAudit(t *testing.T) {
 	ctx := provisioningContext(t, db)
 	staffRelease, ok := belegRetentionAuditOf(t, service).(organizationtenancy.TraegerStaffReleaseChangeAudit)
 	require.True(t, ok)
-	operator := chi.NewRouter()
-	mountOperatorTraegerStaffReleaseRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{
+	inner := chi.NewRouter()
+	mountOperatorTraegerStaffReleaseRoutes(inner, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{
 		Service: service, TraegerStaffReleaseAudit: staffRelease,
 	}))
+	// Mounted under its production path, as the operator portal calls it.
+	operator := chi.NewRouter()
+	operator.Mount("/operator", inner)
 	call := func(method string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer
 		if body != nil {
 			require.NoError(t, json.NewEncoder(&payload).Encode(body))
 		}
-		req := httptest.NewRequest(method, fmt.Sprintf("/organizations/%d/staff-release", organizationID), &payload)
+		req := httptest.NewRequest(method, fmt.Sprintf("/operator/organizations/%d/staff-release", organizationID), &payload)
 		req.Header.Set("Content-Type", "application/json")
 		req = req.WithContext(context.WithValue(ctx, sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(operatorID), Scope: "platform"}))
 		rec := httptest.NewRecorder()

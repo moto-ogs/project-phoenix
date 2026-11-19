@@ -130,15 +130,18 @@ describe("getStaffDisplayType", () => {
     expect(result).toBe("Admin");
   });
 
-  it("returns role when set (Betreuer)", () => {
-    const staff = createSampleStaff({
-      role: "Betreuer",
-      isTeacher: true,
-      specialization: "Mathematics",
-    });
-    const result = getStaffDisplayType(staff);
-
-    expect(result).toBe("Betreuer");
+  it("returns role when set, in the form of the person's gender", () => {
+    const base = { role: "Betreuer", isTeacher: true, specialization: "Mathe" };
+    expect(
+      getStaffDisplayType(
+        createSampleStaff({ ...base, roleForm: "masculine" }),
+      ),
+    ).toBe("Betreuer");
+    expect(
+      getStaffDisplayType(createSampleStaff({ ...base, roleForm: "feminine" })),
+    ).toBe("Betreuerin");
+    // Ohne Angabe im Personal steht die neutrale Form, nie die männliche.
+    expect(getStaffDisplayType(createSampleStaff(base))).toBe("Betreuer:in");
   });
 
   it("returns role when set (Extern)", () => {
@@ -290,14 +293,14 @@ describe("getStaffCardInfo", () => {
     expect(result).toContain("M.Ed");
   });
 
-  it("includes Hauptbetreuer for primary supervision role", () => {
+  it("includes Hauptbetreuung for primary supervision role", () => {
     const staff = createSampleStaff({
       isSupervising: true,
       supervisionRole: "primary",
     });
     const result = getStaffCardInfo(staff);
 
-    expect(result).toContain("Hauptbetreuer");
+    expect(result).toContain("Hauptbetreuung");
   });
 
   it("includes Assistenz for assistant supervision role", () => {
@@ -317,7 +320,7 @@ describe("getStaffCardInfo", () => {
     });
     const result = getStaffCardInfo(staff);
 
-    expect(result).not.toContain("Hauptbetreuer");
+    expect(result).not.toContain("Hauptbetreuung");
   });
 
   it("combines qualifications and supervision role", () => {
@@ -329,7 +332,7 @@ describe("getStaffCardInfo", () => {
     const result = getStaffCardInfo(staff);
 
     expect(result).toContain("M.Ed");
-    expect(result).toContain("Hauptbetreuer");
+    expect(result).toContain("Hauptbetreuung");
     expect(result).toHaveLength(2);
   });
 });

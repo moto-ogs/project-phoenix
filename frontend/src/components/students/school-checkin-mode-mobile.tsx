@@ -16,6 +16,7 @@ import {
   type SelectAllControl,
 } from "~/components/students/school-checkin-select-all";
 import { SpinnerIcon } from "~/components/ui/icons";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 const CHECKIN_BAR_OFFSET_VAR = "--moto-checkin-bar-offset";
 // Measured bar height plus the install hint's clearance (#4358): 106 px in
@@ -158,7 +159,7 @@ export function SchoolCheckinModeMobile({
   // the bar visually floats above the nav with a clear separator.
   return (
     <div
-      className="fixed right-0 left-0 z-40 px-3"
+      className={`fixed right-0 left-0 z-40 px-3 ${FIXED_LAYER_SHIFT}`}
       style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
       data-checkin-mode-mobile="active"
     >

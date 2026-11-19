@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -29,9 +30,12 @@ type ownDayFederalState struct{}
 
 func (ownDayFederalState) ResolveString(context.Context, string) (string, error) { return "DE-NW", nil }
 
-func setupOwnDayRouter(t *testing.T) (chi.Router, *bun.DB) {
+// setupOwnDayRouter returns the router, its database and a hand that moves
+// the pinned clock on, so a block can end after it began.
+func setupOwnDayRouter(t *testing.T) (chi.Router, *bun.DB, func(time.Duration)) {
 	t.Helper()
-	clock := func() time.Time { return ownAllowancesNow }
+	var elapsed atomic.Int64
+	clock := func() time.Time { return ownAllowancesNow.Add(time.Duration(elapsed.Load())) }
 	db, capabilities := workforcetest.ComposeAdmin(t, clock)
 	schoolCalendar, err := api.NewSchoolCalendarWithAdministration(testpkg.NewDatabase(t, db), ownDayFederalState{}, func(context.Context) error { return nil }, nil)
 	require.NoError(t, err)
@@ -54,12 +58,12 @@ func setupOwnDayRouter(t *testing.T) (chi.Router, *bun.DB) {
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Mount("/api/time-tracking", resource.Router(timetracking.ScopeTestTenantRoutes(testpkg.TenantSessionGatesWithCaches(scopeTestSettingsCache))))
-	return router, db
+	return router, db, func(d time.Duration) { elapsed.Add(int64(d)) }
 }
 
 func TestOwnTimeTrackingDay_StampsBreaksAbsencesAndVacationThroughTheRoutes(t *testing.T) {
 	t.Parallel()
-	router, db := setupOwnDayRouter(t)
+	router, db, advance := setupOwnDayRouter(t)
 	staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Tessa", "Tag")
 	token := ownToken(t, account.ID, 0, "time_tracking:own")
 	do := func(method, path string, body any, want int) map[string]any {
@@ -98,6 +102,10 @@ func TestOwnTimeTrackingDay_StampsBreaksAbsencesAndVacationThroughTheRoutes(t *t
 	assert.Equal(t, session["id"], ended["id"])
 	noted := do(http.MethodPut, fmt.Sprintf("/%v", session["id"]), map[string]any{"notes": "Elterngespräch"}, http.StatusOK)
 	assert.Equal(t, "Elterngespräch", noted["notes"])
+	advance(4 * time.Hour)
+	left := do(http.MethodPost, "/check-out", nil, http.StatusOK)
+	assert.Equal(t, session["id"], left["id"])
+	assert.NotNil(t, left["check_out_time"], "the check-out closes the block")
 
 	history := do(http.MethodGet, "/history?from=2026-08-24&to=2026-08-24", nil, http.StatusOK)
 	blocks, _ := history["sessions"].([]any)
@@ -123,4 +131,19 @@ func TestOwnTimeTrackingDay_StampsBreaksAbsencesAndVacationThroughTheRoutes(t *t
 	assert.Equal(t, "vacation", vacation["absence_type"])
 	quota := do(http.MethodGet, "/vacation/quota?year=2026", nil, http.StatusOK)
 	assert.Equal(t, staffID, fmt.Sprint(quota["staff_id"]))
+
+	// A Rückfrage on the request is answered with a new note (#1419), then
+	// the request is withdrawn.
+	vacationPath := fmt.Sprintf("/absences/%v", vacation["id"])
+	_, err := db.NewUpdate().Table("active.staff_absences").Set("status = ?", "question").
+		Where("id = ?", vacation["id"]).Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+	resubmitted := do(http.MethodPost, vacationPath+"/resubmit", map[string]any{"note": "Vertretung steht"}, http.StatusOK)
+	assert.Equal(t, "requested", resubmitted["status"])
+	assert.Equal(t, "Vertretung steht", resubmitted["note"])
+	do(http.MethodPost, vacationPath+"/cancel", nil, http.StatusNoContent)
+	var status string
+	require.NoError(t, db.NewSelect().Table("active.staff_absences").Column("status").
+		Where("id = ?", vacation["id"]).Scan(testpkg.Ctx(t), &status))
+	assert.Equal(t, "canceled", status)
 }

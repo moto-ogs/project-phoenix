@@ -20,6 +20,7 @@ const (
 	KindArray    = "array"
 	KindMap      = "map"
 	KindRef      = "ref"
+	KindJSON     = "json" // any JSON value the owner stores and hands on unread
 )
 
 // Schema is one value on the wire.
@@ -82,6 +83,11 @@ type Route struct {
 	// NoData says the route answers a 204 or the envelope without data.
 	NoData   bool      `json:"no_data,omitempty"`
 	Variants *Variants `json:"variants,omitempty"`
+	// NoRetryAfterRenewal says why the proxy sends the request only once,
+	// also when it renewed the session after a 401.
+	NoRetryAfterRenewal string `json:"no_retry_after_renewal,omitempty"`
+	// MaxBodyBytes is the largest request body the proxy reads.
+	MaxBodyBytes int `json:"max_body_bytes,omitempty"`
 }
 
 // Key is the route's line in the route catalog.

@@ -53,6 +53,11 @@ type PartialAbsenceResponse struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+// partialAbsenceDeletedResponse confirms a removed partial absence.
+type partialAbsenceDeletedResponse struct {
+	Deleted bool `json:"deleted"`
+}
+
 func mapPartialAbsenceToResponse(row *careplan.PickupException) PartialAbsenceResponse {
 	response := PartialAbsenceResponse{
 		ID:        row.ID,
@@ -160,7 +165,7 @@ func (rs *Resource) deleteStudentPartialAbsence(w http.ResponseWriter, r *http.R
 		return
 	}
 	rs.registerPartialAbsenceBroadcasts(r, student.ID)
-	common.Respond(w, r, http.StatusOK, map[string]bool{"deleted": true}, "Partial absence deleted successfully")
+	common.Respond(w, r, http.StatusOK, partialAbsenceDeletedResponse{Deleted: true}, "Partial absence deleted successfully")
 }
 
 func (rs *Resource) requirePartialAbsenceWriteAccess(w http.ResponseWriter, r *http.Request, action string) *peopleModule.StudentState {

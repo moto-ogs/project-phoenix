@@ -25,6 +25,7 @@ export function traegerStaffPoolTopic(): HelpTopic {
         title: "Eine Person zum Springer machen",
         steps: [
           "Öffne `Personalakten` und dort die Akte der Person.",
+          "Öffne den Reiter `Verträge und Zeit`.",
           "Lege einen Arbeitsvertrag an, oder wähle beim Vertrag `Vertrag ändern`.",
           "Schalte `Vertretungspool` ein und speichere.",
         ],
@@ -41,7 +42,7 @@ export function traegerStaffPoolTopic(): HelpTopic {
         title: "Blockungen herunterladen",
         steps: [
           "Wähle mit den Pfeilen die Woche.",
-          "Wähle oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Blockungen dieser Woche.",
+          "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Blockungen dieser Woche.",
         ],
       },
     ],
@@ -60,7 +61,7 @@ export function traegerStaffPoolTopic(): HelpTopic {
       "Die Person braucht dafür ein Konto bei moto. Hat sie keins, lade sie an einer Schule ein.",
     ],
     differences: [
-      "Die Seite zeigt `Personal beim Träger ist noch nicht freigeschaltet`: Das moto-Team schaltet es frei.",
+      "Die Seite zeigt `Diese Funktion ist nicht eingeschaltet`: Personal beim Träger ist noch nicht freigeschaltet. Das moto-Team schaltet es frei.",
     ],
     related: [
       HELP_TOPICS.traegerStaffRecords,

@@ -33,6 +33,8 @@ type CreateInvitationRequest struct {
 	FirstName           string                          `json:"first_name"`
 	LastName            string                          `json:"last_name"`
 	Position            string                          `json:"position"`
+	// Gender is the optional Stammdaten gender; empty leaves it unset.
+	Gender string `json:"gender"`
 }
 
 func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
@@ -46,6 +48,7 @@ func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
 	req.Position = strings.TrimSpace(req.Position)
+	req.Gender = strings.TrimSpace(req.Gender)
 
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
@@ -59,6 +62,7 @@ func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
 		validation.Field(&req.FirstName, validation.Length(0, 100)),
 		validation.Field(&req.LastName, validation.Length(0, 100)),
 		validation.Field(&req.Position, validation.Length(0, 100)),
+		validation.Field(&req.Gender, validation.In("female", "male", "diverse")),
 		validation.Field(&req.ResetMasterData, noResetForNew),
 		validation.Field(&req.ResetQualifications, noResetForNew),
 		validation.Field(&req.ResetWorkTime, noResetForNew),
@@ -164,6 +168,10 @@ func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateInvitatio
 	if req.Position != "" {
 		position := req.Position
 		invitationReq.Position = &position
+	}
+	if req.Gender != "" {
+		gender := req.Gender
+		invitationReq.Gender = &gender
 	}
 	return invitationReq
 }
@@ -551,6 +559,11 @@ func (rs *Resource) resendInvitation(w http.ResponseWriter, r *http.Request) {
 		"invitation resend requested", "Invitation resent", "Invitation resent successfully")
 }
 
+// InvitationResendResponse confirms a resent invitation.
+type InvitationResendResponse struct {
+	Message string `json:"message"`
+}
+
 // resendInvitationHandler is the shared body of the staff and guardian
 // invitation resend endpoints: parse id, run the resend inside the tenant
 // tx (when transactions are wired), map expired/known errors, log, respond.
@@ -589,7 +602,7 @@ func (rs *Resource) resendInvitationHandler(w http.ResponseWriter, r *http.Reque
 	slog.Default().Info(logMsg,
 		slog.Int64("invitation_id", invitationID),
 		slog.Int64("account_id", int64(claims.ID)))
-	common.Respond(w, r, http.StatusOK, map[string]string{"message": message}, respondMsg)
+	common.Respond(w, r, http.StatusOK, InvitationResendResponse{Message: message}, respondMsg)
 }
 
 func (rs *Resource) revokeInvitation(w http.ResponseWriter, r *http.Request) {

@@ -13,6 +13,7 @@ import (
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 )
 
@@ -31,5 +32,9 @@ func NewStaffMembershipRuntime(users peoplePorts.PersonDirectory, education scho
 	if err != nil {
 		panic(err)
 	}
-	return bindStaffMembershipRuntime(users, education, staffDay, hub, offboarding, identity, logger, hooks)
+	genders, ok := workforceCompose.MustNewStaffEmployment(db.Pool()).(workforceModule.StaffGenderReader)
+	if !ok {
+		panic("staff membership runtime: the staff employment owner reads no genders")
+	}
+	return bindStaffMembershipRuntime(users, education, staffDay, genders, hub, offboarding, identity, logger, hooks)
 }

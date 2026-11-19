@@ -90,10 +90,10 @@ export interface BackendHistoryResponse {
 }
 
 export interface BackendWorkSessionEdit {
-  id: number;
-  session_id: number;
-  staff_id: number;
-  edited_by: number;
+  id: number | string;
+  session_id: number | string;
+  staff_id: number | string;
+  edited_by: number | string;
   field_name: string;
   old_value: string | null;
   new_value: string | null;
@@ -873,7 +873,7 @@ export function mapClosingDaysResponse(
 }
 
 export interface BackendMonthSummary {
-  staff_id: number;
+  staff_id: number | string;
   year: number;
   month: number;
   carry_in_minutes: number;
@@ -901,7 +901,7 @@ export interface BackendMonthSummary {
   closing_balance_minutes: number;
   is_closed?: boolean;
   closed_at?: string | null;
-  closed_by?: number | null;
+  closed_by?: number | string | null;
   closed_by_traeger?: boolean;
   close_reason?: string | null;
   frozen_closing_balance_minutes?: number | null;
@@ -912,12 +912,12 @@ export interface BackendMonthSummary {
 
 /** One Stundenkonto transaction (#1420): payout / comp-time grant / reset. */
 export interface BackendBalanceAdjustment {
-  id: number;
+  id: number | string;
   type: string;
   minutes_delta: number;
   effective_date: string;
   note: string;
-  decided_by: number;
+  decided_by: number | string;
   decided_at: string;
 }
 
@@ -1030,7 +1030,7 @@ export interface MonthSummary {
  * computed live and any divergence surfaces as drift on the MonthSummary.
  */
 export interface BackendMonthCloseSnapshot {
-  staff_id: number;
+  staff_id: number | string;
   year: number;
   month: number;
   closing_balance_minutes: number;
@@ -1040,11 +1040,11 @@ export interface BackendMonthCloseSnapshot {
   credited_minutes: number;
   adjustment_minutes: number;
   closed_at: string;
-  closed_by: number;
+  closed_by: number | string;
   close_reason?: string;
   source: string;
   reopened_at?: string;
-  reopened_by?: number;
+  reopened_by?: number | string;
   reopen_reason?: string;
 }
 

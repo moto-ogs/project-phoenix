@@ -33,13 +33,13 @@ Fehlerfälle. Es testet keinen echten S3-Anbieter und keine produktiven Daten.
 `devbox run -- node --test scripts/daily-backup-s3.integration.test.mjs` prüft
 den S3-Modus gegen einen lokalen S3-Endpunkt (`rclone serve s3`).
 
-**Produktiv nachzuweisen:** Einrichtung, tägliche Ausführung, separater
-deutscher Rechenzentrumsstandort, Zugangsrechte, Schlüsselverwahrung,
-Aufbewahrung einschließlich etwaiger Objektversionen, erste echte
-Wiederherstellung und AVV/TOM-Abgleich. Alarmzustellung und Bearbeitung fehlen
-als produktiver Nachweis; `OnFailure` schreibt ein zur neuen Regel passendes
-Journal-Ereignis. Alloy-Anbindung und Zustellung muss ein Mensch einrichten
-und Ende-zu-Ende prüfen (siehe unten).
+**Produktiv nachgewiesen (2026-11-18):** Einrichtung und Timer je Umgebung,
+Ziel in einem anderen Hetzner-Standort (fsn1, App in nbg1), Objektsperre und
+Aufbewahrung, Alloy-Anbindung und Zustellung eines ausgelösten
+Staging-Fehlers nach Slack. Die Wiederherstellung im Volume- und im S3-Modus
+wurde samt Löschprüfung auf Staging geprüft.
+**Offen:** Wiederherstellungsprobe der Produktion auf einer getrennten Maschine
+und AVV/TOM-Abgleich.
 Release-Snapshots haben eine eigene [Altersbereinigung](release-backup-rollback.md#snapshot-retention-slice-3836-c)
 (3836-c); deren Timer muss separat eingerichtet und nachgewiesen werden.
 Slice 3837-d ergänzt die unabhängige Löschungsliste und deren sperrende
@@ -218,9 +218,9 @@ Tool-Verträge: [age](https://github.com/FiloSottile/age),
 
 ## Ausfallerkennung und Bearbeitung (Mensch-Schritte)
 
-**Im Repo vorbereitet, nicht produktiv nachgewiesen:**
-`monitoring/grafana/provisioning/alerting/daily-backup.yml` ergänzt die alten
-cron-Regeln unverändert. Je Instanz ein eigener Stream,
+**Ausgerollt und zugestellt (2026-11-18):**
+`monitoring/grafana/provisioning/alerting/daily-backup.yml` ersetzt die alten
+cron-Regeln. Je Instanz ein eigener Stream,
 `{env="prod",service="daily-backup"}` für `production` und
 `{env="staging",service="daily-backup"}` für `staging`. Er verhindert, dass ein
 alter DB-Dump oder ein Erfolg der anderen Umgebung einen fehlenden
@@ -355,35 +355,18 @@ Quellen: [Journalquelle](https://grafana.com/docs/alloy/latest/reference/compone
 [Alloy-Validierung](https://grafana.com/docs/alloy/latest/reference/cli/validate/),
 [LogQL-Zeitfenster](https://grafana.com/docs/loki/latest/query/metric_queries/).
 
-## Ablösung der bestehenden cron-Sicherung (Mensch-Schritte)
+## Ablösung der bestehenden cron-Sicherung
 
-Die alten Regeln in `alerting/infrastructure.yml` suchen `Backup complete`
-und `Backup FAILED` im Stream `service="backup"`. Das ist ein Hinweis auf ein
-serverlokales Altverfahren, kein Nachweis seiner Eigenschaften. Ein Agent hat
-weder den Produktionshost noch den Monitoring-Host dafür gelesen.
+Am 2026-11-18 abgeschlossen (#7458). Die Wiederherstellung im S3-Modus wurde
+auf Staging samt Löschprüfung geprüft. Die Alarmzustellung nach Slack wurde
+geprüft. Danach wurden die beiden Einträge für `/root/scripts/backup.sh` in der
+Root-Crontab auskommentiert. Eine Kopie der vorherigen Crontab liegt auf dem
+Host. Die Regeln `dfsla2b54bgg0a` und `dfsla2b8noa2od` entfernt
+`infrastructure.yml` über `deleteRules`.
 
-1. Betreiber inventarisiert Cron-/Timer-Einträge, Skriptpfad und -version,
-   Zielanbieter/-standort, Verschlüsselung und Schlüsselzugriff, gesicherte
-   Inhalte (insbesondere `.env`, Rollen-Hashes, Datenbank und Dateien),
-   Aufbewahrung einschließlich Versionen/Replikaten und den tatsächlichen
-   Log-Dateipfad. Befund nur im geschützten Betriebsnachweis festhalten,
-   keine Skript-/Log-Kopien mit Secrets oder Personendaten ins Repo.
-2. Beide Verfahren parallel betreiben, bis die neue Tagessicherung einschließlich
-   Zieltrennung, Aufbewahrung und Zustellung abgenommen ist und daraus eine
-   erste echte Wiederherstellung samt Löschprüfung erfolgreich dokumentiert ist.
-   Alte Alarme bis dahin aktiv lassen. Ein grüner cron-Alarm bestätigt nicht
-   die neue Tagessicherung.
-3. Danach ausschließlich den identifizierten alten Sicherungsjob abschalten,
-   nicht allgemeine Cron-Dienste oder Release-Snapshots. Altbestände gesperrt
-   halten und spätestens 90 Tage nach ihrer jeweiligen Erstellung endgültig
-   löschen, einschließlich Versionen, Replikaten und temporärer Klartextkopien.
-   Bereits ältere Bestände nach Prüfung unverzüglich bereinigen; Abschaltung
-   setzt die Frist nicht neu in Gang. Löschung nachweisen.
-4. Erst danach alte Backup-Regeln gezielt über Provisioning entfernen
-   (`deleteRules`: `orgId: 1`, UIDs `dfsla2b54bgg0a` und `dfsla2b8noa2od`),
-   die beiden Regeldefinitionen aus `infrastructure.yml` nehmen und nur den
-   alten Log-Collector stilllegen. Das ist ein späterer geprüfter Change,
-   nicht Teil dieses PRs. Neue Regeln, Host-Alarme und Default-Policy erhalten.
+Die alten Dumps unter `/root/backups/<env>` sind unverschlüsselt und liegen auf
+dem App-Host. Sie bleiben bis zur Wiederherstellungsprobe der Produktion als
+Rückfall und werden spätestens 90 Tage nach ihrer Erstellung gelöscht.
 
 ## Wiederherstellung, App bleibt gesperrt
 

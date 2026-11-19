@@ -8,12 +8,12 @@ export default function StaffLoading() {
     // Titel und Suchfeld sind fest und rendern sofort im echten Gerüst; nur
     // die Statuszeile und die Kartenliste darunter skelettieren.
     <TenantPage
-      title="Mitarbeiter"
+      title="Mitarbeitende"
       statsLoading
       search={{
         value: "",
         onChange: () => {},
-        placeholder: "Mitarbeiter suchen…",
+        placeholder: "Mitarbeitende suchen…",
         inputProps: { disabled: true },
       }}
     >

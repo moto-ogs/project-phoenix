@@ -13,6 +13,7 @@ vi.mock("~/lib/staff-api", () => ({
   staffService: { createExternal, inviteExternal },
 }));
 
+import { ExternalCaregiverCreateModal } from "./external-caregiver-dialogs";
 import { ExternalCaregiverEntry } from "./external-caregiver-entry";
 
 function openEntry(): void {
@@ -382,5 +383,104 @@ describe("ExternalCaregiverEntry", () => {
       screen.getByRole("button", { name: "Externe Person eintragen" }),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Vorname")).not.toBeInTheDocument();
+  });
+});
+
+// „Externe Person anlegen“ in the Personalverwaltung asks for the optional
+// Stammdaten gender, like inviting staff; the quick entry does not.
+describe("ExternalCaregiverCreateModal", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createExternal.mockResolvedValue({
+      id: "90",
+      name: "Mia Platz",
+      isExternal: true,
+      externalAccountStatus: "none",
+    });
+  });
+
+  function fillNames(first: string, last: string): void {
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: first },
+    });
+    fireEvent.change(screen.getByLabelText("Nachname"), {
+      target: { value: last },
+    });
+  }
+
+  it("sends the chosen gender and omits it for Keine Angabe", async () => {
+    const onSaved = vi.fn();
+    render(
+      <ExternalCaregiverCreateModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+
+    fillNames("Mia", "Platz");
+    fireEvent.click(screen.getByLabelText("Geschlecht (freiwillig)"));
+    fireEvent.click(screen.getByRole("option", { name: "Weiblich" }));
+    fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+    expect(createExternal).toHaveBeenCalledWith({
+      firstName: "Mia",
+      lastName: "Platz",
+      organization: "",
+      access: "none",
+      gender: "female",
+    });
+
+    // A successful save starts the form again at „Keine Angabe“.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Vorname")).toHaveValue(""),
+    );
+    createExternal.mockClear();
+    fillNames("Tom", "Platz");
+    fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(2));
+    expect(createExternal).toHaveBeenCalledWith({
+      firstName: "Tom",
+      lastName: "Platz",
+      organization: "",
+      access: "none",
+    });
+  });
+
+  it("puts the server's gender field error on the gender field", async () => {
+    createExternal.mockRejectedValueOnce(
+      new ApiError("bad gender", 400, {
+        code: "general.input",
+        errors: [{ field: "gender", reason: "invalid" }],
+      }),
+    );
+    render(
+      <ExternalCaregiverCreateModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    fillNames("Mia", "Platz");
+    fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Geschlecht (freiwillig)")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      ),
+    );
+  });
+
+  it("leaves the gender out of the quick entry in the planning", () => {
+    render(<ExternalCaregiverEntry onAdded={vi.fn()} />);
+
+    openEntry();
+    // Anker: die Felder sind offen.
+    expect(screen.getByLabelText("Vorname")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Geschlecht (freiwillig)"),
+    ).not.toBeInTheDocument();
   });
 });

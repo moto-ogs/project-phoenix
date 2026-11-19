@@ -21,6 +21,10 @@ func (rs *Resource) listSchoolClasses(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
+	if classes == nil {
+		// A school without classes answers an empty list, never null.
+		classes = []string{}
+	}
 	common.Respond(w, r, http.StatusOK, classes, "School classes retrieved successfully")
 }
 

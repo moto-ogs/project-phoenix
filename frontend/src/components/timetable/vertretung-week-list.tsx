@@ -21,20 +21,21 @@
  * alle Termine sehen will, schaltet auf "Ganze Woche".
  */
 
-import {
-  CoverageIndicator,
-  type CoverageState,
-} from "~/components/ui/planning/coverage-indicator";
-import { Alert } from "~/components/ui/alert";
+import { CoverageIndicator } from "~/components/ui/planning/coverage-indicator";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { SECTION_LABEL_CLASS } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { ListGroupHeader } from "~/components/ui/list-group-header";
 import {
   classifyInstances,
   VertretungRowList,
+  vertretungRowFocusKey,
+  type ClassifiedRow,
   type VertretungDayListMode,
 } from "~/components/timetable/vertretung-day-list";
+import { useState, type ReactNode } from "react";
+
 import { formatDayHeader, toISODate } from "~/lib/timetable-helpers";
 import type { EnrichedInstance, GapInstance } from "~/lib/timetable-types";
 
@@ -42,6 +43,15 @@ import { VertretungListFilter } from "./vertretung-list-filter";
 import { cn } from "~/lib/utils";
 
 export interface VertretungWeekListProps {
+  /** Überschrift der Karte: sagt, wessen Termine sie zeigt. */
+  title: string;
+  /**
+   * Ein Hinweis für die ganze Woche, etwa der Ladefehler der Lücken mit
+   * „Wiederholen“. Er steht einmal über den Tagen, nicht in jedem Tag.
+   */
+  gapsNotice?: ReactNode;
+  /** Die Lücken laden noch: Platzhalter statt einer Aussage zur Besetzung. */
+  gapsLoading?: boolean;
   /** Die angezeigten Wochentage (Mo–Fr). */
   weekDays: Date[];
   /** Alle Instanzen der geladenen Woche (Filterung nach Tag passiert hier). */
@@ -64,11 +74,19 @@ export interface VertretungWeekListProps {
   onEdit: (instanceId: string) => void;
   /** Klick auf eine Tageskopfzeile — springt in die Tagesansicht des Tages. */
   onSelectDay: (dateISO: string) => void;
+  /** Weg in den Betreuungsplan eines Tages; siehe VertretungDayList. */
+  carePlanHrefFor?: (dateISO: string) => string;
   todayISO: string;
   className?: string;
 }
 
+/** Innenkante der Karte, dieselbe wie in der Tagesliste. */
+const LIST_INSET = "compact:px-4 px-5 max-sm:px-4";
+
 export function VertretungWeekList({
+  title,
+  gapsNotice,
+  gapsLoading = false,
   weekDays,
   instances,
   gaps,
@@ -80,31 +98,68 @@ export function VertretungWeekList({
   canManage,
   onEdit,
   onSelectDay,
+  carePlanHrefFor,
   todayISO,
   className,
 }: VertretungWeekListProps) {
-  // flex-col: die Filterzeile bleibt stehen, nur die Liste darunter scrollt.
+  // Was an einem Tag schon geregelt ist, steht eingeklappt unter seinen
+  // offenen Lücken (#7493): über die Woche fällt so auf, was noch zu tun ist.
+  const [openSettledDays, setOpenSettledDays] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const toggleSettled = (iso: string) =>
+    setOpenSettledDays((current) => {
+      const next = new Set(current);
+      if (!next.delete(iso)) next.add(iso);
+      return next;
+    });
+  const rowList = (rows: ClassifiedRow[]) => (
+    <VertretungRowList
+      rows={rows}
+      staffNames={staffNames}
+      canManage={canManage}
+      onEdit={onEdit}
+      carePlanHrefFor={carePlanHrefFor}
+      todayISO={todayISO}
+    />
+  );
+  // flex-col: Kopf und Hinweis bleiben stehen, nur die Liste darunter scrollt.
   return (
     <SectionCard
-      padding="none"
+      title={title}
+      description={
+        canManage
+          ? undefined
+          : "Nur zur Ansicht. Vertretungen trägt die Leitung ein."
+      }
+      action={
+        onModeChange ? (
+          <VertretungListFilter
+            mode={mode}
+            onModeChange={onModeChange}
+            allLabel="Ganze Woche"
+          />
+        ) : undefined
+      }
+      // Die Platzhalter des Ladezustands behalten den Innenrand der Karte.
+      flush={!gapsLoading}
+      loading={gapsLoading}
       overflow="visible"
       className={cn("flex flex-col", className)}
-      bodyClassName="flex min-h-0 flex-1 flex-col"
+      bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col"
       testId="vertretung-week-list"
     >
-      {onModeChange && (
-        <VertretungListFilter
-          mode={mode}
-          onModeChange={onModeChange}
-          allLabel="Ganze Woche"
-        />
+      {gapsNotice != null && (
+        <div className={`${LIST_INSET} shrink-0 pb-3`}>{gapsNotice}</div>
       )}
       {/* Der Scroll-Container sitzt INNERHALB der Karte (die Karte selbst
           bekommt vom Aufrufer nur die Höhe und overflow-hidden): so bleibt die
           Scrollleiste innerhalb des Rahmens und die abgerundeten Ecken bleiben
           sauber, statt dass die Leiste auf dem Rand klebt. Die sticky
           Tageskopfzeilen kleben an diesem Container. */}
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl">
+      {/* `scroll-pt`: was der Fokus in Sicht holt, landet unter der klebenden
+          Tageskopfzeile statt dahinter. */}
+      <div className="min-h-0 flex-1 scroll-pt-12 overflow-y-auto rounded-b-2xl">
         {weekDays.map((day) => {
           const iso = toISODate(day);
           const gapsAvailable =
@@ -120,29 +175,36 @@ export function VertretungWeekList({
             dayAcknowledged,
             gapsAvailable,
           );
-          const disturbed = classified.filter((row) => row.isDisturbed);
-          const visibleRows = mode === "ganzer-tag" ? classified : disturbed;
+          // Reihenfolge der Arbeit (#7493): zuerst, was offen ist, dann
+          // was geregelt ist, zuletzt die Termine wie geplant.
+          const open = classified.filter((row) => row.coverageState === "gap");
+          const settled = classified.filter(
+            (row) => row.isDisturbed && row.coverageState !== "gap",
+          );
+          // „Ganze Woche“ zeigt jeden Tag in seiner Reihenfolge nach Uhrzeit.
+          const visibleRows =
+            mode === "ganzer-tag" ? classified : [...open, ...settled];
+          const isPast = iso < todayISO;
+          const settledExpanded = openSettledDays.has(iso);
 
-          // Ohne geladene Lückendaten ist der Zähler unvollständig — dann einen
-          // Strich zeigen, nie eine erfundene 0 (Muster der Tagesansicht).
-          const coverageState: CoverageState = !gapsAvailable
-            ? "covered"
-            : dayGaps.length > 0
-              ? "gap"
-              : dayAcknowledged.length > 0
-                ? "acknowledged"
-                : "covered";
-          const countLabel = !gapsAvailable
-            ? "–"
-            : disturbed.length === 1
-              ? "1 Störung"
-              : `${disturbed.length} Störungen`;
+          // Die Kopfzeile nennt, was an dem Tag zu tun ist: die offenen
+          // Lücken. Ohne geladene Lückendaten bleibt sie still, statt eine 0
+          // zu erfinden (Muster der Tagesansicht).
+          const openLabel =
+            open.length === 0
+              ? "keine Lücke offen"
+              : open.length === 1
+                ? "1 offene Lücke"
+                : `${open.length} offene Lücken`;
 
           return (
             <section
               key={iso}
               data-testid={`vertretung-week-list-day-${iso}`}
-              className="border-b border-gray-200 last:border-b-0"
+              // Verlässt eine Zeile nach dem Speichern die Liste ganz, bleibt
+              // der Fokus an ihrem Tag (#7502).
+              data-focus-return-scope=""
+              className="border-b border-gray-100 last:border-b-0"
             >
               <button
                 type="button"
@@ -152,7 +214,7 @@ export function VertretungWeekList({
                 // Container mit der Höhe des Rasters setzt: beim Scrollen muss
                 // sichtbar bleiben, zu welchem Tag die Zeilen gehören. Deckender
                 // Hintergrund (kein /70), sonst scheinen die Zeilen durch.
-                className="sticky top-0 z-10 flex w-full items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 text-left transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none focus-visible:ring-inset"
+                className="compact:px-4 sticky top-0 z-10 flex w-full items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-5 py-2 text-left transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none focus-visible:ring-inset max-sm:px-4"
               >
                 <span className="flex items-center gap-2">
                   <span className={SECTION_LABEL_CLASS}>
@@ -162,52 +224,79 @@ export function VertretungWeekList({
                     <StatusBadge label="Heute" tone="gray" size="xs" />
                   )}
                 </span>
-                <CoverageIndicator
-                  size="sm"
-                  state={coverageState}
-                  label={countLabel}
-                  title={
-                    gapsAvailable
-                      ? `${disturbed.length} Störung(en) an diesem Tag`
-                      : "Störungslage für diesen Tag nicht verfügbar"
-                  }
-                />
+                {gapsAvailable && dayInstances.length > 0 && (
+                  <CoverageIndicator
+                    size="sm"
+                    state={open.length > 0 ? "gap" : "covered"}
+                    label={openLabel}
+                    title={`${openLabel} an diesem Tag`}
+                  />
+                )}
+                {/* Ein vergangener Tag hat keine Lückenzahl; das Wort sagt,
+                    warum die Stelle leer ist. */}
+                {!gapsAvailable && isPast && (
+                  <span className="text-xs text-gray-500">vorbei</span>
+                )}
               </button>
 
               {dayInstances.length === 0 ? (
-                <div className="px-3 py-1">
+                <div className={LIST_INSET}>
                   <EmptyState
                     variant="compact"
-                    title="Keine Termine an diesem Tag"
+                    description="Keine Termine an diesem Tag."
                   />
                 </div>
               ) : visibleRows.length === 0 ? (
-                <div className="px-3 py-1">
-                  <EmptyState
-                    variant="compact"
-                    title={
-                      gapsAvailable
-                        ? "Keine Störungen an diesem Tag"
-                        : "Störungslage konnte nicht geprüft werden"
-                    }
-                  />
-                </div>
+                // Ein vergangener Tag ohne Ausfall braucht keinen Satz: die
+                // Kopfzeile sagt „vorbei“.
+                isPast && !gapsAvailable ? null : (
+                  <div className={LIST_INSET}>
+                    <EmptyState
+                      variant="compact"
+                      description={
+                        gapsAvailable
+                          ? "Keine Lücke und kein Ausfall an diesem Tag."
+                          : "Kein Ausfall eingetragen."
+                      }
+                    />
+                  </div>
+                )
+              ) : mode === "ganzer-tag" ? (
+                rowList(visibleRows)
               ) : (
                 <>
-                  {!gapsAvailable && (
-                    <div className="px-3 pt-2">
-                      <Alert
-                        type="warning"
-                        message="Störungslage konnte nicht vollständig geprüft werden"
+                  {open.length > 0 && rowList(open)}
+                  {settled.length > 0 && (
+                    <>
+                      <ListGroupHeader
+                        as="h4"
+                        // Ohne Lückendaten weiß die Liste nicht, ob es
+                        // geregelt ist: sie nennt, was die Termine sagen.
+                        title={
+                          gapsAvailable
+                            ? "Schon geregelt"
+                            : "Abwesend oder abgesagt"
+                        }
+                        meta={settled.length}
+                        collapsible={{
+                          expanded: settledExpanded,
+                          onToggle: () => toggleSettled(iso),
+                          // Eine besetzte Lücke wandert hier hinein und ist
+                          // eingeklappt nicht zu sehen: der Gruppenname
+                          // nimmt dann ihren Fokus (#7502).
+                          focusReturn: settledExpanded
+                            ? undefined
+                            : settled
+                                .map((row) =>
+                                  vertretungRowFocusKey(row.instance.id),
+                                )
+                                .join(" "),
+                        }}
+                        className={LIST_INSET}
                       />
-                    </div>
+                      {settledExpanded && rowList(settled)}
+                    </>
                   )}
-                  <VertretungRowList
-                    rows={visibleRows}
-                    staffNames={staffNames}
-                    canManage={canManage}
-                    onEdit={onEdit}
-                  />
                 </>
               )}
             </section>

@@ -48,7 +48,7 @@ export function workTimeTemplatesTopic(): HelpTopic {
         title: "Eine Person in der Personalakte zuordnen",
         steps: [
           "Klappe in der Seitenleiste `Team` auf.",
-          "Öffne `Mitarbeiter` und wähle die Person.",
+          "Öffne `Mitarbeitende` und wähle die Person.",
           "Wähle oben `Arbeitszeitmodell` und rechts `Bearbeiten`.",
           "Wähle `Vorlage zuweisen` und die Vorlage.",
           "Wähle `Speichern`.",

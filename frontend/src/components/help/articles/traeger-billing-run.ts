@@ -59,11 +59,11 @@ export function traegerBillingRunTopic(): HelpTopic {
           "Du bearbeitest gerade einen Ferienzeitraum und willst zu seinen Rechnungen.",
         steps: [
           "Öffne den Ferienzeitraum unter `Ferienbetreuung`.",
-          "Wähle oben rechts `Zur Abrechnung`. Der Knopf steht bei `Planung`, `Formular` und `Anmeldungen`.",
+          "Öffne oben rechts das Menü mit den drei Punkten und wähle `Zur Abrechnung`. Der Eintrag steht bei `Planung`, `Formular` und `Anmeldungen`.",
           "Hat der Zeitraum genau einen Lauf, öffnet sich dieser Lauf. Sonst siehst du die Abrechnung nur mit den Läufen dieses Zeitraums.",
           "Den Filter `Ferienzeitraum` entfernst du mit dem Kreuz. Dann siehst du wieder alle Läufe.",
           "Hat der Zeitraum noch keinen Lauf, wähle `Lauf starten`. Der Zeitraum ist schon gewählt.",
-          "Im Lauf führt `Zum Ferienzeitraum` unter dem Titel zurück zur Planung.",
+          "Im Lauf führt das Menü mit den drei Punkten neben dem Titel mit `Zum Ferienzeitraum` zurück zur Planung.",
         ],
       },
       {
@@ -124,12 +124,12 @@ export function traegerBillingRunTopic(): HelpTopic {
         description:
           "Jede Familie bekommt ihr Schreiben als PDF im Anhang einer Mail. Hat die Familie ein Konto in der Eltern-App mit derselben Mail-Adresse, liegt es auch dort unter `Dokumente`. Familien ohne E-Mail gibst du das gedruckte Schreiben.",
         steps: [
-          "Wähle im freigegebenen Lauf bei `Versand per Mail` den Knopf `An alle Familien senden`. moto schickt nur Mails, die noch nicht gesendet sind.",
+          "Wähle im freigegebenen Lauf bei `Versand per Mail` den Knopf `An alle senden`. moto fragt vorher nach und schickt nur Mails, die noch nicht gesendet sind.",
           "Neben jeder Familie steht, was aus der Mail geworden ist. `Gesendet` heißt: Die Mail ist raus. `Zugestellt` heißt: Sie ist angekommen. `Nicht angekommen` und `Nicht zustellbar` heißen: Die Mail kam nicht an. `Als unerwünscht gemeldet` heißt: Die Mail kam an. Die Familie hat sie danach als unerwünscht gemeldet.",
           "Bei `Verzögert` kommt die Mail später an. Warte dann. `Erneut senden` steht erst danach wieder bereit. Spätestens bei `Überfällig` kannst du neu senden.",
           "Bei `Nicht gesendet` und `Abgemeldet` zählt, ob die Sperre noch besteht. Besteht sie, fehlt `Erneut senden`, und der Hinweis sagt, was zu tun ist. Drucke das Schreiben dann und gib es der Familie. Ist sie weg, kannst du neu senden.",
-          "Wähle bei dieser Familie `Erneut senden`. Mit `Senden` schickst du das Schreiben an eine einzelne Familie.",
-          "Wähle `Alle Schreiben drucken`. Du bekommst alle Schreiben des Laufs in einer Datei.",
+          "Wähle bei dieser Familie im Menü mit den drei Punkten `Erneut senden`. Mit `Senden` dort schickst du das Schreiben an eine einzelne Familie.",
+          "Wähle `Drucken` und dann `Alle Schreiben drucken`. Du bekommst alle Schreiben des Laufs in einer Datei.",
         ],
       },
       {
@@ -242,7 +242,7 @@ export function traegerBillingRunTopic(): HelpTopic {
     differences: [
       "Du siehst in der Navigation kein `Abrechnungsläufe`? Deine Rolle ist nicht Abrechnung. Frage im Träger-Büro nach dieser Rolle.",
       "Im Ferienzeitraum fehlt `Zur Abrechnung`? Der Zeitraum ist noch ein Entwurf, oder deine Rolle ist nicht Abrechnung.",
-      "Im Lauf fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
+      "Im Menü des Laufs fehlt `Zum Ferienzeitraum`? Deine Rolle darf die Ferienbetreuung nicht öffnen.",
       "`Lauf freigeben` lässt sich nicht wählen? Es fehlt das Muster der Rechnungsnummern, oder der Lauf hat keine Rechnung.",
       "Statt `Lauf freigeben` steht `Leeren Lauf verwerfen`? Der Lauf hat nichts abzurechnen. Verwirf ihn, dann ist der Ferienzeitraum frei.",
       "Du siehst oben in der Karte `Rechnungen` kein Menü mit den drei Punkten? Der Lauf ist noch nicht freigegeben.",

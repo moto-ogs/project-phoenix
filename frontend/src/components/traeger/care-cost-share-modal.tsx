@@ -249,6 +249,9 @@ export function CareCostShareModal({
   const valueField =
     draft?.mode === "amount" ? "share_cents" : "share_basis_points";
 
+  // Bewusst ein Modal, keine Bearbeitung am Objekt (BAUARTEN-SPEC Bauart 2
+  // Regel 3): ein Kostenanteil ist ein kleiner Listeneintrag ohne eigene
+  // Adresse, eine Route nur für dieses Formular wäre ein Umweg (#7409).
   return (
     <FormModal
       isOpen={target !== null}
@@ -372,7 +375,7 @@ export function CareCostShareModal({
               }
             />
             <Input
-              controlSize="touch"
+              controlSize="compact"
               id="care-cost-share-value"
               name={valueField}
               aria-label={
@@ -392,7 +395,7 @@ export function CareCostShareModal({
             />
           </div>
           <Input
-            controlSize="touch"
+            controlSize="compact"
             id="care-cost-share-reference"
             name="reference"
             label="Bescheid"

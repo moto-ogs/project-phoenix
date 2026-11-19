@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -1657,7 +1658,7 @@ func TestTokenManagement(t *testing.T) {
 // TestInvitationManagement tests invitation management endpoints
 func TestInvitationManagement(t *testing.T) {
 	t.Parallel()
-	_, router := setupProtectedRouter(t)
+	tc, router := setupProtectedRouter(t)
 	adminClaims := testutil.AdminTestClaims(1)
 
 	t.Run("list pending invitations", func(t *testing.T) {
@@ -1721,6 +1722,30 @@ func TestInvitationManagement(t *testing.T) {
 
 		assert.True(t, rr.Code == http.StatusNotFound || rr.Code == http.StatusInternalServerError,
 			"Expected 404 or 500, got %d. Body: %s", rr.Code, rr.Body.String())
+	})
+
+	// The staff portal's proxy forwards these two at /auth/invitations
+	// (#2352); each answers an open invitation of the school.
+	t.Run("resend and revoke an open invitation", func(t *testing.T) {
+		role := testpkg.GetOrCreateTestRole(t, tc.db, "user")
+		invitation := testpkg.CreateTestInvitationToken(t, tc.db, "resend-revoke", role.ID, 0, testpkg.DatabaseNow(t, tc.db).Add(24*time.Hour))
+		pending := func() bool {
+			req := testutil.NewJSONRequest(t, "GET", "/auth/invitations", nil)
+			rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:list"})
+			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+			return strings.Contains(rr.Body.String(), invitation.Email)
+		}
+		require.True(t, pending())
+
+		req := testutil.NewJSONRequest(t, "POST", fmt.Sprintf("/auth/invitations/%d/resend", invitation.ID), nil)
+		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		assert.Equal(t, "Invitation resent", testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]any)["message"])
+
+		req = testutil.NewJSONRequest(t, "DELETE", fmt.Sprintf("/auth/invitations/%d/", invitation.ID), nil)
+		rr = testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
+		require.Equal(t, http.StatusNoContent, rr.Code, rr.Body.String())
+		assert.False(t, pending(), "a revoked invitation is no longer pending")
 	})
 }
 

@@ -76,7 +76,7 @@ func (rs *BillingMonthResource) month(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.ModuleFailure(w, r, err, "failed to read the Mensa month")
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, month, "Mensa month retrieved successfully")
+	rs.runtime.Success(w, r, http.StatusOK, toBillingMonthResponse(month), "Mensa month retrieved successfully")
 }
 
 func (rs *BillingMonthResource) release(w http.ResponseWriter, r *http.Request) {
@@ -93,5 +93,5 @@ func (rs *BillingMonthResource) release(w http.ResponseWriter, r *http.Request) 
 		rs.runtime.ModuleFailure(w, r, err, "failed to release the Mensa month")
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, month, "Mensa month released successfully")
+	rs.runtime.Success(w, r, http.StatusOK, toBillingMonthResponse(month), "Mensa month released successfully")
 }

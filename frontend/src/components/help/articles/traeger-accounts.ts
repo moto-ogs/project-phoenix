@@ -27,22 +27,22 @@ export function traegerAccountsTopic(): HelpTopic {
         ],
       },
       {
-        title: "Namen eintragen oder ändern",
+        title: "Namen eintragen oder bearbeiten",
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
           "Öffne bei der Person das Menü mit den drei Punkten.",
-          "Wähle `Namen eintragen`. Hat die Person schon einen Namen, heißt der Eintrag `Namen ändern`.",
+          "Wähle `Namen eintragen`. Hat die Person schon einen Namen, heißt der Eintrag `Namen bearbeiten`.",
           "Trage den `Name` ein und wähle `Speichern`.",
         ],
       },
       {
-        title: "Rollen ändern",
+        title: "Rollen bearbeiten",
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
           "Öffne bei der Person das Menü mit den drei Punkten.",
-          "Wähle `Rollen ändern`.",
+          "Wähle `Rollen bearbeiten`.",
           "Wähle die Rollen und dann `Speichern`.",
         ],
       },
@@ -52,7 +52,7 @@ export function traegerAccountsTopic(): HelpTopic {
         steps: [
           "Wähle unten in der Navigation `Einstellungen`.",
           "Wähle `Mitglieder und Rollen`.",
-          "Wähle oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
           "Den Verlauf lädst du mit `Herunterladen` beim `Verlauf` herunter.",
         ],
       },

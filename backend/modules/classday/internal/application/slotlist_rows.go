@@ -13,10 +13,10 @@ import (
 
 // enrichEntries filters by source/read access, resolves names/classes/groups,
 // and maps to display rows.
-func (s *service) enrichEntries(ctx context.Context, entries []mergedEntry, source classday.Source, access studentReadAccess, date calendar.Date) ([]classday.Row, error) {
+func (s *service) enrichEntries(ctx context.Context, entries []mergedEntry, source classday.Source, access studentReadAccess, date calendar.Date) ([]classday.SlotListRow, error) {
 	filtered := entriesMatchingSource(entries, source)
 	if len(filtered) == 0 {
-		return []classday.Row{}, nil
+		return []classday.SlotListRow{}, nil
 	}
 	students, err := s.entryStudents(ctx, filtered)
 	if err != nil {
@@ -27,11 +27,11 @@ func (s *service) enrichEntries(ctx context.Context, entries []mergedEntry, sour
 		return nil, err
 	}
 	if len(filtered) == 0 {
-		return []classday.Row{}, nil
+		return []classday.SlotListRow{}, nil
 	}
 	readableStudents, personIDs, groupIDs := readableEntryStudents(filtered, students, access)
 	if len(readableStudents) == 0 {
-		return []classday.Row{}, nil
+		return []classday.SlotListRow{}, nil
 	}
 	persons, groups, err := s.entryDisplayFacts(ctx, personIDs, groupIDs)
 	if err != nil {
@@ -172,8 +172,8 @@ func (s *service) entryDisplayFacts(ctx context.Context, personIDs, groupIDs []i
 	return persons, groups, nil
 }
 
-func entryDisplayRows(filtered []mergedEntry, readableStudents map[int64]*peopledirectory.Student, persons map[int64]*peopledirectory.Person, groups map[int64]schoolstructure.Group, source classday.Source) []classday.Row {
-	rows := make([]classday.Row, 0, len(filtered))
+func entryDisplayRows(filtered []mergedEntry, readableStudents map[int64]*peopledirectory.Student, persons map[int64]*peopledirectory.Person, groups map[int64]schoolstructure.Group, source classday.Source) []classday.SlotListRow {
+	rows := make([]classday.SlotListRow, 0, len(filtered))
 	for _, entry := range filtered {
 		student := readableStudents[entry.StudentID]
 		if student == nil {
@@ -189,7 +189,7 @@ func entryDisplayRows(filtered []mergedEntry, readableStudents map[int64]*people
 				groupName = group.Name
 			}
 		}
-		rows = append(rows, classday.Row{
+		rows = append(rows, classday.SlotListRow{
 			StudentID:   entry.StudentID,
 			Name:        person.FullName(),
 			SchoolClass: student.SchoolClass,
@@ -315,7 +315,7 @@ func statusLabel(entry mergedEntry, source classday.Source) string {
 	}
 }
 
-func countRows(rows []classday.Row, source classday.Source) classday.Counters {
+func countRows(rows []classday.SlotListRow, source classday.Source) classday.Counters {
 	// A slot list may include several offerings and the same child can hold one
 	// row in each, but these counters are child headcounts — the export subtitle
 	// labels them "geplante Kinder" / "anwesende Kinder", not assignment entries.

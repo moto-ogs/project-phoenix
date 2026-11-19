@@ -139,6 +139,23 @@ async function openMenu(email: string) {
   fireEvent.click(menu!);
 }
 
+/**
+ * Opens the download menu of a list: the members' export sits in the page
+ * menu (#7416), the history's on its table head.
+ */
+async function openDownload(label: string) {
+  if (label === "Verlauf herunterladen") {
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    return;
+  }
+  expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
+  fireEvent.click(
+    (await screen.findAllByRole("button", { name: "Weitere Aktionen" })).at(
+      -1,
+    )!,
+  );
+}
+
 describe("TraegerAccountsPage", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
@@ -183,8 +200,8 @@ describe("TraegerAccountsPage", () => {
       const view = render(<View open />, { wrapper: Providers });
       expect(await screen.findByText("Lea Leitung")).toBeVisible();
       expect((await screen.findAllByText("Rollen geändert"))[0]).toBeVisible();
-      fireEvent.click(screen.getByRole("button", { name: downloadLabel }));
-      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      await openDownload(downloadLabel);
+      fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       expect(
         (
           await screen.findAllByText(
@@ -213,7 +230,7 @@ describe("TraegerAccountsPage", () => {
   );
 
   it.each([
-    "Rollen ändern",
+    "Rollen bearbeiten",
     "Namen eintragen",
     "Einladung zurücknehmen",
     "Person einladen",
@@ -305,7 +322,7 @@ describe("TraegerAccountsPage", () => {
 
     await openMenu("kasse@traeger.example");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
     );
     const dialog = await screen.findByRole("dialog");
     const billing = within(dialog).getByRole("checkbox", {
@@ -345,7 +362,7 @@ describe("TraegerAccountsPage", () => {
     expect(labels).toBeInTheDocument();
     await openMenu("verwaltung@traeger.example");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -374,7 +391,7 @@ describe("TraegerAccountsPage", () => {
 
     await openMenu("leitung@traeger.example");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
     );
     const dialog = await screen.findByRole("dialog");
     const leadership = within(dialog).getByRole("checkbox", {
@@ -416,7 +433,7 @@ describe("TraegerAccountsPage", () => {
 
     await openMenu("leitung@traeger.example");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -437,7 +454,7 @@ describe("TraegerAccountsPage", () => {
     ).toBeInTheDocument();
     await openMenu("leitung@traeger.example");
     expect(
-      await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "Aus dem Träger-Büro entfernen" }),
@@ -586,7 +603,7 @@ describe("TraegerAccountsPage", () => {
 
     await openMenu("leitung@traeger.example");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Namen ändern" }),
+      await screen.findByRole("menuitem", { name: "Namen bearbeiten" }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByLabelText(/Name/)).toHaveValue("Lea Leitung");
@@ -679,12 +696,8 @@ describe("TraegerAccountsPage", () => {
       renderPage();
       await screen.findAllByText("kasse@traeger.example");
       await screen.findAllByText("Rollen geändert");
-      fireEvent.click(
-        screen.getByRole("button", {
-          name: downloadLabel,
-        }),
-      );
-      fireEvent.click(await screen.findByRole("menuitem", { name: "Excel" }));
+      await openDownload(downloadLabel);
+      fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       const closeToast = await screen.findByRole("button", {
         name: "Schließen",
       });
@@ -720,7 +733,7 @@ describe("TraegerAccountsPage", () => {
 
     await openMenu("kasse@traeger.example");
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
     );
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("checkbox", { name: /Personal/ }));
@@ -757,7 +770,7 @@ describe("TraegerAccountsPage", () => {
       );
       await openMenu("kasse@traeger.example");
       fireEvent.click(
-        await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+        await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
       );
       expect(await screen.findByRole("dialog")).toBeVisible();
       resetPageReloads();
@@ -835,7 +848,7 @@ describe("TraegerAccountsPage", () => {
 
       await openMenu("kasse@traeger.example");
       fireEvent.click(
-        await screen.findByRole("menuitem", { name: "Rollen ändern" }),
+        await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
       );
       const dialog = await screen.findByRole("dialog");
       fireEvent.click(

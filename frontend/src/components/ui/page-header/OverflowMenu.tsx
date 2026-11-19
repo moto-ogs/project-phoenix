@@ -573,6 +573,10 @@ export function OverflowMenu({
                         if (entry.disabled) return;
                         if (!(entry.kind === "checkbox" && entry.keepOpen)) {
                           setIsOpen(false);
+                          // As with the keyboard: the clicked entry unmounts
+                          // with the menu, a dialog it opens returns the
+                          // focus to the trigger (#7502).
+                          triggerRef.current?.focus();
                         }
                         entry.onClick();
                       }}
@@ -725,6 +729,10 @@ export function OverflowMenu({
                     onClick={() => {
                       if (item.disabled) return;
                       setIsOpen(false);
+                      // As with the keyboard: the clicked entry unmounts with
+                      // the menu, a dialog it opens returns the focus to the
+                      // trigger (#7502).
+                      triggerRef.current?.focus();
                       item.onClick();
                     }}
                     onKeyDown={onItemKey(item)}

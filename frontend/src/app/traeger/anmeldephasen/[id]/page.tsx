@@ -153,6 +153,25 @@ export default function TraegerCatalogPhasePage() {
       }
       error={shownError}
       loading={!loadError && !(phase && schools)}
+      overlays={
+        <ConfirmationModal
+          isOpen={withdrawOpen}
+          onClose={() => setWithdrawOpen(false)}
+          onConfirm={() => void confirmWithdraw()}
+          title="Anmeldephase zurückziehen?"
+          confirmText="Zurückziehen"
+          confirmVariant="danger"
+          isConfirmLoading={withdrawing}
+          loadingText="Wird zurückgezogen…"
+        >
+          <p className="text-sm text-gray-700">
+            Die Anmeldephase und ihre Angebote verschwinden aus allen Schulen,
+            sobald du das nächste Mal überträgst. Gibt es dort schon Anmeldungen
+            oder Buchungen, schaltet moto sie nur aus. Das lässt sich nicht
+            rückgängig machen.
+          </p>
+        </ConfirmationModal>
+      }
     >
       {phase && schools ? (
         <>
@@ -163,6 +182,16 @@ export default function TraegerCatalogPhasePage() {
                 withdrawn
                   ? "Die Anmeldephase ist zurückgezogen. In den Schulen ist sie erst weg, wenn du überträgst. Öffne dazu „Vorschau ansehen“."
                   : "Die Schulen haben noch nicht den aktuellen Stand. Öffne „Vorschau ansehen“ und übertrage danach."
+              }
+              action={
+                <ButtonLink
+                  href={previewHref}
+                  variant="surface"
+                  size="compact"
+                  tooltip="Zeigt, was die Schulen bekommen, noch ohne etwas zu übertragen."
+                >
+                  Vorschau ansehen
+                </ButtonLink>
               }
             />
           ) : null}
@@ -188,23 +217,6 @@ export default function TraegerCatalogPhasePage() {
               onCancel={() => setFormKey((key) => key + 1)}
             />
           )}
-          <ConfirmationModal
-            isOpen={withdrawOpen}
-            onClose={() => setWithdrawOpen(false)}
-            onConfirm={() => void confirmWithdraw()}
-            title="Anmeldephase zurückziehen?"
-            confirmText="Zurückziehen"
-            confirmVariant="danger"
-            isConfirmLoading={withdrawing}
-            loadingText="Wird zurückgezogen…"
-          >
-            <p className="text-sm text-gray-700">
-              Die Anmeldephase und ihre Angebote verschwinden aus allen Schulen,
-              sobald du das nächste Mal überträgst. Gibt es dort schon
-              Anmeldungen oder Buchungen, schaltet moto sie nur aus. Das lässt
-              sich nicht rückgängig machen.
-            </p>
-          </ConfirmationModal>
         </>
       ) : null}
     </TenantPage>

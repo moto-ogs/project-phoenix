@@ -13,8 +13,6 @@ import { useTraegerCatalogPhase } from "~/components/traeger/use-traeger-catalog
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { EmptyState } from "~/components/ui/empty-state";
-import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -117,6 +115,19 @@ export default function TraegerCatalogPreviewPage() {
         ) : null
       }
       statsLoading={loading && !rollout}
+      overflowMenu={
+        rollout
+          ? undefined
+          : [
+              {
+                label: "Vorschau neu laden",
+                description:
+                  "Berechnet die Vorschau mit dem aktuellen Stand neu, ohne etwas zu ändern.",
+                disabled: loading || rollingOut,
+                onClick: () => void loadPreview(),
+              },
+            ]
+      }
       actions={
         rollout ? (
           <ButtonLink
@@ -128,64 +139,48 @@ export default function TraegerCatalogPreviewPage() {
             Zur Anmeldephase
           </ButtonLink>
         ) : (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={() => void loadPreview()}
-              disabled={loading || rollingOut}
-              tooltip="Berechnet die Vorschau mit dem aktuellen Stand neu, ohne etwas zu ändern."
-            >
-              Vorschau neu laden
-            </Button>
-            <Button
-              type="button"
-              variant="success"
-              size="md"
-              onClick={() => void release()}
-              disabled={!preview || loading || preview.schools.length === 0}
-              disabledReason={
-                preview && !loading && preview.schools.length === 0
-                  ? "Wähle zuerst in der Anmeldephase die Schulen aus."
-                  : undefined
-              }
-              tooltip="Überträgt die Anmeldephase sofort an die Schulen der Vorschau."
-              isLoading={rollingOut}
-              loadingText="Wird übertragen…"
-            >
-              Freigeben und übertragen
-            </Button>
-          </>
+          <Button
+            type="button"
+            variant="success"
+            size="md"
+            onClick={() => void release()}
+            disabled={!preview || loading || preview.schools.length === 0}
+            disabledReason={
+              preview && !loading && preview.schools.length === 0
+                ? "Wähle zuerst in der Anmeldephase die Schulen aus."
+                : undefined
+            }
+            tooltip="Überträgt die Anmeldephase sofort an die Schulen der Vorschau."
+            isLoading={rollingOut}
+            loadingText="Wird übertragen…"
+          >
+            Freigeben und übertragen
+          </Button>
         )
       }
       error={previewError ?? schoolsError}
       loading={(loading && !preview && !rollout) || !schools}
+      empty={
+        schools && preview && !rollout && preview.schools.length === 0
+          ? {
+              title: "Keine Schule bekommt etwas.",
+              description:
+                "Wähle in der Anmeldephase bei „Schulen“ aus, wer sie bekommt.",
+            }
+          : null
+      }
     >
       {schools && rollout ? (
         <RolloutResultCard rollout={rollout} schools={schools} />
       ) : null}
       {schools && preview && !rollout ? (
-        preview.schools.length === 0 ? (
-          <SectionCard>
-            <EmptyState
-              title="Keine Schule bekommt etwas."
-              description="Wähle in der Anmeldephase bei „Schulen“ aus, wer sie bekommt."
-            />
-          </SectionCard>
-        ) : (
-          // Equal school cards in a grid: grids do not grow (TenantPage body
-          // rule), so the last school keeps its height like its siblings.
-          <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
-            {preview.schools.map((plan) => (
-              <SchoolPlanCard
-                key={plan.schoolId}
-                plan={plan}
-                schools={schools}
-              />
-            ))}
-          </div>
-        )
+        // Equal school cards in a grid: grids do not grow (TenantPage body
+        // rule), so the last school keeps its height like its siblings.
+        <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
+          {preview.schools.map((plan) => (
+            <SchoolPlanCard key={plan.schoolId} plan={plan} schools={schools} />
+          ))}
+        </div>
       ) : null}
     </TenantPage>
   );

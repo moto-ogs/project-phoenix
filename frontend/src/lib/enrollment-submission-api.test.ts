@@ -404,7 +404,14 @@ describe("enrollment-submission-api", () => {
       formSchemaId: "81",
       termsFingerprint: "shown-terms",
     };
-    mockFetch.mockResolvedValueOnce(jsonResponse({ confirmed: 3 }));
+    // The proxy's envelope: the count is its data.
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        message: "Success",
+        data: { confirmed: 3 },
+      }),
+    );
     await expect(confirmRenewal("tok", accepted)).resolves.toBe(3);
     // The ticks travel with the form version the page showed (#6456).
     const [, init] = mockFetch.mock.calls.at(-1) as [string, RequestInit];

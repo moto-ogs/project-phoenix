@@ -11,32 +11,38 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// hireRequest is „Person einstellen“ (#7206): the person, the contract and
+// HireRequest is „Person einstellen“ (#7206): the person, the contract and
 // the Soll Monday to Friday of each Einsatzort.
-type hireRequest struct {
-	FirstName       string  `json:"first_name"`
-	LastName        string  `json:"last_name"`
-	Birthday        string  `json:"birthday"`
-	Email           *string `json:"email"`
-	Phone           *string `json:"phone"`
-	PersonnelNumber *string `json:"personnel_number"`
-	Contract        struct {
-		Kind     string         `json:"kind"`
-		StartsOn calendar.Date  `json:"starts_on"`
-		EndsOn   *calendar.Date `json:"ends_on"`
-	} `json:"contract"`
-	Sites []struct {
-		SchoolID       common.JSONID `json:"school_id"`
-		WeekdayMinutes []int         `json:"weekday_minutes"`
-	} `json:"sites"`
+type HireRequest struct {
+	FirstName       string       `json:"first_name"`
+	LastName        string       `json:"last_name"`
+	Birthday        string       `json:"birthday"`
+	Email           *string      `json:"email"`
+	Phone           *string      `json:"phone"`
+	PersonnelNumber *string      `json:"personnel_number"`
+	Contract        HireContract `json:"contract"`
+	Sites           []HireSite   `json:"sites"`
 	// ConfirmDuplicate hires although a person with this name and birthday
 	// exists: the Personalverwaltung says these are two people.
 	ConfirmDuplicate bool `json:"confirm_duplicate"`
 }
 
-func (req *hireRequest) Bind(*http.Request) error { return nil }
+// HireContract is the contract a hire starts with.
+type HireContract struct {
+	Kind     string         `json:"kind"`
+	StartsOn calendar.Date  `json:"starts_on"`
+	EndsOn   *calendar.Date `json:"ends_on"`
+}
 
-func (req *hireRequest) toInput() workforce.TraegerStaffHireInput {
+// HireSite is one Einsatzort of a hire with its Soll Monday to Friday.
+type HireSite struct {
+	SchoolID       common.JSONID `json:"school_id"`
+	WeekdayMinutes []int         `json:"weekday_minutes"`
+}
+
+func (req *HireRequest) Bind(*http.Request) error { return nil }
+
+func (req *HireRequest) toInput() workforce.TraegerStaffHireInput {
 	input := workforce.TraegerStaffHireInput{
 		FirstName: req.FirstName, LastName: req.LastName, Birthday: req.Birthday, Email: req.Email, Phone: req.Phone,
 		PersonnelNumber: req.PersonnelNumber, Kind: req.Contract.Kind, StartsOn: req.Contract.StartsOn, EndsOn: req.Contract.EndsOn,
@@ -53,7 +59,7 @@ func (rs *RecordsResource) hire(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	req := &hireRequest{}
+	req := &HireRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceTraegerStaffHireInvalid))
 		return

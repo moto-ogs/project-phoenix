@@ -9,13 +9,7 @@
 
 import { type MouseEvent, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  School,
-  TriangleAlert,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, School, TriangleAlert } from "lucide-react";
 import { CheckCircleIcon } from "@phosphor-icons/react/ssr";
 import { useSession } from "next-auth/react";
 import { emptySearchText } from "~/components/traeger/empty-search";
@@ -42,12 +36,12 @@ import {
 } from "~/components/traeger/use-open-traeger-school";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
 import {
-  TraegerListExportMenu,
   traegerExportScope,
+  useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
+import { TraegerOpenSchoolButton } from "~/components/traeger/traeger-open-school-button";
 import { useTraegerSchoolsAlerts } from "~/components/traeger/use-traeger-schools-alerts";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
-import { SpinnerIcon } from "~/components/ui/icons";
 import { between, useMediaQuery } from "~/lib/hooks/use-media-query";
 import {
   ALERT_LABELS,
@@ -71,10 +65,6 @@ import type {
   TraegerSchoolToday,
   TraegerSchoolsToday,
 } from "~/lib/traeger-api";
-import {
-  TRAEGER_HANDOFF_OPEN,
-  TRAEGER_HANDOFF_OPEN_HINT,
-} from "~/lib/traeger-handoff";
 import { traegerPath } from "~/lib/traeger-url";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -478,6 +468,16 @@ export default function TraegerDashboardPage() {
     [snapshot, search],
   );
   const canChangeThresholds = hasPermission(session, SETTINGS_RIGHT);
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/schools/alerts/export", format, {
+        school: selected?.id,
+      }),
+    scope: traegerExportScope(selected?.name),
+    fallbackName: "dashboard",
+    errorObject: "die Zahlen des Dashboards",
+    unavailable: !alerts || alerts.schools.length === 0,
+  });
 
   // Between md and xl the table has no room for the action's words: the
   // figures would slide under the pinned column. The icon keeps its full
@@ -496,36 +496,16 @@ export default function TraegerDashboardPage() {
             stacked: "meta",
             stackedLabel: false,
             render: (school) => (
-              <Button
-                type="button"
-                variant="surface"
+              <TraegerOpenSchoolButton
+                school={school}
+                opening={opening}
                 size={iconAction ? "icon" : "compact"}
                 // One line: the action keeps its word whole in the table.
                 className="whitespace-nowrap"
-                aria-label={`${TRAEGER_HANDOFF_OPEN}: ${school.name}, neuer Tab`}
-                tooltip={TRAEGER_HANDOFF_OPEN_HINT}
-                disabled={opening !== null}
-                onClick={(event) => {
-                  // Die Aktion öffnet die Schul-App, nicht die Schulansicht.
-                  event.stopPropagation();
-                  void open(school);
-                }}
-              >
-                {opening === school.id ? (
-                  iconAction ? (
-                    <SpinnerIcon />
-                  ) : (
-                    "Wird geöffnet …"
-                  )
-                ) : iconAction ? (
-                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <>
-                    {TRAEGER_HANDOFF_OPEN}
-                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </>
-                )}
-              </Button>
+                // Die Aktion öffnet die Schul-App, nicht die Schulansicht.
+                stopPropagation
+                onOpen={() => void open(school)}
+              />
             ),
           },
         ]
@@ -551,20 +531,7 @@ export default function TraegerDashboardPage() {
       }
       statsLoading={loading}
       error={error}
-      actions={
-        <TraegerListExportMenu
-          download={(format) =>
-            downloadTraegerList("/api/traeger/schools/alerts/export", format, {
-              school: selected?.id,
-            })
-          }
-          scope={traegerExportScope(selected?.name)}
-          ariaLabel="Dashboard herunterladen"
-          fallbackName="dashboard"
-          errorObject="die Zahlen des Dashboards"
-          unavailable={!alerts || alerts.schools.length === 0}
-        />
-      }
+      overflowMenu={exportItems}
       search={
         schools.length > 1
           ? {
@@ -659,7 +626,7 @@ export default function TraegerDashboardPage() {
                 className="w-full shrink-0 min-[480px]:w-auto min-[480px]:self-start sm:self-auto"
                 tooltip="Öffnet deine Grenzen für Auffälligkeiten in den Einstellungen."
               >
-                {canChangeThresholds ? "Grenzen ändern" : "Grenzen ansehen"}
+                {canChangeThresholds ? "Grenzen bearbeiten" : "Grenzen ansehen"}
               </ButtonLink>
             </div>
           ) : null}
@@ -714,28 +681,12 @@ export default function TraegerDashboardPage() {
                     {canOpen && school.alerts.includes("open_enrollments") ? (
                       // The school decides on its registrations in its own
                       // app; the school view has no list of them.
-                      <Button
-                        type="button"
-                        variant="surface"
-                        size="compact"
+                      <TraegerOpenSchoolButton
+                        school={school}
+                        opening={opening}
                         className="whitespace-nowrap"
-                        aria-label={`${TRAEGER_HANDOFF_OPEN}: ${school.name}, neuer Tab`}
-                        tooltip={TRAEGER_HANDOFF_OPEN_HINT}
-                        disabled={opening !== null}
-                        onClick={() => void open(school)}
-                      >
-                        {opening === school.id ? (
-                          "Wird geöffnet …"
-                        ) : (
-                          <>
-                            {TRAEGER_HANDOFF_OPEN}
-                            <ExternalLink
-                              className="h-4 w-4"
-                              aria-hidden="true"
-                            />
-                          </>
-                        )}
-                      </Button>
+                        onOpen={() => void open(school)}
+                      />
                     ) : null}
                     <ButtonLink
                       href={traegerPath(`/traeger/schulen/${school.id}`)}

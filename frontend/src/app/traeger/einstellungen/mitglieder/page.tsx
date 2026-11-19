@@ -16,7 +16,7 @@ import {
 import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TraegerAccountHistory } from "~/components/traeger/traeger-account-history";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -229,14 +229,14 @@ export default function TraegerAccountsPage() {
           items={[
             {
               icon: <UserPen className="size-4" aria-hidden />,
-              label: member.name ? "Namen ändern" : "Namen eintragen",
-              description: "Öffnet den Namen der Person zum Ändern.",
+              label: member.name ? "Namen bearbeiten" : "Namen eintragen",
+              description: "Öffnet den Namen der Person zum Bearbeiten.",
               onClick: () => setNaming(member),
             },
             {
               icon: <Pencil className="size-4" aria-hidden />,
-              label: "Rollen ändern",
-              description: "Öffnet die Rollen der Person zum Ändern.",
+              label: "Rollen bearbeiten",
+              description: "Öffnet die Rollen der Person zum Bearbeiten.",
               onClick: () => setEditing(member),
             },
             ...(isLastLeader(member)
@@ -311,6 +311,16 @@ export default function TraegerAccountsPage() {
   const memberCount = buero.members.length;
   const invitationCount = buero.invitations.length;
 
+  const exportItems = useTraegerListExportItems({
+    download: (format) =>
+      downloadTraegerList("/api/traeger/accounts/export", format),
+    scope: "Träger-Büro",
+    fallbackName: "mitglieder",
+    errorObject: "die Liste der Personen",
+    unavailable: !loaded,
+    onError: onExportError,
+  });
+
   return (
     <TenantPage
       title="Mitglieder und Rollen"
@@ -342,31 +352,19 @@ export default function TraegerAccountsPage() {
       loading={refused && !pageError && !afterWrite.error}
       actions={
         refused ? undefined : (
-          <>
-            <TraegerListExportMenu
-              download={(format) =>
-                downloadTraegerList("/api/traeger/accounts/export", format)
-              }
-              scope="Träger-Büro"
-              ariaLabel="Mitglieder und Einladungen herunterladen"
-              fallbackName="mitglieder"
-              errorObject="die Liste der Personen"
-              unavailable={!loaded}
-              onError={onExportError}
-            />
-            <Button
-              type="button"
-              variant="primary"
-              size="md"
-              tooltip="Öffnet ein Fenster, um eine Person ins Träger-Büro einzuladen."
-              onClick={() => setInviting(true)}
-            >
-              <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
-              Person einladen
-            </Button>
-          </>
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            tooltip="Öffnet ein Fenster, um eine Person ins Träger-Büro einzuladen."
+            onClick={() => setInviting(true)}
+          >
+            <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Person einladen
+          </Button>
         )
       }
+      overflowMenu={refused ? undefined : exportItems}
       error={loaded ? null : (afterWrite.error ?? pageError)}
       overlays={
         <>

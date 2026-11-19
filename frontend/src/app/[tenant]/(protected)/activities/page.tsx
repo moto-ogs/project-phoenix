@@ -40,6 +40,7 @@ import { Plus } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { foldForSearch } from "~/lib/search-fold";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 const logger = createLogger({ component: "ActivitiesPage" });
 
@@ -441,7 +442,7 @@ function ActivitiesPageContent() {
         size="icon"
         tooltip="Öffnet ein Fenster für eine neue Aktivität."
         onClick={() => setIsQuickCreateOpen(true)}
-        className="fixed right-4 bottom-24 z-40 md:hidden"
+        className={`fixed right-4 bottom-24 z-40 md:hidden ${FIXED_LAYER_SHIFT}`}
         aria-label="Aktivität erstellen"
       >
         <Plus className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />

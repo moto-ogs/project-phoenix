@@ -25,14 +25,14 @@ func (rs *RecordsResource) contractRoutes(staff chi.Router) {
 	staff.Delete("/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}", rs.deleteHolidayWeek)
 }
 
-// siteSollPayload is the Soll of one Einsatzort, Monday to Friday in minutes.
-type siteSollPayload struct {
+// SiteSollPayload is the Soll of one Einsatzort, Monday to Friday in minutes.
+type SiteSollPayload struct {
 	SchoolID       common.JSONID `json:"school_id"`
 	StaffID        common.JSONID `json:"staff_id"`
 	WeekdayMinutes []int         `json:"weekday_minutes"`
 }
 
-func sitesInput(sites []siteSollPayload) []workforce.TraegerContractSiteSoll {
+func sitesInput(sites []SiteSollPayload) []workforce.TraegerContractSiteSoll {
 	result := make([]workforce.TraegerContractSiteSoll, 0, len(sites))
 	for _, site := range sites {
 		result = append(result, workforce.TraegerContractSiteSoll{
@@ -43,15 +43,15 @@ func sitesInput(sites []siteSollPayload) []workforce.TraegerContractSiteSoll {
 	return result
 }
 
-type createContractRequest struct {
+type CreateContractRequest struct {
 	Kind     string            `json:"kind"`
 	StartsOn calendar.Date     `json:"starts_on"`
 	EndsOn   *calendar.Date    `json:"ends_on"`
 	Pool     bool              `json:"pool"`
-	Sites    []siteSollPayload `json:"sites"`
+	Sites    []SiteSollPayload `json:"sites"`
 }
 
-func (req *createContractRequest) Bind(*http.Request) error {
+func (req *CreateContractRequest) Bind(*http.Request) error {
 	if req.StartsOn == "" {
 		return errors.New("starts_on is required")
 	}
@@ -63,7 +63,7 @@ func (rs *RecordsResource) createContract(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	req := &createContractRequest{}
+	req := &CreateContractRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, "starts_on"))
 		return
@@ -74,20 +74,20 @@ func (rs *RecordsResource) createContract(w http.ResponseWriter, r *http.Request
 	respondContract(w, r, http.StatusCreated, detail, err, "Contract created successfully")
 }
 
-type updateContractRequest struct {
+type UpdateContractRequest struct {
 	Kind   string         `json:"kind"`
 	EndsOn *calendar.Date `json:"ends_on"`
 	Pool   bool           `json:"pool"`
 }
 
-func (req *updateContractRequest) Bind(*http.Request) error { return nil }
+func (req *UpdateContractRequest) Bind(*http.Request) error { return nil }
 
 func (rs *RecordsResource) updateContract(w http.ResponseWriter, r *http.Request) {
 	session, id, contractID, ok := actorRecordAndContract(w, r)
 	if !ok {
 		return
 	}
-	req := &updateContractRequest{}
+	req := &UpdateContractRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, "kind"))
 		return
@@ -105,12 +105,12 @@ func (rs *RecordsResource) deleteContract(w http.ResponseWriter, r *http.Request
 	respondContract(w, r, http.StatusOK, detail, err, "Contract deleted successfully")
 }
 
-type contractSollRequest struct {
+type ContractSollRequest struct {
 	ValidFrom calendar.Date     `json:"valid_from"`
-	Sites     []siteSollPayload `json:"sites"`
+	Sites     []SiteSollPayload `json:"sites"`
 }
 
-func (req *contractSollRequest) Bind(*http.Request) error {
+func (req *ContractSollRequest) Bind(*http.Request) error {
 	if req.ValidFrom == "" {
 		return errors.New("valid_from is required")
 	}
@@ -122,7 +122,7 @@ func (rs *RecordsResource) changeContractSoll(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	req := &contractSollRequest{}
+	req := &ContractSollRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, "valid_from"))
 		return
@@ -133,7 +133,7 @@ func (rs *RecordsResource) changeContractSoll(w http.ResponseWriter, r *http.Req
 	respondContract(w, r, http.StatusOK, detail, err, "Contract Soll changed successfully")
 }
 
-type holidayWeeksRequest struct {
+type HolidayWeeksRequest struct {
 	SchoolID       common.JSONID `json:"school_id"`
 	StaffID        common.JSONID `json:"staff_id"`
 	FromWeek       calendar.Date `json:"from_week"`
@@ -141,7 +141,7 @@ type holidayWeeksRequest struct {
 	WeekdayMinutes []int         `json:"weekday_minutes"`
 }
 
-func (req *holidayWeeksRequest) Bind(*http.Request) error {
+func (req *HolidayWeeksRequest) Bind(*http.Request) error {
 	if req.FromWeek.IsZero() || req.ToWeek.IsZero() {
 		return errors.New("from_week and to_week are required")
 	}
@@ -153,7 +153,7 @@ func (rs *RecordsResource) addHolidayWeeks(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	req := &holidayWeeksRequest{}
+	req := &HolidayWeeksRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, "from_week"))
 		return

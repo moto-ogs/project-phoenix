@@ -1,5 +1,6 @@
 // Teacher Entity Configuration
 
+import { positionForForm } from "~/lib/position-title";
 import { Input } from "~/components/ui/input";
 import { createLogger } from "~/lib/logger";
 import { defineEntityConfig } from "@/lib/database/types";
@@ -178,7 +179,8 @@ export const teachersConfig = defineEntityConfig<Teacher>({
       subtitle: (teacher: Teacher) => {
         const parts: string[] = [];
         if (teacher.specialization) parts.push(teacher.specialization);
-        if (teacher.role) parts.push(teacher.role);
+        if (teacher.role)
+          parts.push(positionForForm(teacher.role, teacher.role_form));
         return parts.join(" • ") || "Personal";
       },
       avatar: {
@@ -226,7 +228,10 @@ export const teachersConfig = defineEntityConfig<Teacher>({
           },
           {
             label: "Rolle",
-            value: (teacher: Teacher) => teacher.role ?? "Nicht angegeben",
+            value: (teacher: Teacher) =>
+              teacher.role
+                ? positionForForm(teacher.role, teacher.role_form)
+                : "Nicht angegeben",
           },
           {
             label: "Qualifikationen",
@@ -314,7 +319,8 @@ export const teachersConfig = defineEntityConfig<Teacher>({
       subtitle: (teacher: Teacher) => teacher.specialization ?? "Personal",
       description: (teacher: Teacher) => {
         const parts: string[] = [];
-        if (teacher.role) parts.push(teacher.role);
+        if (teacher.role)
+          parts.push(positionForForm(teacher.role, teacher.role_form));
         const email = displayEmail(teacher.email);
         if (email) parts.push(email);
         return parts.join(" • ");

@@ -36,7 +36,7 @@ func (rs *Resource) occupancyExport(w http.ResponseWriter, r *http.Request) {
 	}
 	schoolName := ""
 	if schoolID > 0 {
-		school, found := findSchool(occupancy.Schools, schoolID, func(s traegerview.SchoolOccupancy) traegerview.School { return s.School })
+		school, found := findSchool(occupancy.Schools, schoolID, func(s traegerview.SchoolOccupancy) traegerview.TraegerSchool { return s.TraegerSchool })
 		if !found {
 			renderSchoolNotFound(w, r)
 			return
@@ -109,7 +109,7 @@ func occupancyTable(occupancy traegerview.Occupancy, schoolName string) common.L
 }
 
 // findSchool returns the entry of the school with the ID.
-func findSchool[T any](entries []T, schoolID int64, school func(T) traegerview.School) (T, bool) {
+func findSchool[T any](entries []T, schoolID int64, school func(T) traegerview.TraegerSchool) (T, bool) {
 	for _, entry := range entries {
 		if school(entry).ID == schoolID {
 			return entry, true

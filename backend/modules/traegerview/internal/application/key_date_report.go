@@ -193,7 +193,7 @@ func (o *Overview) rosterReads(ctx context.Context, scope []int64, keyDate calen
 }
 
 // school applies the definitions of traegerview.KeyDateReport to one school.
-func (r keyDateReads) school(school traegerview.School, districts map[int64]string) traegerview.KeyDateSchool {
+func (r keyDateReads) school(school traegerview.TraegerSchool, districts map[int64]string) traegerview.KeyDateSchool {
 	row := traegerview.KeyDateSchool{ID: school.ID, Name: school.Name, City: school.City, CareForms: []traegerview.KeyDateCareForm{}}
 	if district, ok := districts[school.ID]; ok {
 		row.District = &district

@@ -95,19 +95,22 @@ const (
 
 // SchoolInvitation is an invitation as the owner reports it.
 type SchoolInvitation struct {
-	ID                  int64
-	TenantID            int64
-	Email               string
-	Token               string
-	RoleID              int64
-	RoleName            string
-	ExpiresAt           time.Time
-	UsedAt              *time.Time
-	CreatedBy           *int64
-	CreatorEmail        string
-	FirstName           *string
-	LastName            *string
-	Position            *string
+	ID           int64
+	TenantID     int64
+	Email        string
+	Token        string
+	RoleID       int64
+	RoleName     string
+	ExpiresAt    time.Time
+	UsedAt       *time.Time
+	CreatedBy    *int64
+	CreatorEmail string
+	FirstName    *string
+	LastName     *string
+	Position     *string
+	// Gender is the Stammdaten gender the school entered: female, male,
+	// diverse or nil.
+	Gender              *string
 	CaregiverEnabled    bool
 	EmploymentAction    EmploymentAction
 	ResetMasterData     bool
@@ -120,12 +123,15 @@ type SchoolInvitation struct {
 
 // SchoolInvitationRequest describes the invitation to create.
 type SchoolInvitationRequest struct {
-	Email               string
-	RoleID              int64
-	TenantID            int64
-	FirstName           *string
-	LastName            *string
-	Position            *string
+	Email     string
+	RoleID    int64
+	TenantID  int64
+	FirstName *string
+	LastName  *string
+	Position  *string
+	// Gender is the Stammdaten gender the school entered: female, male,
+	// diverse or nil.
+	Gender              *string
 	CaregiverEnabled    bool
 	EmploymentAction    EmploymentAction
 	ResetMasterData     bool

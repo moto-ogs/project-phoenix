@@ -27,7 +27,7 @@ func TestConfirmedNoticeWithoutRemainingBookingsNeedsNoMail(t *testing.T) {
 			n := w.schoolNotices(t)[0]
 			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, n.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: n.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: n.Token})
 				return err
 			}))
 			statement := `UPDATE enrollment.holiday_registrations SET status='cancelled' WHERE organization_id=?`

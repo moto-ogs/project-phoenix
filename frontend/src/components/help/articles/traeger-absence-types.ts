@@ -27,7 +27,7 @@ export function traegerAbsenceTypesTopic(): HelpTopic {
         title: "Eine Abwesenheitsart anlegen",
         steps: [
           "Wähle in der Navigation `Abwesenheitsarten`.",
-          "Wähle oben `Abwesenheitsart`.",
+          "Wähle oben `Abwesenheitsart anlegen`.",
           "Gib einen Namen ein, zum Beispiel Regenerationstag.",
           "Lasse `Tage je Person zählen (Kontingent)` an und trage die Tage je Jahr ein.",
           "Wähle bei `Rest verfällt`, wie lange ein Rest ins neue Jahr geht.",
@@ -40,7 +40,7 @@ export function traegerAbsenceTypesTopic(): HelpTopic {
         description: "Ohne eigenen Wert gilt für jede Person die Zahl der Art.",
         steps: [
           "Öffne unter `Personalakten` die Akte der Person.",
-          "Wähle in der Karte `Kontingente` das Jahr.",
+          "Öffne den Reiter `Verträge und Zeit`. Wähle in der Karte `Kontingente` das Jahr.",
           "Wähle bei der Art `Anspruch ändern`.",
           "Trage die Tage und eine Begründung ein. Wähle `Speichern`.",
         ],

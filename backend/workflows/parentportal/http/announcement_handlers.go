@@ -225,7 +225,7 @@ func (rs *Resource) unreadAnnouncementCount(w http.ResponseWriter, r *http.Reque
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"unread_count": count}, "Unread count retrieved")
+	common.Respond(w, r, http.StatusOK, UnreadCountResponse{UnreadCount: count}, "Unread count retrieved")
 }
 
 // markAnnouncementRead records that the guardian opened an announcement.
@@ -246,7 +246,7 @@ func (rs *Resource) markAnnouncementRead(w http.ResponseWriter, r *http.Request)
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"read": true}, "Announcement marked read")
+	common.Respond(w, r, http.StatusOK, AnnouncementReadResponse{Read: true}, "Announcement marked read")
 }
 
 // respondRequest is the poll answer body: which child the answer is for, the
@@ -295,7 +295,7 @@ func (rs *Resource) respondToAnnouncement(w http.ResponseWriter, r *http.Request
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"answered": len(optionIDs) > 0}, "Answer recorded")
+	common.Respond(w, r, http.StatusOK, AnnouncementAnsweredResponse{Answered: len(optionIDs) > 0}, "Answer recorded")
 }
 
 // acknowledgeAnnouncement records an explicit "gelesen und bestätigt".
@@ -316,5 +316,5 @@ func (rs *Resource) acknowledgeAnnouncement(w http.ResponseWriter, r *http.Reque
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"acknowledged": true}, "Announcement acknowledged")
+	common.Respond(w, r, http.StatusOK, AnnouncementAcknowledgedResponse{Acknowledged: true}, "Announcement acknowledged")
 }

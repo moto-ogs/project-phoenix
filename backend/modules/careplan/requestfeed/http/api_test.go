@@ -2,6 +2,7 @@ package requestfeedhttp_test
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -44,6 +45,11 @@ func testResource(engine stubEngine) *requestfeedhttp.Resource {
 		CurrentTenantID:  func(*http.Request) int64 { return 7 },
 		CurrentAccountID: func(*http.Request) int64 { return 9 },
 		Logger:           slog.New(slog.DiscardHandler),
+		Success: func(w http.ResponseWriter, _ *http.Request, status int, data any, _ string) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
+		},
 	})
 }
 
@@ -76,6 +82,6 @@ func TestTenantStatusDoesNotExposeTheStoredLink(t *testing.T) {
 	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/", nil))
 
 	require.Equal(t, http.StatusOK, recorder.Code)
-	assert.JSONEq(t, `{"active":true}`, recorder.Body.String())
+	assert.JSONEq(t, `{"status":"success","data":{"active":true}}`, recorder.Body.String())
 	assert.NotContains(t, recorder.Body.String(), "url")
 }

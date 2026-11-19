@@ -35,6 +35,7 @@ import {
   type ErrorSurface,
 } from "~/lib/error-log";
 import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -508,7 +509,9 @@ export function ToastProvider({
     <ToastContext.Provider value={api}>
       {children}
 
-      <div className="pointer-events-none fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[9000] mx-auto flex max-h-[70vh] max-w-sm flex-col gap-2 overflow-y-auto md:hidden">
+      <div
+        className={`pointer-events-none fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-[9000] mx-auto flex max-h-[70vh] max-w-sm flex-col gap-2 overflow-y-auto md:hidden ${FIXED_LAYER_SHIFT}`}
+      >
         {isMobile &&
           items.map((item) => (
             <ToastRow
@@ -522,7 +525,9 @@ export function ToastProvider({
           ))}
       </div>
 
-      <div className="pointer-events-none fixed right-6 bottom-6 z-[9000] hidden max-h-[70vh] max-w-sm flex-col items-stretch justify-end gap-2 overflow-y-auto md:flex">
+      <div
+        className={`pointer-events-none fixed right-6 bottom-6 z-[9000] hidden max-h-[70vh] max-w-sm flex-col items-stretch justify-end gap-2 overflow-y-auto md:flex ${FIXED_LAYER_SHIFT}`}
+      >
         {!isMobile &&
           items.map((item) => (
             <ToastRow

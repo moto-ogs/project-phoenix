@@ -17,8 +17,8 @@ func TestSelectedGroupNames_DisclosesGroupWithoutRows(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no selection returns nil", func(t *testing.T) {
-		names := selectedGroupNames(listRequest{}, &classday.Result{
-			Groups: []classday.GroupOption{{ID: 1, Name: "Delfine"}},
+		names := selectedGroupNames(listRequest{}, &classday.ClassdayResult{
+			Groups: []classday.ClassdayGroupOption{{ID: 1, Name: "Delfine"}},
 		})
 		assert.Nil(t, names)
 	})
@@ -26,7 +26,7 @@ func TestSelectedGroupNames_DisclosesGroupWithoutRows(t *testing.T) {
 	t.Run("resolvable id uses the display name", func(t *testing.T) {
 		names := selectedGroupNames(
 			listRequest{Params: classday.Params{GroupIDs: []int64{7}}},
-			&classday.Result{Groups: []classday.GroupOption{{ID: 7, Name: "Delfine"}}},
+			&classday.ClassdayResult{Groups: []classday.ClassdayGroupOption{{ID: 7, Name: "Delfine"}}},
 		)
 		assert.Equal(t, []string{"Delfine"}, names)
 	})
@@ -36,7 +36,7 @@ func TestSelectedGroupNames_DisclosesGroupWithoutRows(t *testing.T) {
 		// result.Groups. It must still surface as a restriction.
 		names := selectedGroupNames(
 			listRequest{Params: classday.Params{GroupIDs: []int64{42}}},
-			&classday.Result{Groups: []classday.GroupOption{{ID: 7, Name: "Delfine"}}},
+			&classday.ClassdayResult{Groups: []classday.ClassdayGroupOption{{ID: 7, Name: "Delfine"}}},
 		)
 		assert.Equal(t, []string{"Gruppe #42"}, names)
 	})
@@ -44,7 +44,7 @@ func TestSelectedGroupNames_DisclosesGroupWithoutRows(t *testing.T) {
 	t.Run("mixed resolvable and unresolvable ids are all disclosed, sorted", func(t *testing.T) {
 		names := selectedGroupNames(
 			listRequest{Params: classday.Params{GroupIDs: []int64{7, 42}}},
-			&classday.Result{Groups: []classday.GroupOption{{ID: 7, Name: "Delfine"}}},
+			&classday.ClassdayResult{Groups: []classday.ClassdayGroupOption{{ID: 7, Name: "Delfine"}}},
 		)
 		// Both entries present; sort.Strings keeps output deterministic.
 		assert.Equal(t, []string{"Delfine", "Gruppe #42"}, names)

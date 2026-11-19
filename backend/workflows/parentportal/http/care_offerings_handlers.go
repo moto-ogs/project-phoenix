@@ -282,15 +282,18 @@ type OfferingCatalogItemResponse struct {
 	FreeSlots       *int     `json:"free_slots,omitempty"`
 }
 
+// OfferingSelectionBody is one offering of a change request and its days.
+type OfferingSelectionBody struct {
+	OfferingID   string   `json:"offering_id"`
+	SelectedDays []string `json:"selected_days"`
+}
+
 // OfferingChangeRequestBody is the wire shape for POST .../care-offerings/requests.
 type OfferingChangeRequestBody struct {
-	Offerings []struct {
-		OfferingID   string   `json:"offering_id"`
-		SelectedDays []string `json:"selected_days"`
-	} `json:"offerings"`
-	EffectiveFrom               string `json:"effective_from"`
-	Note                        string `json:"note"`
-	CompleteWithdrawalConfirmed bool   `json:"complete_withdrawal_confirmed,omitempty"`
+	Offerings                   []OfferingSelectionBody `json:"offerings"`
+	EffectiveFrom               string                  `json:"effective_from"`
+	Note                        string                  `json:"note"`
+	CompleteWithdrawalConfirmed bool                    `json:"complete_withdrawal_confirmed,omitempty"`
 	// RecipientGuardianProfileIDs travel with the creation so the share is
 	// written in the same transaction (#2267); empty shares with nobody.
 	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`

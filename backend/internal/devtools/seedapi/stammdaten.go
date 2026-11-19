@@ -124,7 +124,7 @@ func (s *FixedSeeder) Seed(ctx context.Context) (*FixedResult, error) {
 	}
 
 	// 4. Create staff records
-	if err := s.seedStaff(ctx, result); err != nil {
+	if err := s.seedStaffWithGenders(ctx, result); err != nil {
 		return nil, fmt.Errorf("failed to seed staff: %w", err)
 	}
 

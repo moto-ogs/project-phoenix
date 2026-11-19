@@ -21,9 +21,9 @@ import (
 
 type holidayKnownChildrenKey struct{}
 
-// knownChildrenResponse is the answer: the known children, each with its
+// HolidayKnownChildrenResponse is the answer: the known children, each with its
 // registration and its school.
-type knownChildrenResponse struct {
+type HolidayKnownChildrenResponse struct {
 	Children []capability.HolidayKnownChild `json:"children"`
 }
 
@@ -101,5 +101,5 @@ func (rs *HolidayPeriodResource) listKnownChildren(w http.ResponseWriter, r *htt
 		renderHolidayReviewError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, knownChildrenResponse{Children: known}, "Known holiday children retrieved successfully")
+	common.Respond(w, r, http.StatusOK, HolidayKnownChildrenResponse{Children: known}, "Known holiday children retrieved successfully")
 }

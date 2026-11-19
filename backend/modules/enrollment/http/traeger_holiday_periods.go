@@ -117,26 +117,26 @@ func (rs *HolidayPeriodResource) TraegerRouter(protectedTraegerRoutes func(chi.R
 	return r
 }
 
-type holidayTimeModelRequest struct {
+type HolidayTimeModelRequest struct {
 	ID         int64  `json:"id"`
 	Name       string `json:"name"`
 	StartsAt   string `json:"starts_at"`
 	EndsAt     string `json:"ends_at"`
-	PriceCents int64  `json:"price_cents"`
+	PriceCents int    `json:"price_cents"`
 	Archived   bool   `json:"archived"`
 }
 
-type holidayWeekRequest struct {
+type HolidayWeekRequest struct {
 	ID           int64                     `json:"id"`
 	StartsOn     calendar.Date             `json:"starts_on"`
 	EndsOn       calendar.Date             `json:"ends_on"`
 	HostSchoolID int64                     `json:"host_school_id"`
-	TimeModels   []holidayTimeModelRequest `json:"time_models"`
+	TimeModels   []HolidayTimeModelRequest `json:"time_models"`
 	// BookingUnit is "week" or "day"; empty is a week (#4701).
 	BookingUnit string `json:"booking_unit"`
 	// LunchPriceCents is the price of one lunch; null offers no lunch
 	// (#5631).
-	LunchPriceCents *int64 `json:"lunch_price_cents"`
+	LunchPriceCents *int `json:"lunch_price_cents"`
 }
 
 // HolidayPeriodRequest is the body of POST /traeger/holiday-periods and PUT
@@ -156,7 +156,7 @@ type HolidayPeriodRequest struct {
 	MaxDaysPerChild *int `json:"max_days_per_child"`
 	// AllocationMode is "arrival" or "criteria"; empty is "arrival" (#4700).
 	AllocationMode string               `json:"allocation_mode"`
-	Weeks          []holidayWeekRequest `json:"weeks"`
+	Weeks          []HolidayWeekRequest `json:"weeks"`
 }
 
 // Bind accepts the body; the Owner validates the period as a whole.

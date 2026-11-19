@@ -1898,7 +1898,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidaySchoolNames.HolidaySchoolNames",
-      "binding_digest": "980b26087f614bdd831fb30439f258bf",
+      "binding_digest": "a93b4332cd4daa619397cb75511cd5e1",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolNames.HolidaySchoolNames",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/traegerview.Overview.Schools",

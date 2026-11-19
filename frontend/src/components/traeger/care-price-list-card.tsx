@@ -7,11 +7,7 @@
 // weitere Kind, wenn das Büro einen eingetragen hat. Ein gebuchter Tag ohne
 // Preis ist markiert, denn das Kind kommt sonst nicht in den Monatslauf.
 
-import {
-  ResponsiveActionList,
-  ResponsiveActionRow,
-  ResponsiveRowActions,
-} from "~/components/ui/responsive-action-list";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -346,7 +342,7 @@ export function CarePriceListCard({
       title={school.name}
       description={description || undefined}
       actions={
-        <div className="flex items-center gap-2">
+        <>
           <Button
             type="button"
             variant="outline"
@@ -374,7 +370,7 @@ export function CarePriceListCard({
               ]}
             />
           ) : null}
-        </div>
+        </>
       }
     >
       <div className="space-y-5">
@@ -422,29 +418,29 @@ export function CarePriceListCard({
           </>
         )}
         {gaps.length > 0 ? (
-          <ResponsiveActionList>
-            <ResponsiveActionRow className="bg-moto-orange/10 rounded-xl px-4 first:pt-3 last:pb-3">
-              <p className="text-sm text-gray-900">
-                {gaps.length === 1
-                  ? `„${gaps[0]?.moduleName}“ hat gebuchte Tage ohne Preis.`
-                  : `${gaps.length} Module haben gebuchte Tage ohne Preis.`}{" "}
-                Diese Kinder kommen erst in den Monatslauf, wenn jeder Tag einen
-                Preis hat.
-              </p>
-              <ResponsiveRowActions>
-                <Button
-                  type="button"
-                  variant="surface"
-                  size="compact"
-                  onClick={onEdit}
-                  aria-label={`Preise ergänzen: ${school.name}`}
-                  tooltip="Öffnet ein Fenster, um die fehlenden Preise einzutragen."
-                >
-                  Preise ergänzen
-                </Button>
-              </ResponsiveRowActions>
-            </ResponsiveActionRow>
-          </ResponsiveActionList>
+          <Alert
+            type="warning"
+            message={`${
+              gaps.length === 1
+                ? `„${gaps[0]?.moduleName}“ hat gebuchte Tage ohne Preis.`
+                : `${gaps.length} Module haben gebuchte Tage ohne Preis.`
+            } Diese Kinder kommen erst in den Monatslauf, wenn jeder Tag einen Preis hat.`}
+            actionLayout="responsive"
+            action={
+              // A quiet action on the notice: it opens the price dialog on
+              // this page, no change of page (#7409).
+              <Button
+                type="button"
+                variant="ghost_tone"
+                size="compact"
+                onClick={onEdit}
+                aria-label={`Preise ergänzen: ${school.name}`}
+                tooltip="Öffnet ein Fenster, um die fehlenden Preise einzutragen."
+              >
+                Preise ergänzen
+              </Button>
+            }
+          />
         ) : null}
       </div>
     </SectionCard>

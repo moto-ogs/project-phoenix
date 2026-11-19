@@ -19,8 +19,7 @@ type CompleteOperationRequest struct {
 // SchoolSupervisionRouteContracts registers the typed contract of the
 // supervisions in moto schule (ADR 0270), with patterns relative to
 // /school/supervisions. sheet is the answer type of the child sheet, which
-// Class Day owns. The attendance PATCH tells a missing key from null and
-// keeps its route file.
+// Class Day owns.
 func SchoolSupervisionRouteContracts(sheet any) []common.RouteContract {
 	portals := []common.PortalScope{common.PortalSchool}
 	return []common.RouteContract{
@@ -31,6 +30,7 @@ func SchoolSupervisionRouteContracts(sheet any) []common.RouteContract {
 		{Method: "POST", Pattern: "/{id}/complete", Portals: portals, Request: CompleteOperationRequest{}, Response: timetable.ScheduledInstance{}},
 		{Method: "POST", Pattern: "/{id}/students/{student_id}/check-in", Portals: portals, Response: timetable.OperationRoster{}},
 		{Method: "POST", Pattern: "/{id}/students/{student_id}/check-out", Portals: portals, Response: timetable.OperationRoster{}},
+		{Method: "PATCH", Pattern: "/{id}/students/{student_id}/attendance", Portals: portals, Request: PatchAttendanceRequest{}, Response: timetable.OperationRosterRow{}},
 		{Method: "PUT", Pattern: "/{id}/students/{student_id}/homework-feedback", Portals: portals, Request: HomeworkFeedbackRequest{}, Response: HomeworkFeedbackResponse{}},
 	}
 }

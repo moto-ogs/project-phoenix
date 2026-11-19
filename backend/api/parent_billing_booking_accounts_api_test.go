@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -133,6 +134,14 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 	assert.Empty(t, bookingAccountsOf(t, f).CostCenters)
 	_, content = sollstellung(t, f, run)
 	assert.Contains(t, content, ";4410;ISP")
+
+	// The reset returns to the default mapping, which names no KOST1.
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, financeExportsPath+"/settings/sollstellung", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.NotContains(t, rec.Body.String(), `"header":"KOST1"`, "the answer holds the default mapping")
+	name, content := sollstellung(t, f, run)
+	assert.True(t, strings.HasPrefix(name, "sollstellung-"), "the default file name is back: %s", name)
+	assert.NotContains(t, content, "KOST1")
 }
 
 func TestBookingAccountsRightsAndTraeger(t *testing.T) {

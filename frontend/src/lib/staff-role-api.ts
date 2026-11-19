@@ -8,8 +8,8 @@ export interface StaffGroupLeaderCandidate {
 }
 
 interface BackendStaffGroupLeaderCandidate {
-  id: number;
-  teacher_id?: number;
+  id: number | string;
+  teacher_id?: number | string;
   full_name: string;
 }
 

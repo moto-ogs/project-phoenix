@@ -347,6 +347,7 @@ export function CatalogOfferingForm({
       >
         <FormErrorAlert message={formErrors.error} />
         <Input
+          controlSize="compact"
           name="name"
           label="Name"
           required
@@ -443,6 +444,7 @@ export function CatalogOfferingForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
+            controlSize="compact"
             name="capacity"
             label="Plätze (freiwillig)"
             inputMode="numeric"
@@ -457,6 +459,7 @@ export function CatalogOfferingForm({
             }
           />
           <Input
+            controlSize="compact"
             name="price_cents"
             label="Preis im Anmeldeformular (freiwillig)"
             inputMode="decimal"
@@ -471,6 +474,7 @@ export function CatalogOfferingForm({
             }
           />
           <Input
+            controlSize="compact"
             name="selection_group"
             label="Auswahlgruppe (freiwillig)"
             maxLength={100}
@@ -491,6 +495,7 @@ export function CatalogOfferingForm({
             }
           />
           <Input
+            controlSize="compact"
             name="sort_order"
             label="Reihenfolge"
             inputMode="numeric"

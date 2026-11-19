@@ -307,3 +307,19 @@ func TestStaffNoticeFeedPublishesWhenAnExpiredNoticeIsExtended(t *testing.T) {
 	assert.Equal(t, "„Vorbei“ gilt vom 01.06.2030 bis 12.06.2030.", entries[0].Body)
 	assert.Equal(t, 1, f.pushes(t, pushed))
 }
+
+// The Leitung deletes a Hinweis through its route; it answers in the shared
+// envelope and the Hinweis cannot be read afterwards.
+func TestStaffNoticeDeleteRemovesTheNotice(t *testing.T) {
+	t.Parallel()
+	f := newNoticeFeedFixture(t)
+	author := f.reader(t, "Leitung")
+	id := f.save(t, author, 0, noticeBody("Wird gelöscht", "all", "2030-06-12", "", true))
+
+	rec := f.noticeRequest(t, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/%d", id), nil), author, []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"status":"success","message":"Staff notice deleted"}`, rec.Body.String())
+
+	rec = f.noticeRequest(t, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/%d", id), nil), author, []string{"users:read"})
+	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
+}

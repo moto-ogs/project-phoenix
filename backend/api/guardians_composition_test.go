@@ -70,6 +70,11 @@ type guardianCompositionContext struct {
 	foreignTenant func() (int64, int64, int64)
 	// persistedLink reads the stored link's role and flags.
 	persistedLink func(linkID int64) persistedLinkState
+	// pendingInvitation plants a parent's request to invite the guardian to
+	// the student, waiting for staff approval, and returns its id.
+	pendingInvitation func(studentID, guardianID, requesterAccountID int64) int64
+	// invitationApproval reads the stored approval status of an invitation.
+	invitationApproval func(invitationID int64) string
 }
 
 type financialChangeRow struct {
@@ -96,7 +101,7 @@ func setupGuardiansCompositionRoute(t *testing.T, appEnvs ...string) *guardianCo
 
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
-	router.Mount("/guardians", resource.Router())
+	router.Mount("/api/guardians", resource.Router())
 
 	ctx := testpkg.Ctx(t)
 	tenantID := testpkg.Tenant(t)
@@ -193,6 +198,20 @@ func setupGuardiansCompositionRoute(t *testing.T, appEnvs ...string) *guardianCo
 			}
 			return result
 		},
+		pendingInvitation: func(studentID, guardianID, requesterAccountID int64) int64 {
+			invitation := testpkg.InsertTestGuardianInvitation(t, db, &testpkg.GuardianInvitation{
+				Token:                fmt.Sprintf("pending-approval-%d-%d", guardianID, time.Now().UnixNano()),
+				GuardianProfileID:    guardianID,
+				CreatedBy:            requesterAccountID,
+				StudentID:            &studentID,
+				RequestedByAccountID: &requesterAccountID,
+				ApprovalStatus:       "pending",
+			})
+			return invitation.ID
+		},
+		invitationApproval: func(invitationID int64) string {
+			return testpkg.GuardianInvitationByID(t, db, invitationID).ApprovalStatus
+		},
 		foreignTenant: func() (int64, int64, int64) {
 			foreignTenantID, _ := testpkg.CreateTestTenant(t, db)
 			student := testpkg.CreateTestStudentForTenant(t, db, foreignTenantID, "Foreign", "Child", "1a")
@@ -255,7 +274,7 @@ func guardianStaffClaims(accountID int64, accountPermissions ...string) sessiont
 }
 
 func guardiansPath(format string, args ...any) string {
-	return "/guardians" + fmt.Sprintf(format, args...)
+	return "/api/guardians" + fmt.Sprintf(format, args...)
 }
 
 func (c *guardianCompositionContext) do(t *testing.T, claims sessiontoken.AppClaims, method, path string, body any) *httptest.ResponseRecorder {

@@ -79,12 +79,19 @@ type DeliveryTestModule struct {
 // included. The outer host's session-liveness and
 // module-booking middleware are outside this route-sized test root.
 func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
+	return m.NotificationRouterForTests(nil)
+}
+
+// NotificationRouterForTests is NotificationPreferenceRouterForTests with
+// dispatch: the test notification of both portals goes to dispatch.
+func (m DeliveryTestModule) NotificationRouterForTests(dispatch deliveryCompose.NotificationService) chi.Router {
 	router := chi.NewRouter()
-	notifications := NewNotificationHTTP(nil, m.PushSubscriptions, m.NotificationPreferences, m.Feed)
+	notifications := NewNotificationHTTP(dispatch, m.PushSubscriptions, m.NotificationPreferences, m.Feed)
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
 	parents := parentAPI.NewResource(parentAPI.ResourceConfig{
 		Now:         time.Now,
+		Push:        bindParentPushSubscriptions(m.PushSubscriptions),
 		Preferences: bindParentPreferences(m.NotificationPreferences),
 		Feed:        bindParentNotificationFeed(m.GuardianFeed),
 	})
@@ -95,11 +102,7 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 }
 
 func NewPushSubscriptionTestService(db transactionruntime.Database, unit tenant.UnitOfWork, vapid deliveryCompose.VAPIDConfig) (deliveryCompose.PushSubscriptionService, error) {
-	identity, err := NewIdentityAccessForTests(db)
-	if err != nil {
-		return nil, err
-	}
-	return deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()), identity, vapid, slog.Default())
+	return deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()), vapid, slog.Default())
 }
 
 func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWork) (DeliveryTestModule, error) {
@@ -145,7 +148,7 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
-	push, err := deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), pushRepo, members, vapid, logger)
+	push, err := deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), pushRepo, vapid, logger)
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}

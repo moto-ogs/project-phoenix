@@ -63,7 +63,7 @@ func (rs *StaffAdminResource) getStaffHistory(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, historyResp, "Staff session history retrieved successfully")
+	common.Respond(w, r, http.StatusOK, historyResponse(historyResp), "Staff session history retrieved successfully")
 }
 
 // exportStaffSessions handles GET /api/staff/{id}/time-tracking/export?from=...&to=...&format=csv|xlsx|pdf
@@ -330,12 +330,7 @@ func (rs *StaffAdminResource) setStaffVacationQuota(w http.ResponseWriter, r *ht
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	var body struct {
-		Year          int     `json:"year"`
-		EntitledDays  float64 `json:"entitled_days"`
-		CarryoverDays float64 `json:"carryover_days"`
-		Reason        string  `json:"reason"`
-	}
+	var body VacationQuotaRequest
 	if err := render.DecodeJSON(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -440,7 +435,7 @@ func (rs *StaffAdminResource) adminUpdateStaffSession(w http.ResponseWriter, r *
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, workforce.WorkSessionWire{WorkSession: session}, "Session updated")
+	common.Respond(w, r, http.StatusOK, newAdminSessionResponse(session), "Session updated")
 }
 
 // adminCreateStaffSession handles POST /api/staff/{id}/time-tracking/sessions
@@ -479,7 +474,7 @@ func (rs *StaffAdminResource) adminCreateStaffSession(w http.ResponseWriter, r *
 		return
 	}
 
-	common.Respond(w, r, http.StatusCreated, workforce.WorkSessionWire{WorkSession: session}, "Session created")
+	common.Respond(w, r, http.StatusCreated, newAdminSessionResponse(session), "Session created")
 }
 
 // getStaffSessionEdits handles GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits

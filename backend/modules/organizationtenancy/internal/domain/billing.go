@@ -31,11 +31,70 @@ type BillingSettings struct {
 }
 
 // BillingSchool is a school the capture writes a row for, with the names the
-// row keeps so a later rename does not change an issued invoice.
+// row keeps so a later rename does not change an issued invoice. CreatedOn
+// is the Berlin calendar day the school was created (YYYY-MM-DD); School and
+// Organization are its own and its Träger's key day overrides (#7301).
 type BillingSchool struct {
 	ID               int64
 	Name             string
 	OrganizationName string
+	CreatedOn        string
+	School           BillingKeyDayLevel
+	Organization     BillingKeyDayLevel
+}
+
+// BillingKeyDayLevel is one level of the key day below the setting of every
+// school: the override row of a Träger or of a school (#7301). Present says
+// the row exists; Day is nil when the operator reset it to the next level.
+type BillingKeyDayLevel struct {
+	Present   bool
+	Day       *int
+	UpdatedAt time.Time
+}
+
+// EffectiveBillingKeyDay resolves the key day of a school: its own day wins
+// over its Träger's, the Träger's over the day of every school. ChangedAt is
+// the latest change on the way there, a reset row included, so a key date
+// that passed before the change is never invented from live data.
+func EffectiveBillingKeyDay(settings BillingSettings, school, organization BillingKeyDayLevel) (day int, changedAt time.Time) {
+	for _, level := range []BillingKeyDayLevel{school, organization} {
+		if !level.Present {
+			continue
+		}
+		if level.UpdatedAt.After(changedAt) {
+			changedAt = level.UpdatedAt
+		}
+		if level.Day != nil {
+			return *level.Day, changedAt
+		}
+	}
+	if settings.UpdatedAt.After(changedAt) {
+		changedAt = settings.UpdatedAt
+	}
+	return settings.KeyDay, changedAt
+}
+
+// BillingKeyDayTarget names whose key day the operator sets: a Träger, or
+// with School a school.
+type BillingKeyDayTarget struct {
+	ID     int64
+	School bool
+}
+
+// BillingKeyDayOverride is the own key day of one Träger or one school, as
+// the operator report lists it. Exactly one of OrganizationID and SchoolID
+// is set; TraegerID and OrganizationName are the Träger of a school, or the
+// Träger itself. KeyDay is never nil in
+// a listed override: a reset row is not listed.
+type BillingKeyDayOverride struct {
+	OrganizationID      *int64
+	SchoolID            *int64
+	TraegerID           int64
+	Name                string
+	OrganizationName    string
+	KeyDay              *int
+	UpdatedAt           time.Time
+	UpdatedByOperatorID *int64
 }
 
 // BillingKeyDateCount is one school's captured figures of one month. Period
@@ -71,6 +130,11 @@ func BillingPeriod(keyDate string) string {
 		return ""
 	}
 	return billingDate(year, time.Month(month), 1)
+}
+
+// BillingPeriodOf is the first day of the month of local.
+func BillingPeriodOf(local time.Time) string {
+	return billingDate(local.Year(), local.Month(), 1)
 }
 
 func billingDateParts(value string) (year, month, day int, ok bool) {

@@ -67,6 +67,10 @@ func TestDeclareContractNotice_UsesTheClaimsAndThePath(t *testing.T) {
 	assert.EqualValues(t, 31, parent.gotDocumentID)
 	assert.Equal(t, parentService.ContractNoticeInput{Kind: "kuendigung", TerminationKind: "ordentlich"}, parent.gotNoticeInput)
 	assert.Contains(t, w.Body.String(), `"ends_on":"2026-12-31"`)
+
+	w = serveContractNotice(t, &Resource{ParentService: parent}, http.MethodGet, "/parent/me/documents/4/contracts/31/notice", "", 7301)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Contains(t, w.Body.String(), `"status":"gekuendigt"`, "the read answers the declaration made")
 }
 
 // Without the relationship right 403, outside the inbox 404, a refusal of

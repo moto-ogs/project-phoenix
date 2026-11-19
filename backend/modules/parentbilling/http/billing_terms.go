@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -93,21 +94,29 @@ func (req *ServiceTermsRequest) Bind(*http.Request) error { return nil }
 // FamilyBillingRequest is the body of PUT /traeger/family-billing: the
 // deviation of the family of a contract of the Träger.
 type FamilyBillingRequest struct {
-	ContractID      int64                     `json:"contract_id"`
-	RecipientKind   string                    `json:"recipient_kind"`
-	SecondFirstName string                    `json:"second_first_name"`
-	SecondLastName  string                    `json:"second_last_name"`
-	PayerFirstName  string                    `json:"payer_first_name"`
-	PayerLastName   string                    `json:"payer_last_name"`
-	PayerEmail      string                    `json:"payer_email"`
-	PayerAddress    *capability.PostalAddress `json:"payer_address"`
-	PaymentMethod   string                    `json:"payment_method"`
-	DueDay          *int                      `json:"due_day"`
-	DebtorNumber    string                    `json:"debtor_number"`
+	ContractID      int64                 `json:"contract_id"`
+	RecipientKind   string                `json:"recipient_kind"`
+	SecondFirstName string                `json:"second_first_name"`
+	SecondLastName  string                `json:"second_last_name"`
+	PayerFirstName  string                `json:"payer_first_name"`
+	PayerLastName   string                `json:"payer_last_name"`
+	PayerEmail      string                `json:"payer_email"`
+	PayerAddress    *PostalAddressRequest `json:"payer_address"`
+	PaymentMethod   string                `json:"payment_method"`
+	DueDay          *int                  `json:"due_day"`
+	DebtorNumber    string                `json:"debtor_number"`
 }
 
 // Bind accepts the body; the Owner validates the deviation.
 func (req *FamilyBillingRequest) Bind(*http.Request) error { return nil }
+
+func (req *FamilyBillingRequest) input() capability.FamilyBillingInput {
+	return capability.FamilyBillingInput{
+		ContractID: req.ContractID, RecipientKind: req.RecipientKind, SecondFirstName: req.SecondFirstName, SecondLastName: req.SecondLastName,
+		PayerFirstName: req.PayerFirstName, PayerLastName: req.PayerLastName, PayerEmail: req.PayerEmail,
+		PayerAddress: (*capability.PostalAddress)(req.PayerAddress), PaymentMethod: req.PaymentMethod, DueDay: req.DueDay, DebtorNumber: req.DebtorNumber,
+	}
+}
 
 // FamilyBillingResponse is the answer of PUT /traeger/family-billing: the
 // stored deviation, or null when the family no longer deviates.
@@ -119,7 +128,13 @@ type FamilyBillingResponse struct {
 // /traeger/billing-run-due-dates/{care|holiday}/{id}: the due date per
 // payment method; a method without a date falls back to the payment term.
 type RunDueDatesRequest struct {
-	DueDates []capability.RunDueDate `json:"due_dates"`
+	DueDates []RunDueDateRequest `json:"due_dates"`
+}
+
+// RunDueDateRequest is the due date of one payment method.
+type RunDueDateRequest struct {
+	PaymentMethod string        `json:"payment_method"`
+	DueOn         calendar.Date `json:"due_on"`
 }
 
 // Bind accepts the body; the Owner validates the dates.
@@ -198,7 +213,7 @@ func (rs *BillingTermsResource) saveFamily(w http.ResponseWriter, r *http.Reques
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyBillingInvalid))
 		return
 	}
-	family, err := rs.terms.SaveFamilyBilling(r.Context(), reviewer, capability.FamilyBillingInput(*req))
+	family, err := rs.terms.SaveFamilyBilling(r.Context(), reviewer, req.input())
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderTermsError(w, r, err, common.CodeParentBillingFamilyBillingInvalid)

@@ -50,7 +50,7 @@ func (rs *TraegerClosingDayResource) export(w http.ResponseWriter, r *http.Reque
 
 // closingDaySchools is „Alle Schulen“ or the names of the schools the day
 // holds for, as the list names them.
-func closingDaySchools(day traegercalendar.ClosingDay, schools []traegercalendar.School) string {
+func closingDaySchools(day traegercalendar.ClosingDay, schools []traegercalendar.CalendarSchool) string {
 	names := make([]string, 0, len(day.SchoolIDs))
 	for _, school := range schools {
 		if slices.Contains(day.SchoolIDs, school.ID) {

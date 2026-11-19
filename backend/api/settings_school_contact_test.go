@@ -35,3 +35,27 @@ func TestSettingsSchoolContactEmailAnswersTheOwnSchool(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 	assert.Equal(t, "kontakt@schule.example", body.Data.Email)
 }
+
+// The settings page reveals a stored value through its production path
+// (#2352): the answer carries the value the school saved.
+func TestSettingsRevealValueAnswersTheStoredValue(t *testing.T) {
+	t.Parallel()
+	testpkg.OwnTenant(t)
+	route := setupSettingsCallbackRoute(t)
+	router := testpkg.MountedQueryBudgetRouter("/api/settings", route.router)
+	key := "/values/operations.student_daily_checkout_time"
+	token := testutil.WithJWTBearer(testutil.MintTestJWT(t, adminClaimsForCallback()))
+
+	rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, http.MethodPut, key, map[string]any{"value": "17:45"}, token))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+
+	rr = testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, http.MethodGet, key+"/reveal", nil, token))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var body struct {
+		Data struct {
+			Value string `json:"value"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	assert.Equal(t, "17:45", body.Data.Value)
+}

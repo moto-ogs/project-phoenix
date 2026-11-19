@@ -47,8 +47,8 @@ func (rs *PlanningResource) TraegerRouter(protectedTraegerRoutes func(chi.Router
 	return r
 }
 
-// planShiftRequest is one shift at one Einsatzort of the record.
-type planShiftRequest struct {
+// PlanShiftRequest is one shift at one Einsatzort of the record.
+type PlanShiftRequest struct {
 	WorkingTimeConfirmed bool   `json:"working_time_confirmed"`
 	WorkingTimeReason    string `json:"working_time_reason"`
 	SchoolID             int64  `json:"school_id,string"`
@@ -59,7 +59,7 @@ type planShiftRequest struct {
 	Notes                string `json:"notes"`
 }
 
-func (req *planShiftRequest) Bind(*http.Request) error {
+func (req *PlanShiftRequest) Bind(*http.Request) error {
 	if req.SchoolID <= 0 {
 		return errors.New("school_id is required")
 	}
@@ -69,7 +69,7 @@ func (req *planShiftRequest) Bind(*http.Request) error {
 	return nil
 }
 
-func (req *planShiftRequest) toInput(recordID int64) workforce.TraegerPlanShift {
+func (req *PlanShiftRequest) toInput(recordID int64) workforce.TraegerPlanShift {
 	return workforce.TraegerPlanShift{
 		RecordID: recordID, SchoolID: req.SchoolID, Date: calendar.Date(req.Date), StartTime: req.StartTime, EndTime: req.EndTime,
 		BreakMinutes: req.BreakMinutes, Notes: req.Notes,
@@ -126,7 +126,7 @@ func (rs *PlanningResource) plan(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var req planShiftRequest
+	var req PlanShiftRequest
 	if err := render.Bind(r, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -148,7 +148,7 @@ func (rs *PlanningResource) change(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var req planShiftRequest
+	var req PlanShiftRequest
 	if err := render.Bind(r, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

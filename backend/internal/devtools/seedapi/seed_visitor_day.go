@@ -180,9 +180,19 @@ func seedColleagueBirthday(rt *Runtime, today seedDate) error {
 	first, last := visitorDisplayName(fs.visitor, false, staff.FirstName, staff.LastName, visitor.FirstName, visitor.LastName)
 	birthday := fmt.Sprintf("1988-%02d-%02d", int(today.Month()), today.Day())
 	if _, err := rt.Client.Put(fmt.Sprintf("/api/staff/%d/stammdaten/person", staffID), map[string]any{
-		"first_name": first, "last_name": last, "birthday": birthday, "note": "Geburtsdatum ergänzt",
+		// The person form is saved whole: the seeded gender goes along, or
+		// the birthday would clear it.
+		"first_name": first, "last_name": last, "birthday": birthday, "gender": optionalGender(staff.Gender), "note": "Geburtsdatum ergänzt",
 	}); err != nil {
 		return fmt.Errorf("seed colleague birthday: %w", err)
 	}
 	return nil
+}
+
+// optionalGender sends an unstated gender as null („Keine Angabe“).
+func optionalGender(gender string) any {
+	if gender == "" {
+		return nil
+	}
+	return gender
 }

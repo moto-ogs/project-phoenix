@@ -48,9 +48,12 @@ func newTestTraegerFixture(t *testing.T) testTraegerFixture {
 	service, identity := buildOperatorProvisioningWithIdentity(t, db)
 	imports, err := NewImportTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
-	operator := chi.NewRouter()
-	mountOperatorProvisioningRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service}),
+	inner := chi.NewRouter()
+	mountOperatorProvisioningRoutes(inner, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service}),
 		newSampleChildrenRoute(service, imports.Import))
+	// Mounted under the production path, as the operator portal calls it.
+	operator := chi.NewRouter()
+	operator.Mount("/operator", inner)
 	return testTraegerFixture{
 		db: db, ctx: provisioningContext(t, db), operatorID: testpkg.CreateTestOperator(t, db).ID,
 		operator: operator, identity: identity,
@@ -63,7 +66,7 @@ func (f testTraegerFixture) call(t *testing.T, method, path string, body any) *h
 	if body != nil {
 		require.NoError(t, json.NewEncoder(&payload).Encode(body))
 	}
-	req := httptest.NewRequest(method, path, &payload)
+	req := httptest.NewRequest(method, "/operator"+path, &payload)
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(context.WithValue(f.ctx, sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(f.operatorID), Scope: "platform"}))
 	rec := httptest.NewRecorder()

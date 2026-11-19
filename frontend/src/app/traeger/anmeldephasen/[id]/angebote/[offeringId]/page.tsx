@@ -4,9 +4,13 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { CatalogOfferingForm } from "~/components/traeger/catalog-offering-form";
+import { phaseStatusBadge } from "~/components/traeger/catalog-format";
+import {
+  CatalogOfferingSummary,
+  offeringStatus,
+} from "~/components/traeger/catalog-phase-cards";
 import { useTraegerCatalogPhase } from "~/components/traeger/use-traeger-catalog";
-import { EmptyState } from "~/components/ui/empty-state";
-import { SectionCard } from "~/components/ui/section-card";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { useInvalidateFamily } from "~/lib/swr";
@@ -37,8 +41,21 @@ export default function TraegerCatalogOfferingPage() {
       backLabel={
         phase ? `Zurück zu „${phase.draft.name}“` : "Zurück zur Anmeldephase"
       }
+      actions={
+        phase && offering && !editable ? (
+          // A withdrawn phase withdraws its offerings too.
+          <StatusBadge
+            {...(offering.withdrawnAt
+              ? offeringStatus(offering)
+              : phaseStatusBadge(phase))}
+          />
+        ) : null
+      }
       error={loadError}
       loading={!loadError && !phase}
+      empty={
+        phase && !offering ? { title: "Dieses Angebot gibt es nicht." } : null
+      }
     >
       {phase && offering && editable ? (
         <CatalogOfferingForm
@@ -56,17 +73,11 @@ export default function TraegerCatalogOfferingPage() {
           }}
         />
       ) : null}
-      {phase && !editable ? (
-        <SectionCard>
-          <EmptyState
-            title={
-              offering
-                ? "Dieses Angebot ist zurückgezogen."
-                : "Dieses Angebot gibt es nicht."
-            }
-            description="Ein zurückgezogenes Angebot lässt sich nicht mehr ändern."
-          />
-        </SectionCard>
+      {phase && offering && !editable ? (
+        <CatalogOfferingSummary
+          offering={offering}
+          phaseWithdrawn={Boolean(phase.withdrawnAt)}
+        />
       ) : null}
     </TenantPage>
   );

@@ -250,6 +250,32 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 	status, body = request(http.MethodGet, "/api/meal-caterer/orders/export?from=2026-09-07&to=2026-09-11&format=csv", "", ordersToken)
 	assert.Equal(t, http.StatusForbidden, status)
 	assert.Equal(t, "meals.not_supplied", decodeCatererResponse(t, body, nil), "no delivery list without an active supply")
+
+	// Without a supply the school invites another caterer and takes the
+	// invitation back before anyone accepts it.
+	otherEmail := fmt.Sprintf("kueche-zwei-%d@example.com", time.Now().UnixNano())
+	status, body = request(http.MethodPost, "/api/meal-caterer/invitations", fmt.Sprintf(`{"email":%q,"caterer_name":"Zweite Küche","delivery_address":"Schulstraße 1"}`, otherEmail), adminToken)
+	require.Equal(t, http.StatusCreated, status, string(body))
+	var withdrawn struct {
+		ID string `json:"id"`
+	}
+	decodeCatererResponse(t, body, &withdrawn)
+	status, body = request(http.MethodDelete, "/api/meal-caterer/invitations/"+withdrawn.ID, "", adminToken)
+	require.Equal(t, http.StatusNoContent, status, string(body))
+	status, body = request(http.MethodGet, "/api/meal-caterer/", "", staffToken)
+	require.Equal(t, http.StatusOK, status, string(body))
+	var after struct {
+		Invitations []struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"invitations"`
+	}
+	decodeCatererResponse(t, body, &after)
+	for _, invitation := range after.Invitations {
+		if invitation.ID == withdrawn.ID {
+			assert.NotEqual(t, "open", invitation.Status, "a withdrawn invitation no longer opens")
+		}
+	}
 }
 
 // checkCatererScopeMatrix walks the assembled router (ADR 0077): a caterer

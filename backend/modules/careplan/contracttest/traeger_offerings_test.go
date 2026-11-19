@@ -118,7 +118,7 @@ func TestTraegerOfferingDraftFollowsTheCatalogRules(t *testing.T) {
 		mixed.Prices = append(mixed.Prices, careplan.TraegerCarePrice{DaysPerWeek: &days, MonthlyCents: 2000})
 		_, err = offerings.CreateTraegerOffering(ctx, own, phase, mixed)
 		assert.ErrorIs(t, err, careplan.ErrCareOfferingConfigInvalid, "a module has one price form")
-		sibling := int64(2000)
+		sibling := 2000
 		expensive := traegerOfferingDraft("Geschwister", 10)
 		expensive.Prices[0].SiblingCents = &sibling
 		_, err = offerings.CreateTraegerOffering(ctx, own, phase, expensive)
@@ -321,8 +321,8 @@ func TestTraegerOfferingOutcomesAreBatchedAndKeepAppliedTerms(t *testing.T) {
 			assert.Equal(t, 1, *row.Schools[0].AppliedVersion)
 			require.NotNil(t, row.Schools[0].AppliedCopyID)
 			assert.Equal(t, copiedIDs[row.ID], *row.Schools[0].AppliedCopyID)
-			assert.Equal(t, int64(1600), row.Schools[0].Applied.Prices[0].MonthlyCents)
-			assert.Equal(t, int64(1800), row.Released.Prices[0].MonthlyCents)
+			assert.Equal(t, 1600, row.Schools[0].Applied.Prices[0].MonthlyCents)
+			assert.Equal(t, 1800, row.Released.Prices[0].MonthlyCents)
 		}
 		withdrawnID := rows[0].ID
 		require.NoError(t, offerings.RecordTraegerOfferingOutcomes(ctx, own, map[int64][]careplan.TraegerOfferingOutcome{withdrawnID: {{SchoolID: school, Outcome: "withdrawn"}}}))

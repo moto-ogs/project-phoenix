@@ -67,7 +67,7 @@ type ArrivalPickupHeatmap struct {
 // one; a later day than the period's start shows how far back its data
 // reaches.
 type SchoolArrivalPickupTimes struct {
-	School
+	TraegerSchool
 	ArrivalPickupHeatmap
 	FirstDay *calendar.Date `json:"first_day"`
 }

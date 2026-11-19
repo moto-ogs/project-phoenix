@@ -95,10 +95,12 @@ type CreateStaffResult struct {
 // level (#4573, ADR 0091): the bound body plus the acting account. Access is
 // passed on as sent; the workflow validates it.
 type ExternalCaregiverInput struct {
-	FirstName        string
-	LastName         string
-	Email            string
-	Organization     string
+	FirstName    string
+	LastName     string
+	Email        string
+	Organization string
+	// Gender is the checked Stammdaten gender; empty records none.
+	Gender           string
 	Access           string
 	ActorAccountID   int64
 	ActorPermissions []string
@@ -211,8 +213,11 @@ type Runtime struct {
 	WorkStatusMap   func(context.Context) (map[int64]string, error)
 	AbsenceMap      func(context.Context) (map[int64]string, error)
 	AbsenceLabelMap func(context.Context) (map[int64]string, error)
-	AccountRoles    func(context.Context, []int64) (map[int64]string, error)
-	AccountEmails   func(context.Context, []int64) (map[int64]string, error)
+	// StaffGenders maps staff ID -> stated gender of the personnel record;
+	// only the form of the position („Betreuerin“) leaves the adapter.
+	StaffGenders  func(context.Context, []int64) (map[int64]string, error)
+	AccountRoles  func(context.Context, []int64) (map[int64]string, error)
+	AccountEmails func(context.Context, []int64) (map[int64]string, error)
 	// PersonAccountID resolves a live person without hydrating account metadata.
 	PersonAccountID     func(context.Context, int64) (*int64, error)
 	AccountAvatars      func(context.Context, []int64) (map[int64]string, error)
@@ -264,7 +269,7 @@ func NewResource(membership schoolmembership.Capability, runtime Runtime) *Resou
 		runtime.CreateExternalCaregiver == nil || runtime.InviteExternalCaregiver == nil || runtime.ExternalFailure == nil ||
 		runtime.ExposeSeedInvitationToken == nil || runtime.PendingInvitationPersons == nil ||
 		runtime.PresentStaffIDs == nil || runtime.WorkStatusMap == nil || runtime.AbsenceMap == nil ||
-		runtime.AbsenceLabelMap == nil || runtime.AccountRoles == nil || runtime.AccountEmails == nil ||
+		runtime.AbsenceLabelMap == nil || runtime.StaffGenders == nil || runtime.AccountRoles == nil || runtime.AccountEmails == nil ||
 		runtime.PersonAccountID == nil || runtime.AccountAvatars == nil || runtime.AccountHasRole == nil || runtime.AccountsHoldingRole == nil ||
 		runtime.RetryQueuedDocumentCleanups == nil ||
 		runtime.TeacherGroups == nil || runtime.SchoolClasses == nil || runtime.SetSchoolClasses == nil ||

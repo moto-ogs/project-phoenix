@@ -163,7 +163,7 @@ func dedupeBatchScopes(scopes []reminder.BatchScope) []reminder.BatchScope {
 func disabledResults(recipients []reminder.BatchScope) map[int64]*reminder.Result {
 	results := make(map[int64]*reminder.Result, len(recipients))
 	for _, sc := range recipients {
-		results[resultKey(sc)] = &reminder.Result{Reminders: []reminder.Reminder{}}
+		results[resultKey(sc)] = &reminder.Result{Reminders: []reminder.StaffReminder{}}
 	}
 	return results
 }
@@ -388,8 +388,8 @@ func (s *service) batchDuePickups(ctx context.Context, recipients []reminder.Bat
 	return pickupsByRecipient, dueIDSet, nil
 }
 
-func batchActivityResult(sc reminder.BatchScope, cfg batchConfig, in *batchInputs, nextChange int) ([]reminder.Reminder, int) {
-	var activityPart []reminder.Reminder
+func batchActivityResult(sc reminder.BatchScope, cfg batchConfig, in *batchInputs, nextChange int) ([]reminder.StaffReminder, int) {
+	var activityPart []reminder.StaffReminder
 	if cfg.anyActivity() {
 		roomFilter := activityRoomFilter(sc.Scope, in.roomsByStaff[sc.StaffID])
 		part, next := buildActivityReminders(in.instances,

@@ -1374,7 +1374,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s parentPreferences) GetForParent(ctx context.Context, accountID int64) (*parentAPI.PreferenceOverview, error) {\n\trow, err := s.source.GetForParent(ctx, accountID)\n\tif row == nil {\n\t\treturn nil, err\n\t}\n\tout := \u0026parentAPI.PreferenceOverview{TenantEnabled: row.TenantEnabled}\n\tif row.Types != nil {\n\t\tout.Types = make([]parentAPI.PreferenceState, len(row.Types))\n\t\tfor i, item := range row.Types {\n\t\t\tout.Types[i] = parentAPI.PreferenceState(item)\n\t\t}\n\t}\n\treturn out, err\n}",
+      "evidence": "func (s parentPreferences) GetForParent(ctx context.Context, accountID int64) (*parentAPI.ParentPreferenceOverview, error) {\n\trow, err := s.source.GetForParent(ctx, accountID)\n\tif row == nil {\n\t\treturn nil, err\n\t}\n\tout := \u0026parentAPI.ParentPreferenceOverview{TenantEnabled: row.TenantEnabled}\n\tif row.Types != nil {\n\t\tout.Types = make([]parentAPI.ParentPreferenceState, len(row.Types))\n\t\tfor i, item := range row.Types {\n\t\t\tout.Types[i] = parentAPI.ParentPreferenceState(item)\n\t\t}\n\t}\n\treturn out, err\n}",
       "form": "unclassified-evidence",
       "id": "api/parentPreferences.GetForParent",
       "owner": "roots"

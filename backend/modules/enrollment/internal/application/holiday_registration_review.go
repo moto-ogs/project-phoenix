@@ -647,7 +647,7 @@ func completeHolidayChild(child *enrollment.HolidayRegistrationChild, models map
 		booking.HostSchoolID, booking.TimeModelName, booking.PriceCents = known.week.HostSchoolID, known.model.Name, known.model.PriceCents
 		if len(booking.Days) > 0 {
 			// A time model of a week by days prices one day (#4701).
-			booking.PriceCents = known.model.PriceCents * int64(len(booking.Days))
+			booking.PriceCents = known.model.PriceCents * len(booking.Days)
 		}
 		booking.Lunch = booking.Lunch && known.week.LunchPriceCents != nil
 		booking.LunchDays, booking.LunchPriceCents = enrollment.HolidayLunch(known.week, booking.Days, booking.Lunch)

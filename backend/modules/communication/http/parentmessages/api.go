@@ -77,7 +77,7 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 
 // --- wire shapes (int64 ids stringified per the frontend convention) ---
 
-type InboxThreadResponse struct {
+type ParentChatInboxThreadResponse struct {
 	ThreadID         string `json:"thread_id"`
 	StudentID        string `json:"student_id"`
 	StudentName      string `json:"student_name"`
@@ -134,7 +134,7 @@ func toReadersResponse(readers communication.ParentMessageReaders) ReadersRespon
 	}
 }
 
-type MessageResponse struct {
+type ParentChatMessageResponse struct {
 	ClientMessageID string          `json:"client_message_id,omitempty"`
 	ID              string          `json:"id"`
 	SenderKind      string          `json:"sender_kind"`
@@ -162,15 +162,15 @@ type MessageResponse struct {
 	Attachments json.RawMessage `json:"attachments,omitempty"`
 }
 
-type ThreadDetailResponse struct {
-	ThreadID         string            `json:"thread_id"`
-	StudentID        string            `json:"student_id"`
-	StudentName      string            `json:"student_name"`
-	GuardianName     string            `json:"guardian_name"`
-	RelationshipType string            `json:"relationship_type,omitempty"`
-	Audience         string            `json:"audience"`
-	Readers          ReadersResponse   `json:"readers"`
-	Messages         []MessageResponse `json:"messages"`
+type ParentChatThreadDetailResponse struct {
+	ThreadID         string                      `json:"thread_id"`
+	StudentID        string                      `json:"student_id"`
+	StudentName      string                      `json:"student_name"`
+	GuardianName     string                      `json:"guardian_name"`
+	RelationshipType string                      `json:"relationship_type,omitempty"`
+	Audience         string                      `json:"audience"`
+	Readers          ReadersResponse             `json:"readers"`
+	Messages         []ParentChatMessageResponse `json:"messages"`
 }
 
 // ReachableStudentsResponse lists the children with at least one guardian
@@ -179,12 +179,12 @@ type ReachableStudentsResponse struct {
 	StudentIDs []string `json:"student_ids"`
 }
 
-// GuardianResponse is one recipient for a new conversation. readers says
+// MessageableGuardianResponse is one recipient for a new conversation. readers says
 // who would read the conversation with this guardian in the requested
 // audience (?audience=team|leadership, default team, #5200);
 // leadership_available tells a leadership member whether a new leadership
 // conversation may begin and is false for every other caller.
-type GuardianResponse struct {
+type MessageableGuardianResponse struct {
 	AccountID           string          `json:"account_id"`
 	Name                string          `json:"name"`
 	RelationshipType    string          `json:"relationship_type,omitempty"`
@@ -205,7 +205,7 @@ type StartThreadRequest struct {
 	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 }
 
-type PostMessageRequest struct {
+type ParentChatPostMessageRequest struct {
 	ClientMessageID      string `json:"client_message_id,omitempty"`
 	Body                 string `json:"body"`
 	HandledUpToMessageID string `json:"handled_up_to_message_id,omitempty"`
@@ -219,8 +219,8 @@ type OpenThreadRequest struct {
 	Audience          string `json:"audience,omitempty"`
 }
 
-func toMessageResponses(messages []communication.ParentMessage, viewer ...int64) []MessageResponse {
-	out := make([]MessageResponse, 0, len(messages))
+func toMessageResponses(messages []communication.ParentMessage, viewer ...int64) []ParentChatMessageResponse {
+	out := make([]ParentChatMessageResponse, 0, len(messages))
 	for _, m := range messages {
 		refID := ""
 		if m.RefID != nil {
@@ -230,7 +230,7 @@ func toMessageResponses(messages []communication.ParentMessage, viewer ...int64)
 		if m.AppliedBy != nil {
 			appliedBy = strconv.FormatInt(*m.AppliedBy, 10)
 		}
-		out = append(out, MessageResponse{
+		out = append(out, ParentChatMessageResponse{
 			ID:              strconv.FormatInt(m.ID, 10),
 			SenderKind:      m.SenderKind,
 			SenderName:      m.SenderName,
@@ -264,8 +264,8 @@ func optionalIDString(id *int64) string {
 	return strconv.FormatInt(*id, 10)
 }
 
-func toThreadDetail(d *communication.ParentMessageThread, viewer ...int64) ThreadDetailResponse {
-	return ThreadDetailResponse{
+func toThreadDetail(d *communication.ParentMessageThread, viewer ...int64) ParentChatThreadDetailResponse {
+	return ParentChatThreadDetailResponse{
 		ThreadID:         strconv.FormatInt(d.ThreadID, 10),
 		StudentID:        strconv.FormatInt(d.StudentID, 10),
 		StudentName:      d.StudentName,
@@ -289,10 +289,10 @@ func (rs *Resource) listInbox(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, toInboxThreadResponses(rows), "Inbox retrieved")
 }
 
-func toInboxThreadResponses(rows []communication.ParentMessageInboxThread) []InboxThreadResponse {
-	out := make([]InboxThreadResponse, 0, len(rows))
+func toInboxThreadResponses(rows []communication.ParentMessageInboxThread) []ParentChatInboxThreadResponse {
+	out := make([]ParentChatInboxThreadResponse, 0, len(rows))
 	for _, t := range rows {
-		out = append(out, InboxThreadResponse{
+		out = append(out, ParentChatInboxThreadResponse{
 			ThreadID:         strconv.FormatInt(t.ThreadID, 10),
 			StudentID:        strconv.FormatInt(t.StudentID, 10),
 			StudentName:      t.StudentName,
@@ -333,7 +333,7 @@ func (rs *Resource) unreadCount(w http.ResponseWriter, r *http.Request) {
 		renderMessagingError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"unread_count": count}, "Unread count retrieved")
+	common.Respond(w, r, http.StatusOK, ParentChatUnreadCountResponse{UnreadCount: count}, "Unread count retrieved")
 }
 
 func (rs *Resource) getThread(w http.ResponseWriter, r *http.Request) {
@@ -358,12 +358,22 @@ func (rs *Resource) markAllRead(w http.ResponseWriter, r *http.Request) {
 		renderMessagingError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"unread_count": count}, "Messages marked read")
+	common.Respond(w, r, http.StatusOK, ParentChatUnreadCountResponse{UnreadCount: count}, "Messages marked read")
 }
 
-// CountScopeBody carries the caller's count scope in both directions:
-// "all", "own_groups" or "none".
-type CountScopeBody struct {
+// ParentChatUnreadCountResponse is the caller's number of unread conversations.
+type ParentChatUnreadCountResponse struct {
+	UnreadCount int `json:"unread_count"`
+}
+
+// CountScopeRequest sets the caller's count scope: "all", "own_groups" or
+// "none".
+type CountScopeRequest struct {
+	Scope string `json:"scope"`
+}
+
+// CountScopeSavedResponse answers the count scope the caller saved.
+type CountScopeSavedResponse struct {
 	Scope string `json:"scope"`
 }
 
@@ -384,7 +394,7 @@ func (rs *Resource) getCountScope(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rs *Resource) setCountScope(w http.ResponseWriter, r *http.Request) {
-	var req CountScopeBody
+	var req CountScopeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
@@ -393,7 +403,7 @@ func (rs *Resource) setCountScope(w http.ResponseWriter, r *http.Request) {
 		renderMessagingError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, req, "Count scope saved")
+	common.Respond(w, r, http.StatusOK, CountScopeSavedResponse(req), "Count scope saved")
 }
 
 // markThreadUnread marks the conversation unread for the whole team (#3654).
@@ -443,7 +453,7 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var req PostMessageRequest
+	var req ParentChatPostMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
@@ -535,9 +545,9 @@ func (rs *Resource) listGuardians(w http.ResponseWriter, r *http.Request) {
 		renderMessagingError(w, r, err)
 		return
 	}
-	out := make([]GuardianResponse, 0, len(guardians))
+	out := make([]MessageableGuardianResponse, 0, len(guardians))
 	for _, g := range guardians {
-		out = append(out, GuardianResponse{
+		out = append(out, MessageableGuardianResponse{
 			AccountID:           strconv.FormatInt(g.AccountID, 10),
 			Name:                g.Name,
 			RelationshipType:    g.RelationshipType,

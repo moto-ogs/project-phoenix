@@ -6,7 +6,7 @@
 // Schule sieht dann „Vom Träger aufgehoben“. Wer Springer ist, legt sie im
 // Arbeitsvertrag der Personalakte fest.
 
-import { LockKeyIcon, UsersThreeIcon } from "@phosphor-icons/react";
+import { UsersThreeIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 
 import {
@@ -20,11 +20,10 @@ import {
   planningWeekLabel,
   schoolColors,
 } from "~/components/traeger/planning/planning-format";
+import { StaffNotReleasedPage } from "~/components/traeger/staff/staff-not-released-page";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
-import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
-import { EmptyState } from "~/components/ui/empty-state";
+import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
-import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -47,7 +46,7 @@ const INFO = (
     </p>
     <p>
       Eine Person ist zu jeder Zeit nur für eine Schule geblockt. Du siehst jede
-      Blockung und können sie aufheben.
+      Blockung und kannst sie aufheben.
     </p>
   </div>
 );
@@ -90,6 +89,23 @@ export default function TraegerStaffPoolPage() {
       0,
     ) ?? 0;
   const loading = !notReleased && !shown && !loadError;
+  const exportItems = useTraegerListExportItems({
+    download: (format) => downloadTraegerPoolWeek(weekStart, format),
+    scope:
+      "Alle Blockungen der Woche. Jeder Download steht im Zugriffsprotokoll der Schulen.",
+    fallbackName: `vertretungspool-${weekStart}`,
+    errorObject: "die Blockungen der Woche",
+    unavailable: blockCount === 0,
+  });
+
+  if (notReleased) {
+    return (
+      <StaffNotReleasedPage
+        title="Vertretungspool"
+        description="Bis zur Freischaltung plant jede Schule ihre Vertretungen selbst."
+      />
+    );
+  }
 
   return (
     <TenantPage
@@ -113,42 +129,36 @@ export default function TraegerStaffPoolPage() {
         ) : null
       }
       statsLoading={loading}
-      actions={
-        notReleased ? undefined : (
-          <TraegerListExportMenu
-            download={(format) => downloadTraegerPoolWeek(weekStart, format)}
-            scope="Alle Blockungen der Woche"
-            ariaLabel="Blockungen der Woche herunterladen"
-            tooltip="Zeigt die Formate für die Blockungen dieser Woche. Jeder Download steht im Zugriffsprotokoll der Schulen."
-            fallbackName={`vertretungspool-${weekStart}`}
-            errorObject="die Blockungen der Woche"
-            unavailable={blockCount === 0}
-          />
-        )
-      }
+      overflowMenu={exportItems}
       searchSlot={
-        notReleased ? undefined : (
-          <PlanningContextBar
-            dateLabel={planningWeekLabel(weekStart)}
-            onPrevious={() =>
-              setWeekStart((current) => addDaysISO(current, -7))
-            }
-            onNext={() => setWeekStart((current) => addDaysISO(current, 7))}
-            previousLabel="Vorherige Woche"
-            nextLabel="Nächste Woche"
-            previousTooltip="Zeigt die Woche davor."
-            nextTooltip="Zeigt die Woche danach."
-            withoutContextRow
-            onToday={
-              weekStart === mondayOf(today)
-                ? undefined
-                : () => setWeekStart(mondayOf(today))
-            }
-          />
-        )
+        <PlanningContextBar
+          dateLabel={planningWeekLabel(weekStart)}
+          onPrevious={() => setWeekStart((current) => addDaysISO(current, -7))}
+          onNext={() => setWeekStart((current) => addDaysISO(current, 7))}
+          previousLabel="Vorherige Woche"
+          nextLabel="Nächste Woche"
+          previousTooltip="Zeigt die Woche davor."
+          nextTooltip="Zeigt die Woche danach."
+          withoutContextRow
+          onToday={
+            weekStart === mondayOf(today)
+              ? undefined
+              : () => setWeekStart(mondayOf(today))
+          }
+        />
       }
       error={loadError}
       loading={loading}
+      empty={
+        shown && shown.springers.length === 0
+          ? {
+              icon: <UsersThreeIcon className="h-12 w-12" aria-hidden="true" />,
+              title: "In dieser Woche ist niemand im Vertretungspool.",
+              description:
+                "Setze im Arbeitsvertrag einer Personalakte das Merkmal „Vertretungspool“. Dann sehen alle deine Schulen die Person hier.",
+            }
+          : undefined
+      }
       overlays={
         <LiftBlockModal
           target={lifting}
@@ -163,26 +173,6 @@ export default function TraegerStaffPoolPage() {
         />
       }
     >
-      {notReleased ? (
-        <SectionCard>
-          <EmptyState
-            icon={<LockKeyIcon className="h-12 w-12" aria-hidden="true" />}
-            title="Personal beim Träger ist noch nicht freigeschaltet."
-            description="Das moto-Team schaltet es frei. Bis dahin plant jede Schule ihre Vertretungen selbst."
-          />
-        </SectionCard>
-      ) : null}
-
-      {shown && shown.springers.length === 0 ? (
-        <SectionCard>
-          <EmptyState
-            icon={<UsersThreeIcon className="h-12 w-12" aria-hidden="true" />}
-            title="In dieser Woche ist niemand im Vertretungspool."
-            description="Setze im Arbeitsvertrag einer Personalakte das Merkmal „Vertretungspool“. Dann sehen alle deine Schulen die Person hier."
-          />
-        </SectionCard>
-      ) : null}
-
       {shown && shown.springers.length > 0 ? (
         <PoolWeekGrid
           springers={shown.springers}

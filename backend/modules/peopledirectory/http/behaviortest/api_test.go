@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -141,11 +142,8 @@ func newHarness(t *testing.T, directory *fakeDirectory) *harness {
 			}
 		},
 		ParsePagination: func(r *http.Request) (int, int) { return h.page, h.pageSize },
-		Success: func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-			payload, _ := json.Marshal(data)
-			render.Status(r, status)
-			_ = render.Render(w, r, response{Status: "success", Data: payload, Message: message})
-		},
+		// The production binding: every answer is held against the contract.
+		Success: common.Respond,
 		SuccessPaginated: func(w http.ResponseWriter, r *http.Request, status int, data any, pagination usersHTTP.Pagination, message string) {
 			payload, _ := json.Marshal(data)
 			render.Status(r, status)

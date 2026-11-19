@@ -541,6 +541,11 @@ type EditPatchRequest struct {
 // can decode request bodies into it without ad-hoc json.Decoder code.
 func (req *EditPatchRequest) Bind(_ *http.Request) error { return nil }
 
+// EditPatchResponse confirms a parent's edit of an open request.
+type EditPatchResponse struct {
+	Message string `json:"message"`
+}
+
 func (rs *Resource) patchStatus(w http.ResponseWriter, r *http.Request) {
 	if rs.RequestService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("enrollment request service not configured")))
@@ -571,7 +576,7 @@ func (rs *Resource) patchStatus(w http.ResponseWriter, r *http.Request) {
 		mapEditError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"message": "updated"}, "Request updated")
+	common.Respond(w, r, http.StatusOK, EditPatchResponse{Message: "updated"}, "Request updated")
 }
 
 func (rs *Resource) replaceStatus(w http.ResponseWriter, r *http.Request) {

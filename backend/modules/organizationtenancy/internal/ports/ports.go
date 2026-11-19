@@ -56,7 +56,6 @@ type TraegerMembershipStore interface {
 	HasRetainedTraegerMembership(ctx context.Context, accountID int64) (bool, domain.OperationStats, error)
 	ListActiveAccountTraegerIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error)
 	ListTraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, domain.OperationStats, error)
-	ListTraegerBillingKeyDateCounts(ctx context.Context, organizationID int64) ([]domain.BillingKeyDateCount, domain.OperationStats, error)
 	ListTraegerMemberships(ctx context.Context, organizationID int64) ([]organizationtenancy.TraegerMembership, domain.OperationStats, error)
 	UpsertActiveTraegerMembership(ctx context.Context, organizationID, accountID int64) (organizationtenancy.TraegerMembership, domain.OperationStats, error)
 	DeactivateTraegerMembership(ctx context.Context, organizationID, accountID int64) (bool, domain.OperationStats, error)

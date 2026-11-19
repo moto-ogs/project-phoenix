@@ -105,7 +105,7 @@ func templateResponseFromRow(row templateRow, childrenPerStaffRatio int) templat
 		PlanningTrackID:             row.PlanningTrackID,
 		PlanningTrackName:           row.PlanningTrackName,
 		PlanningTrackColor:          row.PlanningTrackColor,
-		PlanningTrackSortOrder:      row.PlanningTrackOrder,
+		PlanningTrackSortOrder:      intPointer(row.PlanningTrackOrder),
 		RoomID:                      row.RoomID,
 		RoomName:                    stringValue(row.RoomName),
 		EducationGroupID:            row.EducationGroupID,
@@ -213,7 +213,7 @@ type templateResponse struct {
 	PlanningTrackID        *int64 `json:"planning_track_id,omitempty"`
 	PlanningTrackName      string `json:"planning_track_name,omitempty"`
 	PlanningTrackColor     string `json:"planning_track_color,omitempty"`
-	PlanningTrackSortOrder *int64 `json:"planning_track_sort_order,omitempty"`
+	PlanningTrackSortOrder *int   `json:"planning_track_sort_order,omitempty"`
 	RoomID                 *int64 `json:"room_id,omitempty"`
 	RoomName               string `json:"room_name,omitempty"`
 	EducationGroupID       *int64 `json:"education_group_id,omitempty"`
@@ -360,4 +360,13 @@ func templatePeriodIDFromRequest(w http.ResponseWriter, r *http.Request) (*int64
 		return nil, false
 	}
 	return &id, true
+}
+
+// intPointer narrows an optional sort position to the int the wire names.
+func intPointer(value *int64) *int {
+	if value == nil {
+		return nil
+	}
+	narrowed := int(*value)
+	return &narrowed
 }

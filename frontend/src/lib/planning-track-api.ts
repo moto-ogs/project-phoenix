@@ -2,7 +2,7 @@ import { apiErrorFromBody } from "./api-error";
 import { sessionFetch } from "./session-cache";
 
 interface BackendPlanningTrack {
-  id: number;
+  id: number | string;
   name: string;
   color: string;
   sort_order: number;

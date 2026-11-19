@@ -1,5 +1,6 @@
 // Staff API service for fetching all staff members and their supervision status
 
+import type { RoleForm } from "~/lib/position-title";
 import { sessionFetch } from "./session-cache";
 import { createLogger } from "~/lib/logger";
 import {
@@ -38,6 +39,8 @@ export interface BackendStaffResponse {
   lastName: string;
   specialization?: string | null;
   role: string | null;
+  /** Form der Position aus den Stammdaten (`feminine`/`masculine`), fehlt ohne Angabe. */
+  role_form?: RoleForm | null;
   qualifications: string | null;
   account_role?: string | null;
   /** Gespeicherter Avatar-Pfad des Kontos; nur ob er da ist, zählt. */
@@ -118,6 +121,7 @@ export interface Staff {
   /** Profilbild über `/api/staff/[id]/avatar`, fehlt ohne Bild (#4432). */
   avatarUrl?: string;
   role?: string; // Display role (custom position from teacher profile)
+  roleForm?: RoleForm; // Form der Position aus den Stammdaten
   accountRole?: string; // Auth role (Admin/Betreuer/Extern)
   specialization?: string;
   qualifications?: string;
@@ -158,6 +162,8 @@ interface ExternalStaffInput {
   access: ExternalAccess;
   email?: string;
   organization?: string;
+  /** Stammdaten gender; left out when nobody chose one. */
+  gender?: StammdatenGender;
 }
 
 export interface StaffFilters {
@@ -197,11 +203,11 @@ export interface BackendFormerStaff {
 /** Active group with supervisors and room info */
 interface ActiveGroupInfo {
   supervisors?: Array<{
-    staff_id?: number;
+    staff_id?: number | string;
     role?: string;
   }>;
   room?: {
-    id: number;
+    id: number | string;
     name: string;
   };
 }
@@ -214,14 +220,14 @@ interface SupervisedGroupEntry {
 
 /** Active group with ID for supervision mapping */
 interface ActiveGroupWithId extends ActiveGroupInfo {
-  id?: number;
+  id?: number | string;
 }
 
 /**
  * Supervised group entry with group ID
  */
 interface SupervisedGroupEntryWithId extends SupervisedGroupEntry {
-  groupId?: number;
+  groupId?: number | string;
 }
 
 /**
@@ -405,6 +411,7 @@ function mapStaffMember(
     lastName: staff.lastName,
     email: undefined,
     role: staff.role ?? undefined,
+    roleForm: staff.role_form ?? undefined,
     accountRole: staff.account_role ?? undefined,
     specialization: staff.specialization?.trim() ?? undefined,
     qualifications: staff.qualifications ?? undefined,
@@ -482,6 +489,7 @@ export function mapStaffRecord(staff: BackendStaffResponse): Staff {
     email: undefined,
     avatarUrl: staffAvatarUrl(staff.id, staff.avatar),
     role: staff.role ?? undefined,
+    roleForm: staff.role_form ?? undefined,
     accountRole: staff.account_role ?? undefined,
     specialization: staff.specialization?.trim() ?? undefined,
     qualifications: staff.qualifications ?? undefined,
@@ -584,6 +592,7 @@ class StaffService {
         last_name: input.lastName.trim(),
         organization: input.organization?.trim() ?? "",
         access: input.access,
+        ...(input.gender ? { gender: input.gender } : {}),
         ...(input.access === "none"
           ? {}
           : { email: input.email?.trim() ?? "" }),
@@ -668,7 +677,11 @@ class StaffService {
       data: Omit<
         Pick<Staff, "id" | "name" | "firstName" | "lastName">,
         "id"
-      > & { id: number; started_on?: string; ended_on?: string | null };
+      > & {
+        id: number | string;
+        started_on?: string;
+        ended_on?: string | null;
+      };
     };
     return {
       ...json.data,
@@ -763,7 +776,7 @@ interface BackendScheduleEntry {
 }
 
 interface BackendScheduleModel {
-  id: number;
+  id: number | string;
   name: string;
   rotation_length: number;
   rotation_anchor_date: string;
@@ -1215,8 +1228,9 @@ class StaffHistoryService {
 // Admin counterpart to /api/time-tracking/absences (which is self-scoped).
 // Backend response shape matches BackendStaffAbsence in time-tracking-helpers.ts.
 export interface StaffAbsenceRow {
-  id: number;
-  staff_id: number;
+  // The contract decoder hands every identifier over as a decimal string.
+  id: string;
+  staff_id: string;
   absence_type: string;
   /** School-defined Abwesenheitsart (#2403); absent for the standard types. */
   absence_type_id?: string | null;
@@ -1229,7 +1243,7 @@ export interface StaffAbsenceRow {
   end_half_day?: boolean;
   note: string;
   status: string;
-  approved_by?: number | null;
+  approved_by?: string | null;
   approved_at?: string | null;
   decision_note?: string;
   working_days?: number | null;
@@ -1268,8 +1282,8 @@ export interface AbsencePlanGap {
 }
 
 interface AbsencePlanGapWire {
-  absence_id: number;
-  staff_id: number;
+  absence_id: number | string;
+  staff_id: number | string;
   absence_type: string;
   date_start: string;
   date_end: string;
@@ -1308,9 +1322,9 @@ interface BackendStaffVacationOpening extends Omit<
   StaffVacationOpening,
   "id" | "staff_id" | "decided_by"
 > {
-  id: number;
-  staff_id: number;
-  decided_by: number;
+  id: number | string;
+  staff_id: number | string;
+  decided_by: number | string;
 }
 
 function mapStaffVacationOpening(
@@ -1325,7 +1339,7 @@ function mapStaffVacationOpening(
 }
 
 export interface StaffVacationQuotaSummary {
-  staff_id: number;
+  staff_id: string;
   year: number;
   entitled_days: number;
   carryover_days: number;
@@ -2265,7 +2279,7 @@ class StaffMonthCloseService {
       );
     }
     const json = (await response.json()) as {
-      data: { staff_ids: number[] | null } | null;
+      data: { staff_ids: (number | string)[] | null } | null;
     };
     return (json.data?.staff_ids ?? []).map(String);
   }
@@ -2438,7 +2452,7 @@ export interface StaffFinancialPlain {
 }
 
 interface BackendStammdaten {
-  staff_id: number;
+  staff_id: number | string;
   person: {
     first_name: string;
     last_name: string;

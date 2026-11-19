@@ -142,5 +142,5 @@ func (rs *Resource) endSupply(w http.ResponseWriter, r *http.Request) {
 	if !ended {
 		message = "No running supply"
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"ended": ended}, message)
+	common.Respond(w, r, http.StatusOK, SupplyEndedResponse{Ended: ended}, message)
 }

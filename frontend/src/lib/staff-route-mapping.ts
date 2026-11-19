@@ -1,4 +1,5 @@
 // Wire mapping shared by the /api/staff route handlers.
+import type { RoleForm } from "~/lib/position-title";
 import type { ExternalAccountStatus } from "~/lib/staff-api";
 import type { WireID } from "~/lib/wire-id";
 import { toIdString, toOptionalIdString } from "~/lib/wire-id";
@@ -19,6 +20,8 @@ export interface BackendStaffResponse {
   teacher_id?: number;
   specialization?: string;
   role?: string;
+  /** Form der Position aus den Stammdaten (`feminine`/`masculine`), fehlt ohne Angabe. */
+  role_form?: RoleForm;
   qualifications?: string;
   account_role?: string;
   person?: {
@@ -63,6 +66,7 @@ export function mapBackendStaff(staff: BackendStaffResponse) {
     account_id: toOptionalIdString(staff.person?.account_id),
     specialization: staff.specialization ?? null,
     role: staff.role ?? null,
+    role_form: staff.role_form ?? null,
     qualifications: staff.qualifications ?? null,
     account_role: staff.account_role ?? null,
     tag_id: staff.person?.tag_id ?? null,

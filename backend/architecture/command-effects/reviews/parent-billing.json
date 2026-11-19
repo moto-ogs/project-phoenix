@@ -848,7 +848,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.HolidayWeeks",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer: the published period of a resolved link with the prices of its time models, read in the Träger transaction of the link's Träger for the public contribution (ADR 0115). Since #4701 the binding also copies the care days Enrollment names for a week by days, so the quote prices a day; since #5631 it copies the price of one lunch and the lunches of a whole week the same way (ADR 0235). It adds no read and no write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer: the published period of a resolved link with the prices of its time models, read in the Träger transaction of the link's Träger for the public contribution (ADR 0115). Since #4701 the binding also copies the care days Enrollment names for a week by days, so the quote prices a day; since #5631 it copies the price of one lunch and the lunches of a whole week the same way (ADR 0235). Since #2352 Enrollment names the prices in whole cent as int (ADR 0270); the binding widens them to the int64 cent of the Elternabrechnung. It adds no read and no write.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer",
       "target_owner": "enrollment"

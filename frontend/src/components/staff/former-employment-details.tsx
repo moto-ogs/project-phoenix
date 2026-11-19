@@ -10,6 +10,7 @@ import { DataTable } from "~/components/ui/data-table";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { positionForForm } from "~/lib/position-title";
 import {
   staffHistoryService,
   type Staff,
@@ -87,7 +88,11 @@ export function FormerEmploymentDetails({
                 : "Nicht hinterlegt"}
             </DataField>
             <DataField label="Austritt">{formatDate(staff.endedOn!)}</DataField>
-            {staff.role && <DataField label="Position">{staff.role}</DataField>}
+            {staff.role && (
+              <DataField label="Position">
+                {positionForForm(staff.role, staff.roleForm)}
+              </DataField>
+            )}
             {staff.qualifications && (
               <DataField label="Qualifikationen">
                 {staff.qualifications}

@@ -476,6 +476,16 @@ func signingContract(version carecontract.Version) carecontract.SigningContract 
 	return carecontract.SigningContract{
 		ChildFirstName: version.ChildFirstName, ChildLastName: version.ChildLastName,
 		SchoolName: version.SchoolName, PhaseName: version.PhaseName,
-		EffectiveFrom: version.EffectiveFrom, EndsOn: version.EndsOn, PriceCents: version.PriceCents, Services: services,
+		EffectiveFrom: version.EffectiveFrom, EndsOn: version.EndsOn, PriceCents: signingPrice(version.PriceCents), Services: services,
 	}
+}
+
+// signingPrice is the monthly price as the signing view counts it; the wire
+// keeps the JSON number.
+func signingPrice(cents *int64) *int {
+	if cents == nil {
+		return nil
+	}
+	price := int(*cents)
+	return &price
 }

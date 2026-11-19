@@ -24,10 +24,10 @@ export type AuditLogSource =
 export interface BackendAuditLogEvent {
   occurred_at: string;
   source: AuditLogSource;
-  entry_id: number;
-  staff?: { id: number; name: string };
+  entry_id: number | string;
+  staff?: { id: number | string; name: string };
   actor: {
-    staff_id?: number;
+    staff_id?: number | string;
     name: string;
     is_system: boolean;
     is_self: boolean;
@@ -37,7 +37,7 @@ export interface BackendAuditLogEvent {
   detail: Record<string, unknown>;
 }
 
-export interface BackendAuditLogPage {
+interface BackendAuditLogPage {
   events: BackendAuditLogEvent[];
   next_cursor?: string;
   /** Oldest day session edits can still exist for (retention setting). */

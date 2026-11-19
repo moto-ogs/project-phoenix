@@ -8,9 +8,9 @@ import "github.com/moto-ogs/project-phoenix/api/common"
 // moto schule. A Lehrkraft writes class letters only; changing a draft, polls,
 // the scheduled reminder and the Kinderakte belong to the staff portal.
 //
-// The PDF and CSV downloads answer a file and keep their route files, and so
-// does PUT /{announcementId}/reminder: its body tells an omitted reminder_at
-// from an explicit null, which a typed request cannot say.
+// The PDF and CSV downloads answer a file and keep their route files. The
+// body of PUT /{announcementId}/reminder keeps reminder_at as raw JSON, so
+// the handler tells an omitted reminder_at from an explicit null.
 func RouteContracts(portal common.PortalScope) []common.RouteContract {
 	portals := []common.PortalScope{portal}
 	tenant := portal == common.PortalTenant
@@ -39,6 +39,7 @@ func RouteContracts(portal common.PortalScope) []common.RouteContract {
 	}
 	return append(routes,
 		common.RouteContract{Method: "PUT", Pattern: "/{announcementId}", Portals: portals, Request: announcementRequest{}, Response: announcementResponse{}},
+		common.RouteContract{Method: "PUT", Pattern: "/{announcementId}/reminder", Portals: portals, Request: reminderRequest{}, Response: announcementResponse{}},
 		common.RouteContract{Method: "GET", Pattern: "/{announcementId}/poll-results", Portals: portals, Response: pollResultsResponse{}},
 		common.RouteContract{Method: "GET", Pattern: "/{announcementId}/poll-children", Portals: portals, Response: []pollChildResponse{}},
 		common.RouteContract{Method: "GET", Pattern: "/students/{studentId}", Portals: portals, Response: studentRecordsResponse{}},

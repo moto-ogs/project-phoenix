@@ -34,7 +34,7 @@ export function traegerClosingDaysTopic(): HelpTopic {
         title: "Schließtag ändern oder löschen",
         steps: [
           "Wähle beim Schließtag die drei Punkte.",
-          "Wähle `Ändern` oder `Löschen`.",
+          "Wähle `Bearbeiten` oder `Löschen`.",
           "Unter `Ferienbetreuung an diesen Tagen` steht, welche Tage wieder geöffnet sind und wie viele Familien eine E-Mail bekommen.",
           "Wähle `Speichern` oder beim Löschen `Ja, löschen` und dann `Endgültig löschen`. Die Eltern bekommen die E-Mail sofort.",
         ],
@@ -57,7 +57,7 @@ export function traegerClosingDaysTopic(): HelpTopic {
         steps: [
           "Wähle in der Navigation `Schließtage`.",
           "Wähle oben das Jahr.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei enthält die Schließtage dieses Jahres mit Grund und Schulen.",
         ],
       },

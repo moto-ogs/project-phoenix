@@ -3,6 +3,7 @@
 package notifications_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -78,4 +79,45 @@ func TestNotificationPreferenceRoutesStoreTheDecisionOfThePortal(t *testing.T) {
 			}
 		})
 	}
+}
+
+// capturedDispatch records the events a route hands to the dispatch.
+type capturedDispatch struct{ events []notifications.Event }
+
+func (c *capturedDispatch) Notify(_ context.Context, event notifications.Event) error {
+	c.events = append(c.events, event)
+	return nil
+}
+
+// A person sends the test notification in the staff portal and in moto
+// schule; it goes to that person only and to the portal they stand in.
+func TestNotificationTestRouteDispatchesToTheCallerInTheirPortal(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, err := api.NewDeliveryTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
+	require.NoError(t, err)
+	dispatch := &capturedDispatch{}
+	router := module.NotificationRouterForTests(dispatch)
+	_, account := testpkg.CreateTestStaffWithAccount(t, db, "Test", "Glocke")
+	testpkg.MapAccountToTenant(t, db, account.ID, testpkg.Tenant(t))
+	testpkg.AssignLehrkraftSystemRole(t, db, account.ID, testpkg.Tenant(t))
+
+	for _, portal := range []struct{ scope, path, portal string }{
+		{"", "/api/notifications/test", notifications.PortalStaff},
+		{"school", "/school/notifications/test", notifications.PortalSchool},
+	} {
+		claims := testutil.TeacherTestClaims(int(account.ID))
+		claims.TenantID = testpkg.Tenant(t)
+		claims.Scope = portal.scope
+		bearer := testutil.WithJWTBearer(testutil.MintTestJWT(t, claims))
+		response := testutil.ExecuteRequestForTest(t, router, testutil.NewAuthenticatedRequest(t, http.MethodPost, portal.path, nil, bearer))
+		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+		require.NotEmpty(t, dispatch.events, portal.path)
+		event := dispatch.events[len(dispatch.events)-1]
+		assert.Equal(t, "test", event.Type)
+		assert.Equal(t, portal.portal, event.Portal)
+		assert.Equal(t, testpkg.Tenant(t), event.Audience.TenantID)
+		assert.Equal(t, []int64{account.ID}, event.Audience.StaffAccountIDs)
+	}
+	assert.Len(t, dispatch.events, 2)
 }

@@ -32,6 +32,12 @@ export interface GetStaffMessagesQuery {
 }
 
 export const routes = {
+  "DELETE /api/staff-messages/threads/{threadID}/members/{accountID}": {
+    method: "DELETE",
+    pattern: "/api/staff-messages/threads/{threadID}/members/{accountID}",
+    portals: ["tenant"],
+    response: success(ThreadDetailResponseSchema.nullable()),
+  },
   "GET /api/staff-messages/": {
     method: "GET",
     pattern: "/api/staff-messages/",

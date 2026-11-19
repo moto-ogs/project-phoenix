@@ -2,7 +2,8 @@
 
 // Status einer Ferienanmeldung und was das Träger-Büro damit tun kann
 // (#4663): bestätigen, stornieren, einfrieren und wieder öffnen. Die Karte
-// sagt, warum eine Aktion gerade fehlt. Das Bestätigen hält den Ferienbeitrag
+// sagt, warum eine Aktion gerade fehlt; die Aktionen stehen im Seitenkopf,
+// „Bestätigen“ sichtbar, alles andere in seinem Menü (#7410). Das Bestätigen hält den Ferienbeitrag
 // fest, auf Wunsch mit der Befreiung bei Leistungsbezug (#4664) oder mit
 // der Kostenübernahme durch einen Kostenträger (#5627). Fragt der
 // Träger die Debitorennummer ab, ist sie beim Bestätigen Pflicht (#5621).
@@ -71,7 +72,7 @@ import {
   type HolidayRegistrationAction,
   type HolidayRegistrationDetail,
 } from "~/lib/traeger-holiday-registrations-api";
-import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import type { OverflowMenuEntry } from "~/components/ui/page-header/OverflowMenu";
 import {
   ChildDebtorNumberInputs,
   ChildDebtorNumbersField,
@@ -267,7 +268,7 @@ function DebtorNumberField({
             name="debtor_number"
             label="Debitorennummer"
             autoComplete="off"
-            controlSize="touch"
+            controlSize="compact"
             inputMode={format.digitsOnly ? "numeric" : undefined}
             maxLength={DEBTOR_NUMBER_MAX_LENGTH}
             value={value}
@@ -433,7 +434,87 @@ function PayerChoice({
   );
 }
 
-export function HolidayRegistrationStatusCard({
+/** The props of the status, as the page passes them. */
+export interface HolidayRegistrationStatusProps {
+  readonly periodId: string;
+  readonly registration: HolidayRegistrationDetail;
+  /** The contribution a confirmation freezes; null while it loads. */
+  readonly contribution: HolidayContribution | null;
+  /** The preview is computed again; the confirmation waits for it. */
+  readonly previewPending?: boolean;
+  /** The Träger asks for the debtor number at the confirmation (#5621). */
+  readonly debtorNumberRequired?: boolean;
+  /** The format of the Träger's debtor numbers (#6675). */
+  readonly debtorNumberFormat?: DebtorNumberFormat;
+  /**
+   * The number the family already has at the Träger (#6692), proposed at the
+   * field; "" for none.
+   */
+  readonly familyDebtorNumber?: string;
+  /**
+   * The children of the registration with their numbers when the Träger
+   * keeps the number per child (#7007); empty with a number per payer.
+   * Several children get a field each, as each gets an invoice of its own.
+   */
+  readonly childDebtorNumbers?: readonly HolidayChildDebtorNumber[];
+  /** The exemption the confirmation applies; the page shows its preview. */
+  readonly exemption: boolean;
+  readonly onExemptionChange: (exemption: boolean) => void;
+  /** The active cost bearers the confirmation offers (#5627). */
+  readonly costBearers?: readonly CostBearerChoice[];
+  /** The cost bearer that pays; null while the family pays or is exempt. */
+  readonly costBearerId?: string | null;
+  readonly onCostBearerChange?: (costBearerId: string | null) => void;
+  readonly onChanged: (registration: HolidayRegistrationDetail) => void;
+  /**
+   * After a confirmation or a cancellation; the page reads the registration
+   * and its contribution again. A cancellation can change the sibling group
+   * (#5662). Rejects when the read fails.
+   */
+  readonly onReload: () => Promise<unknown>;
+  /** After a change of the debtor number; the page reads it again. */
+  readonly onDebtorNumberChanged: () => Promise<unknown>;
+  /** Das Recht „Abrechnung“ öffnet die Beitragsregeln. */
+  readonly canManageBillingSettings?: boolean;
+  /** Where the invoice of the period stands; null without the right. */
+  readonly billingHref?: string | null;
+  /**
+   * Brings the status card into view, for the page with tabs: „Bestätigen“
+   * and the debtor number entries of the page menu work on the card (#7410).
+   */
+  readonly onReveal?: () => void;
+  /**
+   * Whether the card is on the screen. From another tab „Bestätigen“ only
+   * brings it into view: payer and debtor number stand there, and the
+   * confirmation mails the parents at once.
+   */
+  readonly cardShown?: boolean;
+  /** Brings the children into view; the duplicate notice leads there. */
+  readonly onRevealChildren?: () => void;
+}
+
+/** The status of a registration, split for the page that shows it (#7410). */
+export interface HolidayRegistrationStatus {
+  /** „Bestätigen“ for the page head; null when the status does not allow it. */
+  readonly confirmAction: ReactNode;
+  /** The other actions of the status, for the menu of the page head. */
+  readonly menuItems: readonly OverflowMenuEntry[];
+  /** „Stornieren“, last in that menu; empty when the status forbids it. */
+  readonly cancelItems: readonly OverflowMenuEntry[];
+  /** The card: the status, its notices and the fields of the confirmation. */
+  readonly card: ReactNode;
+  /** The dialogs of the actions; they stay mounted on every tab. */
+  readonly overlays: ReactNode;
+}
+
+const NO_REVEAL = () => {};
+
+/**
+ * Status einer Ferienanmeldung und ihre Aktionen (#4663). „Bestätigen“ ist
+ * die einzige sichtbare Aktion im Seitenkopf, alles andere steht in dessen
+ * Menü; die Karte zeigt nur den Status (#7410).
+ */
+function useHolidayRegistrationStatus({
   periodId,
   registration,
   contribution,
@@ -452,51 +533,10 @@ export function HolidayRegistrationStatusCard({
   onDebtorNumberChanged,
   canManageBillingSettings = false,
   billingHref = null,
-}: Readonly<{
-  periodId: string;
-  registration: HolidayRegistrationDetail;
-  /** The contribution a confirmation freezes; null while it loads. */
-  contribution: HolidayContribution | null;
-  /** The preview is computed again; the confirmation waits for it. */
-  previewPending?: boolean;
-  /** The Träger asks for the debtor number at the confirmation (#5621). */
-  debtorNumberRequired?: boolean;
-  /** The format of the Träger's debtor numbers (#6675). */
-  debtorNumberFormat?: DebtorNumberFormat;
-  /**
-   * The number the family already has at the Träger (#6692), proposed at the
-   * field; "" for none.
-   */
-  familyDebtorNumber?: string;
-  /**
-   * The children of the registration with their numbers when the Träger
-   * keeps the number per child (#7007); empty with a number per payer.
-   * Several children get a field each, as each gets an invoice of its own.
-   */
-  childDebtorNumbers?: readonly HolidayChildDebtorNumber[];
-  /** The exemption the confirmation applies; the page shows its preview. */
-  exemption: boolean;
-  onExemptionChange: (exemption: boolean) => void;
-  /** The active cost bearers the confirmation offers (#5627). */
-  costBearers?: readonly CostBearerChoice[];
-  /** The cost bearer that pays; null while the family pays or is exempt. */
-  costBearerId?: string | null;
-  onCostBearerChange?: (costBearerId: string | null) => void;
-  onChanged: (registration: HolidayRegistrationDetail) => void;
-  /**
-   * After a confirmation or a cancellation; the page reads the registration
-   * and its contribution again. A cancellation can change the sibling group
-   * (#5662).
-   */
-  /** Reads the registration again and rejects when that fails. */
-  onReload: () => Promise<unknown>;
-  /** After a change of the debtor number; the page reads it again. */
-  onDebtorNumberChanged: () => Promise<unknown>;
-  /** Das Recht „Abrechnung“ öffnet die Beitragsregeln. */
-  canManageBillingSettings?: boolean;
-  /** Where the invoice of the period stands; null without the right. */
-  billingHref?: string | null;
-}>) {
+  onReveal = NO_REVEAL,
+  cardShown = true,
+  onRevealChildren,
+}: HolidayRegistrationStatusProps): HolidayRegistrationStatus {
   const [running, setRunning] = useState<
     HolidayRegistrationAction | "confirm" | "cancel" | null
   >(null);
@@ -685,108 +725,111 @@ export function HolidayRegistrationStatusCard({
     onCostBearerChange?.(null);
     onExemptionChange(next === "exemption");
   };
-  // Hauptaktion rechts, wie „Speichern“ in den Formularen (#5684).
-  const actions = open ? (
-    <div className="flex flex-wrap justify-end gap-2">
-      {registration.frozen ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          isLoading={running === "reopen"}
-          loadingText="Öffnet …"
-          disabled={running !== null}
-          tooltip="Öffnet die Anmeldung wieder, damit du stornieren oder umbuchen kannst."
-          onClick={() => void run("reopen")}
-        >
-          Wieder öffnen
-        </Button>
-      ) : (
-        <>
-          <Button
-            type="button"
-            variant="outline_danger"
-            size="md"
-            disabled={running !== null}
-            tooltip="Storniert die Anmeldung, Nachrückende bekommen eine E-Mail. moto fragt vorher nach."
-            onClick={() => setConfirmingCancel(true)}
-          >
-            Stornieren
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            isLoading={running === "freeze"}
-            loadingText="Friert ein …"
-            disabled={running !== null}
-            tooltip="Sperrt die Anmeldung sofort gegen Stornieren und Umbuchen."
-            onClick={() => void run("freeze")}
-          >
-            Einfrieren
-          </Button>
-        </>
-      )}
-      {showsDebtorNumber &&
-      perChild &&
-      !editingChildNumbers &&
-      !editingDebtorNumber ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          disabled={running !== null}
-          tooltip="Öffnet je Kind ein Feld für seine Debitorennummer."
-          onClick={() => setEditingChildNumbers(true)}
-        >
-          {childHasNumber
-            ? "Nummern der Kinder ändern"
-            : "Nummern der Kinder eintragen"}
-        </Button>
-      ) : null}
-      {showsDebtorNumber &&
-      showsRegistrationNumber &&
-      !invoiced &&
-      !editingDebtorNumber &&
-      !editingChildNumbers ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          disabled={running !== null}
-          tooltip="Öffnet das Feld für die Debitorennummer dieser Anmeldung."
-          onClick={() => setEditingDebtorNumber(true)}
-        >
-          {registration.debtorNumber
-            ? "Debitorennummer ändern"
-            : "Debitorennummer eintragen"}
-        </Button>
-      ) : null}
-      {registration.status === "received" ? (
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          isLoading={running === "confirm"}
-          loadingText="Bestätigt …"
-          disabled={confirmBlocked}
-          tooltip="Bestätigt die Anmeldung und schickt den Eltern sofort die Zusage per E-Mail."
-          onClick={() => confirmRef.current?.requestSubmit()}
-        >
-          Bestätigen
-        </Button>
-      ) : null}
-    </div>
-  ) : undefined;
-  return (
-    <SectionCard
-      leading={<ConceptIconTile concept={enrollmentsConcept} />}
-      title="Status"
-      footer={actions}
-    >
-      <LoadErrorAlert error={afterWrite.error} className="mb-4" />
-      <LoadErrorAlert error={debtorAfterWrite.error} className="mb-4" />
+  const busy = running !== null;
+  const menuItems: OverflowMenuEntry[] = [];
+  if (open && registration.frozen) {
+    menuItems.push({
+      label: running === "reopen" ? "Öffnet …" : "Wieder öffnen",
+      description:
+        "Öffnet die Anmeldung wieder, damit du stornieren oder umbuchen kannst.",
+      disabled: busy,
+      onClick: () => void run("reopen"),
+    });
+  } else if (open) {
+    menuItems.push({
+      label: running === "freeze" ? "Friert ein …" : "Einfrieren",
+      description: "Sperrt die Anmeldung sofort gegen Stornieren und Umbuchen.",
+      disabled: busy,
+      onClick: () => void run("freeze"),
+    });
+  }
+  if (
+    open &&
+    showsDebtorNumber &&
+    perChild &&
+    !editingChildNumbers &&
+    !editingDebtorNumber
+  ) {
+    menuItems.push({
+      label: childHasNumber
+        ? "Nummern der Kinder bearbeiten"
+        : "Nummern der Kinder eintragen",
+      description: "Öffnet je Kind ein Feld für seine Debitorennummer.",
+      disabled: busy,
+      onClick: () => {
+        onReveal();
+        setEditingChildNumbers(true);
+      },
+    });
+  }
+  if (
+    open &&
+    showsDebtorNumber &&
+    showsRegistrationNumber &&
+    !invoiced &&
+    !editingDebtorNumber &&
+    !editingChildNumbers
+  ) {
+    menuItems.push({
+      label: registration.debtorNumber
+        ? "Debitorennummer bearbeiten"
+        : "Debitorennummer eintragen",
+      description: "Öffnet das Feld für die Debitorennummer dieser Anmeldung.",
+      disabled: busy,
+      onClick: () => {
+        onReveal();
+        setEditingDebtorNumber(true);
+      },
+    });
+  }
+  const cancelItems: OverflowMenuEntry[] =
+    open && !registration.frozen
+      ? [
+          {
+            label: "Stornieren",
+            description:
+              "Storniert die Anmeldung, Nachrückende bekommen eine E-Mail. moto fragt vorher nach.",
+            destructive: true,
+            disabled: busy,
+            onClick: () => setConfirmingCancel(true),
+          },
+        ]
+      : [];
+
+  // The only visible action of the page head (#7410). From another tab the
+  // first click shows the card with payer and debtor number; it confirms
+  // only where the person sees what the confirmation freezes.
+  const confirmAction =
+    registration.status === "received" ? (
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        isLoading={running === "confirm"}
+        loadingText="Bestätigt …"
+        disabled={cardShown && confirmBlocked}
+        tooltip={
+          cardShown
+            ? "Bestätigt die Anmeldung und schickt den Eltern sofort die Zusage per E-Mail."
+            : "Zeigt die Übersicht mit Beitrag und Debitorennummer zum Bestätigen."
+        }
+        onClick={() => {
+          if (!cardShown) {
+            onReveal();
+            return;
+          }
+          void confirm();
+        }}
+      >
+        Bestätigen
+      </Button>
+    ) : null;
+
+  const card = (
+    <SectionCard concept={enrollmentsConcept} title="Status">
       <div className="space-y-4 text-sm text-gray-700">
+        <LoadErrorAlert error={afterWrite.error} />
+        <LoadErrorAlert error={debtorAfterWrite.error} />
         <p>{statusText(registration)}</p>
         {/* The children's cards sit far below on a phone: the status names a
             possible double registration first, in one line; the child's card
@@ -801,6 +844,7 @@ export function HolidayRegistrationStatusCard({
               firstDuplicate ? (
                 <JumpButton
                   targetId={holidayRegistrationChildCardId(firstDuplicate.id)}
+                  reveal={onRevealChildren}
                   tooltip="Springt zum Kind mit dem Link zur anderen Anmeldung."
                 >
                   Zum Kind
@@ -828,18 +872,16 @@ export function HolidayRegistrationStatusCard({
         ) ? (
           <Alert
             type="warning"
-            message={
-              <>
-                Für ein Kind ist noch ein Platz offen. Bestätigen geht erst,
-                wenn das Büro im Reiter{" "}
-                <NavigationLink
-                  href={traegerPath(`/traeger/ferien/${periodId}/vergabe`)}
-                  className="font-medium underline"
-                >
-                  Vergabe
-                </NavigationLink>{" "}
-                entschieden hat.
-              </>
+            message="Für ein Kind ist noch ein Platz offen. Bestätigen geht erst, wenn das Büro im Reiter Vergabe entschieden hat."
+            action={
+              <ButtonLink
+                href={traegerPath(`/traeger/ferien/${periodId}/vergabe`)}
+                variant="surface"
+                size="compact"
+                tooltip="Öffnet die Vergabe der Plätze in diesem Ferienzeitraum."
+              >
+                Zur Vergabe
+              </ButtonLink>
             }
           />
         ) : null}
@@ -885,7 +927,7 @@ export function HolidayRegistrationStatusCard({
                   name="debtor_number"
                   label="Debitorennummer"
                   autoComplete="off"
-                  controlSize="touch"
+                  controlSize="compact"
                   inputMode={
                     debtorNumberFormat.digitsOnly ? "numeric" : undefined
                   }
@@ -971,6 +1013,11 @@ export function HolidayRegistrationStatusCard({
           />
         ) : null}
       </div>
+    </SectionCard>
+  );
+
+  const overlays = (
+    <>
       <FamilyDebtorNumberConflictDialog
         conflict={conflict}
         running={running === "confirm"}
@@ -1027,6 +1074,21 @@ export function HolidayRegistrationStatusCard({
           ) : null}
         </ul>
       </ConfirmationModal>
-    </SectionCard>
+    </>
   );
+
+  return { confirmAction, menuItems, cancelItems, card, overlays };
+}
+
+/**
+ * Calls {@link useHolidayRegistrationStatus} where the registration is
+ * there: the page reads it first and builds its head from the result.
+ */
+export function HolidayRegistrationStatusScope({
+  children,
+  ...props
+}: HolidayRegistrationStatusProps & {
+  readonly children: (status: HolidayRegistrationStatus) => ReactNode;
+}) {
+  return children(useHolidayRegistrationStatus(props));
 }

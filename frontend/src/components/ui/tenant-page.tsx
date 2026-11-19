@@ -671,6 +671,12 @@ function TenantPageView({
                   suppressHydrationWarning
                   className={cn(
                     "min-w-0 font-semibold tracking-tight text-balance break-words text-gray-900",
+                    // Neben Info, Status und Kebab bleibt dem Titel auf dem
+                    // Telefon oft weniger als ein langes Wort. Dann trennt er
+                    // nach Silben („Ferienbe-treuung“) statt mitten im Wort;
+                    // nur Wörter ab 14 Zeichen, kürzere wandern ganz in die
+                    // nächste Zeile (#7417).
+                    "hyphens-auto [hyphenate-limit-chars:14_7_7]",
                     // Auch auf dem Telefon sichtbar: unter lg gibt es keine
                     // Shell-Kopfzeile mehr (wie in der Eltern-App), die
                     // Kopfkarte ist die einzige Trägerin des Seitennamens.

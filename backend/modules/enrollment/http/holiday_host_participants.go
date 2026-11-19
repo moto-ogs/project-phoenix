@@ -114,7 +114,7 @@ type holidayParticipantResponse struct {
 	HomeSchoolName string `json:"home_school_name"`
 }
 
-type holidayParticipantListResponse struct {
+type HolidayParticipantListResponse struct {
 	Week         capability.HostedHolidayWeek       `json:"week"`
 	TimeModels   []capability.HolidayTimeModelCount `json:"time_models"`
 	HomeSchools  []holidayHomeSchoolResponse        `json:"home_schools"`
@@ -133,7 +133,7 @@ func (rs *HolidayHostResource) getParticipants(w http.ResponseWriter, r *http.Re
 		return
 	}
 	names := hostSchoolNames(r.Context())
-	response := holidayParticipantListResponse{
+	response := HolidayParticipantListResponse{
 		Week: list.Week, TimeModels: list.TimeModels, Questions: list.Questions,
 		HomeSchools:  make([]holidayHomeSchoolResponse, len(list.HomeSchools)),
 		Participants: make([]holidayParticipantResponse, len(list.Participants)),

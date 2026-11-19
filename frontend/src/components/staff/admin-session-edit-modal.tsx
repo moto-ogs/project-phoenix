@@ -472,7 +472,7 @@ export function AdminSessionEditModal({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="z. B. Mitarbeiter hatte vergessen einzustempeln"
+            placeholder="z. B. Person hatte vergessen einzustempeln"
           />
         </Field>
       </div>

@@ -53,7 +53,7 @@ const STAFF_RIGHT = "traeger_staff:manage";
 /** Das Recht, das das Zugriffsprotokoll öffnet (#4655). */
 const ACCESS_LOG_RIGHT = "traeger_access_log:read";
 /**
- * Das Recht, das das Dashboard (#4674), die Stichtagszahlen (#4673), die Belegung (#4676), die allgemeinen Einstellungen (ADR 0086,
+ * Das Recht, das das Dashboard (#4674), die Belegung (#4676), die allgemeinen Einstellungen (ADR 0086,
  * #4652), Briefkopf und Vorlagen (#4653, #4677) und die Abrechnungsvorgaben öffnet. Auf den
  * Abrechnungsvorgaben stehen die Bankverbindungen für alle mit diesem Recht, wie
  * zuvor auf dem Briefkopf; die Regeln und Rechnungsnummern nur mit dem Recht
@@ -104,15 +104,6 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Schulen",
         concept: schoolsConcept,
         right: null,
-      },
-      {
-        // Die festgehaltenen Zahlen je Monat, wie im Bericht des Betreibers (#4673).
-        key: "stichtagszahlen",
-        href: "/traeger/stichtagszahlen",
-        label: "Stichtagszahlen",
-        shortLabel: "Stichtage",
-        concept: reportsConcept,
-        right: OVERVIEW_RIGHT,
       },
       {
         // Die Kinder von heute je Schule, Gruppe und Betreuungsform (#4676).

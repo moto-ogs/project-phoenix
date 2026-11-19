@@ -146,7 +146,7 @@ function sections(type: AbsenceType | null): SectionConfig[] {
           type: "checkbox",
           colSpan: 2,
           helperText:
-            "Die Tage je Person trägst du unter Mitarbeiter im Reiter Abwesenheiten ein. Mehr als dort steht, lässt sich nicht eintragen.",
+            "Die Tage je Person trägst du unter Mitarbeitende im Reiter Abwesenheiten ein. Mehr als dort steht, lässt sich nicht eintragen.",
         },
         {
           name: "carryoverUntil",

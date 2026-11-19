@@ -3,9 +3,12 @@ package announcement_test
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
@@ -111,9 +114,22 @@ func announcementRoute(t *testing.T) (*announcementContract, *announcement.Resou
 }
 func announcementRequest(t *testing.T, r *announcement.Resource, token, method, path string, body any) (int, string) {
 	t.Helper()
-	req := routetest.NewAuthenticatedRequest(t, method, path, body, routetest.WithJWTBearer(token))
-	out := routetest.ExecuteRequest(r.Router(rootAPI.ProtectedTenantRoutes), req)
+	req := routetest.NewAuthenticatedRequest(t, method, staffMount+path, body, routetest.WithJWTBearer(token))
+	out := routetest.ExecuteRequest(mounted(staffMount, r.Router(rootAPI.ProtectedTenantRoutes)), req)
 	return out.Code, out.Body.String()
+}
+
+// The production mounts of the two portals: the answer check knows a route
+// by its full pattern.
+const (
+	staffMount  = "/api/parent-announcements"
+	schoolMount = "/school/parent-letters"
+)
+
+func mounted(prefix string, router http.Handler) chi.Router {
+	root := chi.NewRouter()
+	root.Mount(prefix, router)
+	return root
 }
 
 func TestAnnouncementRoutesPreserveAuthoringAndResponseContracts(t *testing.T) {

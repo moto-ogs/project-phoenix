@@ -160,6 +160,7 @@ export function StaffProofTypeModal({
           }}
         >
           <Input
+            controlSize="compact"
             id="name"
             name="name"
             label="Name"
@@ -172,6 +173,7 @@ export function StaffProofTypeModal({
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
+              controlSize="compact"
               id="validity_months"
               name="validity_months"
               label="Gültig für (Monate)"
@@ -186,6 +188,7 @@ export function StaffProofTypeModal({
               error={formErrors.fieldError("validity_months")}
             />
             <Input
+              controlSize="compact"
               id="reminder_lead_weeks"
               name="reminder_lead_weeks"
               label="Warnung vor Ablauf (Wochen)"

@@ -103,9 +103,9 @@ func (rs *HolidayPeriodResource) listRegistrations(w http.ResponseWriter, r *htt
 	common.Respond(w, r, http.StatusOK, list, "Holiday registrations retrieved successfully")
 }
 
-// mailProblemsResponse names the registrations whose receipt or acceptance
+// HolidayMailProblemsResponse names the registrations whose receipt or acceptance
 // mail did not reach the parents (#6737).
-type mailProblemsResponse struct {
+type HolidayMailProblemsResponse struct {
 	Registrations []capability.HolidayRegistrationMails `json:"registrations"`
 }
 
@@ -124,7 +124,7 @@ func (rs *HolidayPeriodResource) listMailProblems(w http.ResponseWriter, r *http
 		renderHolidayReviewError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, mailProblemsResponse{Registrations: mails}, "Holiday registration mail problems retrieved successfully")
+	common.Respond(w, r, http.StatusOK, HolidayMailProblemsResponse{Registrations: mails}, "Holiday registration mail problems retrieved successfully")
 }
 
 func (rs *HolidayPeriodResource) getRegistration(w http.ResponseWriter, r *http.Request) {

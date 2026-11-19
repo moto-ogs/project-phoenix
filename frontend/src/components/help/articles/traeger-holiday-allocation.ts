@@ -25,7 +25,7 @@ export function traegerHolidayAllocationTopic(): HelpTopic {
         title: "Kriterien festlegen",
         steps: [
           "Wähle in der Navigation `Ferienbetreuung`.",
-          "Wähle oben `Kriterien der Platzvergabe`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle `Kriterien der Platzvergabe`.",
           "Wähle eine Vorlage oder `Eigenes Kriterium`.",
           "Gib den Namen und die `Frage an die Eltern` ein. Wähle bei `Gilt für`, ob die Frage für die Familie oder für jedes Kind gilt.",
           "Bringe die Kriterien mit den Pfeilen in die richtige Reihenfolge. Das oberste Kriterium zählt am meisten.",
@@ -44,7 +44,7 @@ export function traegerHolidayAllocationTopic(): HelpTopic {
         title: "Plätze vergeben",
         steps: [
           "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-          "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Linie zeigt, wo die freien Plätze enden.",
+          "Je Woche stehen die offenen Anmeldungen in der Reihenfolge des Vorschlags. Die Zeile mit „ab hier schlägt moto die Warteliste vor“ zeigt, wo die freien Plätze enden.",
           "Wähle bei einem Kind `Platz geben` oder `Auf die Warteliste`. Weicht das vom Vorschlag ab, schreibe eine `Begründung`.",
           "Oder wähle bei der Woche `Vorschlag übernehmen`. Mit mehreren Wochen gibt es oben `Vorschlag für alle Wochen übernehmen`.",
           "Bestätige im Fenster.",
@@ -55,7 +55,7 @@ export function traegerHolidayAllocationTopic(): HelpTopic {
         description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
         steps: [
           "Öffne den Ferienzeitraum und wähle den Reiter `Vergabe`.",
-          "Wähle `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
           "Die Datei enthält die offenen Anmeldungen im Vorschlag und alle Entscheidungen deines Büros.",
         ],
       },

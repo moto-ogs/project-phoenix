@@ -130,12 +130,7 @@ func (rs *Resource) readStudentNoteTeamNotices(w http.ResponseWriter, r *http.Re
 	if !ok {
 		return
 	}
-	var body struct {
-		Notices []struct {
-			NoteID     int64     `json:"note_id,string"`
-			InformedAt time.Time `json:"informed_at"`
-		} `json:"notices"`
-	}
+	var body studentNoteTeamReadRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid notice revisions")))
 		return
@@ -150,6 +145,17 @@ func (rs *Resource) readStudentNoteTeamNotices(w http.ResponseWriter, r *http.Re
 		return
 	}
 	common.Respond(w, r, http.StatusOK, renderStudentNoteTeamNotices(notices), "Student note team notices read")
+}
+
+// studentNoteTeamReadRequest names the markers the reader saw, each at the
+// revision it was shown in.
+type studentNoteTeamReadRequest struct {
+	Notices []studentNoteTeamNoticeRevision `json:"notices"`
+}
+
+type studentNoteTeamNoticeRevision struct {
+	NoteID     int64     `json:"note_id,string"`
+	InformedAt time.Time `json:"informed_at"`
 }
 
 func renderStudentNoteTeamNotices(notices []peopleModule.StudentNoteTeamNotice) []studentNoteTeamNoticeResponse {

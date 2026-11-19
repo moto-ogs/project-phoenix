@@ -69,9 +69,11 @@ vi.mock("~/components/ui/tenant-page", async (original) => ({
     empty,
     loading,
     children,
+    overlays,
   }: {
     stats: ReactNode;
     actions: ReactNode;
+    overlays?: ReactNode;
     empty?: { title: string; description: string };
     loading?: boolean;
     children: ReactNode;
@@ -82,6 +84,7 @@ vi.mock("~/components/ui/tenant-page", async (original) => ({
       {empty ? <p>{empty.title}</p> : null}
       {loading ? <p>Lädt</p> : null}
       {children}
+      {overlays}
     </div>
   ),
 }));

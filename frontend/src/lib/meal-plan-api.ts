@@ -15,7 +15,7 @@ import {
 const logger = createLogger({ component: "MealPlanAPI" });
 
 /** Wire shape returned by the backend (snake_case, date as YYYY-MM-DD). */
-export interface BackendMealPlanEntry {
+interface BackendMealPlanEntry {
   date: string;
   position: number;
   dish: string;

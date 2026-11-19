@@ -377,7 +377,7 @@ export function MFAAdminOverrideModal({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   maxLength={500}
-                  placeholder="z. B. „Mitarbeiter hat keinen Zugriff mehr auf sein E-Mail-Postfach"
+                  placeholder="z. B. „Person hat keinen Zugriff mehr auf ihr E-Mail-Postfach"
                   disabled={isWorking}
                   aria-invalid={Boolean(resetErrors.fieldError("reason"))}
                 />
@@ -424,8 +424,8 @@ export function MFAAdminOverrideModal({
                 message={
                   <>
                     <strong className="font-semibold">Wichtig:</strong> Diese
-                    Einstellung gilt nur für diese Schule. Wenn der Mitarbeiter
-                    an weiteren Schulen aktiv ist, bleibt 2FA dort unverändert.
+                    Einstellung gilt nur für diese Schule. Wenn die Person an
+                    weiteren Schulen aktiv ist, bleibt 2FA dort unverändert.
                   </>
                 }
               />
@@ -501,7 +501,7 @@ export function MFAAdminOverrideModal({
                     value={overrideReason}
                     onChange={(e) => setOverrideReason(e.target.value)}
                     maxLength={500}
-                    placeholder="z. B. „Mitarbeiter im Urlaub, Postfach gesperrt"
+                    placeholder="z. B. „Person im Urlaub, Postfach gesperrt"
                     disabled={overrideWorking}
                     aria-invalid={Boolean(overrideErrors.fieldError("reason"))}
                   />
@@ -532,9 +532,9 @@ export function MFAAdminOverrideModal({
                 <p className="mb-3 text-xs text-gray-700">
                   Diese Aktion wirkt für{" "}
                   <strong>alle Schulen, in denen der Account aktiv ist</strong>.
-                  Nur einsetzen, wenn der Mitarbeiter komplett keinen Zugriff
-                  auf sein E-Mail-Postfach hat — also nicht über die
-                  Schul-spezifische Einstellung oben gelöst werden kann.
+                  Nur einsetzen, wenn die Person komplett keinen Zugriff auf ihr
+                  E-Mail-Postfach hat — also nicht über die Schul-spezifische
+                  Einstellung oben gelöst werden kann.
                 </p>
 
                 <FormErrorAlert message={globalErrors.error} className="mb-3" />
@@ -610,7 +610,7 @@ export function MFAAdminOverrideModal({
                       value={globalReason}
                       onChange={(e) => setGlobalReason(e.target.value)}
                       maxLength={500}
-                      placeholder="z. B. „Mitarbeiter hat dauerhaft keinen E-Mail-Zugriff mehr — Account-weite Notfall-Freischaltung"
+                      placeholder="z. B. „Person hat dauerhaft keinen E-Mail-Zugriff mehr — Account-weite Notfall-Freischaltung"
                       disabled={globalWorking}
                       aria-invalid={Boolean(globalErrors.fieldError("reason"))}
                     />

@@ -433,6 +433,30 @@ func checkEnrollmentChangeRequestDialogueGolden(t *testing.T, api *goldenRuntime
 	pending := checkpointRequest(api, checkpointScenario{Method: http.MethodGet, Path: "/api/enrollment/admin/change-requests/pending-count", Authenticated: true}, staffToken)
 	require.Equal(t, http.StatusOK, pending.Code, pending.Body.String())
 	require.JSONEq(t, `{"status":"success","message":"Pending enrollment change request count retrieved","data":{"pending_count":0}}`, pending.Body.String())
+
+	// A second correction is approved and lands on the request.
+	second := checkpointRequest(api, checkpointScenario{Method: http.MethodPost, Path: publicBase, Body: strings.Replace(proposal, "Guardian-Korrigiert", "Guardian-Freigegeben", 1)}, "")
+	require.Equal(t, http.StatusCreated, second.Code, second.Body.String())
+	var secondEnvelope struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(second.Body.Bytes(), &secondEnvelope))
+	approved := checkpointRequest(api, checkpointScenario{Method: http.MethodPost, Path: "/api/enrollment/admin/change-requests/" + secondEnvelope.Data.ID + "/approve", Authenticated: true, Body: `{"note":"Freigegeben."}`}, staffToken)
+	require.Equal(t, http.StatusOK, approved.Code, approved.Body.String())
+	var approvedEnvelope struct {
+		Data struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(approved.Body.Bytes(), &approvedEnvelope))
+	require.Equal(t, secondEnvelope.Data.ID, approvedEnvelope.Data.ID)
+	require.Equal(t, "approved", approvedEnvelope.Data.Status)
+	var lastName string
+	require.NoError(t, db.NewRaw("SELECT guardian_last_name FROM enrollment.requests WHERE id = ? AND tenant_id = ?", requestID, testpkg.Tenant(t)).Scan(context.Background(), &lastName))
+	require.Equal(t, "Guardian-Freigegeben", lastName)
 }
 
 // normalizeContractIdentifiers replaces generated identifiers and instants so

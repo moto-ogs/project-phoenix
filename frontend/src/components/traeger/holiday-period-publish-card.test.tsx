@@ -16,7 +16,10 @@ vi.mock("~/lib/traeger-api", () => ({
   publishHolidayPeriod: (id: string) => mockPublish(id),
 }));
 
-import { HolidayPeriodPublishCard } from "./holiday-period-publish-card";
+import {
+  HolidayPeriodPublishButton,
+  HolidayPeriodPublishCard,
+} from "./holiday-period-publish-card";
 
 const renderCard = (card: ReactElement) =>
   render(<ToastProvider>{card}</ToastProvider>);
@@ -52,22 +55,22 @@ const complete: HolidayPeriod = {
   ],
 };
 
-describe("HolidayPeriodPublishCard", () => {
+describe("HolidayPeriodPublishButton", () => {
   beforeEach(() => {
     mockPublish.mockReset();
-    vi.stubEnv("NEXT_PUBLIC_PARENTS_HOSTNAME", "parents.localhost:3000");
-    // The published card links to the review of its registrations (#4663).
-    vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger.localhost:3000");
   });
-  afterEach(() => vi.unstubAllEnvs());
 
-  it("names what is missing instead of offering the button", () => {
+  it("blocks publishing and the card names what is missing", () => {
+    const period = { ...complete, weeks: [] };
     renderCard(
-      <HolidayPeriodPublishCard
-        period={{ ...complete, weeks: [] }}
-        unsavedChanges={false}
-        onPublished={vi.fn()}
-      />,
+      <>
+        <HolidayPeriodPublishButton
+          period={period}
+          unsavedChanges={false}
+          onPublished={vi.fn()}
+        />
+        <HolidayPeriodPublishCard period={period} unsavedChanges={false} />
+      </>,
     );
     expect(
       screen.getByRole("button", { name: "Veröffentlichen" }),
@@ -81,11 +84,14 @@ describe("HolidayPeriodPublishCard", () => {
 
   it("asks to save unsaved changes first", () => {
     renderCard(
-      <HolidayPeriodPublishCard
-        period={complete}
-        unsavedChanges
-        onPublished={vi.fn()}
-      />,
+      <>
+        <HolidayPeriodPublishButton
+          period={complete}
+          unsavedChanges
+          onPublished={vi.fn()}
+        />
+        <HolidayPeriodPublishCard period={complete} unsavedChanges />
+      </>,
     );
     expect(
       screen.getByRole("button", { name: "Veröffentlichen" }),
@@ -105,7 +111,7 @@ describe("HolidayPeriodPublishCard", () => {
       publishedAt: "2026-10-25T09:00:00Z",
     });
     renderCard(
-      <HolidayPeriodPublishCard
+      <HolidayPeriodPublishButton
         period={complete}
         unsavedChanges={false}
         onPublished={onPublished}
@@ -127,6 +133,28 @@ describe("HolidayPeriodPublishCard", () => {
     );
   });
 
+  it("offers nothing once the period is published", () => {
+    renderCard(
+      <>
+        <p>Kopf</p>
+        <HolidayPeriodPublishButton
+          period={{ ...complete, status: "published" }}
+          unsavedChanges={false}
+          onPublished={vi.fn()}
+        />
+      </>,
+    );
+    expect(screen.getByText("Kopf")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("HolidayPeriodPublishCard", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_PARENTS_HOSTNAME", "parents.localhost:3000");
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
   it("shows since when a published period is open for registration", () => {
     renderCard(
       <HolidayPeriodPublishCard
@@ -136,7 +164,6 @@ describe("HolidayPeriodPublishCard", () => {
           publishedAt: "2026-10-25T09:00:00Z",
         }}
         unsavedChanges={false}
-        onPublished={vi.fn()}
       />,
     );
     expect(
@@ -151,10 +178,15 @@ describe("HolidayPeriodPublishCard", () => {
       screen.getByRole("button", { name: "Link kopieren" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "QR-Code" })).toBeInTheDocument();
-    expect(screen.getByText("Veröffentlicht")).toBeInTheDocument();
+    // The title names the link, not the status: the head shows the status
+    // (#7411).
+    expect(
+      screen.getByRole("heading", { name: "Link für Eltern" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Veröffentlicht")).toBeNull();
   });
 
-  it("shows the one link for parents and the registrations received", () => {
+  it("shows the one link for parents", () => {
     renderCard(
       <HolidayPeriodPublishCard
         period={{
@@ -164,29 +196,24 @@ describe("HolidayPeriodPublishCard", () => {
           registrationCount: 3,
         }}
         unsavedChanges={false}
-        onPublished={vi.fn()}
       />,
     );
     expect(
       screen.getByText("http://parents.localhost:3000/ferienanmeldung/abc123"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Bisher 3 Anmeldungen.")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Anmeldungen prüfen" }),
-    ).toHaveAttribute("href", "/traeger/ferien/5/anmeldungen");
+    // The count and the way to the registrations live in the tab
+    // „Anmeldungen“ (#7411).
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("tells a draft that the link for parents comes with publishing", () => {
     renderCard(
-      <HolidayPeriodPublishCard
-        period={complete}
-        unsavedChanges={false}
-        onPublished={vi.fn()}
-      />,
+      <HolidayPeriodPublishCard period={complete} unsavedChanges={false} />,
     );
     expect(
       screen.getByText("Den Link für Eltern gibt es nach dem Veröffentlichen."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/ferienanmeldung/)).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

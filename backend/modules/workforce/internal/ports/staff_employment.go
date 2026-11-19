@@ -12,6 +12,9 @@ import (
 type StaffEmploymentStore interface {
 	StaffEmployments(ctx context.Context, membershipIDs []int64) (map[int64]workforce.StaffEmployment, error)
 	StaffOnWorkTimeModel(ctx context.Context, workTimeModelID int64) ([]int64, error)
+	// StaffGenders reads the stated gender of the listed staff members
+	// from their personnel record (users.staff_master_data).
+	StaffGenders(ctx context.Context, staffIDs []int64) (map[int64]string, error)
 	LockStaffEmployment(ctx context.Context, membershipID int64) (workforce.StaffEmployment, error)
 	SaveStaffEmployment(ctx context.Context, value workforce.StaffEmployment) error
 	ReleaseWorkTimeModel(ctx context.Context, workTimeModelID int64, membershipIDs []int64) error

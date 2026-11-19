@@ -8,8 +8,8 @@ import (
 )
 
 // SessionResponse is a work block as the own time-tracking routes answer it.
-// It names the wire form workforce.WorkSessionWire writes: the identifiers
-// travel as decimal strings.
+// The identifiers travel as decimal strings: JavaScript rounds an int64
+// above Number.MAX_SAFE_INTEGER while parsing numeric JSON.
 type SessionResponse struct {
 	ID             common.ID  `json:"id"`
 	TenantID       common.ID  `json:"tenant_id"`

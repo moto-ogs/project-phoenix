@@ -172,6 +172,9 @@ type tsWriter struct {
 	helpers   map[string]bool
 	typeOrder []string
 	enumOrder []string
+	// pending names the types of the file not written yet: a reference to one
+	// of them closes a cycle and is read lazily.
+	pending map[string]bool
 }
 
 // visit orders the types so that a schema exists before its first use.
@@ -201,8 +204,13 @@ func (w *tsWriter) file(routes []Route, shared *tsWriter) string {
 	for _, name := range w.enumOrder {
 		fmt.Fprintf(&body, "\nexport const %s = [%s] as const;\nexport type %s = (typeof %s)[number];\n", enumConst(name), quoted(w.enums[name].Values), name, enumConst(name))
 	}
+	w.pending = make(map[string]bool, len(w.typeOrder))
+	for _, name := range w.typeOrder {
+		w.pending[name] = true
+	}
 	for _, name := range w.typeOrder {
 		w.object(&body, w.byName[name])
+		delete(w.pending, name)
 	}
 	for _, route := range routes {
 		w.query(&body, route)
@@ -265,11 +273,15 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	if object.Request {
 		return
 	}
-	fmt.Fprintf(out, "\nexport const %sSchema: z.ZodType<%s, unknown> = z.object({\n", object.Name, object.Name)
+	// The interface above and this shape come from one model; `object` hands
+	// the checker the interface instead of letting it derive the shape's type.
+	w.helpers["object"] = true
+	fmt.Fprintf(out, "\nexport const %sSchema: z.ZodType<%s, unknown> = object<%s>({\n", object.Name, object.Name, object.Name)
 	for _, field := range object.Fields {
-		decoder := w.zod(field.Schema)
+		decoder := w.field(field.Schema)
 		if field.Optional {
-			decoder += ".optional()"
+			w.helpers["optional"] = true
+			decoder = "optional(" + decoder + ")"
 		}
 		fmt.Fprintf(out, "  %s: %s,\n", field.Name, decoder)
 	}
@@ -309,6 +321,12 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	fmt.Fprintf(out, "  %q: {\n    method: %q,\n    pattern: %q,\n    portals: [%s],\n", route.Key(), route.Method, route.Pattern, quoted(route.Portals))
 	if route.Deprecated {
 		out.WriteString("    deprecated: true,\n")
+	}
+	if route.NoRetryAfterRenewal != "" {
+		fmt.Fprintf(out, "    noRetryAfterRenewal: %q,\n", route.NoRetryAfterRenewal)
+	}
+	if route.MaxBodyBytes > 0 {
+		fmt.Fprintf(out, "    maxBodyBytes: %d,\n", route.MaxBodyBytes)
 	}
 	if len(route.Query) > 0 {
 		names := make([]string, len(route.Query))
@@ -411,6 +429,8 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 		t = elem + "[]"
 	case KindMap:
 		t = "Record<string, " + w.tsType(*s.Elem, request) + ">"
+	case KindJSON:
+		t = "unknown"
 	case KindRef:
 		t = s.Ref
 	}
@@ -420,6 +440,57 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 	return t
 }
 
+// field is the decoder of a value inside a generated shape. The interface
+// next to the shape says what it yields, so every combinator is an untyped
+// helper of the runtime: the checker derives nothing per field.
+func (w *tsWriter) field(s Schema) string {
+	helper := func(name string) string {
+		w.helpers[name] = true
+		return name
+	}
+	var z string
+	switch s.Kind {
+	case KindString, KindEnum:
+		// An open enum decodes any string.
+		z = helper("str")
+	case KindBool:
+		z = helper("bool")
+	case KindInt:
+		z = helper("safeInt")
+	case KindNumber:
+		z = helper("num")
+	case KindID:
+		z = helper("int64String")
+	case KindLegacyID, KindLaxID:
+		z = helper("int64StringOrNumber")
+	case KindDate:
+		z = helper("calendarDate")
+	case KindInstant:
+		z = helper("instant")
+	case KindClock:
+		z = helper("clockTime")
+	case KindArray:
+		z = helper("arr") + "(" + w.field(*s.Elem) + ")"
+	case KindMap:
+		z = helper("rec") + "(" + w.field(*s.Elem) + ")"
+	case KindJSON:
+		z = helper("json")
+	case KindRef:
+		z = s.Ref + "Schema"
+		if w.pending[s.Ref] {
+			// A type that refers back to itself or to a type of its cycle
+			// reads that schema once it exists.
+			z = helper("lazy") + "(() => " + z + ")"
+		}
+	}
+	if s.Nullable {
+		z = helper("nullable") + "(" + z + ")"
+	}
+	return z
+}
+
+// zod is the typed decoder of a route's answer: its type is what the client
+// reads, so it is derived here and only here.
 func (w *tsWriter) zod(s Schema) string {
 	helper := func(name string) string {
 		w.helpers[name] = true
@@ -451,8 +522,15 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.array(" + w.zod(*s.Elem) + ")"
 	case KindMap:
 		z = "z.record(z.string(), " + w.zod(*s.Elem) + ")"
+	case KindJSON:
+		z = "z.unknown()"
 	case KindRef:
 		z = s.Ref + "Schema"
+		if w.pending[s.Ref] {
+			// A type that refers back to itself or to a type of its cycle
+			// reads that schema once it exists.
+			z = "z.lazy(() => " + z + ")"
+		}
 	}
 	if s.Nullable {
 		z += ".nullable()"

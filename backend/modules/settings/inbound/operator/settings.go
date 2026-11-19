@@ -98,6 +98,11 @@ type setSchoolSettingRequest struct {
 	Value any `json:"value"`
 }
 
+// revealedSettingValue is the unmasked value of a password or PIN setting.
+type revealedSettingValue struct {
+	Value any `json:"value"`
+}
+
 // requiresPhotoMutationResponse gates which keys carry a body in set/reset
 // responses (vs. an empty 204 / generic 200). Today only the photo-feature
 // flag needs the slug for cache busting; other settings stay on the
@@ -252,7 +257,7 @@ func (rs *SettingsResource) RevealSchoolSettingValue(w http.ResponseWriter, r *h
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, map[string]any{"value": value}, "")
+	common.Respond(w, r, http.StatusOK, revealedSettingValue{Value: value}, "")
 }
 
 // renderOperatorSettingsError maps settings errors to operator HTTP responses.

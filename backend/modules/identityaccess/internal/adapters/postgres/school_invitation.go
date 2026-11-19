@@ -36,6 +36,7 @@ type schoolInvitationRow struct {
 	FirstName           *string                 `bun:"first_name"`
 	LastName            *string                 `bun:"last_name"`
 	Position            *string                 `bun:"position"`
+	Gender              *string                 `bun:"gender"`
 	CaregiverEnabled    bool                    `bun:"caregiver_enabled,notnull"`
 	EmploymentAction    domain.EmploymentAction `bun:"employment_action,notnull"`
 	ResetMasterData     bool                    `bun:"reset_master_data,notnull"`
@@ -52,7 +53,7 @@ type schoolInvitationRow struct {
 func (r schoolInvitationRow) toDomain() domain.SchoolInvitation {
 	return domain.SchoolInvitation{
 		ID: r.ID, TenantID: r.TenantID, Email: r.Email, RoleID: r.RoleID, ExpiresAt: r.ExpiresAt,
-		UsedAt: r.UsedAt, CreatedBy: r.CreatedBy, FirstName: r.FirstName, LastName: r.LastName, Position: r.Position,
+		UsedAt: r.UsedAt, CreatedBy: r.CreatedBy, FirstName: r.FirstName, LastName: r.LastName, Position: r.Position, Gender: r.Gender,
 		ResetMasterData: r.ResetMasterData, ResetQualifications: r.ResetQualifications, ResetWorkTime: r.ResetWorkTime, EmploymentAction: r.EmploymentAction, CaregiverEnabled: r.CaregiverEnabled, PersonID: r.PersonID,
 		Delivery:  domain.TokenDelivery{SentAt: r.EmailSentAt, Error: r.EmailError, RetryCount: r.EmailRetryCount},
 		CreatedAt: r.CreatedAt,
@@ -71,7 +72,7 @@ func (s *Store) InsertSchoolInvitation(ctx context.Context, invitation domain.Sc
 	row := schoolInvitationRow{
 		TenantID: invitation.TenantID, Email: invitation.Email, TokenHash: domain.HashToken(invitation.Token), RoleID: invitation.RoleID,
 		ExpiresAt: invitation.ExpiresAt, CreatedBy: invitation.CreatedBy, FirstName: invitation.FirstName,
-		LastName: invitation.LastName, Position: invitation.Position, CaregiverEnabled: invitation.CaregiverEnabled,
+		LastName: invitation.LastName, Position: invitation.Position, Gender: invitation.Gender, CaregiverEnabled: invitation.CaregiverEnabled,
 		PersonID: invitation.PersonID, EmploymentAction: invitation.EmploymentAction,
 		ResetMasterData: invitation.ResetMasterData, ResetQualifications: invitation.ResetQualifications, ResetWorkTime: invitation.ResetWorkTime,
 	}
@@ -157,6 +158,7 @@ type schoolInvitationListRow struct {
 	FirstName           *string                 `bun:"first_name"`
 	LastName            *string                 `bun:"last_name"`
 	Position            *string                 `bun:"position"`
+	Gender              *string                 `bun:"gender"`
 	CaregiverEnabled    bool                    `bun:"caregiver_enabled"`
 	EmploymentAction    domain.EmploymentAction `bun:"employment_action"`
 	ResetMasterData     bool                    `bun:"reset_master_data"`
@@ -173,7 +175,7 @@ func (r schoolInvitationListRow) toDomain() domain.SchoolInvitation {
 	return domain.SchoolInvitation{
 		ID: r.ID, TenantID: r.TenantID, Email: r.Email, RoleID: r.RoleID, RoleName: r.RoleName,
 		ExpiresAt: r.ExpiresAt, UsedAt: r.UsedAt, CreatedBy: r.CreatedBy, CreatorEmail: r.CreatorEmail,
-		FirstName: r.FirstName, LastName: r.LastName, Position: r.Position, ResetMasterData: r.ResetMasterData, ResetQualifications: r.ResetQualifications, ResetWorkTime: r.ResetWorkTime, EmploymentAction: r.EmploymentAction, CaregiverEnabled: r.CaregiverEnabled,
+		FirstName: r.FirstName, LastName: r.LastName, Position: r.Position, Gender: r.Gender, ResetMasterData: r.ResetMasterData, ResetQualifications: r.ResetQualifications, ResetWorkTime: r.ResetWorkTime, EmploymentAction: r.EmploymentAction, CaregiverEnabled: r.CaregiverEnabled,
 		PersonID:  r.PersonID,
 		Delivery:  domain.TokenDelivery{SentAt: r.EmailSentAt, Error: r.EmailError, RetryCount: r.EmailRetryCount},
 		CreatedAt: r.CreatedAt,
@@ -193,7 +195,7 @@ func (s *Store) ListRedeemableSchoolInvitations(ctx context.Context) ([]domain.S
 		ColumnExpr(`COALESCE("role".name, '') AS role_name`).
 		ColumnExpr(`"invitation_token".expires_at, "invitation_token".used_at, "invitation_token".created_by`).
 		ColumnExpr(`COALESCE("creator".email, '') AS creator_email`).
-		ColumnExpr(`"invitation_token".first_name, "invitation_token".last_name, "invitation_token".position, "invitation_token".caregiver_enabled, "invitation_token".person_id, "invitation_token".employment_action, "invitation_token".reset_master_data, "invitation_token".reset_qualifications, "invitation_token".reset_work_time`).
+		ColumnExpr(`"invitation_token".first_name, "invitation_token".last_name, "invitation_token".position, "invitation_token".gender, "invitation_token".caregiver_enabled, "invitation_token".person_id, "invitation_token".employment_action, "invitation_token".reset_master_data, "invitation_token".reset_qualifications, "invitation_token".reset_work_time`).
 		ColumnExpr(`"invitation_token".email_sent_at, "invitation_token".email_error, "invitation_token".email_retry_count, "invitation_token".created_at`).
 		Join(`LEFT JOIN auth.roles AS "role" ON "role".id = "invitation_token".role_id`).
 		Join(`LEFT JOIN auth.accounts AS "creator" ON "creator".id = "invitation_token".created_by`).

@@ -58,6 +58,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createTenantJsonProxy",
     "createOptionalTenantJsonProxy",
     "catalogProxy",
+    "catalogProxyUnder",
     "proxyFile",
     "proxyUpload",
     "tenant.route",
@@ -82,9 +83,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     ...PORTAL_PROXIES,
     "proxyDelete",
     "catalogProxy",
-    "createParentDeleteHandler",
-    "createParentPutHandler",
-    "createParentPatchHandler",
     "createParentJsonProxy",
     "parent.route",
     "parent.proxyFile",
@@ -142,8 +140,6 @@ const DOWNLOAD_POLICY_FACTORIES: Record<string, string[]> = {
 // Non-JSON resources deliberately outside the private-download rule. Image,
 // legal-document and subscription caching is not changed by #5119.
 const NON_DOWNLOAD_RESOURCES: Record<string, string> = {
-  "parent/me/news/[announcementId]/declaration/proof":
-    "JSON proof metadata; the actual file is under proof/pdf",
   "traeger/master-data/logo":
     "Authenticated brand image, existing no-store policy",
   "public/enrollment-form-legal-documents/[filename]":
@@ -341,7 +337,7 @@ describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
   it("finds the route handlers", () => {
-    expect(files.length).toBeGreaterThan(500);
+    expect(files.length).toBeGreaterThan(200);
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {

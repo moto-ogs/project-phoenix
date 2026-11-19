@@ -5,7 +5,7 @@
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --max-old-space-size=6144\" next build",
     "build-storybook": "node scripts/build-storybook.mjs",
     "check": "node scripts/verify-locales.mjs && node scripts/generate-help-index.mjs --check && node scripts/generate-portal-pages.mjs --check && pnpm run test:source-contracts && node scripts/verify-error-catalog.mjs && oxlint . --max-warnings 0 && node ./node_modules/typescript-native/bin/tsc --noEmit",
     "check:fresh": "rm -f *.tsbuildinfo && node scripts/verify-locales.mjs && node scripts/generate-help-index.mjs --check && node scripts/generate-portal-pages.mjs --check && pnpm run test:source-contracts && node scripts/verify-error-catalog.mjs && oxlint . --max-warnings 0 && node ./node_modules/typescript-native/bin/tsc --noEmit",

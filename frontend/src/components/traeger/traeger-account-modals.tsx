@@ -132,7 +132,7 @@ export function InviteTraegerAccountModal({
       >
         <p className="text-sm text-gray-600">{hint}</p>
         <Input
-          controlSize="touch"
+          controlSize="compact"
           id="invite-traeger-account-email"
           label="E-Mail-Adresse"
           name="email"
@@ -224,7 +224,7 @@ export function ChangeTraegerRolesModal({
       isOpen={member !== null}
       onClose={onClose}
       pending={save}
-      title="Rollen ändern"
+      title={member ? `Rollen von ${member.name || member.email}` : "Rollen"}
       size="lg"
       error={formErrors.error}
       footer={
@@ -321,7 +321,9 @@ export function ChangeTraegerMemberNameModal({
     });
   };
 
-  const title = member?.name ? "Namen ändern" : "Namen eintragen";
+  // The window names its object, not the verb of the menu entry: a title
+  // „… bearbeiten“ is an edit overlay (bauart/no-edit-overlay, #7417).
+  const title = member?.name ? `Name von ${member.email}` : "Namen eintragen";
 
   return (
     <FormModal

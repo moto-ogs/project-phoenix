@@ -190,11 +190,7 @@ func (rs *Resource) confirmCareExit(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"students_ended":      result.StudentsEnded,
-		"roster_rows_removed": result.RosterRowsRemoved,
-		"bookings_ended":      result.BookingsEnded,
-	}, "Betreuung beendet")
+	common.Respond(w, r, http.StatusOK, newCareExitConfirmedResponse(result), "Betreuung beendet")
 }
 
 type careWithdrawalResponse struct {
@@ -270,8 +266,8 @@ func (rs *Resource) respondCareWithdrawalPage(w http.ResponseWriter, r *http.Req
 	for _, row := range rows {
 		out = append(out, toCareWithdrawalResponse(row, rs.today()))
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"items": out, "total": total, "page": filter.Page, "page_size": filter.PageSize,
+	common.Respond(w, r, http.StatusOK, careWithdrawalPageResponse{
+		Items: out, Total: total, Page: filter.Page, PageSize: filter.PageSize,
 	}, message)
 }
 
@@ -373,10 +369,7 @@ func (rs *Resource) confirmWithdrawalCareEnd(w http.ResponseWriter, r *http.Requ
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"students_ended": result.StudentsEnded, "roster_rows_removed": result.RosterRowsRemoved,
-		"bookings_ended": result.BookingsEnded,
-	}, "Betreuung beendet")
+	common.Respond(w, r, http.StatusOK, newCareExitConfirmedResponse(result), "Betreuung beendet")
 }
 
 type careExitCancelRequest struct {
@@ -416,7 +409,7 @@ func (rs *Resource) cancelCareExit(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{"students_cancelled": cancelled}, "Geplantes Ende storniert")
+	common.Respond(w, r, http.StatusOK, careExitCancelledResponse{StudentsCancelled: cancelled}, "Geplantes Ende storniert")
 }
 
 type careResumeRequest struct {
@@ -464,7 +457,7 @@ func (rs *Resource) resumeCare(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{"resumed": true, "new_start": start.String()}, "Betreuung wieder aufgenommen")
+	common.Respond(w, r, http.StatusOK, careResumedResponse{Resumed: true, NewStart: start.String()}, "Betreuung wieder aufgenommen")
 }
 
 type endedCareResponse struct {
@@ -527,11 +520,11 @@ func (rs *Resource) listEndedCare(w http.ResponseWriter, r *http.Request) {
 		}
 		items = append(items, item)
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"items":     items,
-		"total":     total,
-		"page":      filter.Page,
-		"page_size": filter.PageSize,
+	common.Respond(w, r, http.StatusOK, endedCarePageResponse{
+		Items:    items,
+		Total:    total,
+		Page:     filter.Page,
+		PageSize: filter.PageSize,
 	}, "Beendete Betreuungen")
 }
 

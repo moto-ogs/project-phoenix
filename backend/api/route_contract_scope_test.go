@@ -25,6 +25,29 @@ var portalScopeMiddleware = map[common.PortalScope]string{
 	common.PortalOperator: "modules/identityaccess/inbound/operator.RequiresOperatorScope",
 }
 
+// sharedPortalRoutes are the routes the root mounts beside every portal
+// (#2352, decision 3): each serves several portals and has no portal's
+// scope middleware. Each names its portals and the middleware that bounds it
+// instead; the handler refuses the sessions the reason names.
+var sharedPortalRoutes = map[string]struct {
+	portals    []string
+	middleware string
+	reason     string
+}{
+	"GET /analytics-consent/": {
+		[]string{"parent", "school", "tenant"}, "modules/identityaccess/sessiontoken.Authenticator",
+		"the account's own consent; the resource refuses operator, Träger and preview sessions (me.ownAccount)",
+	},
+	"PUT /analytics-consent/": {
+		[]string{"parent", "school", "tenant"}, "modules/identityaccess/sessiontoken.Authenticator",
+		"the account's own consent; the resource refuses operator, Träger and preview sessions (me.ownAccount)",
+	},
+	"GET /analytics-policy": {
+		[]string{"parent", "school"}, "modules/identityaccess/sessiontoken.ParseVerified",
+		"only a boolean from the verified session; without a portal session it answers off",
+	},
+}
+
 // The middleware goldens are the reviewed chain of every route;
 // TestFullProductionRouterGolden holds them against the real router.
 func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
@@ -41,6 +64,8 @@ func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
 		for _, line := range strings.Split(strings.TrimSpace(expandMiddlewareTable(t, string(golden))), "\n") {
 			if route, chain, ok := strings.Cut(line, " -> "); ok {
 				chains[route] = chain
+				// A router mounted at "/" is registered as its request reports it.
+				chains[strings.ReplaceAll(route, "/*/", "/")] = chain
 			}
 		}
 		return nil
@@ -49,14 +74,44 @@ func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
 	doc, err := ContractDocument()
 	require.NoError(t, err)
 	require.NotEmpty(t, doc.Routes)
+	registered := map[string]bool{}
+	for _, route := range doc.Routes {
+		registered[route.Key()] = true
+	}
+	for key := range sharedPortalRoutes {
+		assert.Truef(t, registered[key], "sharedPortalRoutes names %s, which the contract no longer registers", key)
+	}
 	for _, route := range doc.Routes {
 		chain, known := chains[route.Key()]
 		require.Truef(t, known, "%s has no middleware golden", route.Key())
+		if shared, ok := sharedPortalRoutes[route.Key()]; ok {
+			assert.Equalf(t, shared.portals, route.Portals, "%s: the shared route's portals changed; review %q", route.Key(), shared.reason)
+			assert.Containsf(t, strings.Split(chain, " > "), shared.middleware, "%s no longer runs behind %s", route.Key(), shared.middleware)
+			continue
+		}
 		// One scope middleware admits one portal; a route for two portals
 		// needs a deliberate decision here first.
 		require.Lenf(t, route.Portals, 1, "%s names more than one portal", route.Key())
+		if common.PortalScope(route.Portals[0]) == common.PortalPublic {
+			assertRunsWithoutSession(t, route.Key(), strings.Split(chain, " > "))
+			continue
+		}
 		scope, mapped := portalScopeMiddleware[common.PortalScope(route.Portals[0])]
 		require.Truef(t, mapped, "%s: portal %q has no scope middleware in portalScopeMiddleware", route.Key(), route.Portals[0])
 		assert.Containsf(t, strings.Split(chain, " > "), scope, "%s is registered for portal %q but does not run behind %s", route.Key(), route.Portals[0], scope)
+	}
+}
+
+// sessionAuthenticator rejects a request without a session token.
+const sessionAuthenticator = "modules/identityaccess/sessiontoken.Authenticator"
+
+// assertRunsWithoutSession holds a public route to a chain that admits a
+// request without a session: the public proxy path sends no bearer, so a
+// scope middleware or the authenticator would refuse every call (#2352).
+func assertRunsWithoutSession(t *testing.T, key string, chain []string) {
+	t.Helper()
+	assert.NotContainsf(t, chain, sessionAuthenticator, "%s is registered as public but runs behind %s", key, sessionAuthenticator)
+	for portal, scope := range portalScopeMiddleware {
+		assert.NotContainsf(t, chain, scope, "%s is registered as public but runs behind the %s scope %s", key, portal, scope)
 	}
 }

@@ -3,6 +3,7 @@ package staffcalendarhttp
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -46,5 +47,27 @@ func SchoolRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/parent-conferences/{conferenceId}", Portals: portals, Response: calendarService.ParentConferenceView{}},
 		{Method: "PUT", Pattern: "/parent-conferences/{conferenceId}", Portals: portals, Request: ParentConferenceRequest{}, Response: calendarService.ParentConferenceView{}},
 		{Method: "DELETE", Pattern: "/parent-conferences/{conferenceId}", Portals: portals, Response: CalendarStatusResponse{}},
+	}
+}
+
+// TraegerClosingDayRouteContracts registers the Träger's closing-day
+// calendar (#4702), with patterns relative to /traeger/closing-days. The
+// change and the delete of one day keep their route file: the delete
+// forwards the holiday bookings token of the query; the export answers a
+// file.
+func TraegerClosingDayRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTraeger}
+	days := []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: portals, Query: days, Response: traegercalendar.Calendar{}},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: TraegerClosingDayRequest{}, Response: traegercalendar.ClosingDay{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: TraegerClosingDayRequest{}, Response: traegercalendar.ClosingDay{}},
+		{
+			// The token of the preview confirms that the parents of the
+			// affected holiday bookings learn of the reopened days (#6457).
+			Method: "DELETE", Pattern: "/{id}", Portals: portals,
+			Query:    []common.QueryParam{{Name: "holiday_bookings_token", Kind: common.QueryString}},
+			Response: TraegerClosingDayDeleted{},
+		},
 	}
 }

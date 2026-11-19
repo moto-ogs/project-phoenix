@@ -16,12 +16,12 @@ import (
 // gated only by the status token like the other parent-facing /requests
 // routes: the token names one request and nothing else.
 
-// FamilyChildrenRequest is the number the parents state.
-type FamilyChildrenRequest struct {
+// StatusFamilyChildrenRequest is the number the parents state.
+type StatusFamilyChildrenRequest struct {
 	Children int `json:"children"`
 }
 
-func (req *FamilyChildrenRequest) Bind(*http.Request) error { return nil }
+func (req *StatusFamilyChildrenRequest) Bind(*http.Request) error { return nil }
 
 var familyChildrenErrorRules = []common.ErrorRule{
 	{Target: capability.ErrRequestNotFound, Render: func(err error) render.Renderer {
@@ -50,7 +50,7 @@ func (rs *Resource) putFamilyChildren(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
-	req := &FamilyChildrenRequest{}
+	req := &StatusFamilyChildrenRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

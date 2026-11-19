@@ -61,6 +61,10 @@ func TestStateFamilyChildren_UsesTheClaimsAndThePath(t *testing.T) {
 	assert.Equal(t, 3, parent.gotFamilyChildren)
 	assert.Contains(t, w.Body.String(), `"stated_children":3`)
 	assert.Contains(t, w.Body.String(), `"can_state":true`)
+
+	w = serveFamilyChildren(t, &Resource{ParentService: parent}, http.MethodGet, "/parent/me/documents/4/contracts/31/family-children", "", 7301)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Contains(t, w.Body.String(), `"stated_children":3`, "the read answers the stated number")
 }
 
 // An invalid number 400, without the relationship right 403, outside the

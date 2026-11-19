@@ -1,6 +1,9 @@
 package contract
 
-import "reflect"
+import (
+	"reflect"
+	"slices"
+)
 
 // Options are the two legacy registers of ADR 0270. Both only shrink: an
 // entry leaves when its route is migrated, and Build fails on an entry that
@@ -33,6 +36,9 @@ const (
 	// ReadsLaxIDs: as ReadsFields, and every int64 field takes a JSON number
 	// or a decimal string.
 	ReadsLaxIDs = "lax_ids"
+	// ReadsValue: the type is a wrapper that reads one JSON value, null
+	// included, into its field Value and notes that the key was present.
+	ReadsValue = "value"
 )
 
 // Registration is one route as the root hands it over: the owner's
@@ -50,6 +56,10 @@ type Registration struct {
 	Enums            []EnumSpec
 	Deprecated       bool
 	DeprecatedFields []string
+	// NoRetryAfterRenewal and MaxBodyBytes are the proxy traits of
+	// common.RouteContract.
+	NoRetryAfterRenewal string
+	MaxBodyBytes        int
 }
 
 // VariantSpec is a response whose shape a query parameter selects.
@@ -69,115 +79,8 @@ type EnumSpec struct {
 
 // legacyNumericIDs names the fields that still travel as numbers on the
 // wire, as "package.Type.GoField".
-var legacyNumericIDs = []string{
-	"appointments.Appointment.ID",
-	"appointments.Appointment.OrganizerStaffID",
-	"appointments.Appointment.TenantID",
-	"appointments.AppointmentRecipient.AppointmentID",
-	"appointments.AppointmentRecipient.GuardianProfileID",
-	"appointments.AppointmentRecipient.ID",
-	"appointments.AppointmentRecipient.StaffID",
-	"appointments.AppointmentRecipient.TenantID",
-	"appointments.AppointmentTarget.AppointmentID",
-	"appointments.AppointmentTarget.ID",
-	"appointments.AppointmentTarget.TargetID",
-	"appointments.AppointmentTarget.TenantID",
-	"appointments.RecurrenceRule.AppointmentID",
-	"appointments.RecurrenceRule.ID",
-	"appointments.RecurrenceRule.TenantID",
-	"careplanhttp.StudentRequest.GroupID",
-	"careplanhttp.UpdateStudentRequest.GroupID",
-	"classday.AbsenceListChild.StudentID",
-	"classday.DayRow.StudentID",
-	"classday.SupervisionStudentSheet.StudentID",
-	"classdayhttp.ClassHandoverRequest.AbsentStudentIDs",
-	"classdayhttp.ClassHandoverRequest.PresentStudentIDs",
-	"classdayhttp.ClassTripRequest.StudentIDs",
-	"classdayhttp.MorningAttendanceMarkRequest.StudentID",
-	"notifications.feedEntryResponse.ID",
-	"organizationtenancy.TraegerBankAccount.ID",
-	"organizationtenancy.TraegerDocumentGroup.ID",
-	"organizationtenancy.TraegerDocumentRelease.GroupID",
-	"organizationtenancy.TraegerDocumentRelease.ID",
-	"organizationtenancy.TraegerDocumentRelease.SchoolID",
-	"organizationtenancy.TraegerDocumentReleaseInput.GroupID",
-	"organizationtenancy.TraegerDocumentReleaseInput.SchoolID",
-	"organizationtenancy.TraegerDocumentSchool.ID",
-	"organizationtenancy.TraegerReportDistrict.SchoolID",
-	"organizationtenancy.TraegerReportTemplate.ID",
-	"peopledirectory.NewStudentGuardian.GuardianProfileID",
-	"presenceprojectionhttp.NameStudentResponse.ID",
-	"presenceprojectionhttp.SlimStudentResponse.CompanionStudentIDs",
-	"presenceprojectionhttp.SlimStudentResponse.GroupID",
-	"presenceprojectionhttp.SlimStudentResponse.ID",
-	"presenceprojectionhttp.StudentResponse.CompanionStudentIDs",
-	"presenceprojectionhttp.StudentResponse.GroupID",
-	"presenceprojectionhttp.StudentResponse.ID",
-	"presenceprojectionhttp.StudentResponse.PersonID",
-	"presenceprojectionhttp.StudentResponse.PhotoConsentGivenBy",
-	"presenceprojectionhttp.SupervisorContact.ID",
-	"timetable.InstanceConflictWarning.ConflictingInstanceID",
-	"timetable.InstanceConflictWarning.ResourceID",
-	"timetable.OperationParallelPresence.InstanceID",
-	"timetable.OperationPlannedInstance.ActiveGroupID",
-	"timetable.OperationPlannedInstance.AssignedStaffIDs",
-	"timetable.OperationPlannedInstance.ID",
-	"timetable.OperationPlannedInstance.RoomID",
-	"timetable.OperationRosterInstance.ActiveGroupID",
-	"timetable.OperationRosterInstance.ID",
-	"timetable.OperationRosterInstance.RoomID",
-	"timetable.OperationRosterRow.StudentID",
-	"timetable.OperationRosterRow.VisitID",
-	"timetable.OperationRosterWarning.CurrentEducationGroup",
-	"timetable.OperationRosterWarning.ExpectedGroupID",
-	"timetable.OperationStaffName.StaffID",
-	"timetable.ScheduledInstance.ActiveGroupID",
-	"timetable.ScheduledInstance.ActivityGroupID",
-	"timetable.ScheduledInstance.CalendarPeriodID",
-	"timetable.ScheduledInstance.CompletedBy",
-	"timetable.ScheduledInstance.CreatedBy",
-	"timetable.ScheduledInstance.ID",
-	"timetable.ScheduledInstance.RoomID",
-	"timetable.ScheduledInstance.StartedBy",
-	"timetable.ScheduledInstance.TenantID",
-	"timetablehttp.CompleteOperationRequest.ConfirmedPresentStudentIDs",
-	"timetablehttp.HomeworkFeedbackResponse.StudentID",
-	"timetablehttp.startOperationResponse.ActiveGroupID",
-	"timetablehttp.startOperationResponse.InstanceID",
-	"traeger.ReportDistrictRequest.SchoolID",
-	"workforce.WorkSessionEdit.ID",
-	"workforce.WorkSessionEdit.TenantID",
-	"workforce.WorkSessionEdit.SessionID",
-	"workforce.WorkSessionEdit.StaffID",
-	"workforce.WorkSessionEdit.EditedBy",
-	"staffshifts.ShiftResponse.StaffID",
-	"staffshifts.ShiftResponse.ShiftTypeID",
-	"workforce.MonthSummary.StaffID",
-	"workforce.AdjustmentView.ID",
-	"workforce.AdjustmentView.DecidedBy",
-	"workforce.MonthSummary.ClosedBy",
-	"timetracking.assignmentResponse.InstanceID",
-	"workforce.StaffAbsence.ID",
-	"workforce.StaffAbsence.TenantID",
-	"workforce.StaffAbsence.StaffID",
-	"workforce.StaffAbsence.AbsenceTypeID",
-	"workforce.StaffAbsence.ApprovedBy",
-	"workforce.StaffAbsence.CreatedBy",
-	"workforce.StaffAbsence.SubstituteStaffID",
-	"workforce.RequestVacationRequest.SubstituteStaffID",
-	"workforce.VacationQuotaSummary.StaffID",
-	"workforce.StaffVacationOpening.ID",
-	"workforce.StaffVacationOpening.TenantID",
-	"workforce.StaffVacationOpening.StaffID",
-	"workforce.StaffVacationOpening.DecidedBy",
-	"worktimemodels.AssignRequest.StaffIDs",
-	"worktimemodels.AssignResponse.AssignedStaffIDs",
-	"worktimemodels.AssignResponse.UnchangedStaffIDs",
-	"worktimemodels.DeletedResponse.ID",
-	"worktimemodels.ModelResponse.ID",
-	"worktimemodels.StaffFactResponse.StaffID",
-	"worktimemodels.StaffFactResponse.WorkTimeModelID",
-}
+// The list is kept in two files by package name, sorted.
+var legacyNumericIDs = slices.Concat(legacyNumericIDsAToO, legacyNumericIDsPToZ)
 
 // Legacy returns the registers of the routes registered today, with the
 // identifier types the root names.

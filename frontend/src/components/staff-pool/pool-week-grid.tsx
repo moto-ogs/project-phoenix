@@ -6,24 +6,24 @@
 // Blockung einer anderen Schule ist grau, nennt nur die Schule und ist nicht
 // klickbar. Ein freier Tag ab heute im Pool trägt die Geste zum Blocken.
 // Beim Träger trägt jede Blockung die Farbe ihrer Schule und öffnet das
-// Aufheben. Unter lg zeigt die Fläche einen Tag mit allen Springern, wie die
-// Einsatzplanung. Das Raster lädt nichts; alles kommt als Props.
+// Aufheben. Unter lg zeigt die Fläche einen Tag mit allen Springern, mit
+// demselben Baustein wie die Einsatzplanung (`ResourceDayList`). Das Raster
+// lädt nichts; alles kommt als Props.
 
 import { CalendarXIcon } from "@phosphor-icons/react";
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
-import { PlanAddAffordance } from "~/components/ui/planning/plan-add-affordance";
+import { PlanAddButton } from "~/components/ui/planning/plan-add-affordance";
 import { PlanBlock } from "~/components/ui/planning/plan-block";
 import {
   PlanLegend,
   type PlanLegendEntry,
 } from "~/components/ui/planning/plan-legend";
-import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
+import { ResourceDayList } from "~/components/ui/planning/resource-day-list";
 import {
   ResourceGrid,
   type ResourceGridColumn,
 } from "~/components/ui/planning/resource-grid";
-import { SectionCard } from "~/components/ui/section-card";
 import {
   StatusBadge,
   type StatusBadgeTone,
@@ -121,26 +121,6 @@ function RowHeader({ springer }: { readonly springer: PoolSpringer }) {
   );
 }
 
-/** Die Geste zum Blocken unter den Blockungen einer Zelle. */
-function BlockButton({
-  label,
-  onClick,
-}: {
-  readonly label: string;
-  readonly onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none"
-    >
-      <PlanAddAffordance size="inline" />
-    </button>
-  );
-}
-
 const NO_SCHOOLS: readonly { readonly id: string; readonly name: string }[] =
   [];
 
@@ -173,13 +153,7 @@ export function PoolWeekGrid({
   onBlock,
   onOpenBlock,
 }: PoolWeekGridProps) {
-  const scrollHintId = useId();
   const isCompact = useMediaQuery(BELOW_LG);
-  const todayIndex = days.findIndex((day) => day.date === todayIso);
-  const [mobileIndex, setMobileIndex] = useState(
-    todayIndex >= 0 ? todayIndex : 0,
-  );
-  const safeMobileIndex = Math.min(Math.max(mobileIndex, 0), days.length - 1);
 
   const columns: ResourceGridColumn[] = useMemo(
     () =>
@@ -333,7 +307,7 @@ export function PoolWeekGrid({
       <div className="flex flex-col gap-1">
         {blocks.map((block) => renderBlock(springer, block))}
         {blockable && onBlock ? (
-          <BlockButton
+          <PlanAddButton
             label={blockLabel(springer, column)}
             onClick={() => onBlock(springer, column.key)}
           />
@@ -347,69 +321,44 @@ export function PoolWeekGrid({
       <PlanLegend entries={legendEntries} aria-label="Legende Blockungen" />
     ) : undefined;
 
-  const mobileColumn = columns[safeMobileIndex];
-  if (isCompact && mobileColumn) {
+  if (isCompact && columns.length > 0) {
     return (
-      <SectionCard padding="none">
-        <div className="flex gap-1 border-b border-gray-200 p-2">
-          {columns.map((column, index) => (
-            <PlanningDayChip
-              key={column.key}
-              stacked
-              weekdayLabel={column.label}
-              dateLabel={column.sublabel ?? ""}
-              selected={index === safeMobileIndex}
-              onClick={() => setMobileIndex(index)}
-              today={column.isCurrent}
-            />
-          ))}
-        </div>
-        <ul className="divide-y divide-gray-100">
-          {springers.map((springer) => (
-            <li key={springer.recordId} className="px-3 py-2.5">
-              <RowHeader springer={springer} />
-              <div className="mt-1.5">
-                {renderCell(springer, mobileColumn) ??
-                  (onBlock ? (
-                    <BlockButton
-                      label={blockLabel(springer, mobileColumn)}
-                      onClick={() => onBlock(springer, mobileColumn.key)}
-                    />
-                  ) : null)}
-              </div>
-            </li>
-          ))}
-        </ul>
-        {legend ? (
-          <div className="border-t border-gray-200 px-3 py-2">{legend}</div>
-        ) : null}
-      </SectionCard>
-    );
-  }
-
-  return (
-    <div>
-      <p id={scrollHintId} className="mb-2 text-xs text-gray-600 sm:hidden">
-        Wische zur Seite, um weitere Tage zu sehen.
-      </p>
-      <ResourceGrid
+      <ResourceDayList
         columns={columns}
         rows={springers}
         getRowKey={(springer) => springer.recordId}
         renderRowHeader={(springer) => <RowHeader springer={springer} />}
-        renderCell={renderCell}
-        columnMode="days"
-        cornerHeader="Springer"
-        scrollHintId={scrollHintId}
-        emptyCellLabel={mode === "school" ? blockLabel : undefined}
-        onEmptyCellClick={
-          mode === "school" && onBlock
-            ? (springer, column) => onBlock(springer, column.key)
-            : undefined
+        renderCell={(springer, column) =>
+          renderCell(springer, column) ??
+          (onBlock ? (
+            <PlanAddButton
+              label={blockLabel(springer, column)}
+              onClick={() => onBlock(springer, column.key)}
+            />
+          ) : null)
         }
-        ariaLabel="Vertretungspool, Woche aller Springer"
         legend={legend}
       />
-    </div>
+    );
+  }
+
+  return (
+    <ResourceGrid
+      columns={columns}
+      rows={springers}
+      getRowKey={(springer) => springer.recordId}
+      renderRowHeader={(springer) => <RowHeader springer={springer} />}
+      renderCell={renderCell}
+      columnMode="days"
+      cornerHeader="Springer"
+      emptyCellLabel={mode === "school" ? blockLabel : undefined}
+      onEmptyCellClick={
+        mode === "school" && onBlock
+          ? (springer, column) => onBlock(springer, column.key)
+          : undefined
+      }
+      ariaLabel="Vertretungspool, Woche aller Springer"
+      legend={legend}
+    />
   );
 }

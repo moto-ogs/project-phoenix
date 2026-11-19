@@ -72,7 +72,7 @@ func TestRoomRemovalFollowsItsImpact(t *testing.T) {
 
 func readImpact(t *testing.T, tc *testContext, roomID int64) removalImpactBody {
 	t.Helper()
-	rr := testutil.ExecuteWithAuth(t, tc.router, testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/removal-impact", roomID), nil), testutil.AdminTestClaims(1))
+	rr := testutil.ExecuteWithAuth(t, testpkg.MountedQueryBudgetRouter("/api/rooms", tc.router), testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/removal-impact", roomID), nil), testutil.AdminTestClaims(1))
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var body removalImpactBody
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))

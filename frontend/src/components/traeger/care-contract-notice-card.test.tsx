@@ -453,8 +453,9 @@ describe("CareContractNoticeCard (#4682)", () => {
       />,
     );
     expect(
+      // The card's description names what follows from each decision.
       await screen.findByText(
-        "Dann gilt sie als ordentliche Kündigung zum 31.12.2026.",
+        /Erkennst du ihn nicht an, gilt die Kündigung als ordentliche Kündigung zum 31\.12\.2026\./,
       ),
     ).toBeInTheDocument();
     fireEvent.click(

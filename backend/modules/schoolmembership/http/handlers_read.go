@@ -92,7 +92,7 @@ func (rs *Resource) listCurrentStaff(w http.ResponseWriter, r *http.Request, fil
 		rs.internal(w, r, err)
 		return
 	}
-	data := rs.withInvitations(ctx, rs.loadDirectory(ctx, accountIDsOf(persons)), members, persons)
+	data := rs.withInvitations(ctx, rs.loadDirectory(ctx, staffIDsOf(members), accountIDsOf(persons)), members, persons)
 	access := rs.fieldAccess(ctx)
 
 	responses := make([]any, 0, len(members))
@@ -121,7 +121,8 @@ func (rs *Resource) listCurrentStaff(w http.ResponseWriter, r *http.Request, fil
 	rs.respond(w, r, http.StatusOK, responses, "Staff members retrieved successfully")
 }
 
-type documentDirectoryEntry struct {
+// DocumentDirectoryEntry is one staff identity of the document directory.
+type DocumentDirectoryEntry struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
 	FirstName string `json:"firstName"`
@@ -143,13 +144,13 @@ func (rs *Resource) listDocumentDirectory(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	entries := make([]documentDirectoryEntry, 0, len(members))
+	entries := make([]DocumentDirectoryEntry, 0, len(members))
 	for _, staff := range members {
 		person := persons[staff.PersonID]
 		if person == nil {
 			continue
 		}
-		entries = append(entries, documentDirectoryEntry{
+		entries = append(entries, DocumentDirectoryEntry{
 			ID:        staff.ID,
 			Name:      person.FirstName + " " + person.LastName,
 			FirstName: person.FirstName,
@@ -181,7 +182,7 @@ func (rs *Resource) getStaff(w http.ResponseWriter, r *http.Request) {
 	if person != nil && person.AccountID != nil {
 		accountIDs = append(accountIDs, *person.AccountID)
 	}
-	directory := rs.withInvitations(ctx, rs.loadDirectory(ctx, accountIDs), []schoolmembership.Staff{staff}, map[int64]*Person{staff.PersonID: person})
+	directory := rs.withInvitations(ctx, rs.loadDirectory(ctx, []int64{staff.ID}, accountIDs), []schoolmembership.Staff{staff}, map[int64]*Person{staff.PersonID: person})
 	data := directory.enrich(staff, person, access.personnel)
 
 	if staff.IsDeleted() {
@@ -230,15 +231,28 @@ func (rs *Resource) getMinimalStaffProfile(w http.ResponseWriter, r *http.Reques
 		rs.failure(w, r, FailureNotFound, errors.New(msgStaffNotFound), "not_found")
 		return
 	}
-	profile := map[string]any{
-		"id": staff.ID, "name": person.FirstName + " " + person.LastName,
-		"firstName": person.FirstName, "lastName": person.LastName,
+	profile := MinimalStaffProfileResponse{
+		ID: staff.ID, Name: person.FirstName + " " + person.LastName,
+		FirstName: person.FirstName, LastName: person.LastName,
 	}
 	if staff.IsDeleted() {
-		profile["started_on"] = calendar.DateFromTime(staff.CreatedAt)
-		profile["ended_on"] = staffEndedOn(staff)
+		startedOn := calendar.DateFromTime(staff.CreatedAt)
+		profile.StartedOn = &startedOn
+		profile.EndedOn = staffEndedOn(staff)
 	}
 	rs.respond(w, r, http.StatusOK, profile, message)
+}
+
+// MinimalStaffProfileResponse identifies a staff member for the financial
+// Stammdaten section and the documents tab, nothing more. A former staff
+// member also carries the employment period.
+type MinimalStaffProfileResponse struct {
+	ID        int64          `json:"id"`
+	Name      string         `json:"name"`
+	FirstName string         `json:"firstName"`
+	LastName  string         `json:"lastName"`
+	StartedOn *calendar.Date `json:"started_on,omitempty"`
+	EndedOn   *calendar.Date `json:"ended_on,omitempty"`
 }
 
 // serveStaffAvatar streams the avatar of the account behind a staff member.

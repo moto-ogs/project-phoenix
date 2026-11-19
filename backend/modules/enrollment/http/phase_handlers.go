@@ -138,12 +138,12 @@ func applyPhaseClassConfig(resp *PhaseResponse, p *enrollmentOwner.Phase) {
 	}
 }
 
-// PhaseRequest is the wire shape POST + PUT accept. Dates are
+// EnrollmentPhaseRequest is the wire shape POST + PUT accept. Dates are
 // YYYY-MM-DD strings; window timestamps are RFC3339 (or omitted for
 // "unbounded"). FormSchemaID is the string ID of an existing schema
 // row, or omitted/empty for "no custom fields" (the parent form
 // renders core fields only).
-type PhaseRequest struct {
+type EnrollmentPhaseRequest struct {
 	Name                      string  `json:"name"`
 	Kind                      string  `json:"kind"`
 	ServiceStartDate          string  `json:"service_start_date"`
@@ -173,15 +173,15 @@ type PhaseRequest struct {
 	EligibleGradeLevels   *[]int    `json:"eligible_grade_levels,omitempty"`
 	// Translations (#3377) follows the same convention: omitted keeps the
 	// stored translations, an explicit {} clears them.
-	Translations *enrollmentOwner.Translations `json:"translations,omitempty"`
+	Translations *PhaseTranslationsRequest `json:"translations,omitempty"`
 
 	calendarPeriodIDPresent bool
 }
 
-func (req *PhaseRequest) Bind(_ *http.Request) error { return nil }
+func (req *EnrollmentPhaseRequest) Bind(_ *http.Request) error { return nil }
 
-func (req *PhaseRequest) UnmarshalJSON(data []byte) error {
-	type phaseRequestAlias PhaseRequest
+func (req *EnrollmentPhaseRequest) UnmarshalJSON(data []byte) error {
+	type phaseRequestAlias EnrollmentPhaseRequest
 	var alias phaseRequestAlias
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
@@ -190,7 +190,7 @@ func (req *PhaseRequest) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	*req = PhaseRequest(alias)
+	*req = EnrollmentPhaseRequest(alias)
 	_, req.calendarPeriodIDPresent = raw["calendar_period_id"]
 	return nil
 }
@@ -198,7 +198,7 @@ func (req *PhaseRequest) UnmarshalJSON(data []byte) error {
 // toModel maps the wire shape onto a Phase model. Date parsing
 // failures bubble back as 400 from the handler — kept here so the
 // parsing logic is in one place.
-func (req *PhaseRequest) toModel(existingID int64) (*enrollmentOwner.Phase, error) {
+func (req *EnrollmentPhaseRequest) toModel(existingID int64) (*enrollmentOwner.Phase, error) {
 	startDate, err := calendar.ParseDate(req.ServiceStartDate)
 	if err != nil {
 		return nil, enrollmentOwner.InvalidInput(common.CodeEnrollmentPhaseServicePeriodInvalid, "service_start_date", errors.New("service_start_date must be YYYY-MM-DD"))
@@ -228,7 +228,7 @@ func (req *PhaseRequest) toModel(existingID int64) (*enrollmentOwner.Phase, erro
 
 // applyClassAndEligibility copies the class and eligibility config and the
 // translations of the request onto the phase.
-func (req *PhaseRequest) applyClassAndEligibility(p *enrollmentOwner.Phase) {
+func (req *EnrollmentPhaseRequest) applyClassAndEligibility(p *enrollmentOwner.Phase) {
 	// Class config: a provided value (even []/false) is applied verbatim;
 	// an omitted value (nil pointer) leaves the zero value here. On create
 	// that means an empty list / not-required (matching a fresh phase); on
@@ -262,13 +262,13 @@ func (req *PhaseRequest) applyClassAndEligibility(p *enrollmentOwner.Phase) {
 		p.EligibleGradeLevels = []int{}
 	}
 	if req.Translations != nil {
-		p.Translations = *req.Translations
+		p.Translations = req.Translations.translations()
 	}
 }
 
 // applyWindowAndLinks parses the enrollment window and the schema and
 // calendar period links of the request onto the phase.
-func (req *PhaseRequest) applyWindowAndLinks(p *enrollmentOwner.Phase) error {
+func (req *EnrollmentPhaseRequest) applyWindowAndLinks(p *enrollmentOwner.Phase) error {
 	openAt, err := parseOptionalRFC3339(req.EnrollmentOpenAt, "enrollment_open_at must be RFC3339")
 	if err != nil {
 		return enrollmentOwner.InvalidInput(common.CodeEnrollmentPhaseWindowInvalid, "enrollment_open_at", err)
@@ -298,7 +298,7 @@ func (req *PhaseRequest) applyWindowAndLinks(p *enrollmentOwner.Phase) error {
 // pre-#1663 eligibility) would otherwise silently wipe the admin's
 // configuration. A PUT without calendar_period_id likewise keeps the stored
 // link; only an explicit null (or value) changes it.
-func (req *PhaseRequest) hydrateOmittedFields(model, existing *enrollmentOwner.Phase) {
+func (req *EnrollmentPhaseRequest) hydrateOmittedFields(model, existing *enrollmentOwner.Phase) {
 	if !req.calendarPeriodIDPresent {
 		model.CalendarPeriodID = existing.CalendarPeriodID
 	}
@@ -425,7 +425,7 @@ func (rs *Resource) createPhase(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("phase service not configured")))
 		return
 	}
-	req := &PhaseRequest{}
+	req := &EnrollmentPhaseRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -553,7 +553,7 @@ func toPhaseUpdateResponse(p *enrollmentOwner.Phase, report enrollmentOwner.Phas
 }
 
 func (rs *Resource) updatePhase(w http.ResponseWriter, r *http.Request) {
-	req := &PhaseRequest{}
+	req := &EnrollmentPhaseRequest{}
 	var report enrollmentOwner.PhaseUpdateReport
 	updateWithRefetch(rs, w, r, rs.PhaseService == nil, "phase service not configured",
 		func(r *http.Request, id int64) (*enrollmentOwner.Phase, error) {
@@ -670,4 +670,31 @@ func bookingBoundsConflict(err error) render.Renderer {
 	}
 	return common.ErrorConflictWithDetails(enrollmentOwner.ErrPhaseBookingBoundsConflict, common.CodeEnrollmentPhaseBookingBoundsConflict,
 		map[string]any{"child": conflict.ChildName})
+}
+
+// PhaseTranslationsRequest is the translations a phase body carries: locale →
+// attribute → text. It reads like enrollment.Translations; the contract keeps
+// request and answer types apart.
+type PhaseTranslationsRequest map[string]map[string]PhaseTranslatedTextRequest
+
+// PhaseTranslatedTextRequest is one translated text of a phase body.
+type PhaseTranslatedTextRequest struct {
+	Text   string `json:"text"`
+	Source string `json:"source,omitempty"`
+}
+
+// translations converts the body's translations into the owner's form.
+func (t PhaseTranslationsRequest) translations() enrollmentOwner.Translations {
+	if t == nil {
+		return nil
+	}
+	out := make(enrollmentOwner.Translations, len(t))
+	for locale, attributes := range t {
+		texts := make(map[string]enrollmentOwner.TranslatedText, len(attributes))
+		for attribute, text := range attributes {
+			texts[attribute] = enrollmentOwner.TranslatedText{Text: text.Text, Source: text.Source}
+		}
+		out[locale] = texts
+	}
+	return out
 }

@@ -43,6 +43,7 @@ interface IncomingCreateInvitationPayload {
   last_name?: string;
   lastName?: string;
   position?: string;
+  gender?: string;
   employment_action?: string;
   employmentAction?: string;
 }
@@ -57,6 +58,7 @@ interface BackendCreateInvitationPayload {
   first_name?: string;
   last_name?: string;
   position?: string;
+  gender?: string;
 }
 
 function normalizeRoleId(
@@ -103,6 +105,7 @@ export const POST = createPostHandler<
       first_name: body.first_name ?? body.firstName,
       last_name: body.last_name ?? body.lastName,
       position: body.position,
+      gender: body.gender,
       employment_action: body.employment_action ?? body.employmentAction,
     };
 

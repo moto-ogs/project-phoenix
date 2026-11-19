@@ -1,5 +1,0 @@
-{
-  "api/school/supervisions/[id]/students/[studentId]/attendance": [
-    "PATCH school /school/supervisions/id%2F1/students/studentId%2F1/attendance"
-  ]
-}

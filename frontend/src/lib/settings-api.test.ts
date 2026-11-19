@@ -423,9 +423,11 @@ describe("revealSettingValue", () => {
     vi.clearAllMocks();
   });
 
-  it("returns revealed value on success (nested data)", async () => {
+  // The catalog proxy answers the backend's data once (#2352); the nested
+  // form came only from the deleted route file.
+  it("returns revealed value on success", async () => {
     mockSessionFetch.mockResolvedValue(
-      mockResponse(200, { data: { data: { value: "1234" } } }),
+      mockResponse(200, { data: { value: "1234" } }),
     );
 
     const result = await revealSettingValue("security.ogs_device_pin");
@@ -435,16 +437,6 @@ describe("revealSettingValue", () => {
       "/api/settings/values/security.ogs_device_pin/reveal",
       { method: "GET" },
     );
-  });
-
-  it("returns revealed value on success (flat data)", async () => {
-    mockSessionFetch.mockResolvedValue(
-      mockResponse(200, { data: { value: "5678" } }),
-    );
-
-    const result = await revealSettingValue("security.ogs_device_pin");
-
-    expect(result).toBe("5678");
   });
 
   it("returns null when value is not a string", async () => {

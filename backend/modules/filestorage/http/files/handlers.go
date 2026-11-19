@@ -27,7 +27,7 @@ type FolderResponse struct {
 	ID         string    `json:"id"`
 	Name       string    `json:"name"`
 	Visibility string    `json:"visibility"`
-	FileCount  int64     `json:"file_count"`
+	FileCount  int       `json:"file_count"`
 	RoleIDs    []string  `json:"role_ids"`
 	AccountIDs []string  `json:"account_ids"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -40,8 +40,8 @@ type FolderListResponse struct {
 	CanManage          bool             `json:"can_manage"`
 	CanUpload          bool             `json:"can_upload"`
 	StaffUploadEnabled bool             `json:"staff_upload_enabled"`
-	UsedBytes          int64            `json:"used_bytes"`
-	MaxBytes           int64            `json:"max_bytes"`
+	UsedBytes          int              `json:"used_bytes"`
+	MaxBytes           int              `json:"max_bytes"`
 }
 
 // FileResponse is one file on the wire.
@@ -86,7 +86,7 @@ func newFolderResponse(folder filestorage.Folder) FolderResponse {
 		ID:         idString(folder.ID),
 		Name:       folder.Name,
 		Visibility: folder.Visibility,
-		FileCount:  folder.FileCount,
+		FileCount:  int(folder.FileCount),
 		RoleIDs:    idStrings(folder.RoleIDs),
 		AccountIDs: idStrings(folder.AccountIDs),
 		CreatedAt:  folder.CreatedAt,
@@ -134,8 +134,8 @@ func (rs *Resource) listFolders(w http.ResponseWriter, r *http.Request) {
 		CanManage:          overview.CanManage,
 		CanUpload:          overview.CanUpload,
 		StaffUploadEnabled: overview.StaffUploadEnabled,
-		UsedBytes:          overview.UsedBytes,
-		MaxBytes:           overview.MaxBytes,
+		UsedBytes:          int(overview.UsedBytes),
+		MaxBytes:           int(overview.MaxBytes),
 	}
 	for _, folder := range overview.Folders {
 		resp.Folders = append(resp.Folders, newFolderResponse(folder))
@@ -206,7 +206,7 @@ func (rs *Resource) deleteFolder(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"folder_id": idString(folderID)}, "Folder deleted successfully")
+	common.Respond(w, r, http.StatusOK, FolderRemovedResponse{FolderID: idString(folderID)}, "Folder deleted successfully")
 }
 
 // listAudience serves GET /audience: the roles and persons a folder can be
@@ -338,5 +338,5 @@ func (rs *Resource) deleteFile(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"folder_id": idString(folderID)}, "File deleted successfully")
+	common.Respond(w, r, http.StatusOK, FolderRemovedResponse{FolderID: idString(folderID)}, "File deleted successfully")
 }

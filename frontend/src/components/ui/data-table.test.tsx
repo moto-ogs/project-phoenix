@@ -205,6 +205,47 @@ describe("DataTable keyboard navigation", () => {
         2,
       );
     });
+
+    it("keeps rows without their own controls keyboard-accessible", async () => {
+      const user = userEvent.setup();
+      const onRowClick = vi.fn();
+
+      render(
+        <DataTable
+          columns={[
+            ...columns,
+            {
+              key: "actions",
+              header: "Aktionen",
+              render: (row) =>
+                row.id === "1" ? <button type="button">Anzeigen</button> : null,
+            },
+          ]}
+          rows={rows}
+          getRowKey={(row) => row.id}
+          onRowClick={onRowClick}
+          rowHasInteractiveControls={(row) => row.id === "1"}
+          stackedOnMobile
+        />,
+      );
+
+      const [rowWithControl, rowWithoutControl] =
+        screen.getAllByRole("listitem");
+      expect(rowWithControl).toBeDefined();
+      expect(rowWithoutControl).toBeDefined();
+      expect(rowWithControl!.firstElementChild).not.toHaveAttribute(
+        "role",
+        "button",
+      );
+
+      const rowButton = within(rowWithoutControl!).getByRole("button", {
+        name: "Beta",
+      });
+      rowButton.focus();
+      await user.keyboard("{Enter}");
+
+      expect(onRowClick).toHaveBeenCalledWith(rows[1]);
+    });
   });
 });
 

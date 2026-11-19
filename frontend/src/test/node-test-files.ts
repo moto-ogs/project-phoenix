@@ -90,7 +90,6 @@ export const nodeLogicTestFiles = [
   "src/lib/student-access.test.ts",
   "src/lib/backend-proxy-response.server.test.ts",
   "src/lib/backend-proxy-route.server.test.ts",
-  "src/lib/birthdays-api.server.test.ts",
   "src/lib/block-children.test.ts",
   "src/lib/calendar-period-api.test.ts",
   "src/lib/calendar-period-helpers.test.ts",

@@ -2,7 +2,7 @@
 import type { NextRequest } from "next/server";
 import { apiPost } from "~/lib/api-helpers.server";
 import { createPostHandler } from "~/lib/route-wrapper.server";
-import type { ExternalAccess } from "~/lib/staff-api";
+import type { ExternalAccess, StammdatenGender } from "~/lib/staff-api";
 import {
   mapBackendStaff,
   type BackendStaffResponse,
@@ -14,14 +14,15 @@ interface ExternalStaffCreateRequest {
   access: ExternalAccess;
   email?: string;
   organization?: string;
+  gender?: StammdatenGender;
 }
 
 /**
  * Handler for POST /api/staff/externals
  * Records an external caregiver (#3823) with the chosen access (ADR 0091):
  * `none` without account, `view` and `supervise` with an email invitation.
- * The backend validates names, access and address; this hop only forwards
- * them.
+ * The backend validates names, access, address and the optional Stammdaten
+ * gender; this hop only forwards them.
  */
 export const POST = createPostHandler<
   ReturnType<typeof mapBackendStaff>,
@@ -37,6 +38,7 @@ export const POST = createPostHandler<
       last_name: body.last_name,
       email: body.email,
       organization: body.organization,
+      gender: body.gender,
       access: body.access,
     },
   );

@@ -673,6 +673,11 @@ type ReplacementRequest struct {
 	ShiftTypeID  *int64 `json:"shift_type_id"`
 }
 
+// ShiftDeletedResponse names the shift a delete removed.
+type ShiftDeletedResponse struct {
+	ID int64 `json:"id"`
+}
+
 // CancellationResponse returns the updated origin plus the created covers.
 type CancellationResponse struct {
 	Shift        ShiftResponse   `json:"shift"`
@@ -787,5 +792,5 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, map[string]any{"id": id}, "Staff shift deleted")
+	rs.runtime.Success(w, r, http.StatusOK, ShiftDeletedResponse{ID: id}, "Staff shift deleted")
 }

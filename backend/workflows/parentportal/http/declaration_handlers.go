@@ -21,7 +21,7 @@ import (
 // Erklärungen (#3430): the declaration part of a feed item, the submission
 // and the guardian's own proof.
 
-type declarationVersionResponse struct {
+type parentDeclarationVersionResponse struct {
 	ID          string `json:"id"`
 	VersionNo   int    `json:"version_no"`
 	ContentHash string `json:"content_hash"`
@@ -34,7 +34,7 @@ type declarationSignerStateResponse struct {
 	SubmittedAt *time.Time `json:"submitted_at"`
 }
 
-type declarationChildResponse struct {
+type parentDeclarationChildResponse struct {
 	StudentID      string                           `json:"student_id"`
 	FirstName      string                           `json:"first_name"`
 	LastName       string                           `json:"last_name"`
@@ -89,9 +89,9 @@ type AnnouncementDeclarationResponse struct {
 	// Ended: the school no longer shows this Einverständnis (withdrawn,
 	// deactivated or expired). It stays in the feed because the guardian
 	// answered it; only revoking an own consent remains (#6290).
-	Ended    bool                        `json:"ended"`
-	Version  *declarationVersionResponse `json:"version"`
-	Children []declarationChildResponse  `json:"children"`
+	Ended    bool                              `json:"ended"`
+	Version  *parentDeclarationVersionResponse `json:"version"`
+	Children []parentDeclarationChildResponse  `json:"children"`
 }
 
 func toDeclarationResponse(d *parentService.AnnouncementFeedDeclaration) *AnnouncementDeclarationResponse {
@@ -100,15 +100,15 @@ func toDeclarationResponse(d *parentService.AnnouncementFeedDeclaration) *Announ
 	}
 	out := &AnnouncementDeclarationResponse{
 		Kind: d.Kind, Signers: d.Signers, RequiresPassword: d.RequiresPassword,
-		RequiresSignature: d.RequiresSignature, Deadline: d.Deadline, Closed: d.Closed, Ended: d.Ended, Children: make([]declarationChildResponse, 0, len(d.Children)),
+		RequiresSignature: d.RequiresSignature, Deadline: d.Deadline, Closed: d.Closed, Ended: d.Ended, Children: make([]parentDeclarationChildResponse, 0, len(d.Children)),
 	}
 	if d.Version != nil {
-		out.Version = &declarationVersionResponse{
+		out.Version = &parentDeclarationVersionResponse{
 			ID: strconv.FormatInt(d.Version.ID, 10), VersionNo: d.Version.VersionNo, ContentHash: d.Version.ContentHash,
 		}
 	}
 	for _, c := range d.Children {
-		child := declarationChildResponse{
+		child := parentDeclarationChildResponse{
 			StudentID: strconv.FormatInt(c.StudentID, 10), FirstName: c.FirstName, LastName: c.LastName,
 			CanSubmit: c.CanSubmit, State: c.State, MyAction: c.MyAction, MySubmittedAt: c.MySubmittedAt,
 			AllowedActions: c.AllowedActions, OtherSigners: make([]declarationSignerStateResponse, 0, len(c.OtherSigners)),
@@ -153,7 +153,7 @@ func (s *declarationSignatureRequest) input() *parentService.DeclarationSignatur
 	return &parentService.DeclarationSignatureInput{Method: s.Method, ImagePNG: s.ImagePNG, TypedName: s.TypedName}
 }
 
-type declarationSubmissionResponse struct {
+type parentDeclarationSubmissionResponse struct {
 	ID                string    `json:"id"`
 	Action            string    `json:"action"`
 	SubmittedAt       time.Time `json:"submitted_at"`
@@ -203,9 +203,9 @@ func (rs *Resource) submitDeclaration(w http.ResponseWriter, r *http.Request) {
 		renderDeclarationError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"created": created,
-		"submission": declarationSubmissionResponse{
+	common.Respond(w, r, http.StatusOK, DeclarationRecordedResponse{
+		Created: created,
+		Submission: parentDeclarationSubmissionResponse{
 			ID: strconv.FormatInt(submission.ID, 10), Action: submission.Action, SubmittedAt: submission.SubmittedAt,
 			VersionNo: submission.VersionNo, ContentHash: submission.ContentHash, RecordHash: submission.RecordHash,
 			PasswordConfirmed: submission.PasswordConfirmed,
@@ -256,7 +256,7 @@ type proofAttachmentResponse struct {
 	ID          string `json:"id"`
 	Filename    string `json:"filename"`
 	ContentType string `json:"content_type"`
-	SizeBytes   int64  `json:"size_bytes"`
+	SizeBytes   int    `json:"size_bytes"`
 	SHA256      string `json:"sha256"`
 }
 
@@ -432,7 +432,7 @@ func toDeclarationProofResponse(proof *parentService.DeclarationProof, now time.
 		}
 		for _, a := range v.Attachments {
 			version.Attachments = append(version.Attachments, proofAttachmentResponse{
-				ID: strconv.FormatInt(a.AttachmentID, 10), Filename: a.Filename, ContentType: a.ContentType, SizeBytes: a.SizeBytes, SHA256: a.SHA256,
+				ID: strconv.FormatInt(a.AttachmentID, 10), Filename: a.Filename, ContentType: a.ContentType, SizeBytes: int(a.SizeBytes), SHA256: a.SHA256,
 			})
 		}
 		out.Versions = append(out.Versions, version)

@@ -113,11 +113,17 @@ func embeddedStruct(sf reflect.StructField, name string) (reflect.Type, bool) {
 func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, name string, options []string, where string, request bool) (Field, error) {
 	at := where + "." + sf.Name
 	schema, err := b.schema(sf.Type, at, request)
-	if errors.Is(err, errBareInt64) {
+	format := sf.Tag.Get("contract")
+	switch {
+	case errors.Is(err, errBareInt64) && format == "number":
+		// A running number or a count kept as int64: a number, never an
+		// identifier.
+		err, format = nil, ""
+	case errors.Is(err, errBareInt64):
 		err = b.numericID(&schema, declaring, sf.Name, slices.Contains(options, "string"), at)
 	}
 	if err == nil {
-		err = setFormat(&schema, sf.Tag.Get("contract"), at)
+		err = setFormat(&schema, format, at)
 	}
 	if err != nil {
 		return Field{}, err
@@ -180,6 +186,10 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 			field.Schema.Nullable = false
 		}
 	}
+	if field.Schema.Kind == KindJSON {
+		// Present JSON may itself be null.
+		field.Schema.Nullable = true
+	}
 }
 
 // numericID decides a bare int64. With ,string it is an identifier that
@@ -204,6 +214,8 @@ func (b *builder) numericID(schema *Schema, declaring reflect.Type, goField stri
 	case b.numericIDs[key]:
 		leaf.Kind = KindLegacyID
 		b.used["id:"+key] = true
+	case strings.HasSuffix(goField, "Cents"):
+		// An amount in whole cent is a number, never an identifier.
 	default:
 		return fmt.Errorf("%s: int64 does not say what it is. Use common.ID for an identifier and int for a count (ADR 0270)", at)
 	}

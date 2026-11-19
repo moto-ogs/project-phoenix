@@ -47,6 +47,7 @@ import { useHelpSidebarScrollRestoration } from "./help-sidebar-scroll";
 import { useHelpTableOfContents } from "./help-table-of-contents";
 import { HelpWordmark } from "./help-wordmark";
 import { foldForSearch } from "~/lib/search-fold";
+import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 // Reihenfolge der Oberthemen je Rolle. Jede Rolle hat eine eigene
 // Seitenleiste (#2229, Informationsarchitektur Abschnitt 3).
@@ -1102,7 +1103,9 @@ function HelpDocumentationShell({
         onOpenDrawer={openMobileDrawer}
       />
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-gray-200 bg-white lg:flex">
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-gray-200 bg-white lg:flex ${FIXED_LAYER_SHIFT}`}
+      >
         <div className="flex h-20 shrink-0 items-center gap-3 border-b border-gray-200 px-6">
           <Link
             href={restartHref}

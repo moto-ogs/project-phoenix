@@ -1,12 +1,13 @@
 "use client";
 
-// Veröffentlichen eines Ferienzeitraums (#4659). Die Karte sagt, was fehlt,
-// bevor der Knopf wirkt, und was danach gilt. Ein veröffentlichter Zeitraum
-// zeigt den einen Link für Eltern und die Zahl der Anmeldungen (#4661) mit
-// dem Weg zu ihrer Prüfung (#4663).
+// Veröffentlichen eines Ferienzeitraums (#4659). „Veröffentlichen“ ist die
+// eine Kopfaktion der Seite (#7411); die Karte darunter trägt nur den Link
+// für Eltern (#4661). Vor dem Veröffentlichen sagt sie, was fehlt und dass es
+// den Link erst danach gibt. Den Status zeigt die Plakette im Seitenkopf,
+// die Zahl der Anmeldungen der Reiter „Anmeldungen“.
 
 import { useState } from "react";
-import { Button, ButtonLink } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { CopyField } from "~/components/ui/copy-field";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
@@ -15,13 +16,13 @@ import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { parentsPortalUrl } from "~/lib/parent-url";
 import { type HolidayPeriod, publishHolidayPeriod } from "~/lib/traeger-api";
-import { traegerPath } from "~/lib/traeger-url";
 import { holidayPeriodComplete } from "./holiday-period-model";
 import { QrCodeButton } from "~/components/qr-code/qr-code-button";
 
-const logger = createLogger({ component: "HolidayPeriodPublishCard" });
+const logger = createLogger({ component: "HolidayPeriodPublish" });
 
-function publishBlocker(
+/** What keeps a draft from being published, or `null`. */
+function holidayPublishBlocker(
   period: HolidayPeriod,
   unsavedChanges: boolean,
 ): string | null {
@@ -34,7 +35,11 @@ function publishBlocker(
   return null;
 }
 
-export function HolidayPeriodPublishCard({
+/**
+ * „Veröffentlichen“ im Seitenkopf eines Entwurfs, mit der Rückfrage davor.
+ * Ein veröffentlichter Zeitraum zeigt nichts: er wird nicht wieder Entwurf.
+ */
+export function HolidayPeriodPublishButton({
   period,
   unsavedChanges,
   onPublished,
@@ -47,36 +52,9 @@ export function HolidayPeriodPublishCard({
   const [publishing, setPublishing] = useState(false);
   const errorDisplay = useApiErrorDisplay();
 
-  if (period.status === "published") {
-    return (
-      <SectionCard
-        title="Veröffentlicht"
-        action={
-          <ButtonLink
-            href={traegerPath(`/traeger/ferien/${period.id}/anmeldungen`)}
-            variant="outline"
-            size="md"
-            tooltip="Öffnet die Liste der Anmeldungen zu diesem Ferienzeitraum."
-          >
-            Anmeldungen prüfen
-          </ButtonLink>
-        }
-      >
-        <div className="space-y-4 text-sm text-gray-700">
-          <p>
-            {period.publishedAt
-              ? `Seit ${formatDate(period.publishedAt)} für die Anmeldung freigegeben.`
-              : "Für die Anmeldung freigegeben."}{" "}
-            Änderungen gelten sofort nach dem Speichern.
-          </p>
-          <HolidayRegistrationLink period={period} />
-          <p>{registrationCountText(period.registrationCount)}</p>
-        </div>
-      </SectionCard>
-    );
-  }
+  if (period.status === "published") return null;
 
-  const blocker = publishBlocker(period, unsavedChanges);
+  const blocker = holidayPublishBlocker(period, unsavedChanges);
   const publish = async () => {
     setPublishing(true);
     try {
@@ -94,27 +72,18 @@ export function HolidayPeriodPublishCard({
   };
 
   return (
-    <SectionCard
-      title="Entwurf"
-      description="Ein Entwurf ist noch nicht für die Anmeldung freigegeben."
-      action={
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          disabled={blocker !== null}
-          disabledReason={blocker ?? undefined}
-          tooltip="Gibt die Anmeldung für alle Schulen des Zeitraums frei. moto fragt vorher nach."
-          onClick={() => setConfirming(true)}
-        >
-          Veröffentlichen
-        </Button>
-      }
-    >
-      <div className="space-y-2 text-sm text-gray-700">
-        {blocker ? <p>{blocker}</p> : null}
-        <p>Den Link für Eltern gibt es nach dem Veröffentlichen.</p>
-      </div>
+    <>
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        disabled={blocker !== null}
+        disabledReason={blocker ?? undefined}
+        tooltip="Gibt die Anmeldung für alle Schulen des Zeitraums frei. moto fragt vorher nach."
+        onClick={() => setConfirming(true)}
+      >
+        Veröffentlichen
+      </Button>
       <ConfirmationModal
         isOpen={confirming}
         title="Ferienzeitraum veröffentlichen?"
@@ -129,16 +98,45 @@ export function HolidayPeriodPublishCard({
           ihn weiter ändern, aber nicht mehr zum Entwurf machen.
         </p>
       </ConfirmationModal>
-    </SectionCard>
+    </>
   );
 }
 
-function registrationCountText(count: number): string {
-  // „eingegangen“ is a status of the registrations list; the count here
-  // includes every registration.
-  if (count === 0) return "Noch keine Anmeldung.";
-  if (count === 1) return "Bisher 1 Anmeldung.";
-  return `Bisher ${count} Anmeldungen.`;
+/**
+ * Der Link für Eltern. Vor dem Veröffentlichen sagt die Karte, dass es ihn
+ * erst danach gibt und was dafür noch fehlt.
+ */
+export function HolidayPeriodPublishCard({
+  period,
+  unsavedChanges,
+}: Readonly<{
+  period: HolidayPeriod;
+  unsavedChanges: boolean;
+}>) {
+  if (period.status === "published") {
+    return (
+      <SectionCard
+        title="Link für Eltern"
+        description={`${
+          period.publishedAt
+            ? `Seit ${formatDate(period.publishedAt)} für die Anmeldung freigegeben.`
+            : "Für die Anmeldung freigegeben."
+        } Änderungen gelten sofort nach dem Speichern.`}
+      >
+        <HolidayRegistrationLink period={period} />
+      </SectionCard>
+    );
+  }
+
+  const blocker = holidayPublishBlocker(period, unsavedChanges);
+  return (
+    <SectionCard title="Link für Eltern">
+      <div className="space-y-2 text-sm text-gray-700">
+        <p>Den Link für Eltern gibt es nach dem Veröffentlichen.</p>
+        {blocker ? <p>{blocker}</p> : null}
+      </div>
+    </SectionCard>
+  );
 }
 
 /** Der eine Link des Zeitraums für alle seine Schulen, im Elternportal. */
@@ -151,8 +149,7 @@ function HolidayRegistrationLink({
     `/ferienanmeldung/${encodeURIComponent(period.publicToken)}`,
   );
   return (
-    <div className="space-y-1">
-      <p className="font-semibold text-gray-900">Link für Eltern</p>
+    <div className="space-y-2 text-sm text-gray-700">
       <p>
         Über diesen Link melden Eltern ihre Kinder für alle Wochen an. Ein
         Elternkonto brauchen sie nicht.

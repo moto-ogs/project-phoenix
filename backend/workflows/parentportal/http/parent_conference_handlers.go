@@ -17,6 +17,11 @@ import (
 // checks that the child belongs to the class of the day, in the transaction
 // this flow opens for the child's school.
 
+// ParentConferenceCancelledResponse confirms a cancelled booking.
+type ParentConferenceCancelledResponse struct {
+	Status string `json:"status"`
+}
+
 type parentConferenceBookingRequest struct {
 	StartTime string `json:"start_time"`
 }
@@ -72,7 +77,7 @@ func (rs *Resource) cancelChildParentConference(w http.ResponseWriter, r *http.R
 	if !ok {
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]string{"status": "cancelled"}, "Parent conference booking cancelled")
+	common.Respond(w, r, http.StatusOK, ParentConferenceCancelledResponse{Status: "cancelled"}, "Parent conference booking cancelled")
 }
 
 // parentConferenceChild resolves the child of the path for the account of

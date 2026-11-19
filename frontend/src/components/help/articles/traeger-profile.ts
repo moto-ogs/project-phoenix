@@ -15,6 +15,7 @@ export function traegerProfileTopic(): HelpTopic {
     steps: [
       "Öffne oben rechts das Profil-Menü.",
       "Wähle `Konto`.",
+      "Wähle bei `Name` den Knopf `Bearbeiten`.",
       "Trage bei `Dein Name` deinen Namen ein.",
       "Wähle `Speichern`.",
     ],

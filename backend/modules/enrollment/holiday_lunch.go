@@ -36,12 +36,12 @@ func HolidayLunchDays(week HolidayWeek, days []calendar.Date) []calendar.Date {
 // HolidayLunch is the lunch of one booking: the number of lunches and their
 // price at the week's price now. A booking without lunch, or in a week
 // without the offer, has neither.
-func HolidayLunch(week HolidayWeek, days []calendar.Date, lunch bool) (count int, cents int64) {
+func HolidayLunch(week HolidayWeek, days []calendar.Date, lunch bool) (count int, cents int) {
 	if !lunch || week.LunchPriceCents == nil {
 		return 0, 0
 	}
 	count = len(HolidayLunchDays(week, days))
-	return count, *week.LunchPriceCents * int64(count)
+	return count, *week.LunchPriceCents * count
 }
 
 // HolidayCareDayLunches leaves the days without care out of the lunches of a

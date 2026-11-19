@@ -27,23 +27,26 @@ type PushSubscriptionRepository struct {
 	DB *bun.DB
 }
 
-// Upsert inserts or refreshes a subscription keyed by (tenant_id, portal,
-// endpoint), so a browser can be registered independently in both staff
-// portals.
+// RegisterSubscription inserts or refreshes a subscription keyed by school,
+// portal and endpoint, or by endpoint alone for account-bound parent devices.
 // A re-subscribe from the same browser rotates keys and may switch accounts
 // (different user logs in on the same device) — both are overwritten.
 func (r *PushSubscriptionRepository) RegisterSubscription(ctx context.Context, sub *deliveryModels.PushSubscription) error {
-	if sub.TenantID == 0 {
+	accountDevice := sub.Portal == deliveryModels.PushPortalParent && sub.TenantID == 0 && tenant.IsAdminTx(ctx)
+	if sub.TenantID == 0 && !accountDevice {
 		sub.TenantID = tenant.FromContext(ctx)
 	}
-	ambientDB1, databaseErr1 := r.database(ctx)
-	if databaseErr1 != nil {
-		return databaseErr1
+	db, err := r.database(ctx)
+	if err != nil {
+		return err
 	}
-	_, err := ambientDB1.NewInsert().
-		Model((*pushSubscription)(sub)).
-		ModelTableExpr(tablePushSubscriptions).
-		On("CONFLICT (tenant_id, portal, endpoint) DO UPDATE").
+	query := db.NewInsert().Model((*pushSubscription)(sub)).ModelTableExpr(tablePushSubscriptions)
+	if accountDevice {
+		query = query.On("CONFLICT (endpoint) WHERE portal = 'parent' AND tenant_id IS NULL DO UPDATE")
+	} else {
+		query = query.On("CONFLICT (tenant_id, portal, endpoint) DO UPDATE")
+	}
+	_, err = query.
 		Set("account_id = EXCLUDED.account_id").
 		Set("p256dh = EXCLUDED.p256dh").
 		Set("auth = EXCLUDED.auth").
@@ -63,9 +66,9 @@ func (r *PushSubscriptionRepository) DeleteByEndpoint(ctx context.Context, accou
 	return r.deleteByEndpointPortal(ctx, accountID, endpoint, deliveryModels.PushPortalStaff, "delete staff push subscription")
 }
 
-// DeleteParentByAccountEndpoint removes the caller's parent-portal
-// subscription for the current tenant without affecting another portal that
-// uses the same browser endpoint.
+// DeleteParentByAccountEndpoint removes the caller's account-wide device and
+// any legacy school bindings in an admin transaction. A tenant transaction
+// can still delete its own legacy bindings.
 func (r *PushSubscriptionRepository) DeleteParentByAccountEndpoint(ctx context.Context, accountID int64, endpoint string) error {
 	return r.deleteByEndpointPortal(ctx, accountID, endpoint, deliveryModels.PushPortalParent, "delete parent push subscription")
 }
@@ -81,10 +84,11 @@ func (r *PushSubscriptionRepository) deleteByEndpointPortal(ctx context.Context,
 		Where("account_id = ?", accountID).
 		Where("endpoint = ?", endpoint).
 		Where("portal = ?", portal)
-	id, scopeErr := tenant.TenantFromContext(ctx)
-	if scopeErr != nil {
-		query = query.Err(scopeErr)
-	} else {
+	if portal != deliveryModels.PushPortalParent || !tenant.IsAdminTx(ctx) {
+		id, err := tenant.TenantFromContext(ctx)
+		if err != nil {
+			return err
+		}
 		query = query.Where("tenant_id = ?", id.Int64())
 	}
 	if _, err := query.Exec(ctx); err != nil {
@@ -144,10 +148,15 @@ func (r *PushSubscriptionRepository) DeleteExpiredIfUnchanged(ctx context.Contex
 		Where("p256dh = ?", sub.P256dh).
 		Where("auth = ?", sub.Auth).
 		Where("updated_at = ?", sub.UpdatedAt)
-	id, scopeErr := tenant.TenantFromContext(ctx)
-	if scopeErr != nil {
-		query = query.Err(scopeErr)
+	if sub.Portal == deliveryModels.PushPortalParent && tenant.IsAdminTx(ctx) {
+		// The school in the snapshot is the delivery scope; the persisted row
+		// is either account-bound or a legacy binding for that school.
+		query = query.Where("(tenant_id IS NULL OR tenant_id = ?)", sub.TenantID)
 	} else {
+		id, err := tenant.TenantFromContext(ctx)
+		if err != nil {
+			return false, err
+		}
 		query = query.Where("tenant_id = ?", id.Int64())
 	}
 	result, err := query.Exec(ctx)
@@ -161,19 +170,32 @@ func (r *PushSubscriptionRepository) DeleteExpiredIfUnchanged(ctx context.Contex
 	return rows > 0, nil
 }
 
-// DeleteParentByEndpoint serializes rebinds, then removes every parent-portal
-// binding for an endpoint across tenants. The caller must supply an admin
-// transaction because a parent device can be linked to several schools.
-func (r *PushSubscriptionRepository) DeleteParentByEndpoint(ctx context.Context, endpoint string) error {
-	ambientDB5, databaseErr5 := r.database(ctx)
-	if databaseErr5 != nil {
-		return databaseErr5
+// LockParentEndpoint serializes changes to a browser's parent registration.
+func (r *PushSubscriptionRepository) LockParentEndpoint(ctx context.Context, endpoint string) error {
+	if !tenant.IsAdminTx(ctx) {
+		return errAdminTxRequired
 	}
-	db := ambientDB5
+	db, err := r.database(ctx)
+	if err != nil {
+		return err
+	}
 	if _, err := db.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", endpoint); err != nil {
 		return &databaseError{Op: "lock parent push subscription endpoint", Err: translateNotFound(err)}
 	}
-	_, err := db.NewDelete().
+	return nil
+}
+
+// DeleteParentByEndpoint serializes rebinds, then removes every parent-portal
+// binding for an endpoint. The caller must supply an admin transaction.
+func (r *PushSubscriptionRepository) DeleteParentByEndpoint(ctx context.Context, endpoint string) error {
+	if err := r.LockParentEndpoint(ctx, endpoint); err != nil {
+		return err
+	}
+	db, err := r.database(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = db.NewDelete().
 		Model((*pushSubscription)(nil)).
 		ModelTableExpr(tablePushSubscriptions).
 		Where("endpoint = ?", endpoint).
@@ -258,8 +280,8 @@ func (r *PushSubscriptionRepository) DeleteSchoolUnboundByAccount(ctx context.Co
 }
 
 // DeleteParentUnboundByAccount removes parent-portal subscriptions that have
-// no token family. The caller must supply an admin transaction. A positive
-// tenantID limits the delete to that school.
+// no token family. The caller must supply an admin transaction. This includes
+// any legacy binding in the specified school.
 func (r *PushSubscriptionRepository) DeleteParentUnboundByAccount(ctx context.Context, accountID, tenantID int64) error {
 	return r.deleteUnboundByAccount(ctx, accountID, tenantID, deliveryModels.PushPortalParent, "delete unbound parent push subscriptions")
 }
@@ -297,7 +319,7 @@ func (r *PushSubscriptionRepository) ListSessionLinks(ctx context.Context, after
 		TableExpr(tablePushSubscriptions+` AS "push_subscription"`).
 		ColumnExpr(`"push_subscription".id AS subscription_id`).
 		ColumnExpr(`"push_subscription".account_id`).
-		ColumnExpr(`"push_subscription".tenant_id`).
+		ColumnExpr(`COALESCE("push_subscription".tenant_id, 0) AS tenant_id`).
 		ColumnExpr(`"push_subscription".portal`).
 		ColumnExpr(`"push_subscription".token_family_id`).
 		Where(`"push_subscription".id > ?`, afterID).
@@ -345,7 +367,7 @@ func (r *PushSubscriptionRepository) DeleteSessionLinks(ctx context.Context, lin
 				AS "link"(subscription_id, account_id, tenant_id, portal, token_family_id)
 				ON "push_subscription".id = "link".subscription_id
 				AND "push_subscription".account_id = "link".account_id
-				AND "push_subscription".tenant_id = "link".tenant_id
+				AND "push_subscription".tenant_id IS NOT DISTINCT FROM NULLIF("link".tenant_id, 0)
 				AND "push_subscription".portal = "link".portal
 				AND "push_subscription".token_family_id = "link".token_family_id
 			FOR UPDATE OF "push_subscription" SKIP LOCKED
@@ -371,10 +393,14 @@ func (r *PushSubscriptionRepository) deleteUnboundByAccount(ctx context.Context,
 		Where("account_id = ?", accountID).
 		Where("token_family_id = ?", "").
 		Where(pushPortalFilter, portal)
-	if tenantID <= 0 {
-		return tenant.ErrTenantRequired
+	if portal == deliveryModels.PushPortalParent && tenant.IsAdminTx(ctx) {
+		query = query.Where("(tenant_id IS NULL OR tenant_id = ?)", tenantID)
+	} else {
+		if tenantID <= 0 {
+			return tenant.ErrTenantRequired
+		}
+		query = query.Where("tenant_id = ?", tenantID)
 	}
-	query = query.Where("tenant_id = ?", tenantID)
 	if _, err := query.Exec(ctx); err != nil {
 		return &databaseError{Op: op, Err: translateNotFound(err)}
 	}
@@ -535,7 +561,7 @@ type pushSubscription struct {
 	ID            int64     `bun:"id,pk,autoincrement"`
 	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
 	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
-	TenantID      int64     `bun:"tenant_id,notnull"`
+	TenantID      int64     `bun:"tenant_id,nullzero"`
 	AccountID     int64     `bun:"account_id,notnull"`
 	Portal        string    `bun:"portal,notnull"`
 	Endpoint      string    `bun:"endpoint,notnull"`

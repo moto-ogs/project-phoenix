@@ -53,42 +53,37 @@ func currentUserResponse(account identityaccess.AccountMetadata) *currentUser {
 	return &user
 }
 
-// profileResponse renders the profile map the /api/me/profile routes have
-// always returned: the account, then the person or the account fallback,
-// then the non-empty school-scoped fields.
-func profileResponse(profile identityaccess.CallerProfile) map[string]any {
-	account := profile.Account
-	response := map[string]any{
-		"email":      account.Email,
-		"username":   account.Username,
-		"last_login": account.LastLogin,
-	}
-	addIfNotEmpty(response, "avatar", account.Avatar)
-	if person := profile.Person; person != nil {
-		response["id"] = person.ID
-		response["first_name"] = person.FirstName
-		response["last_name"] = person.LastName
-		response["created_at"] = person.CreatedAt
-		response["updated_at"] = person.UpdatedAt
-		if person.TagID != nil {
-			response["rfid_card"] = *person.TagID
-		}
-	} else {
-		response["id"] = account.ID
-		response["created_at"] = account.CreatedAt
-		response["updated_at"] = account.UpdatedAt
-		response["first_name"] = ""
-		response["last_name"] = ""
-	}
-	addIfNotEmpty(response, "bio", profile.Bio)
-	addIfNotEmpty(response, "settings", profile.Settings)
-	return response
+// ProfileResponse is the profile the /api/me/profile routes render: the
+// account, then the person or the account fallback, then the non-empty
+// school-scoped fields.
+type ProfileResponse struct {
+	Email     string     `json:"email"`
+	Username  *string    `json:"username"`
+	LastLogin *time.Time `json:"last_login"`
+	Avatar    string     `json:"avatar,omitempty"`
+	ID        int64      `json:"id"`
+	FirstName string     `json:"first_name"`
+	LastName  string     `json:"last_name"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	RFIDCard  *string    `json:"rfid_card,omitempty"`
+	Bio       string     `json:"bio,omitempty"`
+	Settings  string     `json:"settings,omitempty"`
 }
 
-func addIfNotEmpty(response map[string]any, key, value string) {
-	if value != "" {
-		response[key] = value
+func profileResponse(profile identityaccess.CallerProfile) ProfileResponse {
+	account := profile.Account
+	response := ProfileResponse{
+		Email: account.Email, Username: account.Username, LastLogin: account.LastLogin, Avatar: account.Avatar,
+		Bio: profile.Bio, Settings: profile.Settings,
 	}
+	if person := profile.Person; person != nil {
+		response.ID, response.FirstName, response.LastName = person.ID, person.FirstName, person.LastName
+		response.CreatedAt, response.UpdatedAt, response.RFIDCard = person.CreatedAt, person.UpdatedAt, person.TagID
+		return response
+	}
+	response.ID, response.CreatedAt, response.UpdatedAt = account.ID, account.CreatedAt, account.UpdatedAt
+	return response
 }
 
 func (res *Resource) getCurrentProfile(w http.ResponseWriter, r *http.Request) {

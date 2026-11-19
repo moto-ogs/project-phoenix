@@ -18,6 +18,9 @@ type surveyTargetWire struct {
 	RefText    *string `json:"ref_text,omitempty"`
 }
 
+// surveyTargetRequest is a target as the author sends it.
+type surveyTargetRequest surveyTargetWire
+
 type surveyQuestionRequest struct {
 	Kind     string   `json:"kind"`
 	Prompt   string   `json:"prompt"`
@@ -32,7 +35,7 @@ type surveyRequest struct {
 	Anonymous bool                    `json:"anonymous"`
 	SendEmail bool                    `json:"send_email"`
 	ClosesAt  *time.Time              `json:"closes_at"`
-	Targets   []surveyTargetWire      `json:"targets"`
+	Targets   []surveyTargetRequest   `json:"targets"`
 	Questions []surveyQuestionRequest `json:"questions"`
 }
 

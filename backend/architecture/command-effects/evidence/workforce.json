@@ -3697,6 +3697,46 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "binding_digest": "f7b95dae7ebd325b278365c8f4c08d25",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "binding_digest": "0f8e9488cc8b4de2ba685fd5ab949ed7",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "binding_digest": "880c9015e43dbb75995a32acce065e66",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPersonDetails",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "binding_digest": "7a6c8ff404e55844be841dd54eba4baf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ApplyInvitedGender",
+      "binding_digest": "a4203d183cd9c0f618bb13f73d8c59af",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ApplyInvitedGender",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.EmploymentResetter.ResetEmployment",
       "binding_digest": "f7b95dae7ebd325b278365c8f4c08d25",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.EmploymentResetter.ResetEmployment",

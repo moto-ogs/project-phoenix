@@ -7,7 +7,8 @@ import { LIVE_RECONCILE_INTERVAL_MS, useSWRAuth } from "~/lib/swr";
 import { authFetch } from "~/lib/api-helpers";
 
 export interface UnreadAnnouncement {
-  id: number;
+  /** The proxy answers a string; the server bootstrap still reads a number. */
+  id: number | string;
   title: string;
   content: string;
   type: string;
@@ -27,7 +28,7 @@ async function fetchUnread(): Promise<UnreadAnnouncement[]> {
   return response.data ?? [];
 }
 
-async function markDismissed(id: number): Promise<void> {
+async function markDismissed(id: number | string): Promise<void> {
   await authFetch(`/api/platform/announcements/${id}/dismiss`, {
     method: "POST",
   });
@@ -59,7 +60,7 @@ export function useAnnouncements() {
     }
   }, [pathname, mutate]);
 
-  const dismiss = async (id: number) => {
+  const dismiss = async (id: number | string) => {
     // Just send to backend - don't mutate local state
     // The modal manages its own queue and will refresh after closing
     await markDismissed(id);

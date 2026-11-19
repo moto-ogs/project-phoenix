@@ -29,7 +29,7 @@ func (f deviceRemovalFixture) slotSummary(t *testing.T, permissions ...string) (
 	t.Helper()
 	claims := testutil.DefaultTestClaims()
 	claims.Roles, claims.Permissions, claims.IsAdmin = []string{"user"}, permissions, false
-	req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/devices/device-slots", nil,
+	req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/iot/device-slots", nil,
 		testutil.WithClaims(t, claims), testutil.WithPermissions(permissions...))
 	rr := testutil.ExecuteRequest(f.router, req)
 	var envelope struct {
@@ -45,7 +45,7 @@ func (f deviceRemovalFixture) register(t *testing.T, deviceID string, permission
 	t.Helper()
 	claims := testutil.DefaultTestClaims()
 	claims.Roles, claims.Permissions, claims.IsAdmin = []string{"user"}, permissions, false
-	req := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/devices/",
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/api/iot/",
 		map[string]string{"device_id": deviceID, "device_type": "rfid_reader"},
 		testutil.WithClaims(t, claims), testutil.WithPermissions(permissions...))
 	return testutil.ExecuteRequest(f.router, req)
@@ -188,13 +188,13 @@ func TestDeviceManagementNeedsDevicesManage(t *testing.T) {
 	claims.Roles, claims.Permissions, claims.IsAdmin = []string{"user"}, []string{"devices:read"}, false
 
 	for _, route := range []struct{ method, path string }{
-		{http.MethodPost, "/devices/"},
-		{http.MethodPut, fmt.Sprintf("/devices/%d", device.ID)},
-		{http.MethodDelete, fmt.Sprintf("/devices/%d", device.ID)},
-		{http.MethodPatch, "/devices/" + device.DeviceID + "/status"},
-		{http.MethodPost, "/devices/" + device.DeviceID + "/ping"},
-		{http.MethodPost, "/devices/detect-new"},
-		{http.MethodPost, "/devices/scan-network"},
+		{http.MethodPost, "/api/iot/"},
+		{http.MethodPut, fmt.Sprintf("/api/iot/%d", device.ID)},
+		{http.MethodDelete, fmt.Sprintf("/api/iot/%d", device.ID)},
+		{http.MethodPatch, "/api/iot/" + device.DeviceID + "/status"},
+		{http.MethodPost, "/api/iot/" + device.DeviceID + "/ping"},
+		{http.MethodPost, "/api/iot/detect-new"},
+		{http.MethodPost, "/api/iot/scan-network"},
 	} {
 		req := testutil.NewAuthenticatedRequest(t, route.method, route.path,
 			map[string]string{"device_id": "x", "device_type": "rfid_reader", "status": "inactive"},

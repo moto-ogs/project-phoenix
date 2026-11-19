@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { portalRoutes } from "~/lib/contract/portals.generated";
 
 /**
  * A route that forwards a password or a code may not repeat a backend 401
@@ -88,7 +89,6 @@ describe("routes that forward a password or a code", () => {
     expect(credentialRoutes).toEqual(
       expect.arrayContaining([
         "auth/password",
-        "parent/me/news/[announcementId]/declaration",
         "operator/profile/password",
         "operator/profile/email-change",
         "caterer/account/password",
@@ -112,5 +112,20 @@ describe("routes that forward a password or a code", () => {
         (route) => !credentialRoutes.includes(route),
       ),
     ).toEqual([]);
+  });
+});
+
+describe("catalog routes that forward a password or a code", () => {
+  // The catalog proxy reads the trait from the contract (#2352);
+  // credential-retry.test.ts runs both routes through their catch-all.
+  it.each([
+    ["parent", "POST /parent/me/news/{announcementId}/declaration"],
+    ["org", "POST /traeger/auth/mfa/step-up"],
+  ] as const)("%s %s turns the retry off", (portal, key) => {
+    const route = portalRoutes[portal].find(
+      (entry) => `${entry.method} ${entry.pattern}` === key,
+    );
+    expect(route).toBeDefined();
+    expect(route).toHaveProperty("noRetryAfterRenewal", expect.any(String));
   });
 });

@@ -24,7 +24,7 @@ type updateSchoolRequest struct {
 	Hidden         bool   `json:"hidden"`
 	// ChildQuota is the Kinderkontingent (#3567): absent keeps it, null
 	// removes it, an object sets it.
-	ChildQuota childQuotaField `json:"child_quota"`
+	ChildQuota ChildQuotaField `json:"child_quota"`
 }
 
 func (req *updateSchoolRequest) Bind(_ *http.Request) error {
@@ -48,11 +48,11 @@ func (req *updateSchoolRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// childQuotaField remembers whether the request mentioned child_quota at
+// ChildQuotaField remembers whether the request mentioned child_quota at
 // all, so an update that leaves it out cannot clear a contract value.
-type childQuotaField struct {
+type ChildQuotaField struct {
 	present bool
-	value   *childQuotaRequest
+	Value   *childQuotaRequest
 }
 
 type childQuotaRequest struct {
@@ -60,32 +60,32 @@ type childQuotaRequest struct {
 	BundleSize *int `json:"bundle_size"`
 }
 
-func (f *childQuotaField) UnmarshalJSON(data []byte) error {
+func (f *ChildQuotaField) UnmarshalJSON(data []byte) error {
 	f.present = true
 	if string(data) == "null" {
-		f.value = nil
+		f.Value = nil
 		return nil
 	}
 	value := &childQuotaRequest{}
 	if err := json.Unmarshal(data, value); err != nil {
 		return fmt.Errorf("child_quota: %w", err)
 	}
-	f.value = value
+	f.Value = value
 	return nil
 }
 
 // change converts the field into the owner's change; nil means unchanged. A
 // missing bundle size is the default contract size.
-func (f childQuotaField) change() *organizationtenancy.ChildQuotaChange {
+func (f ChildQuotaField) change() *organizationtenancy.ChildQuotaChange {
 	if !f.present {
 		return nil
 	}
-	if f.value == nil {
+	if f.Value == nil {
 		return &organizationtenancy.ChildQuotaChange{}
 	}
 	bundleSize := organizationtenancy.DefaultChildQuotaBundleSize
-	if f.value.BundleSize != nil {
-		bundleSize = *f.value.BundleSize
+	if f.Value.BundleSize != nil {
+		bundleSize = *f.Value.BundleSize
 	}
-	return &organizationtenancy.ChildQuotaChange{Quota: &organizationtenancy.ChildQuota{Bundles: f.value.Bundles, BundleSize: bundleSize}}
+	return &organizationtenancy.ChildQuotaChange{Quota: &organizationtenancy.ChildQuota{Bundles: f.Value.Bundles, BundleSize: bundleSize}}
 }

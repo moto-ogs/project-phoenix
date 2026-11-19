@@ -45,7 +45,7 @@ type Side struct {
 	Person     PersonSnapshot `json:"person"`
 	Employment Employment     `json:"employment"`
 }
-type Candidate struct {
+type StaffPersonMergeCandidate struct {
 	Keeper   Side   `json:"keeper"`
 	Donor    Side   `json:"donor"`
 	Revision string `json:"revision"`
@@ -67,7 +67,7 @@ type Runtime interface {
 	OperatorID(context.Context) int64
 }
 type Audit interface {
-	RecordStaffPersonMerge(context.Context, int64, int64, Candidate) error
+	RecordStaffPersonMerge(context.Context, int64, int64, StaffPersonMergeCandidate) error
 	RecordStaffPersonMergePreview(context.Context, int64, int64, net.IP) error
 }
 type Workflow struct {
@@ -83,7 +83,7 @@ func New(people peopledirectory.StaffPersonMerge, memberships schoolmembership.S
 	}
 	return &Workflow{people: people, memberships: memberships, runtime: runtime, audit: audit}, nil
 }
-func (w *Workflow) Preview(ctx context.Context, schoolID int64, clientIP net.IP) ([]Candidate, error) {
+func (w *Workflow) Preview(ctx context.Context, schoolID int64, clientIP net.IP) ([]StaffPersonMergeCandidate, error) {
 	if w.runtime.OperatorID(ctx) <= 0 {
 		return nil, ErrUnauthorized
 	}
@@ -134,7 +134,7 @@ func (w *Workflow) Execute(ctx context.Context, schoolID int64, request Request)
 	return nil
 }
 
-func (w *Workflow) executeSelected(ctx context.Context, actor, schoolID int64, selected []Candidate) error {
+func (w *Workflow) executeSelected(ctx context.Context, actor, schoolID int64, selected []StaffPersonMergeCandidate) error {
 	for _, candidate := range selected {
 		if err := w.memberships.ReassignStaffPerson(ctx, schoolmembership.StaffPersonReassignment{SchoolID: schoolID, StaffID: candidate.Donor.Employment.ID, DonorPersonID: candidate.Donor.Person.ID, KeeperPersonID: candidate.Keeper.Person.ID}); err != nil {
 			if errors.Is(err, peopledirectory.ErrStaffPersonMergeNoLongerEligible) || errors.Is(err, schoolmembership.ErrStaffPersonMergeNoLongerEligible) {
@@ -155,12 +155,12 @@ func (w *Workflow) executeSelected(ctx context.Context, actor, schoolID int64, s
 	return nil
 }
 
-func selectCandidates(candidates []Candidate, selections []Selection) ([]Candidate, error) {
-	byDonor := make(map[int64]Candidate, len(candidates))
+func selectCandidates(candidates []StaffPersonMergeCandidate, selections []Selection) ([]StaffPersonMergeCandidate, error) {
+	byDonor := make(map[int64]StaffPersonMergeCandidate, len(candidates))
 	for _, candidate := range candidates {
 		byDonor[candidate.Donor.Person.ID] = candidate
 	}
-	result := make([]Candidate, 0, len(selections))
+	result := make([]StaffPersonMergeCandidate, 0, len(selections))
 	seen := make(map[int64]bool)
 	for _, selection := range selections {
 		candidate, ok := byDonor[selection.DonorID]
@@ -178,7 +178,7 @@ func selectCandidates(candidates []Candidate, selections []Selection) ([]Candida
 // (Konto → Schule → Profil, #6702): offboarding, retention and staff admin
 // hold a staff row while they lock its person, so the merge never holds a
 // person while it waits for a staff row.
-func (w *Workflow) candidates(ctx context.Context, schoolID int64, lock bool) ([]Candidate, error) {
+func (w *Workflow) candidates(ctx context.Context, schoolID int64, lock bool) ([]StaffPersonMergeCandidate, error) {
 	memberships, err := w.memberships.StaffMergeMemberships(ctx, schoolID, lock)
 	if err != nil {
 		return nil, err
@@ -195,7 +195,7 @@ func (w *Workflow) candidates(ctx context.Context, schoolID int64, lock bool) ([
 	for _, person := range people {
 		groups[person.NameKey] = append(groups[person.NameKey], person)
 	}
-	result := []Candidate{}
+	result := []StaffPersonMergeCandidate{}
 	for _, group := range groups {
 		candidate, ok, err := candidateFor(group, byPerson)
 		if err != nil {
@@ -208,29 +208,29 @@ func (w *Workflow) candidates(ctx context.Context, schoolID int64, lock bool) ([
 	sort.Slice(result, func(i, j int) bool { return result[i].Keeper.Person.ID < result[j].Keeper.Person.ID })
 	return result, nil
 }
-func candidateFor(group []peopledirectory.StaffMergePerson, staff map[int64][]schoolmembership.Staff) (Candidate, bool, error) {
+func candidateFor(group []peopledirectory.StaffMergePerson, staff map[int64][]schoolmembership.Staff) (StaffPersonMergeCandidate, bool, error) {
 	if len(group) != 2 {
-		return Candidate{}, false, nil
+		return StaffPersonMergeCandidate{}, false, nil
 	}
 	keeper, donor := group[0], group[1]
 	if keeper.AccountID == nil {
 		keeper, donor = donor, keeper
 	}
 	if keeper.AccountID == nil || donor.AccountID != nil || keeper.HasStudent || donor.HasStudent || donor.TagID != nil || (keeper.Birthday != "" && donor.Birthday != "" && keeper.Birthday != donor.Birthday) {
-		return Candidate{}, false, nil
+		return StaffPersonMergeCandidate{}, false, nil
 	}
 	ks, ds := staff[keeper.ID], staff[donor.ID]
 	if len(ks) != 1 || len(ds) != 1 || (ks[0].DeletedAt == nil) == (ds[0].DeletedAt == nil) || ks[0].PersonalDataErasedAt != nil || ds[0].PersonalDataErasedAt != nil {
-		return Candidate{}, false, nil
+		return StaffPersonMergeCandidate{}, false, nil
 	}
 	side := func(p peopledirectory.Person, s schoolmembership.Staff) Side {
 		return Side{Person: PersonSnapshot{ID: p.ID, TenantID: p.TenantID, AccountID: p.AccountID, FirstName: p.FirstName, LastName: p.LastName, Birthday: p.Birthday, TagID: p.TagID, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt}, Employment: Employment{ID: s.ID, CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt, DeletedAt: s.DeletedAt}}
 	}
-	candidate := Candidate{Keeper: side(keeper.Person, ks[0]), Donor: side(donor.Person, ds[0])}
+	candidate := StaffPersonMergeCandidate{Keeper: side(keeper.Person, ks[0]), Donor: side(donor.Person, ds[0])}
 	// All fields have deterministic JSON encodings; no maps or credentials.
 	encoded, err := json.Marshal(candidate)
 	if err != nil {
-		return Candidate{}, false, err
+		return StaffPersonMergeCandidate{}, false, err
 	}
 	sum := sha256.Sum256(encoded)
 	candidate.Revision = hex.EncodeToString(sum[:])

@@ -132,7 +132,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.updateOrganization("5", updateData);
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/5",
+        "/api/operator/organizations/5",
         { method: "PUT", body: updateData },
       );
     });
@@ -176,7 +176,7 @@ describe("OperatorProvisioningService", () => {
       const result = await operatorProvisioningService.createTestTraeger(order);
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/test-traeger",
+        "/api/operator/organizations/test-traeger",
         { method: "POST", body: order },
       );
       expect(result.organization.testSystem).toBe(true);
@@ -198,7 +198,7 @@ describe("OperatorProvisioningService", () => {
         await operatorProvisioningService.createSampleChildren("5");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/5/sample-children",
+        "/api/operator/organizations/5/sample-children",
         { method: "POST", body: {} },
       );
       expect(result).toEqual({ createdCount: 30, skippedCount: 18 });
@@ -225,7 +225,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.updateSchool("10", updateData);
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10",
+        "/api/operator/schools/10",
         { method: "PUT", body: updateData },
       );
     });
@@ -275,7 +275,7 @@ describe("OperatorProvisioningService", () => {
       const result = await operatorProvisioningService.listOrganizations();
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations",
+        "/api/operator/organizations",
       );
       expect(result).toHaveLength(1);
       expect(result[0]!.id).toBe("5");
@@ -288,9 +288,7 @@ describe("OperatorProvisioningService", () => {
 
       const result = await operatorProvisioningService.listSchools();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools",
-      );
+      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/schools");
       expect(result).toHaveLength(1);
       expect(result[0]!.id).toBe("10");
     });
@@ -306,7 +304,7 @@ describe("OperatorProvisioningService", () => {
       });
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations",
+        "/api/operator/organizations",
         {
           method: "POST",
           body: { name: "Stadt Köln", slug: "stadt-koeln" },
@@ -328,20 +326,17 @@ describe("OperatorProvisioningService", () => {
         federal_state: "DE-NW",
       });
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools",
-        {
-          method: "POST",
-          body: {
-            organization_id: 5,
-            name: "GGS Europaschule",
-            slug: "ggs-europa",
-            subdomain: "ggs-europa",
-            email: "info@ggs-europa.example",
-            federal_state: "DE-NW",
-          },
+      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/schools", {
+        method: "POST",
+        body: {
+          organization_id: 5,
+          name: "GGS Europaschule",
+          slug: "ggs-europa",
+          subdomain: "ggs-europa",
+          email: "info@ggs-europa.example",
+          federal_state: "DE-NW",
         },
-      );
+      });
     });
   });
 
@@ -352,7 +347,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolAccounts("10");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10/accounts",
+        "/api/operator/schools/10/accounts",
       );
     });
 
@@ -362,7 +357,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolAccounts("10/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil/accounts",
+        "/api/operator/schools/10%2Fevil/accounts",
       );
     });
 
@@ -396,7 +391,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listOrganizationAccounts("5");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/5/accounts",
+        "/api/operator/organizations/5/accounts",
       );
     });
 
@@ -432,9 +427,7 @@ describe("OperatorProvisioningService", () => {
 
       await operatorProvisioningService.listAllAccounts();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/accounts",
-      );
+      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/accounts");
     });
 
     it("maps response data correctly", async () => {
@@ -454,9 +447,7 @@ describe("OperatorProvisioningService", () => {
 
       await operatorProvisioningService.listAllDevices();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/devices",
-      );
+      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/devices");
     });
 
     it("maps response data correctly", async () => {
@@ -492,7 +483,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolDevices("10");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10/devices",
+        "/api/operator/schools/10/devices",
       );
     });
 
@@ -502,7 +493,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolDevices("10/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil/devices",
+        "/api/operator/schools/10%2Fevil/devices",
       );
     });
 
@@ -523,7 +514,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listOrganizationDevices("5");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/5/devices",
+        "/api/operator/organizations/5/devices",
       );
     });
 
@@ -550,7 +541,7 @@ describe("OperatorProvisioningService", () => {
       });
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10/invite-admin",
+        "/api/operator/schools/10/invite-admin",
         {
           method: "POST",
           body: {
@@ -605,10 +596,10 @@ describe("OperatorProvisioningService", () => {
       };
       await operatorProvisioningService.createDevice(createData);
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/devices",
-        { method: "POST", body: createData },
-      );
+      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/devices", {
+        method: "POST",
+        body: createData,
+      });
     });
 
     it("maps response data correctly", async () => {
@@ -653,7 +644,7 @@ describe("OperatorProvisioningService", () => {
       );
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/devices/1%2Funsafe/set-api-key",
+        "/api/operator/devices/1%2Funsafe/set-api-key",
         { method: "POST", body: { api_key: "manual-key" } },
       );
     });
@@ -667,7 +658,7 @@ describe("OperatorProvisioningService", () => {
       const result = await operatorProvisioningService.setDeviceAPIKey("1");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/devices/1/set-api-key",
+        "/api/operator/devices/1/set-api-key",
         { method: "POST", body: {} },
       );
       expect(result.apiKey).toBe("generated-key");
@@ -712,7 +703,7 @@ describe("OperatorProvisioningService", () => {
         await operatorProvisioningService.getDeviceTransferStatus("1/unsafe");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/devices/1%2Funsafe/transfer-status",
+        "/api/operator/devices/1%2Funsafe/transfer-status",
       );
       expect(result).toEqual({
         canTransfer: false,
@@ -740,7 +731,7 @@ describe("OperatorProvisioningService", () => {
       );
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/devices/1%2Funsafe/transfer",
+        "/api/operator/devices/1%2Funsafe/transfer",
         { method: "POST", body: { target_school_id: 20 } },
       );
       expect(result.schoolId).toBe("20");
@@ -766,7 +757,7 @@ describe("OperatorProvisioningService", () => {
       );
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10/create-account",
+        "/api/operator/schools/10/create-account",
         { method: "POST", body: mockAccountData },
       );
     });
@@ -780,7 +771,7 @@ describe("OperatorProvisioningService", () => {
       );
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil/create-account",
+        "/api/operator/schools/10%2Fevil/create-account",
         expect.any(Object),
       );
     });
@@ -823,7 +814,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolPersons("10");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10/persons",
+        "/api/operator/schools/10/persons",
       );
     });
 
@@ -833,7 +824,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listSchoolPersons("10/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil/persons",
+        "/api/operator/schools/10%2Fevil/persons",
       );
     });
 
@@ -877,7 +868,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeletePerson("42");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/persons/42",
+        "/api/operator/persons/42",
         { method: "DELETE" },
       );
     });
@@ -888,7 +879,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeletePerson("42/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/persons/42%2Fevil",
+        "/api/operator/persons/42%2Fevil",
         { method: "DELETE" },
       );
     });
@@ -910,9 +901,7 @@ describe("OperatorProvisioningService", () => {
 
       await operatorProvisioningService.listSystemRoles();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/roles",
-      );
+      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/roles");
     });
 
     it("maps response data correctly", async () => {
@@ -950,7 +939,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteSchool("10");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10",
+        "/api/operator/schools/10",
         { method: "DELETE" },
       );
     });
@@ -961,7 +950,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteSchool("10/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil",
+        "/api/operator/schools/10%2Fevil",
         { method: "DELETE" },
       );
     });
@@ -982,7 +971,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.restoreSchool("10");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10/restore",
+        "/api/operator/schools/10/restore",
         { method: "POST" },
       );
     });
@@ -993,7 +982,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.restoreSchool("10/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/10%2Fevil/restore",
+        "/api/operator/schools/10%2Fevil/restore",
         { method: "POST" },
       );
     });
@@ -1014,7 +1003,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteOrganization("77");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/77",
+        "/api/operator/organizations/77",
         { method: "DELETE" },
       );
     });
@@ -1025,7 +1014,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.softDeleteOrganization("77/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/77%2Fevil",
+        "/api/operator/organizations/77%2Fevil",
         { method: "DELETE" },
       );
     });
@@ -1038,7 +1027,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.restoreOrganization("77");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/77/restore",
+        "/api/operator/organizations/77/restore",
         { method: "POST" },
       );
     });
@@ -1049,7 +1038,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.restoreOrganization("77/evil");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/77%2Fevil/restore",
+        "/api/operator/organizations/77%2Fevil/restore",
         { method: "POST" },
       );
     });
@@ -1066,9 +1055,7 @@ describe("OperatorProvisioningService", () => {
 
       const stats = await operatorProvisioningService.getStats();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/stats",
-      );
+      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/stats");
       expect(stats).toEqual({
         traegerCount: 3,
         schulenCount: 12,
@@ -1102,7 +1089,7 @@ describe("OperatorProvisioningService", () => {
         await operatorProvisioningService.listOrganizationSummaries();
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/summaries",
+        "/api/operator/organizations/summaries",
       );
       expect(summaries).toHaveLength(1);
       expect(summaries[0]).toMatchObject({
@@ -1131,7 +1118,7 @@ describe("OperatorProvisioningService", () => {
       const summaries = await operatorProvisioningService.listSchoolSummaries();
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/summaries",
+        "/api/operator/schools/summaries",
       );
       expect(summaries).toHaveLength(1);
       expect(summaries[0]).toMatchObject({
@@ -1156,7 +1143,7 @@ describe("OperatorProvisioningService", () => {
         await operatorProvisioningService.listSchoolRequiredDetails();
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/schools/required-details",
+        "/api/operator/schools/required-details",
       );
       expect(details).toEqual([
         { schoolId: "7", replyAddressMissing: true },
@@ -1172,7 +1159,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listOrganizationSchools("42");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/42/schools",
+        "/api/operator/organizations/42/schools",
       );
     });
 
@@ -1182,7 +1169,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listOrganizationSchools("a/b c");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/a%2Fb%20c/schools",
+        "/api/operator/organizations/a%2Fb%20c/schools",
       );
     });
 
@@ -1216,7 +1203,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listOrganizationPersons("42");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/42/persons",
+        "/api/operator/organizations/42/persons",
       );
     });
 
@@ -1226,7 +1213,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.listOrganizationPersons("a/b c");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/organizations/a%2Fb%20c/persons",
+        "/api/operator/organizations/a%2Fb%20c/persons",
       );
     });
 
@@ -1276,7 +1263,7 @@ describe("OperatorProvisioningService", () => {
       );
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/unregistered-tag-scans",
+        "/api/operator/unregistered-tag-scans",
       );
       expect(result).toEqual([
         {
@@ -1310,7 +1297,7 @@ describe("OperatorProvisioningService", () => {
       });
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/unregistered-tag-scans?organization_id=5&school_id=10&resolved=all",
+        "/api/operator/unregistered-tag-scans?organization_id=5&school_id=10&resolved=all",
       );
     });
 
@@ -1323,7 +1310,7 @@ describe("OperatorProvisioningService", () => {
       });
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/unregistered-tag-scans?organization_id=5",
+        "/api/operator/unregistered-tag-scans?organization_id=5",
       );
     });
   });
@@ -1335,7 +1322,7 @@ describe("OperatorProvisioningService", () => {
       await operatorProvisioningService.resolveUnregisteredTagScan("300");
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/unregistered-tag-scans/300/resolve",
+        "/api/operator/unregistered-tag-scans/300/resolve",
         { method: "POST", body: {} },
       );
     });
@@ -1352,7 +1339,7 @@ describe("OperatorProvisioningService", () => {
       );
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/provisioning/unregistered-tag-scans/300%2Funsafe/resolve",
+        "/api/operator/unregistered-tag-scans/300%2Funsafe/resolve",
         { method: "POST", body: { note: "Assigned to new card" } },
       );
     });

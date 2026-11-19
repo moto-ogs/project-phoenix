@@ -74,7 +74,7 @@ func TestPhaseWriteError_DuplicateNameMarksName(t *testing.T) {
 func TestPhaseRequest_UnparsableServiceDateNamesField(t *testing.T) {
 	t.Parallel()
 
-	req := &PhaseRequest{Name: "Schuljahr", ServiceStartDate: "", ServiceEndDate: "2027-07-31"}
+	req := &EnrollmentPhaseRequest{Name: "Schuljahr", ServiceStartDate: "", ServiceEndDate: "2027-07-31"}
 	_, err := req.toModel(0)
 	require.Error(t, err)
 

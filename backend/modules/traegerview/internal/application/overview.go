@@ -14,7 +14,7 @@ import (
 
 // SchoolRows reads the rows of a school set; the Postgres adapter serves it.
 type SchoolRows interface {
-	Schools(ctx context.Context, schools []int64) ([]traegerview.School, error)
+	Schools(ctx context.Context, schools []int64) ([]traegerview.TraegerSchool, error)
 	SchoolContacts(ctx context.Context, schools []int64) ([]traegerview.SchoolContact, error)
 }
 
@@ -32,7 +32,6 @@ type Overview struct {
 	present     traegerview.PresentStudents
 	sick        traegerview.SickStudents
 	onSite      traegerview.OnSiteStaff
-	keyDates    traegerview.KeyDateCountReads
 	enrollments traegerview.OpenEnrollments
 	alerts      traegerview.AlertSettings
 	occupancy   traegerview.OccupancyPorts
@@ -56,25 +55,25 @@ var (
 // withinAdmin opens the administrative transaction the projection reads in;
 // it is the Träger-Portal's only one (ADR 0084).
 func New(ports traegerview.Ports, rows SchoolRows, renderer ReportRenderer, withinAdmin func(context.Context, func(context.Context) error) error) (*Overview, error) {
-	if ports.SchoolIDs == nil || rows == nil || ports.Trail == nil || ports.Persons == nil || ports.Staff == nil || ports.Bureau == nil || ports.Recorder == nil || ports.Holiday == nil || ports.Rosters == nil || ports.Present == nil || ports.Sick == nil || ports.OnSite == nil || ports.KeyDates == nil ||
+	if ports.SchoolIDs == nil || rows == nil || ports.Trail == nil || ports.Persons == nil || ports.Staff == nil || ports.Bureau == nil || ports.Recorder == nil || ports.Holiday == nil || ports.Rosters == nil || ports.Present == nil || ports.Sick == nil || ports.OnSite == nil ||
 		ports.Enrollments == nil || ports.Alerts == nil || !occupancyPortsBound(ports.Occupancy) || ports.Known.Children == nil || ports.Known.Namesakes == nil || !utilizationPortsBound(ports.Utilization) || ports.Times == nil || !reportPortsBound(ports.Reports) || renderer == nil ||
 		ports.Daily.Days == nil || ports.Daily.Absences == nil || ports.Daily.States == nil || ports.Now == nil || withinAdmin == nil {
-		return nil, errors.New("traeger view: school IDs, rows, access trail, persons, staff, Träger-Büro addresses, access recorder, holiday trail, school figures, Stichtagszahlen, open enrollments, alert thresholds, occupancy reads, known child reads, utilization reads, arrival and pickup times, report reads, the report renderer, the daily attendance reads, the clock and the administrative transaction are required")
+		return nil, errors.New("traeger view: school IDs, rows, access trail, persons, staff, Träger-Büro addresses, access recorder, holiday trail, school figures, open enrollments, alert thresholds, occupancy reads, known child reads, utilization reads, arrival and pickup times, report reads, the report renderer, the daily attendance reads, the clock and the administrative transaction are required")
 	}
 	return &Overview{
 		schoolIDs: ports.SchoolIDs, rows: rows, trail: ports.Trail, persons: ports.Persons, staff: ports.Staff, bureau: ports.Bureau,
-		recorder: ports.Recorder, holiday: ports.Holiday, rosters: ports.Rosters, present: ports.Present, sick: ports.Sick, onSite: ports.OnSite, keyDates: ports.KeyDates,
+		recorder: ports.Recorder, holiday: ports.Holiday, rosters: ports.Rosters, present: ports.Present, sick: ports.Sick, onSite: ports.OnSite,
 		enrollments: ports.Enrollments, alerts: ports.Alerts, occupancy: ports.Occupancy, known: ports.Known, utilization: ports.Utilization, times: ports.Times, reports: ports.Reports, renderer: renderer, daily: ports.Daily, now: ports.Now, withinAdmin: withinAdmin,
 	}, nil
 }
 
 // Schools lists the schools of the Träger. A Träger that is deactivated or
 // deleted reaches no school.
-func (o *Overview) Schools(ctx context.Context, organizationID int64) ([]traegerview.School, error) {
+func (o *Overview) Schools(ctx context.Context, organizationID int64) ([]traegerview.TraegerSchool, error) {
 	if organizationID <= 0 {
 		return nil, traegerview.ErrTraegerRequired
 	}
-	var schools []traegerview.School
+	var schools []traegerview.TraegerSchool
 	err := o.withinAdmin(ctx, func(adminCtx context.Context) error {
 		ids, err := o.schoolIDs.ListTraegerSchoolIDs(adminCtx, organizationID)
 		if err != nil {

@@ -18,7 +18,7 @@ interface BackendGroup {
 }
 
 const groupsPath = (periodId: string) =>
-  `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/sibling-groups`;
+  `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups`;
 
 function groupFromBackend(group: BackendGroup): HolidaySiblingGroup {
   return {
@@ -59,7 +59,7 @@ export async function splitHolidaySibling(
   registrationId: string,
 ): Promise<void> {
   await traegerRequest<unknown>(
-    `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}/sibling-group`,
+    `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups/registrations/${encodeURIComponent(registrationId)}`,
     { method: "DELETE" },
   );
 }

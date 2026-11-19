@@ -324,8 +324,8 @@ describe("staff-session-table.targets", () => {
         }),
         absences: [
           {
-            id: 73,
-            staff_id: 1,
+            id: "73",
+            staff_id: "1",
             absence_type: "comp_time",
             date_start: "2026-01-05",
             date_end: "2026-01-05",
@@ -346,8 +346,8 @@ describe("staff-session-table.targets", () => {
         }),
         absences: [
           {
-            id: 74,
-            staff_id: 1,
+            id: "74",
+            staff_id: "1",
             absence_type: "comp_time",
             date_start: "2026-01-05",
             date_end: "2026-01-05",
@@ -711,11 +711,11 @@ describe("staff-session-table.targets", () => {
         {
           absences: [
             absenceOn("vacation", {
-              id: 7,
+              id: "7",
               date_start: "2026-01-02",
               date_end: monday,
             }),
-            absenceOn("sick", { id: 3 }),
+            absenceOn("sick", { id: "3" }),
           ],
         },
       );
@@ -731,8 +731,8 @@ describe("staff-session-table.targets", () => {
         { targetMinutes: 480, creditMinutes: 480, balanceMinutes: 0 },
         {
           absences: [
-            absenceOn("vacation", { id: 1, status: "requested" }),
-            absenceOn("sick", { id: 4 }),
+            absenceOn("vacation", { id: "1", status: "requested" }),
+            absenceOn("sick", { id: "4" }),
           ],
         },
       );
@@ -1221,8 +1221,8 @@ describe("staff-session-table.edit", () => {
   };
 
   const mondaySickAbsence: StaffAbsenceRow = {
-    id: 7,
-    staff_id: 1,
+    id: "7",
+    staff_id: "1",
     absence_type: "sick",
     date_start: "2026-01-05",
     date_end: "2026-01-05",
@@ -1395,8 +1395,8 @@ describe("staff-session-table.backfill", () => {
   };
 
   const mondayHalfSick: StaffAbsenceRow = {
-    id: 7,
-    staff_id: 1,
+    id: "7",
+    staff_id: "1",
     absence_type: "sick",
     date_start: "2026-01-05",
     date_end: "2026-01-05",

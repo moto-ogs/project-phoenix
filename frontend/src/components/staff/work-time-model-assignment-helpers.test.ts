@@ -74,6 +74,23 @@ describe("assignmentPeople", () => {
     expect(people.candidates[0]?.role).toBe("Erzieherin");
   });
 
+  it("shows the position in the form of the person's Stammdaten", () => {
+    const people = assignmentPeople(
+      [
+        staff("1", "Jana Krüger", { role: "Betreuer", roleForm: "feminine" }),
+        staff("2", "Mai Pham", { role: "Betreuer" }),
+      ],
+      [],
+      models,
+      "7",
+    );
+
+    expect(people.candidates.map((person) => person.role)).toEqual([
+      "Betreuerin",
+      "Betreuer:in",
+    ]);
+  });
+
   it("names a Soll the Träger keeps", () => {
     const people = assignmentPeople(
       [staff("1", "Mira Sommer")],

@@ -41,7 +41,7 @@ describe("operator-settings-api", () => {
         plannedCompletions: [],
       });
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        `/api/operator/provisioning/schools/${SCHOOL_ID}/settings/booking-authority-impact`,
+        `/api/operator/schools/${SCHOOL_ID}/settings/booking-authority-impact`,
         { method: "GET" },
       );
     });
@@ -57,7 +57,7 @@ describe("operator-settings-api", () => {
       const result = await fetchOperatorSettingsSchema(SCHOOL_ID);
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        `/api/operator/provisioning/schools/${SCHOOL_ID}/settings/schema`,
+        `/api/operator/schools/${SCHOOL_ID}/settings/schema`,
         { method: "GET" },
       );
       expect(result).toEqual(schema);
@@ -165,7 +165,7 @@ describe("operator-settings-api", () => {
       );
       expect(result).toBe("1234");
       expect(mockOperatorFetch).toHaveBeenCalledWith(
-        `/api/operator/provisioning/schools/${SCHOOL_ID}/settings/values/security.ogs_device_pin/reveal`,
+        `/api/operator/schools/${SCHOOL_ID}/settings/values/security.ogs_device_pin/reveal`,
         { method: "GET" },
       );
     });

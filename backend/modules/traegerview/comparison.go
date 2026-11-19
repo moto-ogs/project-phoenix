@@ -11,7 +11,7 @@ import (
 // the Träger-Büro chooses, the same key figures for every chosen school side
 // by side, with the average of those schools and their figure together. The
 // figures derive from the series of the utilization (#4713, ADR 0241) and
-// from the captured Stichtagszahlen (#4673); they are counts, never a child,
+// from the roster of School Membership; they are counts, never a child,
 // so the read is not written to the access log (ADR 0084 section 7).
 //
 // The binding definitions, over the weekdays of the window as
@@ -33,9 +33,10 @@ import (
 //     schools' averages.
 //   - present_peak: the most children with a check-in on one day. Together:
 //     no figure, the peaks of the schools fall on different days.
-//   - active_students: the actively managed children of the newest
-//     Stichtagszahl whose key date lies in the window, the figure of the
-//     operator billing report. Together: the sum.
+//   - active_students: the actively managed children on the last day of the
+//     window, by the rule of the key-date report and the occupancy (the
+//     roster of School Membership). It is a live count, never moto's billing
+//     figure, which only the operator sees (#7301). Together: the sum.
 //
 // Average is the mean over the chosen schools that have the figure. A
 // school without a figure carries no value for that key, never 0.
@@ -72,12 +73,10 @@ type ComparisonFilter struct {
 	SchoolIDs []int64
 }
 
-// ComparedSchool is one school with its figures. KeyDate is the key date of
-// its active_students, nil without one.
+// ComparedSchool is one school with its figures.
 type ComparedSchool struct {
-	School
-	Values  ComparisonValues `json:"values"`
-	KeyDate *calendar.Date   `json:"key_date"`
+	TraegerSchool
+	Values ComparisonValues `json:"values"`
 }
 
 // SchoolComparison is the comparison of the chosen schools, ordered by

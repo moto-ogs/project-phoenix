@@ -90,6 +90,7 @@ export function WeekHoursRow({
       <div className="grid grid-cols-5 gap-2">
         {CONTRACT_WEEKDAYS.map((day, dayIndex) => (
           <Input
+            controlSize="compact"
             key={day.short}
             id={`contract-hours-${index}-${dayIndex}`}
             label={day.short}
@@ -407,6 +408,7 @@ export function CreateContractDialog({
         <KindChoice value={kind} onChange={setKind} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
+            controlSize="compact"
             id="contract-starts-on"
             monthYearNavigation
             label="Erster Tag"
@@ -416,6 +418,7 @@ export function CreateContractDialog({
             calendarLayout="popover"
           />
           <ISODatePicker
+            controlSize="compact"
             id="contract-ends-on"
             monthYearNavigation
             label="Letzter Tag"
@@ -535,6 +538,7 @@ export function ChangeSollDialog({
     >
       <div className="space-y-5">
         <ISODatePicker
+          controlSize="compact"
           id="contract-soll-valid-from"
           monthYearNavigation
           label="Gilt ab"
@@ -659,6 +663,7 @@ export function HolidayWeeksDialog({
         ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ISODatePicker
+            controlSize="compact"
             id="holiday-week-from"
             monthYearNavigation
             label="Erste Woche"
@@ -670,6 +675,7 @@ export function HolidayWeeksDialog({
             calendarLayout="popover"
           />
           <ISODatePicker
+            controlSize="compact"
             id="holiday-week-to"
             monthYearNavigation
             label="Letzte Woche"
@@ -766,6 +772,7 @@ export function ContractTermsDialog({
       <div className="space-y-5">
         <KindChoice value={kind} onChange={setKind} />
         <ISODatePicker
+          controlSize="compact"
           id="contract-terms-ends-on"
           monthYearNavigation
           label="Letzter Tag"

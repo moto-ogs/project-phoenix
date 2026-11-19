@@ -19,7 +19,7 @@ import { getWeekNumber } from "../src/lib/time-tracking-helpers";
 // (die decken die Go-Tests in backend/api/staff-shifts ab, die Detached-/
 // Delta-Logik die Vitest-Tests dienstplan-resource-grid.test.tsx u. a.).
 //
-// Testdaten werden über die Next.js-Proxy-Routen (/api/staff/shifts …)
+// Testdaten werden über den Katalog-Proxy (/api/staff-shifts …)
 // angelegt und wieder entfernt; die Requests laufen über den Browser-Context,
 // teilen also die NextAuth-Session des UI-Logins. Die Dev-DB gehört dem Nutzer:
 // jeder Test merkt sich die IDs seiner eigenen Datensätze. finally + afterEach
@@ -89,13 +89,20 @@ async function fetchNonAdminStaff(
   const from = mondayOf(TODAY);
   const to = addDaysISO(from, 4);
   const res = await request.get(
-    `${base}/api/staff/shifts/overview?from=${from}&to=${to}`,
+    `${base}/api/staff-shifts/overview?from=${from}&to=${to}`,
   );
   expect(res.ok(), `overview laden fehlgeschlagen (${res.status()})`).toBe(
     true,
   );
-  const json = (await res.json()) as { data?: { staff?: StaffLite[] } };
-  const staff = json.data?.staff ?? [];
+  const json = (await res.json()) as {
+    data?: { staff?: Array<Omit<StaffLite, "id"> & { id: number | string }> };
+  };
+  // Der Katalog-Proxy liefert IDs als Dezimal-Strings; die Spec rechnet mit
+  // Zahlen, weil der Backend-Body staff_id als Zahl liest.
+  const staff = (json.data?.staff ?? []).map((s) => ({
+    ...s,
+    id: Number(s.id),
+  }));
   // Die eigene Zeile der angemeldeten Person nicht einplanen: ihr Personen-Menü
   // führt zur Zeiterfassung statt zur Vertretung. Früher standen hier feste
   // IDs (1/2); der Seed vergibt die Admin-IDs inzwischen anders.
@@ -120,7 +127,7 @@ async function createShift(
     breakMinutes?: number;
   },
 ): Promise<number> {
-  const res = await request.post(`${base}/api/staff/shifts`, {
+  const res = await request.post(`${base}/api/staff-shifts`, {
     data: {
       staff_id: input.staffId,
       date: input.date,
@@ -144,7 +151,7 @@ async function listShifts(
   to: string,
 ): Promise<Array<{ id: number }>> {
   const res = await request.get(
-    `${base}/api/staff/shifts?staff_id=${staffId}&from=${from}&to=${to}`,
+    `${base}/api/staff-shifts?staff_id=${staffId}&from=${from}&to=${to}`,
   );
   expect(res.ok(), `Schichten laden fehlgeschlagen (${res.status()})`).toBe(
     true,
@@ -202,7 +209,7 @@ async function cleanupOwnedRecords(request: APIRequestContext): Promise<void> {
 
   for (const shiftId of ownedShiftIds) {
     await request
-      .delete(`${base}/api/staff/shifts/${shiftId}`)
+      .delete(`${base}/api/staff-shifts/${shiftId}`)
       .catch(() => undefined);
   }
 }
@@ -220,7 +227,7 @@ async function captureCreatedShift(
     const url = new URL(response.url());
     return (
       response.request().method() === "POST" &&
-      url.pathname.endsWith("/api/staff/shifts")
+      url.pathname.endsWith("/api/staff-shifts")
     );
   });
   await action();

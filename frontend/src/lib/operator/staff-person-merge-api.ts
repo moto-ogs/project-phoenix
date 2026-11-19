@@ -47,7 +47,7 @@ export async function previewStaffPersonMerges(
   schoolId: string,
 ): Promise<StaffMergeCandidate[]> {
   const candidates = await operatorFetch<BackendCandidate[]>(
-    `/api/operator/provisioning/staff-person-merges/${encodeURIComponent(schoolId)}`,
+    `/api/operator/staff-person-merges/${encodeURIComponent(schoolId)}`,
   );
   return candidates.map((candidate) => ({
     keeper: mapSide(candidate.keeper),
@@ -61,7 +61,7 @@ export async function executeStaffPersonMerges(
   schoolConfirmed: boolean,
 ): Promise<void> {
   await operatorFetch(
-    `/api/operator/provisioning/staff-person-merges/${encodeURIComponent(schoolId)}`,
+    `/api/operator/staff-person-merges/${encodeURIComponent(schoolId)}`,
     {
       method: "POST",
       body: {

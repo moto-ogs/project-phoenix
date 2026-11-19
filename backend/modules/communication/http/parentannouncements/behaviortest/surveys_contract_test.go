@@ -28,6 +28,7 @@ type surveyContract struct {
 	answers     []communication.SurveyAnswerInput
 	answeredBy  int64
 	respondents error
+	input       communication.SurveyInput
 }
 
 func (s *surveyContract) record(name string) { s.calls = append(s.calls, name) }
@@ -64,6 +65,40 @@ func (s *surveyContract) StaffSurveysToAnswer(context.Context, int64) ([]communi
 	return []communication.SurveyToAnswer{{ID: s.survey.ID, Title: s.survey.Title, Anonymous: true, ClosesAt: s.survey.ClosesAt}}, nil
 }
 
+func (s *surveyContract) written(name string, in communication.SurveyInput) (*communication.Survey, error) {
+	s.record(name)
+	s.input = in
+	out := s.survey
+	out.Title = in.Title
+	return &out, nil
+}
+func (s *surveyContract) CreateSurvey(_ context.Context, createdBy int64, in communication.SurveyInput) (*communication.Survey, error) {
+	s.answeredBy = createdBy
+	return s.written("create", in)
+}
+func (s *surveyContract) UpdateSurvey(_ context.Context, _ int64, in communication.SurveyInput) (*communication.Survey, error) {
+	return s.written("update", in)
+}
+func (s *surveyContract) DeleteSurvey(context.Context, int64) error {
+	s.record("delete")
+	return nil
+}
+func (s *surveyContract) PublishSurvey(context.Context, int64, int64) (*communication.Survey, error) {
+	s.record("publish")
+	published := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
+	out := s.survey
+	out.PublishedAt = &published
+	return &out, nil
+}
+func (s *surveyContract) CloseSurvey(context.Context, int64) (*communication.Survey, error) {
+	s.record("close")
+	return &s.survey, nil
+}
+func (s *surveyContract) RemindSurvey(context.Context, int64) (int, error) {
+	s.record("remind")
+	return 4, nil
+}
+
 func surveyRoute(t *testing.T, perms ...string) (*surveyContract, *announcement.SurveyResource, string, int64) {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
@@ -80,8 +115,8 @@ func surveyRoute(t *testing.T, perms ...string) (*surveyContract, *announcement.
 
 func surveyRequest(t *testing.T, r *announcement.SurveyResource, token, method, path string, body any) (int, string) {
 	t.Helper()
-	req := routetest.NewAuthenticatedRequest(t, method, path, body, routetest.WithJWTBearer(token))
-	out := routetest.ExecuteRequest(r.Router(rootAPI.ProtectedTenantRoutes), req)
+	req := routetest.NewAuthenticatedRequest(t, method, "/api/surveys"+path, body, routetest.WithJWTBearer(token))
+	out := routetest.ExecuteRequest(mounted("/api/surveys", r.Router(rootAPI.ProtectedTenantRoutes)), req)
 	return out.Code, out.Body.String()
 }
 
@@ -140,4 +175,37 @@ func TestSurveyEvaluationWireCarriesNoPerson(t *testing.T) {
 	status, body = surveyRequest(t, r, token, "GET", "/"+id+"/respondents", nil)
 	require.Equal(t, 409, status, body)
 	assert.Contains(t, body, "communication.survey_anonymous")
+}
+
+// An author with surveys:manage writes, sends and ends a survey through the
+// production routes; each answer carries the survey the owner returned.
+func TestSurveyManagementRoutesHandTheDraftToTheOwner(t *testing.T) {
+	t.Parallel()
+	s, r, token, caller := surveyRoute(t, permissions.SurveysManage)
+	id := strconv.FormatInt(s.survey.ID, 10)
+	draft := map[string]any{"title": "Teamklima", "audience": "staff", "anonymous": true, "closes_at": "2026-11-01T12:00:00Z",
+		"targets": []map[string]any{{"target_type": "staff_all"}}, "questions": []map[string]any{{"kind": "scale", "prompt": "Wie gut?", "required": true}}}
+	for _, tc := range []struct {
+		method, path, call, fragment string
+		status                       int
+		body                         any
+	}{
+		{"GET", "/", "list", `"title":"Team"`, 200, nil},
+		{"POST", "/", "create", `"title":"Teamklima"`, 201, draft},
+		{"PUT", "/" + id, "update", `"title":"Teamklima"`, 200, draft},
+		{"POST", "/" + id + "/publish", "publish", `"published_at":"2026-10-01T08:00:00Z"`, 200, nil},
+		{"POST", "/" + id + "/remind", "remind", `"reminded":4`, 200, nil},
+		{"POST", "/" + id + "/close", "close", `"id":"` + id + `"`, 200, nil},
+		{"DELETE", "/" + id, "delete", `"deleted":true`, 200, nil},
+	} {
+		before := len(s.calls)
+		status, body := surveyRequest(t, r, token, tc.method, tc.path, tc.body)
+		require.Equal(t, tc.status, status, "%s %s: %s", tc.method, tc.path, body)
+		assert.Contains(t, body, tc.fragment)
+		assert.Equal(t, []string{tc.call}, s.calls[before:])
+	}
+	assert.Equal(t, caller, s.answeredBy, "the caller authors the draft")
+	require.Len(t, s.input.Questions, 1)
+	assert.Equal(t, "Wie gut?", s.input.Questions[0].Prompt)
+	assert.Equal(t, "2026-11-01T12:00:00Z", s.input.ClosesAt.Format(time.RFC3339))
 }

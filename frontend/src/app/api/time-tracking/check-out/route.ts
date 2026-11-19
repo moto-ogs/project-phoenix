@@ -1,26 +1,16 @@
 import type { NextRequest } from "next/server";
-import { apiPost } from "~/lib/api-helpers.server";
-import { createPostHandler } from "~/lib/route-wrapper.server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-interface CheckOutRequest {
-  reason?: string;
-}
+// Temporary (#2352): while time-tracking/[id] keeps its PUT for one release,
+// Next selects that file for this path, not the portal's catch-all. Hand the
+// request to the catalog proxy with the path the catch-all would receive.
+const path = {
+  params: Promise.resolve({ path: ["time-tracking", "check-out"] }),
+};
 
-/**
- * POST /api/time-tracking/check-out
- * Check out from work. The body is optional; `reason` carries the F9
- * deviation reason when the backend demanded one. Without a reason the
- * request is forwarded body-less, exactly like before the F9 extension.
- */
-export const POST = createPostHandler<unknown, CheckOutRequest>(
-  async (_request: NextRequest, body: CheckOutRequest, token: string) => {
-    const response = body.reason
-      ? await apiPost<{ data: unknown }>(
-          "/api/time-tracking/check-out",
-          token,
-          { reason: body.reason },
-        )
-      : await apiPost<{ data: unknown }>("/api/time-tracking/check-out", token);
-    return response.data;
-  },
+const post = catalogProxy(portalRoutes.tenant, "POST");
+export const POST = withPrivateNoStore((request: NextRequest) =>
+  post(request, path),
 );

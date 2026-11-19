@@ -143,7 +143,7 @@ func (rs *SurveyResource) delete(w http.ResponseWriter, r *http.Request) {
 		surveyFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"deleted": true}, "Survey deleted")
+	common.Respond(w, r, http.StatusOK, deletedResponse{Deleted: true}, "Survey deleted")
 }
 
 func (rs *SurveyResource) publish(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +182,7 @@ func (rs *SurveyResource) remind(w http.ResponseWriter, r *http.Request) {
 		surveyFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"reminded": count}, "Survey reminder sent")
+	common.Respond(w, r, http.StatusOK, surveyRemindedResponse{Reminded: count}, "Survey reminder sent")
 }
 
 func (rs *SurveyResource) results(w http.ResponseWriter, r *http.Request) {
@@ -283,7 +283,7 @@ func (rs *SurveyResource) answer(w http.ResponseWriter, r *http.Request) {
 		surveyFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"submitted": true}, "Survey answered")
+	common.Respond(w, r, http.StatusOK, surveySubmittedResponse{Submitted: true}, "Survey answered")
 }
 
 func decodeSurveyRequest(w http.ResponseWriter, r *http.Request) (announcementService.SurveyInput, bool) {

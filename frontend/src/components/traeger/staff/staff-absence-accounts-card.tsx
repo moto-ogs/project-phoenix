@@ -215,6 +215,7 @@ function AllowanceForm({
         </p>
       </div>
       <Input
+        controlSize="compact"
         id={`${id}-reason`}
         name="reason"
         label="Begründung"

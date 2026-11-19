@@ -39,7 +39,7 @@ func (rs *Resource) stepUpStart(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules, portalauth.ExchangeRules)
 		return
 	}
-	render.JSON(w, r, StepUpStartResponse{ChallengeToken: challenge.ChallengeToken, MaskedEmail: challenge.MaskedEmail})
+	common.Respond(w, r, http.StatusOK, StepUpStartResponse{ChallengeToken: challenge.ChallengeToken, MaskedEmail: challenge.MaskedEmail}, "Code sent")
 }
 
 // stepUpVerify redeems the code of the session's account and answers with

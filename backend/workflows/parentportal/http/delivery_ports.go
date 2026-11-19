@@ -7,7 +7,7 @@ import (
 )
 
 // PushSubscriptions manages only the authenticated parent's devices.
-// The root preserves Delivery's atomic fan-out across active school mappings.
+// A parent device is registered once, regardless of school mappings.
 type PushSubscriptions interface {
 	PublicKey() (string, error)
 	SubscribeParent(context.Context, int64, PushSubscriptionInput) error
@@ -25,19 +25,19 @@ type PushSubscriptionInput struct {
 
 // NotificationPreferences reads and writes the parent's cross-school decisions.
 type NotificationPreferences interface {
-	GetForParent(context.Context, int64) (*PreferenceOverview, error)
+	GetForParent(context.Context, int64) (*ParentPreferenceOverview, error)
 	SetForParent(context.Context, int64, string, bool) error
 	DisableAllForParent(context.Context, int64) error
 }
 
-// PreferenceOverview preserves the parent's notification preference response.
-type PreferenceOverview struct {
-	TenantEnabled bool              `json:"tenant_enabled"`
-	Types         []PreferenceState `json:"types"`
+// ParentPreferenceOverview preserves the parent's notification preference response.
+type ParentPreferenceOverview struct {
+	TenantEnabled bool                    `json:"tenant_enabled"`
+	Types         []ParentPreferenceState `json:"types"`
 }
 
-// PreferenceState is one notification choice displayed by the portal.
-type PreferenceState struct {
+// ParentPreferenceState is one notification choice displayed by the portal.
+type ParentPreferenceState struct {
 	Key         string `json:"key"`
 	Label       string `json:"label"`
 	Description string `json:"description"`

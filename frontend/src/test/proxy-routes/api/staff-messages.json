@@ -1,5 +1,0 @@
-{
-  "api/staff-messages/threads/[threadID]/members/[accountID]": [
-    "DELETE tenant /api/staff-messages/threads/threadID%2F1/members/accountID%2F1"
-  ]
-}

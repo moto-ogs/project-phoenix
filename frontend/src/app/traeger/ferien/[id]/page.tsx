@@ -2,6 +2,8 @@
 
 // Ein Ferienzeitraum des Trägers (#4659): ändern und veröffentlichen. Der
 // Reiter „Anmeldungen“ führt zur Prüfung der Anmeldungen (#4663).
+// „Veröffentlichen“ ist die eine Kopfaktion, der Weg zur Abrechnung steht im
+// Drei-Punkte-Menü (#7411).
 
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -12,7 +14,10 @@ import {
 } from "~/components/traeger/holiday-period-head";
 import { HolidayPeriodForm } from "~/components/traeger/holiday-period-form";
 import { useHolidayEditorCalendar } from "~/components/traeger/use-week-no-care-days";
-import { HolidayPeriodPublishCard } from "~/components/traeger/holiday-period-publish-card";
+import {
+  HolidayPeriodPublishButton,
+  HolidayPeriodPublishCard,
+} from "~/components/traeger/holiday-period-publish-card";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { useTraegerHolidayCriteria } from "~/components/traeger/use-traeger-resources";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
@@ -20,9 +25,6 @@ import {
   HOLIDAY_BILLING_HINT,
   useHolidayPeriodBillingHref,
 } from "~/components/traeger/use-holiday-period-billing-href";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { billingConcept } from "~/lib/concepts/billing";
-import { ButtonLink } from "~/components/ui/button";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
@@ -87,36 +89,36 @@ export default function TraegerHolidayPeriodPage() {
         period?.registrationCount,
         period?.allocationMode,
       )}
+      overflowMenu={
+        billingHref
+          ? [
+              {
+                label: "Zur Abrechnung",
+                description: HOLIDAY_BILLING_HINT,
+                href: billingHref,
+                onClick: () => undefined,
+              },
+            ]
+          : undefined
+      }
       actions={
-        <>
-          {period ? <HolidayPeriodStatusBadge period={period} /> : null}
-          {billingHref ? (
-            <ButtonLink
-              href={billingHref}
-              variant="outline"
-              size="md"
-              tooltip={HOLIDAY_BILLING_HINT}
-            >
-              <MotoConceptIcon
-                concept={billingConcept}
-                size={18}
-                className="mr-2"
-              />
-              Zur Abrechnung
-            </ButtonLink>
-          ) : null}
-        </>
+        period ? (
+          <>
+            <HolidayPeriodStatusBadge period={period} />
+            <HolidayPeriodPublishButton
+              period={period}
+              unsavedChanges={dirty}
+              onPublished={saved}
+            />
+          </>
+        ) : null
       }
       error={shownError}
       loading={!loadError && !(period && schools)}
     >
       {period && schools ? (
         <>
-          <HolidayPeriodPublishCard
-            period={period}
-            unsavedChanges={dirty}
-            onPublished={saved}
-          />
+          <HolidayPeriodPublishCard period={period} unsavedChanges={dirty} />
           <HolidayPeriodForm
             calendar={holidayCalendar}
             key={period.id}

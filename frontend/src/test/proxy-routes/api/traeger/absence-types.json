@@ -1,9 +1,0 @@
-{
-  "api/traeger/absence-types": [
-    "GET traeger /traeger/absence-types/",
-    "POST traeger /traeger/absence-types/"
-  ],
-  "api/traeger/absence-types/[id]": [
-    "PUT traeger /traeger/absence-types/id%2F1"
-  ]
-}

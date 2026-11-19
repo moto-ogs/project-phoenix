@@ -21,11 +21,12 @@ func RouteContracts(portal common.PortalScope) []common.RouteContract {
 	if portal != common.PortalTenant {
 		return routes
 	}
-	// DELETE /threads/{threadID}/members/{accountID} answers the thread or,
-	// when the caller removed themselves, nothing; it keeps its route file.
+	// Removing a member answers the thread, or null when the caller removed
+	// themselves.
 	return append(routes,
 		common.RouteContract{Method: "POST", Pattern: "/groups", Portals: portals, Request: groupRequest{}, Response: ThreadDetailResponse{}},
 		common.RouteContract{Method: "PUT", Pattern: "/threads/{threadID}/name", Portals: portals, Request: renameGroupRequest{}, Response: ThreadDetailResponse{}},
 		common.RouteContract{Method: "POST", Pattern: "/threads/{threadID}/members", Portals: portals, Request: groupRequest{}, Response: ThreadDetailResponse{}},
+		common.RouteContract{Method: "DELETE", Pattern: "/threads/{threadID}/members/{accountID}", Portals: portals, Response: &ThreadDetailResponse{}},
 	)
 }

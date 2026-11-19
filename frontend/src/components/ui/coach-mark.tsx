@@ -1,6 +1,7 @@
 "use client";
 
 import { Z_LAYER } from "./overlay-styles";
+import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 import { useOverlay } from "./overlay-stack";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -306,8 +307,15 @@ export function CoachMark({
     };
   }
 
+  // With a target, the ring and the bubble stand at its
+  // getBoundingClientRect(), measured from the same layout viewport that
+  // `fixed` uses: they sit on the target in the installed iPhone app's shifted
+  // viewport too, and the shift would move them off it. Without a target the
+  // dimmed screen and the centred bubble belong to the screen and move along.
   return createPortal(
-    <div className={`pointer-events-none fixed inset-0 ${Z_LAYER.coach}`}>
+    <div
+      className={`pointer-events-none fixed inset-0 ${Z_LAYER.coach} ${box ? "" : FIXED_LAYER_SHIFT}`}
+    >
       {box ? (
         <>
           <div

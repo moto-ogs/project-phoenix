@@ -148,7 +148,7 @@ type TraegerTransferEntry struct {
 	CreatedAt       time.Time `json:"created_at"`
 	Format          string    `json:"format"`
 	Filename        string    `json:"filename"`
-	ByteSize        int64     `json:"byte_size"`
+	ByteSize        int       `json:"byte_size"`
 	TargetHost      string    `json:"target_host"`
 	TargetDirectory string    `json:"target_directory"`
 	// RecipientID is nil once the recipient was removed; RecipientName is

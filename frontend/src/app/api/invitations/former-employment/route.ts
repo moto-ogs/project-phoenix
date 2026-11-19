@@ -1,3 +1,7 @@
+// Temporary (#2352): the client calls /api/auth/invitations/… through the
+// staff portal's catalog proxy now. This file serves bundles built before
+// that change for one production deploy; delete it afterwards, together with
+// its test.
 import type { NextRequest } from "next/server";
 import { apiPost } from "~/lib/api-helpers.server";
 import type { BackendFormerEmployment } from "~/lib/invitation-helpers";

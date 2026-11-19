@@ -12,7 +12,7 @@ export const SYSTEM_ROLE_LABELS: Record<SystemRole, string> = {
 };
 
 export interface BackendAnnouncement {
-  id: number;
+  id: number | string;
   title: string;
   content: string;
   type: AnnouncementType;
@@ -22,9 +22,9 @@ export interface BackendAnnouncement {
   published_at?: string | null;
   expires_at?: string | null;
   target_roles: string[];
-  target_org_ids: number[];
-  target_tenant_ids: number[];
-  created_by: number;
+  target_org_ids: (number | string)[];
+  target_tenant_ids: (number | string)[];
+  created_by: number | string;
   created_at: string;
   updated_at: string;
   status: AnnouncementStatus;
@@ -50,14 +50,14 @@ export interface Announcement {
 }
 
 export interface AnnouncementStats {
-  announcement_id: number;
+  announcement_id: number | string;
   target_count: number;
   seen_count: number;
   dismissed_count: number;
 }
 
 export interface BackendAnnouncementViewDetail {
-  user_id: number;
+  user_id: number | string;
   user_name: string;
   seen_at: string;
   dismissed: boolean;

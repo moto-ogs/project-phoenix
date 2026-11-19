@@ -272,7 +272,7 @@ function ActivitySummary({ activity }: { activity: Activity }) {
       {activity.supervisor_name ? (
         <div className="mt-4">
           <DataGrid>
-            <DataField label="Hauptbetreuer" fullWidth>
+            <DataField label="Hauptbetreuung" fullWidth>
               <span className="whitespace-pre-wrap">
                 {activity.supervisor_name}
               </span>

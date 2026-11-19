@@ -74,7 +74,8 @@ const familyRoutes = (path) =>
   !path.startsWith("/operator/auth/") &&
   !path.startsWith("/__fixture/") &&
   path !== "/health";
-// One protected read per other portal, behind its real BFF route.
+// One protected read per other portal, through its BFF (the operator's
+// through the catalog proxy, #2352).
 const portalReads = new Set(["/operator/organizations"]);
 // Reads that reach the API through a portal's catalog proxy (#2352), not a
 // route file: the proxy checks each answer against the route's contract.
@@ -97,12 +98,17 @@ const refuse = (res, body) => {
   res.writeHead(401, { "Content-Type": "application/problem+json" });
   res.end(JSON.stringify(body));
 };
+// The shape of GET /api/me/profile in the contract: the catalog proxy checks
+// the answer (#2352).
 const profile = {
   id: 1,
   first_name: "Test",
   last_name: "Fixture",
   email: "fixture@example.invalid",
-  settings: {},
+  username: null,
+  last_login: null,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
 };
 const api = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${apiPort}`);

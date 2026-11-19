@@ -108,6 +108,7 @@ function renderWeekList(
   overrides: Partial<React.ComponentProps<typeof VertretungWeekList>> = {},
 ) {
   const props = {
+    title: "Termine der Woche",
     weekDays: WEEK_DAYS,
     instances: INSTANCES,
     gaps: GAPS,
@@ -150,6 +151,10 @@ describe("VertretungWeekList", () => {
     expect(
       within(daySection(MON)).getByTestId("vertretung-day-list-row-10"),
     ).toBeInTheDocument();
+    // Der abgesagte Termin ist geregelt und steht eingeklappt unter dem Tag.
+    fireEvent.click(
+      within(daySection(THU)).getByRole("button", { name: "Schon geregelt" }),
+    );
     expect(
       within(daySection(THU)).getByTestId("vertretung-day-list-row-30"),
     ).toBeInTheDocument();
@@ -158,11 +163,72 @@ describe("VertretungWeekList", () => {
       screen.queryByTestId("vertretung-day-list-row-20"),
     ).not.toBeInTheDocument();
     expect(
-      within(daySection(WED)).getByText("Keine Störungen an diesem Tag"),
+      within(daySection(WED)).getByText(
+        "Keine Lücke und kein Ausfall an diesem Tag.",
+      ),
     ).toBeInTheDocument();
     expect(
-      within(daySection(TUE)).getByText("Keine Termine an diesem Tag"),
+      within(daySection(TUE)).getByText("Keine Termine an diesem Tag."),
     ).toBeInTheDocument();
+  });
+
+  it("stellt an einem Tag die offene Lücke vor das, was schon geregelt ist (#7493)", () => {
+    // Der abgesagte Termin beginnt früher als die offene Lücke.
+    const monCancelledEarly = makeInstance({
+      id: "5",
+      date: MON,
+      title: "Frühdienst",
+      startTime: "06:30",
+      endTime: "07:00",
+      status: "cancelled",
+      staff: [],
+    });
+    renderWeekList({ instances: [monCancelledEarly, ...INSTANCES] });
+
+    const ids = () =>
+      within(daySection(MON))
+        .getAllByTestId(/vertretung-day-list-row-/)
+        .map((row) =>
+          row.dataset.testid?.replace("vertretung-day-list-row-", ""),
+        );
+    // Was geregelt ist, steht eingeklappt unter der offenen Lücke.
+    expect(ids()).toEqual(["10"]);
+    const settled = within(daySection(MON)).getByRole("button", {
+      name: "Schon geregelt",
+    });
+    expect(settled).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(settled);
+    expect(settled).toHaveAttribute("aria-expanded", "true");
+    expect(ids()).toEqual(["10", "5"]);
+    // Auch ein Tag ohne offene Lücke klappt das Geregelte ein: eine
+    // erledigte Woche füllt die Liste nicht mit erledigter Arbeit.
+    expect(
+      within(daySection(THU)).getByRole("button", { name: "Schon geregelt" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(
+      within(daySection(THU)).queryByTestId("vertretung-day-list-row-30"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lässt den eingeklappten Gruppennamen für seine Zeilen den Fokus nehmen (#7502)", () => {
+    // Nach dem Besetzen wandert die Zeile in die eingeklappte Gruppe und ist
+    // nicht mehr gerendert: der Fokus findet stattdessen den Gruppennamen.
+    renderWeekList();
+    const settled = within(daySection(THU)).getByRole("button", {
+      name: "Schon geregelt",
+    });
+
+    expect(settled.dataset.focusReturn?.split(" ")).toEqual([
+      "vertretung-row-30",
+    ]);
+
+    // Aufgeklappt trägt die Zeile ihren Schlüssel selbst, sonst gäbe es ihn
+    // zweimal.
+    fireEvent.click(settled);
+    expect(settled).not.toHaveAttribute("data-focus-return");
+    expect(
+      within(daySection(THU)).getByRole("button", { name: /Fußball/ }),
+    ).toHaveAttribute("data-focus-return", "vertretung-row-30");
   });
 
   it("zeigt im Modus 'Ganze Woche' auch ungestörte Termine", () => {
@@ -173,36 +239,69 @@ describe("VertretungWeekList", () => {
     ).toBeInTheDocument();
   });
 
-  it("zählt die Störungen pro Tag in der Kopfzeile", () => {
+  it("nennt in der Kopfzeile, wie viele Lücken an dem Tag offen sind", () => {
     renderWeekList();
 
-    expect(within(daySection(MON)).getByText("1 Störung")).toBeInTheDocument();
+    // Gezählt wird, was zu tun ist: die offenen Lücken. Der abgesagte
+    // Termin am Donnerstag ist geregelt und zählt nicht mit.
     expect(
-      within(daySection(WED)).getByText("0 Störungen"),
+      within(daySection(MON)).getByText("1 offene Lücke"),
+    ).toBeInTheDocument();
+    expect(
+      within(daySection(WED)).getByText("keine Lücke offen"),
+    ).toBeInTheDocument();
+    expect(
+      within(daySection(THU)).getByText("keine Lücke offen"),
     ).toBeInTheDocument();
   });
 
-  it("zeigt einen Strich statt einer erfundenen 0, solange für einen Tag keine Lückendaten vorliegen", () => {
-    // Lückenfenster erst ab Mittwoch (auf heute geklemmt): Mo und Di haben
-    // keine geprüfte Störungslage.
+  it("erfindet keine Zahl, solange für einen Tag keine Lückendaten vorliegen", () => {
+    // Lückenfenster erst ab Mittwoch (auf heute geklemmt): für Mo und Di
+    // ist die Besetzung nicht geprüft.
     renderWeekList({ gapsAvailableFrom: WED, instances: INSTANCES, gaps: [] });
 
-    expect(within(daySection(MON)).getByText("–")).toBeInTheDocument();
-    expect(within(daySection(TUE)).getByText("–")).toBeInTheDocument();
+    // Mo und Di liegen vor heute (Mittwoch): statt einer Zahl steht „vorbei“.
+    for (const iso of [MON, TUE]) {
+      expect(within(daySection(iso)).queryByText(/offen/)).toBeNull();
+      expect(within(daySection(iso)).getByText("vorbei")).toBeInTheDocument();
+    }
     expect(
-      within(daySection(WED)).getByText("0 Störungen"),
+      within(daySection(WED)).getByText("keine Lücke offen"),
     ).toBeInTheDocument();
+    // Die Abwesenheit steht im Termin selbst und bleibt erreichbar. Ohne
+    // Lückendaten heißt die Gruppe nicht „Schon geregelt“.
+    fireEvent.click(
+      within(daySection(MON)).getByRole("button", {
+        name: "Abwesend oder abgesagt",
+      }),
+    );
     expect(
-      within(daySection(MON)).getByText(
-        "Störungslage konnte nicht vollständig geprüft werden",
-      ),
+      within(daySection(MON)).getByTestId("vertretung-day-list-row-10"),
     ).toBeInTheDocument();
   });
 
-  it("zeigt für alle Tage einen Strich, wenn gar keine Lückendaten geladen sind", () => {
-    renderWeekList({ gapsAvailableFrom: null, gaps: [] });
+  it("sagt für einen vergangenen Tag ohne Ausfall nur, dass er vorbei ist, nie 'keine Lücke'", () => {
+    renderWeekList({
+      gapsAvailableFrom: WED,
+      instances: [makeInstance({ id: "70", date: MON, title: "Lesen" })],
+      gaps: [],
+    });
 
-    expect(screen.getAllByText("–")).toHaveLength(5);
+    expect(within(daySection(MON)).getByText("vorbei")).toBeInTheDocument();
+    expect(within(daySection(MON)).queryByText(/Lücke|Ausfall/)).toBeNull();
+  });
+
+  it("bleibt in jeder Kopfzeile still, wenn gar keine Lückendaten geladen sind, und zeigt den Hinweis einmal", () => {
+    renderWeekList({
+      gapsAvailableFrom: null,
+      gaps: [],
+      gapsNotice: <p>Die Lücken sind gerade nicht erreichbar.</p>,
+    });
+
+    expect(screen.queryByText(/offen/)).toBeNull();
+    expect(
+      screen.getAllByText("Die Lücken sind gerade nicht erreichbar."),
+    ).toHaveLength(1);
   });
 
   it("markiert heute in der Tageskopfzeile", () => {
@@ -224,10 +323,13 @@ describe("VertretungWeekList", () => {
   });
 
   it("löst onEdit mit der Instanz-ID aus", () => {
-    const props = renderWeekList();
+    // Montag ist heute: an einem vergangenen Tag hieße der Knopf „Details“.
+    const props = renderWeekList({ todayISO: MON });
 
     fireEvent.click(
-      within(daySection(MON)).getByRole("button", { name: "Bearbeiten" }),
+      within(daySection(MON)).getByRole("button", {
+        name: /^Besetzen: Frühstück/,
+      }),
     );
     expect(props.onEdit).toHaveBeenCalledWith("10");
   });

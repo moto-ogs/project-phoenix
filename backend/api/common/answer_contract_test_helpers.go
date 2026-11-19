@@ -148,10 +148,8 @@ func (c *answerContract) answersWith(route contractmodel.Route, data any) bool {
 	if data == nil {
 		return false
 	}
-	t := reflect.TypeOf(data)
-	for t.Kind() == reflect.Pointer || t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
-		t = t.Elem()
-	}
+	// A list and a single object of the same type are different answers.
+	t, lists := elementType(reflect.TypeOf(data))
 	schemas := []contractmodel.Schema{}
 	if route.Response != nil {
 		schemas = append(schemas, *route.Response)
@@ -162,14 +160,35 @@ func (c *answerContract) answersWith(route contractmodel.Route, data any) bool {
 		}
 	}
 	for _, schema := range schemas {
-		for schema.Kind == contractmodel.KindArray {
-			schema = *schema.Elem
-		}
-		if schema.Kind == contractmodel.KindRef && c.goTypes[schema.Ref] == t.String() {
+		ref, depth := elementSchema(schema)
+		if depth == lists && ref.Kind == contractmodel.KindRef && c.goTypes[ref.Ref] == t.String() {
 			return true
 		}
 	}
 	return false
+}
+
+// elementType is the type of the elements of t and how many lists hold them.
+func elementType(t reflect.Type) (reflect.Type, int) {
+	lists := 0
+	for t.Kind() == reflect.Pointer || t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+		if t.Kind() != reflect.Pointer {
+			lists++
+		}
+		t = t.Elem()
+	}
+	return t, lists
+}
+
+// elementSchema is the schema of the elements of schema and how many arrays
+// hold them.
+func elementSchema(schema contractmodel.Schema) (contractmodel.Schema, int) {
+	depth := 0
+	for schema.Kind == contractmodel.KindArray {
+		schema = *schema.Elem
+		depth++
+	}
+	return schema, depth
 }
 
 func variantOf(r *http.Request, route contractmodel.Route) string {

@@ -63,7 +63,7 @@ func TestTraegerStepUpOpensASchoolWithoutRememberedDevices(t *testing.T) {
 		require.Equal(t, "traeger.school_requires_code", answer.Code, "the device-proven session needs the code, also where the setting is unreadable")
 	}
 
-	code, start := traegerPost(t, portal, traegerStepUpPath, byDevice.AccessToken, map[string]any{})
+	code, start := traegerStepUpStart(t, portal, byDevice.AccessToken)
 	require.Equal(t, http.StatusOK, code, start.Code)
 	require.NotEmpty(t, start.ChallengeToken)
 	assert.NotEmpty(t, start.MaskedEmail)
@@ -113,9 +113,9 @@ func TestTraegerStepUpOpensASchoolWithoutRememberedDevices(t *testing.T) {
 
 	// The codes of a step share the sign-in's cap of three per window: the
 	// sign-in sent one, the step one; the third goes out, the fourth not.
-	code, start = traegerPost(t, portal, traegerStepUpPath, stepped.AccessToken, map[string]any{})
+	code, start = traegerStepUpStart(t, portal, stepped.AccessToken)
 	require.Equal(t, http.StatusOK, code, start.Code)
-	code, start = traegerPost(t, portal, traegerStepUpPath, stepped.AccessToken, map[string]any{})
+	code, start = traegerStepUpStart(t, portal, stepped.AccessToken)
 	assert.Equal(t, http.StatusTooManyRequests, code)
 	assert.Equal(t, "identity.mfa_blocked", start.Code)
 
@@ -140,9 +140,9 @@ func TestTraegerStepUpNeedsTheSchoolSwitchRightAndTheOwnCode(t *testing.T) {
 	memberSession := signInTraegerWithSecondFactor(t, portal, member.Email, password)
 	readerSession := signInTraegerWithSecondFactor(t, portal, reader.Email, password)
 
-	code, _ := traegerPost(t, portal, traegerStepUpPath, readerSession.AccessToken, map[string]any{})
+	code, _ := traegerStepUpStart(t, portal, readerSession.AccessToken)
 	assert.Equal(t, http.StatusForbidden, code, "without „In OGS wechseln“ there is nothing to step up for")
-	code, _ = traegerPost(t, portal, traegerStepUpPath, "", map[string]any{})
+	code, _ = traegerStepUpStart(t, portal, "")
 	assert.Equal(t, http.StatusUnauthorized, code, "the step needs a Träger session")
 
 	// A challenge of another account is refused before its code is
@@ -161,7 +161,7 @@ func TestTraegerStepUpNeedsTheSchoolSwitchRightAndTheOwnCode(t *testing.T) {
 
 	// „Neuen Code anfordern“ in the dialog renews the step's challenge
 	// through the sign-in's resend; the renewed code completes the step.
-	code, start := traegerPost(t, portal, traegerStepUpPath, memberSession.AccessToken, map[string]any{})
+	code, start := traegerStepUpStart(t, portal, memberSession.AccessToken)
 	require.Equal(t, http.StatusOK, code, start.Code)
 	rec = traegerRequest(t, portal, "/traeger/auth/mfa/resend", map[string]any{"challenge_token": start.ChallengeToken})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -175,4 +175,24 @@ func TestTraegerStepUpNeedsTheSchoolSwitchRightAndTheOwnCode(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusOK, code, stepped.Code)
 	assert.NotEmpty(t, stepped.AccessToken, "the resent code completes the step")
+}
+
+// traegerStepUpStart asks for the code of the session's account. A started
+// step answers in the success envelope (#2352), a refusal with the error
+// envelope.
+func traegerStepUpStart(t *testing.T, router http.Handler, bearer string) (int, traegerLoginAnswer) {
+	t.Helper()
+	rec := traegerRequestWithBearer(t, router, traegerStepUpPath, bearer, map[string]any{})
+	var envelope struct {
+		Status any                 `json:"status"`
+		Data   *traegerLoginAnswer `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope), rec.Body.String())
+	if envelope.Data != nil {
+		assert.Equal(t, "success", envelope.Status)
+		return rec.Code, *envelope.Data
+	}
+	var answer traegerLoginAnswer
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &answer), rec.Body.String())
+	return rec.Code, answer
 }

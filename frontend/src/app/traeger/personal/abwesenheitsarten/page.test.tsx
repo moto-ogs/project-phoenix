@@ -100,7 +100,7 @@ describe("TraegerAbsenceTypesPage", () => {
     });
     renderPage();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Abwesenheitsart" }),
+      await screen.findByRole("button", { name: "Abwesenheitsart anlegen" }),
     );
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText(/^Name/), {
@@ -143,13 +143,17 @@ describe("TraegerAbsenceTypesPage", () => {
       types: [],
     });
     renderPage();
+    // #7415: die Bauart „Funktion nicht eingeschaltet“ mit dem Satz der Seite.
     expect(
-      await screen.findByText(
-        "Personal beim Träger ist noch nicht freigeschaltet.",
+      await screen.findByText("Diese Funktion ist nicht eingeschaltet"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        /Bis zur Freischaltung legt jede Schule ihre Abwesenheitsarten selbst an\. Das moto-Team schaltet/,
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Abwesenheitsart" }),
+      screen.queryByRole("button", { name: "Abwesenheitsart anlegen" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Abwesenheitsarten")).toBeInTheDocument();
   });

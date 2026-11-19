@@ -18,7 +18,7 @@ import (
 // past lists and late/early starts keep their attendance. Cancelled occurrences
 // are excluded before this merge, regardless of whether they still carry an
 // active-group bridge or historical visits.
-func (s *service) collectSlotEntries(ctx context.Context, params listRequest, result *classday.Result) ([]mergedEntry, error) {
+func (s *service) collectSlotEntries(ctx context.Context, params listRequest, result *classday.ClassdayResult) ([]mergedEntry, error) {
 	contexts, deferredInstances, err := s.collectSlotContexts(ctx, params, result)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ type slotContext struct {
 // every matching non-cancelled slot as selectable context on result.Slots,
 // returns the selected instances whose rosters the merge will actually read,
 // and the set of deferred (not-yet-started reconciliation) occurrences.
-func (s *service) collectSlotContexts(ctx context.Context, params listRequest, result *classday.Result) ([]slotContext, map[int64]struct{}, error) {
+func (s *service) collectSlotContexts(ctx context.Context, params listRequest, result *classday.ClassdayResult) ([]slotContext, map[int64]struct{}, error) {
 	instances, err := s.loadInstances(ctx, params.date)
 	if err != nil {
 		return nil, nil, err
@@ -116,7 +116,7 @@ func slotSelected(selected map[int64]struct{}, instanceID int64) bool {
 // buildSlotContext publishes one matching instance as selectable context on
 // result.Slots and returns its slotContext plus whether it is a deferred
 // (not-yet-started reconciliation) occurrence.
-func (s *service) buildSlotContext(inst *slotInstance, params listRequest, roomName string, result *classday.Result) (slotContext, bool) {
+func (s *service) buildSlotContext(inst *slotInstance, params listRequest, roomName string, result *classday.ClassdayResult) (slotContext, bool) {
 	listKind := ""
 	if inst.ListKind != nil {
 		listKind = *inst.ListKind
@@ -253,7 +253,7 @@ func (s *service) mergeSlotInstance(
 	careDay map[int64]ports.CareDay,
 	presentByGroup map[int64]map[int64]bool,
 	deferredInstances map[int64]struct{},
-	result *classday.Result,
+	result *classday.ClassdayResult,
 ) []mergedEntry {
 	inst := p.inst
 	planned := rosterByInstance[inst.ID]
@@ -356,7 +356,7 @@ func appendUnseenPresent(p slotContext, presentSet map[int64]bool, seenPlanned m
 // produced no rows, so the export "Enthalten" summary does not count content
 // absent from the document. A deferred slot that retained a present or
 // registered-absence row contributed content and therefore counts normally.
-func recordDeferredAccounting(result *classday.Result, instanceID int64, deferred, retainedRows bool) {
+func recordDeferredAccounting(result *classday.ClassdayResult, instanceID int64, deferred, retainedRows bool) {
 	if deferred && !retainedRows {
 		if result.DeferredSlots == nil {
 			result.DeferredSlots = map[int64]struct{}{}

@@ -3,6 +3,7 @@ package contract
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,6 +53,11 @@ type row struct {
 	Hidden   string         `json:"-"`
 	Born     string         `json:"born,omitempty" contract:"date"`
 	Pickup   *string        `json:"pickup,omitempty" contract:"clock"`
+	// An amount in cent and a running number travel as plain numbers.
+	PriceCents int64            `json:"price_cents"`
+	Next       int64            `json:"next" contract:"number"`
+	Image      []byte           `json:"image"`
+	BySchool   map[int64]string `json:"by_school"`
 }
 
 type body struct {
@@ -153,6 +159,10 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "Status"}, schema("status"))
 	assert.Equal(t, KindInt, schema("count").Kind)
 	assert.Equal(t, KindLegacyID, schema("legacy_id").Kind)
+	assert.Equal(t, Schema{Kind: KindInt}, schema("price_cents"), "an amount in cent is a number")
+	assert.Equal(t, Schema{Kind: KindInt}, schema("next"), "a running number tagged number stays a number")
+	assert.Equal(t, Schema{Kind: KindString, Nullable: true}, schema("image"), "[]byte renders base64, nil as null")
+	assert.Equal(t, KindMap, schema("by_school").Kind, "an integer key renders as its decimal string")
 	assert.Equal(t, KindID, schema("quoted_id").Kind)
 	assert.Equal(t, KindLaxID, schema("lax_id").Kind)
 	assert.True(t, fields["nick"].Deprecated)
@@ -172,6 +182,19 @@ func TestBuildRejects(t *testing.T) {
 	bothAnswers.NoData = true
 	strayEnum := get("/api/rows/", inner{})
 	strayEnum.Enums = []EnumSpec{{Name: "Gone", Fields: []string{"inner.gone"}, Values: []string{"x"}}}
+	limitWithoutBody := get("/api/rows/", inner{})
+	limitWithoutBody.MaxBodyBytes = 1024
+	negativeLimit := post(body{})
+	negativeLimit.MaxBodyBytes = -1
+	publicWrite := post(body{})
+	publicWrite.Portals = []string{PublicPortal}
+	publicRetry := get("/api/links/{token}", inner{})
+	publicRetry.Portals = []string{PublicPortal}
+	publicRetry.NoRetryAfterRenewal = "mails a code"
+	publicBeside := get("/api/links/{token}", inner{})
+	publicBeside.Portals = []string{PublicPortal, "tenant"}
+	publicLink := get("/api/rows/{token}", inner{})
+	publicLink.Portals = []string{PublicPortal}
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -196,6 +219,12 @@ func TestBuildRejects(t *testing.T) {
 		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
 		"a day type entry nothing uses":             {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}}, "day type contract.ownDay"},
 		"an owner's day type without an entry":      {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a body limit on a route without a body":    {[]Registration{limitWithoutBody}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a negative body limit":                     {[]Registration{negativeLimit}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a public write without a body limit":       {[]Registration{publicWrite}, Options{Identifiers: identifiers}, "a public write needs MaxBodyBytes"},
+		"a public route that names a retry":         {[]Registration{publicRetry}, Options{Identifiers: identifiers}, "has no session to renew"},
+		"a public route beside a session portal":    {[]Registration{publicBeside}, Options{Identifiers: identifiers}, "names no session portal"},
+		"a public pattern a session pattern takes":  {[]Registration{publicLink, get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers}, "overlaps the session route GET /api/rows/{id}"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -312,9 +341,9 @@ func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
 		"  mode: OpenEnum<mode>;",
 		"  /** @deprecated leaves the contract with the next release */\n  nick?: string;",
 		"  legacy_id: int64StringOrNumber,",
-		"  friend_ids: z.array(int64String).optional(),",
-		"  day: calendarDate.nullable(),",
-		"  hint: z.string().optional(),",
+		"  friend_ids: optional(arr(int64String)),",
+		"  day: nullable(calendarDate),",
+		"  hint: optional(str),",
 		`  "GET /api/rows/{id}": {`,
 		"    response: success(rowSchema),",
 	} {
@@ -368,6 +397,28 @@ func TestTypeScriptWritesARouteWithoutData(t *testing.T) {
 	assert.NotContains(t, source, "success")
 }
 
+// The proxy traits travel into contract.json and onto the route object the
+// catalog proxy reads; a route without them carries neither key.
+func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
+	t.Parallel()
+	once := post(body{})
+	once.NoRetryAfterRenewal = "a renewed session would mail the code twice"
+	once.MaxBodyBytes = 64 * 1024
+	plain := get("/api/rows/{id}", inner{})
+	doc, err := Build([]Registration{once, plain}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	encoded, err := json.Marshal(doc.Routes)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"no_retry_after_renewal":"a renewed session would mail the code twice","max_body_bytes":65536`)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "    pattern: \"/api/rows/\",\n    portals: [\"tenant\"],\n    noRetryAfterRenewal: \"a renewed session would mail the code twice\",\n    maxBodyBytes: 65536,\n")
+	assert.Equal(t, 1, strings.Count(source, "noRetryAfterRenewal"))
+	assert.Equal(t, 1, strings.Count(source, "maxBodyBytes"))
+}
+
 // Two portals mount the same handlers, so two resources answer with one Go
 // type. It is written once and both files import it.
 func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
@@ -381,7 +432,7 @@ func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
 	assert.Contains(t, shared, "  type OpenEnum,\n} from \"./runtime\";")
 	assert.Contains(t, shared, "  mode: OpenEnum<mode>;")
 	assert.Contains(t, shared, `export const MODE_VALUES = ["a", "b"] as const;`)
-	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = z.object({")
+	assert.Contains(t, shared, "export const rowSchema: z.ZodType<row, unknown> = object<row>({")
 	assert.NotContains(t, shared, "export const routes")
 	for _, name := range []string{"rows.generated.ts", "school-rows.generated.ts"} {
 		assert.Contains(t, files[name], "import {\n  rowSchema,\n} from \"./shared.generated\";", name)
@@ -432,4 +483,87 @@ func TestARegisteredPointerAnswersTheObjectOrNull(t *testing.T) {
 	source := files["rows.generated.ts"]
 	assert.Contains(t, source, "response: success(innerSchema.nullable()),")
 	assert.Contains(t, source, "response: success(innerSchema),")
+}
+
+// stored hands on JSON its owner stored without reading it.
+type stored struct {
+	Old json.RawMessage `json:"old,omitempty"`
+	Raw json.RawMessage `json:"raw"`
+	Any any             `json:"any"`
+}
+
+// presence tells an absent key from null, as the template writes do.
+type presence struct {
+	Set   bool
+	Value *int64
+}
+
+func (p *presence) UnmarshalJSON(data []byte) error {
+	p.Set = true
+	return json.Unmarshal(data, &p.Value)
+}
+
+type presenceBody struct {
+	Track presence `json:"track_id"`
+}
+
+func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
+	t.Parallel()
+	options := Options{
+		Identifiers: identifiers,
+		NumericIDs:  []string{"contract.presence.Value"},
+		Readers:     map[reflect.Type]string{reflect.TypeFor[presence](): ReadsValue},
+	}
+	doc, err := Build([]Registration{get("/api/stored/", stored{}), post(presenceBody{})}, options)
+	require.NoError(t, err)
+	fields := fieldsOf(t, doc, "stored")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["raw"].Schema, "any JSON value, null included")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["old"].Schema, "omitempty leaves an empty value out; a stored null still travels")
+	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["any"].Schema, "an empty interface holds any JSON")
+	assert.True(t, fields["old"].Optional)
+	assert.Equal(t, Schema{Kind: KindLegacyID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
+
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["stored.generated.ts"], "  raw: unknown | null;")
+	assert.Contains(t, files["stored.generated.ts"], "raw: nullable(json),")
+	assert.Contains(t, files["rows.generated.ts"], "  track_id?: number | null;")
+
+	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers, NumericIDs: options.NumericIDs})
+	require.ErrorContains(t, err, "has its own UnmarshalJSON", "without an entry the wrapper stops the generator")
+}
+
+// session and supervisor refer to each other, as a room session and its
+// supervisions do.
+type session struct {
+	Name        string        `json:"name"`
+	Supervisors []*supervisor `json:"supervisors,omitempty"`
+}
+
+type supervisor struct {
+	Role    string   `json:"role"`
+	Session *session `json:"session,omitempty"`
+}
+
+func TestATypeOfACycleReadsTheLaterSchemaLazily(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{get("/api/rows/sessions", []session{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	first, second := strings.Index(source, "export const supervisorSchema"), strings.Index(source, "export const sessionSchema")
+	require.True(t, first >= 0 && second > first, source)
+	assert.Contains(t, source, "  session: optional(lazy(() => sessionSchema)),")
+	assert.Contains(t, source, "  supervisors: optional(arr(nullable(supervisorSchema))),")
+}
+
+func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {
+	t.Parallel()
+	link := get("/api/rows/public/{token}", inner{})
+	link.Portals = []string{PublicPortal}
+	// /api/rows/public/x/ matches both; the literal "public" wins in chi
+	// and in the proxy, so the pair is ordered.
+	_, err := Build([]Registration{link, get("/api/rows/{id}/history", inner{})}, Options{Identifiers: identifiers})
+	assert.NoError(t, err)
 }

@@ -83,7 +83,7 @@ type HolidayRegistrationTimeModel struct {
 	Name       string `json:"name"`
 	StartsAt   string `json:"starts_at"`
 	EndsAt     string `json:"ends_at"`
-	PriceCents int64  `json:"price_cents"`
+	PriceCents int    `json:"price_cents"`
 }
 
 // HolidayRegistrationWeek is a bookable week with the name of its host school.
@@ -104,8 +104,8 @@ type HolidayRegistrationWeek struct {
 	// LunchPriceCents is the price of one lunch, null when the week offers
 	// no lunch; LunchDays is the number of lunches of a booking of the
 	// whole week (#5631). A booking of days takes one lunch per booked day.
-	LunchPriceCents *int64 `json:"lunch_price_cents"`
-	LunchDays       int    `json:"lunch_days"`
+	LunchPriceCents *int `json:"lunch_price_cents"`
+	LunchDays       int  `json:"lunch_days"`
 }
 
 // HolidayRegistrationOfferResponse is the body of GET

@@ -173,6 +173,15 @@ func TestFinanceExportHandoverOfARun(t *testing.T) {
 	require.Equal(t, http.StatusOK, page.Code)
 	assert.Equal(t, 5, strings.Count(page.Body.String(), `"state":"failed"`), "every attempt is in the journal of its recipient, and the last one on it")
 
+	renamed := readyRecipient()
+	renamed["name"] = "Kämmerei Nord"
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, recipientPath(recipient), renamed)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	saved := decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes())
+	assert.Equal(t, recipient, saved.ID)
+	assert.Equal(t, "Kämmerei Nord", saved.Name)
+	assert.True(t, saved.Ready, "a saved recipient with its password stays ready")
+
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, recipientPath(recipient), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	removed := decodeSchoolPortalData[recipientsPageBody](t, rec.Body.Bytes())
@@ -339,6 +348,7 @@ func TestFinanceExportFormatsGoToTheirOwnRecipient(t *testing.T) {
 	f := sepaDebitFixture(t, "Träger Übergabe zwei Empfänger")
 	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Ida", sepaDebitMonth, sjrServices()...)
 	createMandate(t, f, mandateBody(contract, "SJR-H-IDA"))
+	setDebtor(t, f, contract, "10002")
 	run := releaseDebitRun(t, f, sepaDebitMonth)
 	_, kaemmerei := addRecipient(t, f, readyRecipient())
 	steuer := readyRecipient()
@@ -380,4 +390,14 @@ func TestFinanceExportFormatsGoToTheirOwnRecipient(t *testing.T) {
 	page := decodeSchoolPortalData[recipientsPageBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, exportRecipientPath, nil).Body.Bytes())
 	require.Len(t, page.Recipients, 1)
 	assert.Equal(t, []string{}, page.Recipients[0].Formats, "the Kämmerei kept no format after the reassignment")
+
+	// The DATEV batch goes to its recipient with the bookings the body picks.
+	setDatevSettings(t, f)
+	require.Equal(t, http.StatusOK, assignFormats(t, f, map[string]int64{"datev": kaemmerei}).Code)
+	rec = handOver(t, f, run, "datev", map[string]any{"mode": "new"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	datev := decodeSchoolPortalData[handoverResultBody](t, rec.Body.Bytes())
+	assert.Equal(t, "Kämmerei", datev.RecipientName)
+	assert.True(t, strings.HasPrefix(datev.FileName, "EXTF_Buchungsstapel_"), datev.FileName)
+	assert.Equal(t, "datev", exportFiles(t, f, "")[0].Format, "the protocol holds the DATEV file")
 }

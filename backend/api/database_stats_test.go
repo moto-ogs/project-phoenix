@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -75,5 +76,20 @@ func TestDatabaseStatsReturnsDataForAdmin(t *testing.T) {
 
 	router.ServeHTTP(response, request)
 
-	assert.Equal(t, http.StatusOK, response.Code)
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	// The counts travel in the usual envelope (#2352), so the catalog proxy
+	// can check them against the contract.
+	var body struct {
+		Status string `json:"status"`
+		Data   struct {
+			Teachers    int `json:"teachers"`
+			Permissions struct {
+				CanViewStudents bool `json:"canViewStudents"`
+			} `json:"permissions"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))
+	assert.Equal(t, "success", body.Status)
+	assert.True(t, body.Data.Permissions.CanViewStudents, "an admin reads every count")
+	assert.GreaterOrEqual(t, body.Data.Teachers, 1, "the admin's own staff row is counted")
 }

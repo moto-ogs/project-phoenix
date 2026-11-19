@@ -5,11 +5,11 @@ import { createLogger } from "~/lib/logger";
 const logger = createLogger({ component: "FeedbackAPI" });
 
 interface BackendFeedbackEntry {
-  id: number;
+  id: number | string;
   value: "positive" | "neutral" | "negative";
   day: string;
   time: string;
-  student_id: number;
+  student_id: number | string;
   is_mensa_feedback: boolean;
   created_at: string;
   updated_at: string;

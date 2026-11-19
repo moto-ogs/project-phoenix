@@ -112,11 +112,13 @@ func (rs *Resource) removeGroupMember(w http.ResponseWriter, r *http.Request) {
 	}
 	if detail == nil {
 		// The caller removed themselves: that is leaving, and the group is no
-		// longer theirs to show.
-		common.Respond(w, r, http.StatusOK, nil, "Group left")
+		// longer theirs to show. The answer says so with data null, one shape
+		// with the thread of the other case (#2352).
+		common.Respond(w, r, http.StatusOK, (*ThreadDetailResponse)(nil), "Group left")
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toThreadDetail(detail, currentAccountID(r)), "Member removed")
+	thread := toThreadDetail(detail, currentAccountID(r))
+	common.Respond(w, r, http.StatusOK, &thread, "Member removed")
 }
 
 func (rs *Resource) leaveGroup(w http.ResponseWriter, r *http.Request) {
