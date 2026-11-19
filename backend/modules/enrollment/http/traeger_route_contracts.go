@@ -9,7 +9,8 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // HolidayPeriodRouteContracts registers the Träger's holiday periods and
 // their registrations (ADR 0270), with patterns relative to
-// /traeger/holiday-periods. Files, uploads and exports keep their route
+// /traeger/holiday-periods. The office's proof upload streams through the
+// catalog (#2352); the other files, uploads and exports keep their route
 // files.
 func HolidayPeriodRouteContracts() []common.RouteContract {
 	registration := "/{id}/registrations/{registrationId}"
@@ -46,6 +47,9 @@ func HolidayPeriodRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: registration + "/children/{childId}/holiday-wish", Portals: traegerPortal, Request: HolidayWishRequest{}, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "PUT", Pattern: registration + "/details", Portals: traegerPortal, Request: HolidayRegistrationEditRequest{}, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "PUT", Pattern: registration + "/criteria", Portals: traegerPortal, Request: HolidayCriteriaCheckRequest{}, Response: capability.HolidayRegistrationDetail{}},
+		{Method: "POST", Pattern: registration + "/proofs", Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: int(maxEnrollmentUploadBody), TooLargeCode: common.CodeEnrollmentUploadInvalid,
+			Response: capability.HolidayRegistrationDetail{}},
 	}
 }
 
