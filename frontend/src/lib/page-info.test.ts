@@ -124,6 +124,16 @@ const FIRST_WEEK_PAGES = [
   "/students/[id]",
 ];
 
+/**
+ * Seiten, deren Info-Knopf nur in einem klar abgegrenzten Zustand fehlt.
+ * Diese Ausnahme bleibt sichtbar: eine neue bedingte `info`-Eigenschaft
+ * besteht den Wächter nicht stillschweigend.
+ */
+const PAGES_WITH_CONDITIONAL_INFO: readonly string[] = [
+  "/home", // Nur beim Anordnen der Startseite erklärt der Knopf das Verschieben.
+  "/students/[id]", // Ferienkinder haben keine Reiter; der normale Text wäre falsch.
+];
+
 function collectPageFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = resolve(directory, entry.name);
@@ -164,11 +174,78 @@ function resolveImport(fromFile: string, specifier: string): string | null {
 
 interface ParsedModule {
   readonly rendersTenantPage: boolean;
-  readonly hasInfo: boolean;
+  readonly info: InfoAvailability;
   readonly imports: readonly string[];
 }
 
+type InfoAvailability = "none" | "conditional" | "always";
+
 const parsedModules = new Map<string, ParsedModule>();
+
+function combineConditionalBranches(
+  left: InfoAvailability,
+  right: InfoAvailability,
+): InfoAvailability {
+  return left === right ? left : "conditional";
+}
+
+function preferInfoAvailability(
+  left: InfoAvailability,
+  right: InfoAvailability,
+): InfoAvailability {
+  const rank: Record<InfoAvailability, number> = {
+    none: 0,
+    conditional: 1,
+    always: 2,
+  };
+  return rank[left] >= rank[right] ? left : right;
+}
+
+function infoAvailability(expression: ts.Expression): InfoAvailability {
+  if (
+    expression.kind === ts.SyntaxKind.NullKeyword ||
+    (ts.isIdentifier(expression) && expression.text === "undefined")
+  ) {
+    return "none";
+  }
+  if (
+    ts.isStringLiteral(expression) ||
+    ts.isNoSubstitutionTemplateLiteral(expression)
+  ) {
+    return expression.text.trim() === "" ? "none" : "always";
+  }
+  if (ts.isParenthesizedExpression(expression)) {
+    return infoAvailability(expression.expression);
+  }
+  if (ts.isAsExpression(expression) || ts.isSatisfiesExpression(expression)) {
+    return infoAvailability(expression.expression);
+  }
+  if (ts.isConditionalExpression(expression)) {
+    return combineConditionalBranches(
+      infoAvailability(expression.whenTrue),
+      infoAvailability(expression.whenFalse),
+    );
+  }
+  // Ein dynamischer Wert kann der Quelltext-Wächter nicht auflösen. Explizite
+  // Leerwerte und bedingte Leerwerte prüft er oben; ein Name oder JSX-Knoten
+  // rendert dagegen zumindest einen Info-Knopf.
+  return "always";
+}
+
+function infoAttributeAvailability(
+  attribute: ts.JsxAttribute,
+): InfoAvailability {
+  if (!attribute.initializer) return "none";
+  if (ts.isStringLiteral(attribute.initializer)) {
+    return attribute.initializer.text.trim() === "" ? "none" : "always";
+  }
+  if (ts.isJsxExpression(attribute.initializer)) {
+    return attribute.initializer.expression
+      ? infoAvailability(attribute.initializer.expression)
+      : "none";
+  }
+  return "always";
+}
 
 function parseModule(file: string): ParsedModule {
   const cached = parsedModules.get(file);
@@ -181,7 +258,7 @@ function parseModule(file: string): ParsedModule {
     ts.ScriptKind.TSX,
   );
   let rendersTenantPage = false;
-  let hasInfo = false;
+  let info: InfoAvailability | undefined;
   const imports: string[] = [];
   const visit = (node: ts.Node): void => {
     if (
@@ -198,20 +275,20 @@ function parseModule(file: string): ParsedModule {
       node.tagName.getText(source) === "TenantPage"
     ) {
       rendersTenantPage = true;
-      if (
-        node.attributes.properties.some(
-          (attribute) =>
-            ts.isJsxAttribute(attribute) &&
-            attribute.name.getText(source) === "info",
-        )
-      ) {
-        hasInfo = true;
+      const infoAttribute = node.attributes.properties.find(
+        (attribute): attribute is ts.JsxAttribute =>
+          ts.isJsxAttribute(attribute) &&
+          attribute.name.getText(source) === "info",
+      );
+      if (infoAttribute) {
+        const currentInfo = infoAttributeAvailability(infoAttribute);
+        info = info ? preferInfoAvailability(info, currentInfo) : currentInfo;
       }
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
-  const parsed = { rendersTenantPage, hasInfo, imports };
+  const parsed = { rendersTenantPage, info: info ?? "none", imports };
   parsedModules.set(file, parsed);
   return parsed;
 }
@@ -227,7 +304,7 @@ function parseModule(file: string): ParsedModule {
 // tiefer, zählt die Seite als „ohne Info-Knopf“ und steht auf der Liste.
 const MAX_IMPORT_DEPTH = 4;
 
-function pageHasInfo(pageFile: string): boolean {
+function pageInfoAvailability(pageFile: string): InfoAvailability {
   const seen = new Set([pageFile]);
   let level = [pageFile];
   for (let depth = 0; depth < MAX_IMPORT_DEPTH && level.length > 0; depth++) {
@@ -235,7 +312,11 @@ function pageHasInfo(pageFile: string): boolean {
       (file) => parseModule(file).rendersTenantPage,
     );
     if (renderers.length > 0) {
-      return renderers.some((file) => parseModule(file).hasInfo);
+      return renderers.reduce<InfoAvailability>(
+        (availability, file) =>
+          preferInfoAvailability(availability, parseModule(file).info),
+        "none",
+      );
     }
     level = level
       .flatMap((file) => parseModule(file).imports)
@@ -245,7 +326,7 @@ function pageHasInfo(pageFile: string): boolean {
         return true;
       });
   }
-  return false;
+  return "none";
 }
 
 const pages = PORTALS.flatMap(({ prefix, root, publicPages }) =>
@@ -269,11 +350,20 @@ describe("Info-Knopf am Seitentitel (#7565)", () => {
 
   it("hält die Seiten ohne Info-Knopf auf einer schrumpfenden Liste", () => {
     const withoutInfo = pages
-      .filter(({ file }) => !pageHasInfo(file))
+      .filter(({ file }) => pageInfoAvailability(file) === "none")
       .map(({ id }) => id)
       .sort();
 
     expect(withoutInfo).toEqual([...PAGES_WITHOUT_INFO_BASELINE].sort());
+  });
+
+  it("dokumentiert Zustände ohne Info-Knopf ausdrücklich", () => {
+    const conditionalInfo = pages
+      .filter(({ file }) => pageInfoAvailability(file) === "conditional")
+      .map(({ id }) => id)
+      .sort();
+
+    expect(conditionalInfo).toEqual([...PAGES_WITH_CONDITIONAL_INFO].sort());
   });
 
   it("erklärt die Einstiegsseiten der Betreuung", () => {

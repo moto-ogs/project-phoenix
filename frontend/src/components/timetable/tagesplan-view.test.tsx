@@ -661,6 +661,9 @@ describe("TagesplanView", () => {
     render(<TagesplanView />);
 
     expect(screen.getByTestId("tagesplan-disabled")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Erklärung zu Heute" }),
+    ).toBeInTheDocument();
   });
 
   it("shows the own-scope hint when the school keeps staff on their own blocks (#2380)", () => {

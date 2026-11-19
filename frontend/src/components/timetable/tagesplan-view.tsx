@@ -46,7 +46,6 @@ import {
   type TagesplanGroup,
   groupParallelBlocks,
 } from "~/components/timetable/tagesplan-groups";
-import { PlanningDisabledState } from "~/components/planning/planning-disabled-state";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { blockChildrenLabel, blockEndLine } from "~/lib/block-children";
 import {
@@ -73,8 +72,12 @@ import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
+import { closingDaysConcept } from "~/lib/concepts/closingDays";
 
 const logger = createLogger({ component: "TagesplanView" });
+
+const TAGESPLAN_INFO =
+  "Hier siehst du die Betreuung des Tages nach Uhrzeit. Eine Linie zeigt, wo du gerade im Tag stehst. Tippe auf einen laufenden Block, um seine Kinderliste zu öffnen.";
 
 // Zwischen Navigationen gemerkte Scrollposition (#2383): wer aus einer
 // Kinderliste zurückkommt, landet wieder beim Block, den er angetippt hat.
@@ -603,11 +606,16 @@ export function TagesplanView() {
 
   if (!timetableEnabled) {
     return (
-      <PlanningDisabledState
-        pageTitle={STAFF_FLAT_PAGES.tagesplan.label}
-        heading="Der Betreuungsplan ist ausgeschaltet"
-        description="Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“."
+      <TenantPage
+        title={STAFF_FLAT_PAGES.tagesplan.label}
+        info={TAGESPLAN_INFO}
         testId="tagesplan-disabled"
+        empty={{
+          title: "Der Betreuungsplan ist ausgeschaltet",
+          description:
+            "Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“.",
+          icon: <MotoConceptIcon concept={closingDaysConcept} size={42} />,
+        }}
       />
     );
   }
@@ -636,7 +644,7 @@ export function TagesplanView() {
   return (
     <TenantPage
       title={isToday ? "Heute" : formatDate(day)}
-      info="Hier siehst du die Betreuung des Tages nach Uhrzeit. Eine Linie zeigt, wo du gerade im Tag stehst. Tippe auf einen laufenden Block, um seine Kinderliste zu öffnen."
+      info={TAGESPLAN_INFO}
       stats={
         statsItems.length > 0 ? (
           <TenantPageStats items={statsItems} />
