@@ -75,7 +75,7 @@ func slotListExportColumns(pickupBased, checklist bool) []classday.ExportColumn 
 // section followed by plain value rows — the same shape the grouped
 // student exports produce. Rows arrive sorted by GroupTitle (sortRows),
 // so sections are contiguous.
-func slotListExportRows(rows []classday.Row, pickupBased, checklist bool) []classday.ExportRow {
+func slotListExportRows(rows []classday.SlotListRow, pickupBased, checklist bool) []classday.ExportRow {
 	docRows := make([]classday.ExportRow, 0, len(rows))
 	currentGroup := ""
 	for _, row := range rows {

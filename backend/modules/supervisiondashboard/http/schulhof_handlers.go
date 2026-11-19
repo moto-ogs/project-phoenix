@@ -100,3 +100,11 @@ func (rs *SchulhofResource) Register(r chi.Router, withTx common.Middleware) {
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/status", rs.getSchulhofStatus)
 	})
 }
+
+// SchulhofRouteContracts registers the typed contract of the courtyard status
+// (ADR 0270), with patterns relative to /api/active.
+func SchulhofRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/schulhof/status", Portals: []common.PortalScope{common.PortalTenant}, Response: SchulhofStatusResponse{}},
+	}
+}

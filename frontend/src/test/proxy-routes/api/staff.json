@@ -1,7 +1,4 @@
 {
-  "api/staff/[id]/absences/rebook": [
-    "POST tenant /api/staff/id%2F1/absences/rebook"
-  ],
   "api/staff/absence-types": [
     "GET tenant /api/absence-types",
     "POST tenant /api/absence-types"
@@ -12,12 +9,6 @@
   "api/staff/absence-types/[absenceTypeId]/allowances/[staffId]/preview": [
     "GET tenant /api/absence-types/absenceTypeId%2F1/allowances/staffId%2F1/preview"
   ],
-  "api/staff/dashboard-summary": ["GET tenant /api/staff/dashboard-summary"],
-  "api/staff/qualification-types": [
-    "GET tenant /api/staff/qualification-types",
-    "POST tenant /api/staff/qualification-types"
-  ],
-  "api/staff/qualifications": ["GET tenant /api/staff/qualifications"],
   "api/staff/shift-types": [
     "GET tenant /api/shift-types query=include_archived,with_usage",
     "POST tenant /api/shift-types"

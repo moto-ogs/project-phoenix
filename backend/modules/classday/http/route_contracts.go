@@ -39,3 +39,14 @@ func RouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/absence-reports/{schoolClass}/{date}/students/{studentId}", Portals: portals, NoData: true},
 	}
 }
+
+// SlotListRouteContracts registers the typed contract of the slot lists'
+// options and preview (ADR 0270), with patterns relative to /api/timetable.
+// The export answers a file and keeps its route file.
+func SlotListRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "POST", Pattern: "/lists/options", Portals: portals, Request: slotListOptionsRequest{}, Response: classday.OptionsResult{}},
+		{Method: "POST", Pattern: "/lists/preview", Portals: portals, Request: slotListRequest{}, Response: classday.Result{}},
+	}
+}

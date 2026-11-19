@@ -22,6 +22,22 @@ type recordedMealPlan struct {
 	changes  []mealplanModule.SchoolChange
 	cleared  []mealplanModule.SchoolChange
 	schedule *mealplanModule.SchoolSchedule
+	replaced []mealplanModule.ReplaceDay
+	emptied  []mealplanModule.ClearDay
+}
+
+func (m *recordedMealPlan) Week(_ context.Context, weekStart mealplanModule.Date) ([]mealplanModule.Entry, error) {
+	return []mealplanModule.Entry{{Date: weekStart, Position: 1, Dish: "Linsensuppe", Allergens: []mealplanModule.Allergen{"A"}}}, nil
+}
+
+func (m *recordedMealPlan) ReplaceDay(_ context.Context, day mealplanModule.ReplaceDay) error {
+	m.replaced = append(m.replaced, day)
+	return nil
+}
+
+func (m *recordedMealPlan) ClearDay(_ context.Context, day mealplanModule.ClearDay) error {
+	m.emptied = append(m.emptied, day)
+	return nil
 }
 
 func (m *recordedMealPlan) SetParticipationBySchool(_ context.Context, change mealplanModule.SchoolChange) error {
@@ -118,6 +134,23 @@ func TestMealPlanSchoolRoutesHandTheirRequestsOn(t *testing.T) {
 		} `json:"days"`
 	}
 	send(http.MethodGet, "/api/meal-plan/participants/week?week_start=2026-09-07", nil, &week)
+
+	var dishes []struct {
+		Date      string   `json:"date"`
+		Dish      string   `json:"dish"`
+		Allergens []string `json:"allergens"`
+	}
+	send(http.MethodGet, "/api/meal-plan/?week_start=2026-09-07", nil, &dishes)
+	require.Len(t, dishes, 1)
+	assert.Equal(t, "Linsensuppe", dishes[0].Dish)
+	assert.Equal(t, []string{"A"}, dishes[0].Allergens)
+	send(http.MethodPut, "/api/meal-plan/2026-09-08", map[string]any{"dishes": []map[string]any{{"dish": "Nudeln", "note": nil}}}, nil)
+	require.Len(t, plan.replaced, 1)
+	assert.Equal(t, mealplanModule.Date("2026-09-08"), plan.replaced[0].Date)
+	assert.Equal(t, "Nudeln", plan.replaced[0].Dishes[0].Dish)
+	send(http.MethodDelete, "/api/meal-plan/2026-09-08", nil, nil)
+	require.Len(t, plan.emptied, 1)
+	assert.Equal(t, account.ID, plan.emptied[0].AccountID)
 	assert.Equal(t, "2026-09-07", week.WeekStart)
 	require.Len(t, week.Days, 1)
 	assert.Equal(t, "42", week.Days[0].Participants[0].StudentID)

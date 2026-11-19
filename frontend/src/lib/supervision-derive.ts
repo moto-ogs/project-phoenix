@@ -40,13 +40,16 @@ export interface OpenRoomPayload {
   name: string;
 }
 
-/** One entry of /api/active/supervisors/all or /api/me/groups/supervised. */
+/**
+ * One entry of /api/active/supervisors/all or /api/me/groups/supervised. The
+ * catalog proxy hands the identifiers on as decimal strings (#2352).
+ */
 export interface SupervisedGroupPayload {
-  id: number;
-  room_id?: number;
-  group_id: number;
-  room?: { id: number; name: string };
-  actual_group?: { id: number; name: string };
+  id: number | string;
+  room_id?: number | string;
+  group_id: number | string | null;
+  room?: { id: number | string; name: string };
+  actual_group?: { id: number | string; name: string };
 }
 
 /**
@@ -251,7 +254,7 @@ export function deriveSupervision(
   // Parallel sessions can share one room (#2265): a room-name-only label
   // would render indistinguishable entries, so suffix the activity name
   // whenever a room appears more than once.
-  const roomUseCount = new Map<number, number>();
+  const roomUseCount = new Map<number | string, number>();
   for (const g of eligible) {
     roomUseCount.set(g.room_id!, (roomUseCount.get(g.room_id!) ?? 0) + 1);
   }

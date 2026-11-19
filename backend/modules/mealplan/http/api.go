@@ -86,7 +86,7 @@ func (rs *Resource) Router() chi.Router {
 	return router
 }
 
-type MealPlanEntryResponse struct {
+type MealPlanWeekEntryResponse struct {
 	Date     string  `json:"date"`
 	Position int     `json:"position"`
 	Dish     string  `json:"dish"`
@@ -151,9 +151,9 @@ func (rs *Resource) getWeek(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.ModuleFailure(w, r, err, "failed to load meal plan")
 		return
 	}
-	responses := make([]MealPlanEntryResponse, 0, len(entries))
+	responses := make([]MealPlanWeekEntryResponse, 0, len(entries))
 	for _, entry := range entries {
-		responses = append(responses, MealPlanEntryResponse{
+		responses = append(responses, MealPlanWeekEntryResponse{
 			Date: string(entry.Date), Position: entry.Position, Dish: entry.Dish, Note: entry.Note, Allergens: entry.AllergenCodes(),
 		})
 	}

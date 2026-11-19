@@ -15,6 +15,23 @@ import {
   success,
 } from "./runtime";
 
+/** Go: mealplan.MealPlanWeekEntryResponse */
+export interface MealPlanWeekEntryResponse {
+  date: string;
+  position: number;
+  dish: string;
+  note?: string;
+  allergens: string[] | null;
+}
+
+export const MealPlanWeekEntryResponseSchema: z.ZodType<MealPlanWeekEntryResponse, unknown> = object<MealPlanWeekEntryResponse>({
+  date: str,
+  position: safeInt,
+  dish: str,
+  note: optional(str),
+  allergens: nullable(arr(str)),
+});
+
 /** Go: mealplan.OrderClassCountResponse */
 export interface OrderClassCountResponse {
   school_class: string;
@@ -191,6 +208,23 @@ export const ScheduleChangedResponseSchema: z.ZodType<ScheduleChangedResponse, u
   effective_from: calendarDate,
 });
 
+/** Go: mealplan.DishRequest */
+export interface DishRequest {
+  dish?: string;
+  note?: string | null;
+  allergens?: string[] | null;
+}
+
+/** Go: mealplan.SetDayRequest */
+export interface SetDayRequest {
+  dishes?: DishRequest[] | null;
+}
+
+/** Query of GET /api/meal-plan/ */
+export interface GetMealPlanQuery {
+  week_start?: string;
+}
+
 /** Query of GET /api/meal-plan/orders */
 export interface GetMealPlanOrdersQuery {
   from?: string;
@@ -220,6 +254,19 @@ export const routes = {
     pattern: "/api/meal-plan/participation/{studentId}/days/{date}",
     portals: ["tenant"],
     response: noData,
+  },
+  "DELETE /api/meal-plan/{date}": {
+    method: "DELETE",
+    pattern: "/api/meal-plan/{date}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "GET /api/meal-plan/": {
+    method: "GET",
+    pattern: "/api/meal-plan/",
+    portals: ["tenant"],
+    query: ["week_start"],
+    response: success(z.array(MealPlanWeekEntryResponseSchema)),
   },
   "GET /api/meal-plan/orders": {
     method: "GET",
@@ -262,5 +309,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<ChildScheduleRequest>(),
     response: success(ScheduleChangedResponseSchema),
+  },
+  "PUT /api/meal-plan/{date}": {
+    method: "PUT",
+    pattern: "/api/meal-plan/{date}",
+    portals: ["tenant"],
+    request: requestBody<SetDayRequest>(),
+    response: noData,
   },
 } as const;

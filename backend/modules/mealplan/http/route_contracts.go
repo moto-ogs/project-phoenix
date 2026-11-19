@@ -58,6 +58,7 @@ func toBillingMonthResponse(m mealplanModule.BillingMonth) BillingMonthResponse 
 type ContractTypes struct {
 	Orders, DailyList, WeeklyList, ChildParticipation, ChildDay, ChildSchedule, ScheduleChanged any
 	BillingMonths, BillingMonth, BillingMonthRelease                                            any
+	Week, Day                                                                                   any
 }
 
 // RouteContractTypes names the bodies of the meal plan and Mensa month routes.
@@ -68,5 +69,6 @@ func RouteContractTypes() ContractTypes {
 		ScheduleChanged: ScheduleChangedResponse{},
 		BillingMonths:   []mealplanModule.BillingMonthSummary{}, BillingMonth: BillingMonthResponse{},
 		BillingMonthRelease: BillingMonthReleaseRequest{},
+		Week:                []MealPlanWeekEntryResponse{}, Day: SetDayRequest{},
 	}
 }

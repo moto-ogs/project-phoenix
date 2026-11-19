@@ -1050,6 +1050,12 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/staff/{id}/absences/{absenceId}": {
+    method: "DELETE",
+    pattern: "/api/staff/{id}/absences/{absenceId}",
+    portals: ["tenant"],
+    response: noData,
+  },
   "DELETE /api/staff/{id}/documents/{documentId}": {
     method: "DELETE",
     pattern: "/api/staff/{id}/documents/{documentId}",

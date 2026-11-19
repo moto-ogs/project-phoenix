@@ -23,7 +23,7 @@ func TestListSignature(t *testing.T) {
 			ListLabel:  "Ganztag",
 			Provenance: "Plan",
 			Counters:   classday.Counters{Planned: 2, Present: 1},
-			Rows: []classday.Row{
+			Rows: []classday.SlotListRow{
 				{StudentID: 1, Name: "Anna", SchoolClass: "1a", GroupName: "Rot", GroupID: &gid, InstanceID: 5, Slot: "AG", StatusLabel: "Anwesend", Planned: true, Present: true},
 				{StudentID: 2, Name: "Ben", SchoolClass: "1b", GroupName: "Blau", Slot: "AG", StatusLabel: "Fehlt", Planned: true},
 			},
@@ -55,7 +55,7 @@ func TestListSignature(t *testing.T) {
 
 	t.Run("an added row flips the signature", func(t *testing.T) {
 		changed := base()
-		changed.Rows = append(changed.Rows, classday.Row{StudentID: 3, Name: "Cara"})
+		changed.Rows = append(changed.Rows, classday.SlotListRow{StudentID: 3, Name: "Cara"})
 		assert.NotEqual(t, listSignature(base()), listSignature(changed))
 	})
 
@@ -87,7 +87,7 @@ func TestListSignatureExportHeader(t *testing.T) {
 			Provenance:            "Plan",
 			ExportHeaderSignature: "Tagesliste Plan – Ganztag\x1fEnthalten: 3 Angebote",
 			Counters:              classday.Counters{Planned: 2},
-			Rows: []classday.Row{
+			Rows: []classday.SlotListRow{
 				{StudentID: 1, Name: "Anna", SchoolClass: "1a", GroupName: "Rot", Slot: "AG", StatusLabel: "Anwesend", Planned: true},
 			},
 		}

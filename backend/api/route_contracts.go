@@ -112,6 +112,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, operatorContractMounts()...)
 	mounts = append(mounts, traegerContractMounts()...)
 	mounts = append(mounts, staffPortalContractMounts()...)
+	mounts = append(mounts, staffPortalLiveContractMounts()...)
 	mounts = append(mounts, rootContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
@@ -450,8 +451,14 @@ func guardianRouteContracts() []common.RouteContract {
 	types := guardiansHTTP.RouteContractTypes()
 	portals := []common.PortalScope{common.PortalTenant}
 	search := []common.QueryParam{{Name: "q", Kind: common.QueryString}, {Name: "page", Kind: common.QueryInt}, {Name: "page_size", Kind: common.QueryInt}}
+	deleteQuery := []common.QueryParam{{Name: "force", Kind: common.QueryString}, {Name: "expected_link_ids", Kind: common.QueryString}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
+		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: types.Guardian},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: types.GuardianUpdate, Response: types.Guardian},
+		// Without force a guardian still linked to children is refused; the
+		// expected links pin the confirmed state of the full delete.
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Query: deleteQuery, NoData: true},
 		{Method: "GET", Pattern: "/{id}/delete-preview", Portals: portals, Response: types.DeletePreview},
 		{Method: "POST", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
@@ -519,6 +526,9 @@ func mealPlanRouteContracts() []common.RouteContract {
 	daily := []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "include", Kind: common.QueryString}}
 	week := []common.QueryParam{{Name: "week_start", Kind: common.QueryDate}}
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/meal-plan/", Portals: portals, Query: week, Response: types.Week},
+		{Method: "PUT", Pattern: "/meal-plan/{date}", Portals: portals, Request: types.Day, NoData: true},
+		{Method: "DELETE", Pattern: "/meal-plan/{date}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/meal-plan/orders", Portals: portals, Query: window, Response: types.Orders},
 		{Method: "GET", Pattern: "/meal-plan/participants", Portals: portals, Query: daily, Response: types.DailyList},
 		{Method: "GET", Pattern: "/meal-plan/participants/week", Portals: portals, Query: week, Response: types.WeeklyList},

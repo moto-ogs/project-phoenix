@@ -75,11 +75,15 @@ func measureSlotListHTTPQueries(t *testing.T, action string) (testpkg.QueryMeasu
 			assert.Equal(t, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.Header().Get("Content-Type"))
 			assert.True(t, bytes.HasPrefix(response.Body.Bytes(), []byte("PK")), "the adapter must return the rendered workbook")
 		} else {
-			var result struct {
-				Slots []classday.Slot `json:"slots"`
-				Rows  []classday.Row  `json:"rows"`
+			// The answer travels in the shared envelope (#2352).
+			var envelope struct {
+				Data struct {
+					Slots []classday.Slot        `json:"slots"`
+					Rows  []classday.SlotListRow `json:"rows"`
+				} `json:"data"`
 			}
-			require.NoError(t, json.Unmarshal(response.Body.Bytes(), &result))
+			require.NoError(t, json.Unmarshal(response.Body.Bytes(), &envelope))
+			result := envelope.Data
 			require.Len(t, result.Slots, wantSlots)
 			if action == "preview" {
 				require.Len(t, result.Rows, 3)

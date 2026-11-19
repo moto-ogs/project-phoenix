@@ -55,7 +55,7 @@ func TestSlotListExportColumns_ChecklistOnlyOnPlannedLists(t *testing.T) {
 func TestSlotListExportRows_ChecklistCellStaysEmpty(t *testing.T) {
 	t.Parallel()
 
-	rows := []classday.Row{
+	rows := []classday.SlotListRow{
 		{Name: "Mia Beispiel", SchoolClass: "2a", GroupTitle: "Randstunde"},
 		{Name: "Ben Beispiel", SchoolClass: "2b", GroupTitle: "Randstunde"},
 	}

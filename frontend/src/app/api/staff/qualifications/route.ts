@@ -1,7 +1,17 @@
-import { proxyGet } from "~/lib/route-wrapper.server";
+import type { NextRequest } from "next/server";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
+import { catalogProxy } from "~/lib/route-wrapper.server";
 
-/**
- * GET /api/staff/qualifications
- * Die Nachweise aller Mitarbeitenden mit Status (#4808).
- */
-export const GET = proxyGet("/api/staff/qualifications");
+// While staff/[id] keeps its own route file (it reshapes the staff record),
+// Next selects that file for this path, not the portal's catch-all (#2352).
+// Hand the request to the catalog proxy with the path the catch-all would
+// receive; delete this file together with staff/[id]/route.ts.
+const path = {
+  params: Promise.resolve({ path: ["staff", "qualifications"] }),
+};
+
+const get = catalogProxy(portalRoutes.tenant, "GET");
+export const GET = withPrivateNoStore((request: NextRequest) =>
+  get(request, path),
+);
