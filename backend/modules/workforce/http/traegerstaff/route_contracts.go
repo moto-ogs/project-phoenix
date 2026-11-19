@@ -119,4 +119,20 @@ func ExportRouteContracts() []common.RouteContract {
 	}
 }
 
+// ImportRouteContracts registers the Personal-Import (#4724), with patterns
+// relative to /traeger/staff-record-imports. The preview and the import take
+// the same upload: the file plus the form fields.
+func ImportRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: workforce.MaxStaffImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeWorkforceTraegerStaffImportFileTooLarge, Response: workforce.StaffImport{}}
+	}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []workforce.StaffImportEntry{}},
+		upload("/"),
+		upload("/preview"),
+	}
+}
+
 var weekQuery = []common.QueryParam{{Name: "week", Kind: common.QueryDate}}

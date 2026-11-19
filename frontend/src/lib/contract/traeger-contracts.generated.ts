@@ -4,8 +4,10 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
+  multipart,
   noData,
   nullable,
   object,
@@ -462,6 +464,12 @@ export const routes = {
     portals: ["org"],
     response: success(ContractDetailSchema),
   },
+  "GET /traeger/contracts/{id}/paper-signature": {
+    method: "GET",
+    pattern: "/traeger/contracts/{id}/paper-signature",
+    portals: ["org"],
+    response: fileAnswer,
+  },
   "POST /traeger/contracts/": {
     method: "POST",
     pattern: "/traeger/contracts/",
@@ -475,5 +483,14 @@ export const routes = {
     portals: ["org"],
     request: requestBody<SendRequest>(),
     response: success(SendResultSchema),
+  },
+  "POST /traeger/contracts/{id}/paper-signature": {
+    method: "POST",
+    pattern: "/traeger/contracts/{id}/paper-signature",
+    portals: ["org"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "care_contract.paper_document_invalid",
+    request: multipart,
+    response: noData,
   },
 } as const;

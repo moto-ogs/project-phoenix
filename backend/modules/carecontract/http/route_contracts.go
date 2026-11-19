@@ -8,8 +8,9 @@ import (
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // ContractRouteContracts registers the typed contract of the care contracts
-// (ADR 0270), with patterns relative to /traeger/contracts. The documents,
-// the paper signature and the export answer files and keep their route files.
+// (ADR 0270), with patterns relative to /traeger/contracts. The paper
+// signature answers a file and takes a multipart upload (#2352); the documents
+// and the export answer files and keep their route files.
 func ContractRouteContracts() []common.RouteContract {
 	school := common.QueryParam{Name: "school_id", Kind: common.QueryID}
 	list := []common.QueryParam{
@@ -18,6 +19,10 @@ func ContractRouteContracts() []common.RouteContract {
 	}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: list, Response: carecontract.ContractList{}},
+		{Method: "GET", Pattern: "/{id}/paper-signature", Portals: traegerPortal, File: true},
+		// The handler answers 204; the catalog proxy answers it as no data.
+		{Method: "POST", Pattern: "/{id}/paper-signature", Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.PaperMaxBytes + paperFormOverhead, TooLargeCode: common.CodeCareContractPaperDocumentInvalid, NoData: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CreateRequest{}, Response: carecontract.CreateResult{}},
 		{Method: "GET", Pattern: "/candidates", Portals: traegerPortal, Query: []common.QueryParam{school}, Response: []carecontract.Candidate{}},
 		{Method: "GET", Pattern: "/conclusion-modes", Portals: traegerPortal, Response: []carecontract.SchoolConclusion{}},
@@ -68,6 +73,22 @@ func OverrunRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: window, Response: carecontract.OverrunEvaluation{}},
 		{Method: "GET", Pattern: "/children", Portals: traegerPortal, Query: window, Response: carecontract.OverrunEvaluation{}},
+	}
+}
+
+// ImportRouteContracts registers the import of existing contracts (#4723),
+// with patterns relative to /traeger/contract-imports. The preview and the
+// import take the same upload: the file plus the form fields.
+func ImportRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractImport{}}
+	}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractImportEntry{}},
+		upload("/"),
+		upload("/preview"),
 	}
 }
 

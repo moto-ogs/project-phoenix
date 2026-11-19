@@ -22,6 +22,10 @@ func BillingFamilyRouteContracts() []common.RouteContract {
 
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
+// importUploadBytes bounds an import upload: the file and the form around
+// it, as importFileOf reads them.
+const importUploadBytes = capability.MaxImportFileBytes + importFormOverhead
+
 // billingFamilyListRouteContracts registers the families, their children
 // and debtor numbers. The exports answer files and keep their route files.
 func billingFamilyListRouteContracts() []common.RouteContract {
@@ -194,11 +198,15 @@ func CareCostShareRouteContracts() []common.RouteContract {
 }
 
 // FamilyChildrenRouteContracts registers the children of the families
-// (#5918), relative to /traeger/family-children. The export and the import
-// answer files or take uploads and keep their route files.
+// (#5918), relative to /traeger/family-children. The import takes uploads
+// (#2352); the export answers a file and keeps its route file.
 func FamilyChildrenRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.FamilyChildrenSet{}},
+		{Method: "POST", Pattern: "/imports/preview", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
+			TooLargeCode: common.CodeParentBillingFamilyChildrenImportFileTooLarge, Response: capability.FamilyChildrenImport{}},
+		{Method: "POST", Pattern: "/imports", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
+			TooLargeCode: common.CodeParentBillingFamilyChildrenImportFileTooLarge, Response: capability.FamilyChildrenImport{}},
 		{Method: "PUT", Pattern: "/", Portals: traegerPortal, Request: FamilyChildrenRequest{}, Response: capability.FamilyChildrenSet{}},
 		{Method: "DELETE", Pattern: "/{contractId}", Portals: traegerPortal, Response: capability.FamilyChildrenSet{}},
 	}
@@ -241,12 +249,18 @@ func SEPACreditorRouteContracts() []common.RouteContract {
 }
 
 // SEPAMandateRouteContracts registers the mandates, relative to
-// /traeger/sepa-mandates. Export and imports keep their route files.
+// /traeger/sepa-mandates. The imports take uploads (#2352); the export
+// keeps its route file.
 func SEPAMandateRouteContracts() []common.RouteContract {
 	contract := []common.QueryParam{{Name: "contract_id", Kind: common.QueryID}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: contract, Response: []capability.SEPAMandate{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: SEPAMandateRequest{}, Response: capability.SEPAMandate{}},
+		{Method: "GET", Pattern: "/imports", Portals: traegerPortal, Response: []capability.SEPAMandateImportEntry{}},
+		{Method: "POST", Pattern: "/imports/preview", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
+			TooLargeCode: common.CodeParentBillingSepaImportFileTooLarge, Response: capability.SEPAMandateImport{}},
+		{Method: "POST", Pattern: "/imports", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
+			TooLargeCode: common.CodeParentBillingSepaImportFileTooLarge, Response: capability.SEPAMandateImport{}},
 		{Method: "POST", Pattern: "/{id}/revoke", Portals: traegerPortal, Request: SEPAMandateRevokeRequest{}, Response: capability.SEPAMandate{}},
 		{Method: "GET", Pattern: "/{id}/history", Portals: traegerPortal, Response: []capability.SEPAMandateEvent{}},
 		{Method: "GET", Pattern: "/{id}/collections", Portals: traegerPortal, Response: []capability.SEPADebit{}},
