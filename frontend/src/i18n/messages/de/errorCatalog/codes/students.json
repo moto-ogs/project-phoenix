@@ -72,7 +72,7 @@
   "photo_consent_withdrawn": "Die Eltern haben die Einwilligung für Fotos zurückgezogen. Bitte prüfe die Einwilligung erneut.",
   "photos_disabled": "Kinderfotos sind an dieser Schule ausgeschaltet. Bitte frage die Schulleitung.",
   "pickup_change_completed": "Das Kind ist schon abgemeldet. Die Abholzeit lässt sich nicht mehr ändern.",
-  "pickup_change_conflict": "Für diesen Tag hat die OGS schon etwas eingetragen. Bitte prüfe den Tag.",
+  "pickup_change_conflict": "Für diesen Tag gibt es bereits einen Eintrag der OGS. Prüfe, ob die gewünschte Änderung schon eingetragen ist. Falls ja, kannst du die Anfrage mit einer Begründung ablehnen. Der vorhandene Eintrag bleibt bestehen.",
   "pickup_change_expired": "Der Tag liegt in der Vergangenheit. Bitte lehne {object} ab.",
   "pickup_change_impact_changed": "Der Betreuungsplan hat sich geändert. Bitte lade die Seite neu.",
   "care_request_plan_changed": "Der Betreuungsplan wurde gerade geändert. Bitte lade die Seite neu. Prüfe die Anfrage dann noch einmal.",

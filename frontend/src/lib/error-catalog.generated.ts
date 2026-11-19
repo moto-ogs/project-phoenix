@@ -1499,7 +1499,7 @@ export const ERROR_CATALOG = {
       "students.pickup_change_completed":
         "Das Kind ist schon abgemeldet. Die Abholzeit lässt sich nicht mehr ändern.",
       "students.pickup_change_conflict":
-        "Für diesen Tag hat die OGS schon etwas eingetragen. Bitte prüfe den Tag.",
+        "Für diesen Tag gibt es bereits einen Eintrag der OGS. Prüfe, ob die gewünschte Änderung schon eingetragen ist. Falls ja, kannst du die Anfrage mit einer Begründung ablehnen. Der vorhandene Eintrag bleibt bestehen.",
       "students.pickup_change_expired":
         "Der Tag liegt in der Vergangenheit. Bitte lehne {object} ab.",
       "students.pickup_change_impact_changed":
