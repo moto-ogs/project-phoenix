@@ -34,6 +34,8 @@ func publicContractMounts() []contractMount {
 		{"/parent/auth", common.PasswordResetRouteContracts()},
 		{"/school/auth", common.PasswordResetRouteContracts()},
 		{"/traeger/auth", common.PasswordResetRouteContracts()},
+		// The invitation and holiday links and the school list below /auth.
+		{"/auth", accountHTTP.PublicRouteContracts()},
 	}
 }
 

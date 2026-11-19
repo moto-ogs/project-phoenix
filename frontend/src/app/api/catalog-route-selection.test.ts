@@ -13,8 +13,8 @@ import { portalRoutes } from "~/lib/contract/portals.generated";
 
 /**
  * A registered route reaches its portal's catalog proxy only when no route
- * file with a dynamic segment stands in front of it: Next prefers
- * `billing-families/[id]` over `[...path]` for
+ * file with a dynamic segment stands in front of it: Next would prefer a
+ * `billing-families/[id]/route.ts` over `[...path]` for
  * `billing-families/debtor-number-format`, and that file would answer with
  * its own backend call (#2352). Such a route keeps a literal route file that
  * hands the request to the proxy.
@@ -38,6 +38,9 @@ const BFF_PREFIX: Record<SessionPortal, [string, string]> = {
  */
 const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/invitations/[[...path]]": "tenant",
+  "/api/auth/guardian-invitations/[...path]": "tenant",
+  "/api/auth/holiday-parent-setups/[...path]": "tenant",
+  "/api/auth/tenants": "tenant",
   "/api/auth/roles/[[...path]]": "tenant",
   "/api/auth/permissions/[[...path]]": "tenant",
   "/api/auth/accounts/[accountId]/[...path]": "tenant",
@@ -232,9 +235,10 @@ describe("path freed from its own route file", () => {
     ["/api/enrollment/legal/schule/1", "/api/[...path]"],
     ["/api/staff/shifts/overview", "/api/[...path]"],
     ["/api/timetable/conflict-check", "/api/[...path]"],
+    // Its hand-off file is gone: billing-families/[id] has no route file.
     [
       "/api/traeger/billing-families/debtor-number-format",
-      "/api/traeger/billing-families/debtor-number-format",
+      "/api/traeger/[...path]",
     ],
     ["/api/operator/schools/1/pwa-usage", "/api/operator/[...path]"],
     ["/api/parent/me/calendar", "/api/parent/[...path]"],

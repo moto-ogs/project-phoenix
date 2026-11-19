@@ -6947,6 +6947,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/holiday-parent-setups/{token}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayParentSetupResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/invitations/",
       "portals": [
         "tenant"
@@ -6957,6 +6968,17 @@
           "kind": "ref",
           "ref": "SchoolInvitationResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/invitations/{token}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "InvitationValidationResponse"
       }
     },
     {
@@ -7078,6 +7100,20 @@
         "elem": {
           "kind": "ref",
           "ref": "StaffPreviewCandidate"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/tenants",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "PublicTenantResponse"
         }
       }
     },
@@ -13781,6 +13817,38 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/guardian-invitations/{token}/accept",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AcceptGuardianInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AcceptGuardianInvitationResponse"
+      },
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/holiday-parent-setups/{token}",
+      "portals": [
+        "public"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "CompleteHolidayParentSetupRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CompleteHolidayParentSetupResponse"
+      },
+      "max_body_bytes": 4096
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/invitations/",
       "portals": [
         "tenant"
@@ -20163,6 +20231,52 @@
           "schema": {
             "kind": "number",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptGuardianInvitationRequest",
+      "go_type": "account.AcceptGuardianInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptGuardianInvitationResponse",
+      "go_type": "account.AcceptGuardianInvitationResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -37724,6 +37838,39 @@
       ]
     },
     {
+      "name": "CompleteHolidayParentSetupRequest",
+      "go_type": "account.CompleteHolidayParentSetupRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CompleteHolidayParentSetupResponse",
+      "go_type": "account.CompleteHolidayParentSetupResponse",
+      "fields": [
+        {
+          "name": "account_exists",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "CompleteOperationRequest",
       "go_type": "timetablehttp.CompleteOperationRequest",
       "request": true,
@@ -51587,6 +51734,30 @@
       ]
     },
     {
+      "name": "HolidayParentSetupResponse",
+      "go_type": "account.HolidayParentSetupResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_exists",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayParticipantListResponse",
       "go_type": "enrollmenthttp.HolidayParticipantListResponse",
       "fields": [
@@ -55751,6 +55922,69 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InvitationValidationResponse",
+      "go_type": "account.InvitationValidationResponse",
+      "fields": [
+        {
+          "name": "target_portal",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requires_account_login",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "caregiver_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -69074,6 +69308,36 @@
           "name": "collect_grade_1",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PublicTenantResponse",
+      "go_type": "account.PublicTenantResponse",
+      "fields": [
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

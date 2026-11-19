@@ -8,6 +8,8 @@ import { routes as analyticsPolicy } from "./analytics-policy.generated";
 import { routes as announcementAttachments } from "./announcement-attachments.generated";
 import { routes as authAccount } from "./auth-account.generated";
 import { routes as authAccounts } from "./auth-accounts.generated";
+import { routes as authGuardianInvitations } from "./auth-guardian-invitations.generated";
+import { routes as authHolidayParentSetups } from "./auth-holiday-parent-setups.generated";
 import { routes as authInvitations } from "./auth-invitations.generated";
 import { routes as authLinkToTenant } from "./auth-link-to-tenant.generated";
 import { routes as authMfa } from "./auth-mfa.generated";
@@ -18,6 +20,7 @@ import { routes as authPermissions } from "./auth-permissions.generated";
 import { routes as authRegister } from "./auth-register.generated";
 import { routes as authRoles } from "./auth-roles.generated";
 import { routes as authStaffPreview } from "./auth-staff-preview.generated";
+import { routes as authTenants } from "./auth-tenants.generated";
 import { routes as birthdays } from "./birthdays.generated";
 import { routes as calendar } from "./calendar.generated";
 import { routes as catererAccount } from "./caterer-account.generated";
@@ -694,8 +697,13 @@ export const portalRoutes = {
     operatorUnregisteredTagScans["POST /operator/unregistered-tag-scans/{id}/resolve"],
   ],
   public: [
+    authGuardianInvitations["POST /auth/guardian-invitations/{token}/accept"],
+    authHolidayParentSetups["GET /auth/holiday-parent-setups/{token}"],
+    authHolidayParentSetups["POST /auth/holiday-parent-setups/{token}"],
+    authInvitations["GET /auth/invitations/{token}"],
     authPasswordReset["POST /auth/password-reset"],
     authPasswordReset["POST /auth/password-reset/confirm"],
+    authTenants["GET /auth/tenants"],
     catererAuth["POST /caterer/auth/password-reset"],
     catererAuth["POST /caterer/auth/password-reset/confirm"],
     catererInvitations["GET /caterer/invitations/{schoolId}/{token}"],
