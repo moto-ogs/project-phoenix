@@ -100,8 +100,9 @@ async function requestJson<T>(
     );
   }
 
-  // The staff portal's management answers in the envelope through its
-  // catalog proxy; the sign-in and the other portals answer bare.
+  // The management answers in the envelope through the catalog proxies,
+  // bare through the temporary route files (#2352); the sign-in answers
+  // bare.
   return dataOrBare<T>(data);
 }
 

@@ -59,9 +59,6 @@ const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
   "operator/profile/password": () =>
     import("./operator/profile/password/route"),
   "caterer/account/password": () => import("./caterer/account/password/route"),
-  // Hands the request to the Träger catalog proxy, whose contract switches
-  // the retry off.
-  "traeger/auth/mfa/step-up": () => import("./traeger/auth/mfa/step-up/route"),
   "caterer/account/mfa/disable": () =>
     import("./caterer/account/mfa/disable/route"),
   "caterer/account/mfa/confirm": () =>
@@ -90,6 +87,11 @@ const CATALOG: Record<
   "operator/profile/email-change": {
     load: () => import("./operator/[...path]/route"),
     path: ["profile", "email-change"],
+  },
+  // The hand-off below `auth`, which Next would give Auth.js otherwise.
+  "traeger/auth/mfa/step-up": {
+    load: () => import("./traeger/auth/mfa/[...path]/route"),
+    path: ["step-up"],
   },
 };
 

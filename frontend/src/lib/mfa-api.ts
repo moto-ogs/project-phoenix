@@ -250,8 +250,8 @@ function trustedDevicesUrl(scope: LoginScope, suffix = ""): string {
 export async function listTrustedDevices(
   scope: LoginScope,
 ): Promise<TrustedDeviceDTO[]> {
-  // The staff, caterer and parents portals answer in the envelope through
-  // their catalog proxies, their temporary route files bare (#2352).
+  // The catalog proxies answer in the envelope, the temporary route files
+  // bare (#2352).
   return dataOrBare<TrustedDeviceDTO[]>(
     await postJson<unknown>(trustedDevicesUrl(scope), undefined, {
       method: "GET",

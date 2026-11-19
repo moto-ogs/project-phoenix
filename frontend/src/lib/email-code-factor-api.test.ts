@@ -56,4 +56,21 @@ describe("emailCodeFactorApi", () => {
       maskedEmail: "e***@x.de",
     });
   });
+
+  it("switches the factor off with the backend's field name (#2352)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ success: true, message: "Success", data: null }),
+      );
+    global.fetch = fetchMock as unknown as typeof global.fetch;
+
+    await emailCodeFactorApi("/api/caterer/account/mfa").disable("Passw0rd!");
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/caterer/account/mfa/disable");
+    expect(JSON.parse(init.body as string)).toEqual({
+      current_password: "Passw0rd!",
+    });
+  });
 });

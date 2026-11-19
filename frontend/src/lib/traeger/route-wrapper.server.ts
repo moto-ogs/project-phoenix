@@ -1,8 +1,10 @@
 import { traegerPortal } from "~/server/auth/traeger";
 import {
+  handOffUnder,
   makeCatalogProxy,
   type CatalogMethod,
   type CatalogRoute,
+  type HandOffHead,
 } from "../contract/catalog-proxy.server";
 import { makePortalHandlers } from "../portal-handlers.server";
 
@@ -40,3 +42,18 @@ export const catalogProxy = (
   makeCatalogProxy(traeger, "/traeger", routes, method, [], {
     routes: publicRoutes,
   });
+
+/**
+ * The Träger portal's proxy for a route file below its BFF prefix that Next would
+ * give Auth.js's `auth/[...nextauth]`: the head goes in front of the file's
+ * catch-all `path` again (#2352). `publicRoutes` are served without a
+ * session, as in the catch-all.
+ */
+export function catalogProxyUnder(
+  head: HandOffHead,
+  routes: readonly CatalogRoute[],
+  method: CatalogMethod,
+  publicRoutes: readonly CatalogRoute[] = [],
+) {
+  return handOffUnder(head, catalogProxy(routes, method, publicRoutes));
+}

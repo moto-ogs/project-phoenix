@@ -28,6 +28,16 @@ const RETRY_KEPT: Record<string, string> = {
     "a WebAuthn attestation of a one-time challenge, no password or code the account lock counts",
   "operator/auth/passkeys/register/verify":
     "a WebAuthn attestation of a one-time challenge, no password or code the account lock counts",
+  "auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "caterer/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "parent/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "school/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "traeger/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
 };
 
 function filesUnder(dir: string, match: (file: string) => boolean): string[] {
@@ -121,6 +131,13 @@ describe("catalog routes that forward a password or a code", () => {
     ["parent", "POST /parent/me/news/{announcementId}/declaration"],
     ["org", "POST /traeger/auth/mfa/step-up"],
     ["platform", "POST /operator/profile/email-change"],
+    // Served by their temporary route files until the next production
+    // deploy, then by the catalog proxy.
+    ["tenant", "POST /auth/password"],
+    ["platform", "POST /operator/profile/password"],
+    ["caterer", "POST /caterer/account/password"],
+    ["caterer", "POST /caterer/account/mfa/disable"],
+    ["parent", "POST /parent/me/mfa/disable"],
   ] as const)("%s %s turns the retry off", (portal, key) => {
     const route = portalRoutes[portal].find(
       (entry) => `${entry.method} ${entry.pattern}` === key,
