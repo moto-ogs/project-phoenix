@@ -42,7 +42,7 @@ export function staffAvatarUrl(
  * ids as decimal strings. The external caregiver writes answer the same
  * record without the teacher fields.
  */
-export type StaffRecord = StaffRecordResponse | ExternalStaffResponse;
+type StaffRecord = StaffRecordResponse | ExternalStaffResponse;
 
 /**
  * Account state of an external caregiver (#4573): `account` signs in,
