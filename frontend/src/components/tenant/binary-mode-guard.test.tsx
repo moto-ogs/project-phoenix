@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 // Opt out of the global tenant-provider mock so the guard sees the real
@@ -68,9 +68,28 @@ describe("BinaryModeGuard", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the page explanation in binary mode", () => {
+    render(
+      <TenantProvider tenantSlug="demo" tenant={makeTenant("binary")}>
+        <BinaryModeGuard info="Erklärung der geschützten Seite.">
+          <div>protected-content</div>
+        </BinaryModeGuard>
+      </TenantProvider>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Erklärung zu Nicht eingeschaltet",
+      }),
+    );
+    expect(
+      screen.getByText("Erklärung der geschützten Seite."),
+    ).toBeInTheDocument();
+  });
+
   it("renders children when no tenant context (safe default is detailed)", () => {
     // Outside a TenantProvider the hook returns "detailed" — first paint
-    // on cold load should NOT accidentally 404 protected pages.
+    // on cold load should NOT accidentally show a disabled state.
     render(
       <BinaryModeGuard>
         <div>protected-content</div>

@@ -16,6 +16,9 @@ const LOADING_TABS = [
   "Historie",
 ];
 
+export const STUDENT_DETAIL_INFO =
+  "Hier stehen alle Angaben zu diesem Kind. Oben siehst du, wo es gerade ist. Wähle darunter den Bereich, den du brauchst.";
+
 /**
  * Das geladene Seitengerüst der Kindakte. Titel und verfügbare Reiter hängen
  * von den noch nicht geladenen Kind- und Berechtigungsdaten ab; die
@@ -33,6 +36,7 @@ export function StudentDetailLoadingPage({
   return (
     <TenantPage
       title={preview?.name ?? "Kindakte"}
+      info={STUDENT_DETAIL_INFO}
       back
       backHref={referrer}
       backLabel={backLabel}

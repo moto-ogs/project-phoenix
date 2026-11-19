@@ -1042,6 +1042,7 @@ function StaffCalendarPageInner() {
   return (
     <TenantPage
       title="Mein Kalender"
+      info="Hier stehen deine Termine, Schichten und Einsätze, dazu Schultermine und Feiertage. Die Farbe zeigt, woher ein Eintrag kommt. Wähle oben „Tag“, „Woche“ oder „Monat“."
       stats={onCalendarTab ? statusLine : undefined}
       statsLoading={calendarLoading}
       loading={calendarLoading}

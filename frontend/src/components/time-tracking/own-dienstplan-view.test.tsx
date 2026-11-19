@@ -501,6 +501,9 @@ describe("OwnDienstplanView", () => {
 
     expect(screen.getByText(/Kein eigenes Personalprofil/)).toBeInTheDocument();
     expect(
+      screen.getByRole("button", { name: "Erklärung zu Mein Dienstplan" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("link", { name: "Zur Startseite" }),
     ).toHaveAttribute("href", "/home");
     expect(state.keys).toEqual([]);
