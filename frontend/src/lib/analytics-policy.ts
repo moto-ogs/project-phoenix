@@ -53,7 +53,8 @@ export type OnboardingSurface = (typeof ONBOARDING_SURFACES)[number];
 
 /**
  * Checklisten des Einstiegs, deren Zustand nur im Browser liegt (#7557): nur
- * die Ersten Schritte der Eltern. Die übrigen Checklisten meldet das Backend.
+ * die Ersten Schritte der Eltern. Checklisten mit Zustand auf dem Server
+ * melden ihre Ereignisse aus dem Backend (Kernaktionen, #7541).
  */
 const ONBOARDING_CHECKLISTS = ["parent_first_steps"] as const;
 export type OnboardingChecklist = (typeof ONBOARDING_CHECKLISTS)[number];

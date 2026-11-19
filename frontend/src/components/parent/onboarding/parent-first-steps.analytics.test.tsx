@@ -148,6 +148,33 @@ describe("ParentFirstSteps analytics", () => {
     ]);
   });
 
+  it("counts no answer when the list opened before collection was allowed", async () => {
+    const client = await import("~/lib/posthog-client");
+    // Die Schulfreigabe der Eltern ist beim Öffnen noch nicht geladen.
+    client.setAnalyticsContext({ enabled: false, consent: true });
+    const { ParentFirstSteps } = await import("./parent-first-steps");
+    render(<ParentFirstSteps accountId="42" childCount={1} newsEnabled />);
+    await screen.findByRole("heading", { name: "Erste Schritte" });
+
+    client.setAnalyticsContext({ enabled: true });
+    await client.initializePostHog();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte einklappen" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Erste Schritte öffnen/ }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte ausblenden" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
+
+    // Die Checkliste meldet weiter; nur die Fläche bleibt ohne Antwort.
+    expect(onboardingEvents().map(([event]) => event)).toEqual([
+      "onboarding_checklist_dismissed",
+    ]);
+  });
+
   it("reports completing the checklist", async () => {
     localStorage.setItem(
       parentFirstStepsStorageKey("42"),

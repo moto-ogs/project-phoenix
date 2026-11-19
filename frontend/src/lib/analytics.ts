@@ -50,8 +50,8 @@ export type AnalyticsEvent =
   | "onboarding_checklist_dismissed"
   | "onboarding_checklist_completed";
 
-function captureEvent(event: AnalyticsEvent, props?: Properties): void {
-  capturePostHog(event, props);
+function captureEvent(event: AnalyticsEvent, props?: Properties): boolean {
+  return capturePostHog(event, props);
 }
 
 export function trackEvent(
@@ -64,13 +64,14 @@ export function trackEvent(
 /**
  * Eine selbstöffnende Fläche des Einstiegs (#7541) wurde angezeigt, von der
  * Person angenommen oder geschlossen. Nur die feste Fläche geht mit; das
- * Portal setzt der Filter als `surface` aus dem Kontext.
+ * Portal setzt der Filter als `surface` aus dem Kontext. Gibt false zurück,
+ * wenn die Erfassung (noch) aus ist und das Ereignis verworfen wurde.
  */
 export function trackOnboardingSurface(
   action: "shown" | "accepted" | "dismissed",
   surface: OnboardingSurface,
-): void {
-  captureEvent(`onboarding_surface_${action}`, {
+): boolean {
+  return captureEvent(`onboarding_surface_${action}`, {
     onboarding_surface: surface,
   });
 }

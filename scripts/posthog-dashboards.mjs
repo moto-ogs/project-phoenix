@@ -1210,7 +1210,7 @@ order by Portal, Flaechen`),
         },
         {
           name: 'Einstieg: Erste Schritte der Eltern (nur mit Einwilligung)',
-          description: 'Nur mit Einwilligung, letzte 30 Tage, Eltern-App. Wie oft die Liste von selbst aufging, welche Schritte erledigt wurden und wie oft Eltern die Liste ausblendeten oder abschlossen. Der Fortschritt liegt nur im Browser; ein neues Gerät beginnt von vorn. Die allererste Sitzung vor der Einwilligung fehlt immer.',
+          description: 'Nur mit Einwilligung, letzte 30 Tage, Eltern-App. Wie oft die Liste von selbst aufging, welche Schritte erledigt wurden und wie oft Eltern die Liste ausblendeten oder mit „Erste Schritte abschließen“ abschlossen; der Anteil bezieht sich auf „von selbst geöffnet“. Der Fortschritt liegt nur im Browser; ein neues Gerät beginnt von vorn. Die allererste Sitzung vor der Einwilligung fehlt immer.',
           ...hogql('production', (where) => `
 select
   multiIf(
@@ -1220,6 +1220,7 @@ select
     '4 Abgeschlossen') as Ereignis,
   if(event = 'onboarding_checklist_step_done', ${parentStepLabel}, '–') as Schritt,
   count() as Anzahl,
+  round(100 * count() / greatest(sum(countIf(event = 'onboarding_surface_shown')) over (), 1), 1) as ${quoted('Anteil an „von selbst geöffnet“ in Prozent')},
   uniq(properties.$session_id) as Sitzungen
 from events
 where ${where}

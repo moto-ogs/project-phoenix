@@ -77,8 +77,10 @@ export function ParentFirstSteps({
   // Letzter gespeicherter Zustand, damit ein erledigter Schritt genau einmal
   // gemeldet wird, auch wenn React einen Zustandswechsel doppelt ausführt.
   const stateRef = useRef<ParentFirstStepsState | null>(null);
-  // Die Liste ging von selbst auf und die Person hat noch nicht reagiert
-  // (Fläche `parent_first_steps`, #7557).
+  // Die Liste ging von selbst auf, „angezeigt“ ist gezählt und die Person hat
+  // noch nicht reagiert (Fläche `parent_first_steps`, #7557). War die
+  // Erfassung beim Öffnen noch aus (Schulfreigabe noch nicht geladen), zählt
+  // auch die Antwort nicht, sonst gäbe es mehr Antworten als Anzeigen.
   const autoOpenRef = useRef(false);
 
   const steps = useMemo<readonly StepContent[]>(() => {
@@ -222,11 +224,14 @@ export function ParentFirstSteps({
   useEffect(() => {
     const stored = readParentFirstStepsState(accountId);
     stateRef.current = stored;
+    autoOpenRef.current = false;
     setState(stored);
     if (!stored.dismissed && !stored.finished && claimFirstOpen(accountId)) {
       setView("checklist");
-      autoOpenRef.current = true;
-      trackOnboardingSurface("shown", "parent_first_steps");
+      autoOpenRef.current = trackOnboardingSurface(
+        "shown",
+        "parent_first_steps",
+      );
     }
   }, [accountId]);
 
