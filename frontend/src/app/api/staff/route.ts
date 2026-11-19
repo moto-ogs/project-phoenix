@@ -1,207 +1,50 @@
 // app/api/staff/route.ts
+//
+// Temporary (#7563): the contract registers GET and POST /api/staff, and the
+// current client reads the contract record. Bundles built before #7563 read
+// the flat fields this file used to build (`name`, `firstName`, `tag_id`, …)
+// and call this same path, so the file stays for one production deploy and
+// answers the contract record with those fields beside it
+// (`withLegacyStaffFields`). Delete it after the next production deploy,
+// together with its test; the portal's catch-all then answers the path.
 import type { NextRequest } from "next/server";
-import { apiGet, apiPost } from "~/lib/api-helpers.server";
+import { contractGet, contractWrite } from "~/lib/contract/client.server";
+import { routes, type StaffRequest } from "~/lib/contract/staff.generated";
 import {
   createGetHandler,
   createPostHandler,
 } from "~/lib/route-wrapper.server";
-import { createLogger } from "~/lib/logger";
-import {
-  mapBackendStaff,
-  type BackendStaffResponse,
-} from "~/lib/staff-route-mapping";
+import { withLegacyStaffFields } from "~/lib/staff-route-mapping";
 
-const logger = createLogger({ component: "StaffRoute" });
+const LIST = routes["GET /api/staff/"];
+const CREATE = routes["POST /api/staff/"];
 
-/**
- * Type definition for staff creation request
- *
- * person_id is accepted as a decimal string as well as a number, and is
- * forwarded as a string. It is a PostgreSQL bigint, and this route parses the
- * body and re-serializes it on the way to the backend, so a number has already
- * been through `JSON.parse` — exactly the step that rounds a value past 2^53
- * into a valid id for a different person (#2222). A string crosses that hop
- * intact, and the backend field takes either form.
- */
-interface StaffCreateRequest {
-  person_id: number | string;
-  staff_notes?: string | null;
-  is_teacher?: boolean;
-  specialization?: string | null;
-  role?: string | null;
-  qualifications?: string | null;
-}
+/** Handler for GET /api/staff: the staff directory with its filters. */
+export const GET = createGetHandler(async (request: NextRequest, token) => {
+  // Only the filters the contract names travel, as through the proxy; the
+  // legacy `strict=1` and `search` never reached the backend's filters.
+  const filters: readonly string[] = LIST.query;
+  const query = new URLSearchParams();
+  request.nextUrl.searchParams.forEach((value, key) => {
+    if (filters.includes(key)) query.append(key, value);
+  });
+  const search = query.size > 0 ? `?${query.toString()}` : "";
+  const result = await contractGet(
+    `${LIST.method} ${LIST.pattern}`,
+    LIST.response,
+    `/api/staff${search}`,
+    token,
+  );
+  if (!result.ok) throw result.error.cause;
+  return result.value.data.map(withLegacyStaffFields);
+});
 
-/**
- * Resolves the submitted person id to the decimal string that goes on the wire,
- * or null when it is not a positive integer id.
- *
- * The value stays a string for the whole hop. Person ids are PostgreSQL
- * bigints, and this route parses the body and re-serializes it — a number would
- * pass through JSON.parse, which rounds anything above Number.MAX_SAFE_INTEGER
- * into a valid id for a *different* person. The backend accepts the string, so
- * there is no point in the chain where the digits have to fit in a JS number,
- * and no id this route has to refuse for being too large.
- *
- * A number is still accepted for callers that send one, and is only safe to
- * take when it is exactly representable — past 2^53 it has already been rounded
- * before this function ever sees it, and nothing here can recover it.
- */
-function safePersonId(value: number | string | undefined): string | null {
-  if (typeof value === "string") {
-    const digits = value.trim();
-    // No leading zeros, so one id has exactly one spelling on the wire.
-    if (!/^[1-9]\d*$/.test(digits)) {
-      return null;
-    }
-    return digits;
-  }
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
-    return null;
-  }
-  return String(value);
-}
-
-/**
- * Normalizes an optional string field for API submission.
- * - If original is undefined, returns undefined (field not provided)
- * - If trimmed value is empty, returns empty string (field explicitly cleared)
- * - Otherwise returns the trimmed value
- */
-function normalizeOptionalString(
-  original: string | null | undefined,
-  trimmed: string | undefined,
-): string | undefined {
-  if (original === undefined) {
-    return undefined;
-  }
-  return trimmed === "" ? "" : trimmed;
-}
-
-/**
- * Type definition for API response format
- */
-interface ApiStaffResponse {
-  status: string;
-  data: BackendStaffResponse[];
-}
-
-/**
- * Handler for GET /api/staff
- * Returns a list of staff members, optionally filtered by query parameters
- */
-export const GET = createGetHandler(
-  async (request: NextRequest, token: string) => {
-    // `strict=1` was a client opt-out of an empty-list-on-error fallback.
-    // All backend errors now propagate; keep stripping this legacy query key.
-
-    // Build URL with any query parameters
-    const queryParams = new URLSearchParams();
-    request.nextUrl.searchParams.forEach((value, key) => {
-      if (key === "strict") return;
-      queryParams.append(key, value);
-    });
-
-    const endpoint = `/api/staff${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
-
-    logger.debug("requesting staff from backend", { endpoint });
-
-    try {
-      // Fetch staff from backend API
-      const response = await apiGet<BackendStaffResponse[] | ApiStaffResponse>(
-        endpoint,
-        token,
-      );
-
-      // Handle null or undefined response
-      if (!response) {
-        logger.warn("API returned null response for staff");
-        return [];
-      }
-
-      logger.debug("staff API response received");
-
-      // Check if the response is already an array (common pattern)
-      if (Array.isArray(response)) {
-        return response.map(mapBackendStaff);
-      }
-
-      // Check for nested data structure
-      if ("data" in response && Array.isArray(response.data)) {
-        return response.data.map(mapBackendStaff);
-      }
-
-      // If the response doesn't have the expected structure, return an empty array
-      logger.warn("staff API response has unexpected structure");
-      return [];
-    } catch (error) {
-      logger.error("staff fetch failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  },
-);
-
-// Define the Teacher response type
-interface TeacherResponse {
-  id: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-  specialization?: string | null;
-  role: string | null;
-  qualifications: string | null;
-  tag_id: string | null;
-  staff_notes: string | null;
-  created_at: string;
-  updated_at: string;
-  staff_id?: string;
-  teacher_id?: string;
-}
-
-/**
- * Handler for POST /api/staff
- * Creates a new staff member (potentially a teacher)
- */
-export const POST = createPostHandler<TeacherResponse, StaffCreateRequest>(
-  async (_request: NextRequest, body: StaffCreateRequest, token: string) => {
-    // Validate required fields
-    const personId = safePersonId(body.person_id);
-    if (!personId) {
-      throw new Error(
-        "Missing required field: person_id must be a positive integer id",
-      );
-    }
-
-    const trimmedNotes = body.staff_notes?.trim();
-    const trimmedSpecialization = body.specialization?.trim();
-    const trimmedRole = body.role?.trim();
-    const trimmedQualifications = body.qualifications?.trim();
-
-    const normalizedBody = {
-      ...body,
-      person_id: personId,
-      staff_notes: normalizeOptionalString(body.staff_notes, trimmedNotes),
-      specialization: normalizeOptionalString(
-        body.specialization,
-        trimmedSpecialization,
-      ),
-      role: normalizeOptionalString(body.role, trimmedRole),
-      qualifications: normalizeOptionalString(
-        body.qualifications,
-        trimmedQualifications,
-      ),
-    };
-
-    // Create the staff member via the API; a backend failure (403, 400)
-    // keeps its envelope and status.
-    const response = await apiPost<BackendStaffResponse>(
-      "/api/staff",
-      token,
-      normalizedBody,
-    );
-
-    return mapBackendStaff(response);
-  },
-);
+/** Handler for POST /api/staff: forwards the body; the backend validates it. */
+export const POST = createPostHandler<
+  ReturnType<typeof withLegacyStaffFields>,
+  StaffRequest
+>(async (_request: NextRequest, body, token) => {
+  const result = await contractWrite(CREATE, "/api/staff", token, body);
+  if (!result.ok) throw result.error.cause;
+  return withLegacyStaffFields(result.value.data);
+});

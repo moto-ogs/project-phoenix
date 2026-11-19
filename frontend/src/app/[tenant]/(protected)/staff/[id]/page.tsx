@@ -37,7 +37,8 @@ import {
   staffService,
   staffStammdatenService,
 } from "~/lib/staff-api";
-import type { BackendStaffResponse, Staff } from "~/lib/staff-api";
+import type { Staff } from "~/lib/staff-api";
+import type { StaffRecordResponse } from "~/lib/contract/staff.generated";
 import { teacherService, type Teacher } from "~/lib/teacher-api";
 import { mapTeacherResponse } from "~/lib/teacher-helpers";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -233,7 +234,7 @@ export default function StaffDetailContent() {
   // wie im Register der Datenverwaltung (Systemrolle, RFID-Karte, Notizen,
   // Konto-ID), damit beide Seiten dieselben Felder kennen. Neben einem
   // schmalen Profil lädt er nur für den Reiter „Konto".
-  const recordRequest = useSWRAuth<BackendStaffResponse>(
+  const recordRequest = useSWRAuth<StaffRecordResponse>(
     limitedProfile === null || (canViewRecord && profile && !profile.endedOn)
       ? staffKeys.recordKey(staffId)
       : null,

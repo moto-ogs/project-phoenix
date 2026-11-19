@@ -308,6 +308,7 @@ func (rs *Resource) Register(r chi.Router, withTx Middleware) {
 	usersRead := rs.runtime.Permission(permissions.UsersRead)
 
 	r.With(directoryGate, withTx).Get("/", rs.listStaff)
+	r.With(directoryGate, withTx).Get("/former", rs.listFormerStaff)
 	r.With(documentsGate, withTx).Get("/documents-directory", rs.listDocumentDirectory)
 	r.With(rs.runtime.Permission(permissions.StaffFinancial), withTx).Get("/financial-profile/{id}", rs.getFinancialProfile)
 	r.With(documentsGate, withTx).Get("/documents-profile/{id}", rs.getDocumentProfile)

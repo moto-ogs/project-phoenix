@@ -91,8 +91,8 @@ const mockRevokeInvitation = vi.fn();
 
 vi.mock("~/lib/invitation-api", () => ({
   listPendingInvitations: (): unknown => mockListPendingInvitations(),
-  resendInvitation: (id: number): unknown => mockResendInvitation(id),
-  revokeInvitation: (id: number): unknown => mockRevokeInvitation(id),
+  resendInvitation: (id: string): unknown => mockResendInvitation(id),
+  revokeInvitation: (id: string): unknown => mockRevokeInvitation(id),
 }));
 
 vi.mock("~/lib/auth-helpers", () => ({
@@ -107,11 +107,11 @@ vi.mock("~/lib/utils/date-helpers", () => ({
 
 const mockInvitations: PendingInvitation[] = [
   {
-    id: 1,
+    id: "1",
     email: "test1@example.com",
     roleId: "1",
     roleName: "teacher",
-    createdBy: 1,
+    createdBy: "1",
     creatorEmail: "admin@example.com",
     firstName: "John",
     lastName: "Doe",
@@ -119,11 +119,11 @@ const mockInvitations: PendingInvitation[] = [
     token: "token1",
   },
   {
-    id: 2,
+    id: "2",
     email: "test2@example.com",
     roleId: "1",
     roleName: "teacher",
-    createdBy: 1,
+    createdBy: "1",
     creatorEmail: "admin@example.com",
     firstName: "Jane",
     lastName: "Smith",
@@ -328,7 +328,7 @@ describe("PendingInvitationsList", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Erneut senden" }));
 
     await waitFor(() => {
-      expect(mockResendInvitation).toHaveBeenCalledWith(1);
+      expect(mockResendInvitation).toHaveBeenCalledWith("1");
     });
   });
 
@@ -355,7 +355,7 @@ describe("PendingInvitationsList", () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(mockRevokeInvitation).toHaveBeenCalledWith(1);
+      expect(mockRevokeInvitation).toHaveBeenCalledWith("1");
     });
   });
 
@@ -470,11 +470,11 @@ describe("PendingInvitationsList mail state (#5934)", () => {
   const invitation = (
     overrides: Partial<PendingInvitation>,
   ): PendingInvitation => ({
-    id: 1,
+    id: "1",
     email: "neu@example.com",
     roleId: "2",
     roleName: "Betreuer",
-    createdBy: 1,
+    createdBy: "1",
     expiresAt: "2099-01-01T12:00:00Z",
     ...overrides,
   });

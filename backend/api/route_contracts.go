@@ -18,6 +18,7 @@ import (
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
@@ -248,6 +249,8 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
 		// The substitution bodies take an id as a number or a decimal string.
 		reflect.TypeOf(substitutions.LaxID): contract.KindLaxID,
+		// A staff body names its person as a number or a decimal string.
+		reflect.TypeFor[staffHTTP.JSONID](): contract.KindLaxID,
 	})
 	// Both student bodies only refuse retired keys before the plain decode;
 	// CompanionEntry takes its companion id as a number or a decimal string.

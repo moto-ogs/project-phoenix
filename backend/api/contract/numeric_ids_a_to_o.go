@@ -8,6 +8,8 @@ var legacyNumericIDsAToO = []string{
 	"account.AccountTenantResponse.TenantID",
 	"account.LinkToTenantRequest.RoleID",
 	"account.RegisterRequest.RoleID",
+	"account.SchoolInvitationResponse.CreatedBy",
+	"account.SchoolInvitationResponse.ID",
 	"appointments.Appointment.ID",
 	"appointments.Appointment.OrganizerStaffID",
 	"appointments.Appointment.TenantID",
