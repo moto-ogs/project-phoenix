@@ -138,7 +138,9 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
    gehen auch jetzt nicht durch. Jede Antwort einer Datei-Route ist
    `private, no-store`, auch eine Ablehnung, wie bei
    `withPrivateDownloadNoStore`. Ein Backend-Fehler bleibt sein
-   Problem-JSON.
+   Problem-JSON. Die Sandbox-CSP eines hochgeladenen Dokuments setzt
+   `src/proxy.ts` weiter nach dem Pfad (`SANDBOXED_FILE_ROUTES`), gleich ob
+   eine Routendatei oder der Katalog antwortet.
 3. **Ein Upload nennt seine Grenze und seinen Code im Vertrag.**
    `MaxBodyBytes` ist die Grenze des ganzen Bodys mit Platz für den
    Multipart-Rahmen, `TooLargeCode` der Code, mit dem das Backend eine zu
