@@ -102,7 +102,7 @@ func mountPresenceRoutes(
 		}
 		return staff.ID, true, err
 	})
-	tenant.Mount("/active", activeResource.RouterWithOwnerRoutes(move.Register, yardResource.Register))
+	tenant.Mount("/active", activeResource.Router(move.Register, yardResource.Register))
 	tenant.Mount("/iot", iotResource.Router())
 	return nil
 }

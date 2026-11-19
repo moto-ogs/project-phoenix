@@ -66,9 +66,7 @@ func NewResource(operations PresenceOperations, personService People, userContex
 }
 
 // Router returns a configured router for active endpoints
-func (rs *Resource) Router() chi.Router { return rs.RouterWithOwnerRoutes() }
-
-func (rs *Resource) RouterWithOwnerRoutes(mounts ...func(chi.Router, common.Middleware)) chi.Router {
+func (rs *Resource) Router(mounts ...func(chi.Router, common.Middleware)) chi.Router {
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
