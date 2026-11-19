@@ -3,8 +3,8 @@ import { dirname, relative, resolve, sep } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-// Wächter für den Info-Knopf am Seitentitel (#7565). Eine OGS- oder
-// Lehrer-Seite erklärt sich über die `info`-Eigenschaft von `TenantPage`:
+// Wächter für den Info-Knopf am Seitentitel (#7565, Träger-Portal seit
+// #7595). Eine OGS-, Lehrer- oder Träger-Seite erklärt sich über die `info`-Eigenschaft von `TenantPage`:
 // wofür sie da ist und was man dort zuerst tut. Der Test liest Quelltext,
 // nicht das DOM, wie die Baseline der Hilfe-Zuordnung (help-topics.test.ts).
 
@@ -23,14 +23,34 @@ const PORTALS = [
     root: resolve(SRC_ROOT, "app/school"),
     publicPages: new Set(["/login", "/invite", "/reset-password"]),
   },
+  {
+    prefix: "traeger:",
+    root: resolve(SRC_ROOT, "app/traeger"),
+    publicPages: new Set(["/login", "/demo", "/invite", "/reset-password"]),
+  },
 ] as const;
 
 /**
- * OGS- und Lehrer-Seiten ohne Info-Knopf. Die Liste darf nur schrumpfen: eine
- * neue Seite braucht `info`, und eine Seite, die `info` bekommt, fliegt hier
- * heraus. Lehrer-Seiten tragen das Präfix `school:`.
+ * OGS-, Lehrer- und Träger-Seiten ohne Info-Knopf. Die Liste darf nur
+ * schrumpfen: eine neue Seite braucht `info`, und eine Seite, die `info`
+ * bekommt, fliegt hier heraus. Lehrer-Seiten tragen das Präfix `school:`,
+ * Träger-Seiten das Präfix `traeger:`.
  */
-const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [];
+const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
+  // Abrechnung im Träger-Portal: erklärt das Folge-Ticket #7596.
+  "traeger:/abrechnung/[id]",
+  "traeger:/abrechnung/[id]/faelligkeiten",
+  "traeger:/abrechnung/exporte/empfaenger/[id]",
+  "traeger:/abrechnung/familien/[id]",
+  "traeger:/abrechnung/jahresbescheide/[id]",
+  "traeger:/abrechnung/jahresbescheide/[id]/lastschrift",
+  "traeger:/abrechnung/jahresbescheide/[id]/versand",
+  "traeger:/abrechnung/lastschrift/[contractId]",
+  "traeger:/abrechnung/monatsbeitraege/[id]",
+  "traeger:/abrechnung/monatsbeitraege/[id]/empfaenger/[contractId]",
+  "traeger:/abrechnung/monatsbeitraege/[id]/faelligkeiten",
+  "traeger:/abrechnung/monatsbeitraege/[id]/schreiben",
+];
 
 /**
  * Seiten ohne eigenen Seitenkopf: Sie leiten nur weiter und zeigen nie einen
@@ -73,6 +93,8 @@ const PAGES_WITH_CONDITIONAL_INFO: readonly string[] = [
   "/team-chat/[threadID]", // Gesperrte und fehlerhafte Unterhaltungen erklären sich selbst.
   "school:/nachrichten", // Ist der Team-Chat aus, erklärt sich die Seite selbst.
   "school:/nachrichten/[threadID]", // Gesperrte und fehlerhafte Unterhaltungen erklären sich selbst.
+  "traeger:/abrechnung/jahresbescheide/[id]/bescheid/[contractId]", // Nur ein Entwurf braucht den Hinweis zu Nummer und Datum.
+  "traeger:/einstellungen/briefkopf/vorlagen/[kind]", // Eine unbekannte Vorlagenart zeigt nur den Hinweis, eine aus der Liste zu wählen.
 ];
 
 function collectPageFiles(directory: string): string[] {
@@ -195,6 +217,20 @@ function infoAvailability(
     ts.isNoSubstitutionTemplateLiteral(expression)
   ) {
     return expression.text.trim() === "" ? "none" : "always";
+  }
+  // Ein Template ist nie leer, wenn fester Text oder ein eingesetzter Wert
+  // immer etwas zeigt.
+  if (ts.isTemplateExpression(expression)) {
+    const literalText =
+      expression.head.text +
+      expression.templateSpans.map((span) => span.literal.text).join("");
+    const alwaysFilled =
+      literalText.trim() !== "" ||
+      expression.templateSpans.some(
+        (span) =>
+          infoAvailability(span.expression, constants, resolving) === "always",
+      );
+    return alwaysFilled ? "always" : "conditional";
   }
   if (ts.isParenthesizedExpression(expression)) {
     return infoAvailability(expression.expression, constants, resolving);
@@ -452,15 +488,18 @@ const checkedPages = pages.filter(({ id }) => !(id in PAGES_WITHOUT_OWN_HEAD));
 
 describe("Info-Knopf am Seitentitel (#7565)", () => {
   // Untergrenzen knapp unter dem Stand vom November 2026 (94 OGS-, 13
-  // Lehrer-Seiten): Findet der Test plötzlich kaum Seiten, ist die Suche
-  // kaputt und die Liste prüfte nichts mehr.
-  it("findet OGS- und Lehrer-Seiten", () => {
+  // Lehrer-, 84 Träger-Seiten): Findet der Test plötzlich kaum Seiten, ist
+  // die Suche kaputt und die Liste prüfte nichts mehr.
+  it("findet OGS-, Lehrer- und Träger-Seiten", () => {
     expect(
-      pages.filter(({ id }) => !id.startsWith("school:")).length,
+      pages.filter(({ id }) => !/^(school|traeger):/.test(id)).length,
     ).toBeGreaterThanOrEqual(90);
     expect(
       pages.filter(({ id }) => id.startsWith("school:")).length,
     ).toBeGreaterThanOrEqual(12);
+    expect(
+      pages.filter(({ id }) => id.startsWith("traeger:")).length,
+    ).toBeGreaterThanOrEqual(80);
   });
 
   it("hält die Seiten ohne Info-Knopf auf einer schrumpfenden Liste", () => {

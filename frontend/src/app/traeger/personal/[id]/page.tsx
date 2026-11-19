@@ -61,6 +61,10 @@ import {
 
 const logger = createLogger({ component: "TraegerStaffRecordPage" });
 
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const RECORD_INFO =
+  "Hier siehst du die Akte einer Person über alle ihre Schulen. Prüfe unter „Stammdaten“ zuerst die „Personalnummer“ und die „Einsatzorte“. Verträge, Nachweise sowie Bank- und Steuerdaten findest du in den anderen Reitern.";
+
 /**
  * Was mit einem Einsatzort aus dem Vertretungspool als Nächstes passiert
  * (#7197): Er endet nach der letzten Blockung der Schule, die nächste
@@ -373,7 +377,9 @@ function FinancialCard({
 export default function TraegerStaffRecordPage() {
   // `useSearchParams` braucht eine Suspense-Grenze.
   return (
-    <Suspense fallback={<TenantPage title="Personalakte" loading />}>
+    <Suspense
+      fallback={<TenantPage title="Personalakte" info={RECORD_INFO} loading />}
+    >
       <StaffRecordContent />
     </Suspense>
   );
@@ -461,6 +467,7 @@ function StaffRecordContent() {
 
   return (
     <TenantPage
+      info={RECORD_INFO}
       title={record ? staffName(record) : "Personalakte"}
       leading={<ConceptIconTile concept={staffConcept} size="page" />}
       back
