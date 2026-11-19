@@ -5,6 +5,7 @@ const CodeGeneralBusinessRejection = "general.business_rejection"
 const CodeGeneralInput = "general.input"
 const CodeGeneralPermission = "general.permission"
 const CodeGeneralRequestTooLarge = "general.request_too_large"
+const CodeGeneralRouteNotFound = "general.route_not_found"
 const CodeGeneralServer = "general.server"
 const CodeGeneralUnavailable = "general.unavailable"
 
@@ -13,6 +14,7 @@ var errorCodeClassesGeneral = []errorCodeClass{
 	{CodeGeneralInput, "input"},
 	{CodeGeneralPermission, "permission"},
 	{CodeGeneralRequestTooLarge, "input"},
+	{CodeGeneralRouteNotFound, "business_rejection"},
 	{CodeGeneralServer, "server"},
 	{CodeGeneralUnavailable, "unavailable"},
 }

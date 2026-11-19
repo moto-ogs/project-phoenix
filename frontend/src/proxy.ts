@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { problemBody } from "~/lib/api-error";
 import { REQUEST_ID_HEADER } from "~/lib/request-id";
 import { RESERVED_SLUGS } from "~/lib/reserved-slugs";
 import { normalizeHostname, tenantSlugFromHost } from "~/lib/tenant-host";
@@ -434,8 +435,15 @@ function movedTarget(host: PortalHost, pathname: string): string | null {
   return host.movedPaths.find(([from]) => page === from)?.[1] ?? null;
 }
 
+/** An /api/ path this host does not serve. Its code asks the reader to
+ * reload: a tab from before a release may still call a retired route. */
 function notFound(): NextResponse {
-  return withSecurityHeaders(new NextResponse(null, { status: 404 }));
+  return withSecurityHeaders(
+    NextResponse.json(
+      problemBody(404, "route not found", { code: "general.route_not_found" }),
+      { status: 404, headers: { "Content-Type": "application/problem+json" } },
+    ),
+  );
 }
 
 function handlePortalHost(

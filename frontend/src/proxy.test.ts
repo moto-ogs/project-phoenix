@@ -729,7 +729,7 @@ describe("proxy", () => {
       expect(rewrite).toContain("/operator/organizations/123");
     });
 
-    it("returns 404 for tenant /api/auth/* routes on operator host", () => {
+    it("returns 404 for tenant /api/auth/* routes on operator host", async () => {
       const res = proxy(
         makeRequest(
           `http://${OPERATOR_HOSTNAME}/api/auth/session`,
@@ -742,6 +742,13 @@ describe("proxy", () => {
       const redirect = res.headers.get("location");
       expect(rewrite).toBeNull();
       expect(redirect).toBeNull();
+      // A tab from before a release that retired the route reads the
+      // code's text and reloads.
+      expect(res.headers.get("Content-Type")).toBe("application/problem+json");
+      expect(await res.json()).toMatchObject({
+        status: 404,
+        code: "general.route_not_found",
+      });
     });
 
     it("passes through /api/operator/auth/* routes without rewriting", () => {

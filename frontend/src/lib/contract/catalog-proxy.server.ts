@@ -193,7 +193,10 @@ export function makeCatalogProxy(
       : null;
   }
 
-  const notFound = () => bffError(404, "route not found");
+  // An unknown path is mostly a tab whose app predates a release that moved
+  // or removed the route: its code asks the reader to reload the page.
+  const notFound = () =>
+    bffError(404, "route not found", { code: "general.route_not_found" });
 
   function target(request: NextRequest, path: unknown) {
     const found = find(path);
