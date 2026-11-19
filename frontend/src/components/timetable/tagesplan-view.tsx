@@ -32,6 +32,7 @@ import {
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Button } from "~/components/ui/button";
+import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
@@ -636,12 +637,18 @@ export function TagesplanView() {
   // Solange die Session lädt, fetcht useSWRAuth noch nicht — dann ist
   // isLoading false UND instances leer. Ohne diese Bedingung würde kurz
   // "keine Betreuung geplant" aufblitzen, obwohl nie geladen wurde. Bis der
-  // Katalogtext eines Ladefehlers da ist, bleibt das Skelett stehen: kein
-  // kurzer Leerzustand ohne Daten.
+  // Katalogtext eines Erstladefehlers da ist, bleibt das Skelett stehen; bei
+  // einem fehlgeschlagenen Neuladen bleiben bestätigte Termine sichtbar.
   const showSkeleton =
-    isLoading ||
-    (instances == null && !listError) ||
-    (listError && !listLoadError);
+    instances == null && (isLoading || !listError || !listLoadError);
+  const pageError =
+    listLoadError && instances != null
+      ? {
+          message: listLoadError.message,
+          action: errorAlertActions(listLoadError),
+          keepContent: true,
+        }
+      : listLoadError;
 
   return (
     <TenantPage
@@ -688,7 +695,7 @@ export function TagesplanView() {
         </div>
       }
       loading={showSkeleton}
-      error={listError ? listLoadError : null}
+      error={pageError}
       empty={
         instances != null && groups.length === 0
           ? {

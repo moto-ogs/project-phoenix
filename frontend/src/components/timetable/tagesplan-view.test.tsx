@@ -606,6 +606,28 @@ describe("TagesplanView", () => {
     expect(reloadList).toHaveBeenCalled();
   });
 
+  it("keeps loaded blocks visible when a refresh fails", async () => {
+    setSWR({
+      data: [makeInstance({ id: "1", title: "Basteln" })],
+      isLoading: false,
+      error: new ApiError("Failed to fetch", 503, {
+        code: "general.unavailable",
+      }),
+    });
+
+    render(<TagesplanView />);
+
+    expect(screen.getByText("Basteln")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Liste der Termine"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Basteln")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(reloadList).toHaveBeenCalled();
+  });
+
   it("explains missing permission with the catalog text (403)", async () => {
     setSWR({
       data: undefined,
