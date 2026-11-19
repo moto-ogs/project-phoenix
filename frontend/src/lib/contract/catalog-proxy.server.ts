@@ -27,7 +27,7 @@ export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 type PortalHandlers = Pick<
   ReturnType<typeof makePortalHandlers>,
-  "get" | "post" | "put" | "patch" | "del" | "api"
+  "get" | "post" | "put" | "patch" | "del" | "delWithBody" | "api"
 >;
 
 type Envelope = z.ZodType<{ data: unknown }>;
@@ -154,8 +154,28 @@ export function makeCatalogProxy(
     const answer = await portal.api(method, endpoint, token, undefined, {
       request,
     });
+    return decoded(route, answer);
+  };
+
+  /** A DELETE forwards a JSON body, such as a reason, when it carries one. */
+  const remove = async (
+    request: NextRequest,
+    body: unknown,
+    token: string,
+    params: Record<string, unknown>,
+  ) => {
+    const { route, endpoint } = target(request, params.path);
+    const sent =
+      typeof body === "object" && body !== null && Object.keys(body).length > 0;
+    const answer = await portal.api(
+      method,
+      endpoint,
+      token,
+      sent ? body : undefined,
+      { request },
+    );
     // A DELETE may answer 204; every other empty answer breaks the contract.
-    if (method === "DELETE" && answer === undefined) return null;
+    if (answer === undefined) return null;
     return decoded(route, answer);
   };
 
@@ -179,7 +199,7 @@ export function makeCatalogProxy(
   };
   const factories = {
     GET: (options: Options) => portal.get(read, options),
-    DELETE: (options: Options) => portal.del(read, options),
+    DELETE: (options: Options) => portal.delWithBody(remove, options),
     POST: (options: Options) => portal.post(write, options),
     PUT: (options: Options) => portal.put(write, options),
     PATCH: (options: Options) => portal.patch(write, options),

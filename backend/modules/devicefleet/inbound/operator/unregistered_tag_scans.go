@@ -418,3 +418,8 @@ func resolveIsClientError(err error) bool {
 // ListResponse is the answer of the list route, for the contract the root
 // registers (ADR 0270); this package names no contract types itself.
 func ListResponse() any { return []scanResponse{} }
+
+// ResolveTypes are the body and the answer of the resolve route.
+func ResolveTypes() (request, response any) {
+	return resolveUnregisteredTagScanRequest{}, scanResponse{}
+}

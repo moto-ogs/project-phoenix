@@ -69,7 +69,7 @@ export async function fetchOperatorSettingsSchema(
 ): Promise<SettingsSchema> {
   try {
     return await operatorFetch<SettingsSchema>(
-      `/api/operator/provisioning/schools/${schoolId}/settings/schema`,
+      `/api/operator/schools/${schoolId}/settings/schema`,
       { method: "GET" },
     );
   } catch (error) {
@@ -135,7 +135,7 @@ export async function revealOperatorSettingValue(
   key: string,
 ): Promise<string | null> {
   const result = await operatorFetch<{ value: unknown }>(
-    `/api/operator/provisioning/schools/${schoolId}/settings/values/${key}/reveal`,
+    `/api/operator/schools/${schoolId}/settings/values/${key}/reveal`,
     { method: "GET" },
   );
   return typeof result.value === "string" ? result.value : null;
@@ -144,7 +144,7 @@ export async function revealOperatorSettingValue(
 // --- Träger-Einstellungen im Operator-Dashboard (#5748) ---
 
 const traegerSettingsPath = (organizationId: string) =>
-  `/api/operator/provisioning/organizations/${encodeURIComponent(organizationId)}/traeger-settings`;
+  `/api/operator/organizations/${encodeURIComponent(organizationId)}/traeger-settings`;
 
 const traegerSettingValuePath = (organizationId: string, key: string) =>
   `${traegerSettingsPath(organizationId)}/values/${encodeURIComponent(key)}`;

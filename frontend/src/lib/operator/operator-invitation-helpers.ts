@@ -1,10 +1,10 @@
 // --- Backend response types (snake_case) ---
 
 export interface BackendInvitationResponse {
-  id: number;
+  id: number | string;
   email: string;
   display_name?: string | null;
-  created_by: number;
+  created_by: number | string;
   creator_name?: string;
   expires_at: string;
   email_sent_at?: string | null;
@@ -14,7 +14,7 @@ export interface BackendInvitationResponse {
 }
 
 export interface BackendOperatorListItem {
-  id: number;
+  id: number | string;
   email: string;
   display_name: string;
   active: boolean;

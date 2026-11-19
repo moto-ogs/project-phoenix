@@ -57,7 +57,7 @@ type (
 	ContractDocumentsPort            = care.ContractDocuments
 	ContractNoticesPort              = care.ContractNotices
 	FamilyChildrenReader             = care.FamilyChildrenReader
-	FamilyChildren                   = care.FamilyChildren
+	FamilyChildren                   = care.ContractFamilyChildren
 	SEPAMandatesPort                 = care.SEPAMandates
 	SEPAMandateReader                = care.SEPAMandateReader
 	SEPAMandateStatus                = care.SEPAMandateStatus

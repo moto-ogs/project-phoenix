@@ -39,9 +39,9 @@ type FamilyChildrenReader struct {
 	ContractID int64
 }
 
-// FamilyChildren is the number of the family as the parents see it, and
+// ContractFamilyChildren is the number of the family as the parents see it, and
 // whether they may state one on this contract.
-type FamilyChildren struct {
+type ContractFamilyChildren struct {
 	ConfirmedAt       *time.Time     `json:"confirmed_at"`
 	StatedChildren    *int           `json:"stated_children"`
 	StatedAt          *time.Time     `json:"stated_at"`
@@ -53,38 +53,38 @@ type FamilyChildren struct {
 
 // FamilyChildren reads the number of the account's family on a contract of
 // its inbox.
-func (s *Service) FamilyChildren(ctx context.Context, accountID, organizationID, contractID int64) (FamilyChildren, error) {
+func (s *Service) FamilyChildren(ctx context.Context, accountID, organizationID, contractID int64) (ContractFamilyChildren, error) {
 	return s.familyChildren(ctx, accountID, organizationID, contractID, GuardianPermissionEnrollmentsView,
-		func(txCtx context.Context, reader FamilyChildrenReader) (FamilyChildren, error) {
+		func(txCtx context.Context, reader FamilyChildrenReader) (ContractFamilyChildren, error) {
 			return s.BillingDocuments.FamilyChildren(txCtx, organizationID, reader)
 		})
 }
 
 // StateFamilyChildren stores the number the account states for its family
 // on a sent or active contract of its inbox.
-func (s *Service) StateFamilyChildren(ctx context.Context, accountID, organizationID, contractID int64, children int) (FamilyChildren, error) {
+func (s *Service) StateFamilyChildren(ctx context.Context, accountID, organizationID, contractID int64, children int) (ContractFamilyChildren, error) {
 	return s.familyChildren(ctx, accountID, organizationID, contractID, GuardianPermissionEnrollmentSubmit,
-		func(txCtx context.Context, reader FamilyChildrenReader) (FamilyChildren, error) {
+		func(txCtx context.Context, reader FamilyChildrenReader) (ContractFamilyChildren, error) {
 			return s.BillingDocuments.StateFamilyChildren(txCtx, organizationID, reader, children)
 		})
 }
 
-type familyChildrenStep func(txCtx context.Context, reader FamilyChildrenReader) (FamilyChildren, error)
+type familyChildrenStep func(txCtx context.Context, reader FamilyChildrenReader) (ContractFamilyChildren, error)
 
 // familyChildren resolves the children the account holds permission for at
 // the Träger, checks in that Träger's transaction that the contract was
 // sent to the account for one of them and runs step. An account without
 // such a child at any Träger gets ErrGuardianPermissionDenied; a contract
 // outside its inbox, ErrBillingDocumentNotFound.
-func (s *Service) familyChildren(ctx context.Context, accountID, organizationID, contractID int64, permission string, step familyChildrenStep) (FamilyChildren, error) {
+func (s *Service) familyChildren(ctx context.Context, accountID, organizationID, contractID int64, permission string, step familyChildrenStep) (ContractFamilyChildren, error) {
 	if s.BillingDocuments == nil || s.ContractDocuments == nil || s.TraegerRuntime == nil || s.SchoolTraeger == nil || s.ParentAccounts == nil {
-		return FamilyChildren{}, errors.New("parent: family children are not configured")
+		return ContractFamilyChildren{}, errors.New("parent: family children are not configured")
 	}
 	inbox, err := s.familyChildrenReader(ctx, accountID, organizationID, contractID, permission)
 	if err != nil {
-		return FamilyChildren{}, err
+		return ContractFamilyChildren{}, err
 	}
-	var result FamilyChildren
+	var result ContractFamilyChildren
 	err = s.TraegerRuntime.WithinTraeger(ctx, organizationID, func(txCtx context.Context) error {
 		canState, err := s.familyContract(txCtx, organizationID, contractID, inbox)
 		if err != nil {
@@ -102,7 +102,7 @@ func (s *Service) familyChildren(ctx context.Context, accountID, organizationID,
 		return err
 	})
 	if err != nil {
-		return FamilyChildren{}, err
+		return ContractFamilyChildren{}, err
 	}
 	return result, nil
 }

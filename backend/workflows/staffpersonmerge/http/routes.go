@@ -13,7 +13,7 @@ import (
 )
 
 type Capability interface {
-	Preview(rctx context.Context, schoolID int64, clientIP net.IP) ([]staffpersonmerge.Candidate, error)
+	Preview(rctx context.Context, schoolID int64, clientIP net.IP) ([]staffpersonmerge.StaffPersonMergeCandidate, error)
 	Execute(rctx context.Context, schoolID int64, request staffpersonmerge.Request) error
 }
 
@@ -31,7 +31,7 @@ func Router(workflow Capability, bindScope func(http.Handler) http.Handler) http
 	return r
 }
 func (rs resource) preview(w http.ResponseWriter, r *http.Request) {
-	load := func(ctx context.Context, schoolID int64) ([]staffpersonmerge.Candidate, error) {
+	load := func(ctx context.Context, schoolID int64) ([]staffpersonmerge.StaffPersonMergeCandidate, error) {
 		return rs.workflow.Preview(ctx, schoolID, common.ParseClientIP(r))
 	}
 	common.IDFetch("schoolId", "invalid school ID", load, errorRenderer, "staff person merge candidates")(w, r)
@@ -67,4 +67,14 @@ var errorRenderer = common.RulesRenderer([]common.ErrorRule{
 
 func respondError(w http.ResponseWriter, r *http.Request, err error) {
 	common.RenderError(w, r, errorRenderer(err))
+}
+
+// RouteContracts registers the duplicate repair (ADR 0270, #2352), relative
+// to the /operator/staff-person-merges mount.
+func RouteContracts() []common.RouteContract {
+	operator := []common.PortalScope{common.PortalOperator}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{schoolId}", Portals: operator, Response: []staffpersonmerge.StaffPersonMergeCandidate{}},
+		{Method: "POST", Pattern: "/{schoolId}", Portals: operator, Request: staffpersonmerge.Request{}, NoData: true},
+	}
 }

@@ -1,5 +1,4 @@
 import { parentPortal } from "~/server/auth/parent";
-import { unwrapEnvelope } from "../backend-client.server";
 import {
   makeCatalogProxy,
   type CatalogMethod,
@@ -19,20 +18,8 @@ export const {
   proxyPut,
   proxyPatch,
   proxyDelete,
-  del: createParentDeleteHandler,
-  put: createParentPutHandler,
-  patch: createParentPatchHandler,
   jsonProxy: createParentJsonProxy,
 } = parent;
-
-export const parentApiDelete = async <T>(endpoint: string, token: string) =>
-  unwrapEnvelope<T>(await parent.api("DELETE", endpoint, token));
-
-export const parentApiPut = async <T, B = unknown>(
-  endpoint: string,
-  token: string,
-  body?: B,
-) => unwrapEnvelope<T>(await parent.api("PUT", endpoint, token, body));
 
 /**
  * The guardians' portal proxy: forwards `/api/parent/…` to the backend's

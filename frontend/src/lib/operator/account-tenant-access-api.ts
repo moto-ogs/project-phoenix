@@ -27,11 +27,11 @@ export interface AccountTenantAccess {
 }
 
 interface BackendAccountTenantAccess {
-  tenant_id: number;
+  tenant_id: number | string;
   school_name: string;
   school_slug: string;
   school_active: boolean;
-  organization_id: number;
+  organization_id: number | string;
   organization_name: string;
   status: string;
   activated_at?: string | null;

@@ -397,4 +397,15 @@ func TestOperatorRoutesListUnregisteredTagScansOfATraeger(t *testing.T) {
 	var all []scan
 	f.call(t, http.MethodGet, fmt.Sprintf("/operator/unregistered-tag-scans?organization_id=%d&school_id=%d&resolved=all", organizationID, schoolID), nil, &all)
 	assert.ElementsMatch(t, []string{"ROUTE-OPEN", "ROUTE-DONE"}, tags(all), "asked for all, the handled scan too")
+
+	var openID int64
+	require.NoError(t, f.db.NewRaw(`SELECT id FROM audit.unregistered_tag_scans WHERE tenant_id = ? AND tag_uid = 'ROUTE-OPEN'`, schoolID).Scan(testpkg.Ctx(t), &openID))
+	var resolved struct {
+		ResolutionNote *string `json:"resolution_note"`
+		ResolvedAt     *string `json:"resolved_at"`
+	}
+	f.call(t, http.MethodPost, fmt.Sprintf("/operator/unregistered-tag-scans/%d/resolve", openID), map[string]string{"note": " Karte ausgetauscht "}, &resolved)
+	require.NotNil(t, resolved.ResolutionNote)
+	assert.Equal(t, "Karte ausgetauscht", *resolved.ResolutionNote)
+	assert.NotNil(t, resolved.ResolvedAt, "the scan is handled")
 }

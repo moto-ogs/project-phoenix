@@ -5,6 +5,7 @@ import {
   int64StringOrNumber,
   object,
   optional,
+  requestBody,
   str,
   success,
 } from "./runtime";
@@ -48,6 +49,11 @@ export const scanResponseSchema: z.ZodType<scanResponse, unknown> = object<scanR
   device_name: optional(str),
 });
 
+/** Go: operator.resolveUnregisteredTagScanRequest */
+export interface resolveUnregisteredTagScanRequest {
+  note?: string;
+}
+
 /** Query of GET /operator/unregistered-tag-scans/ */
 export interface GetOperatorUnregisteredTagScansQuery {
   organization_id?: string;
@@ -62,5 +68,12 @@ export const routes = {
     portals: ["platform"],
     query: ["organization_id", "resolved", "school_id"],
     response: success(z.array(scanResponseSchema)),
+  },
+  "POST /operator/unregistered-tag-scans/{id}/resolve": {
+    method: "POST",
+    pattern: "/operator/unregistered-tag-scans/{id}/resolve",
+    portals: ["platform"],
+    request: requestBody<resolveUnregisteredTagScanRequest>(),
+    response: success(scanResponseSchema),
   },
 } as const;

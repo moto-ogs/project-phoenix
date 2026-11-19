@@ -12,6 +12,9 @@ import {
   str,
   success,
 } from "./runtime";
+import {
+  TraegerStaffProofSchema,
+} from "./shared.generated";
 
 /** Go: workforce.TraegerStaffProofType */
 export interface TraegerStaffProofType {
@@ -128,6 +131,14 @@ export interface ProofTypeRequest {
   archived?: boolean;
 }
 
+/** Go: traegerstaff.ProofRequest */
+export interface ProofRequest {
+  presented_on?: string;
+  issued_on?: string;
+  no_relevant_entry?: boolean;
+  expires_on?: string;
+}
+
 /** Go: traegerstaff.ProofMappingRequest */
 export interface ProofMappingRequest {
   school_id?: number;
@@ -136,6 +147,12 @@ export interface ProofMappingRequest {
 }
 
 export const routes = {
+  "DELETE /traeger/staff-proofs/records/{id}/{typeId}": {
+    method: "DELETE",
+    pattern: "/traeger/staff-proofs/records/{id}/{typeId}",
+    portals: ["org"],
+    response: success(z.array(TraegerStaffProofSchema)),
+  },
   "GET /traeger/staff-proofs/": {
     method: "GET",
     pattern: "/traeger/staff-proofs/",
@@ -160,6 +177,13 @@ export const routes = {
     portals: ["org"],
     request: requestBody<ProofTypeRequest>(),
     response: success(TraegerStaffProofTypeSchema),
+  },
+  "PUT /traeger/staff-proofs/records/{id}/{typeId}": {
+    method: "PUT",
+    pattern: "/traeger/staff-proofs/records/{id}/{typeId}",
+    portals: ["org"],
+    request: requestBody<ProofRequest>(),
+    response: success(z.array(TraegerStaffProofSchema)),
   },
   "PUT /traeger/staff-proofs/school-kinds": {
     method: "PUT",

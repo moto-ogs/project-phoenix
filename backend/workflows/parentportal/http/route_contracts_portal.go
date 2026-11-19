@@ -56,6 +56,8 @@ func PortalRouteContracts(foreign ForeignContractTypes) []common.RouteContract {
 	routes = append(routes, communicationRouteContracts()...)
 	routes = append(routes, childStatusRouteContracts()...)
 	routes = append(routes, childCareRouteContracts()...)
+	routes = append(routes, childWriteRouteContracts()...)
+	routes = append(routes, accountWriteRouteContracts()...)
 	routes = append(routes, childMasterDataRouteContracts()...)
 	return append(routes, formRouteContracts(foreign)...)
 }

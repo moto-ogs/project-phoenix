@@ -82,6 +82,8 @@ func ProofRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/types/{id}", Portals: traegerPortal, Request: ProofTypeRequest{}, Response: workforce.TraegerStaffProofType{}},
 		{Method: "GET", Pattern: "/school-kinds", Portals: traegerPortal, Response: []workforce.TraegerSchoolProofKinds{}},
 		{Method: "PUT", Pattern: "/school-kinds", Portals: traegerPortal, Request: ProofMappingRequest{}, Response: []workforce.TraegerSchoolProofKinds{}},
+		{Method: "PUT", Pattern: "/records/{id}/{typeId}", Portals: traegerPortal, Request: ProofRequest{}, Response: []workforce.TraegerStaffProof{}},
+		{Method: "DELETE", Pattern: "/records/{id}/{typeId}", Portals: traegerPortal, Response: []workforce.TraegerStaffProof{}},
 	}
 }
 

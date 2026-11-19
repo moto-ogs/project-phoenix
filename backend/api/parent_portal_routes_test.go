@@ -18,10 +18,16 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
+	"github.com/moto-ogs/project-phoenix/modules/communication"
+	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
+	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
+	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	observabilityCompose "github.com/moto-ogs/project-phoenix/observability/compose"
+	deliveryPolicy "github.com/moto-ogs/project-phoenix/roots/communicationtest"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -42,6 +48,14 @@ type parentPortalRoutes struct {
 
 func newParentPortalRoutes(t *testing.T, db *bun.DB) parentPortalRoutes {
 	t.Helper()
+	routes, _ := newParentPortalRoutesWithSurveys(t, db)
+	return routes
+}
+
+// newParentPortalRoutesWithSurveys also answers the surveys that publish the
+// Umfragen the parents answer in their feed.
+func newParentPortalRoutesWithSurveys(t *testing.T, db *bun.DB) (parentPortalRoutes, communication.SurveyCapability) {
+	t.Helper()
 	database, unit := testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
@@ -50,6 +64,7 @@ func newParentPortalRoutes(t *testing.T, db *bun.DB) parentPortalRoutes {
 	// The guard rig's helpers, without its gates and its markers: every
 	// owner command of these routes runs for real.
 	rig := &guardRig{checked: newRequestGate(), guarded: newRequestGate(), locked: newLockGate(), settings: settings.Settings}
+	surveys := newParentPortalSurveys(t, db, settings.Settings)
 	rig.childReadRig = newChildReadRigOn(t, db, func(deps *portalCompose.Dependencies) {
 		deps.Signatures = owners.ParentDeclarationSignatures{Ledger: owners.SignatureLedger()}
 		_, schedules, _, _, _, _, err := NewTestCareRequests(database, slog.Default())
@@ -58,6 +73,7 @@ func newParentPortalRoutes(t *testing.T, db *bun.DB) parentPortalRoutes {
 		deps.PickupSchedules = owners.NewParentPickupSchedules(schedules.Pickups)
 		composeParentMessaging(t, db, deps)
 		composeParentDeclarations(t, db, deps)
+		deps.Surveys = owners.BindParentSurveys(surveys)
 		// The news and the school picker read the account's enrollments and
 		// the open phases of every school, as the root binds them.
 		rows := NewCarePlanSuiteRepositories(database).WithSchoolProjections(organizations)
@@ -101,7 +117,29 @@ func newParentPortalRoutes(t *testing.T, db *bun.DB) parentPortalRoutes {
 		Enrollment:             enrollmentAPI.ParentForms{Requests: enrollmentAPI.NewRequestService(intake)},
 		Schools:                parentSchoolDirectory{schools: organizations},
 	}).Router(ParentSessionChain))
-	return parentPortalRoutes{guardRig: rig, router: router}
+	return parentPortalRoutes{guardRig: rig, router: router}, surveys
+}
+
+// newParentPortalSurveys composes Communication's surveys over the parent
+// announcements, as the root binds them for the parents' feed.
+func newParentPortalSurveys(t *testing.T, db *bun.DB, settings settingsCompose.BatchSettingsService) communication.SurveyCapability {
+	t.Helper()
+	database := testpkg.NewDatabase(t, db)
+	organizations, err := owners.NewOrganizationTenancy(database)
+	require.NoError(t, err)
+	repos := NewParentMessagingSuiteRepositories(database).WithSchoolProjections(organizations)
+	objectBackend, err := objects.SealedPrivateUploadsBackend(objects.FileKeys{})
+	require.NoError(t, err)
+	files, _, err := NewFileStoreTestModule(database, testpkg.TenantRuntime(t, db), objectBackend)
+	require.NoError(t, err)
+	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
+		Repo: repos.ParentAnnouncement, Settings: settingsValues.NewParentAnnouncementValues(settings), Logger: slog.Default(),
+		SurveyStaff: repos.StaffMessageRead, Now: time.Now,
+	}, files, owners.CommunicationRequestRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
+	require.NoError(t, err)
+	surveys, err := communication.SurveysOf(announcements)
+	require.NoError(t, err)
+	return surveys
 }
 
 // noPWAUsageCounts is the dashboard count a report does not read.

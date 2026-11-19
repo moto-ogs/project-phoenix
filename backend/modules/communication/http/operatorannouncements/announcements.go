@@ -31,8 +31,8 @@ func NewAnnouncementsResource(announcementService communication.Capability, now 
 	}
 }
 
-// AnnouncementResponse represents an announcement in the response
-type AnnouncementResponse struct {
+// OperatorAnnouncementResponse represents an announcement in the response
+type OperatorAnnouncementResponse struct {
 	ID              int64    `json:"id"`
 	Title           string   `json:"title"`
 	Content         string   `json:"content"`
@@ -116,7 +116,7 @@ func (rs *AnnouncementsResource) ListAnnouncements(w http.ResponseWriter, r *htt
 		return
 	}
 
-	responses := make([]AnnouncementResponse, 0, len(announcements))
+	responses := make([]OperatorAnnouncementResponse, 0, len(announcements))
 	for _, announcement := range announcements {
 		responses = append(responses, newAnnouncementResponse(announcement, rs.now()))
 	}
@@ -325,7 +325,7 @@ func AnnouncementErrorRenderer(err error) render.Renderer {
 }
 
 // newAnnouncementResponse creates an announcement response from an announcement model
-func newAnnouncementResponse(a *communication.Announcement, now time.Time) AnnouncementResponse {
+func newAnnouncementResponse(a *communication.Announcement, now time.Time) OperatorAnnouncementResponse {
 	targetRoles := a.TargetRoles
 	if targetRoles == nil {
 		targetRoles = []string{}
@@ -339,7 +339,7 @@ func newAnnouncementResponse(a *communication.Announcement, now time.Time) Annou
 		targetTenantIDs = []int64{}
 	}
 
-	response := AnnouncementResponse{
+	response := OperatorAnnouncementResponse{
 		ID:              a.ID,
 		Title:           a.Title,
 		Content:         a.Content,

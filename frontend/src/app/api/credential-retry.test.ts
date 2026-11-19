@@ -70,8 +70,8 @@ const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
     import("./caterer/account/mfa/confirm/route"),
   "parent/me/mfa/disable": () => import("./parent/me/mfa/disable/route"),
   "parent/me/mfa/confirm": () => import("./parent/me/mfa/confirm/route"),
-  "parent/me/children/[studentId]/care-exception": () =>
-    import("./parent/me/children/[studentId]/care-exception/route"),
+  "parent/me/children/[studentId]/sick-note": () =>
+    import("./parent/me/children/[studentId]/sick-note/route"),
 };
 
 /**
@@ -188,9 +188,9 @@ describe("routes that carry the current password or a code", () => {
 
   it("a route without a credential repeats the call with the renewed session", async () => {
     const response = await post(
-      "parent/me/children/[studentId]/care-exception",
+      "parent/me/children/[studentId]/sick-note",
       "parents.localhost:3000",
-      { note: SECRET },
+      { dates: ["2026-09-09"], reason: SECRET },
     );
 
     // Anker: the session renewed and the call ran twice, so the harness

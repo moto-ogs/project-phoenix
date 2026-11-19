@@ -17,6 +17,15 @@ import {
   type Holiday,
 } from "./shared.generated";
 
+/** Go: staffcalendarhttp.TraegerClosingDayDeleted */
+export interface TraegerClosingDayDeleted {
+  notified_families: number;
+}
+
+export const TraegerClosingDayDeletedSchema: z.ZodType<TraegerClosingDayDeleted, unknown> = object<TraegerClosingDayDeleted>({
+  notified_families: safeInt,
+});
+
 /** Go: traegercalendar.ClosingDay */
 export interface ClosingDay {
   id: string;
@@ -95,6 +104,11 @@ export interface TraegerClosingDayRequest {
   holiday_bookings_token?: string;
 }
 
+/** Query of DELETE /traeger/closing-days/{id} */
+export interface DeleteTraegerClosingDaysIdQuery {
+  holiday_bookings_token?: string;
+}
+
 /** Query of GET /traeger/closing-days/ */
 export interface GetTraegerClosingDaysQuery {
   from?: string;
@@ -102,6 +116,13 @@ export interface GetTraegerClosingDaysQuery {
 }
 
 export const routes = {
+  "DELETE /traeger/closing-days/{id}": {
+    method: "DELETE",
+    pattern: "/traeger/closing-days/{id}",
+    portals: ["org"],
+    query: ["holiday_bookings_token"],
+    response: success(TraegerClosingDayDeletedSchema),
+  },
   "GET /traeger/closing-days/": {
     method: "GET",
     pattern: "/traeger/closing-days/",
@@ -112,6 +133,13 @@ export const routes = {
   "POST /traeger/closing-days/": {
     method: "POST",
     pattern: "/traeger/closing-days/",
+    portals: ["org"],
+    request: requestBody<TraegerClosingDayRequest>(),
+    response: success(ClosingDaySchema),
+  },
+  "PUT /traeger/closing-days/{id}": {
+    method: "PUT",
+    pattern: "/traeger/closing-days/{id}",
     portals: ["org"],
     request: requestBody<TraegerClosingDayRequest>(),
     response: success(ClosingDaySchema),

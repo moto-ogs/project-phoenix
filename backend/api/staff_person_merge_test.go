@@ -108,17 +108,17 @@ func (h staffMergeHarness) request(t *testing.T, method string, schoolID int64, 
 	req := testutil.NewAuthenticatedRequest(t, method, fmt.Sprintf("/%d", schoolID), body, testutil.WithClaims(t, sessiontoken.AppClaims{ID: int(h.operatorID), Scope: "platform"}))
 	return testutil.ExecuteRequest(testpkg.MountedQueryBudgetRouter("/operator/staff-person-merges", h.router), req)
 }
-func (h staffMergeHarness) preview(t *testing.T) []staffpersonmerge.Candidate {
+func (h staffMergeHarness) preview(t *testing.T) []staffpersonmerge.StaffPersonMergeCandidate {
 	t.Helper()
 	rr := h.request(t, http.MethodGet, h.schoolID, nil)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var result struct {
-		Data []staffpersonmerge.Candidate `json:"data"`
+		Data []staffpersonmerge.StaffPersonMergeCandidate `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &result))
 	return result.Data
 }
-func mergeSelection(candidates []staffpersonmerge.Candidate) staffpersonmerge.Request {
+func mergeSelection(candidates []staffpersonmerge.StaffPersonMergeCandidate) staffpersonmerge.Request {
 	request := staffpersonmerge.Request{SchoolConfirmed: true}
 	for _, candidate := range candidates {
 		request.Cases = append(request.Cases, staffpersonmerge.Selection{DonorID: candidate.Donor.Person.ID, KeeperID: candidate.Keeper.Person.ID, Revision: candidate.Revision})

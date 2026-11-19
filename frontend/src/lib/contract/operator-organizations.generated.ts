@@ -17,10 +17,12 @@ import {
 } from "./runtime";
 import {
   OperatorDeviceSchema,
+  OperatorPersonSchema,
   OrganizationAccountSchema,
   OrganizationSchema,
   SchoolSchema,
   SchoolSummarySchema,
+  SettingsSchemaSchema,
   TraegerStaffReleaseSchema,
   type Organization,
   type School,
@@ -35,6 +37,11 @@ export interface withdrawnReleaseResponse {
 export const withdrawnReleaseResponseSchema: z.ZodType<withdrawnReleaseResponse, unknown> = object<withdrawnReleaseResponse>({
   organization_id: int64StringOrNumber,
 });
+
+/** Go: operator.resetTraegerMemberMFARequest */
+export interface resetTraegerMemberMFARequest {
+  reason?: string;
+}
 
 /** Go: organizationtenancy.OrganizationSummary */
 export interface OrganizationSummary {
@@ -259,39 +266,6 @@ export const TraegerErasureOrderSchema: z.ZodType<TraegerErasureOrder, unknown> 
   records_export_sha256: optional(str),
 });
 
-/** Go: organizationtenancy.OperatorPerson */
-export interface OperatorPerson {
-  id: string;
-  first_name: string;
-  last_name: string;
-  has_account: boolean;
-  account_email?: string;
-  has_rfid_card: boolean;
-  is_staff: boolean;
-  is_student: boolean;
-  school_id: string;
-  school_name: string;
-  organization_id: string;
-  organization_name: string;
-  created_at: string;
-}
-
-export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<OperatorPerson>({
-  id: int64StringOrNumber,
-  first_name: str,
-  last_name: str,
-  has_account: bool,
-  account_email: optional(str),
-  has_rfid_card: bool,
-  is_staff: bool,
-  is_student: bool,
-  school_id: int64StringOrNumber,
-  school_name: str,
-  organization_id: int64StringOrNumber,
-  organization_name: str,
-  created_at: instant,
-});
-
 /** Go: workforce.TraegerStaffReleaseState */
 export interface TraegerStaffReleaseState {
   release: TraegerStaffRelease | null;
@@ -445,6 +419,13 @@ export interface traegerMemberRequest {
   roles?: string[] | null;
 }
 
+/** Go: operator.updateOrganizationRequest */
+export interface updateOrganizationRequest {
+  name?: string;
+  slug?: string;
+  active?: boolean;
+}
+
 /** Go: operator.recordTraegerErasureOrderRecordsRequest */
 export interface recordTraegerErasureOrderRecordsRequest {
   records_notice_acknowledged?: boolean;
@@ -453,7 +434,18 @@ export interface recordTraegerErasureOrderRecordsRequest {
   records_export_sha256?: string;
 }
 
+/** Go: operator.setSchoolSettingRequest */
+export interface setSchoolSettingRequest {
+  value?: unknown | null;
+}
+
 export const routes = {
+  "DELETE /operator/organizations/{id}": {
+    method: "DELETE",
+    pattern: "/operator/organizations/{id}",
+    portals: ["platform"],
+    response: noData,
+  },
   "DELETE /operator/organizations/{id}/beleg-retention/suspensions/{suspensionId}": {
     method: "DELETE",
     pattern: "/operator/organizations/{id}/beleg-retention/suspensions/{suspensionId}",
@@ -475,6 +467,19 @@ export const routes = {
   "DELETE /operator/organizations/{id}/traeger-members/invitations/{invitationId}": {
     method: "DELETE",
     pattern: "/operator/organizations/{id}/traeger-members/invitations/{invitationId}",
+    portals: ["platform"],
+    response: noData,
+  },
+  "DELETE /operator/organizations/{id}/traeger-members/{accountId}/mfa": {
+    method: "DELETE",
+    pattern: "/operator/organizations/{id}/traeger-members/{accountId}/mfa",
+    portals: ["platform"],
+    request: requestBody<resetTraegerMemberMFARequest>(),
+    response: noData,
+  },
+  "DELETE /operator/organizations/{id}/traeger-settings/values/{key}": {
+    method: "DELETE",
+    pattern: "/operator/organizations/{id}/traeger-settings/values/{key}",
     portals: ["platform"],
     response: noData,
   },
@@ -543,6 +548,12 @@ export const routes = {
     pattern: "/operator/organizations/{id}/traeger-members/invitations",
     portals: ["platform"],
     response: success(z.array(TraegerInvitationSchema)),
+  },
+  "GET /operator/organizations/{id}/traeger-settings/schema": {
+    method: "GET",
+    pattern: "/operator/organizations/{id}/traeger-settings/schema",
+    portals: ["platform"],
+    response: success(SettingsSchemaSchema),
   },
   "POST /operator/organizations/": {
     method: "POST",
@@ -625,11 +636,25 @@ export const routes = {
     portals: ["platform"],
     response: success(TraegerInvitationSchema),
   },
+  "PUT /operator/organizations/{id}": {
+    method: "PUT",
+    pattern: "/operator/organizations/{id}",
+    portals: ["platform"],
+    request: requestBody<updateOrganizationRequest>(),
+    response: success(OrganizationSchema),
+  },
   "PUT /operator/organizations/{id}/erasure-order/records": {
     method: "PUT",
     pattern: "/operator/organizations/{id}/erasure-order/records",
     portals: ["platform"],
     request: requestBody<recordTraegerErasureOrderRecordsRequest>(),
     response: success(TraegerErasureOrderSchema),
+  },
+  "PUT /operator/organizations/{id}/traeger-settings/values/{key}": {
+    method: "PUT",
+    pattern: "/operator/organizations/{id}/traeger-settings/values/{key}",
+    portals: ["platform"],
+    request: requestBody<setSchoolSettingRequest>(),
+    response: noData,
   },
 } as const;

@@ -134,7 +134,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "list":
 				var out struct {
-					Data []operatorHTTP.AnnouncementResponse
+					Data []operatorHTTP.OperatorAnnouncementResponse
 				}
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n*2)

@@ -372,6 +372,22 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, childPath+"/check-in", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
+	// A child who stays away is marked absent; null clears no note.
+	away := testpkg.CreateTestStudentForTenant(t, supervisionDB, supervisionTenantID, "Bleibt", "Weg", "2a")
+	testpkg.CreateTestInstanceStudent(t, supervisionDB, mine.ID, away.ID, testpkg.ScheduleAttendanceStatusExpected)
+	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPatch,
+		fmt.Sprintf("%s/students/%d/attendance", block, away.ID), strings.NewReader(`{"status":"absent","note":null}`))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var absent struct {
+		Data struct {
+			StudentID int64  `json:"student_id"`
+			Status    string `json:"status"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &absent), rec.Body.String())
+	assert.Equal(t, away.ID, absent.Data.StudentID)
+	assert.Equal(t, "absent", absent.Data.Status, rec.Body.String())
+
 	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, childPath+"/check-out", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var roster struct {
@@ -384,10 +400,16 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &roster), rec.Body.String())
-	require.Len(t, roster.Data.Rows, 1)
-	assert.Equal(t, child.ID, roster.Data.Rows[0].StudentID)
-	assert.False(t, roster.Data.Rows[0].CurrentlyPresent, rec.Body.String())
-	assert.NotNil(t, roster.Data.Rows[0].CheckedOutAt, rec.Body.String())
+	require.Len(t, roster.Data.Rows, 2, "the checked-out child and the absent one")
+	var checkedOut bool
+	for _, row := range roster.Data.Rows {
+		if row.StudentID == child.ID {
+			checkedOut = true
+			assert.False(t, row.CurrentlyPresent, rec.Body.String())
+			assert.NotNil(t, row.CheckedOutAt, rec.Body.String())
+		}
+	}
+	assert.True(t, checkedOut, "the checked-out child is on the roster")
 
 	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, block+"/complete", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
