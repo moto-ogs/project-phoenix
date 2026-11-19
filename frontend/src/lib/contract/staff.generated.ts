@@ -1588,6 +1588,11 @@ export interface GetStaffIdAbsencesQuery {
   to?: string;
 }
 
+/** Query of GET /api/staff/{id}/documents */
+export interface GetStaffIdDocumentsQuery {
+  category?: string;
+}
+
 /** Query of GET /api/staff/{id}/time-tracking/adjustments */
 export interface GetStaffIdTimeTrackingAdjustmentsQuery {
   from?: string;
@@ -1847,6 +1852,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/{id}/documents",
     portals: ["tenant"],
+    query: ["category"],
     response: success(StaffDocumentListResponseSchema),
   },
   "GET /api/staff/{id}/payroll-number": {

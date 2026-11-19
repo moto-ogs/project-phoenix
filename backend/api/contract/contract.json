@@ -4586,6 +4586,12 @@
       "portals": [
         "tenant"
       ],
+      "query": [
+        {
+          "name": "category",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "StaffDocumentListResponse"
@@ -5673,6 +5679,12 @@
       "pattern": "/api/students/{id}/documents",
       "portals": [
         "tenant"
+      ],
+      "query": [
+        {
+          "name": "category",
+          "kind": "string"
+        }
       ],
       "response": {
         "kind": "ref",

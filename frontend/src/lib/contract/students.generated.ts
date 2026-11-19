@@ -3382,6 +3382,11 @@ export interface GetStudentsIdCareWithdrawalsQuery {
   page_size?: number;
 }
 
+/** Query of GET /api/students/{id}/documents */
+export interface GetStudentsIdDocumentsQuery {
+  category?: string;
+}
+
 /** Query of GET /api/students/{id}/notes */
 export interface GetStudentsIdNotesQuery {
   kind?: string;
@@ -3709,6 +3714,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}/documents",
     portals: ["tenant"],
+    query: ["category"],
     response: success(StudentDocumentListResponseSchema),
   },
   "GET /api/students/{id}/enrollment-extra-fields": {
