@@ -96,6 +96,12 @@ const unreadWhere = audienceWhere + `
 		AND COALESCE(v.dismissed, FALSE) = FALSE
 		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL)`
 
+// shown or dismissed views remain reportable after dismissal so a delayed
+// /seen request records the modal that was actually displayed. Historical
+// views stay closed: they have seen_at but no shown_at and were not dismissed.
+const seeableWhere = audienceWhere + `
+		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL OR v.dismissed = TRUE)`
+
 // dismissed views remain dismissible so a client can safely repeat an
 // acknowledgement after losing its successful response. Historical views stay
 // closed: they have seen_at but no shown_at and were never dismissed.
@@ -151,7 +157,7 @@ func (p *Projection) CanSee(ctx context.Context, userID int64, roles []string, t
 	stats := contract.Stats{Queries: 1}
 	started := time.Now()
 	var id int64
-	err = db.NewRaw(`SELECT a.id`+unreadFrom+unreadWhere+`
+	err = db.NewRaw(`SELECT a.id`+unreadFrom+seeableWhere+`
 		AND a.id = ? FOR SHARE OF a`, append(unreadArgs(userID, roles, tenantID, orgID), announcementID)...).Scan(ctx, &id)
 	stats.StatementDuration = time.Since(started)
 	if errors.Is(err, sql.ErrNoRows) {

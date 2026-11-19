@@ -161,7 +161,7 @@ func TestProjection_UnreadDistinguishesHistoricalReadsFromShownAnnouncements(t *
 	assert.NotContains(t, announcementIDs(unread), fix.ownAnnouncement, "a dismissed announcement stays closed")
 	canSee, _, err = fix.projection.CanSee(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
 	require.NoError(t, err)
-	assert.False(t, canSee, "a dismissed announcement is not actionable")
+	assert.True(t, canSee, "a delayed seen report records a modal that was displayed before dismissal")
 	canDismiss, _, err = fix.projection.CanDismiss(ctx, fix.readerID, nil, fix.tenantID, fix.organizationID, fix.ownAnnouncement)
 	require.NoError(t, err)
 	assert.True(t, canDismiss, "a dismissed announcement acknowledges a repeated dismissal")

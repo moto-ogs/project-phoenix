@@ -176,6 +176,31 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	require.NoError(t, db.NewRaw(`SELECT seen_at FROM platform.announcement_views
 		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &retriedView))
 	assert.Equal(t, dismissedView.SeenAt, retriedView.SeenAt)
+	// The seen request from another tab can commit after this dismissal. It
+	// still records the displayed modal but must not reopen the announcement.
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
+	var delayedSeenView struct {
+		Dismissed bool `bun:"dismissed"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT dismissed FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &delayedSeenView))
+	assert.True(t, delayedSeenView.Dismissed)
+
+	dismissedFirst := newAnnouncement("Dismissed before seen", tenantID)
+	require.NoError(t, module.CreateAnnouncement(ctx, dismissedFirst, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, dismissedFirst.ID, operator.ID, nil))
+	// A different tab can close the same displayed announcement before this
+	// tab's initial seen request reaches the server.
+	require.NoError(t, module.MarkDismissed(ctx, viewer, dismissedFirst.ID))
+	require.NoError(t, module.MarkSeen(ctx, viewer, dismissedFirst.ID))
+	var dismissedFirstView struct {
+		ShownAt   *time.Time `bun:"shown_at"`
+		Dismissed bool       `bun:"dismissed"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT shown_at, dismissed FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, dismissedFirst.ID).Scan(ctx, &dismissedFirstView))
+	assert.NotNil(t, dismissedFirstView.ShownAt)
+	assert.True(t, dismissedFirstView.Dismissed)
 	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
 	assert.Zero(t, count, "dismissing an announcement closes it")
