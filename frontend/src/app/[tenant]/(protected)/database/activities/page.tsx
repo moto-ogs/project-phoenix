@@ -40,11 +40,19 @@ import { activitiesConcept } from "~/lib/concepts/activities";
 import { foldForSearch } from "~/lib/search-fold";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const ACTIVITIES_INFO =
+  "Aktivitäten sind Angebote neben der Gruppe, zum Beispiel eine AG. Lege hier jedes Angebot einmal an und wähle eine Kategorie. Dein Team kann die Aktivität danach am Tablet starten.";
+
 const logger = createLogger({ component: "DatabaseActivitiesPage" });
 
 export default function ActivitiesPage() {
   return (
-    <ModuleRouteGuard module="nfc_anwesenheit" title="Aktivitäten">
+    <ModuleRouteGuard
+      module="nfc_anwesenheit"
+      title="Aktivitäten"
+      info={ACTIVITIES_INFO}
+    >
       <Suspense fallback={null}>
         <ActivitiesPageContent />
       </Suspense>
@@ -370,6 +378,7 @@ function ActivitiesPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Aktivitäten",
+        info: ACTIVITIES_INFO,
         description: statusLine,
         actions: (
           <DatabaseCreateAction

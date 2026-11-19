@@ -25,6 +25,10 @@ import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const PERMISSIONS_INFO =
+  "Hier siehst du alle Berechtigungen, die es in moto gibt. Diese Liste kannst du nur ansehen. Was eine Person darf, legst du unter „Rollen“ fest.";
+
 const NO_PERMISSIONS: Permission[] = [];
 
 export default function PermissionsPage() {
@@ -184,6 +188,7 @@ function PermissionsPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Berechtigungen",
+        info: PERMISSIONS_INFO,
         description: statusLine,
       }}
       searchRow={{

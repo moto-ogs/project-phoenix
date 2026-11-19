@@ -175,6 +175,8 @@ interface CatalogPageProps<T extends CatalogItem> {
   readonly canManage: boolean;
   /** Auswahl aus der Adresse, damit ein Neuladen denselben Eintrag zeigt. */
   readonly selectedId: string | null;
+  /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+  readonly info?: React.ReactNode;
   /** Zusätzliche Kopf-Aktion, z. B. „Beispiele hinzufügen". */
   readonly headAction?: React.ReactNode;
   /** Hinweis über der Liste, z. B. der Ladefehler nach der Kopf-Aktion. */
@@ -203,6 +205,7 @@ export function CatalogPage<T extends CatalogItem>({
   onChanged,
   canManage,
   selectedId,
+  info,
   headAction,
   notice,
 }: CatalogPageProps<T>) {
@@ -702,6 +705,7 @@ export function CatalogPage<T extends CatalogItem>({
       }
       intro={{
         title: config.title,
+        info,
         description: isLoading ? (
           <Skeleton className="h-4 w-48" />
         ) : (

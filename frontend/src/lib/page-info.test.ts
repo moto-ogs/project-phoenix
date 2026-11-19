@@ -45,28 +45,14 @@ const PAGES_WITHOUT_INFO_BASELINE: readonly string[] = [
   "/calendar-periods",
   "/care-offerings",
   "/dashboard",
-  "/database/absence-types",
-  "/database/activities",
-  "/database/categories",
-  "/database/devices",
-  "/database/exports",
-  "/database/grade-transitions",
-  "/database/groups",
-  "/database/permissions",
   "/database/personal",
   "/database/personal/import",
   "/database/personal/opening-balances",
-  "/database/planning-tracks",
-  "/database/qualification-types",
-  "/database/roles",
-  "/database/rooms",
-  "/database/shift-types",
   "/database/students",
   "/database/students/class-list",
   "/database/students/class-list/import",
   "/database/students/ended-care",
   "/database/students/import",
-  "/database/work-time-models",
   "/dateien",
   "/day-log",
   "/dienstplan",
@@ -176,11 +162,20 @@ function resolveImport(fromFile: string, specifier: string): string | null {
 
 interface ParsedModule {
   readonly rendersTenantPage: boolean;
-  readonly info: InfoAvailability;
+  readonly info: ModuleInfo;
   readonly imports: readonly string[];
+  /** Was dieses Modul den importierten Komponenten als `info` mitgibt. */
+  readonly infoSupplies: ReadonlyMap<string, ModuleInfo>;
 }
 
 type InfoAvailability = "none" | "conditional" | "always";
+
+/**
+ * „forwarded“: das Modul reicht die `info` seiner Aufrufer durch, etwa
+ * `info={info}` oder `info={intro.info}`. Was dort ankommt, entscheidet die
+ * Seite, die das Modul rendert.
+ */
+type ModuleInfo = InfoAvailability | "forwarded";
 
 const parsedModules = new Map<string, ParsedModule>();
 
@@ -191,11 +186,30 @@ function combineConditionalBranches(
   return left === right ? left : "conditional";
 }
 
-function combineRendererAvailability(
-  left: InfoAvailability,
-  right: InfoAvailability,
-): InfoAvailability {
+function combineRendererAvailability<T extends ModuleInfo>(
+  left: T,
+  right: T,
+): T | "conditional" {
   return left === right ? left : "conditional";
+}
+
+/**
+ * `info` oder `intro.info` aus den Eigenschaften des Moduls. Eine lokale
+ * Konstante (`copy.info`) ist kein Durchreichen, sie wird aufgelöst.
+ */
+function isForwardedInfo(
+  expression: ts.Expression,
+  constants: ReadonlyMap<string, ts.Expression>,
+): boolean {
+  if (ts.isIdentifier(expression)) {
+    return expression.text === "info" && !constants.has("info");
+  }
+  return (
+    ts.isPropertyAccessExpression(expression) &&
+    expression.name.text === "info" &&
+    ts.isIdentifier(expression.expression) &&
+    !constants.has(expression.expression.text)
+  );
 }
 
 function infoAvailability(
@@ -211,9 +225,9 @@ function infoAvailability(
   ) {
     return "none";
   }
-  // `info` ist die optionale Eigenschaft gemeinsamer Seitengerüste. Ohne
-  // Aufrufanalyse kann sie leer sein und zählt deshalb nicht als Erklärung.
-  if (ts.isIdentifier(expression) && expression.text === "info") {
+  // Weitergereichte `info` löst `infoAttributeAvailability` über die Aufrufer
+  // auf. Bleibt sie innerhalb eines Ausdrucks stehen, zählt sie nicht.
+  if (ts.isIdentifier(expression) && isForwardedInfo(expression, constants)) {
     return "none";
   }
   if (ts.isIdentifier(expression)) {
@@ -266,17 +280,62 @@ function infoAvailability(
 function infoAttributeAvailability(
   attribute: ts.JsxAttribute,
   constants: ReadonlyMap<string, ts.Expression>,
-): InfoAvailability {
+): ModuleInfo {
   if (!attribute.initializer) return "none";
   if (ts.isStringLiteral(attribute.initializer)) {
     return attribute.initializer.text.trim() === "" ? "none" : "always";
   }
   if (ts.isJsxExpression(attribute.initializer)) {
-    return attribute.initializer.expression
-      ? infoAvailability(attribute.initializer.expression, constants)
-      : "none";
+    const expression = attribute.initializer.expression;
+    if (!expression) return "none";
+    return isForwardedInfo(expression, constants)
+      ? "forwarded"
+      : infoAvailability(expression, constants);
   }
   return "always";
+}
+
+/**
+ * `info` an einer Komponente, die ihr Gerüst weiter unten rendert: direkt als
+ * `info` oder im Kopf-Objekt `intro={{ title, info }}` der
+ * Datenverwaltungs-Seiten.
+ */
+function suppliedInfo(
+  attributes: ts.JsxAttributes,
+  constants: ReadonlyMap<string, ts.Expression>,
+): ModuleInfo {
+  for (const attribute of attributes.properties) {
+    if (!ts.isJsxAttribute(attribute)) continue;
+    const name = attribute.name.getText();
+    if (name === "info") {
+      return infoAttributeAvailability(attribute, constants);
+    }
+    const expression =
+      name === "intro" &&
+      attribute.initializer &&
+      ts.isJsxExpression(attribute.initializer)
+        ? attribute.initializer.expression
+        : undefined;
+    if (expression && ts.isObjectLiteralExpression(expression)) {
+      for (const property of expression.properties) {
+        if (ts.isShorthandPropertyAssignment(property)) {
+          if (property.name.text === "info") {
+            return constants.has("info")
+              ? infoAvailability(property.name, constants)
+              : "forwarded";
+          }
+        } else if (
+          ts.isPropertyAssignment(property) &&
+          property.name.getText() === "info"
+        ) {
+          return isForwardedInfo(property.initializer, constants)
+            ? "forwarded"
+            : infoAvailability(property.initializer, constants);
+        }
+      }
+    }
+  }
+  return "none";
 }
 
 function parseModule(file: string): ParsedModule {
@@ -290,8 +349,11 @@ function parseModule(file: string): ParsedModule {
     ts.ScriptKind.TSX,
   );
   let rendersTenantPage = false;
-  let info: InfoAvailability | undefined;
+  let info: ModuleInfo | undefined;
   const imports: string[] = [];
+  // Lokaler Name einer importierten Komponente -> ihr Modul.
+  const importedComponents = new Map<string, string>();
+  const infoSupplies = new Map<string, ModuleInfo>();
   const constants = new Map<string, ts.Expression>();
   const collectConstants = (node: ts.Node): void => {
     if (
@@ -314,7 +376,18 @@ function parseModule(file: string): ParsedModule {
       !(ts.isImportDeclaration(node) && node.importClause?.isTypeOnly)
     ) {
       const target = resolveImport(file, node.moduleSpecifier.text);
-      if (target) imports.push(target);
+      if (target) {
+        imports.push(target);
+        const clause = ts.isImportDeclaration(node)
+          ? node.importClause
+          : undefined;
+        if (clause?.name) importedComponents.set(clause.name.text, target);
+        if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+          for (const element of clause.namedBindings.elements) {
+            importedComponents.set(element.name.text, target);
+          }
+        }
+      }
     }
     if (
       (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
@@ -332,11 +405,29 @@ function parseModule(file: string): ParsedModule {
           ? combineRendererAvailability(info, currentInfo)
           : currentInfo;
       }
+    } else if (
+      ts.isJsxOpeningElement(node) ||
+      ts.isJsxSelfClosingElement(node)
+    ) {
+      const target = importedComponents.get(node.tagName.getText(source));
+      if (target) {
+        const supplied = suppliedInfo(node.attributes, constants);
+        const previous = infoSupplies.get(target);
+        infoSupplies.set(
+          target,
+          previous ? combineRendererAvailability(previous, supplied) : supplied,
+        );
+      }
     }
     ts.forEachChild(node, visit);
   };
   visit(source);
-  const parsed = { rendersTenantPage, info: info ?? "none", imports };
+  const parsed = {
+    rendersTenantPage,
+    info: info ?? "none",
+    imports,
+    infoSupplies,
+  };
   parsedModules.set(file, parsed);
   return parsed;
 }
@@ -345,7 +436,9 @@ function parseModule(file: string): ParsedModule {
  * Eine Seite rendert ihr Gerüst selbst oder über eine View-Komponente. Der
  * Test folgt den Importen Ebene für Ebene bis zur ersten, auf der ein Modul
  * `TenantPage` rendert, und fragt nur diese Module nach `info`. Tiefer liegende
- * Gerüste gehören zu anderen Seiten.
+ * Gerüste gehören zu anderen Seiten. Reicht ein Gerüst-Modul `info` nur durch
+ * (`CatalogPage`, `DatabasePageLayout`, Modulwächter), zählt, was seine
+ * Aufrufer auf dem Weg von der Seite dorthin mitgeben.
  */
 // Tiefste Importebene, auf der ein Seitengerüst gesucht wird. Heute rendert
 // jede Seite es selbst (Ebene 0) oder in ihrer View (Ebene 1). Liegt es
@@ -354,27 +447,45 @@ const MAX_IMPORT_DEPTH = 4;
 
 function pageInfoAvailability(pageFile: string): InfoAvailability {
   const seen = new Set([pageFile]);
+  // Je Modul die Module der vorigen Ebene, die es importieren.
+  const importers = new Map<string, string[]>();
+
+  // Was die Aufrufer eines Moduls als `info` mitgeben. Die Seite selbst hat
+  // keinen Aufrufer: bei ihr endet weitergereichte `info` leer.
+  const resolve = (file: string, info: ModuleInfo): InfoAvailability => {
+    if (info !== "forwarded") return info;
+    const callers = importers.get(file) ?? [];
+    if (callers.length === 0) return "none";
+    return callers
+      .map((caller) =>
+        resolve(caller, parseModule(caller).infoSupplies.get(file) ?? "none"),
+      )
+      .reduce((left, right) => combineRendererAvailability(left, right));
+  };
+
   let level = [pageFile];
   for (let depth = 0; depth < MAX_IMPORT_DEPTH && level.length > 0; depth++) {
     const renderers = level.filter(
       (file) => parseModule(file).rendersTenantPage,
     );
     if (renderers.length > 0) {
-      const [firstRenderer, ...otherRenderers] = renderers;
-      if (!firstRenderer) return "none";
-      return otherRenderers.reduce<InfoAvailability>(
-        (availability, file) =>
-          combineRendererAvailability(availability, parseModule(file).info),
-        parseModule(firstRenderer).info,
-      );
+      return renderers
+        .map((file) => resolve(file, parseModule(file).info))
+        .reduce((left, right) => combineRendererAvailability(left, right));
     }
-    level = level
-      .flatMap((file) => parseModule(file).imports)
-      .filter((file) => {
-        if (seen.has(file)) return false;
-        seen.add(file);
-        return true;
-      });
+    const next: string[] = [];
+    for (const file of level) {
+      for (const target of parseModule(file).imports) {
+        if (!seen.has(target)) {
+          seen.add(target);
+          next.push(target);
+          importers.set(target, [file]);
+        } else if (next.includes(target)) {
+          importers.get(target)?.push(file);
+        }
+      }
+    }
+    level = next;
   }
   return "none";
 }

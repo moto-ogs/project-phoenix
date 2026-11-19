@@ -48,6 +48,10 @@ import {
 } from "~/lib/holiday-host-api";
 import { holidayKeys } from "~/lib/swr/portal-keys";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const GROUPS_INFO =
+  "Hier legst du die Gruppen deiner OGS an, mit Gruppenraum und Gruppenleitung. Die Kinder trägst du beim Kind ein, nicht hier.";
+
 const logger = createLogger({ component: "DatabaseGroupsPage" });
 
 export default function GroupsPage() {
@@ -379,6 +383,7 @@ function GroupsPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Gruppendaten",
+        info: GROUPS_INFO,
         description: statusLine,
         actions: accessRefused ? undefined : (
           <DatabaseCreateAction

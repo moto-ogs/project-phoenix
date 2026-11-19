@@ -34,6 +34,10 @@ import { useTimetableEnabled } from "~/lib/tenant-context";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const PLANNING_TRACKS_INFO =
+  "Hier legst du Planungsspuren an, zum Beispiel eine je Jahrgang. Jede Planungsspur hat eine Farbe. Im Betreuungsplan erkennst du daran, zu welcher Planungsspur ein Regeltermin gehört.";
+
 const CACHE_KEY = tenantAdminKeys.planningTracks();
 const DEFAULT_COLOR: string = LOCATION_COLORS.OTHER_ROOM;
 
@@ -192,6 +196,7 @@ function PlanningTracksPageContent() {
     return (
       <PlanningDisabledState
         pageTitle="Planungsspuren"
+        info={PLANNING_TRACKS_INFO}
         heading="Planungsspuren sind nicht verfügbar"
         description="Der Betreuungsplan ist für diese Schule ausgeschaltet."
         testId="planning-tracks-disabled-state"
@@ -201,6 +206,7 @@ function PlanningTracksPageContent() {
 
   return (
     <CatalogPage
+      info={PLANNING_TRACKS_INFO}
       config={config}
       items={items}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett

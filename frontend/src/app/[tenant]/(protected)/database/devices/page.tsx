@@ -59,6 +59,10 @@ import { devicesConcept } from "~/lib/concepts/devices";
 import { foldForSearch } from "~/lib/search-fold";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const DEVICES_INFO =
+  "Hier siehst du alle Geräte deiner OGS und ob sie online sind. Ein geliefertes Tablet steht schon in der Liste, du musst es nicht anlegen. Wähle ein Gerät, um es zu sperren oder zu entfernen.";
+
 const logger = createLogger({ component: "DatabaseDevicesPage" });
 
 type DevicesGroupingMode = "none" | "type" | "room";
@@ -84,7 +88,11 @@ function parseDevicesGrouping(value: string | null): DevicesGroupingMode {
 
 export default function DevicesPage() {
   return (
-    <ModuleRouteGuard module="nfc_anwesenheit" title="Geräte">
+    <ModuleRouteGuard
+      module="nfc_anwesenheit"
+      title="Geräte"
+      info={DEVICES_INFO}
+    >
       <Suspense fallback={null}>
         <DevicesPageContent />
       </Suspense>
@@ -516,6 +524,7 @@ function DevicesPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Geräte",
+        info: DEVICES_INFO,
         description: (
           <>
             {statusLine}
