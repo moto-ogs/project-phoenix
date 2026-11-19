@@ -1,13 +1,13 @@
 import type {
   PlannedInstance,
-  Projection,
+  DashboardProjection,
   RosterRow,
 } from "~/lib/contract/active.generated";
 
 /** An empty supervision projection in the contract's shape (#7563). */
 export function buildSupervisionDashboardWire(
-  overrides?: Partial<Projection>,
-): Projection {
+  overrides?: Partial<DashboardProjection>,
+): DashboardProjection {
   return {
     business_day: "2026-08-31",
     spontaneous_start_availability: { available: true },

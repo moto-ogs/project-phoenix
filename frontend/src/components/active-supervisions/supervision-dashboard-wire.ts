@@ -4,7 +4,7 @@
 // page renders. Pure, so the page and the temporary route share it.
 import type {
   OpenRoomStudent,
-  Projection,
+  DashboardProjection,
   SessionSupervisor,
   Visit,
 } from "~/lib/contract/active.generated";
@@ -46,7 +46,7 @@ function supervisorNames(
 }
 
 export function mapSupervisionDashboard(
-  wire: Projection,
+  wire: DashboardProjection,
 ): BFFDashboardResponse {
   const schulhof = wire.schulhof_status;
   return {

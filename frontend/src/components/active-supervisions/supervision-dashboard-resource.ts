@@ -5,7 +5,7 @@ import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types"
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { TeacherHint } from "~/lib/student-helpers";
 import type { ClassHandover } from "~/lib/class-handover";
-import type { Projection } from "~/lib/contract/active.generated";
+import type { DashboardProjection } from "~/lib/contract/active.generated";
 import { mapSupervisionDashboard } from "./supervision-dashboard-wire";
 import type { OpenRoomView, SchulhofStatusResponse } from "./view-model";
 const logger = createLogger({ component: "useSupervisionDashboard" });
@@ -149,7 +149,7 @@ export async function fetchSupervisionDashboard(
     );
   }
 
-  const body = (await response.json()) as { data: Projection };
+  const body = (await response.json()) as { data: DashboardProjection };
 
   logger.debug("SWR fetch complete", {
     duration_ms: Math.round(performance.now() - start),
