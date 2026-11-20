@@ -139,7 +139,7 @@ func TestDeclarationProofDownloadsTheMotoPDF(t *testing.T) {
 	rs := &Resource{ParentService: &fakeParentService{declarationProof: declarationProofFixture(true)}, Reports: renderer, Now: enrollmentTestNow}
 	w := httptest.NewRecorder()
 
-	rs.declarationProof(w, declarationProofRequest("student_id=7&format=pdf"))
+	rs.declarationProofPDF(w, declarationProofRequest("student_id=7"))
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "application/pdf", w.Header().Get("Content-Type"))

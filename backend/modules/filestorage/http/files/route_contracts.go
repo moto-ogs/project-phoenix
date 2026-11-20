@@ -47,11 +47,16 @@ func AnnouncementAttachmentRouteContracts() []common.RouteContract {
 }
 
 // ParentAnnouncementAttachmentRouteContracts registers the guardian's
-// attachment list, with patterns relative to /parent-news-attachments. The
-// download answers a file and keeps its route file.
+// attachments, with patterns relative to /parent-news-attachments. The
+// download answers the file; student_id names the child a declaration proof
+// is for, inline=1 shows a picture or PDF in the tab.
 func ParentAnnouncementAttachmentRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalParent}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: AnnouncementAttachmentListResponse{}},
+		{
+			Method: "GET", Pattern: "/{announcementId}/{attachmentId}/download", Portals: portals, File: true,
+			Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}, {Name: "inline", Kind: common.QueryString}},
+		},
 	}
 }

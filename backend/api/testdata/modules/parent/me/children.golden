@@ -21,6 +21,7 @@ GET /parent/me/children/{studentId}/parent-conferences -> eltern_app  (#4895 Elt
 GET /parent/me/children/{studentId}/pickup-change-requests -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/pickup-permission-requests -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
+GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/related-accounts -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/request-sharing-options -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId} -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
