@@ -147,9 +147,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 	t.Run("care staff sees names for its group and numbers for the school", func(t *testing.T) {
 		overview, body := read(t, router, carerAccount.ID, tenantID, "users:read")
 		assert.Equal(t, day.String(), overview.Date)
-		require.Len(t, overview.Sources, 1)
-		assert.Equal(t, "staff", overview.Sources[0].Source)
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 		assert.Equal(t, []string{
 			"you group_substitution Tom Hilfe/substitute @Igel bis 2026-09-10 ->group_handovers",
 			"you staff_absent Ben Kollege/absent bis 2026-09-11 ->staff_member",
@@ -165,7 +163,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 			"you group_substitution Tom Hilfe/substitute @Igel bis 2026-09-10 ->group_handovers",
 			"you staff_absent Ben Kollege/absent bis 2026-09-11",
 		}, summary(overview.Entries))
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("lead sees every name of the school and no other school", func(t *testing.T) {
@@ -184,8 +182,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 	t.Run("account without the rights gets no entries and no failure", func(t *testing.T) {
 		overview, _ := read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, overview.Entries)
-		require.Len(t, overview.Sources, 1)
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("the day before shows that day only", func(t *testing.T) {

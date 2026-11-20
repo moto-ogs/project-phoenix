@@ -991,6 +991,7 @@ describe("useGlobalSSE — Heute anders", () => {
     "staffing_deviation_changed",
     "group_access_changed",
     "staff_time_tracking_changed",
+    "staff_notices_changed",
   ] as const)("reloads the block on %s", (type) => {
     renderHook(() => useGlobalSSE());
 
@@ -1018,5 +1019,20 @@ describe("useGlobalSSE — Heute anders", () => {
       vi.advanceTimersByTime(500);
     });
     expect(dayChangesReloads()).toBe(1);
+  });
+
+  it("reloads the notices of the day on staff_notices_changed (#7667)", () => {
+    const noticesKey = "t1:staff-notices-today:u1";
+    renderHook(() => useGlobalSSE());
+
+    fireSSE(makeEvent("staff_notices_changed"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    const noticeReloads = mockMutate.mock.calls.filter(
+      ([matcher]) => typeof matcher === "function" && matcher(noticesKey),
+    ).length;
+    expect(noticeReloads).toBe(1);
   });
 });

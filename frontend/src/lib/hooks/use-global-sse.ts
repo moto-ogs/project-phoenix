@@ -66,6 +66,7 @@ import { homeKeys, STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { announceCareScheduleStale } from "~/lib/care-schedule-stale";
 import { groupKeys } from "~/lib/swr/groups-keys";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 
 const logger = createLogger({ component: "GlobalSSE" });
 
@@ -405,6 +406,8 @@ export function useGlobalSSE(): SSEHookState {
   // date-bound access change can refresh subscriptions without another broad
   // OGS refetch; both paths still share the same burst debounce.
   const hasPendingGroupSubscriptionRefresh = useRef(false);
+  // A Hinweis der Leitung was created, changed or deleted (#7667).
+  const hasPendingStaffNoticesEvent = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Per-burst flush state (#2057): jitter drawn once when a burst starts, and
   // the burst's start time for the MAX_FLUSH_WAIT_MS cap.
@@ -433,6 +436,7 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingTimetableEvent.current = false;
     hasPendingGroupAccessEvent.current = false;
     hasPendingGroupSubscriptionRefresh.current = false;
+    hasPendingStaffNoticesEvent.current = false;
     burstScopeRef.current = null;
   }, []);
 
@@ -967,7 +971,8 @@ export function useGlobalSSE(): SSEHookState {
     if (
       hasPendingTimetableEvent.current ||
       hasPendingGroupAccessEvent.current ||
-      hasPendingStaffTimeTrackingEvent.current
+      hasPendingStaffTimeTrackingEvent.current ||
+      hasPendingStaffNoticesEvent.current
     ) {
       mutate(
         (key) =>
@@ -977,6 +982,22 @@ export function useGlobalSSE(): SSEHookState {
         logger.debug("swr_revalidation_failed", {
           error: err instanceof Error ? err.message : String(err),
           scope: "day_changes",
+        });
+      });
+    }
+
+    // Hinweise der Leitung (#7667): the day's notices of the account feed
+    // „Heute anders“ (above), the Tagesinformationen page and the count in the
+    // navigation; all three read the same key.
+    if (hasPendingStaffNoticesEvent.current) {
+      mutate(
+        (key) =>
+          typeof key === "string" && key.includes(staffNoticeKeys.today("")),
+      ).catch((err) => {
+        // Fire-and-forget: the views keep their data until the next event or load.
+        logger.debug("swr_revalidation_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          scope: "staff_notices",
         });
       });
     }
@@ -1252,6 +1273,12 @@ export function useGlobalSSE(): SSEHookState {
           // cascade tears down the EventSource only once.
           hasPendingGroupSubscriptionRefresh.current = true;
           hasPendingGroupAccessEvent.current = true;
+          scheduleFlush();
+          break;
+        }
+
+        case "staff_notices_changed": {
+          hasPendingStaffNoticesEvent.current = true;
           scheduleFlush();
           break;
         }
@@ -1544,6 +1571,7 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingStudentUpdateEvent.current = true;
     hasPendingTimetableEvent.current = true;
     hasPendingGroupAccessEvent.current = true;
+    hasPendingStaffNoticesEvent.current = true;
     const openStudentId = currentStudentDetailId();
     if (openStudentId) pendingOpenStudentIds.current.add(openStudentId);
     // One flush for the gap and any burst that was still waiting.

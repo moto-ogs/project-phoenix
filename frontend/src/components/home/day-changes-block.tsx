@@ -14,6 +14,7 @@ import {
   dayChangeText,
   sourceFailureText,
 } from "~/components/home/day-changes-text";
+import { DayNoticeRow } from "~/components/home/day-notice-row";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -71,7 +72,7 @@ export function DayChangesBlock() {
           if (!data) {
             return isLoading || error ? <DayChangesSkeleton /> : null;
           }
-          return <DayChangesContent overview={data} />;
+          return <DayChangesContent overview={data} onChanged={mutate} />;
         })()}
       </div>
     </HomeCard>
@@ -90,8 +91,11 @@ function DayChangesSkeleton() {
 
 function DayChangesContent({
   overview,
+  onChanged,
 }: {
   readonly overview: DayChangesOverview;
+  /** Lädt die Übersicht neu, etwa nach einer Kenntnisnahme (#7667). */
+  readonly onChanged: () => Promise<unknown>;
 }) {
   const shown = overview.entries.filter(
     (entry) => dayChangeText(entry) !== null,
@@ -127,10 +131,19 @@ function DayChangesContent({
         }
       >
         {mine.length > 0 ? (
-          <DayChangesSection title="Betrifft dich" entries={mine} />
+          <DayChangesSection
+            title="Betrifft dich"
+            entries={mine}
+            onChanged={onChanged}
+          />
         ) : null}
         {school.length > 0 ? (
-          <DayChangesSection title="Schule" entries={school} capOnPhone />
+          <DayChangesSection
+            title="Schule"
+            entries={school}
+            onChanged={onChanged}
+            capOnPhone
+          />
         ) : null}
       </div>
     </div>
@@ -140,10 +153,12 @@ function DayChangesContent({
 function DayChangesSection({
   title,
   entries,
+  onChanged,
   capOnPhone = false,
 }: {
   readonly title: string;
   readonly entries: readonly DayChange[];
+  readonly onChanged: () => Promise<unknown>;
   /** Auf dem Telefon nur die ersten Einträge, damit „Mein Tag“ sichtbar bleibt. */
   readonly capOnPhone?: boolean;
 }) {
@@ -160,9 +175,18 @@ function DayChangesSection({
         {title}
       </SectionLabel>
       <ul ref={listRef} className="space-y-2">
-        {visible.map((entry, index) => (
-          <DayChangeRow key={dayChangeKey(entry, index)} entry={entry} />
-        ))}
+        {visible.map((entry, index) =>
+          entry.notice ? (
+            <DayNoticeRow
+              key={dayChangeKey(entry, index)}
+              entry={entry}
+              notice={entry.notice}
+              onChanged={onChanged}
+            />
+          ) : (
+            <DayChangeRow key={dayChangeKey(entry, index)} entry={entry} />
+          ),
+        )}
       </ul>
       {capped && entries.length > PHONE_SCHOOL_ROWS ? (
         <Button
@@ -193,6 +217,7 @@ function DayChangesSection({
 
 /** Stabil über ein Neuladen hinweg: Art, Personen und Gruppe. */
 function dayChangeKey(entry: DayChange, index: number): string {
+  if (entry.notice) return `${entry.kind}:${entry.notice.id}`;
   const people = entry.people.map((person) => person.staffId).join(",");
   return `${entry.kind}:${people}:${entry.groupName ?? ""}:${people || entry.groupName ? "" : index}`;
 }

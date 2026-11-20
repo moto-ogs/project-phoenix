@@ -68,11 +68,13 @@ export function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
+          "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",
