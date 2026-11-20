@@ -8,13 +8,6 @@
       "external_test_role": "module-behavior-test"
     },
     {
-      "path": "modules/daychangesview/compose",
-      "owner": "day-changes-view",
-      "role": "compose",
-      "internal_test_role": "module-internal-test",
-      "external_test_role": "module-behavior-test"
-    },
-    {
       "path": "modules/daychangesview/http",
       "owner": "day-changes-view",
       "role": "http",
@@ -23,17 +16,6 @@
     }
   ],
   "rules": [
-    {
-      "id": "day-changes-view.compose.tenant-runtime",
-      "description": "ADR 0299 point 7: the composition runs every source in a savepoint of the request's school transaction.",
-      "scopes": [
-        "production"
-      ],
-      "source_owner": "day-changes-view",
-      "source_role": "compose",
-      "target_owner": "tenant-runtime",
-      "target_role": "public"
-    },
     {
       "id": "day-changes-view.http.public",
       "description": "ADR 0299: the route calls the projection's one public capability.",

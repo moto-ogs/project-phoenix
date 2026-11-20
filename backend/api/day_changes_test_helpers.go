@@ -23,16 +23,12 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
-	workTime, err := owners.NewWorkforceWithClock(db, membership, today.BerlinMidnight)
-	if err != nil {
-		return nil, err
-	}
 	people, err := NewRFIDTestPeople(db)
 	if err != nil {
 		return nil, err
 	}
 	view, err := NewDayChanges(DayChangesSources{
-		Caller: caller, Workforce: workTime, Teachers: owners.NewGroupTeacherStaff(membership),
+		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
 		Names: NewTimetablePeople(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		Today: func() calendar.Date { return today }, Logger: slog.Default(),
 	})

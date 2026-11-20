@@ -167,7 +167,9 @@ type Isolation interface {
 	IsFatal(err error) bool
 }
 
-// Dependencies are the ports the root binds. Every field is required.
+// Dependencies are the ports the root binds. Today, Isolation and every
+// source are required; Logger is optional. The root binds Isolation to a
+// savepoint of the request's school transaction (ADR 0299 point 7).
 type Dependencies struct {
 	Today     func() calendar.Date
 	Isolation Isolation
@@ -233,7 +235,10 @@ func (v *view) Today(ctx context.Context) (Overview, error) {
 				return Overview{}, fmt.Errorf("day changes source %s: %w", source.source, err)
 			}
 			// No personal data: the source and the error class only.
-			v.logger.ErrorContext(ctx, "day changes source failed", "source", string(source.source), "error", err.Error())
+			v.logger.ErrorContext(ctx, "day changes source failed",
+				"source", string(source.source),
+				"error", err.Error(),
+			)
 			overview.Sources = append(overview.Sources, SourceStatus{Source: source.source, Status: SourceFailed})
 			continue
 		}

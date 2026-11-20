@@ -525,14 +525,7 @@ func composeServeRoot(
 		},
 		func() error { return mountRequestFeed(router, tenant, db, logger, config.FrontendURL) },
 		func() error {
-			return mountDayChanges(tenant, DayChangesSources{
-				Caller: caller, Workforce: workTime, Teachers: owners.NewGroupTeacherStaff(membership),
-				Names: NewTimetablePeople(services.Users), Groups: structure.Groups, Today: env.Today,
-				Logger: logger.With("service", "day-changes"),
-			})
-		},
-		func() error {
-			return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers, persons.StudentNotes, activities, workforce.TimeTracking.Overview, env.Today)
+			return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers, persons.StudentNotes, activities, workforce.TimeTracking.Overview, env.Today, DayChangesSources{Caller: caller, Workforce: workTime, Teachers: owners.NewGroupTeacherStaff(membership), Names: NewTimetablePeople(services.Users), Groups: structure.Groups, Today: env.Today, Logger: logger.With("service", "day-changes")})
 		},
 		func() error {
 			return mountStudentRoutes(tenant, db, logger, deviceAuth, studentPresence, persons, services, membership, caller, reviewPolicy,

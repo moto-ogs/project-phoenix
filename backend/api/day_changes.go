@@ -18,7 +18,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
-	dayChangesCompose "github.com/moto-ogs/project-phoenix/modules/daychangesview/compose"
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	schoolstructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
@@ -26,6 +25,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // dayChangesCaller is the Identity & Access read of the caller's staff
@@ -67,12 +67,24 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
-	return dayChangesCompose.New(daychangesview.Dependencies{
-		Today:  sources.Today,
-		Staff:  dayChangesStaff{sources: sources},
-		Logger: sources.Logger,
+	return daychangesview.New(daychangesview.Dependencies{
+		Today:     sources.Today,
+		Isolation: dayChangesSavepoints{},
+		Staff:     dayChangesStaff{sources: sources},
+		Logger:    sources.Logger,
 	})
 }
+
+// dayChangesSavepoints runs every source in a savepoint of the request's
+// school transaction, so a failed statement of one source leaves the
+// transaction usable for the next (ADR 0299 point 7).
+type dayChangesSavepoints struct{}
+
+func (dayChangesSavepoints) Run(ctx context.Context, read func(context.Context) error) error {
+	return tenant.WithSavepoint(ctx, read)
+}
+
+func (dayChangesSavepoints) IsFatal(err error) bool { return tenant.IsSavepointControlFailure(err) }
 
 // mountDayChanges serves GET /api/day-changes/today (#7659).
 func mountDayChanges(tenant chi.Router, sources DayChangesSources) error {
