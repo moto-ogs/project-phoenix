@@ -30,8 +30,6 @@ import (
 // Shrink only: register the parameter (when a client sends it) or stop
 // reading it, then delete it here.
 var handlerQueryReadsOutsideContract = map[string][]string{
-	// ?format=pdf: the route file signature-proof asks for the PDF directly
-	"GET /api/enrollment/admin/requests/{id}/": {"format"},
 	// ?format=pdf stays for existing calls (ADR 0270, public files)
 	"GET /api/enrollment/requests/{statusToken}": {"format"},
 	// the route answers the PDF; format is read by the shared helper
@@ -42,8 +40,6 @@ var handlerQueryReadsOutsideContract = map[string][]string{
 	"GET /api/staff/{id}/time-tracking/schedule-targets": {"target_only"},
 	// the child list's filters; the client sends none, so the counts cover every child in care
 	"GET /api/students/enrollment-answer-filters": {"bus", "date", "day_status", "first_name", "grade_level", "group_id", "include_arrival_times", "include_companions", "include_pending_withdrawals", "include_pickup_times", "last_name", "location", "location_state", "page", "page_size", "photo_consent", "pickup_status", "room_id", "school_class", "search"},
-	// ?format=pdf: the route file proof/pdf asks for the PDF directly
-	"GET /parent/me/news/{announcementId}/declaration/proof": {"format"},
 	// no client sends kind; the invoice letter is the default
 	"POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/cancellation": {"kind"},
 }
@@ -149,10 +145,10 @@ const backendModulePath = "github.com/moto-ogs/project-phoenix"
 
 // queryReadIndex reads the backend source one package at a time.
 type queryReadIndex struct {
-	t        *testing.T
-	root     string
-	packages map[string]*queryReadPackage
-	results  map[ast.Node]*queryReadResult
+	// pkg parses a backend package on its first use and remembers it; nil
+	// for a package outside the module or without a directory.
+	pkg     func(pkgPath string) *queryReadPackage
+	results map[ast.Node]*queryReadResult
 }
 
 type queryReadPackage struct {
@@ -175,7 +171,18 @@ type queryReadResult struct {
 func newQueryReadIndex(t *testing.T) *queryReadIndex {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
-	return &queryReadIndex{t: t, root: filepath.Dir(wd), packages: map[string]*queryReadPackage{}, results: map[ast.Node]*queryReadResult{}}
+	root := filepath.Dir(wd)
+	packages := map[string]*queryReadPackage{}
+	load := func(pkgPath string) *queryReadPackage {
+		if pkg, found := packages[pkgPath]; found {
+			return pkg
+		}
+		packages[pkgPath] = nil
+		pkg := loadQueryReadPackage(t, root, pkgPath)
+		packages[pkgPath] = pkg
+		return pkg
+	}
+	return &queryReadIndex{pkg: load, results: map[ast.Node]*queryReadResult{}}
 }
 
 // handlerReads lists the keys the function the runtime names reads.
@@ -278,21 +285,19 @@ func cleanFuncName(name string) string {
 	return name
 }
 
-func (ix *queryReadIndex) pkg(pkgPath string) *queryReadPackage {
-	if pkg, found := ix.packages[pkgPath]; found {
-		return pkg
-	}
-	ix.packages[pkgPath] = nil
+// loadQueryReadPackage parses the non-test files of a backend package.
+func loadQueryReadPackage(t *testing.T, root, pkgPath string) *queryReadPackage {
 	rel, inModule := strings.CutPrefix(pkgPath, backendModulePath)
 	if !inModule {
 		return nil
 	}
-	dir := filepath.Join(ix.root, filepath.FromSlash(strings.TrimPrefix(rel, "/")))
+	dir := filepath.Join(root, filepath.FromSlash(strings.TrimPrefix(rel, "/")))
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil
 	}
-	pkg := &queryReadPackage{path: pkgPath, funcs: map[string]*ast.FuncDecl{}, methods: map[string]*ast.FuncDecl{}, imports: map[*ast.FuncDecl]map[string]string{}, consts: map[string]string{}}
+	funcs, methods := map[string]*ast.FuncDecl{}, map[string]*ast.FuncDecl{}
+	imports, consts := map[*ast.FuncDecl]map[string]string{}, map[string]string{}
 	fset := token.NewFileSet()
 	for _, entry := range entries {
 		name := entry.Name()
@@ -300,14 +305,29 @@ func (ix *queryReadIndex) pkg(pkgPath string) *queryReadPackage {
 			continue
 		}
 		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.SkipObjectResolution)
-		require.NoError(ix.t, err)
-		pkg.addFile(file)
+		require.NoError(t, err)
+		fileImports := queryReadFileImports(file)
+		for _, decl := range file.Decls {
+			if gen, isGen := decl.(*ast.GenDecl); isGen && gen.Tok == token.CONST {
+				addQueryReadConsts(consts, gen)
+			}
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
+			}
+			imports[fn] = fileImports
+			if recvType, _ := receiver(fn); recvType != "" {
+				methods[recvType+"."+fn.Name.Name] = fn
+			} else {
+				funcs[fn.Name.Name] = fn
+			}
+		}
 	}
-	ix.packages[pkgPath] = pkg
-	return pkg
+	return &queryReadPackage{path: pkgPath, funcs: funcs, methods: methods, imports: imports, consts: consts}
 }
 
-func (pkg *queryReadPackage) addFile(file *ast.File) {
+// queryReadFileImports maps the names a file imports to their paths.
+func queryReadFileImports(file *ast.File) map[string]string {
 	imports := map[string]string{}
 	for _, spec := range file.Imports {
 		path, _ := strconv.Unquote(spec.Path.Value)
@@ -317,24 +337,11 @@ func (pkg *queryReadPackage) addFile(file *ast.File) {
 		}
 		imports[name] = path
 	}
-	for _, decl := range file.Decls {
-		if gen, isGen := decl.(*ast.GenDecl); isGen && gen.Tok == token.CONST {
-			pkg.addConsts(gen)
-		}
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Body == nil {
-			continue
-		}
-		pkg.imports[fn] = imports
-		if recvType, _ := receiver(fn); recvType != "" {
-			pkg.methods[recvType+"."+fn.Name.Name] = fn
-		} else {
-			pkg.funcs[fn.Name.Name] = fn
-		}
-	}
+	return imports
 }
 
-func (pkg *queryReadPackage) addConsts(gen *ast.GenDecl) {
+// addQueryReadConsts adds the string constants of a declaration to consts.
+func addQueryReadConsts(consts map[string]string, gen *ast.GenDecl) {
 	for _, spec := range gen.Specs {
 		value, ok := spec.(*ast.ValueSpec)
 		if !ok {
@@ -345,7 +352,7 @@ func (pkg *queryReadPackage) addConsts(gen *ast.GenDecl) {
 				break
 			}
 			if lit, isLit := value.Values[i].(*ast.BasicLit); isLit && lit.Kind == token.STRING {
-				pkg.consts[name.Name], _ = strconv.Unquote(lit.Value)
+				consts[name.Name], _ = strconv.Unquote(lit.Value)
 			}
 		}
 	}

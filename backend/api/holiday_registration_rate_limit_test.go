@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	"github.com/stretchr/testify/assert"
@@ -29,11 +30,21 @@ func TestPublicLinkLimitsAreNeverTighterThanTheGeneralLimiter(t *testing.T) {
 	}
 }
 
+// stoppedClockRateLimiter is the production limiter on a clock that stands
+// still. A burst test spends several hundred tokens; on a loaded runner the
+// wall clock would refill one before the request past the burst (#7644).
+func stoppedClockRateLimiter(limit, burst int) *customMiddleware.RateLimiter {
+	limiter := customMiddleware.NewRateLimiter(limit, burst)
+	stopped := time.Date(2026, time.November, 20, 12, 0, 0, 0, time.UTC)
+	limiter.SetClock(func() time.Time { return stopped })
+	return limiter
+}
+
 // A school network opens the link at once: every request of the burst
 // passes, the one after it is refused, reads and writes apart.
 func TestHolidayRegistrationRateLimitLetsItsBurstThrough(t *testing.T) {
 	t.Parallel()
-	limited := holidayRegistrationRateLimit(true, false, customMiddleware.NewRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	limited := holidayRegistrationRateLimit(true, false, stoppedClockRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	send := func(method string) int {
@@ -57,7 +68,7 @@ func TestHolidayRegistrationRateLimitLetsItsBurstThrough(t *testing.T) {
 // does not spend the budget of the holiday link.
 func TestCareContractSigningRateLimitLetsItsBurstThrough(t *testing.T) {
 	t.Parallel()
-	limited := careContractSigningRateLimit(true, false, customMiddleware.NewRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	limited := careContractSigningRateLimit(true, false, stoppedClockRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	send := func(method string) int {
