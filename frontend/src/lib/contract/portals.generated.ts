@@ -82,6 +82,7 @@ import { routes as schoolNotifications } from "./school-notifications.generated"
 import { routes as schoolParentLetters } from "./school-parent-letters.generated";
 import { routes as schoolSetup } from "./school-setup.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
+import { routes as schoolStaffMessagesAttachments } from "./school-staff-messages-attachments.generated";
 import { routes as schoolStaffNotices } from "./school-staff-notices.generated";
 import { routes as schoolSupervisions } from "./school-supervisions.generated";
 import { routes as search } from "./search.generated";
@@ -906,6 +907,8 @@ export const portalRoutes = {
     schoolStaffMessages["POST /school/staff-messages/threads/open"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}"],
     schoolStaffMessages["POST /school/staff-messages/threads/{threadID}/leave"],
+    schoolStaffMessagesAttachments["GET /school-staff-messages/attachments/{attachmentId}/download"],
+    schoolStaffMessagesAttachments["POST /school-staff-messages/attachments"],
     schoolStaffNotices["GET /school/staff-notices/today"],
     schoolStaffNotices["POST /school/staff-notices/{noticeId}/acknowledge"],
     schoolSupervisions["GET /school/supervisions/"],

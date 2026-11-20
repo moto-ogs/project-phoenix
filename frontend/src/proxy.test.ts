@@ -294,7 +294,7 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
     "/api/traeger/holiday-registrations/token/documents/2",
     "/api/messages/attachments/3/download",
     "/api/staff-messages/attachments/4/download",
-    "/api/school/staff-messages/attachments/5/download",
+    "/api/school/school-staff-messages/attachments/5/download",
     "/api/parent/me/messages/children/6/attachments/7/download",
   ])("runs %s in the sandbox, not under the app CSP", (route) => {
     const host = hostFor(route);
@@ -334,15 +334,31 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
     })
       .filter((file) => file.endsWith("route.ts"))
       .map((file) => path.dirname(file).split(path.sep).join("/"));
-    const contractFiles = Object.values(portalRoutes)
-      .flat()
-      .filter((route) => route.response === fileAnswer)
-      .map((route) =>
-        route.pattern
-          .replace(/^\/(?:api\/)?/, "")
-          .replace(/\{([^}]+)\}/g, "[$1]")
-          .replace(/\/$/, ""),
-      );
+    // A portal's BFF folder: its mount stands for its prefix, and a backend
+    // path beside the mount (`/parent-news-attachments`) sits below it.
+    const bffFolders: Record<string, readonly [string, string]> = {
+      tenant: ["/api/", ""],
+      parent: ["/parent/", "parent/"],
+      school: ["/school/", "school/"],
+      org: ["/traeger/", "traeger/"],
+      caterer: ["/caterer/", "caterer/"],
+      platform: ["/operator/", "operator/"],
+    };
+    const contractFiles = Object.entries(portalRoutes).flatMap(
+      ([portal, routes]) => {
+        const [mount, prefix] = bffFolders[portal] ?? ["/", ""];
+        return routes
+          .filter((route) => route.response === fileAnswer)
+          .map((route) =>
+            (route.pattern.startsWith(mount)
+              ? prefix + route.pattern.slice(mount.length)
+              : prefix + route.pattern.slice(1)
+            )
+              .replace(/\{([^}]+)\}/g, "[$1]")
+              .replace(/\/$/, ""),
+          );
+      },
+    );
     const sandboxed = [...new Set([...routeFolders, ...contractFiles])]
       .filter((dir) => {
         const route =
@@ -363,7 +379,7 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
       "messages/attachments/[attachmentId]/download",
       "parent/me/messages/children/[studentId]/attachments/[attachmentId]/download",
       "parent/me/news/[announcementId]/attachments/[attachmentId]/download",
-      "school/staff-messages/attachments/[attachmentId]/download",
+      "school/school-staff-messages/attachments/[attachmentId]/download",
       "staff-messages/attachments/[attachmentId]/download",
       "staff/[id]/documents/[documentId]/download",
       "students/[id]/documents/[documentId]/download",

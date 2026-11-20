@@ -44,7 +44,6 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["school/class-day/absence-list/export", "GET"],
   ["school/parent-letters/[announcementId]/declaration-export", "GET"],
   ["school/parent-letters/[announcementId]/letters-pdf", "GET"],
-  ["school/staff-messages/attachments/[attachmentId]/download", "GET"],
   ["staff-shifts/export", "POST"],
   ["staff/[id]/time-tracking/export", "GET"],
   ["statistics/care-time-overruns/export", "GET"],

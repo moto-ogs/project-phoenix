@@ -83,8 +83,10 @@ export const PARENT_MESSAGE_ATTACHMENTS =
 export const STAFF_MESSAGE_ATTACHMENTS = messageAttachmentRoutes(
   "/api/staff-messages",
 );
+// The school portal's chat files live beside its mount, at
+// /school-staff-messages (#6685); its proxy reaches them under its prefix.
 export const SCHOOL_STAFF_MESSAGE_ATTACHMENTS = messageAttachmentRoutes(
-  "/api/school/staff-messages",
+  "/api/school/school-staff-messages",
 );
 
 /** Die Anhänge der Eltern hängen am Kind, über das sie schreiben. */

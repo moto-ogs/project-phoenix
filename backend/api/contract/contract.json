@@ -8897,6 +8897,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/school-staff-messages/attachments/{attachmentId}/download",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/school/auth/mfa/trusted-devices",
       "portals": [
         "school"
@@ -16777,6 +16791,20 @@
       ],
       "file": true,
       "public_file": "the one-time link of the payroll mail is the payroll office's only credential"
+    },
+    {
+      "method": "POST",
+      "pattern": "/school-staff-messages/attachments",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
