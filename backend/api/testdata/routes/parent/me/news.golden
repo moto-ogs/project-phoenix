@@ -1,6 +1,7 @@
 GET /parent/me/news
 GET /parent/me/news/unread-count
 GET /parent/me/news/{announcementId}/declaration/proof
+GET /parent/me/news/{announcementId}/declaration/proof/pdf
 GET /parent/me/news/{announcementId}/survey
 POST /parent/me/news/{announcementId}/acknowledge
 POST /parent/me/news/{announcementId}/declaration
