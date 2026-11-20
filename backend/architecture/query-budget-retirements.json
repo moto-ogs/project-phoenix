@@ -168,5 +168,20 @@
     "scenario": "api.active.supervisors.staff",
     "route": "GET /api/active/supervisors/staff/{staffId}",
     "issue": 2352
+  },
+  {
+    "scenario": "api.auth.accounts.by_role.positive_growth",
+    "route": "GET /auth/accounts/by-role/{roleName}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.auth.accounts.tokens.positive_growth",
+    "route": "GET /auth/accounts/{accountId}/tokens/",
+    "issue": 2352
+  },
+  {
+    "scenario": "operator.lists.account_tenants_slash",
+    "route": "GET /operator/accounts/{accountId}/tenants/",
+    "issue": 2352
   }
 ]

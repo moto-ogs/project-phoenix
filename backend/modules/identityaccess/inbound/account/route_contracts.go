@@ -42,6 +42,8 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		{Name: "resource", Kind: common.QueryString},
 		{Name: "action", Kind: common.QueryString},
 	}
+	getPermission := route("GET", "/permissions/{id}/", nil, PermissionResponse{})
+	getPermission.Deprecated = true
 	return []common.RouteContract{
 		listRoles,
 		route("POST", "/roles/", CreateRoleRequest{}, RoleResponse{}),
@@ -51,7 +53,7 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{}),
 		route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, nil),
 		listPermissions,
-		route("GET", "/permissions/{id}/", nil, PermissionResponse{}),
+		getPermission,
 		route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{}),
 		route("PUT", "/accounts/{accountId}/roles/", ReplaceAccountRoleRequest{}, nil),
 		route("GET", "/accounts/{accountId}/mfa/", nil, AccountMFAAdminStateResponse{}),
