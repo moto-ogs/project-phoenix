@@ -36,8 +36,6 @@ type LifecycleFixturePlanning interface {
 }
 
 type LifecycleFixtureStaffing interface {
-	AcknowledgeUnderstaffed(arg0 context.Context, arg1 int64, arg2 bool, arg3 *string, arg4 *int64) (*timetable.LifecycleInstance, error)
-
 	ClearUnderstaffedAckIfStaffed(arg0 context.Context, arg1 int64, arg2 *int64) error
 
 	MoveStaffBetweenBlocks(arg0 context.Context, arg1 int64, arg2 timetable.MoveStaffInput) (*timetable.MoveStaffResult, error)
@@ -72,11 +70,6 @@ func FromInstanceLifecycle(value ports.InstanceLifecycle) InstanceLifecycle {
 		return nil
 	}
 	return fromInstanceLifecycle{value: value}
-}
-
-func (adapter fromInstanceLifecycle) AcknowledgeUnderstaffed(arg0 context.Context, arg1 int64, arg2 bool, arg3 *string, arg4 *int64) (*timetable.LifecycleInstance, error) {
-	result0, result1 := adapter.value.AcknowledgeUnderstaffed(arg0, arg1, arg2, arg3, arg4)
-	return result0, result1
 }
 
 func (adapter fromInstanceLifecycle) AnnounceStaffingChanged(arg0 int64, arg1 string) error {

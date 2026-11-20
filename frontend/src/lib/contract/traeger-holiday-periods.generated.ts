@@ -9,6 +9,7 @@ import {
   int64StringOrNumber,
   json,
   multipart,
+  noData,
   nullable,
   object,
   optional,
@@ -555,6 +556,19 @@ export interface HolidayAllocationRequest {
   decisions?: holidayAllocationChoiceRequest[] | null;
 }
 
+/** Go: enrollment.HolidayFormDocument */
+export interface HolidayFormDocument {
+  id: string;
+  filename: string;
+  size: number;
+}
+
+export const HolidayFormDocumentSchema: z.ZodType<HolidayFormDocument, unknown> = object<HolidayFormDocument>({
+  id: str,
+  filename: str,
+  size: safeInt,
+});
+
 /** Go: enrollmenthttp.holidayCriterionRequest */
 export interface holidayCriterionRequest {
   id?: number;
@@ -663,6 +677,12 @@ export interface GetTraegerHolidayPeriodsIdRegistrationsRegistrationIdPdfQuery {
 }
 
 export const routes = {
+  "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}": {
+    method: "DELETE",
+    pattern: "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+    portals: ["org"],
+    response: noData,
+  },
   "GET /traeger/holiday-periods/": {
     method: "GET",
     pattern: "/traeger/holiday-periods/",
@@ -706,6 +726,12 @@ export const routes = {
     pattern: "/traeger/holiday-periods/{id}/form",
     portals: ["org"],
     response: success(HolidayFormEditorSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/form/documents/{documentId}": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/places": {
     method: "GET",
@@ -792,6 +818,15 @@ export const routes = {
     portals: ["org"],
     request: requestBody<HolidayAllocationRequest>(),
     response: success(HolidayAllocationBoardSchema),
+  },
+  "POST /traeger/holiday-periods/{id}/form/documents": {
+    method: "POST",
+    pattern: "/traeger/holiday-periods/{id}/form/documents",
+    portals: ["org"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "enrollment.legal_document_invalid",
+    request: multipart,
+    response: success(HolidayFormDocumentSchema),
   },
   "POST /traeger/holiday-periods/{id}/publish": {
     method: "POST",

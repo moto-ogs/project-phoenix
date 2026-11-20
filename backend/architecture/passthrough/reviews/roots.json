@@ -12,21 +12,6 @@
     },
     {
       "decision": "0090",
-      "id": "api/AttendanceRoutePeople.GetStudentByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/AttendanceRoutePeople.GetStudentByPersonID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/AttendanceRoutePeople.GetTeacherByStaffID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "api/ClassDayHomework.AddHomework",
       "reason": "Root translation of Class Day View's homework port onto Timetable's HomeworkBook (#4796): maps the projection's types and refusals; no forwarding without translation."
     },
@@ -303,21 +288,6 @@
     {
       "decision": "0090",
       "id": "api/activePeople.GetStaffByPersonID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/activePeople.GetStudentByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/activePeople.GetStudentByPersonID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/activePeople.GetTeacherByStaffID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -2283,11 +2253,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/PresenceAttendanceMirror.MirrorCheckOutForVisits",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/PresenceAttendanceMirror.MirrorVisitRevision",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

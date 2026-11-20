@@ -2,13 +2,6 @@
   "sites": [
     {
       "build": "testhooks",
-      "evidence": "func (r *TeacherGroupIDs) TeacherGroupIDs(ctx context.Context, teacherID int64) ([]int64, error) {\n\tgroups, err := r.records.GetTeacherGroups(ctx, teacherID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\tids = append(ids, group.ID)\n\t\t}\n\t}\n\treturn ids, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolstructure/compose/TeacherGroupIDs.TeacherGroupIDs",
-      "owner": "modules/schoolstructure"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (s *legacyGroupManagement) CountGroups(ctx context.Context, query *domain.GroupListQuery) (int, error) {\n\tcount, err := s.capability.CountGroups(ctx, legacyGroupQuery(query))\n\treturn count, legacyGroupError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/compose/legacyGroupManagement.CountGroups",

@@ -297,10 +297,6 @@ type InstanceStaffing interface {
 	// ClearUnderstaffedAckIfStaffed clears a lingering acknowledgement only
 	// when the block is fully staffed now.
 	ClearUnderstaffedAckIfStaffed(ctx context.Context, instanceID int64, actorAccountID *int64) error
-	// AcknowledgeUnderstaffed is the standalone acknowledgement: it gates
-	// past blocks and serializes with same-day staffing saves. The note
-	// arrives trimmed and validated.
-	AcknowledgeUnderstaffed(ctx context.Context, instanceID int64, ack bool, note *string, actorAccountID *int64) (*LifecycleInstance, error)
 	// MoveStaffBetweenBlocks moves (or pool-assigns) one staff member onto
 	// the target block atomically, with one staff_moved protocol entry.
 	MoveStaffBetweenBlocks(ctx context.Context, targetID int64, in MoveStaffInput) (*MoveStaffResult, error)

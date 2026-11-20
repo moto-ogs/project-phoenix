@@ -44,27 +44,3 @@ func TestApproveInvitation_LosesToConcurrentRejection(t *testing.T) {
 	assert.Equal(t, "rejected", status)
 	assert.False(t, env.linkExists(t, student.ID, result.GuardianProfileID), "a rejected request grants no child access")
 }
-
-// A resend racing an acceptance: the acceptance committed first, so the
-// resend must not reopen the spent invitation with a fresh link.
-func TestResendGuardianInvitation_LosesToConcurrentAcceptance(t *testing.T) {
-	t.Parallel()
-	env := setupGuardianInvitationTest(t)
-	profile := testpkg.CreateTestGuardianProfile(t, env.db, "race-resend")
-	creatorID := env.inviterAccountID(t)
-	ctx := testpkg.Ctx(t)
-	invitation, err := env.service.CreateGuardianInvitation(ctx, identityaccess.GuardianInvitationRequest{
-		GuardianProfileID: profile.ID, CreatedBy: creatorID,
-	})
-	require.NoError(t, err)
-	spentHash := testpkg.GuardianInvitationByID(t, env.db, invitation.ID).Token
-
-	err = raceHeldTransition(t, env.db, func(context.Context) error {
-		return env.service.ResendGuardianInvitation(ctx, invitation.ID, creatorID)
-	}, `UPDATE auth.guardian_invitations SET accepted_at = NOW() WHERE id = ?`, invitation.ID)
-
-	require.Error(t, err, "the resend must not overwrite the committed acceptance")
-	stored := testpkg.GuardianInvitationByID(t, env.db, invitation.ID)
-	assert.NotNil(t, stored.AcceptedAt, "the invitation stays spent")
-	assert.Equal(t, spentHash, stored.Token, "no new link is issued for a spent invitation")
-}

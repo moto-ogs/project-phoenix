@@ -16,27 +16,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) GetStudentByID(ctx context.Context, id int64) (int64, *int64, bool, error) {\n\trow, err := p.source.StudentRows().FindByID(ctx, id)\n\tif row == nil {\n\t\treturn 0, nil, false, err\n\t}\n\treturn row.ID, row.GroupID, true, err\n}",
-      "form": "unclassified-evidence",
-      "id": "api/AttendanceRoutePeople.GetStudentByID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) GetStudentByPersonID(ctx context.Context, id int64) (int64, *int64, bool, error) {\n\trow, err := p.source.StudentRows().FindByPersonID(ctx, id)\n\tif row == nil {\n\t\treturn 0, nil, false, err\n\t}\n\treturn row.ID, row.GroupID, true, err\n}",
-      "form": "unclassified-evidence",
-      "id": "api/AttendanceRoutePeople.GetStudentByPersonID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) GetTeacherByStaffID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.TeacherRows().FindByStaffID(ctx, id)\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID, true, err\n}",
-      "form": "unclassified-evidence",
-      "id": "api/AttendanceRoutePeople.GetTeacherByStaffID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (b ClassDayHomework) AddHomework(ctx context.Context, in classday.HomeworkWrite) (classdayCompose.HomeworkEntry, error) {\n\tentry, err := b.Book.AddHomework(ctx, timetable.HomeworkInput{SchoolClass: in.SchoolClass, Date: timezone.Date(in.Date), Subject: in.Subject, Description: in.Description, StaffID: in.StaffID})\n\tif err != nil {\n\t\treturn classdayCompose.HomeworkEntry{}, classDayHomeworkError(err)\n\t}\n\treturn classDayHomeworkEntry(entry), nil\n}",
       "form": "unclassified-evidence",
       "id": "api/ClassDayHomework.AddHomework",
@@ -425,27 +404,6 @@
       "evidence": "func (p activePeople) GetStaffByPersonID(ctx context.Context, key int64) (*presenceAPI.StaffIdentity, error) {\n\tid, tenantID, found, err := p.source.GetStaffByPersonID(ctx, key)\n\tif !found {\n\t\treturn nil, err\n\t}\n\treturn \u0026presenceAPI.StaffIdentity{ID: id, TenantID: tenantID}, err\n}",
       "form": "unclassified-evidence",
       "id": "api/activePeople.GetStaffByPersonID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p activePeople) GetStudentByID(ctx context.Context, key int64) (*presenceAPI.StudentIdentity, error) {\n\tid, groupID, found, err := p.source.GetStudentByID(ctx, key)\n\tif !found {\n\t\treturn nil, err\n\t}\n\treturn \u0026presenceAPI.StudentIdentity{ID: id, GroupID: groupID}, err\n}",
-      "form": "unclassified-evidence",
-      "id": "api/activePeople.GetStudentByID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p activePeople) GetStudentByPersonID(ctx context.Context, key int64) (*presenceAPI.StudentIdentity, error) {\n\tid, groupID, found, err := p.source.GetStudentByPersonID(ctx, key)\n\tif !found {\n\t\treturn nil, err\n\t}\n\treturn \u0026presenceAPI.StudentIdentity{ID: id, GroupID: groupID}, err\n}",
-      "form": "unclassified-evidence",
-      "id": "api/activePeople.GetStudentByPersonID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p activePeople) GetTeacherByStaffID(ctx context.Context, key int64) (*presenceAPI.TeacherIdentity, error) {\n\tid, found, err := p.source.GetTeacherByStaffID(ctx, key)\n\tif !found {\n\t\treturn nil, err\n\t}\n\treturn \u0026presenceAPI.TeacherIdentity{ID: id}, err\n}",
-      "form": "unclassified-evidence",
-      "id": "api/activePeople.GetTeacherByStaffID",
       "owner": "roots"
     },
     {
@@ -3197,13 +3155,6 @@
       "evidence": "func (m PresenceAttendanceMirror) MirrorCheckOutForVisits(ctx context.Context, visits []*studentpresence.Visit, at time.Time) error {\n\tmapped := make([]timetable.AttendanceVisit, 0, len(visits))\n\tfor _, visit := range visits {\n\t\tif visit != nil {\n\t\t\tmapped = append(mapped, attendanceVisitOf(visit))\n\t\t}\n\t}\n\treturn m.Mirror.MirrorCheckOutForVisits(ctx, mapped, at)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/PresenceAttendanceMirror.MirrorCheckOutForVisits",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (m PresenceAttendanceMirror) MirrorVisitRevision(ctx context.Context, previous, updated *studentpresence.Visit) error {\n\tif previous == nil || updated == nil {\n\t\treturn nil\n\t}\n\treturn m.Mirror.MirrorVisitRevision(ctx, attendanceVisitOf(previous), attendanceVisitOf(updated))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/PresenceAttendanceMirror.MirrorVisitRevision",
       "owner": "roots"
     },
     {

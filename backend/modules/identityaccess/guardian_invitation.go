@@ -143,7 +143,6 @@ type GuardianInvitations interface {
 	ValidateGuardianInvitation(ctx context.Context, token string) (GuardianInvitationPreview, error)
 	// AcceptGuardianInvitation returns the account the guardian signs in with.
 	AcceptGuardianInvitation(ctx context.Context, token string, registration GuardianRegistration) (Account, error)
-	ResendGuardianInvitation(ctx context.Context, invitationID, actorAccountID int64) error
 	GuardianInvitationReads
 	// GuardianInvitationSchoolSlug resolves the school of an invitation; it
 	// is best-effort and answers "" when it cannot.

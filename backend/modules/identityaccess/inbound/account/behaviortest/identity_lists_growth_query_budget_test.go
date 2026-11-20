@@ -90,16 +90,11 @@ func TestIdentityAccountsGrowthQueryBudget(t *testing.T) {
 			rows           []map[string]any
 		}{
 			{"/auth/accounts/", "api.auth.accounts.list.positive_growth", all},
-			{"/auth/accounts/by-role/" + role.Name, "api.auth.accounts.by_role.positive_growth", all},
 		} {
 			rr, queries := f.get(t, tc.path, token)
 			rbacBudgetCollection(t, rr, "Accounts retrieved successfully", tc.rows)
 			t.Logf("%s N%d statements=%d", tc.scenario, n, len(queries.Statements))
-			if tc.scenario == "api.auth.accounts.list.positive_growth" {
-				querybudgets.AssertQueryBudget(t, "api.auth.accounts.list.positive_growth", queries)
-			} else {
-				querybudgets.AssertQueryBudget(t, "api.auth.accounts.by_role.positive_growth", queries)
-			}
+			querybudgets.AssertQueryBudget(t, "api.auth.accounts.list.positive_growth", queries)
 		}
 	}
 }
@@ -123,26 +118,6 @@ func TestIdentityStaffPreviewCandidatesGrowthQueryBudget(t *testing.T) {
 		rbacBudgetCollection(t, rr, "Preview candidates retrieved", want)
 		t.Logf("identity preview N%d statements=%d", n, len(queries.Statements))
 		querybudgets.AssertQueryBudget(t, "api.auth.staff_preview.candidates.positive_growth", queries)
-	}
-}
-
-func TestIdentityAccountTokensGrowthQueryBudget(t *testing.T) {
-	t.Parallel()
-	f := newRBACBudgetFixtureOn(t, testpkg.SetupIsolatedTestDB(t))
-	token, _ := f.accountToken(t, "identity-token-reader", "users:manage")
-	account := testpkg.CreateTestAccount(t, f.db, "identity-token-owner")
-	want := []map[string]any{}
-	for _, n := range []int{3, 8} {
-		for len(want) < n {
-			fixture := testpkg.CreateTestToken(t, f.db, account.ID, "refresh")
-			var created, expiry time.Time
-			require.NoError(t, f.db.NewSelect().TableExpr("auth.tokens").Column("created_at", "expiry").Where("id = ?", fixture.ID).Scan(context.Background(), &created, &expiry))
-			want = append(want, map[string]any{"id": float64(fixture.ID), "expiry": expiry.Format(time.RFC3339), "mobile": false, "created_at": created.Format(time.RFC3339)})
-		}
-		rr, queries := f.get(t, fmt.Sprintf("/auth/accounts/%d/tokens/", account.ID), token)
-		rbacBudgetCollection(t, rr, "Active tokens retrieved successfully", want)
-		t.Logf("identity tokens N%d statements=%d", n, len(queries.Statements))
-		querybudgets.AssertQueryBudget(t, "api.auth.accounts.tokens.positive_growth", queries)
 	}
 }
 

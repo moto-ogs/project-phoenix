@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	recordports "github.com/moto-ogs/project-phoenix/modules/communication/ports"
 
@@ -93,6 +94,10 @@ func newAnnouncement(title string, targetTenantIDs ...int64) *communication.Anno
 	}
 }
 
+func announcementViewer(accountID, tenantID, organizationID int64) communication.AnnouncementViewer {
+	return communication.AnnouncementViewer{AccountID: accountID, TenantID: tenantID, OrgID: organizationID}
+}
+
 func ownAnnouncementsByOperator(t *testing.T, db *bun.DB, operatorID int64) {
 	t.Helper()
 	t.Cleanup(func() {
@@ -133,21 +138,131 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	require.NoError(t, err)
 	assert.Empty(t, otherUnread)
 
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
+	err = module.MarkSeen(ctx, announcementViewer(otherAccount.ID, otherTenantID, otherOrganizationID), announcement.ID)
+	assert.ErrorIs(t, err, communication.ErrAnnouncementNotFound)
+	var foreignViewCount int
+	require.NoError(t, db.NewSelect().TableExpr("platform.announcement_views").ColumnExpr("COUNT(*)").Where("user_id = ? AND announcement_id = ?", otherAccount.ID, announcement.ID).Scan(ctx, &foreignViewCount))
+	assert.Zero(t, foreignViewCount, "a school may not record a view for another school's announcement")
+
+	viewer := announcementViewer(account.ID, tenantID, organizationID)
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
 	unread, err = module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
-	assert.Empty(t, unread)
+	assert.Len(t, unread, 1, "seeing an announcement does not close it")
 
 	details, err := module.GetViewDetails(ctx, announcement.ID)
 	require.NoError(t, err)
 	require.Len(t, details, 1)
 	assert.Equal(t, "Ada Leserin", details[0].UserName)
 	assert.Equal(t, account.Email, details[0].AccountEmail)
+	assert.NotNil(t, details[0].ShownAt)
 
 	stats, err := module.GetStats(ctx, announcement.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, stats.SeenCount)
 	assert.Equal(t, 1, stats.TargetCount)
+
+	require.NoError(t, module.MarkDismissed(ctx, viewer, announcement.ID))
+	var dismissedView struct {
+		SeenAt time.Time `bun:"seen_at"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT seen_at FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &dismissedView))
+	// A response can be lost after the write commits; the same dismissal must
+	// still acknowledge the already closed announcement.
+	require.NoError(t, module.MarkDismissed(ctx, viewer, announcement.ID))
+	var retriedView struct {
+		SeenAt time.Time `bun:"seen_at"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT seen_at FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &retriedView))
+	assert.Equal(t, dismissedView.SeenAt, retriedView.SeenAt)
+	// The seen request from another tab can commit after this dismissal. It
+	// still records the displayed modal but must not reopen the announcement.
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
+	var delayedSeenView struct {
+		Dismissed bool `bun:"dismissed"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT dismissed FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &delayedSeenView))
+	assert.True(t, delayedSeenView.Dismissed)
+
+	dismissedFirst := newAnnouncement("Dismissed before seen", tenantID)
+	require.NoError(t, module.CreateAnnouncement(ctx, dismissedFirst, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, dismissedFirst.ID, operator.ID, nil))
+	// A different tab can close the same displayed announcement before this
+	// tab's initial seen request reaches the server.
+	require.NoError(t, module.MarkDismissed(ctx, viewer, dismissedFirst.ID))
+	var dismissedFirstBeforeSeen struct {
+		SeenAt      *time.Time `bun:"seen_at"`
+		DismissedAt *time.Time `bun:"dismissed_at"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT seen_at, dismissed_at FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, dismissedFirst.ID).Scan(ctx, &dismissedFirstBeforeSeen))
+	assert.Nil(t, dismissedFirstBeforeSeen.SeenAt)
+	assert.NotNil(t, dismissedFirstBeforeSeen.DismissedAt)
+	require.NoError(t, module.MarkSeen(ctx, viewer, dismissedFirst.ID))
+	var dismissedFirstView struct {
+		ShownAt   *time.Time `bun:"shown_at"`
+		Dismissed bool       `bun:"dismissed"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT shown_at, dismissed FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, dismissedFirst.ID).Scan(ctx, &dismissedFirstView))
+	assert.NotNil(t, dismissedFirstView.ShownAt)
+	assert.True(t, dismissedFirstView.Dismissed)
+
+	dismissedOnly := newAnnouncement("Dismissed without display", tenantID)
+	require.NoError(t, module.CreateAnnouncement(ctx, dismissedOnly, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, dismissedOnly.ID, operator.ID, nil))
+	require.NoError(t, module.MarkDismissed(ctx, viewer, dismissedOnly.ID))
+	dismissedOnlyStats, err := module.GetStats(ctx, dismissedOnly.ID)
+	require.NoError(t, err)
+	assert.Zero(t, dismissedOnlyStats.SeenCount, "a queued announcement closed with X was not displayed")
+	assert.Equal(t, 1, dismissedOnlyStats.DismissedCount)
+	dismissedOnlyDetails, err := module.GetViewDetails(ctx, dismissedOnly.ID)
+	require.NoError(t, err)
+	require.Len(t, dismissedOnlyDetails, 1)
+	assert.NotZero(t, dismissedOnlyDetails[0].SeenAt)
+	assert.Nil(t, dismissedOnlyDetails[0].ShownAt)
+	assert.NotNil(t, dismissedOnlyDetails[0].DismissedAt)
+	unread, err = module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
+	require.NoError(t, err)
+	assert.Empty(t, unread, "dismissing an announcement closes it")
+}
+
+func TestMarkSeenDoesNotReopenHistoricalAnnouncement(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	module := buildCommunication(t, db, &auditRecorder{})
+	operator := testpkg.CreateTestOperator(t, db)
+	ownAnnouncementsByOperator(t, db, operator.ID)
+	account := testpkg.CreateTestAccount(t, db, "historical-announcement-reader")
+	tenantID := testpkg.Tenant(t)
+	organizationID := tenantOrganizationID(t, db, tenantID)
+	announcement := newAnnouncement("Historical read", tenantID)
+
+	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	_, err := db.ExecContext(ctx, `INSERT INTO platform.announcement_views (user_id, announcement_id, dismissed)
+		VALUES (?, ?, TRUE)`, account.ID, announcement.ID)
+	require.NoError(t, err)
+
+	err = module.MarkSeen(ctx, announcementViewer(account.ID, tenantID, organizationID), announcement.ID)
+	assert.ErrorIs(t, err, communication.ErrAnnouncementNotFound)
+
+	var view struct {
+		ShownAt   *time.Time `bun:"shown_at"`
+		Dismissed bool       `bun:"dismissed"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT shown_at, dismissed FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &view))
+	assert.Nil(t, view.ShownAt)
+	assert.True(t, view.Dismissed)
+
+	unread, err := module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
+	require.NoError(t, err)
+	assert.Empty(t, unread)
 }
 
 func TestAnnouncementWritesRollBackAfterAuditFailureAndRetryOnce(t *testing.T) {
@@ -242,9 +357,11 @@ func TestAnnouncementViewWriteRollsBackWithOuterUnitOfWorkAndRetryIsIdempotent(t
 	_, account := testpkg.CreateTestPersonWithAccount(t, db, "Ida", "Retry")
 	announcement := newAnnouncement("Read state", testpkg.Tenant(t))
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	viewer := announcementViewer(account.ID, testpkg.Tenant(t), tenantOrganizationID(t, db, testpkg.Tenant(t)))
 
 	err := tenant.WithinAdmin(ctx, func(txCtx context.Context) error {
-		require.NoError(t, module.MarkSeen(txCtx, account.ID, announcement.ID))
+		require.NoError(t, module.MarkSeen(txCtx, viewer, announcement.ID))
 		return errInjectedAudit
 	})
 	require.ErrorIs(t, err, errInjectedAudit)
@@ -252,8 +369,8 @@ func TestAnnouncementViewWriteRollsBackWithOuterUnitOfWorkAndRetryIsIdempotent(t
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcement_views").ColumnExpr("COUNT(*)").Where("user_id = ? AND announcement_id = ?", account.ID, announcement.ID).Scan(context.Background(), &count))
 	assert.Zero(t, count)
 
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
+	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
 	observationsMu.Lock()
 	defer observationsMu.Unlock()
 	var conflicts int

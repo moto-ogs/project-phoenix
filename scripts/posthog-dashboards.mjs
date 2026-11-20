@@ -369,6 +369,9 @@ export const NO_FEATURE_PAGES = Object.freeze({
   school: ['/login', '/invite', '/reset-password'],
 });
 
+/** Backend events of the announcement (#7555): seen, closed (core_actions.go). */
+const ANNOUNCEMENT_EVENTS = ['announcement_seen', 'announcement_dismissed'];
+
 /** Server events of the care worker's first steps (#7553, core_actions.go). */
 export const STAFF_FIRST_STEPS_EVENTS = Object.freeze(['staff_first_step_changed', 'staff_first_steps_completed', 'staff_first_steps_dismissed']);
 
@@ -398,6 +401,8 @@ const NO_FEATURE_EVENTS = [
   // The care worker's first steps (#7553): getting in, not using a feature.
   ...STAFF_FIRST_STEPS_EVENTS,
   'caterer_invite_accepted', 'meal_order_confirmed',
+  // The announcement of the entry (#7555): backend events of its routes.
+  ...ANNOUNCEMENT_EVENTS,
   // Clicks inside a page the browser reports (tab, bell): the page view
   // already counts the feature, a click is no action of its own.
   'child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read',
@@ -491,6 +496,31 @@ const sqlArray = (values) => `[${values.map(sqlString).join(', ')}]`;
 const staffStepLabel = `transform(toString(properties.step), ${sqlArray(Object.keys(STAFF_FIRST_STEP_LABELS))}, ${sqlArray(Object.values(STAFF_FIRST_STEP_LABELS))}, toString(properties.step))`;
 const parentStepLabel = `transform(toString(properties.checklist_step), ${sqlArray(Object.keys(PARENT_FIRST_STEP_LABELS))}, ${sqlArray(Object.values(PARENT_FIRST_STEP_LABELS))}, toString(properties.checklist_step))`;
 const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlArray(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlArray(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
+
+/**
+ * Core actions of the leadership's setup checklist (#7554), sent by the
+ * server for every school that allows the usage analytics, with or without
+ * the person's consent. A done step has no event: the server derives it.
+ */
+const SETUP_CHECKLIST_EVENTS = {
+  completed: 'onboarding_setup_checklist_completed',
+  dismissed: 'onboarding_setup_checklist_dismissed',
+  stepSkipped: 'onboarding_setup_checklist_step_skipped',
+};
+
+/**
+ * German names of the setup checklist's steps (schoolsetup.StepKeys), short
+ * forms of the checklist's titles (a query naming a person fails the guard).
+ */
+export const SETUP_CHECKLIST_STEP_LABELS = Object.freeze({
+  team: 'Team einladen',
+  rooms: 'Raum anlegen',
+  groups: 'Gruppe anlegen',
+  students: 'Kind anlegen',
+  guardians: 'Eltern einladen',
+  worktime: 'Arbeitszeitmodelle eintragen',
+});
+const setupStepLabel = `transform(toString(properties.step), ${sqlArray(Object.keys(SETUP_CHECKLIST_STEP_LABELS))}, ${sqlArray(Object.values(SETUP_CHECKLIST_STEP_LABELS))}, toString(properties.step))`;
 
 /** HogQL: the product name of a school portal (`surface`). */
 const portalLabel = (surface) => `multiIf(${surface} = 'ogs', 'OGS-App', ${surface} = 'school', 'Schul-App', ${surface} = 'parents', 'Eltern-App', 'unbekannt')`;
@@ -1216,6 +1246,23 @@ group by Schritt
 order by ${quoted('Übersprungen')} desc`),
         },
         {
+          name: 'Einstieg: Ankündigung gesehen und geschlossen',
+          description: 'Letzte 30 Tage, auch ohne Einwilligung, je Schule gezählt, ohne Person oder Sitzung. Gesehen: eine Ankündigung erschien im OGS-Portal. Geschlossen: per „Verstanden“ oder X; das X schließt alle wartenden auf einmal. Daher gibt es keinen Prozentwert. Zählt Anzeigen, nicht Personen: eine nicht geschlossene erscheint beim nächsten Laden wieder.',
+          ...hogql('production', (where) => `
+select
+  coalesce(properties.role, 'unbekannt') as Rolle,
+  countIf(event = 'announcement_seen') as Gesehen,
+  countIf(event = 'announcement_dismissed') as Geschlossen,
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and event in ${sqlList(ANNOUNCEMENT_EVENTS)}
+  and ${SCHOOL_EVENT}
+  and timestamp > now() - interval 30 day
+group by Rolle
+order by Gesehen desc`),
+        },
+        {
           name: 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)',
           description: 'Nur mit Einwilligung, letzte 30 Tage. Je Fläche und Portal: wie oft sie erschien, wie oft die Person ihr Angebot annahm und wie oft sie sie schloss. Die Antwort im Installations-Dialog des Browsers steht nicht hier.',
           ...hogql('production', (where) => `
@@ -1286,6 +1333,45 @@ where ${where}
   and timestamp > now() - interval 30 day
 group by Ereignis, Schritt
 order by Ereignis, Anzahl desc`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: abgeschlossen und ausgeblendet',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Schulen, deren Leitung in der Checkliste etwas tat: abschließen, Schritt überspringen oder ausblenden. Abschließen gilt für die Schule, Ausblenden für eine Person; die Schule zählt als ausgeblendet, sobald jemand ausblendet. Nur angesehene Checklisten fehlen; sie stehen in der Kachel je Fläche.',
+          ...hogql('production', (where) => `
+select
+  count() as ${quoted('Schulen mit Checkliste')},
+  countIf(HatAbgeschlossen = 1) as ${quoted('Abgeschlossen')},
+  countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) as ${quoted('Ausgeblendet ohne Abschluss')},
+  round(100 * countIf(HatAbgeschlossen = 1) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
+  round(100 * countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
+from (
+  select
+    toString(properties.school_id) as Schule_ID,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.completed)}) > 0 as HatAbgeschlossen,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.dismissed)}) > 0 as HatAusgeblendet
+  from events
+  where ${where}
+    and event in ${sqlList(Object.values(SETUP_CHECKLIST_EVENTS))}
+    and ${SCHOOL_EVENT}
+    and timestamp > now() - interval 30 day
+  group by Schule_ID
+)`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: übersprungene Schritte',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Welche Schritte die Leitung überspringt, und in wie vielen Schulen. Wer einen Sprung zurücknimmt und neu überspringt, zählt bei „Übersprungen“ doppelt, bei „Schulen“ nicht.',
+          ...hogql('production', (where) => `
+select
+  ${setupStepLabel} as Schritt,
+  count() as ${quoted('Übersprungen')},
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and event = ${sqlString(SETUP_CHECKLIST_EVENTS.stepSkipped)}
+  and ${SCHOOL_EVENT}
+  and timestamp > now() - interval 30 day
+group by Schritt
+order by Schulen desc`),
         },
         {
           name: 'Einstieg: Benachrichtigungs-Einrichtung je Portal (nur mit Einwilligung)',

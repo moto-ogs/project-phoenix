@@ -1,7 +1,9 @@
 // The one proxy of a portal (#2352): it forwards a request only when the
 // generated contract lists the route for that portal, and checks the answer
 // against the route's decoder (ADR 0270). A file answer and a multipart
-// upload stream through it unread (ADR 0270, addendum of 2026-11-19).
+// upload stream through it unread (ADR 0270, addendum of 2026-11-19); a
+// public file only where its contract marks it (addendum "Öffentliche
+// Datei-Routen").
 import { NextResponse, type NextRequest } from "next/server";
 import type { z } from "zod";
 import { bffError, handleApiError } from "~/lib/api-response-error.server";
@@ -42,6 +44,12 @@ export interface CatalogRoute {
   readonly request?: unknown;
   /** The code of an upload over `maxBodyBytes`. */
   readonly tooLargeCode?: ErrorCode;
+  /**
+   * Why a file of the portal `public` may leave without a session: the
+   * contract's marker of that one route. A public file without it is never
+   * served.
+   */
+  readonly publicFile?: string;
 }
 
 export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -111,6 +119,18 @@ const isUpload = (route: CatalogRoute) => route.request === multipart;
 
 /** A route whose body or answer the proxy streams instead of reading. */
 const isStreamed = (route: CatalogRoute) => isFile(route) || isUpload(route);
+
+/**
+ * A file the contract opens to the portal `public`, route by route. An
+ * upload never is one, and neither is a file without the marker.
+ */
+const isPublicFile = (route: CatalogRoute) =>
+  isFile(route) &&
+  !isUpload(route) &&
+  typeof route.publicFile === "string" &&
+  route.publicFile.length > 0;
+
+const PRIVATE_NO_STORE = "private, no-store";
 
 function isServable(route: CatalogRoute): route is ServedRoute {
   if (isDecoder(route.response) || isFile(route)) return true;
@@ -214,8 +234,9 @@ export function makeCatalogProxy(
     list
       .filter((route) => route.method === method)
       .filter(isServable)
-      // The session-free path answers JSON only; Go refuses a public file.
-      .filter((route) => !isPublic || !isStreamed(route))
+      // The session-free path answers JSON, and a file only where the
+      // contract marks it; Go refuses an unmarked public file.
+      .filter((route) => !isPublic || !isStreamed(route) || isPublicFile(route))
       .map((route) => ({ route, pattern: segmentsOf(route.pattern), isPublic }))
       .filter(({ pattern }) =>
         under.some((head) => underOutsideHead(pattern, head)),
@@ -453,6 +474,24 @@ export function makeCatalogProxy(
   }
 
   /**
+   * A public file (#2352): the link in the path is the only credential, so
+   * the request carries no session, no bearer, no body and no idempotency
+   * key; `sendBackend` adds the client IP the backend's limiter of the link
+   * keys on. The bytes stream through with their file headers, and every
+   * answer, a refusal included, is private and uncached.
+   */
+  async function servePublicFile(
+    request: NextRequest,
+    context: RouteContext,
+  ): Promise<Response> {
+    const { endpoint } = target(request, (await context.params)?.path);
+    return fileResponse(
+      await sendBackend(endpoint, null, { method, request }),
+      request,
+    );
+  }
+
+  /**
    * A public route: no session read, no bearer, no renewal. The body is
    * read within the route's limit; a write without one reads nothing.
    */
@@ -487,17 +526,20 @@ export function makeCatalogProxy(
       applyPrivateNoStore(response.headers);
       return response;
     }
+    const file = isPublicFile(found.route);
     let response: Response;
     try {
-      response = await servePublic(
-        request,
-        found.route as ServedRoute,
-        context,
-      );
+      response = file
+        ? await servePublicFile(request, context)
+        : await servePublic(request, found.route as ServedRoute, context);
     } catch (error) {
       response = handleApiError(error, request);
     }
-    applyPrivateNoStore(response.headers);
+    if (file) {
+      response.headers.set("Cache-Control", PRIVATE_NO_STORE);
+    } else {
+      applyPrivateNoStore(response.headers);
+    }
     return response;
   };
 }
@@ -524,9 +566,12 @@ export function handOffUnder(
   head: HandOffHead,
   handler: (request: NextRequest, context: RouteContext) => Promise<Response>,
 ) {
-  return (request: NextRequest, context: RouteContext) =>
+  // Next passes `params: undefined` to a route file without a dynamic
+  // segment (`auth/tenants/route.ts`); such a file has no tail.
+  return (request: NextRequest, context: Partial<RouteContext> | undefined) =>
     handler(request, {
-      params: context.params.then((params) => {
+      params: Promise.resolve(context?.params).then((given) => {
+        const params = given ?? {};
         const tail = params.path;
         const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
         const lead = typeof head === "function" ? head(params) : head;

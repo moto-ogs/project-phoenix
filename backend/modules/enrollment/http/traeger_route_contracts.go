@@ -10,9 +10,8 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // HolidayPeriodRouteContracts registers the Träger's holiday periods and
 // their registrations (ADR 0270), with patterns relative to
-// /traeger/holiday-periods. The exports, the PDFs and the proofs answer
-// files and the proof upload is multipart (#2352); the form documents keep
-// their route files.
+// /traeger/holiday-periods. Exports, PDFs, proofs and form documents answer
+// files; proof and form document uploads stream through the catalog (#2352).
 func HolidayPeriodRouteContracts() []common.RouteContract {
 	registration := "/{id}/registrations/{registrationId}"
 	filter := []common.QueryParam{
@@ -39,6 +38,11 @@ func HolidayPeriodRouteContracts() []common.RouteContract {
 		// once as a request and once as a response it refuses, so the body
 		// stays unregistered here.
 		{Method: "PUT", Pattern: "/{id}/form", Portals: traegerPortal, Response: capability.HolidayFormEditor{}},
+		{Method: "POST", Pattern: "/{id}/form/documents", Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: maxEnrollmentLegalDocumentBody, TooLargeCode: common.CodeEnrollmentLegalDocumentInvalid,
+			Response: capability.HolidayFormDocument{}},
+		{Method: "GET", Pattern: "/{id}/form/documents/{documentId}", Portals: traegerPortal, File: true},
+		{Method: "DELETE", Pattern: "/{id}/form/documents/{documentId}", Portals: traegerPortal, NoData: true},
 		{Method: "GET", Pattern: "/{id}/places", Portals: traegerPortal, Response: []capability.HolidayWeekPlaces{}},
 		{Method: "GET", Pattern: "/{id}/places/export", Portals: traegerPortal, Query: format, File: true},
 		{Method: "GET", Pattern: "/{id}/allocation", Portals: traegerPortal, Response: capability.HolidayAllocationBoard{}},

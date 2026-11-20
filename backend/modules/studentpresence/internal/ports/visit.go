@@ -23,7 +23,5 @@ type VisitStore interface {
 	FindVisit(context.Context, int64) (*studentpresence.Visit, Stats, error)
 	ListVisits(context.Context, studentpresence.VisitFilter) ([]*studentpresence.Visit, Stats, error)
 	RecordVisit(context.Context, *studentpresence.Visit) (Stats, error)
-	ReviseVisit(context.Context, *studentpresence.Visit) (Stats, error)
-	DeleteVisit(context.Context, int64) (Stats, error)
 	CloseVisits(context.Context, []int64, time.Time) ([]*studentpresence.Visit, Stats, error)
 }

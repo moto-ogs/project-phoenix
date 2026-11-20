@@ -4,10 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
-
 	"github.com/moto-ogs/project-phoenix/tenant"
-	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 )
 
 // recordingWaker haelt fest, welche Kinder geweckt wurden.
@@ -68,26 +65,5 @@ func TestWakeGuardiansAfterCommitSkipsInvalidStudent(t *testing.T) {
 
 	if len(waker.calls) != 0 {
 		t.Fatalf("ohne gueltige Kind-ID darf nicht geweckt werden, es gab %d Weckungen", len(waker.calls))
-	}
-}
-
-func TestBroadcastVisitMovedWakesGuardiansWithoutBroadcaster(t *testing.T) {
-	t.Parallel()
-
-	waker := &recordingWaker{}
-	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
-	WithGuardianWaker(waker)(s)
-	ctx, commit := tenanttest.WithAfterCommitHooks(
-		tenant.WithTenantID(context.Background(), 42),
-	)
-
-	s.broadcastVisitMoved(ctx, &studentpresence.Visit{}, &studentpresence.Visit{StudentID: 4242}, nil, nil)
-	commit()
-
-	if len(waker.calls) != 1 {
-		t.Fatalf("expected one guardian wake, got %d", len(waker.calls))
-	}
-	if waker.calls[0].tenantID != 42 || waker.calls[0].studentID != 4242 {
-		t.Fatalf("unexpected guardian wake: %+v", waker.calls[0])
 	}
 }

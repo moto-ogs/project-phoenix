@@ -8,9 +8,9 @@ import (
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // ContractRouteContracts registers the typed contract of the care contracts
-// (ADR 0270), with patterns relative to /traeger/contracts. The documents
-// and the export answer files (#2352); the paper signature keeps its route
-// file.
+// (ADR 0270), with patterns relative to /traeger/contracts. Documents and
+// exports answer files; the paper signature also takes a multipart upload
+// through the catalog (#2352).
 func ContractRouteContracts() []common.RouteContract {
 	school := common.QueryParam{Name: "school_id", Kind: common.QueryID}
 	filter := []common.QueryParam{{Name: "status", Kind: common.QueryString}, school, {Name: "search", Kind: common.QueryString}}
@@ -21,6 +21,10 @@ func ContractRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: export, File: true},
 		{Method: "GET", Pattern: "/{id}/document", Portals: traegerPortal, File: true},
 		{Method: "GET", Pattern: "/{id}/versions/{number}/document", Portals: traegerPortal, File: true},
+		{Method: "GET", Pattern: "/{id}/paper-signature", Portals: traegerPortal, File: true},
+		// The handler answers 204; the catalog proxy answers it as no data.
+		{Method: "POST", Pattern: "/{id}/paper-signature", Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.PaperMaxBytes + paperFormOverhead, TooLargeCode: common.CodeCareContractPaperDocumentInvalid, NoData: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CreateRequest{}, Response: carecontract.CreateResult{}},
 		{Method: "GET", Pattern: "/candidates", Portals: traegerPortal, Query: []common.QueryParam{school}, Response: []carecontract.Candidate{}},
 		{Method: "GET", Pattern: "/conclusion-modes", Portals: traegerPortal, Response: []carecontract.SchoolConclusion{}},
@@ -77,6 +81,22 @@ func OverrunRouteContracts() []common.RouteContract {
 	}
 }
 
+// ImportRouteContracts registers the import of existing contracts (#4723),
+// with patterns relative to /traeger/contract-imports. The preview and the
+// import take the same upload: the file plus the form fields.
+func ImportRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractImport{}}
+	}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractImportEntry{}},
+		upload("/"),
+		upload("/preview"),
+	}
+}
+
 // The bodies the link reads: the drawn signature as base64 PNG, and a number.
 const (
 	signBodyBytes           = 400 << 10
@@ -85,12 +105,14 @@ const (
 
 // SigningRouteContracts registers the one-time link of a contract mail,
 // which the parents open without a session (#2352), with patterns relative
-// to /public/care-contract-signing. The frozen PDF answers a file and keeps
-// its route file.
+// to /public/care-contract-signing. The frozen PDF is a public file of the
+// link; reading it leaves the link open.
 func SigningRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalPublic}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{link}", Portals: portals, Response: carecontract.SigningView{}},
+		{Method: "GET", Pattern: "/{link}/document", Portals: portals, File: true,
+			PublicFile: "the one-time link of the contract mail is the parents' only credential for the contract it names"},
 		{Method: "POST", Pattern: "/{link}/sign", Portals: portals, Request: SignRequest{}, Response: carecontract.SigningView{}, MaxBodyBytes: signBodyBytes},
 		{Method: "GET", Pattern: "/{link}/family-children", Portals: portals, Response: SigningFamilyChildrenResponse{}},
 		{Method: "PUT", Pattern: "/{link}/family-children", Portals: portals, Request: SigningFamilyChildrenRequest{}, Response: SigningFamilyChildrenResponse{}, MaxBodyBytes: familyChildrenBodyBytes},

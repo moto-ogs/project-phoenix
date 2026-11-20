@@ -84,15 +84,6 @@ type StudentResponse struct {
 	LastName  string `json:"last_name"`
 }
 
-// TimespanResponse represents a time span for activities
-type TimespanResponse struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	StartTime   string `json:"start_time"`
-	EndTime     string `json:"end_time"`
-	Description string `json:"description,omitempty"`
-}
-
 // ActivityRequest represents an activity creation/update request
 type ActivityRequest struct {
 	Name            string            `json:"name"`

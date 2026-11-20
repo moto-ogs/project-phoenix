@@ -25,6 +25,12 @@ let shellUser: { id: string } | null = { id: "73" };
 let shellViaTraeger = false;
 let setupState: SchoolSetupState | null = null;
 let pathname = "/dashboard";
+let setupAccountID = "73";
+let tenantSlug = "school-a";
+
+const analytics = vi.hoisted(() => ({
+  trackOnboardingSurface: vi.fn(() => true),
+}));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
@@ -39,6 +45,7 @@ vi.mock("~/lib/shell-auth-context", () => ({
 
 vi.mock("~/lib/tenant-context", () => ({
   useNFCEnabled: () => false,
+  useTenantSlugSafe: () => tenantSlug,
 }));
 
 vi.mock("~/lib/tenant-router", () => ({
@@ -48,11 +55,12 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("./use-school-setup", () => ({
   useSchoolSetup: () => ({
     state: setupState,
-    accountID: "73",
+    accountID: setupAccountID,
     refresh,
     replace,
   }),
 }));
+vi.mock("~/lib/analytics", () => analytics);
 
 // Die Soll-Prüfung des Schritts „Arbeitszeitmodelle“ (#6919); `enabled`
 // hält fest, wann die Checkliste sie abruft.
@@ -284,6 +292,9 @@ describe("SchoolSetupWizard", () => {
     shellViaTraeger = false;
     setupState = newSchool();
     pathname = "/dashboard";
+    setupAccountID = "73";
+    tenantSlug = "school-a";
+    analytics.trackOnboardingSurface.mockReturnValue(true);
   });
 
   it("opens the checklist once per sign-in, afterwards only the beacon", () => {
@@ -305,6 +316,58 @@ describe("SchoolSetupWizard", () => {
     expect(
       screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
     ).toBeInTheDocument();
+  });
+
+  it("does not answer an auto-open that analytics could not record", () => {
+    analytics.trackOnboardingSurface.mockReturnValueOnce(false);
+    render(<SchoolSetupWizard />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "setup_checklist"],
+    ]);
+  });
+
+  it("opens once per school and never answers another school's auto-open", () => {
+    const view = render(<SchoolSetupWizard />);
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledWith(
+      "shown",
+      "setup_checklist",
+    );
+
+    tenantSlug = "school-b";
+    view.rerender(<SchoolSetupWizard />);
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledTimes(2);
+
+    sessionStorage.setItem("school-setup-opened:school-c:73", "1");
+    tenantSlug = "school-c";
+    view.rerender(<SchoolSetupWizard />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "setup_checklist"],
+      ["shown", "setup_checklist"],
+    ]);
+  });
+
+  it("never answers another account's auto-open", () => {
+    const view = render(<SchoolSetupWizard />);
+    sessionStorage.setItem("school-setup-opened:school-a:74", "1");
+    setupAccountID = "74";
+    view.rerender(<SchoolSetupWizard />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "setup_checklist"],
+    ]);
   });
 
   it("stays hidden for a finished school, a hidden wizard and without an account", () => {

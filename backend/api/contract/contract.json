@@ -1348,6 +1348,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/master-data/bank-accounts/{id}",
       "portals": [
         "org"
@@ -1732,6 +1740,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -1746,6 +1755,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ActivityScheduleResponse"
@@ -1821,6 +1831,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "TransitionResponse"
@@ -2314,6 +2325,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "CareOfferingResponse"
@@ -2530,6 +2542,15 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/requests/{statusToken}/signature-proof",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the status link of the mail is the parents' only credential for their own proof"
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/schema/",
       "portals": [
         "tenant"
@@ -2584,6 +2605,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -7067,6 +7089,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "PermissionResponse"
@@ -8664,6 +8687,15 @@
     },
     {
       "method": "GET",
+      "pattern": "/public/care-contract-signing/{link}/document",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the one-time link of the contract mail is the parents' only credential for the contract it names"
+    },
+    {
+      "method": "GET",
       "pattern": "/public/care-contract-signing/{link}/family-children",
       "portals": [
         "public"
@@ -8736,6 +8768,7 @@
       "portals": [
         "school"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ParentConferenceView"
@@ -10153,6 +10186,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/contract-imports/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ContractImportEntry"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/contract-notices/{id}",
       "portals": [
         "org"
@@ -10301,6 +10348,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/contracts/{id}/paper-signature",
+      "portals": [
+        "org"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/contracts/{id}/versions/{number}/document",
       "portals": [
         "org"
@@ -10332,6 +10387,20 @@
         "elem": {
           "kind": "ref",
           "ref": "CostBearer"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/documents/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "TraegerDocument"
         }
       }
     },
@@ -10780,6 +10849,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+      "portals": [
+        "org"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/holiday-periods/{id}/places",
       "portals": [
         "org"
@@ -11010,6 +11087,15 @@
         "kind": "ref",
         "ref": "PublicHolidayRegistrationOfferResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-registrations/{token}/documents/{documentId}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the published link of a holiday period opens the form documents it lists"
     },
     {
       "method": "GET",
@@ -11634,6 +11720,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/sepa-mandates/imports",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "SEPAMandateImportEntry"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/sepa-mandates/{id}/collections",
       "portals": [
         "org"
@@ -11914,6 +12014,20 @@
         "elem": {
           "kind": "ref",
           "ref": "TraegerStaffProofType"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/staff-record-imports/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "StaffImportEntry"
         }
       }
     },
@@ -13176,6 +13290,14 @@
     {
       "method": "POST",
       "pattern": "/api/platform/announcements/{id}/dismiss",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/platform/announcements/{id}/seen",
       "portals": [
         "tenant"
       ],
@@ -16404,6 +16526,15 @@
     },
     {
       "method": "POST",
+      "pattern": "/public/payroll-download/{link}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the one-time link of the payroll mail is the payroll office's only credential"
+    },
+    {
+      "method": "POST",
       "pattern": "/school/auth/password-reset",
       "portals": [
         "public"
@@ -17314,6 +17445,34 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/contract-imports/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractImport"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-imports/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractImport"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/contract-notices/{id}",
       "portals": [
         "org"
@@ -17374,6 +17533,17 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/contracts/{id}/paper-signature",
+      "portals": [
+        "org"
+      ],
+      "no_data": true,
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "care_contract.paper_document_invalid"
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/contribution-rules/",
       "portals": [
         "org"
@@ -17404,6 +17574,20 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/documents/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerDocument"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/documents/{id}/releases",
       "portals": [
         "org"
@@ -17431,6 +17615,34 @@
         "kind": "ref",
         "ref": "TraegerRecipient"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/family-children/imports",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FamilyChildrenImport"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "parent_billing.family_children_import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/family-children/imports/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FamilyChildrenImport"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "parent_billing.family_children_import_file_too_large"
     },
     {
       "method": "POST",
@@ -17607,6 +17819,20 @@
         "kind": "ref",
         "ref": "HolidayAllocationBoard"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/holiday-periods/{id}/form/documents",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayFormDocument"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "enrollment.legal_document_invalid"
     },
     {
       "method": "POST",
@@ -17832,6 +18058,34 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/sepa-mandates/imports",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SEPAMandateImport"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "parent_billing.sepa_import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/sepa-mandates/imports/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SEPAMandateImport"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "parent_billing.sepa_import_file_too_large"
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/sepa-mandates/{id}/revoke",
       "portals": [
         "org"
@@ -17874,6 +18128,34 @@
         "kind": "ref",
         "ref": "TraegerStaffProofType"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/staff-record-imports/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffImport"
+      },
+      "max_body_bytes": 2162688,
+      "multipart": true,
+      "too_large_code": "workforce.traeger_staff_import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/staff-record-imports/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffImport"
+      },
+      "max_body_bytes": 2162688,
+      "multipart": true,
+      "too_large_code": "workforce.traeger_staff_import_file_too_large"
     },
     {
       "method": "POST",
@@ -25730,6 +26012,20 @@
           "name": "seen_at",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "shown_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "dismissed_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         },
         {
@@ -39696,6 +39992,554 @@
       ]
     },
     {
+      "name": "ContractImport",
+      "go_type": "carecontract.ContractImport",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "mapping",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractImportMapping"
+          }
+        },
+        {
+          "name": "unmapped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractImportSchool"
+            }
+          }
+        },
+        {
+          "name": "debtor_number_scope",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_children_allowed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractImportCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractImportRow"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportColumns",
+      "go_type": "carecontract.ContractImportColumns",
+      "fields": [
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_birth_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "module",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "concluded_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_children",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportCounts",
+      "go_type": "carecontract.ContractImportCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "duplicate",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "conflict",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "imported",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "debtor_numbers",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "debtor_conflicts",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_children",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_children_conflicts",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportEntry",
+      "go_type": "carecontract.ContractImportEntry",
+      "fields": [
+        {
+          "name": "file",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "imported_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportMapping",
+      "go_type": "carecontract.ContractImportMapping",
+      "fields": [
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractImportColumns"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "module_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportModule",
+      "go_type": "carecontract.ContractImportModule",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "has_conditions",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportProblem",
+      "go_type": "carecontract.ContractImportProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportRow",
+      "go_type": "carecontract.ContractImportRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "module_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "party_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractImportProblem"
+            }
+          }
+        },
+        {
+          "name": "hints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "repeats_line",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "debtor_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "debtor_number_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_children",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_children_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractImportSchool",
+      "go_type": "carecontract.ContractImportSchool",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "modules",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractImportModule"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractList",
       "go_type": "carecontract.ContractList",
       "fields": [
@@ -47187,6 +48031,297 @@
       ]
     },
     {
+      "name": "FamilyChildrenImport",
+      "go_type": "parentbilling.FamilyChildrenImport",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "mapping",
+          "schema": {
+            "kind": "ref",
+            "ref": "FamilyChildrenImportMapping"
+          }
+        },
+        {
+          "name": "unmapped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareSchool"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "FamilyChildrenImportCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyChildrenImportRow"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyChildrenImportColumns",
+      "go_type": "parentbilling.FamilyChildrenImportColumns",
+      "fields": [
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_birth_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyChildrenImportCounts",
+      "go_type": "parentbilling.FamilyChildrenImportCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "same",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "differs",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "conflict",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "imported",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyChildrenImportMapping",
+      "go_type": "parentbilling.FamilyChildrenImportMapping",
+      "fields": [
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "ref",
+            "ref": "FamilyChildrenImportColumns"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyChildrenImportProblem",
+      "go_type": "parentbilling.FamilyChildrenImportProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyChildrenImportRow",
+      "go_type": "parentbilling.FamilyChildrenImportRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "confirmed_children",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyChildrenImportProblem"
+            }
+          }
+        },
+        {
+          "name": "repeats_line",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "FamilyChildrenRequest",
       "go_type": "parentbillinghttp.FamilyChildrenRequest",
       "request": true,
@@ -52218,6 +53353,30 @@
               "kind": "ref",
               "ref": "HolidayChildDebtorNumber"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayFormDocument",
+      "go_type": "enrollment.HolidayFormDocument",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -74252,6 +75411,430 @@
       ]
     },
     {
+      "name": "SEPAMandateImport",
+      "go_type": "parentbilling.SEPAMandateImport",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "mapping",
+          "schema": {
+            "kind": "ref",
+            "ref": "SEPAMandateImportMapping"
+          }
+        },
+        {
+          "name": "unmapped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "creditor_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "SEPAMandateImportCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SEPAMandateImportRow"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SEPAMandateImportColumns",
+      "go_type": "parentbilling.SEPAMandateImportColumns",
+      "fields": [
+        {
+          "name": "reference",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bic",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "payer",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "creditor_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sequence",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_collected_on",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SEPAMandateImportCounts",
+      "go_type": "parentbilling.SEPAMandateImportCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "clarify",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "duplicate",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "same_mandate",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "conflict",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "imported",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "without_mandate",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "debtor_numbers",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "debtor_conflicts",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SEPAMandateImportEntry",
+      "go_type": "parentbilling.SEPAMandateImportEntry",
+      "fields": [
+        {
+          "name": "file",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "imported_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "mandates",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SEPAMandateImportMapping",
+      "go_type": "parentbilling.SEPAMandateImportMapping",
+      "fields": [
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "ref",
+            "ref": "SEPAMandateImportColumns"
+          }
+        },
+        {
+          "name": "payer_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "creditor_from_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "confirmed_creditor_id",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SEPAMandateImportProblem",
+      "go_type": "parentbilling.SEPAMandateImportProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SEPAMandateImportRow",
+      "go_type": "parentbilling.SEPAMandateImportRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reference",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "iban_masked",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bic",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "payer_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "payer_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sequence",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_collected_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "mandate_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SEPAMandateImportProblem"
+            }
+          }
+        },
+        {
+          "name": "hints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "debtor_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "debtor_number_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "same_mandate_line",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SEPAMandateInput",
       "go_type": "care.SEPAMandateInput",
       "request": true,
@@ -81927,6 +83510,344 @@
       ]
     },
     {
+      "name": "StaffImport",
+      "go_type": "workforce.StaffImport",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "mapping",
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffImportMapping"
+          }
+        },
+        {
+          "name": "unmapped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffImportCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffImportRow"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffImportColumns",
+      "go_type": "workforce.StaffImportColumns",
+      "fields": [
+        {
+          "name": "personnel_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tax_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "social_security_number",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffImportCounts",
+      "go_type": "workforce.StaffImportCounts",
+      "fields": [
+        {
+          "name": "new",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "complete",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "duplicate",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "conflict",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "imported",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffImportEntry",
+      "go_type": "workforce.StaffImportEntry",
+      "fields": [
+        {
+          "name": "file",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "by_you",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "account_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "imported_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "created",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "completed",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffImportMapping",
+      "go_type": "workforce.StaffImportMapping",
+      "fields": [
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffImportColumns"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffImportProblem",
+      "go_type": "workforce.StaffImportProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffImportRow",
+      "go_type": "workforce.StaffImportRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "personnel_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban_masked",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tax_id_masked",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "social_security_number_masked",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_record_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "completes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffImportProblem"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffLinkRequest",
       "go_type": "traegerstaff.StaffLinkRequest",
       "request": true,
@@ -89156,6 +91077,65 @@
           "name": "contract_partner",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerDocument",
+      "go_type": "organizationtenancy.TraegerDocument",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "file_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "releases",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerDocumentRelease"
+            }
+          }
+        },
+        {
+          "name": "reads",
+          "schema": {
+            "kind": "int"
           }
         }
       ]

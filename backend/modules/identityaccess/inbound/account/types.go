@@ -543,11 +543,6 @@ func (req *CreatePermissionRequest) Bind(_ *http.Request) error {
 	)
 }
 
-// UpdatePermissionRequest represents the update permission request payload.
-// Field set, JSON tags, and Bind validation are identical to the create
-// payload, so it is a type alias.
-type UpdatePermissionRequest = CreatePermissionRequest
-
 // PermissionResponse represents a permission response
 type PermissionResponse struct {
 	ID          int64  `json:"id,string"`

@@ -1,6 +1,7 @@
 package platformannouncements
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -33,7 +34,11 @@ type PlatformAnnouncementResponse struct {
 }
 
 func (rs *AnnouncementsResource) internalError(w http.ResponseWriter, r *http.Request, message string, err error) {
-	rs.runtime.Failure(w, r, Failure{Message: message, Err: err})
+	status := http.StatusInternalServerError
+	if errors.Is(err, communication.ErrAnnouncementNotFound) {
+		status = http.StatusNotFound
+	}
+	rs.runtime.Failure(w, r, Failure{Message: message, Err: err, Status: status})
 }
 
 func (rs *AnnouncementsResource) announcementID(w http.ResponseWriter, r *http.Request) (int64, bool) {
@@ -79,7 +84,7 @@ func (rs *AnnouncementsResource) MarkSeen(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := rs.announcementService.MarkSeen(r.Context(), viewer.AccountID, announcementID); err != nil {
+	if err := rs.announcementService.MarkSeen(r.Context(), viewer, announcementID); err != nil {
 		rs.internalError(w, r, "failed to mark announcement as seen", err)
 		return
 	}
@@ -96,7 +101,7 @@ func (rs *AnnouncementsResource) MarkDismissed(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := rs.announcementService.MarkDismissed(r.Context(), viewer.AccountID, announcementID); err != nil {
+	if err := rs.announcementService.MarkDismissed(r.Context(), viewer, announcementID); err != nil {
 		rs.internalError(w, r, "failed to mark announcement as dismissed", err)
 		return
 	}

@@ -70,7 +70,7 @@ describe("structured logger redaction", () => {
     globalThis.window.history.replaceState(
       null,
       "",
-      "/parents/enroll/status/route-token-sentinel/edit",
+      "/lohnbuero/7.payroll-route-sentinel",
     );
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -113,10 +113,10 @@ describe("structured logger redaction", () => {
         Cookie: "[REDACTED]",
       },
       safe_index: 0,
-      route: "/parents/enroll/status/[REDACTED]/edit",
+      route: "/lohnbuero/[REDACTED]",
     });
     expect(JSON.stringify(body)).not.toMatch(
-      /client-(secret|pin|jwt|api-key|authorization|cookie|header)-sentinel/,
+      /(?:client-(?:secret|pin|jwt|api-key|authorization|cookie|header)|payroll-route)-sentinel/,
     );
   });
 
