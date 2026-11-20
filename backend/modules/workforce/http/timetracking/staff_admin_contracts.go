@@ -115,6 +115,10 @@ func StaffAdminRouteContracts() []common.RouteContract {
 		route("DELETE", "/{id}/absences/{absenceId}", nil, nil),
 		route("GET", "/absences/mails", nil, AbsenceDecisionMailsResponse{}, common.QueryParam{Name: "ids", Kind: common.QueryString}),
 		route("DELETE", "/{id}/documents/{documentId}", nil, StammdatenAck{}),
+		{Method: "GET", Pattern: "/{id}/time-tracking/export", Portals: portals, File: true, Query: []common.QueryParam{
+			{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
+			{Name: "format", Kind: common.QueryString, Values: []string{"csv", "pdf", "xlsx"}},
+		}},
 		// Files stream through the portal's proxy (#2352).
 		{Method: "GET", Pattern: "/{id}/documents/{documentId}/download", Portals: portals, File: true},
 	}

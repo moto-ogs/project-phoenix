@@ -217,6 +217,8 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 		response := checkpointRequest(graph, checkpointScenario{Method: http.MethodGet, Path: export.path, Authenticated: true}, export.token)
 		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 		assert.Equal(t, export.contentType, response.Header().Get("Content-Type"))
+		// The catalog proxy passes the backend's file name on (#2352).
+		assert.Regexp(t, `^attachment; filename=".+"`, response.Header().Get("Content-Disposition"))
 	}
 
 	// A valid caterer token must lose a deleted school before opening its

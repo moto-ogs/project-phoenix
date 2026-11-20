@@ -4,7 +4,7 @@ import apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 
 // RouteContracts registers the typed contract of the room routes the staff
 // portal reaches through its proxy (ADR 0270), with patterns relative to
-// /api/rooms. The export writes a file and stays outside the contract.
+// /api/rooms. The export answers a file that streams through the proxy.
 func RouteContracts() []apiCommon.RouteContract {
 	portals := []apiCommon.PortalScope{apiCommon.PortalTenant}
 	category := []apiCommon.QueryParam{{Name: "category", Kind: apiCommon.QueryString}}
@@ -26,5 +26,6 @@ func RouteContracts() []apiCommon.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Response: RoomRemovalResponse{}},
 		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Query: window, Response: []RoomSessionEntry{}},
 		{Method: "GET", Pattern: "/{id}/removal-impact", Portals: portals, Response: RoomRemovalImpactResponse{}},
+		{Method: "POST", Pattern: "/export", Portals: portals, File: true},
 	}
 }

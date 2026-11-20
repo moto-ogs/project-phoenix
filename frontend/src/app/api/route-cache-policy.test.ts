@@ -414,16 +414,14 @@ describe("private download cache policy (#5119)", () => {
       const route = path.relative(API_ROOT, path.dirname(file));
       const text = readFileSync(file, "utf8");
       const fileFactory =
-        /\b(?:createFileExportRoute|createFileDownloadRoute|fileResponse|downloadFile|proxyFile)\s*[(<]/.test(
-          text,
-        );
+        /\b(?:fileResponse|downloadFile|proxyFile)\s*[(<]/.test(text);
       const binaryResponse =
         /new (?:Next)?Response\(/.test(text) &&
         /content-disposition|application\/octet-stream|text\/calendar|text\/event-stream|image\//i.test(
           text,
         );
       const downloadPath =
-        /(?:^|\/)(?:export(?:\/\[format\])?|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
+        /(?:^|\/)(?:export|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
           route,
         );
       return (

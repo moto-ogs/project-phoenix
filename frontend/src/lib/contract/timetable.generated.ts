@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   int64String,
   int64StringOrNumber,
@@ -1742,6 +1743,21 @@ export interface CorrectAttendanceRequest {
   reason?: string;
 }
 
+/** Go: classdayhttp.slotListRequest */
+export interface slotListRequest {
+  date?: string;
+  target?: string;
+  pickup_cohort?: string;
+  source?: string;
+  format?: string;
+  list_kind?: string;
+  instance_ids?: string[] | null;
+  group_ids?: string[] | null;
+  classes?: string[] | null;
+  group_by?: string;
+  expected_signature?: string;
+}
+
 /** Go: classdayhttp.slotListOptionsRequest */
 export interface slotListOptionsRequest {
   date?: string;
@@ -1812,21 +1828,6 @@ export const OptionsResultSchema: z.ZodType<OptionsResult, unknown> = object<Opt
   pickup_cohorts: nullable(arr(PickupCohortOptionSchema)),
   list_kinds: nullable(arr(ListKindOptionSchema)),
 });
-
-/** Go: classdayhttp.slotListRequest */
-export interface slotListRequest {
-  date?: string;
-  target?: string;
-  pickup_cohort?: string;
-  source?: string;
-  format?: string;
-  list_kind?: string;
-  instance_ids?: string[] | null;
-  group_ids?: string[] | null;
-  classes?: string[] | null;
-  group_by?: string;
-  expected_signature?: string;
-}
 
 /** Go: classday.ClassdayGroupOption */
 export interface ClassdayGroupOption {
@@ -2820,6 +2821,12 @@ export const routes = {
     request: requestBody<PatchAttendanceRequest>(),
     response: success(OperationRosterRowSchema),
   },
+  "POST /api/timetable/betreuungsplan/export": {
+    method: "POST",
+    pattern: "/api/timetable/betreuungsplan/export",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "POST /api/timetable/closing-days/": {
     method: "POST",
     pattern: "/api/timetable/closing-days/",
@@ -2906,6 +2913,13 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<CorrectAttendanceRequest>(),
     response: success(AttendanceResponseSchema),
+  },
+  "POST /api/timetable/lists/export": {
+    method: "POST",
+    pattern: "/api/timetable/lists/export",
+    portals: ["tenant"],
+    request: requestBody<slotListRequest>(),
+    response: fileAnswer,
   },
   "POST /api/timetable/lists/options": {
     method: "POST",

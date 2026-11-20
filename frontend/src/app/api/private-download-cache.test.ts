@@ -70,11 +70,6 @@ const routes: Array<
     {},
   ],
   [
-    "planning export",
-    "POST",
-    async () => (await import("./rooms/export/route")).POST,
-  ],
-  [
     "staff streaming export",
     "GET",
     async () => (await import("./[...path]/route")).GET,
@@ -103,11 +98,6 @@ const routes: Array<
       ).GET,
   ],
   [
-    "caterer export",
-    "GET",
-    async () => (await import("./caterer/orders/export/route")).GET,
-  ],
-  [
     "operator export",
     "GET",
     async () => (await import("./operator/[...path]/route")).GET,
@@ -128,6 +118,18 @@ const routes: Array<
   ],
   // A public file the contract marks runs through the catalog proxy's
   // session-free path (#2352).
+  [
+    "planning export",
+    "POST",
+    async () => (await import("./[...path]/route")).POST,
+    { path: ["rooms", "export"] },
+  ],
+  [
+    "caterer export",
+    "GET",
+    async () => (await import("./caterer/[...path]/route")).GET,
+    { path: ["orders", "export"] },
+  ],
   [
     "token-bound proof",
     "GET",

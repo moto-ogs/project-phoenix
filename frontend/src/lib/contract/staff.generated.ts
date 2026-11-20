@@ -1572,6 +1572,13 @@ export interface GetStaffIdTimeTrackingCompTimePreviewQuery {
   half_day?: boolean;
 }
 
+/** Query of GET /api/staff/{id}/time-tracking/export */
+export interface GetStaffIdTimeTrackingExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  from?: string;
+  to?: string;
+}
+
 /** Query of GET /api/staff/{id}/time-tracking/history */
 export interface GetStaffIdTimeTrackingHistoryQuery {
   from?: string;
@@ -1882,6 +1889,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["date_end", "date_start", "half_day"],
     response: success(CompTimeBalancePreviewSchema),
+  },
+  "GET /api/staff/{id}/time-tracking/export": {
+    method: "GET",
+    pattern: "/api/staff/{id}/time-tracking/export",
+    portals: ["tenant"],
+    query: ["format", "from", "to"],
+    response: fileAnswer,
   },
   "GET /api/staff/{id}/time-tracking/history": {
     method: "GET",
