@@ -82,9 +82,13 @@ describe("contractGet", () => {
       data: { name: 7, secret: "Ada Beispiel" },
     });
     const result = await read();
-    expect(!result.ok && result.error.status).toBe(502);
+    expect(!result.ok && result.error).toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
     expect(consoleSpies.error).toHaveBeenCalledWith("contract_decode_failed", {
       route: "GET /api/rows/{id}",
+      write: false,
       issues: ["data.name: invalid_type"],
     });
   });
@@ -160,12 +164,18 @@ describe("contractWrite", () => {
     });
   });
 
-  it("answers 502 for a written answer outside the contract", async () => {
+  it("answers 502 for a written answer outside the contract without inviting a resend", async () => {
+    // The backend has stored the write; general.unavailable would offer
+    // to send it again (#7563).
     mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
     const result = await contractWrite(create, "/api/rows", "token", {});
-    expect(!result.ok && result.error.status).toBe(502);
+    expect(!result.ok && result.error).toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
     expect(consoleSpies.error).toHaveBeenCalledWith("contract_decode_failed", {
       route: "POST /api/rows/",
+      write: true,
       issues: ["data.name: invalid_type"],
     });
   });

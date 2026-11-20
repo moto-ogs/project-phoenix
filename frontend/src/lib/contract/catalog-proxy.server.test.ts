@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
+import { ApiResponseError } from "~/lib/api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
 import {
   makeCatalogProxy,
@@ -387,10 +388,27 @@ describe("makeCatalogProxy", () => {
     ).rejects.toMatchObject({ status: 502 });
   });
 
+  it("asks to reload instead of resending a stored write whose answer leaves the contract", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    const refusal = await call("PUT", ["rows", "1", "seen"], "", {
+      on: true,
+    }).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(ApiResponseError);
+    expect((refusal as ApiResponseError).body()).toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
+  });
+
   it("refuses an answer outside the contract with 502", async () => {
     api.mockResolvedValueOnce({ status: "success", data: { name: 7 } });
-    await expect(call("GET", ["rows", "1"])).rejects.toMatchObject({
-      status: 502,
+    const refusal = await call("GET", ["rows", "1"]).catch(
+      (error: unknown) => error,
+    );
+    expect(refusal).toMatchObject({ status: 502 });
+    // A read may be sent again.
+    expect((refusal as ApiResponseError).body()).toMatchObject({
+      code: "general.unavailable",
     });
   });
 

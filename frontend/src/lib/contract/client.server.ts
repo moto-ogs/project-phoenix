@@ -51,14 +51,25 @@ export function decodeContract<T>(
 ): ContractResult<T> {
   const parsed = schema.safeParse(payload);
   if (parsed.success) return { ok: true, value: parsed.data };
+  // A decoder only sees a backend success: a write has already happened.
+  // `general.unavailable` would offer to send it again and store it twice;
+  // this code asks to reload first and offers no retry (#7563).
+  const write = !route.startsWith("GET ");
   // Paths and issue codes only: the values are personal data.
   logger.error("contract_decode_failed", {
     route,
+    write,
     issues: parsed.error.issues
       .slice(0, 20)
       .map((issue) => `${issue.path.join(".")}: ${issue.code}`),
   });
-  return failure(bffError(502, "backend response does not match the contract"));
+  return failure(
+    bffError(
+      502,
+      "backend response does not match the contract",
+      write ? { code: "general.write_answer_unreadable" } : undefined,
+    ),
+  );
 }
 
 /** GET of a registered route. `route` is its catalog line, for the log. */
