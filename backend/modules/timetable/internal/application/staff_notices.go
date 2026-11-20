@@ -61,9 +61,10 @@ type StaffNoticeDependencies struct {
 // through the timetable's after-commit announcer; the root binds the notice
 // announcer to its own event, not to the staffing one.
 const (
-	staffNoticeChangeCreate = "staff_notice_create"
-	staffNoticeChangeUpdate = "staff_notice_update"
-	staffNoticeChangeDelete = "staff_notice_delete"
+	staffNoticeChangeCreate      = "staff_notice_create"
+	staffNoticeChangeUpdate      = "staff_notice_update"
+	staffNoticeChangeDelete      = "staff_notice_delete"
+	staffNoticeChangeAcknowledge = "staff_notice_acknowledge"
 )
 
 type staffNoticeService struct {
@@ -352,6 +353,7 @@ func (s *staffNoticeService) AcknowledgeStaffNotice(ctx context.Context, id, acc
 	if err := s.repo.Acknowledge(ctx, id, accountID); err != nil {
 		return fmt.Errorf("staffnotice: acknowledge: %w", err)
 	}
+	announceStaffingChanged(ctx, s.changes, s.logger, staffNoticeChangeAcknowledge)
 	return nil
 }
 

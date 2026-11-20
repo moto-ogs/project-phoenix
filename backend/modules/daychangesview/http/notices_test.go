@@ -186,6 +186,10 @@ func TestDayChangesNoticeSource(t *testing.T) {
 
 	t.Run("confirming over the existing write path moves the notice to Schule", func(t *testing.T) {
 		writeNotice(t, notices, "/api/staff-notices/"+confirm+"/acknowledge", carerAccount.ID, tenantID, map[string]any{}, "users:read")
+		sources, content := signals()
+		assert.Equal(t, []string{"staff_notice_acknowledge"}, sources,
+			"a confirmation wakes the overview after its commit")
+		assert.False(t, content, "the signal carries nothing but its source")
 		_, body := read(t, router, carerAccount.ID, tenantID, "users:read")
 		assert.ElementsMatch(t, []string{
 			"school Elternabend wichtig bestätigt ->staff_notices",
