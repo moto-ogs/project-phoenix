@@ -76,9 +76,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/vacation/quota", rs.getOwnVacationQuota)
 		// Own Kontingente of the school's absence types, read-only (#4971)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/absence-allowances", rs.getOwnAbsenceAllowances)
-
-		// Presence map - for internal use by staff page
-		r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/presence-map", rs.getPresenceMap)
 	})
 
 	return r
@@ -623,18 +620,6 @@ func parseYearParam(r *http.Request, today calendar.Date) (int, error) {
 		return 0, errors.New("invalid year parameter, expected 2000-2100")
 	}
 	return year, nil
-}
-
-// getPresenceMap handles GET /api/time-tracking/presence-map
-func (rs *Resource) getPresenceMap(w http.ResponseWriter, r *http.Request) {
-	// Get today's presence map
-	presenceMap, err := rs.WorkSessionService.GetTodayPresenceMap(r.Context())
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, presenceMap, "Presence map retrieved successfully")
 }
 
 // getOwnShifts handles GET /api/time-tracking/shifts — the staff member's

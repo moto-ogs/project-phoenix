@@ -455,6 +455,7 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/platform", []common.RouteContract{
 			{Method: "GET", Pattern: "/announcements/unread", Portals: []common.PortalScope{common.PortalTenant}, Response: []platformAnnouncementsHTTP.PlatformAnnouncementResponse{}},
 			{Method: "POST", Pattern: "/announcements/{id}/dismiss", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
+			{Method: "POST", Pattern: "/announcements/{id}/seen", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
 		}},
 		// Delivery's http role may not import the contract types; the report
 		// answers no data.

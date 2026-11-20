@@ -58,9 +58,9 @@ func TestLiveGroup_IsOpen(t *testing.T) {
 func setupPresenceRoute(t *testing.T, db *testpkg.DB) *presence.Resource {
 	t.Helper()
 
-	_, serviceFactory, serviceFactoryPresence, serviceFactoryPeople, serviceFactoryEducation, serviceFactoryCaller, serviceFactoryCare := setupActiveModule(t)
+	_, serviceFactory, serviceFactoryPresence, serviceFactoryPeople, _, serviceFactoryCaller, serviceFactoryCare := setupActiveModule(t)
 
-	return presence.NewResource(serviceFactoryPresence.PresenceOperations(), activePeople{source: serviceFactoryPeople.AttendancePeople()}, serviceFactoryEducation.TeacherGroupIDs, activeStaffAccess{source: rootAPI.NewActiveTestAttendanceStaff(serviceFactoryCaller)}, serviceFactory.Settings, rootAPI.ProtectedTenantRoutes, slog.Default(), testPresenceQueries(t, db), requestRuntimeForTest(serviceFactoryCare.WithAttendanceStaff), authorizationForTest(), settingsFacts.NewDisplaySettings(serviceFactory.Settings))
+	return presence.NewResource(serviceFactoryPresence.PresenceOperations(), activePeople{source: serviceFactoryPeople.AttendancePeople()}, activeStaffAccess{source: rootAPI.NewActiveTestAttendanceStaff(serviceFactoryCaller)}, serviceFactory.Settings, rootAPI.ProtectedTenantRoutes, slog.Default(), testPresenceQueries(t, db), requestRuntimeForTest(serviceFactoryCare.WithAttendanceStaff), authorizationForTest(), settingsFacts.NewDisplaySettings(serviceFactory.Settings))
 }
 
 func testPresenceQueries(t *testing.T, db *testpkg.DB) studentpresence.Owner {

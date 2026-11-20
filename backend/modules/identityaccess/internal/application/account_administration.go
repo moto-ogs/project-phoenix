@@ -89,20 +89,6 @@ func NewAccountAdministration(auth *AccountAuthentication, deps AccountAdministr
 	}, nil
 }
 
-// FindOwnAccount reads the account without the administration predicate.
-// The caller's own account is their own business; who may ask for it is the
-// request boundary's decision, not this one's.
-func (a *AccountAdministration) findOwnAccount(ctx context.Context, accountID int64) (domain.ManagedAccountRecord, error) {
-	account, found, _, err := a.store.FindAccountRecord(ctx, accountID)
-	if err != nil {
-		return domain.ManagedAccountRecord{}, failed(opGetAccount, err)
-	}
-	if !found {
-		return domain.ManagedAccountRecord{}, failed(opGetAccount, domain.ErrAccountNotFound)
-	}
-	return account, nil
-}
-
 func (a *AccountAdministration) AnonymizeAccountForDeletion(ctx context.Context, accountID int64, email string) error {
 	return runFlowErr(ctx, a.flow(), func(ctx context.Context) (err error) {
 		err = a.auth.sessions.run(ctx, a.auth.sessions.tx.RunPlatform, "anonymize_account_for_deletion", func(txCtx context.Context, stats *domain.OperationStats) error {
@@ -146,31 +132,6 @@ func (a *AccountAdministration) listManageableAccounts(ctx context.Context, filt
 		return nil, failed(opListAccounts, err)
 	}
 	return accounts, nil
-}
-
-// ListManageableAccountsByRole lists the accounts holding the named role at
-// a school the caller may administer.
-//
-// An organisation-scoped caller reads it administratively: the assignment
-// and mapping rows it has to join belong to several schools, and the
-// caller's own school transaction cannot see past its own.
-func (a *AccountAdministration) ListManageableAccountsByRole(ctx context.Context, roleName string) ([]identityaccess.ManagedAccount, error) {
-	return runFlow(ctx, a.flow(), func(ctx context.Context) ([]identityaccess.ManagedAccount, error) {
-		visibility, err := a.visibility(ctx)
-		if err != nil {
-			return nil, failed(opAccountsByRole, err)
-		}
-		read := func(readCtx context.Context) ([]domain.ManagedAccountRecord, error) {
-			accounts, _, listErr := a.store.ListManageableAccountRecordsByRole(readCtx, roleName, visibility)
-			return accounts, listErr
-		}
-		var accounts []domain.ManagedAccountRecord
-		listErr := a.runtime.RunInTx(ctx, func(txCtx context.Context) error { var err error; accounts, err = read(txCtx); return err })
-		if listErr != nil {
-			return nil, failed(opAccountsByRole, listErr)
-		}
-		return publicManagedAccounts(accounts), nil
-	})
 }
 
 // UpdateManageableAccount writes the address and, when the caller supplied
@@ -408,18 +369,6 @@ func (a *AccountAdministration) markWipeCompleted(ctx context.Context, accountID
 	}
 	return a.runtime.WithAdminTx(a.runtime.Detach(ctx), func(adminCtx context.Context) error {
 		return a.auth.MarkAccountWideWipeCompleted(adminCtx, accountID)
-	})
-}
-
-func (a *AccountAdministration) FindOwnAccount(ctx context.Context, accountID int64) (identityaccess.ManagedAccount, error) {
-	return runFlow(ctx, a.flow(), func(ctx context.Context) (identityaccess.ManagedAccount, error) {
-		var result domain.ManagedAccountRecord
-		err := globalIdentityRead(ctx, a.runtime, func(txCtx context.Context) error {
-			var err error
-			result, err = a.findOwnAccount(txCtx, accountID)
-			return err
-		})
-		return publicManagedAccount(result), err
 	})
 }
 

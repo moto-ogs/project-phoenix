@@ -38,8 +38,8 @@ func datevSettingsOf(consultant, client, length, chart, month, revenue string) p
 	}
 }
 
-func newDatevExportForTest(settings parentbilling.DatevBillingSettings) parentbilling.DatevExport {
-	return NewDatevExport(settings,
+func newDatevExportForTest(settings parentbilling.DatevBillingSettings) *datevExport {
+	return newDatevExport(settings,
 		func() calendar.Date { return calendar.NewDate(2026, time.November, 9) },
 		func() time.Time { return time.Date(2026, time.November, 9, 10, 0, 0, 0, calendar.Berlin) })
 }

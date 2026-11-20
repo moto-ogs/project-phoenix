@@ -312,7 +312,7 @@ var moduleComposeBudgets = map[string]int{
 	"modules/securityruntime/compose": 13,
 	// ADR 0154: the group names constructor (+13).
 	// ADR 0268: the clock fields of the group service and the retention (+8).
-	"modules/schoolstructure/compose": 614,
+	"modules/schoolstructure/compose": 581,
 	// Raised by ADR 0107 and ADR 0175: the Träger settings and school-read context guard.
 	// ADR 0193: the export projection of setting values (+3).
 	// ADR 0268: the clock of the operator presence-mode guard (+3).

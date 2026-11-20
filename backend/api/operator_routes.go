@@ -488,12 +488,9 @@ func (rs operatorIdentityRoutes) mountAccountTenantAccessRoutes(r chi.Router, pr
 	if rs.account == nil {
 		return
 	}
-	// Chi treats collection paths with and without a trailing slash as distinct
-	// routes. The operator client deliberately uses the canonical no-slash form.
+	// The operator client uses the canonical no-slash form.
 	r.Get("/accounts/{accountId}/tenants", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.ListAccountTenantAccess))
-	r.Get("/accounts/{accountId}/tenants/", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.ListAccountTenantAccess))
 	r.Post("/accounts/{accountId}/tenants", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.GrantAccountTenantAccess))
-	r.Post("/accounts/{accountId}/tenants/", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.GrantAccountTenantAccess))
 	r.Get("/accounts/{accountId}/tenants/{tenantId}/roles", rs.account.ListAssignableSchoolRoles)
 	r.Put("/accounts/{accountId}/tenants/{tenantId}", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.UpdateAccountTenantRole))
 	r.Delete("/accounts/{accountId}/tenants/{tenantId}", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.RevokeAccountTenantAccess))

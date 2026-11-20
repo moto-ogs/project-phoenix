@@ -323,55 +323,6 @@ func TestAuthService_ListAccounts_Extended(t *testing.T) {
 	})
 }
 
-func TestAuthService_GetAccountsByRole_Extended(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthServiceWithDB(t, db)
-	rbac := roleAdministrationOf(t, service)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns accounts with specific role", func(t *testing.T) {
-		// ARRANGE
-		uniqueID := fmt.Sprintf("%d", testpkg.UniqueSuffix())
-		roleName := fmt.Sprintf("specific-role-%s", uniqueID)
-		role, err := rbac.CreateRole(ctx, roleName, "Specific role for testing", testpkg.StrPtr("user"))
-		require.NoError(t, err)
-
-		email := fmt.Sprintf("role-specific-%s@test.local", uniqueID)
-		account, err := service.Register(ctx, email, fmt.Sprintf("user-%s", uniqueID), "Test1234%", nil, 0)
-		require.NoError(t, err)
-		testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
-
-		err = rbac.AssignRoleToAccount(ctx, account.ID, role.ID)
-		require.NoError(t, err)
-
-		// ACT
-		result, err := service.GetAccountsByRole(ctx, roleName)
-
-		// ASSERT
-		require.NoError(t, err)
-		found := false
-		for _, acc := range result {
-			if acc.ID == account.ID {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found)
-	})
-
-	t.Run("returns empty list for non-existent role", func(t *testing.T) {
-		// ACT
-		result, err := service.GetAccountsByRole(ctx, fmt.Sprintf("non-existent-role-%d", time.Now().UnixNano()))
-
-		// ASSERT
-		require.NoError(t, err)
-		assert.Empty(t, result)
-	})
-}
-
 // =============================================================================
 // Auth Login Extended Tests (auth_login.go)
 // =============================================================================

@@ -127,42 +127,6 @@ func TestAccountManagementForeignAccountsAbsentFromList(t *testing.T) {
 	assert.NotContains(t, ids, foreignID)
 }
 
-func TestAccountManagementRoleFilterExcludesForeignRoleAssignment(t *testing.T) {
-	t.Parallel()
-	e := newAccountIsolationEnv(t)
-	local := testpkg.CreateTestAccount(t, e.tc.db, "account-scope-role-local")
-	foreignID, _ := e.foreignAccount(t, "account-scope-role-foreign")
-	role := testpkg.CreateTestRoleForTenant(t, e.tc.db, "account-scope-role", e.tenantID)
-	_, sameOrgSchoolID := e.createSchoolInOwnOrganization(t)
-	testpkg.MapAccountToTenant(t, e.tc.db, local.ID, sameOrgSchoolID)
-
-	for _, assignment := range []struct {
-		accountID int64
-		tenantID  int64
-	}{
-		{accountID: local.ID, tenantID: e.tenantID},
-		{accountID: local.ID, tenantID: sameOrgSchoolID},
-		{accountID: foreignID, tenantID: e.foreignTenantID},
-	} {
-		_, err := e.tc.db.ExecContext(context.Background(),
-			"INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)",
-			assignment.accountID, role.ID, assignment.tenantID)
-		require.NoError(t, err)
-	}
-
-	rr := e.execute(t, e.claims, http.MethodGet, "/auth/accounts/by-role/"+role.Name, nil)
-	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	var response struct {
-		Data []authAPI.AccountResponse `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-
-	ids := accountIDs(response.Data)
-	assert.Contains(t, ids, local.ID)
-	assert.NotContains(t, ids, foreignID)
-	assert.Equal(t, 1, len(ids))
-}
-
 func TestAccountManagementRBACForeignAccountDoesNotLeakExistence(t *testing.T) {
 	t.Parallel()
 	e := newAccountIsolationEnv(t)
@@ -319,8 +283,7 @@ func TestAccountManagementOrganizationWritesRollBackWithCaller(t *testing.T) {
 		return rollback
 	})
 	require.ErrorIs(t, err, rollback)
-	got, err := e.tc.resource.Sessions.FindOwnAccount(ctx, account.ID)
-	require.NoError(t, err)
+	got := readStoredAccount(t, ctx, e.tc.db, account.ID)
 	assert.Equal(t, account.Email, got.Email)
 	assert.True(t, got.Active)
 }
@@ -349,8 +312,7 @@ func TestOrganizationStaffOffboardingPreservesLockedCallerTransaction(t *testing
 	})
 	require.ErrorIs(t, err, rollback)
 	// Use a fresh context so a lock-wait timeout cannot mask the persisted state.
-	got, err := e.tc.resource.Sessions.FindOwnAccount(testpkg.Ctx(t), account.ID)
-	require.NoError(t, err)
+	got := readStoredAccount(t, testpkg.Ctx(t), e.tc.db, account.ID)
 	require.True(t, got.Active)
 	membership, err := e.tc.resource.Sessions.VerifyAccountTenantMembership(testpkg.Ctx(t), account.ID, e.tenantID)
 	require.NoError(t, err)
@@ -359,8 +321,7 @@ func TestOrganizationStaffOffboardingPreservesLockedCallerTransaction(t *testing
 	require.NoError(t, err, "the rolled-back preview must still be executable")
 	require.True(t, result.AccountDeactivated)
 	require.EqualValues(t, 1, result.TokensRevoked)
-	got, err = e.tc.resource.Sessions.FindOwnAccount(testpkg.Ctx(t), account.ID)
-	require.NoError(t, err)
+	got = readStoredAccount(t, testpkg.Ctx(t), e.tc.db, account.ID)
 	require.False(t, got.Active)
 }
 
@@ -376,8 +337,7 @@ func TestAccountManagementOrganizationWriteRetainsCallerSchoolBoundary(t *testin
 		})
 	})
 	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
-	got, err := e.tc.resource.Sessions.FindOwnAccount(ctx, accountID)
-	require.NoError(t, err)
+	got := readStoredAccount(t, ctx, e.tc.db, accountID)
 	require.Equal(t, email, got.Email)
 }
 
@@ -397,8 +357,6 @@ func TestAccountManagementRejectsTraegerTokens(t *testing.T) {
 		body   any
 	}{
 		{http.MethodGet, "/auth/accounts", nil},
-		{http.MethodGet, "/auth/accounts/by-role/admin", nil},
-		{http.MethodGet, "/auth/account", nil},
 		{http.MethodGet, "/auth/permissions", nil},
 		{http.MethodGet, fmt.Sprintf("/auth/accounts/%d/roles", accountID), nil},
 		{http.MethodPut, fmt.Sprintf("/auth/accounts/%d", accountID), map[string]string{"email": "traeger-write@example.test"}},

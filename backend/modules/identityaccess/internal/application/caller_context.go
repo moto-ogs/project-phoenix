@@ -251,18 +251,6 @@ func (p CallerPeople) FindPersonByAccount(ctx context.Context, accountID int64) 
 
 type CallerSessions struct{ identityPorts.CallerSessions }
 
-func (s CallerSessions) SessionVisits(ctx context.Context, sessionID int64) ([]domain.CallerVisit, error) {
-	visits, err := s.CallerSessions.SessionVisits(ctx, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]domain.CallerVisit, 0, len(visits))
-	for _, visit := range visits {
-		result = append(result, domain.CallerVisit(visit))
-	}
-	return result, nil
-}
-
 // mappedCallerError keeps the text of a wrapped caller-context error while
 // its cause is the public error.
 type mappedCallerError struct {

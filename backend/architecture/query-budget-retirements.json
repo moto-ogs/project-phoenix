@@ -18,5 +18,275 @@
     "scenario": "api.traeger.key_date_counts",
     "route": "GET /traeger/schools/key-date-counts",
     "issue": 7301
+  },
+  {
+    "scenario": "api.activities.student_available.complete",
+    "route": "GET /api/activities/students/{studentId}/available",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.activities.timespans",
+    "route": "GET /api/activities/timespans",
+    "issue": 2352
+  },
+  {
+    "scenario": "e2e.timetable.exception_conflicts.cancelled",
+    "route": "GET /api/timetable/exception-conflicts",
+    "issue": 2352
+  },
+  {
+    "scenario": "e2e.timetable.exception_conflicts.modified",
+    "route": "GET /api/timetable/exception-conflicts",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.type",
+    "route": "GET /api/iot/type/{type}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.status",
+    "route": "GET /api/iot/status/{status}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.registered_by",
+    "route": "GET /api/iot/registered-by/{personId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.active",
+    "route": "GET /api/iot/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.maintenance",
+    "route": "GET /api/iot/maintenance",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.iot.devices.list.offline",
+    "route": "GET /api/iot/offline",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.combination_groups.reads",
+    "route": "GET /api/active/combined/{id}/groups",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.combined.active",
+    "route": "GET /api/active/combined/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.combined.list",
+    "route": "GET /api/active/combined/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.groups.by_activity",
+    "route": "GET /api/active/groups/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.groups.by_room",
+    "route": "GET /api/active/groups/room/{roomId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.mappings.combined",
+    "route": "GET /api/active/mappings/combined/{combinedId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.mappings.group",
+    "route": "GET /api/active/mappings/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.detail.n3",
+    "route": "GET /api/active/groups/{id}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.detail.n8",
+    "route": "GET /api/active/groups/{id}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.student_visits.n3",
+    "route": "GET /api/active/visits/student/{studentId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.student_visits.n8",
+    "route": "GET /api/active/visits/student/{studentId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.unclaimed.n3",
+    "route": "GET /api/active/groups/unclaimed",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence20.unclaimed.n8",
+    "route": "GET /api/active/groups/unclaimed",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.display.n3",
+    "route": "GET /api/active/groups/{id}/visits/display",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.display.n8",
+    "route": "GET /api/active/groups/{id}/visits/display",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.group.n3",
+    "route": "GET /api/active/visits/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.group.n8",
+    "route": "GET /api/active/visits/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.session.n3",
+    "route": "GET /api/active/groups/{id}/visits",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.presence25.session.n8",
+    "route": "GET /api/active/groups/{id}/visits",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.group",
+    "route": "GET /api/active/supervisors/group/{groupId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.list",
+    "route": "GET /api/active/supervisors/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.list.active",
+    "route": "GET /api/active/supervisors/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.list.ended",
+    "route": "GET /api/active/supervisors/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.active.supervisors.staff",
+    "route": "GET /api/active/supervisors/staff/{staffId}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.auth.accounts.by_role.positive_growth",
+    "route": "GET /auth/accounts/by-role/{roleName}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.auth.accounts.tokens.positive_growth",
+    "route": "GET /auth/accounts/{accountId}/tokens/",
+    "issue": 2352
+  },
+  {
+    "scenario": "operator.lists.account_tenants_slash",
+    "route": "GET /operator/accounts/{accountId}/tenants/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.feedback.date.positive_growth",
+    "route": "GET /api/feedback/date/{date}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.feedback.list.positive_growth",
+    "route": "GET /api/feedback/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.feedback.mensa.positive_growth",
+    "route": "GET /api/feedback/mensa",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.guardians.invitable.http_positive_growth",
+    "route": "GET /api/guardians/invitable",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.guardians.without_account.http_positive_growth",
+    "route": "GET /api/guardians/without-account",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.active.n3",
+    "route": "GET /api/me/groups/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.active.n8",
+    "route": "GET /api/me/groups/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.activity.n3",
+    "route": "GET /api/me/groups/activity",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.activity.n8",
+    "route": "GET /api/me/groups/activity",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.students.n3",
+    "route": "GET /api/me/groups/{groupID}/students",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.students.n8",
+    "route": "GET /api/me/groups/{groupID}/students",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.rooms.available",
+    "route": "GET /api/rooms/available",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.rooms.buildings",
+    "route": "GET /api/rooms/buildings",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.rooms.categories",
+    "route": "GET /api/rooms/categories",
+    "issue": 2352
+  },
+  {
+    "scenario": "workforce.staff_growth.directory_available",
+    "route": "GET /api/staff/available",
+    "issue": 2352
+  },
+  {
+    "scenario": "workforce.workforce20.own_presence_map",
+    "route": "GET /api/time-tracking/presence-map",
+    "issue": 2352
+  },
+  {
+    "scenario": "parent.enrollments.growth.mine",
+    "route": "GET /parent/me/enrollments",
+    "issue": 2352
   }
 ]

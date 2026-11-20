@@ -65,21 +65,6 @@ func operationActor(ctx context.Context) (accountID int64, isAdmin bool) {
 	return int64(claims.ID), claims.IsAdmin
 }
 
-// operationsActiveSessions lists today's running instances with their plan
-// windows so the supervision UI can label session tabs (#2265).
-func (rs *Resource) operationsActiveSessions(w http.ResponseWriter, r *http.Request) {
-	if rs.OperationsService == nil {
-		common.RenderError(w, r, common.ErrorInternalServer(errors.New("timetable operations service not wired")))
-		return
-	}
-	result, err := rs.OperationsService.ActiveSessions(r.Context(), rs.todayDate())
-	if err != nil {
-		rs.renderOperationsError(w, r, err)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, map[string]any{"sessions": result}, "Active timetable sessions retrieved")
-}
-
 func (rs *Resource) operationsPlannedNow(w http.ResponseWriter, r *http.Request) {
 	if rs.OperationsService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("timetable operations service not wired")))
@@ -401,17 +386,6 @@ func spontaneousStartWorkdayWindow(ctx context.Context, now time.Time) (spontane
 
 func clockTimeFromMinutes(minutes int) time.Time {
 	return time.Date(2000, 1, 1, minutes/60, minutes%60, 0, 0, time.UTC)
-}
-
-func (rs *Resource) operationsCapabilities(w http.ResponseWriter, r *http.Request) {
-	enabled, err := rs.webSpontaneousActivitiesEnabled(r)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServerWrap(http.StatusText(http.StatusInternalServerError), err))
-		return
-	}
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"web_spontaneous_activities_enabled": enabled,
-	}, "Timetable operation capabilities retrieved")
 }
 
 func (rs *Resource) webSpontaneousActivitiesEnabled(r *http.Request) (bool, error) {

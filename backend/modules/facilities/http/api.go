@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"slices"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -128,9 +126,6 @@ func (rs *Resource) Router() chi.Router {
 		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Put("/{id}", rs.updateRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Delete), withTx).Delete("/{id}", rs.deleteRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Delete), withTx).Get("/{id}/removal-impact", rs.roomRemovalImpact)
-		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/buildings", rs.getBuildingList)
-		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/categories", rs.getCategoryList)
-		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/available", rs.getAvailableRooms)
 	})
 	return router
 }
@@ -312,83 +307,6 @@ func (rs *Resource) getRoomsByCategory(w http.ResponseWriter, r *http.Request) {
 		responses = append(responses, simpleRoomResponse(room))
 	}
 	rs.runtime.Success(w, r, http.StatusOK, responses, "Rooms retrieved successfully")
-}
-
-func (rs *Resource) getBuildingList(w http.ResponseWriter, r *http.Request) {
-	rooms, err := rs.rooms.ListRooms(r.Context(), facilities.RoomFilter{})
-	if err != nil {
-		rs.failure(w, r, err)
-		return
-	}
-	buildings := uniqueRoomStrings(rooms, func(room facilities.Room) string { return room.Building })
-	rs.runtime.Success(w, r, http.StatusOK, map[string][]string{"buildings": buildings}, "Building list retrieved successfully")
-}
-
-func (rs *Resource) getCategoryList(w http.ResponseWriter, r *http.Request) {
-	rooms, err := rs.rooms.ListRooms(r.Context(), facilities.RoomFilter{})
-	if err != nil {
-		rs.failure(w, r, err)
-		return
-	}
-	categories := uniqueRoomStrings(rooms, func(room facilities.Room) string {
-		if room.Category == nil {
-			return ""
-		}
-		return *room.Category
-	})
-	rs.runtime.Success(w, r, http.StatusOK, map[string][]string{"categories": categories}, "Category list retrieved successfully")
-}
-
-func uniqueRoomStrings(rooms []facilities.Room, value func(facilities.Room) string) []string {
-	seen := make(map[string]struct{}, len(rooms))
-	for _, room := range rooms {
-		if current := value(room); current != "" {
-			seen[current] = struct{}{}
-		}
-	}
-	result := make([]string, 0, len(seen))
-	for current := range seen {
-		result = append(result, current)
-	}
-	slices.Sort(result)
-	return result
-}
-
-func (rs *Resource) getAvailableRooms(w http.ResponseWriter, r *http.Request) {
-	capacity := 0
-	if value := r.URL.Query().Get("capacity"); value != "" {
-		if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
-			capacity = parsed
-		}
-	}
-	rooms, err := rs.rooms.ListRooms(r.Context(), facilities.RoomFilter{MinimumCapacity: &capacity})
-	if err != nil {
-		rs.failure(w, r, err)
-		return
-	}
-	rooms = visibleRooms(rooms, r.URL.Query().Get("include_system") == "true")
-	responses := make([]RoomResponse, 0, len(rooms))
-	for _, room := range rooms {
-		responses = append(responses, simpleRoomResponse(room))
-	}
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Available rooms retrieved successfully")
-}
-
-func visibleRooms(rooms []facilities.Room, includeSystem bool) []facilities.Room {
-	if includeSystem {
-		return rooms
-	}
-	visible := make([]facilities.Room, 0, len(rooms))
-	for _, room := range rooms {
-		// Mirrors the owner's ExcludeSystem predicate: toilet rooms are never
-		// staff-visible, and the Schulhof stays selectable whether or not it
-		// is released (ADR 0019).
-		if facilities.IsToiletRoomName(room.Name) || (room.IsSystem && room.Name != facilities.SchulhofRoomName) {
-			continue
-		}
-		visible = append(visible, room)
-	}
-	return visible
 }
 
 // ErrHistoryDisabled refuses the room history of a school whose attendance

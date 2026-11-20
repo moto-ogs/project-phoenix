@@ -6,7 +6,7 @@ import (
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 )
 
-// studentVisitResponse preserves the current-visit and deprecated visit-history HTTP shape.
+// studentVisitResponse preserves the deprecated visit-history HTTP shape.
 type studentVisitResponse struct {
 	ID            int64      `json:"id"`
 	CreatedAt     time.Time  `json:"created_at"`

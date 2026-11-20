@@ -36,17 +36,16 @@ func classifyPresence(err error) error {
 	case errors.Is(inner, studentpresence.ErrStudentGraduated), errors.Is(inner, studentpresence.ErrStudentCareEnded):
 		return mapError(err, ports.ErrStudentNotInCare)
 	case errors.Is(inner, studentpresence.ErrRoomConflict), errors.Is(inner, studentpresence.ErrSessionConflict),
-		errors.Is(inner, studentpresence.ErrStudentAlreadyInGroup), errors.Is(inner, studentpresence.ErrGroupAlreadyInCombination),
+		errors.Is(inner, studentpresence.ErrStudentAlreadyInGroup),
 		errors.Is(inner, studentpresence.ErrStudentAlreadyActive), errors.Is(inner, studentpresence.ErrStaffAlreadySupervising),
 		errors.Is(inner, studentpresence.ErrDeviceAlreadyActive):
 		return mapError(err, ports.ErrConflict)
 	case errors.Is(inner, studentpresence.ErrGroupNotFound), errors.Is(inner, studentpresence.ErrVisitNotFound),
-		errors.Is(inner, studentpresence.ErrGroupSupervisorNotFound), errors.Is(inner, studentpresence.ErrCombinedGroupNotFound),
-		errors.Is(inner, studentpresence.ErrGroupMappingNotFound), errors.Is(inner, studentpresence.ErrNoActiveSession),
-		errors.Is(inner, studentpresence.ErrStaffNotFound):
+		errors.Is(inner, studentpresence.ErrGroupSupervisorNotFound),
+		errors.Is(inner, studentpresence.ErrNoActiveSession), errors.Is(inner, studentpresence.ErrStaffNotFound):
 		return mapError(err, ports.ErrNotFound)
 	case errors.Is(inner, studentpresence.ErrGroupAlreadyEnded), errors.Is(inner, studentpresence.ErrVisitAlreadyEnded),
-		errors.Is(inner, studentpresence.ErrSupervisionAlreadyEnded), errors.Is(inner, studentpresence.ErrCombinedGroupAlreadyEnded),
+		errors.Is(inner, studentpresence.ErrSupervisionAlreadyEnded),
 		errors.Is(inner, studentpresence.ErrInvalidTimeRange), errors.Is(inner, studentpresence.ErrCannotDeleteActiveGroup),
 		errors.Is(inner, studentpresence.ErrInvalidData), errors.Is(inner, studentpresence.ErrInvalidActivitySession):
 		return mapError(err, ports.ErrInvalid)

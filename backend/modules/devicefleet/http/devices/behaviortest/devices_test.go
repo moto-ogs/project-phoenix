@@ -174,45 +174,6 @@ func TestGetDevice_InvalidID(t *testing.T) {
 // GET DEVICE BY DEVICE ID TESTS
 // =============================================================================
 
-func TestGetDeviceByDeviceID_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	// Create test device - the fixture appends its own unique suffix
-	device := testpkg.CreateTestDevice(t, ctx.db, "test-device")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	// Use device.DeviceID which includes the fixture's unique suffix
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/devices/device/%s", device.DeviceID), nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetDeviceByDeviceID_NotFound(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/device/nonexistent-device", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	// An unknown device ID is not found (#2317 fixed the former 500).
-	testutil.AssertErrorResponse(t, rr, http.StatusNotFound)
-}
-
 // =============================================================================
 // CREATE DEVICE TESTS
 // =============================================================================
@@ -562,297 +523,38 @@ func TestUpdateDeviceStatus_MissingStatus(t *testing.T) {
 // PING DEVICE TESTS
 // =============================================================================
 
-func TestPingDevice_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	// Create test device - use device.DeviceID which includes fixture's unique suffix
-	device := testpkg.CreateTestDevice(t, ctx.db, "ping-device")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/devices/%s/ping", device.DeviceID), nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:manage"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestPingDevice_NotFound(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/devices/nonexistent-device/ping", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:manage"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	// An unknown device ID is not found (#2317 fixed the former 500).
-	testutil.AssertErrorResponse(t, rr, http.StatusNotFound)
-}
-
 // =============================================================================
 // GET DEVICES BY TYPE TESTS
 // =============================================================================
-
-func TestGetDevicesByType_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/type/terminal", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
 
 // =============================================================================
 // GET DEVICES BY STATUS TESTS
 // =============================================================================
 
-func TestGetDevicesByStatus_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/status/active", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetDevicesByStatus_InvalidStatus(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/status/invalid_status", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertBadRequest(t, rr)
-}
-
 // =============================================================================
 // GET DEVICES BY REGISTERED BY TESTS
 // =============================================================================
-
-func TestGetDevicesByRegisteredBy_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	// Create test person
-	person := testpkg.CreateTestPerson(t, ctx.db, "RegisteredBy", "Test")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/devices/registered-by/%d", person.ID), nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetDevicesByRegisteredBy_InvalidPersonID(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/registered-by/invalid", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertBadRequest(t, rr)
-}
 
 // =============================================================================
 // GET ACTIVE DEVICES TESTS
 // =============================================================================
 
-func TestGetActiveDevices_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/active", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
 // =============================================================================
 // GET DEVICES REQUIRING MAINTENANCE TESTS
 // =============================================================================
-
-func TestGetDevicesRequiringMaintenance_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/maintenance", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
 
 // =============================================================================
 // GET OFFLINE DEVICES TESTS
 // =============================================================================
 
-func TestGetOfflineDevices_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/offline", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetOfflineDevices_WithDurationFilter(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/offline?duration=30m", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
 // =============================================================================
 // GET DEVICE STATISTICS TESTS
 // =============================================================================
-
-func TestGetDeviceStatistics_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/devices/statistics", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:read"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-
-	// Verify response has expected fields
-	response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-	data, ok := response["data"].(map[string]interface{})
-	assert.True(t, ok, "Response should have data field")
-	assert.Contains(t, data, "total_devices", "Response should contain total_devices")
-	assert.Contains(t, data, "active_devices", "Response should contain active_devices")
-	assert.Contains(t, data, "offline_devices", "Response should contain offline_devices")
-}
 
 // =============================================================================
 // DETECT NEW DEVICES TESTS
 // =============================================================================
 
-func TestDetectNewDevices_NotImplemented(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/devices/detect-new", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:manage"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	// NOTE: This endpoint is not implemented in the service layer yet.
-	// Returns "device auto-discovery not implemented" error.
-	testutil.AssertErrorResponse(t, rr, http.StatusInternalServerError)
-	assert.Contains(t, rr.Body.String(), "not implemented")
-}
-
 // =============================================================================
 // SCAN NETWORK TESTS
 // =============================================================================
-
-func TestScanNetwork_NotImplemented(t *testing.T) {
-	t.Parallel()
-	ctx := setupDevicesModule(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/devices", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/devices/scan-network", nil,
-		testutil.WithClaims(t, testutil.DefaultTestClaims()),
-		testutil.WithPermissions("devices:manage"),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	// NOTE: This endpoint is not implemented in the service layer yet.
-	// Returns "network scanning not implemented" error.
-	testutil.AssertErrorResponse(t, rr, http.StatusInternalServerError)
-	assert.Contains(t, rr.Body.String(), "not implemented")
-}

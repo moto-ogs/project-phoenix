@@ -7,4 +7,3 @@ POST /school/auth/mfa/resend -> unterricht_vormittag  (#4895 Schulportal: Anmeld
 POST /school/auth/mfa/verify -> unterricht_vormittag  (#4895 Schulportal: Anmeldung prüft das Modul in Identity & Access)
 POST /school/auth/password-reset -> unterricht_vormittag  (#4895 Schulportal: Anmeldung prüft das Modul in Identity & Access)
 POST /school/auth/password-reset/confirm -> unterricht_vormittag  (#4895 Schulportal: Anmeldung prüft das Modul in Identity & Access)
-POST /school/auth/switch-school -> unterricht_vormittag  (#4895 Schulportal: Anmeldung prüft das Modul in Identity & Access)

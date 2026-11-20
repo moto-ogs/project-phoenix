@@ -10,24 +10,13 @@ import (
 type StudentPresence interface {
 	studentpresence.VisitWriteLocks
 	QueryGroupSupervisions(context.Context, studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error)
-	GetCombinedGroup(context.Context, int64) (studentpresence.CombinedGroup, error)
-	ListCombinedGroups(context.Context, studentpresence.CombinedGroupFilter) ([]studentpresence.CombinedGroup, error)
-	RecordCombination(context.Context, time.Time, *time.Time) (studentpresence.CombinedGroup, error)
-	ReviseCombination(context.Context, int64, time.Time, *time.Time) (studentpresence.CombinedGroup, error)
-	DeleteCombination(context.Context, int64) error
-	EndCombination(context.Context, int64, time.Time) error
-	ListGroupMappings(context.Context, studentpresence.GroupMappingFilter) ([]studentpresence.GroupMapping, error)
-	RecordGroupMapping(context.Context, int64, int64) (studentpresence.GroupMapping, error)
-	DeleteGroupMapping(context.Context, int64) error
 	ListLiveGroups(context.Context, []int64) ([]studentpresence.LiveGroup, error)
 	LockRoomSessionWrites(context.Context, int64) error
 	UnclaimedGroups(context.Context, string) ([]studentpresence.UnclaimedGroup, error)
 	ClaimGroup(context.Context, studentpresence.GroupClaim) (studentpresence.ClaimedSupervision, error)
 	FindVisit(context.Context, int64) (*studentpresence.Visit, error)
-	DeleteVisit(context.Context, int64) error
 	CloseVisits(context.Context, []int64, time.Time) ([]studentpresence.Visit, error)
 	RecordVisit(context.Context, studentpresence.Visit) (studentpresence.Visit, error)
-	ReviseVisit(context.Context, studentpresence.Visit) (studentpresence.Visit, error)
 	ListVisits(context.Context, studentpresence.VisitFilter) ([]studentpresence.Visit, error)
 	ListVisitLocations(context.Context, studentpresence.VisitLocationFilter) ([]studentpresence.VisitLocation, error)
 	TransferOpenVisits(context.Context, int64, int64) (int64, error)
@@ -48,7 +37,6 @@ type StudentPresence interface {
 	EnsureAttendance(context.Context, studentpresence.Attendance) (studentpresence.Attendance, bool, error)
 	EnsureAttendanceBatch(context.Context, []studentpresence.Attendance) ([]int64, error)
 	CloseAttendance(context.Context, studentpresence.AttendanceCheckout) ([]studentpresence.Attendance, error)
-	ReviseAttendance(context.Context, studentpresence.Attendance) (studentpresence.Attendance, error)
 	LockStudentAttendance(context.Context, int64) error
 	HasAttendance(context.Context, studentpresence.AttendanceFilter) (bool, error)
 	ListOpenAttendanceStudentIDs(context.Context, string) ([]int64, error)

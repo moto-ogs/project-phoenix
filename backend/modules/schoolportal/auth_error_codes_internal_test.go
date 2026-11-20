@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,9 +25,6 @@ func refusalRuntime(err error) *Resource {
 			return nil, err
 		},
 		IssueTokens: func(context.Context, VerifiedChallenge, string, string) (string, string, error) {
-			return "", "", err
-		},
-		SwitchSchool: func(context.Context, int64, string, string, string, string) (string, string, error) {
 			return "", "", err
 		},
 	}}
@@ -113,50 +109,6 @@ func TestSchoolExchangeRefusalsCarryIdentityCodes(t *testing.T) {
 			assert.Equal(t, tc.code, code)
 		})
 	}
-}
-
-// A signed-in teacher switching schools gets the codes of the tenant switch.
-func TestSchoolSwitchRefusalsCarryIdentityCodes(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []refusalCase{
-		{owner(identityaccess.ErrInvalidToken), http.StatusUnauthorized, "identity.mfa_session_required"},
-		{owner(identityaccess.ErrMFAStatusUnavailable), http.StatusServiceUnavailable, "identity.mfa_status_unavailable"},
-		{owner(identityaccess.ErrAccountNotFound), http.StatusUnauthorized, "identity.account_not_found"},
-		{owner(identityaccess.ErrAccountInactive), http.StatusUnauthorized, "identity.session_account_inactive"},
-		{owner(identityaccess.ErrTenantNotFound), http.StatusNotFound, "general.input"},
-		{owner(identityaccess.ErrTenantAccessDenied), http.StatusUnauthorized, "identity.tenant_access_denied"},
-		{owner(identityaccess.ErrAccountNoSchoolPortalRole), http.StatusForbidden, "school.no_school_portal_role"},
-		{owner(errPortalNotBooked), http.StatusForbidden, "module.not_booked"},
-	} {
-		t.Run(tc.err.Error(), func(t *testing.T) {
-			t.Parallel()
-			recorder := httptest.NewRecorder()
-			request := httptest.NewRequest(http.MethodPost, "/auth/switch-school", strings.NewReader(`{"tenant_slug":"other-school"}`))
-			request.Header.Set("Content-Type", "application/json")
-			refusalRuntime(tc.err).switchSchool(recorder, request)
-			status, code := decodeRefusal(t, recorder)
-			assert.Equal(t, tc.status, status)
-			assert.Equal(t, tc.code, code)
-		})
-	}
-}
-
-func TestSchoolSwitchUsesFamilyFromAuthenticatedClaims(t *testing.T) {
-	t.Parallel()
-	resource := refusalRuntime(nil)
-	resource.AuthService.SwitchSchool = func(_ context.Context, _ int64, slug, _, _, family string) (string, string, error) {
-		require.Equal(t, "target", slug)
-		require.Equal(t, "signed-source-family", family)
-		return "example-access", "example-refresh", nil
-	}
-	request := httptest.NewRequest(http.MethodPost, "/auth/switch-school", strings.NewReader(`{"tenant_slug":"target","family_id":"untrusted-family","mfa_verified":true}`))
-	request.Header.Set("Content-Type", "application/json")
-	request = request.WithContext(context.WithValue(request.Context(), sessiontoken.CtxClaims,
-		sessiontoken.AppClaims{FamilyID: "signed-source-family"}))
-	response := httptest.NewRecorder()
-	resource.switchSchool(response, request)
-	require.Equal(t, http.StatusOK, response.Code)
 }
 
 // The refusal of a school without Unterricht am Vormittag names the module

@@ -82,7 +82,6 @@ func TestIdentityPersistenceRuntimeEvidence(t *testing.T) {
 	operations := []operation{
 		{"login", http.MethodPost, "/auth/login", map[string]string{"email": email, "password": password}, nil, http.StatusOK, tokens},
 		{"refresh", http.MethodPost, "/auth/refresh", nil, func() string { return refreshToken }, http.StatusOK, tokens},
-		{"own_account", http.MethodGet, "/auth/account", nil, access, http.StatusOK, keep},
 		{"own_account_tenants", http.MethodGet, "/auth/account/tenants", nil, access, http.StatusOK, keep},
 		{"accounts_list", http.MethodGet, "/auth/accounts?email=identity-runtime", nil, access, http.StatusOK, keep},
 		{"account_roles", http.MethodGet, accountPath + "/roles", nil, access, http.StatusOK, keep},

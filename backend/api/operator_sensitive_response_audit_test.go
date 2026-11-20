@@ -156,7 +156,6 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 		{http.MethodPost, school + fmt.Sprintf("/accounts/%d/caregiver-capability/", account.ID)},
 		{http.MethodDelete, school + fmt.Sprintf("/accounts/%d/caregiver-capability/", account.ID)},
 		{http.MethodPost, access},
-		{http.MethodPost, access + "/"},
 		{http.MethodPut, access + fmt.Sprintf("/%d", schoolID)},
 		{http.MethodDelete, access + fmt.Sprintf("/%d", schoolID)},
 		{http.MethodPost, school + "/demo-presence-history"},

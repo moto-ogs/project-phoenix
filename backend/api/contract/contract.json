@@ -1740,6 +1740,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -1754,6 +1755,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ActivityScheduleResponse"
@@ -1829,6 +1831,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "TransitionResponse"
@@ -2322,6 +2325,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "CareOfferingResponse"
@@ -2601,6 +2605,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -3652,6 +3657,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "query": [
         {
           "name": "category",
@@ -3718,6 +3724,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "paginated": true,
       "query": [
         {
@@ -7083,6 +7090,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "PermissionResponse"
@@ -8761,6 +8769,7 @@
       "portals": [
         "school"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ParentConferenceView"
@@ -13282,6 +13291,14 @@
     {
       "method": "POST",
       "pattern": "/api/platform/announcements/{id}/dismiss",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/platform/announcements/{id}/seen",
       "portals": [
         "tenant"
       ],
@@ -25996,6 +26013,20 @@
           "name": "seen_at",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "shown_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "dismissed_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         },
         {

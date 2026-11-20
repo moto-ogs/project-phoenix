@@ -28,6 +28,13 @@ async function fetchUnread(): Promise<UnreadAnnouncement[]> {
   return response.data ?? [];
 }
 
+/** Records that the person saw the announcement (`seen_at`, #7555). */
+async function markSeen(id: number | string): Promise<void> {
+  await authFetch(`/api/platform/announcements/${id}/seen`, {
+    method: "POST",
+  });
+}
+
 async function markDismissed(id: number | string): Promise<void> {
   await authFetch(`/api/platform/announcements/${id}/dismiss`, {
     method: "POST",
@@ -71,6 +78,7 @@ export function useAnnouncements() {
     unreadCount: data?.length ?? 0,
     isLoading,
     dismiss,
+    markSeen,
     refresh: () => mutate(),
   };
 }

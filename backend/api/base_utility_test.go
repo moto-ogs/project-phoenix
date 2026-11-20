@@ -843,7 +843,7 @@ func checkTimetableConflictWiring(t *testing.T, graph *goldenRuntime) {
 	_, staff := testpkg.CreateTestTeacherWithAccount(t, db, "Conflict", "Probe")
 	token := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(staff.ID), testpkg.Tenant(t)))
 	probe := checkpointRequest(graph, checkpointScenario{
-		Method: http.MethodGet, Path: "/api/timetable/exception-conflicts?date=2099-01-05", Authenticated: true,
+		Method: http.MethodGet, Path: "/api/timetable/conflicts?date=2099-01-05&start_time=10:00&end_time=11:00&room_id=1", Authenticated: true,
 	}, token)
 	require.Equal(t, http.StatusOK, probe.Code, probe.Body.String())
 }
