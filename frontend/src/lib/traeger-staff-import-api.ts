@@ -107,7 +107,7 @@ interface BackendRow {
   iban_masked?: string;
   tax_id_masked?: string;
   social_security_number_masked?: string;
-  staff_record_id?: number;
+  staff_record_id?: string;
   completes: StaffImportField[] | null;
   problems: StaffImportProblem[] | null;
 }
@@ -126,7 +126,7 @@ interface BackendResult {
 
 interface BackendLogEntry {
   file: string;
-  account_id: number;
+  account_id: string;
   by_you: boolean;
   account_name?: string;
   imported_at: string;

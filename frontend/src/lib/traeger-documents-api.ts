@@ -70,8 +70,8 @@ export interface TraegerDocumentReleaseInput {
   readonly groupId: string | null;
 }
 
-// The catalog proxy hands identifiers out as strings (ADR 0270); the list
-// route still sends numbers.
+// The catalog proxy hands identifiers out as strings (ADR 0270); a route
+// outside it may still send numbers.
 type BackendId = string | number;
 
 interface BackendRelease {
@@ -84,7 +84,7 @@ interface BackendRelease {
 }
 
 interface BackendDocument {
-  id: number;
+  id: string;
   title: string;
   file_name: string;
   content_type: string;

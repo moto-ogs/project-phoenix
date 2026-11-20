@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -154,6 +155,16 @@ type EditDraftOfferingDayResponse struct {
 	SelectedDays          []string `json:"selected_days"`
 	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
 	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
+}
+
+// getStatusSignatureProof answers GET /requests/{statusToken}/signature-proof:
+// the proof of the parent's signature on a path of its own, which the
+// frontend's catalog proxy serves as a public file (#2352). It is the status
+// read with ?format=pdf, so token resolution and its transaction stay one.
+func (rs *Resource) getStatusSignatureProof(w http.ResponseWriter, r *http.Request) {
+	proof := r.Clone(r.Context())
+	proof.URL.RawQuery = url.Values{"format": {"pdf"}}.Encode()
+	rs.getStatus(w, proof)
 }
 
 // getStatus returns the per-child status for a token-bearing parent.

@@ -143,9 +143,9 @@ describe("session reads of every BFF route", () => {
     // Anker: the walk sees the tree, also the portals' own routes.
     expect(routes).toContain("auth/logout");
     expect(routes).toContain("traeger/auth/logout");
-    // The catalog proxy took over the pass-through files (#2352); the walk
-    // still sees the routes with behaviour of their own. The floor only
-    // proves the walk reads the tree; #2352 keeps deleting route files.
+    // The catalog proxy took over the checked school uploads and the Träger
+    // pass-through files (#2352). The floor only proves the walk reads the
+    // remaining tree; the migration keeps deleting route files.
     expect(routes.length).toBeGreaterThan(150);
   });
 

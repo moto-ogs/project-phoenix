@@ -340,7 +340,13 @@ describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
   it("finds the route handlers", () => {
-    expect(files.length).toBeGreaterThan(200);
+    expect(files).toContain(path.join(API_ROOT, "auth/logout/route.ts"));
+    expect(files).toContain(
+      path.join(API_ROOT, "traeger/auth/logout/route.ts"),
+    );
+    // Catalog migrations remove pass-through files; the floor only anchors
+    // discovery, while the policy check below still examines every handler.
+    expect(files.length).toBeGreaterThan(150);
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {
