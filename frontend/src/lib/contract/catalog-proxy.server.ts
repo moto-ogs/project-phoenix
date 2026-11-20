@@ -11,10 +11,7 @@ import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { fileResponse } from "~/lib/file-response.server";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
-import {
-  applyPrivateNoStore,
-  withPrivateDownloadNoStore,
-} from "~/lib/private-no-store";
+import { applyPrivateNoStore } from "~/lib/private-no-store";
 import {
   parseRequestBody,
   wrapInApiResponse,
@@ -50,6 +47,13 @@ export interface CatalogRoute {
    * served.
    */
   readonly publicFile?: string;
+  /**
+   * The Cache-Control the proxy keeps on a file the backend handed out; every
+   * other answer of the route stays private and uncached.
+   */
+  readonly fileCache?: string;
+  /** Forward the validators of a conditional GET and hand back its 304. */
+  readonly conditionalGet?: boolean;
 }
 
 export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -131,6 +135,115 @@ const isPublicFile = (route: CatalogRoute) =>
   route.publicFile.length > 0;
 
 const PRIVATE_NO_STORE = "private, no-store";
+
+/**
+ * The Cache-Control values a file route may keep (contractmodel's
+ * FileCacheValues). The list is closed here as well: a value an entry
+ * carried that Go never reviewed leaves the file uncached.
+ */
+const PUBLIC_ASSET_CACHE = "public, max-age=86400";
+const FILE_CACHE_VALUES = new Set([
+  PUBLIC_ASSET_CACHE,
+  "private, max-age=3600",
+  "private, max-age=86400, immutable",
+]);
+
+/**
+ * The cache a route's file answer keeps: a reviewed value, and a public one
+ * only for a file its contract opens to the portal public.
+ */
+function cacheOf(route: CatalogRoute): string | null {
+  const value = route.fileCache;
+  if (value === undefined || !FILE_CACHE_VALUES.has(value)) return null;
+  if (value.startsWith("public") && !isPublicFile(route)) return null;
+  return value;
+}
+
+/** The request headers a conditional GET forwards. */
+const CONDITIONAL_REQUEST_HEADERS = ["If-None-Match", "If-Modified-Since"];
+/** The validators a conditional GET's answer hands back. */
+const VALIDATOR_HEADERS = ["ETag", "Last-Modified"];
+
+/**
+ * Marks a file answer whose cache the route names, between building it and
+ * the wrapper that makes every other answer private; never sent.
+ */
+const KEEP_CACHE_HEADER = "X-Moto-Catalog-Keep-Cache";
+
+function conditionalHeaders(route: CatalogRoute, request: Request) {
+  const headers: Record<string, string> = {};
+  if (!route.conditionalGet || request.method !== "GET") return headers;
+  for (const name of CONDITIONAL_REQUEST_HEADERS) {
+    const value = request.headers.get(name);
+    if (value) headers[name] = value;
+  }
+  return headers;
+}
+
+/**
+ * A file answer: the backend's bytes with their file headers, or its 304 on
+ * a conditional GET. Only these keep the route's cache; an error or a
+ * refusal leaves through the private, uncached path.
+ */
+async function fileAnswerOf(
+  route: CatalogRoute,
+  backend: Response,
+  request: Request,
+): Promise<Response> {
+  const cache = cacheOf(route);
+  if (route.conditionalGet && cache && backend.status === 304) {
+    const headers = new Headers({
+      "Cache-Control": cache,
+      [KEEP_CACHE_HEADER]: "1",
+    });
+    copyHeaders(backend.headers, headers, VALIDATOR_HEADERS);
+    return new Response(null, { status: 304, headers });
+  }
+  const response = await fileResponse(
+    backend,
+    request,
+    cache ? { cacheControl: cache } : {},
+  );
+  if (cache && backend.ok && backend.body) {
+    if (route.conditionalGet) {
+      copyHeaders(backend.headers, response.headers, VALIDATOR_HEADERS);
+    }
+    response.headers.set(KEEP_CACHE_HEADER, "1");
+  }
+  return response;
+}
+
+function copyHeaders(from: Headers, to: Headers, names: readonly string[]) {
+  for (const name of names) {
+    const value = from.get(name);
+    if (value) to.set(name, value);
+  }
+}
+
+/**
+ * Every answer of a file route is private and uncached, except a file the
+ * route names a cache for (fileAnswerOf). The marker never leaves.
+ */
+function privateUnlessKept(response: Response): Response {
+  const kept = response.headers.get(KEEP_CACHE_HEADER) !== null;
+  // A fetch result handed through as is has immutable headers.
+  const out = kept ? response : mutable(response);
+  if (kept) {
+    out.headers.delete(KEEP_CACHE_HEADER);
+  } else {
+    out.headers.set("Cache-Control", PRIVATE_NO_STORE);
+  }
+  return out;
+}
+
+function mutable(response: Response): Response {
+  try {
+    response.headers.set("Cache-Control", PRIVATE_NO_STORE);
+    return response;
+  } catch {
+    return new Response(response.body, response);
+  }
+}
 
 function isServable(route: CatalogRoute): route is ServedRoute {
   if (isDecoder(route.response) || isFile(route)) return true;
@@ -414,26 +527,27 @@ export function makeCatalogProxy(
    * limit, so the renewal's retry can send it again.
    */
   function streamedHandler(route: CatalogRoute) {
-    return withPrivateDownloadNoStore(
-      portal.route(async (request, _token, params) => {
-        const { endpoint } = target(request, params.path);
-        if (isUpload(route)) return upload(route, request, endpoint);
-        const json =
-          method === "GET"
-            ? undefined
-            : await parseRequestBody(request, route.maxBodyBytes);
-        const backend = await portal.backendFetch(request, endpoint, {
-          method,
-          json,
-          idempotencyKey:
-            method === "GET" ? null : request.headers.get("Idempotency-Key"),
-          ...(route.noRetryAfterRenewal && {
-            retry: { off: route.noRetryAfterRenewal },
-          }),
-        });
-        return fileResponse(backend, request);
-      }),
-    );
+    const handler = portal.route(async (request, _token, params) => {
+      const { endpoint } = target(request, params.path);
+      if (isUpload(route)) return upload(route, request, endpoint);
+      const json =
+        method === "GET"
+          ? undefined
+          : await parseRequestBody(request, route.maxBodyBytes);
+      const backend = await portal.backendFetch(request, endpoint, {
+        method,
+        json,
+        headers: conditionalHeaders(route, request),
+        idempotencyKey:
+          method === "GET" ? null : request.headers.get("Idempotency-Key"),
+        ...(route.noRetryAfterRenewal && {
+          retry: { off: route.noRetryAfterRenewal },
+        }),
+      });
+      return fileAnswerOf(route, backend, request);
+    });
+    return async (request: NextRequest, context: RouteContext) =>
+      privateUnlessKept(await handler(request, context));
   }
 
   type Options = {
@@ -484,11 +598,17 @@ export function makeCatalogProxy(
     request: NextRequest,
     context: RouteContext,
   ): Promise<Response> {
-    const { endpoint } = target(request, (await context.params)?.path);
-    return fileResponse(
-      await sendBackend(endpoint, null, { method, request }),
+    const { route, endpoint } = target(request, (await context.params)?.path);
+    // A public asset embedded in a page waits for the backend no longer
+    // than any other image of a public page.
+    const backend = await sendBackend(endpoint, null, {
+      method,
       request,
-    );
+      ...(cacheOf(route) === PUBLIC_ASSET_CACHE && {
+        timeout: "publicAsset" as const,
+      }),
+    });
+    return fileAnswerOf(route, backend, request);
   }
 
   /**
@@ -536,7 +656,7 @@ export function makeCatalogProxy(
       response = handleApiError(error, request);
     }
     if (file) {
-      response.headers.set("Cache-Control", PRIVATE_NO_STORE);
+      response = privateUnlessKept(response);
     } else {
       applyPrivateNoStore(response.headers);
     }

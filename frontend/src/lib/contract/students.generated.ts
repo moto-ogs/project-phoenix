@@ -3695,6 +3695,14 @@ export const routes = {
     query: ["from", "to"],
     response: success(z.array(PartialAbsenceResponseSchema)),
   },
+  "GET /api/students/{id}/photo/{filename}": {
+    method: "GET",
+    pattern: "/api/students/{id}/photo/{filename}",
+    portals: ["tenant"],
+    fileCache: "private, max-age=86400, immutable",
+    conditionalGet: true,
+    response: fileAnswer,
+  },
   "GET /api/students/{id}/pickup-schedules": {
     method: "GET",
     pattern: "/api/students/{id}/pickup-schedules",

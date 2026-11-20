@@ -633,3 +633,49 @@ func TestParseUpload_ExtensionMustMatchContent(t *testing.T) {
 		}
 	}
 }
+
+// The public upload folders hand out only their own kind, with the type, the
+// disposition and the cache the frontend server set before (#2352).
+func TestServePublicAsset_ServesOnlyTheFolderKind(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "agb.pdf"), makePDFBytes(), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "logo.jpg"), makeJPEGBytes(), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "logo.svg"), []byte("<svg/>"), 0644))
+
+	serve := func(name string, asset PublicAsset) *http.Response {
+		w := httptest.NewRecorder()
+		ServePublicAsset(w, httptest.NewRequest(http.MethodGet, "/public/x/"+name, nil), dir, name, asset, nativeUploads.UploadFiles{})
+		return w.Result()
+	}
+
+	pdf := serve("agb.pdf", PublicPDFAsset)
+	assert.Equal(t, http.StatusOK, pdf.StatusCode)
+	assert.Equal(t, "application/pdf", pdf.Header.Get("Content-Type"))
+	assert.Equal(t, `inline; filename="agb.pdf"`, pdf.Header.Get("Content-Disposition"))
+	assert.Equal(t, "nosniff", pdf.Header.Get("X-Content-Type-Options"))
+	assert.Equal(t, FileCachePublicAsset, pdf.Header.Get("Cache-Control"))
+
+	image := serve("logo.jpg", PublicImageAsset)
+	assert.Equal(t, http.StatusOK, image.StatusCode)
+	assert.Equal(t, "image/jpeg", image.Header.Get("Content-Type"))
+	assert.Empty(t, image.Header.Get("Content-Disposition"))
+	assert.Equal(t, FileCachePublicAsset, image.Header.Get("Cache-Control"))
+
+	for name, asset := range map[string]PublicAsset{
+		"logo.jpg":         PublicPDFAsset,   // an image in a legal text folder
+		"agb.pdf":          PublicImageAsset, // a PDF in the image folder
+		"logo.svg":         PublicImageAsset, // a script-capable image
+		"../agb.pdf":       PublicPDFAsset,   // a path
+		"missing.pdf":      PublicPDFAsset,
+		"no-extension":     PublicPDFAsset,
+		"agb.pdf.exe":      PublicPDFAsset,
+		"LOGO.JPG.unknown": PublicImageAsset,
+	} {
+		refused := serve(name, asset)
+		assert.Equal(t, http.StatusNotFound, refused.StatusCode, name)
+		assert.Empty(t, refused.Header.Get("Content-Disposition"), name)
+		assert.NotEqual(t, FileCachePublicAsset, refused.Header.Get("Cache-Control"), name)
+	}
+}

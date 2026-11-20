@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common/contractmodel"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -212,6 +213,14 @@ func TestBuildRejects(t *testing.T) {
 	publicFileWithBody.MaxBodyBytes = 1024
 	publicUpload := upload()
 	publicUpload.Portals = []string{PublicPortal}
+	cachedJSON := get("/api/rows/{id}", inner{})
+	cachedJSON.FileCache = contractmodel.FileCachePrivateHour
+	unknownCache := fileRoute("/api/rows/{id}/file")
+	unknownCache.FileCache = "public, max-age=31536000"
+	publicCacheOnSession := fileRoute("/api/rows/{id}/file")
+	publicCacheOnSession.FileCache = contractmodel.FileCachePublicAsset
+	conditionalWithoutCache := fileRoute("/api/rows/{id}/file")
+	conditionalWithoutCache.ConditionalGet = true
 	uploadWithoutLimit := upload()
 	uploadWithoutLimit.MaxBodyBytes = 0
 	uploadWithoutCode := upload()
@@ -264,6 +273,10 @@ func TestBuildRejects(t *testing.T) {
 		"a public file marker on a JSON route":      {[]Registration{markedPublicJSON}, Options{Identifiers: identifiers}, "PublicFile marks a file of the portal"},
 		"a public file that reads a body":           {[]Registration{publicFileWithBody}, Options{Identifiers: identifiers}, "a public file reads no request body"},
 		"a public upload":                           {[]Registration{publicUpload}, Options{Identifiers: identifiers}, "takes no upload"},
+		"a cache trait on a JSON route":             {[]Registration{cachedJSON}, Options{Identifiers: identifiers}, "FileCache belongs to a file route"},
+		"a cache value nobody reviewed":             {[]Registration{unknownCache}, Options{Identifiers: identifiers}, "none of the reviewed values"},
+		"a public cache on a session file":          {[]Registration{publicCacheOnSession}, Options{Identifiers: identifiers}, "a public FileCache needs PublicFile"},
+		"a conditional GET without a cache":         {[]Registration{conditionalWithoutCache}, Options{Identifiers: identifiers}, "ConditionalGet belongs to a GET file route with FileCache"},
 		"an upload without a body limit":            {[]Registration{uploadWithoutLimit}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
 		"an upload without its too large code":      {[]Registration{uploadWithoutCode}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
 		"an upload beside a JSON body":              {[]Registration{uploadAndBody}, Options{Identifiers: identifiers}, "a multipart upload and a JSON request body"},
@@ -671,6 +684,25 @@ func TestAMarkedPublicFileIsBuiltWithItsReason(t *testing.T) {
 	files, err := TypeScript(doc)
 	require.NoError(t, err)
 	assert.Contains(t, files["links.generated.ts"], "    portals: [\"public\"],\n    publicFile: \"the link of the mail is the credential\",\n")
+}
+
+// A file route's cache traits travel to the proxy, which keeps no other
+// Cache-Control on a file than the one its contract names (#2352).
+func TestAFileRouteCarriesItsCacheTraits(t *testing.T) {
+	t.Parallel()
+	photo := fileRoute("/api/rows/{id}/photo/{filename}")
+	photo.FileCache = contractmodel.FileCachePrivateImmutableDay
+	photo.ConditionalGet = true
+	asset := fileRoute("/public/assets/{filename}")
+	asset.Portals = []string{PublicPortal}
+	asset.PublicFile = "a school's public asset"
+	asset.FileCache = contractmodel.FileCachePublicAsset
+	doc, err := Build([]Registration{photo, asset}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["rows.generated.ts"], "    fileCache: \"private, max-age=86400, immutable\",\n    conditionalGet: true,\n")
+	assert.Contains(t, files["public-assets.generated.ts"], "    publicFile: \"a school's public asset\",\n    fileCache: \"public, max-age=86400\",\n")
 }
 
 func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {

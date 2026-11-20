@@ -135,8 +135,7 @@ success wrapper. Their **backend errors still use the shared error path**:
 | `api/announcement-attachments/[announcementId]/[attachmentId]/download`, `api/files/folders/[folderId]/files/[fileId]/download`, `api/staff/[id]/documents/[documentId]/download`, `api/students/[id]/documents/[documentId]/download`                     | Attachment bytes, MIME types, and dispositions are passed through.                                                          |
 | `api/parent/me/news/[announcementId]/attachments/[attachmentId]/download`                                                                                                                                                                                  | Parent attachment bytes retain disposition and `nosniff` headers; parent relationship authorization remains in the backend. |
 | `api/parent-announcements/[announcementId]/declaration-export`, `api/parent/me/news/[announcementId]/declaration/proof/pdf`                                                                                                                                | Declaration exports and parent proof PDFs retain backend download headers and portal-specific session refresh behavior. |
-| `api/public/enrollment-form-legal-documents/[filename]`, `api/public/enrollment-legal-documents/[filename]`, `api/public/login-image/[filename]`, `api/me/profile/avatar/[filename]`, `api/staff/[id]/avatar`, `api/students/[id]/photo/[filename]`        | Public or user image/PDF responses retain content-type and caching behavior.                                                |
-| `api/calendar-feed/[token]`, `api/request-feed/[token]`                                                                                                                                                                                                    | iCalendar/RSS subscriptions retain their wire format and cache policy; the path token is the subscription credential.       |
+| `api/me/profile/avatar/[filename]`, `api/staff/[id]/avatar` | User image responses retain content-type and caching behavior. |
 
 ### Private download inventory (#5119)
 
@@ -186,7 +185,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `auth/login` | Relays login response cookies as well as the backend body. |
 | `auth/logout` | Uses the tenant refresh token for revocation; the browser still clears its local session. |
 | `birthdays/staff-export` | Streams the staff-birthday export file. |
-| `calendar-feed/[token]` | Returns iCalendar text; the path token is the subscription credential. |
 | `demo/access/handoff` | Checks readiness and returns a portal redirect, not backend JSON. |
 | `demo/access/reset` | Validates a demo credential and maps a reset result to the entry URL. |
 | `demo/access/sessions` | Accepts a link or cookie token and stores a new httpOnly demo cookie on success. |
@@ -213,10 +211,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `parent/me/news/[announcementId]/attachments/[attachmentId]/download` | Streams a parent-authorized attachment with disposition and nosniff headers. |
 | `parent-announcements/[announcementId]/declaration-export` | Streams a declaration PDF or CSV report with tenant-session refresh. |
 | `parent/me/news/[announcementId]/declaration/proof/pdf` | Streams a parent-authorized declaration proof PDF with parent-session refresh. |
-| `public/enrollment-form-legal-documents/[filename]` | Serves a public form PDF as a body stream. |
-| `public/enrollment-legal-documents/[filename]` | Serves a public legal PDF with MIME validation and cache policy. |
-| `public/login-image/[filename]` | Serves a public login image with MIME validation and cache policy. |
-| `request-feed/[token]` | Returns RSS/XML with subscription-token scope and private no-store cache policy. |
 | `school/auth/logout` | Uses the school refresh token, not the access token, to revoke the scoped session. |
 | `settings/enrollment/legal-agb-document` | Multipart legal PDF upload uses the shared file-upload validator. |
 | `settings/login-image` | Uploads validated tenant image data and invalidates the tenant cache. |
@@ -226,7 +220,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `staff/[id]/time-tracking/export` | Streams one staff member’s time-tracking export. |
 | `staff/time-tracking/export` | Streams staff time-tracking export bytes. |
 | `statistics/export` | Streams statistics export bytes with no-store caching. |
-| `students/[id]/photo/[filename]` | Serves student photo bytes with MIME, cache headers and the 304 revalidation path. |
 | `traeger/auth/logout` | Uses the Träger refresh token, not the access token, to revoke the `org` session. |
 
 File routes of every portal answer through one builder, `fileResponse`
@@ -360,7 +353,8 @@ The key is the scope claim of the portal's session token
   `/operator/schools`) moves its callers to the backend's path first.
 - Next prefers an existing route file over the proxy. Keep a file only for
   what is specific to the browser: portal policy, session handling, a file
-  or upload with behavior of its own (own cache header, BFF checks), login/MFA, the SSE pipe, or an aggregation without a Go view.
+  or upload with behavior the contract cannot name (reshaping, several
+  backend calls), login/MFA, the SSE pipe, or an aggregation without a Go view.
 - A file answer registers `File: true`, a multipart upload `Multipart: true`
   with `MaxBodyBytes` and `TooLargeCode` (ADR 0270, addendum 2026-11-19).
   The proxy streams both unread: the file with the headers of
@@ -375,6 +369,13 @@ The key is the scope claim of the portal's session token
   `private, no-store` (ADR 0270, addendum "Öffentliche Datei-Routen"). The
   link's path prefix needs log redaction in `lib/log-redaction.ts` and
   `backend/middleware/log_redaction.go`.
+- A file the browser may keep names its Cache-Control in `FileCache`, one
+  of the reviewed `FileCache*` values; a public value needs `PublicFile`.
+  `ConditionalGet` forwards `If-None-Match`/`If-Modified-Since` and hands a
+  304 back with `ETag` and `Last-Modified`. Only the served file keeps the
+  value; refusals stay `private, no-store` (ADR 0270, addendum of
+  2026-11-20). A subscription address that predates its backend path is a
+  `beforeFiles` rewrite in `next.config.js`, never a route file.
 - To move a pure proxy route: register its Go route for the portal,
   regenerate, delete the route file and its row in
   `src/test/proxy-routes/**`. A file is deleted only when every method it
