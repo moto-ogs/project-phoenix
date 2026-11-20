@@ -702,6 +702,10 @@ function TenantPageView({
                   // React behält dann den Servertext, statt die Seite zu
                   // verwerfen (greeting.ts).
                   suppressHydrationWarning
+                  // Die optionalen Umbruchstellen für lange IDs würden dem
+                  // zugänglichen Namen ein Leerzeichen hinzufügen. Der
+                  // unveränderte Titel bleibt deshalb der Name der Überschrift.
+                  aria-label={title}
                   className={cn(
                     "min-w-0 font-semibold tracking-tight text-balance break-words text-gray-900",
                     // Neben Info, Status und Kebab bleibt dem Titel auf dem
