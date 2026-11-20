@@ -1,6 +1,6 @@
 {
   "schema_version": 5,
-  "policy_epoch": 104,
+  "policy_epoch": 106,
   "module_path": "github.com/moto-ogs/project-phoenix",
   "shared_kernel_types": [
     "CorrelationID",
@@ -327,6 +327,10 @@
     },
     {
       "id": "school-search-view",
+      "kind": "projection"
+    },
+    {
+      "id": "day-changes-view",
       "kind": "projection"
     }
   ],

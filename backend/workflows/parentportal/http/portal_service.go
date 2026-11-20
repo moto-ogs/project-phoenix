@@ -90,13 +90,6 @@ type PortalService interface {
 	ListSharedDocuments(ctx context.Context, accountID int64) ([]parentService.SharedDocument, error)
 	SharedDocumentFile(ctx context.Context, accountID, organizationID, documentID int64) (parentService.BillingDocumentFile, error)
 
-	// ListEnrollmentsForAccount returns every enrollment.requests row
-	// where guardian_account_id matches the calling account, joined
-	// to phase + school + child summaries. Used by the dashboard to
-	// surface in-progress / decided submissions without the parent
-	// having to dig out the email-link status URL.
-	ListEnrollmentsForAccount(ctx context.Context, accountID int64) ([]*parentService.EnrollmentRequestSummary, error)
-
 	// GetChildConsents returns the four consent/acknowledgement states currently
 	// stored for the child. Visibility requires parent_portal.access; only the
 	// voluntary photo consent can be withdrawn through this interface.

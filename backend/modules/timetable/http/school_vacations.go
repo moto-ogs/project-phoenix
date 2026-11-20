@@ -14,10 +14,9 @@ import (
 )
 
 // SchoolVacations is the slice of the School Calendar the vacation routes
-// drive: the school's reads and confirmations and the local seed.
+// drive: the school's reads and confirmations.
 type SchoolVacations interface {
 	schoolcalendar.SchoolVacations
-	schoolcalendar.SchoolVacationSeed
 }
 
 // SchoolVacationsResponse is the wire shape of GET /school-vacations
@@ -119,43 +118,4 @@ func (rs *Resource) acknowledgeSchoolVacation(w http.ResponseWriter, r *http.Req
 	default:
 		common.Respond(w, r, http.StatusOK, SchoolVacationAcknowledgedResponse{Acknowledged: true}, "School vacation acknowledged")
 	}
-}
-
-// schoolVacationSeedRequest names the vacation windows the local demo seeder
-// stores for every federal state.
-type schoolVacationSeedRequest struct {
-	Vacations []schoolcalendar.SchoolVacation `json:"vacations"`
-}
-
-func (req *schoolVacationSeedRequest) Bind(_ *http.Request) error {
-	if len(req.Vacations) == 0 {
-		return errors.New("vacations are required")
-	}
-	return nil
-}
-
-// seedSchoolVacations handles POST /api/timetable/school-vacations/seed: the
-// local demo seeder stores fixed vacations, so a seeded stack shows them
-// without the external source. It runs outside the tenant transaction
-// because the vacations belong to no school.
-func (rs *Resource) seedSchoolVacations(w http.ResponseWriter, r *http.Request) {
-	if !rs.IsLocalSeed(r) {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New("not found")))
-		return
-	}
-	req := &schoolVacationSeedRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	stored, err := rs.SchoolVacations.SeedSchoolVacations(r.Context(), req.Vacations)
-	if errors.Is(err, schoolcalendar.ErrInvalidSchoolVacationWindow) {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServerWrap("Schulferien konnten nicht angelegt werden", err))
-		return
-	}
-	common.Respond(w, r, http.StatusCreated, map[string]int{"stored": stored}, "School vacations seeded")
 }

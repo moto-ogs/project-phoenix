@@ -168,7 +168,7 @@ type retryDemoCheckoutClient struct {
 
 func (c *retryDemoCheckoutClient) Post(path string, _ any) ([]byte, error) {
 	c.studentActions = append(c.studentActions, path)
-	if path == "/api/active/visits/student/1/checkout" && c.failCheckout {
+	if path == "/api/students/1/school-checkin" && c.failCheckout {
 		c.failCheckout = false
 		return nil, fmt.Errorf("temporary checkout failure")
 	}
@@ -197,8 +197,8 @@ func TestDemoTickRetriesFailedPickupCheckout(t *testing.T) {
 	require.NoError(t, ticker.sendHome(t.Context(), now, latest))
 	assert.Contains(t, ticker.day.home, state.Students[0].ID)
 	assert.Equal(t, []string{
-		"/api/active/visits/student/1/checkout",
-		"/api/active/visits/student/1/checkout",
+		"/api/students/1/school-checkin",
+		"/api/students/1/school-checkin",
 	}, client.studentActions)
 }
 

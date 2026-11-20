@@ -17,7 +17,6 @@ type presenceSettingsStub struct {
 	excusedClearMode         string
 	attendanceEditScope      string
 	operationalOverviewScope string
-	inactivityTimeoutMinutes int
 	// webParticipantLimitEnforced is the negated #3632 setting; the zero value
 	// is the registry default (exceeding the limit on the web is allowed).
 	webParticipantLimitEnforced bool
@@ -59,10 +58,6 @@ func (s presenceSettingsStub) ExcusedClearMode(context.Context) (string, error) 
 	return s.excusedClearMode, s.excusedClearModeErr
 }
 
-func (s presenceSettingsStub) SessionInactivityTimeoutMinutes(context.Context) (int, error) {
-	return s.inactivityTimeoutMinutes, nil
-}
-
 func (s presenceSettingsStub) AttendanceEditScope(context.Context) (string, error) {
 	return s.attendanceEditScope, s.attendanceEditScopeErr
 }
@@ -86,6 +81,5 @@ func defaultPresenceSettings() presenceSettingsStub {
 		excusedClearMode:         "end_of_day",
 		attendanceEditScope:      active.AttendanceEditScopeOwn,
 		operationalOverviewScope: active.OverviewScopeAllStaff,
-		inactivityTimeoutMinutes: 30,
 	}
 }

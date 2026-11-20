@@ -697,3 +697,16 @@ func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {
 	_, err := Build([]Registration{link, get("/api/rows/{id}/history", inner{})}, Options{Identifiers: identifiers})
 	assert.NoError(t, err)
 }
+
+func TestResourceAliasAvoidsReservedWords(t *testing.T) {
+	t.Parallel()
+	for resource, want := range map[string]string{
+		"import":         "importRoutes",
+		"meal-plan":      "mealPlan",
+		"week-protocols": "weekProtocols",
+	} {
+		if got := resourceAlias(resource); got != want {
+			t.Errorf("resourceAlias(%q) = %q, want %q", resource, got, want)
+		}
+	}
+}

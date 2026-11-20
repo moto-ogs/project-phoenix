@@ -20,8 +20,6 @@ type CallerPeople interface {
 type CallerSessions interface {
 	OpenSessionIDsForActivities(ctx context.Context, activityGroupIDs []int64) ([]int64, error)
 	SupervisedSessionIDs(ctx context.Context, staffID int64) ([]int64, error)
-	SessionExists(ctx context.Context, sessionID int64) (bool, error)
-	SessionVisits(ctx context.Context, sessionID int64) ([]identityaccess.CallerVisit, error)
 }
 
 // CallerOverview decides the school-wide operational overview scope

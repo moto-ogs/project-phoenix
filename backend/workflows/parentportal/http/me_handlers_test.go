@@ -35,6 +35,7 @@ type fakeParentService struct {
 	gotSEPACall  string
 
 	declarationProof *parentService.DeclarationProof
+	pickupProof      *parentService.PickupProof
 
 	conferenceChild         *parentService.Child
 	conferenceChildErr      error
@@ -402,6 +403,9 @@ func (f *fakeParentService) PickupSignatureStatement(context.Context, int64, int
 }
 
 func (f *fakeParentService) PickupRequestProof(context.Context, int64, int64, int64) (*parentService.PickupProof, error) {
+	if f.pickupProof != nil {
+		return f.pickupProof, nil
+	}
 	return nil, parentService.ErrPickupProofNotFound
 }
 

@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { _resetTraegerHostCache } from "~/lib/traeger-url";
 import {
@@ -24,7 +25,13 @@ vi.mock("next-auth/react", () => ({
 }));
 
 import { TraegerReturnPathMemory } from "./traeger-return-path";
+import { TraegerSearchProvider } from "./traeger-search";
 import { TraegerSidebar } from "./traeger-sidebar";
+
+// The search reads the school list from the shared cache (#7648).
+vi.mock("../use-traeger-schools", () => ({
+  useTraegerSchools: () => ({ schools: [], error: null }),
+}));
 
 const ALL_RIGHTS = [
   "traeger_overview:read",
@@ -55,6 +62,7 @@ function linkNames(nav: ReturnType<typeof mainNav>) {
 describe("TraegerSidebar", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     mockPathname.mockReturnValue("/");
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
     _resetTraegerHostCache();
@@ -250,6 +258,17 @@ describe("TraegerSidebar", () => {
       mockPathname.mockReturnValue("/einstellungen");
       render(<TraegerSidebar />);
 
+      // The start is the dashboard with its right (#7646).
+      expect(
+        settingsNav().getByRole("link", { name: "Zurück zur App" }),
+      ).toHaveAttribute("href", "/uebersicht");
+    });
+
+    it("leads to the school list without the dashboard right (#7646)", () => {
+      sessionUser.permissions = ["traeger_access_log:read"];
+      mockPathname.mockReturnValue("/einstellungen/zugriffsprotokoll");
+      render(<TraegerSidebar />);
+
       expect(
         settingsNav().getByRole("link", { name: "Zurück zur App" }),
       ).toHaveAttribute("href", "/");
@@ -287,7 +306,89 @@ describe("TraegerSidebar", () => {
 
       expect(
         settingsNav().getByRole("link", { name: "Zurück zur App" }),
-      ).toHaveAttribute("href", "/");
+      ).toHaveAttribute("href", "/uebersicht");
+    });
+  });
+
+  describe("collapsible groups (#7647)", () => {
+    // Mit dem Recht für die Personalakten, damit alle vier Gruppen stehen.
+    const EVERY_GROUP_RIGHTS = [...ALL_RIGHTS, "traeger_staff:manage"];
+
+    function groupHeading(name: string) {
+      return mainNav().getByRole("button", { name });
+    }
+
+    it("shows every group open to a new person", () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      mockPathname.mockReturnValue("/ferien");
+      render(<TraegerSidebar />);
+
+      for (const name of ["Übersicht", "Betreuung", "Personal", "Finanzen"]) {
+        expect(groupHeading(name)).toHaveAttribute("aria-expanded", "true");
+      }
+    });
+
+    it("keeps a closed group closed after a reload", async () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      mockPathname.mockReturnValue("/ferien");
+      const user = userEvent.setup();
+      const first = render(<TraegerSidebar />);
+
+      await user.click(groupHeading("Finanzen"));
+      expect(groupHeading("Finanzen")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      first.unmount();
+
+      render(<TraegerSidebar />);
+      await act(async () => {});
+      expect(groupHeading("Finanzen")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      expect(groupHeading("Übersicht")).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      // The OGS app keeps its own key; the portals do not share a state.
+      expect(localStorage.getItem("sidebar-open-groups")).toBeNull();
+    });
+
+    it("opens the group of the current page even if it was closed", async () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      localStorage.setItem(
+        "traeger-sidebar-open-groups",
+        JSON.stringify(["uebersicht"]),
+      );
+      mockPathname.mockReturnValue("/abrechnung/familien");
+      render(<TraegerSidebar />);
+      await act(async () => {});
+
+      expect(groupHeading("Finanzen")).toHaveAttribute("aria-expanded", "true");
+      expect(groupHeading("Betreuung")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      expect(
+        mainNav().getByRole("link", { name: "Familien und Zahlung" }),
+      ).toHaveAttribute("aria-current", "page");
+    });
+
+    it("toggles a group by keyboard", async () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      mockPathname.mockReturnValue("/ferien");
+      const user = userEvent.setup();
+      render(<TraegerSidebar />);
+
+      groupHeading("Finanzen").focus();
+      await user.keyboard("{Enter}");
+      expect(groupHeading("Finanzen")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      await user.keyboard(" ");
+      expect(groupHeading("Finanzen")).toHaveAttribute("aria-expanded", "true");
     });
   });
 
@@ -308,5 +409,25 @@ describe("TraegerSidebar", () => {
         await expectIdleRenderBudget(<TraegerSidebar />);
       },
     );
+  });
+
+  it("puts the search button above the main navigation (#7648)", async () => {
+    const user = userEvent.setup();
+    sessionUser.permissions = ALL_RIGHTS;
+    render(
+      <TraegerSearchProvider>
+        <TraegerSidebar />
+      </TraegerSearchProvider>,
+    );
+
+    const search = screen.getByRole("button", { name: /^Suchen/ });
+    expect(search).toHaveAttribute("aria-keyshortcuts", "Control+K Meta+K");
+    // A dialog opener, not a target of the navigation.
+    expect(mainNav().queryByRole("button", { name: /^Suchen/ })).toBeNull();
+
+    await user.click(search);
+    expect(
+      await screen.findByRole("combobox", { name: "Suchen" }),
+    ).toBeInTheDocument();
   });
 });

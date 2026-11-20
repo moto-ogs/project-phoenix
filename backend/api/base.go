@@ -188,16 +188,20 @@ func newFeedbackResource(module feedbackModule.Capability) *feedbackAPI.Resource
 			return apiCommon.RequiresPermission(permission)
 		},
 		Success: apiCommon.Respond,
-		Failure: func(w http.ResponseWriter, r *http.Request, failure feedbackAPI.Failure) {
-			response := &apiCommon.ErrResponse{Err: failure.Err, HTTPStatusCode: failure.Status, Detail: failure.Err.Error()}
-			if errors.Is(failure.Err, feedbackAPI.ErrFeatureDisabled) {
-				response.Code = apiCommon.CodeFeedbackDisabled
-			}
-			apiCommon.RenderError(w, r, response)
-		},
+		Failure: renderFeedbackFailure,
 		ObserveResponse: func(status int, code string) {
 			observability.ObserveFeedbackHTTPResponse("staff", status, code)
 		},
 		ParseIDParam: apiCommon.ParseIDParam,
 	})
+}
+
+// renderFeedbackFailure answers a refused feedback request with the shared
+// envelope; a school with feedback off gets its own code.
+func renderFeedbackFailure(w http.ResponseWriter, r *http.Request, failure feedbackAPI.Failure) {
+	response := &apiCommon.ErrResponse{Err: failure.Err, HTTPStatusCode: failure.Status, Detail: failure.Err.Error()}
+	if errors.Is(failure.Err, feedbackAPI.ErrFeatureDisabled) {
+		response.Code = apiCommon.CodeFeedbackDisabled
+	}
+	apiCommon.RenderError(w, r, response)
 }

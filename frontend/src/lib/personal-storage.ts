@@ -98,6 +98,7 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Gerätelayout.
   "sidebar-collapsed",
   "sidebar-open-groups",
+  "traeger-sidebar-open-groups",
   "sidebar-accordion-expanded",
   // Steuerwerte ohne Konto. deliberateLogout muss den Logout überleben: die
   // Login-Seite liest daraus, dass er gewollt war.

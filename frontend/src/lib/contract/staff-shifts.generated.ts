@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   int64String,
   int64StringOrNumber,
   nullable,
@@ -260,6 +261,12 @@ export const routes = {
     pattern: "/api/staff-shifts/",
     portals: ["tenant"],
     response: success(ShiftResponseSchema),
+  },
+  "POST /api/staff-shifts/export": {
+    method: "POST",
+    pattern: "/api/staff-shifts/export",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "POST /api/staff-shifts/series": {
     method: "POST",

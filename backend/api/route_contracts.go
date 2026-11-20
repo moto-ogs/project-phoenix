@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
@@ -14,6 +15,7 @@ import (
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
+	emergencyHTTP "github.com/moto-ogs/project-phoenix/modules/emergencysnapshot/http"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
@@ -35,6 +37,7 @@ import (
 	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
+	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
@@ -184,6 +187,9 @@ func contractMounts() []contractMount {
 		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
+		{"/api/staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalTenant)},
+		// The school portal's chat files sit beside its mount (#6685, #2352).
+		{"/school-staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalSchool)},
 		{"/api/time-tracking", timeTrackingRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		{"/api/staff", timeTrackingHTTP.StaffAdminRouteContracts()},
@@ -456,6 +462,7 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/platform", []common.RouteContract{
 			{Method: "GET", Pattern: "/announcements/unread", Portals: []common.PortalScope{common.PortalTenant}, Response: []platformAnnouncementsHTTP.PlatformAnnouncementResponse{}},
 			{Method: "POST", Pattern: "/announcements/{id}/dismiss", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
+			{Method: "POST", Pattern: "/announcements/{id}/seen", Portals: []common.PortalScope{common.PortalTenant}, NoData: true},
 		}},
 		// Delivery's http role may not import the contract types; the report
 		// answers no data.
@@ -465,6 +472,8 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/substitutions", substitutionRouteContracts()},
 		// The Datenverwaltung hub's counts (#4013), served by the root.
 		{"/api/database", []common.RouteContract{{Method: "GET", Pattern: "/stats", Portals: []common.PortalScope{common.PortalTenant}, Response: statsContract.StatsResponse{}}}},
+		{"/api/emergency", emergencyHTTP.RouteContracts()},
+		{"/api/import", importTemplateRouteContracts()},
 	}
 }
 
@@ -501,6 +510,7 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Query: deleteQuery, NoData: true},
 		{Method: "GET", Pattern: "/{id}/delete-preview", Portals: portals, Response: types.DeletePreview},
 		{Method: "POST", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/payment-overview/export", Portals: portals, File: true},
 		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/{id}/payment", Portals: portals, Response: types.PaymentMasked},
@@ -568,6 +578,7 @@ func mealPlanRouteContracts() []common.RouteContract {
 	window := []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}}
 	daily := []common.QueryParam{{Name: "date", Kind: common.QueryDate}, {Name: "include", Kind: common.QueryString}}
 	week := []common.QueryParam{{Name: "week_start", Kind: common.QueryDate}}
+	format := common.QueryParam{Name: "format", Kind: common.QueryString, Values: []string{"pdf", "xlsx"}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/meal-plan/", Portals: portals, Query: week, Response: types.Week},
 		{Method: "PUT", Pattern: "/meal-plan/{date}", Portals: portals, Request: types.Day, NoData: true},
@@ -575,6 +586,10 @@ func mealPlanRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/meal-plan/orders", Portals: portals, Query: window, Response: types.Orders},
 		{Method: "GET", Pattern: "/meal-plan/participants", Portals: portals, Query: daily, Response: types.DailyList},
 		{Method: "GET", Pattern: "/meal-plan/participants/week", Portals: portals, Query: week, Response: types.WeeklyList},
+		{Method: "GET", Pattern: "/meal-plan/participants/export", Portals: portals, Query: append(slices.Clone(daily), format), File: true},
+		{Method: "GET", Pattern: "/meal-plan/participants/week/export", Portals: portals, Query: append(slices.Clone(week), format), File: true},
+		{Method: "GET", Pattern: "/meal-plan/orders/month/export", Portals: portals, File: true,
+			Query: []common.QueryParam{{Name: "month", Kind: common.QueryString}, format}},
 		{Method: "GET", Pattern: "/meal-plan/participation/{studentId}", Portals: portals, Query: window, Response: types.ChildParticipation},
 		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, Request: types.ChildDay, NoData: true},
 		{Method: "DELETE", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, NoData: true},
@@ -634,6 +649,7 @@ func staffPortalCalendarContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/calendar", calendarAPI.StaffRouteContracts()},
 		{"/api/messages", parentMessagingAPI.InboxRouteContracts()},
+		{"/api/messages", messageAttachmentsHTTP.RouteContracts(common.PortalTenant)},
 		{"/api/iot", devices},
 		{"/api/display", displays},
 	}

@@ -94,7 +94,7 @@ interface PersonalCalendarProps {
   readonly onCancel?: (event: CalendarEvent) => void;
   readonly onDelete?: (event: CalendarEvent) => void;
   readonly busyAppointmentId?: string | null;
-  // Base path for the .ics download route, e.g. "/api/parent/calendar/appointments".
+  // Base path for the .ics download route, e.g. "/api/parent/me/calendar/appointments".
   // When set, appointment cards show a "Zum Kalender hinzufügen" download link.
   readonly icsHrefBase?: string;
   /** Zeigt dem Ersteller, was aus den E-Mails an die Eltern wurde (#7058). */

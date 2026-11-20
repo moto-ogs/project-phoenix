@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   nullable,
   object,
@@ -140,6 +141,12 @@ export interface GetParentAnnouncementsQuery {
   include_inactive?: boolean;
 }
 
+/** Query of GET /api/parent-announcements/{announcementId}/declaration-export */
+export interface GetParentAnnouncementsAnnouncementIdDeclarationExportQuery {
+  format?: "csv" | "pdf";
+  student_id?: string;
+}
+
 export const routes = {
   "DELETE /api/parent-announcements/{announcementId}": {
     method: "DELETE",
@@ -172,6 +179,13 @@ export const routes = {
     portals: ["tenant"],
     response: success(announcementResponseSchema),
   },
+  "GET /api/parent-announcements/{announcementId}/declaration-export": {
+    method: "GET",
+    pattern: "/api/parent-announcements/{announcementId}/declaration-export",
+    portals: ["tenant"],
+    query: ["format", "student_id"],
+    response: fileAnswer,
+  },
   "GET /api/parent-announcements/{announcementId}/declaration-status": {
     method: "GET",
     pattern: "/api/parent-announcements/{announcementId}/declaration-status",
@@ -183,6 +197,12 @@ export const routes = {
     pattern: "/api/parent-announcements/{announcementId}/letter-status",
     portals: ["tenant"],
     response: success(letterStatusResponseSchema),
+  },
+  "GET /api/parent-announcements/{announcementId}/letters-pdf": {
+    method: "GET",
+    pattern: "/api/parent-announcements/{announcementId}/letters-pdf",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/parent-announcements/{announcementId}/poll-children": {
     method: "GET",

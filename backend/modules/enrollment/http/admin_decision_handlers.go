@@ -307,6 +307,12 @@ func (rs *Resource) listAdminRequests(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, out, "Admin requests retrieved")
 }
 
+// getAdminSignatureProof downloads the proof of the parent's signature
+// (#4786) on a path of its own (#2352): the detail read with its PDF answer.
+func (rs *Resource) getAdminSignatureProof(w http.ResponseWriter, r *http.Request) {
+	rs.getAdminRequest(w, r.WithContext(context.WithValue(r.Context(), signatureProofRoute{}, true)))
+}
+
 func (rs *Resource) getAdminRequest(w http.ResponseWriter, r *http.Request) {
 	if rs.DecisionService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("decision service not configured")))
@@ -352,7 +358,7 @@ func (rs *Resource) getAdminRequest(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	// ?format=pdf downloads the proof of the parent's signature (#4786).
+	// The proof's own path or ?format=pdf downloads the parent's signature (#4786).
 	if proofRequested {
 		rs.writeAdminSignatureProof(w, r, summary, signature)
 		return

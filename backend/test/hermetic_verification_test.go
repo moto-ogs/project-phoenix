@@ -295,7 +295,6 @@ func checkHardcodedIDs(t *testing.T, root string) []string {
 		"modules/timetable/http/api_test.go",                                   // Uses mock CalendarPeriodService for unit testing handlers
 		"modules/timetable/http/closing_days_test.go",                          // Uses mock ClosingDayService for unit testing handlers; int64 literals are fake IDs, not DB rows
 		"modules/timetable/http/instances_test.go",                             // Uses mock InstanceService + PersonService for unit testing handlers
-		"modules/timetable/http/understaffed_test.go",                          // Uses mock InstanceService for unit testing the acknowledge-understaffed handler (no DB); int64 literals are fake instance IDs, not DB rows
 		"modules/timetable/http/instance_students_unit_test.go",                // Uses fake repo for unit testing attendance PATCH handler
 		"timetable/substitute_conflicts_test.go",                               // Pure unit test with in-memory structs; int64(1)/int64(2) are fake IDs, not DB rows (WP-B12)
 		"modules/presenceprojection/http/response_helpers_test.go",             // Pure unit tests on populatePhotoFields; int64 literals are fake IDs in stack-allocated structs

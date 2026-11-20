@@ -594,17 +594,6 @@ func TestGuardianComposition_ForceDeleteByNonAdminIsForbidden(t *testing.T) {
 // SPECIAL LISTS AND INVITATIONS
 // ===========================================================================
 
-func TestGuardianComposition_SpecialListsReturnArrays(t *testing.T) {
-	t.Parallel()
-	ctx := setupGuardiansCompositionRoute(t)
-
-	for _, path := range []string{"/without-account", "/invitable", "/invitations/pending"} {
-		rr := ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, path, nil)
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-		dataArray(t, rr.Body.Bytes())
-	}
-}
-
 func TestGuardianComposition_SendInvitationGates(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)

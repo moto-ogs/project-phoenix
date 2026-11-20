@@ -70,9 +70,10 @@ func ReportTemplateRouteContracts() []common.RouteContract {
 
 // SchoolDocumentRouteContracts registers the documents a Träger released
 // for the school (#4692), with patterns relative to /api/traeger-documents
-// of the staff portal. The file answers bytes and keeps its route file.
+// of the staff portal. The file streams through the portal's proxy (#2352).
 func SchoolDocumentRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant}, Response: []organizationtenancy.SharedDocument{}},
+		{Method: "GET", Pattern: "/{id}/file", Portals: []common.PortalScope{common.PortalTenant}, File: true},
 	}
 }

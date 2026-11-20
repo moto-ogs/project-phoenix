@@ -2161,6 +2161,18 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(RequestMailOutcomeSchema)),
   },
+  "GET /api/enrollment/admin/requests/{id}/signature-proof": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/signature-proof",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
+  "GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /api/enrollment/admin/students/{studentId}/requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/students/{studentId}/requests/",
@@ -2185,6 +2197,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(CareOfferingResponseSchema),
   },
   "GET /api/enrollment/legal/{tenantSlug}": {
@@ -2316,6 +2329,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/schema/{id}",
     portals: ["tenant"],
+    deprecated: true,
     response: success(FormSchemaResponseSchema),
   },
   "PATCH /api/enrollment/requests/{statusToken}": {
@@ -2354,6 +2368,18 @@ export const routes = {
     request: requestBody<ReviewChangeRequestRequest>(),
     response: success(ChangeRequestResponseSchema),
   },
+  "POST /api/enrollment/admin/reports/care-usage/export": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/reports/care-usage/export",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
+  "POST /api/enrollment/admin/reports/class-roster/export": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/reports/class-roster/export",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "POST /api/enrollment/admin/request-children/{id}/rollover-review": {
     method: "POST",
     pattern: "/api/enrollment/admin/request-children/{id}/rollover-review",
@@ -2380,6 +2406,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(AdminRestoreResponseSchema),
   },
+  "POST /api/enrollment/admin/students/{studentId}/requests/export": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/students/{studentId}/requests/export",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "POST /api/enrollment/care-offerings/": {
     method: "POST",
     pattern: "/api/enrollment/care-offerings/",
@@ -2400,6 +2432,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<EnrollmentPhaseRequest>(),
     response: success(PhaseResponseSchema),
+  },
+  "POST /api/enrollment/phases/{id}/export": {
+    method: "POST",
+    pattern: "/api/enrollment/phases/{id}/export",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "POST /api/enrollment/phases/{id}/late-invites": {
     method: "POST",

@@ -64,7 +64,7 @@ func getData(t *testing.T, tc *testContext, path string, accountID int64, messag
 	return response["data"]
 }
 
-func TestWireShape_CurrentUserAndProfile(t *testing.T) {
+func TestWireShape_CurrentProfile(t *testing.T) {
 	t.Parallel()
 	tc := setupUserContextRoute(t)
 
@@ -85,20 +85,6 @@ func TestWireShape_CurrentUserAndProfile(t *testing.T) {
 		account.ID, testpkg.Tenant(t), "Wire bio", `{"theme":"dark"}`,
 	)
 	require.NoError(t, err)
-
-	t.Run("GET /api/me", func(t *testing.T) {
-		data, ok := getData(t, tc, "/", account.ID, "Current user retrieved successfully").(map[string]any)
-		require.True(t, ok, "data must be an object")
-		assert.Equal(t, sorted(
-			"id", "created_at", "updated_at", "email", "avatar", "active", "last_login",
-			"username",
-			"is_password_otp",
-		), sortedKeys(data))
-		assert.Equal(t, float64(account.ID), data["id"])
-		assert.Equal(t, username, data["username"])
-		assert.Equal(t, avatar, data["avatar"])
-		assertInstant(t, lastLogin, data["last_login"])
-	})
 
 	t.Run("GET /api/me/profile with person", func(t *testing.T) {
 		data, ok := getData(t, tc, "/profile", account.ID, "Current profile retrieved successfully").(map[string]any)

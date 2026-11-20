@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   nullable,
   object,
@@ -43,11 +44,24 @@ export const AnnouncementAttachmentListResponseSchema: z.ZodType<AnnouncementAtt
   editable: bool,
 });
 
+/** Query of GET /parent-news-attachments/{announcementId}/{attachmentId}/download */
+export interface GetParentNewsAttachmentsAnnouncementIdAttachmentIdDownloadQuery {
+  inline?: string;
+  student_id?: string;
+}
+
 export const routes = {
   "GET /parent-news-attachments/{announcementId}": {
     method: "GET",
     pattern: "/parent-news-attachments/{announcementId}",
     portals: ["parent"],
     response: success(AnnouncementAttachmentListResponseSchema),
+  },
+  "GET /parent-news-attachments/{announcementId}/{attachmentId}/download": {
+    method: "GET",
+    pattern: "/parent-news-attachments/{announcementId}/{attachmentId}/download",
+    portals: ["parent"],
+    query: ["inline", "student_id"],
+    response: fileAnswer,
   },
 } as const;

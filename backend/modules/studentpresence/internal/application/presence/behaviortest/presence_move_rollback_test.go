@@ -16,7 +16,7 @@ import (
 
 func TestMovementPresenceModeFailurePreservesStateAndRetries(t *testing.T) {
 	t.Parallel()
-	for _, operation := range []string{"assign", "move", "transit"} {
+	for _, operation := range []string{"assign", "move"} {
 		t.Run(operation, func(t *testing.T) {
 			testpkg.OwnTenant(t)
 			db := testpkg.SetupTestDB(t)
@@ -44,11 +44,8 @@ func TestMovementPresenceModeFailurePreservesStateAndRetries(t *testing.T) {
 				case "assign":
 					_, err := svc.AssignTransitStudentsToActiveGroup(ctx, []int64{student.ID}, target.ID)
 					return err
-				case "move":
-					_, err := svc.MoveStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, target.ID, activeSvcBypassAuth)
-					return err
 				default:
-					_, err := svc.MoveStudentsToTransitAuthorized(ctx, []int64{student.ID}, activeSvcBypassAuth)
+					_, err := svc.MoveStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, target.ID, activeSvcBypassAuth)
 					return err
 				}
 			}

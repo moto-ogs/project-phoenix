@@ -11,7 +11,7 @@
 // start_time / end_time are missing or invalid, or when no resource
 // parameter (room_id, staff_ids, student_ids) is given at all.
 //
-// Permission: SchedulesRead (information view, mirrors /exception-conflicts).
+// Permission: SchedulesRead (information view).
 package timetablehttp
 
 import (

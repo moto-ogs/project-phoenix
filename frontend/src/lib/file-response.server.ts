@@ -72,9 +72,3 @@ export async function fileResponse(
     headers,
   });
 }
-
-/** An appointment file, for a backend answer that names no type. */
-export const ICS_FILE = {
-  fallbackType: "text/calendar; charset=utf-8",
-  fallbackDisposition: 'attachment; filename="termin.ics"',
-} as const satisfies FileResponseOptions;

@@ -2,7 +2,6 @@ DELETE /operator/auth/mfa/trusted-devices/{deviceId}
 DELETE /operator/auth/passkeys/{passkeyId}
 GET /operator/auth/mfa/trusted-devices
 GET /operator/auth/passkeys
-GET /operator/auth/passkeys/
 POST /operator/auth/email-confirm
 POST /operator/auth/invitations/accept
 POST /operator/auth/invitations/validate

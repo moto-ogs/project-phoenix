@@ -89,6 +89,7 @@ func TestSurveyPositiveGrowthQueryBudget(t *testing.T) {
 			switch suffix {
 			case "/results/export":
 				require.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
+				require.Regexp(t, `^attachment; filename=".+\.pdf"`, rec.Header().Get("Content-Disposition"))
 				require.True(t, strings.HasPrefix(rec.Body.String(), "%PDF-"))
 				require.Greater(t, rec.Body.Len(), 1000)
 			case "/respondents":

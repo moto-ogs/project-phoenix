@@ -617,56 +617,6 @@ func TestInstanceStudentRepository_FindCurrentCandidates_ExcludesEndedInstances(
 	assert.NotContains(t, ids, instanceByStatus[fixtures.InstanceStatusCancelled()].ID)
 }
 
-func TestInstanceStudentRepository_ReconcileAttendanceInterval_UsesPreviousIntervalAsGuard(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	ctx := testpkg.Ctx(t)
-	repo := instanceStudentRepository(t, db)
-	inst, cleanupInst := createInstanceFixture(t, db, "visit-revision", calendar.NewDate(2026, 10, 16))
-	defer cleanupInst()
-	student := testpkg.CreateTestStudent(t, db, "Revision", fmt.Sprintf("Guard-%d", time.Now().UnixNano()), "3a")
-
-	previousIn := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
-	previousOut := previousIn.Add(time.Hour)
-	row := fixtures.NewInstanceStudent(func(fixtureRow *fixtures.InstanceStudent) {
-		fixtureRow.InstanceID = inst.ID
-		fixtureRow.StudentID = student.ID
-		fixtureRow.Status = fixtures.AttendanceStatusPresent()
-		fixtureRow.CheckedInAt = &previousIn
-		fixtureRow.CheckedOutAt = &previousOut
-	})
-
-	row.SetTenantID(testpkg.Tenant(t))
-	require.NoError(t, repo.Create(ctx, row))
-
-	updatedIn := previousIn.Add(15 * time.Minute)
-	changed, err := repo.ReconcileAttendanceInterval(ctx, inst.ID, student.ID, previousIn, &previousOut, updatedIn, nil)
-	require.NoError(t, err)
-	assert.True(t, changed)
-	got, err := repo.FindByID(ctx, row.ID)
-	require.NoError(t, err)
-	require.NotNil(t, got.CheckedInAt)
-	assert.WithinDuration(t, updatedIn, *got.CheckedInAt, time.Second)
-	assert.Nil(t, got.CheckedOutAt)
-
-	staleOut := previousOut.Add(time.Minute)
-	changed, err = repo.ReconcileAttendanceInterval(ctx, inst.ID, student.ID, previousIn, &previousOut, previousIn, &staleOut)
-	require.NoError(t, err)
-	assert.False(t, changed, "a stale edit must not replace the reopened interval")
-
-	legacyExit := updatedIn.Add(30 * time.Minute)
-	correctedExit := legacyExit.Add(15 * time.Minute)
-	changed, err = repo.ReconcileAttendanceInterval(ctx, inst.ID, student.ID, updatedIn, &legacyExit, updatedIn, &correctedExit)
-	require.NoError(t, err)
-	assert.True(t, changed, "a closed visit edit must repair its historically missing checkout")
-	got, err = repo.FindByID(ctx, row.ID)
-	require.NoError(t, err)
-	require.NotNil(t, got.CheckedOutAt)
-	assert.WithinDuration(t, correctedExit, *got.CheckedOutAt, time.Second)
-}
-
 func TestInstanceStudentRepository_ReleaseStatusDayFollowsTheReplacingStatus(t *testing.T) {
 	t.Parallel()
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   noData,
   nullable,
@@ -84,6 +85,13 @@ export interface inviteRequest {
   delivery_address?: string;
 }
 
+/** Query of GET /api/meal-caterer/orders/export */
+export interface GetMealCatererOrdersExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  from?: string;
+  to?: string;
+}
+
 export const routes = {
   "DELETE /api/meal-caterer/invitations/{invitationId}": {
     method: "DELETE",
@@ -102,6 +110,13 @@ export const routes = {
     pattern: "/api/meal-caterer/",
     portals: ["tenant"],
     response: success(SchoolCatererResponseSchema),
+  },
+  "GET /api/meal-caterer/orders/export": {
+    method: "GET",
+    pattern: "/api/meal-caterer/orders/export",
+    portals: ["tenant"],
+    query: ["format", "from", "to"],
+    response: fileAnswer,
   },
   "POST /api/meal-caterer/invitations": {
     method: "POST",

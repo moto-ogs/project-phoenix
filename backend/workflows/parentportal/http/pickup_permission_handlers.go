@@ -221,8 +221,18 @@ type pickupProofSignature struct {
 }
 
 // pickupRequestProof returns the guardian's proof of one signed request:
-// JSON for the portal page, or with format=pdf the moto PDF.
+// JSON for the portal page.
 func (rs *Resource) pickupRequestProof(w http.ResponseWriter, r *http.Request) {
+	rs.servePickupRequestProof(w, r, false)
+}
+
+// pickupRequestProofPDF returns the same proof as the moto PDF, on a path of
+// its own so the answer's form never depends on a query parameter (#2352).
+func (rs *Resource) pickupRequestProofPDF(w http.ResponseWriter, r *http.Request) {
+	rs.servePickupRequestProof(w, r, true)
+}
+
+func (rs *Resource) servePickupRequestProof(w http.ResponseWriter, r *http.Request, pdf bool) {
 	accountID, ok := rs.parentAccountID(w, r)
 	if !ok {
 		return
@@ -242,7 +252,8 @@ func (rs *Resource) pickupRequestProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	if r.URL.Query().Get("format") == "pdf" {
+	// ?format=pdf stays for callers of the JSON path.
+	if pdf || r.URL.Query().Get("format") == "pdf" {
 		rs.writePickupProofPDF(w, r, proof)
 		return
 	}
@@ -376,4 +387,5 @@ func (rs *Resource) mountPickupPermissionRoutes(r chi.Router) {
 	r.Post("/me/children/{studentId}/guardians/{guardianProfileId}/pickup-permission-requests", rs.submitPickupPermissionRequest)
 	r.Get("/me/children/{studentId}/pickup-permission-requests", rs.listPickupPermissionRequests)
 	r.Get("/me/children/{studentId}/pickup-requests/{requestId}/proof", rs.pickupRequestProof)
+	r.Get("/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf", rs.pickupRequestProofPDF)
 }
