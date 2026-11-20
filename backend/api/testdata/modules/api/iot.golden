@@ -5,14 +5,11 @@ GET /api/iot/*/device-slots -> nfc_anwesenheit
 GET /api/iot/*/{id} -> nfc_anwesenheit
 GET /api/iot/*/{id}/history -> nfc_anwesenheit
 GET /api/iot/activities -> nfc_anwesenheit
-GET /api/iot/attendance/status/{rfid} -> nfc_anwesenheit
 GET /api/iot/config -> nfc_anwesenheit
 GET /api/iot/rfid/{tagId} -> nfc_anwesenheit
 GET /api/iot/rooms/available -> nfc_anwesenheit
 GET /api/iot/school-name -> nfc_anwesenheit
 GET /api/iot/session/current -> nfc_anwesenheit
-GET /api/iot/session/timeout-info -> nfc_anwesenheit
-GET /api/iot/status -> nfc_anwesenheit
 GET /api/iot/students -> nfc_anwesenheit
 GET /api/iot/teachers/ -> nfc_anwesenheit
 PATCH /api/iot/*/{deviceId}/status -> nfc_anwesenheit
@@ -25,11 +22,8 @@ POST /api/iot/move-to-room -> nfc_anwesenheit
 POST /api/iot/pickup-query -> nfc_anwesenheit
 POST /api/iot/ping -> nfc_anwesenheit
 POST /api/iot/session/activity -> nfc_anwesenheit
-POST /api/iot/session/check-conflict -> nfc_anwesenheit
 POST /api/iot/session/end -> nfc_anwesenheit
 POST /api/iot/session/start -> nfc_anwesenheit
-POST /api/iot/session/timeout -> nfc_anwesenheit
-POST /api/iot/session/validate-timeout -> nfc_anwesenheit
 POST /api/iot/staff-clock -> zeiterfassung
 POST /api/iot/staff-clock/state -> zeiterfassung
 POST /api/iot/staff/{staffId}/rfid -> nfc_anwesenheit

@@ -12,11 +12,7 @@ type SessionLifecycle interface {
 	CurrentSession(context.Context) (SessionCurrentResponse, error)
 	SessionToEnd(context.Context) (SessionToEnd, error)
 	ReplaceSessionSupervisors(context.Context, int64, []int64) (UpdateSupervisorsResponse, error)
-	CheckSessionConflict(context.Context, int64) (ConflictInfoResponse, error)
-	TimeoutSession(context.Context) (SessionTimeoutResponse, error)
 	TouchSession(context.Context) (int64, error)
-	ValidateTimeout(context.Context, int) error
-	SessionTimeoutInfo(context.Context) (SessionTimeoutInfoResponse, error)
 }
 
 // StartSessionCommand carries the validated kiosk request.
@@ -59,27 +55,6 @@ type ConflictInfoResponse struct {
 	ConflictingDevice *int64 `json:"conflicting_device,omitempty"`
 	ConflictMessage   string `json:"conflict_message"`
 	CanOverride       bool   `json:"can_override"`
-}
-
-type SessionTimeoutResponse struct {
-	SessionID          int64     `json:"session_id"`
-	ActivityID         *int64    `json:"activity_id"`
-	StudentsCheckedOut int       `json:"students_checked_out"`
-	TimeoutAt          time.Time `json:"timeout_at"`
-	Status             string    `json:"status"`
-	Message            string    `json:"message"`
-}
-
-type SessionTimeoutInfoResponse struct {
-	SessionID               int64     `json:"session_id"`
-	ActivityID              *int64    `json:"activity_id"`
-	StartTime               time.Time `json:"start_time"`
-	LastActivity            time.Time `json:"last_activity"`
-	TimeoutMinutes          int       `json:"timeout_minutes"`
-	InactivitySeconds       int       `json:"inactivity_seconds"`
-	TimeUntilTimeoutSeconds int       `json:"time_until_timeout_seconds"`
-	IsTimedOut              bool      `json:"is_timed_out"`
-	ActiveStudentCount      int       `json:"active_student_count"`
 }
 
 type SessionCurrentResponse struct {

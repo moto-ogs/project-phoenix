@@ -53,10 +53,7 @@ type Service interface {
 	UpdateActiveGroupSupervisors(ctx context.Context, activeGroupID int64, supervisorIDs []int64) (*ports.ActiveGroup, error)
 
 	// Session timeout operations
-	ProcessSessionTimeout(ctx context.Context, deviceID int64) (*TimeoutResult, error)
 	UpdateSessionActivity(ctx context.Context, activeGroupID int64) error
-	ValidateSessionTimeout(ctx context.Context, deviceID int64, timeoutMinutes int) error
-	GetSessionTimeoutInfo(ctx context.Context, deviceID int64) (*SessionTimeoutInfo, error)
 	CleanupAbandonedSessions(ctx context.Context, olderThan time.Duration) (int, error)
 
 	// Daily session management
@@ -139,7 +136,6 @@ type (
 	StudentMoveResult         = studentpresence.StudentMoveResult
 	StudentMoveAuthorization  = studentpresence.StudentMoveAuthorization
 	TimeoutResult             = studentpresence.TimeoutResult
-	SessionTimeoutInfo        = studentpresence.SessionTimeoutInfo
 	CleanupResult             = studentpresence.CleanupResult
 	CleanupError              = studentpresence.CleanupError
 	RetentionStats            = studentpresence.RetentionStats

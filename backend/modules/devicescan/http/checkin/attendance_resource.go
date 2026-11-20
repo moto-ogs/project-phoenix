@@ -36,7 +36,6 @@ func (rs *AttendanceResource) Router() chi.Router {
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
-	r.Get("/status/{rfid}", rs.getAttendanceStatus)
 	r.Post("/toggle", rs.toggleAttendance)
 
 	return r

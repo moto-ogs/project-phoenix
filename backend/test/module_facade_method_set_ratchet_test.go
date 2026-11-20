@@ -118,7 +118,7 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/schoolstructure/transition.go:TransitionCapability":                                      16,
 	"modules/settings/records/settings_interface.go:BatchSettingsService":                             33,
 	"modules/settings/records/settings_interface.go:SettingsService":                                  27,
-	"modules/studentpresence/presence.go:Presence":                                                    52,
+	"modules/studentpresence/presence.go:Presence":                                                    49,
 	"modules/studentpresence/studentpresence.go:Capability":                                           114,
 	"modules/studentpresence/studentpresence.go:Command":                                              68,
 	"modules/studentpresence/studentpresence.go:Owner":                                                124,

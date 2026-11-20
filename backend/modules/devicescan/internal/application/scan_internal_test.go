@@ -780,18 +780,6 @@ func TestPingAndStatus(t *testing.T) {
 
 		requireFailure(t, err, devicescan.FailureInternal, "IoT service error in PingDevice: device not found")
 	})
-	t.Run("status reports the device", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-
-		status, err := h.service().Status(context.Background())
-
-		require.NoError(t, err)
-		assert.Equal(t, testDeviceID, status.Device.ID)
-		assert.True(t, status.Device.Active)
-		assert.True(t, status.IsOnline)
-		assert.Equal(t, fixedNow, status.AuthenticatedAt)
-	})
 }
 
 func TestScan_LockedActivityCapacityRefusalKeepsKioskContract(t *testing.T) {
