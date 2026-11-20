@@ -95,6 +95,17 @@ function cases(): readonly { name: string; props: HeadProps }[] {
       },
     },
     {
+      // Das Emoji fällt bei UTF-16-Zählung genau auf die frühere 13er-Grenze.
+      // Die Notbremse darf es nicht in seine beiden Surrogate teilen.
+      name: "untrennbarer Titel mit Emoji",
+      props: {
+        title: "device://A8G😀ZQX0B7F3M9K2R5V1N6C4D",
+        info: "Erklärung",
+        actions: createElement(Badge, { tone: "blue", label: "Entwurf" }),
+        overflowMenu: menu,
+      },
+    },
+    {
       // `stats` ist ein beliebiger ReactNode. Auch ein Knoten, der selbst
       // nicht umbrechen darf, darf die Breite des Titelblocks nicht setzen.
       name: "untrennbarer Status",
@@ -163,6 +174,23 @@ async function brokenWords(page: Page): Promise<string[]> {
   });
 }
 
+async function hasSplitSurrogate(page: Page): Promise<boolean> {
+  return page.locator("h1").evaluate((h1) =>
+    [...h1.querySelectorAll("wbr")].some((wbr) => {
+      const before = wbr.previousSibling?.textContent ?? "";
+      const after = wbr.nextSibling?.textContent ?? "";
+      const beforeCode = before.charCodeAt(before.length - 1);
+      const afterCode = after.charCodeAt(0);
+      return (
+        beforeCode >= 0xd800 &&
+        beforeCode <= 0xdbff &&
+        afterCode >= 0xdc00 &&
+        afterCode <= 0xdfff
+      );
+    }),
+  );
+}
+
 test("a long title next to the info button keeps short words whole on a phone", async ({
   page,
 }) => {
@@ -176,6 +204,21 @@ test("a long title next to the info button keeps short words whole on a phone", 
         (word) => word.length < 14,
       );
       expect.soft(shortBroken, label).toEqual([]);
+
+      if (testCase.name === "sehr langes Einzelwort") {
+        expect.soft(await page.locator("h1 wbr").count(), label).toBe(0);
+        if (width === 320) {
+          expect
+            .soft(await brokenWords(page), label)
+            .toContain("Nachmittagsbetreuungsvereinbarungen");
+        }
+      }
+      if (testCase.name === "untrennbarer Titel mit Emoji") {
+        expect
+          .soft(await page.locator("h1 wbr").count(), label)
+          .toBeGreaterThan(0);
+        expect.soft(await hasSplitSurrogate(page), label).toBe(false);
+      }
 
       // Der Info-Knopf steht direkt hinter dem Titel, auf seiner Höhe.
       const title = await page.locator("h1").boundingBox();

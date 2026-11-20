@@ -563,16 +563,34 @@ function useEmptyActionGuard(
   });
 }
 
+function isTechnicalTitleToken(token: string) {
+  return (
+    /[0-9/:@_?&=#]/u.test(token) ||
+    /^(?:www\.)?[^./]+(?:\.[^./]+)+(?:\/.*)?$/u.test(token) ||
+    (/^[A-Z-]+$/u.test(token) && token !== token.toLowerCase())
+  );
+}
+
 /**
- * Kurze Wörter bleiben zusammen. Lange Wörter dürfen nach Silben trennen;
- * bei IDs und URLs ohne Trennstelle fügt `wbr` nach 13 Zeichen eine sichere
- * Notbremse ein, ohne den Text in umschließende Elemente aufzuteilen.
+ * Kurze Wörter bleiben zusammen, deutsche Komposita trennen weiter nach
+ * Silben. Nur URLs und IDs ohne natürliche Trennstelle erhalten nach
+ * 13 Unicode-Codepunkten eine Notbremse, ohne den Text einzuschließen.
  */
 function tenantPageTitle(title: string) {
   return title.split(/(\s+)/).flatMap((part, partIndex) => {
-    if (/\s/.test(part) || part.length < 14) return part;
+    const characters = Array.from(part);
+    if (
+      /\s/.test(part) ||
+      characters.length < 14 ||
+      !isTechnicalTitleToken(part)
+    ) {
+      return part;
+    }
 
-    const chunks = part.match(/.{1,13}/g) ?? [part];
+    const chunks = Array.from(
+      { length: Math.ceil(characters.length / 13) },
+      (_, index) => characters.slice(index * 13, (index + 1) * 13).join(""),
+    );
     return chunks.flatMap((chunk, chunkIndex) =>
       chunkIndex === chunks.length - 1
         ? [chunk]
