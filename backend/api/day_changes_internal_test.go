@@ -58,12 +58,17 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 			Caller:    invisibleDayChangesCaller{},
 			Workforce: workforceSource,
 		}},
+		// Without schedules:read the Stundenplan source reads nothing.
+		Activities: dayChangesActivities{},
 	})
 	require.NoError(t, err)
 
 	overview, err := view.Today(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []daychangesview.SourceStatus{{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded}}, overview.Sources)
+	assert.Equal(t, []daychangesview.SourceStatus{
+		{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceActivities, Status: daychangesview.SourceLoaded},
+	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)
 	assert.False(t, workforceSource.absencesRead)

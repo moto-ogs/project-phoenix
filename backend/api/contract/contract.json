@@ -22616,6 +22616,10 @@
     {
       "name": "Kind",
       "values": [
+        "activity_cancelled",
+        "activity_lead_changed",
+        "activity_reinstated",
+        "activity_room_changed",
         "group_substitution",
         "group_substitution_count",
         "staff_absent",
@@ -22625,6 +22629,7 @@
     {
       "name": "LinkTarget",
       "values": [
+        "day_plan",
         "group_handovers",
         "own_absences",
         "staff_absences",
@@ -22686,6 +22691,7 @@
     {
       "name": "Source",
       "values": [
+        "activities",
         "staff"
       ]
     },
@@ -31632,6 +31638,54 @@
               "kind": "ref",
               "ref": "Row"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BlockActivity",
+      "go_type": "daychangesview.BlockActivity",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BlockRoom",
+      "go_type": "daychangesview.BlockRoom",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -48509,6 +48563,30 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        },
+        {
+          "name": "activity",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "BlockActivity"
+          }
+        },
+        {
+          "name": "room",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "BlockRoom"
+          }
+        },
+        {
+          "name": "previous_room",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "BlockRoom"
           }
         }
       ]

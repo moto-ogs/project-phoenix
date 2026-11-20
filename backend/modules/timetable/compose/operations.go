@@ -19,6 +19,12 @@ func NewOperations(deps ports.OperationDependencies, caller ports.OperationCalle
 	return application.NewOperations(deps, caller)
 }
 
+// BlockDayChanges is the read of the day's changed blocks ("Heute anders",
+// #7662) of an operational day NewOperations built.
+func BlockDayChanges(operations timetable.OperationCapability) (timetable.BlockDayChangeQuery, error) {
+	return application.BlockDayChangesOf(operations)
+}
+
 func NewTimetableData(deps ports.TimetableDataDependencies) (timetable.TimetableDataCapability, error) {
 	if deps.RunInTx == nil {
 		deps.RunInTx = tenant.NewTransactionRunner().RunInTx

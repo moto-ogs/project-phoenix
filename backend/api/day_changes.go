@@ -58,8 +58,10 @@ type DayChangesSources struct {
 	Teachers  owners.GroupTeacherStaff
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
-	Today     func() calendar.Date
-	Logger    *slog.Logger
+	// Blocks is Timetable's read of the day's changed blocks (#7662).
+	Blocks dayChangesBlocks
+	Today  func() calendar.Date
+	Logger *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -67,11 +69,15 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
+	if sources.Blocks == nil {
+		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
+	}
 	return daychangesview.New(daychangesview.Dependencies{
-		Today:     sources.Today,
-		Isolation: dayChangesSavepoints{},
-		Staff:     dayChangesStaff{sources: sources},
-		Logger:    sources.Logger,
+		Today:      sources.Today,
+		Isolation:  dayChangesSavepoints{},
+		Staff:      dayChangesStaff{sources: sources},
+		Activities: dayChangesActivities{sources: sources},
+		Logger:     sources.Logger,
 	})
 }
 

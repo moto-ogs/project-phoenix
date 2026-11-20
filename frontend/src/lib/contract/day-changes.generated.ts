@@ -14,10 +14,10 @@ import {
   type OpenEnum,
 } from "./runtime";
 
-export const KIND_VALUES = ["group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count"] as const;
+export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
-export const LINK_TARGET_VALUES = ["group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member"] as const;
+export const LINK_TARGET_VALUES = ["day_plan", "group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member"] as const;
 export type LinkTarget = (typeof LINK_TARGET_VALUES)[number];
 
 export const PERSON_ROLE_VALUES = ["absent", "replaced", "substitute"] as const;
@@ -26,7 +26,7 @@ export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
 export const SECTION_VALUES = ["school", "you"] as const;
 export type Section = (typeof SECTION_VALUES)[number];
 
-export const SOURCE_VALUES = ["staff"] as const;
+export const SOURCE_VALUES = ["activities", "staff"] as const;
 export type Source = (typeof SOURCE_VALUES)[number];
 
 export const SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
@@ -80,6 +80,32 @@ export const LinkSchema: z.ZodType<Link, unknown> = object<Link>({
   staff_id: optional(int64String),
 });
 
+/** Go: daychangesview.BlockActivity */
+export interface BlockActivity {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const BlockActivitySchema: z.ZodType<BlockActivity, unknown> = object<BlockActivity>({
+  id: int64String,
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
+/** Go: daychangesview.BlockRoom */
+export interface BlockRoom {
+  id: string;
+  name: string;
+}
+
+export const BlockRoomSchema: z.ZodType<BlockRoom, unknown> = object<BlockRoom>({
+  id: int64String,
+  name: str,
+});
+
 /** Go: daychangesview.Entry */
 export interface Entry {
   kind: OpenEnum<Kind>;
@@ -92,6 +118,9 @@ export interface Entry {
   group: Group | null;
   link: Link | null;
   count: number | null;
+  activity: BlockActivity | null;
+  room: BlockRoom | null;
+  previous_room: BlockRoom | null;
 }
 
 export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
@@ -105,6 +134,9 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   group: nullable(GroupSchema),
   link: nullable(LinkSchema),
   count: nullable(safeInt),
+  activity: nullable(BlockActivitySchema),
+  room: nullable(BlockRoomSchema),
+  previous_room: nullable(BlockRoomSchema),
 });
 
 /** Go: daychangesview.Overview */

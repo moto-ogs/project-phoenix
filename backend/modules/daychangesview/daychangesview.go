@@ -27,6 +27,9 @@ type Source string
 const (
 	// SourceStaff is Personal: full-day absences and group substitutions.
 	SourceStaff Source = "staff"
+	// SourceActivities is Stundenplan: cancelled, reinstated, moved and
+	// covered activity blocks (#7662).
+	SourceActivities Source = "activities"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -52,6 +55,14 @@ const (
 	KindGroupSubstitution Kind = "group_substitution"
 	// KindGroupSubstitutionCount: how many further groups are covered today.
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
+	// KindActivityCancelled: an activity block does not take place today.
+	KindActivityCancelled Kind = "activity_cancelled"
+	// KindActivityReinstated: its cancellation was taken back.
+	KindActivityReinstated Kind = "activity_reinstated"
+	// KindActivityRoomChanged: it lies in another room than its series plans.
+	KindActivityRoomChanged Kind = "activity_room_changed"
+	// KindActivityLeadChanged: somebody covers for a planned supervisor.
+	KindActivityLeadChanged Kind = "activity_lead_changed"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -77,6 +88,8 @@ const (
 	LinkStaffList LinkTarget = "staff_list"
 	// LinkGroupHandovers is the page of the group substitutions.
 	LinkGroupHandovers LinkTarget = "group_handovers"
+	// LinkDayPlan is the day plan of today, where the blocks stand.
+	LinkDayPlan LinkTarget = "day_plan"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -92,6 +105,20 @@ type Person struct {
 type Group struct {
 	ID   int64  `json:"id,string"`
 	Name string `json:"name"`
+}
+
+// BlockRoom is the room an entry names.
+type BlockRoom struct {
+	ID   int64  `json:"id,string"`
+	Name string `json:"name"`
+}
+
+// BlockActivity is the block an entry concerns, with its wall-clock window.
+type BlockActivity struct {
+	ID        int64  `json:"id,string"`
+	Title     string `json:"title"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
 }
 
 // Link is the target of an entry; StaffID is set for the staff pages.
@@ -118,6 +145,12 @@ type SourceEntry struct {
 	Link   *Link
 	// Count is set on the summary kinds only.
 	Count *int
+	// Activity is set on the activity kinds; an entry with one has a time
+	// of day. Room is where it takes place, PreviousRoom where its series
+	// plans it when it moved.
+	Activity     *BlockActivity
+	Room         *BlockRoom
+	PreviousRoom *BlockRoom
 }
 
 // Entry is one change to regular operation of the day.
@@ -134,6 +167,10 @@ type Entry struct {
 	Group   *Group         `json:"group"`
 	Link    *Link          `json:"link"`
 	Count   *int           `json:"count"`
+	// Activity, Room and PreviousRoom: see SourceEntry.
+	Activity     *BlockActivity `json:"activity"`
+	Room         *BlockRoom     `json:"room"`
+	PreviousRoom *BlockRoom     `json:"previous_room"`
 }
 
 // SourceStatus reports one source.
@@ -157,6 +194,20 @@ type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// ActivityChanges is the Stundenplan port: the activity blocks of the day
+// that do not run as planned, as the caller may see them on the day plan.
+// It carries no reason for a cancellation or an absence.
+type ActivityChanges interface {
+	ActivityChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
+// Gate is optional on a source port. A source the caller may not read at
+// all answers loaded and without entries, and the projection opens no
+// savepoint for it.
+type Gate interface {
+	Readable(ctx context.Context) bool
+}
+
 // Isolation runs one source read so that its failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
@@ -174,7 +225,9 @@ type Dependencies struct {
 	Today     func() calendar.Date
 	Isolation Isolation
 	Staff     StaffChanges
-	Logger    *slog.Logger
+	// Activities is the Stundenplan source (#7662).
+	Activities ActivityChanges
+	Logger     *slog.Logger
 }
 
 // Query reads the overview of the session's school.
@@ -188,6 +241,16 @@ var ErrDependencies = errors.New("day changes view: missing dependency")
 type sourceRead struct {
 	source Source
 	read   func(context.Context, calendar.Date) ([]SourceEntry, error)
+	// readable is the source's Gate, nil when it has none.
+	readable func(context.Context) bool
+}
+
+// gated adds the port's Gate to its read.
+func gated(read sourceRead, port any) sourceRead {
+	if gate, ok := port.(Gate); ok {
+		read.readable = gate.Readable
+	}
+	return read
 }
 
 type view struct {
@@ -199,7 +262,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Activities == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -213,6 +276,7 @@ func New(deps Dependencies) (Query, error) {
 		// The order is the order of the statuses in the answer.
 		sources: []sourceRead{
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
+			gated(sourceRead{source: SourceActivities, read: deps.Activities.ActivityChanges}, deps.Activities),
 		},
 	}, nil
 }
@@ -224,6 +288,10 @@ func (v *view) Today(ctx context.Context) (Overview, error) {
 	day := v.today()
 	overview := Overview{Date: day, Sources: make([]SourceStatus, 0, len(v.sources)), Entries: []Entry{}}
 	for _, source := range v.sources {
+		if source.readable != nil && !source.readable(ctx) {
+			overview.Sources = append(overview.Sources, SourceStatus{Source: source.source, Status: SourceLoaded})
+			continue
+		}
 		var entries []SourceEntry
 		err := v.isolation.Run(ctx, func(ctx context.Context) error {
 			var readErr error
@@ -261,15 +329,17 @@ func toEntry(entry SourceEntry) Entry {
 		people = []Person{}
 	}
 	return Entry{
-		Kind: entry.Kind, Section: section, AllDay: true, HalfDay: entry.HalfDay,
+		Kind: entry.Kind, Section: section, AllDay: entry.Activity == nil, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, People: people, Group: entry.Group,
 		Link: entry.Link, Count: entry.Count,
+		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
 	}
 }
 
 // sortEntries puts "Betrifft dich" before "Schule". Inside a section, new
-// changes stand first, the long ones that began before today follow
-// compactly, and the summaries close the section. Ties sort by kind, first
+// all-day changes stand first, the changes with a time of day follow by
+// start, then the long ones that began before today compactly, and the
+// summaries close the section. Ties sort by kind, first
 // name and group, so the order is stable.
 func sortEntries(entries []Entry) {
 	sort.SliceStable(entries, func(i, j int) bool {
@@ -279,6 +349,9 @@ func sortEntries(entries []Entry) {
 		}
 		if ra, rb := rank(a), rank(b); ra != rb {
 			return ra < rb
+		}
+		if sa, sb := startTime(a), startTime(b); sa != sb {
+			return sa < sb
 		}
 		if a.Kind != b.Kind {
 			return a.Kind < b.Kind
@@ -293,12 +366,22 @@ func sortEntries(entries []Entry) {
 func rank(entry Entry) int {
 	switch {
 	case entry.Count != nil:
-		return 2
+		return 3
 	case entry.Since != nil:
+		return 2
+	case !entry.AllDay:
+		// Changes with a time of day follow the new all-day ones, by start.
 		return 1
 	default:
 		return 0
 	}
+}
+
+func startTime(entry Entry) string {
+	if entry.Activity == nil {
+		return ""
+	}
+	return entry.Activity.StartTime
 }
 
 func firstName(entry Entry) string {

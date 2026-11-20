@@ -31,6 +31,20 @@ type operations struct {
 
 // NewOperations composes the Timetable owner's operational day.
 func NewOperations(deps ports.OperationDependencies, caller ports.OperationCaller) (timetable.OperationCapability, error) {
+	return newOperations(deps, caller)
+}
+
+// BlockDayChangesOf is the read of the changed blocks ("Heute anders",
+// #7662) over the dependencies of an operational day NewOperations built.
+func BlockDayChangesOf(day timetable.OperationCapability) (timetable.BlockDayChangeQuery, error) {
+	changes, ok := day.(*operations)
+	if !ok {
+		return nil, errors.New("timetable operations: not an operational day of this owner")
+	}
+	return changes, nil
+}
+
+func newOperations(deps ports.OperationDependencies, caller ports.OperationCaller) (*operations, error) {
 	if deps.Session == nil {
 		return nil, errors.New("timetable operations: the request session is required")
 	}
