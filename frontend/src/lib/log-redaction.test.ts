@@ -173,6 +173,17 @@ describe("redactSensitiveLogData", () => {
     );
   });
 
+  // The catalog proxy serves the feeds on their rewritten BFF paths (#2352).
+  it("redacts feed tokens on the rewritten BFF paths", () => {
+    expect(
+      redactSensitiveLogString(
+        "GET /api/public/calendar/cal-secret /api/public/request-feed/rss-secret",
+      ),
+    ).toBe(
+      "GET /api/public/calendar/[REDACTED] /api/public/request-feed/[REDACTED]",
+    );
+  });
+
   it("redacts holiday registration status link tokens (#6676)", () => {
     expect(
       redactSensitiveLogString(

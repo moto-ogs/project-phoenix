@@ -146,6 +146,7 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
 		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile,
+		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
 		PrivateCache: rc.PrivateCache,
 	}
 	where := route.Key()
@@ -156,6 +157,9 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		return route, fmt.Errorf("%s: a body limit needs a positive size and a request body", where)
 	}
 	if err := multipartTraits(rc, where); err != nil {
+		return route, err
+	}
+	if err := fileCacheTraits(rc, where); err != nil {
 		return route, err
 	}
 	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {

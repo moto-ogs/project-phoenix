@@ -142,7 +142,7 @@ func (rs *Resource) serveStudentPhoto(w http.ResponseWriter, r *http.Request) {
 
 // studentPhotoCacheControl keeps photo bytes in the viewer's private browser
 // cache for a day; shared caches must not store them.
-const studentPhotoCacheControl = "private, max-age=86400, immutable"
+const studentPhotoCacheControl = common.FileCachePrivateImmutableDay
 
 // mapPhotoUploadError maps service sentinels to HTTP status.
 func mapPhotoUploadError(w http.ResponseWriter, r *http.Request, err error) {
