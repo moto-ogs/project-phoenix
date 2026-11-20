@@ -12915,7 +12915,7 @@ export const traegerDashboardTopic =
       audience: "traeger",
       icon: "BarChart3",
       steps: [
-        "Wähle in der Navigation `Dashboard`.",
+        "Nach der Anmeldung öffnet moto das Dashboard. Sonst wähle in der Navigation `Dashboard`.",
         "Lies oben die Summe für alle Schulen.",
         "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
         "Wähle dort `Zur Schule`, um die Schule anzusehen.",
@@ -12926,6 +12926,7 @@ export const traegerDashboardTopic =
       result:
         "Du siehst für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
       notes: [
+        "Ohne die Pflichtangaben erstellt moto nicht alle Verträge, Rechnungen und Bescheide. Der Hinweis verschwindet, sobald alles eingetragen ist.",
         "Die Zahlen aktualisieren sich jede Minute von selbst.",
         "Du siehst nur Zahlen, keine Namen.",
         "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
@@ -12938,6 +12939,8 @@ export const traegerDashboardTopic =
         "`Offene Anmeldungen` zählt die Kinder aus der Online-Anmeldung, über die die Schule noch nicht entschieden hat.",
       ],
       differences: [
+        "Steht oben `Es fehlen noch Pflichtangaben`? Trage die genannten Angaben nach. Die Knöpfe im Hinweis führen zur passenden Seite.",
+        "Eine Angabe darfst du nicht eintragen? Dann nennt der Hinweis die Rolle, die das tut.",
         "`Betreuungskräfte` zählt nur, wer sich in der Zeiterfassung angemeldet hat. Homeoffice zählt nicht. Nutzt eine Schule die Zeiterfassung nicht, steht dort 0 und beim Schlüssel `–`.",
         "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
         "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
@@ -14245,7 +14248,7 @@ export const traegerInvitationTopic =
         "Wähle `Weiter zum Dashboard`.",
       ],
       result:
-        "moto öffnet die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
+        "moto öffnet das `Dashboard`. Darfst du es nicht sehen, öffnet moto die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
       notes: [
         "Mit derselben E-Mail-Adresse und demselben Passwort meldest du dich später an.",
         "Ein Konto in einer Schule brauchst du dafür nicht.",
@@ -14270,7 +14273,8 @@ export const traegerInvitationTopic =
 // Die Ablaeufe sind noch nicht Schritt fuer Schritt gegen die App geprueft,
 // deshalb bleiben es Entwuerfe.
 /**
- * `/traeger/login` (#4649): eigene Adresse, danach die Liste der Schulen.
+ * `/traeger/login` (#4649): eigene Adresse, danach das Dashboard; ohne
+ * dessen Recht die Liste der Schulen (#7646).
  * Der Code per E-Mail ist Pflicht, beim ersten Mal mit Einrichtung (#4651).
  * „Passwort vergessen?“ schickt den Link auf den Träger-Host (#5149).
  */
@@ -14280,7 +14284,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     title: "Im Träger-Portal anmelden",
     question: "Wie melde ich mich im Träger-Portal an?",
     summary:
-      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers.",
+      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers auf einen Blick.",
     group: "einstieg",
     audience: "traeger",
     icon: "Building2",
@@ -14300,13 +14304,15 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Ist es dein eigenes Gerät? Wähle `Ja, merken und anmelden`. Dort fragt moto dann 90 Tage lang keinen Code ab.",
       "Nutzen mehrere Personen das Gerät? Wähle `Nein, nur anmelden`.",
     ],
-    result: "moto öffnet die Seite `Schulen` mit allen Schulen deines Trägers.",
+    result:
+      "moto öffnet das `Dashboard`. Dort siehst du die Zahlen von jetzt und was Aufmerksamkeit braucht.",
     notes: [
       "Lege dir die Adresse als Lesezeichen an.",
-      "Die Liste der Schulen lädst du über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+      "Die Liste der Schulen findest du in der Navigation unter `Schulen`. Du lädst sie über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
       "Ein neues Passwort gilt auch für dein Konto in der OGS.",
     ],
     differences: [
+      "Darfst du das Dashboard nicht sehen? Dann öffnet moto die Seite `Schulen` mit allen Schulen deines Trägers.",
       "Oben steht `Willkommen im Träger-Portal`. So erkennst du, dass du richtig bist.",
       "Hast du auch ein Konto in einer OGS? Dann nutzt du dasselbe Konto. Ein zweites Passwort brauchst du nicht.",
       "Meldest du dich zum ersten Mal an? Dann richtest du den Code zuerst ein. Wähle `Code an meine E-Mail senden`. Gib danach den Code ein. Wähle `Weiter zum Dashboard`.",
@@ -14315,6 +14321,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Gemerkte Geräte stehen unter `Konto` bei `Meine vertrauten Geräte`. Dort entfernst du ein Gerät wieder.",
       "Am Computer stehen die Bereiche links in der Navigation. Auf dem Handy stehen sie unten. Was dort keinen Platz hat, findest du unter `Mehr`.",
       "`Einstellungen` steht unten in der Navigation. Ein Klick darauf zeigt dort die Einstellungen. `Zurück zur App` führt zurück.",
+      "Ein Klick auf das Logo oben links führt zurück zum `Dashboard`. Ohne das Dashboard führt er zu `Schulen`.",
     ],
     troubleshootingDetails: [
       "Keine E-Mail mit Code? Schau im Spam-Ordner nach. Wähle sonst `Neuen Code anfordern`.",
@@ -15643,7 +15650,7 @@ export const traegerTestSystemTopic =
         "Melde dich im Träger-Portal an.",
         "Gehörst du auch zum echten Träger? Wähle den Test-Träger aus.",
         "Oben steht der Hinweis `Testsystem`. So erkennst du das Testsystem.",
-        "Die Seite `Schulen` zeigt die Test-Schulen. Probiere alles aus.",
+        "Unter `Schulen` in der Navigation stehen die Test-Schulen. Probiere alles aus.",
       ],
       result:
         "Wenn du fertig bist, löscht das moto-Team das Testsystem mit allen Test-Schulen.",

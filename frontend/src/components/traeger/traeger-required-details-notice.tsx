@@ -1,6 +1,6 @@
 "use client";
 
-// Hinweis auf der Startseite des Träger-Portals (#7177): welche Pflichtangaben
+// Hinweis oben auf dem Dashboard des Träger-Portals (#7177, #7646): welche Pflichtangaben
 // dem Träger noch fehlen. Ohne sie verschickt moto keine Verträge und erzeugt
 // keine Rechnungen oder Bescheide. Das Backend nennt nur Angaben, deren Modul
 // eine Schule des Trägers gebucht hat.

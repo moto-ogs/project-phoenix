@@ -11,6 +11,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import { releaseFakeTimers, TEST_CLOCK_INSTANT } from "~/test/clock";
 import type {
   TraegerAlertKind,
@@ -19,13 +20,23 @@ import type {
   TraegerSchoolsToday,
 } from "~/lib/traeger-api";
 
-const { mockFetchAlerts, mockStartSession, mockUseSession, mockPush } =
-  vi.hoisted(() => ({
-    mockFetchAlerts: vi.fn(),
-    mockStartSession: vi.fn(),
-    mockUseSession: vi.fn(),
-    mockPush: vi.fn(),
-  }));
+const {
+  mockFetchAlerts,
+  mockFetchRequiredDetails,
+  mockStartSession,
+  mockUseSession,
+  mockPush,
+} = vi.hoisted(() => ({
+  mockFetchAlerts: vi.fn(),
+  mockFetchRequiredDetails: vi.fn(),
+  mockStartSession: vi.fn(),
+  mockUseSession: vi.fn(),
+  mockPush: vi.fn(),
+}));
+
+vi.mock("~/lib/traeger-required-details-api", () => ({
+  fetchTraegerRequiredDetails: () => mockFetchRequiredDetails(),
+}));
 
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
@@ -172,9 +183,74 @@ describe("TraegerDashboardPage", () => {
   beforeEach(() => {
     mockFetchAlerts.mockReset();
     mockFetchAlerts.mockResolvedValue(ALERTS);
+    mockFetchRequiredDetails.mockReset();
+    mockFetchRequiredDetails.mockResolvedValue([]);
     mockStartSession.mockReset();
     mockPush.mockReset();
     mockUseSession.mockReturnValue(sessionWith(["traeger_overview:read"]));
+  });
+
+  it("names the missing details above the alerts, with links only to what the viewer may enter (#7177, #7646)", async () => {
+    mockFetchRequiredDetails.mockResolvedValue(["letterhead", "sepa_creditor"]);
+    mockUseSession.mockReturnValue(
+      sessionWith(["traeger_overview:read", "traeger_settings:manage"]),
+    );
+    renderPage();
+
+    const notice = await screen.findByText("Es fehlen noch Pflichtangaben");
+    // Oben auf dem Dashboard, vor den Auffälligkeiten.
+    const alertsCard = await screen.findByTestId("traeger-school-alerts");
+    expect(
+      notice.compareDocumentPosition(alertsCard) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Absender im Briefkopf (Name und Anschrift des Trägers)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Gläubiger-ID für die Lastschrift – trägt die Rolle „Abrechnung“ ein",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Briefkopf öffnen" }),
+    ).toHaveAttribute("href", "/traeger/einstellungen/briefkopf");
+    // The creditor needs the right "Abrechnung": no link the viewer cannot use.
+    expect(
+      screen.queryByRole("link", { name: "Abrechnungsvorgaben öffnen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows no hint once nothing is missing", async () => {
+    renderPage();
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    await waitFor(() => expect(mockFetchRequiredDetails).toHaveBeenCalled());
+    expect(
+      screen.queryByText("Es fehlen noch Pflichtangaben"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a failed required-details check and retries it", async () => {
+    mockFetchRequiredDetails
+      .mockRejectedValueOnce(
+        new ApiError("unavailable", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce([]);
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Pflichtangaben"),
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+
+    await waitFor(() =>
+      expect(mockFetchRequiredDetails).toHaveBeenCalledTimes(2),
+    );
   });
 
   it("sums the figures of all schools with an explaining sentence each", async () => {
