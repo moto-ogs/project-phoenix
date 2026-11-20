@@ -1637,13 +1637,6 @@ func TestTokenManagement(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, rr.Code, "Body: %s", rr.Body.String())
 	})
 
-	t.Run("cleanup expired tokens", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "DELETE", "/auth/tokens/expired", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"admin:*"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	})
-
 	t.Run("token operations forbidden without permission", func(t *testing.T) {
 		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts/1/tokens", nil)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{})

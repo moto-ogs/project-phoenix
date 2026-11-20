@@ -269,7 +269,7 @@ func (rs *Resource) mountAuthenticatedRoutes(r chi.Router, configureSession func
 	r.Post("/switch-tenant", rs.switchTenant)
 
 	// Admin staff-view preview (#2893). "admin:*" matches the admin
-	// wildcard (precedent: DELETE /auth/tokens/expired below). start
+	// wildcard. start
 	// deliberately runs WITHOUT the tenant transaction — like
 	// /switch-tenant it opens its own admin transaction inside the
 	// service; the candidate list is a plain RLS read and gets one.
@@ -342,11 +342,6 @@ func (rs *Resource) mountAdminRoutes(r chi.Router) {
 	r.Route("/roles/{roleId}/permissions", func(r chi.Router) {
 		r.With(common.RequiresPermission(permRolesManage)).Get("/", rs.getRolePermissions)
 		r.With(common.RequiresPermission(permRolesManage)).Put("/", rs.replaceRolePermissions)
-	})
-
-	// Token cleanup
-	r.Route("/tokens", func(r chi.Router) {
-		r.With(common.RequiresPermission("admin:*")).Delete("/expired", rs.cleanupExpiredTokens)
 	})
 
 	rs.mountInvitationRoutes(r)

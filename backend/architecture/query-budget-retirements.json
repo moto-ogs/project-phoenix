@@ -18,5 +18,10 @@
     "scenario": "api.traeger.key_date_counts",
     "route": "GET /traeger/schools/key-date-counts",
     "issue": 7301
+  },
+  {
+    "scenario": "parent.enrollments.growth.mine",
+    "route": "GET /parent/me/enrollments",
+    "issue": 2352
   }
 ]

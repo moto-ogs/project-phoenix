@@ -537,7 +537,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/auth/staff-preview"}:                               notCaptured,
 	{http.MethodPost, "/auth/staff-preview/end"}:                           notCaptured,
 	{http.MethodPost, "/auth/switch-tenant"}:                               notCaptured,
-	{http.MethodDelete, "/auth/tokens/expired"}:                            notCaptured,
 
 	// Parents portal.
 	{http.MethodPost, "/parent/auth/login"}: session("login_success"),
