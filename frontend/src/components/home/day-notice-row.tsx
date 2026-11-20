@@ -124,7 +124,7 @@ export function DayNoticeRow({
         {body}
       </ListRow>
       {open ? (
-        <div className="mt-1">
+        <div className="mt-1 pl-3">
           <Button
             type="button"
             variant="outline"
