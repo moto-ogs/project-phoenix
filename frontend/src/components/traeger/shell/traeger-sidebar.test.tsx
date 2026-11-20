@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { _resetTraegerHostCache } from "~/lib/traeger-url";
 import {
@@ -55,6 +56,7 @@ function linkNames(nav: ReturnType<typeof mainNav>) {
 describe("TraegerSidebar", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     mockPathname.mockReturnValue("/");
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
     _resetTraegerHostCache();
@@ -299,6 +301,88 @@ describe("TraegerSidebar", () => {
       expect(
         settingsNav().getByRole("link", { name: "Zurück zur App" }),
       ).toHaveAttribute("href", "/uebersicht");
+    });
+  });
+
+  describe("collapsible groups (#7647)", () => {
+    // Mit dem Recht für die Personalakten, damit alle vier Gruppen stehen.
+    const EVERY_GROUP_RIGHTS = [...ALL_RIGHTS, "traeger_staff:manage"];
+
+    function groupHeading(name: string) {
+      return mainNav().getByRole("button", { name });
+    }
+
+    it("shows every group open to a new person", () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      mockPathname.mockReturnValue("/ferien");
+      render(<TraegerSidebar />);
+
+      for (const name of ["Übersicht", "Betreuung", "Personal", "Finanzen"]) {
+        expect(groupHeading(name)).toHaveAttribute("aria-expanded", "true");
+      }
+    });
+
+    it("keeps a closed group closed after a reload", async () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      mockPathname.mockReturnValue("/ferien");
+      const user = userEvent.setup();
+      const first = render(<TraegerSidebar />);
+
+      await user.click(groupHeading("Finanzen"));
+      expect(groupHeading("Finanzen")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      first.unmount();
+
+      render(<TraegerSidebar />);
+      await act(async () => {});
+      expect(groupHeading("Finanzen")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      expect(groupHeading("Übersicht")).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      // The OGS app keeps its own key; the portals do not share a state.
+      expect(localStorage.getItem("sidebar-open-groups")).toBeNull();
+    });
+
+    it("opens the group of the current page even if it was closed", async () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      localStorage.setItem(
+        "traeger-sidebar-open-groups",
+        JSON.stringify(["uebersicht"]),
+      );
+      mockPathname.mockReturnValue("/abrechnung/familien");
+      render(<TraegerSidebar />);
+      await act(async () => {});
+
+      expect(groupHeading("Finanzen")).toHaveAttribute("aria-expanded", "true");
+      expect(groupHeading("Betreuung")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      expect(
+        mainNav().getByRole("link", { name: "Familien und Zahlung" }),
+      ).toHaveAttribute("aria-current", "page");
+    });
+
+    it("toggles a group by keyboard", async () => {
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
+      mockPathname.mockReturnValue("/ferien");
+      const user = userEvent.setup();
+      render(<TraegerSidebar />);
+
+      groupHeading("Finanzen").focus();
+      await user.keyboard("{Enter}");
+      expect(groupHeading("Finanzen")).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+      await user.keyboard(" ");
+      expect(groupHeading("Finanzen")).toHaveAttribute("aria-expanded", "true");
     });
   });
 
