@@ -1,0 +1,7 @@
+{
+  "scenario": "api.care_contracts.application_contracts",
+  "max": 2,
+  "exact": true,
+  "description": "modules/carecontract — GET /api/care-contracts?request_child_ids= (#4788):\nthe tenant binding of the school's transaction, then one statement over the\ncontracts of the application children with their newest version and its\nbooked services. Flat in the number of children.",
+  "route": "GET /api/care-contracts/"
+}

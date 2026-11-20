@@ -2006,6 +2006,26 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/care-contracts/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "request_child_ids",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ApplicationContractResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/class-list-entries/",
       "portals": [
         "tenant"
@@ -22077,6 +22097,24 @@
   ],
   "enums": [
     {
+      "name": "ApplicationContractConclusionMethod",
+      "values": [
+        "einfach_elektronisch",
+        "mit_anmeldung",
+        "papier"
+      ]
+    },
+    {
+      "name": "ApplicationContractStatus",
+      "values": [
+        "aktiv",
+        "beendet",
+        "gekuendigt",
+        "versendet",
+        "widerrufen"
+      ]
+    },
+    {
       "name": "AttendanceActorKind",
       "values": [
         "automatic",
@@ -26915,6 +26953,121 @@
           "name": "dismissed",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ApplicationContractConclusion",
+      "go_type": "carecontracthttp.ApplicationContractConclusion",
+      "fields": [
+        {
+          "name": "method",
+          "schema": {
+            "kind": "enum",
+            "ref": "ApplicationContractConclusionMethod"
+          }
+        },
+        {
+          "name": "at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ApplicationContractResponse",
+      "go_type": "carecontracthttp.ApplicationContractResponse",
+      "fields": [
+        {
+          "name": "request_child_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ApplicationContractStatus"
+          }
+        },
+        {
+          "name": "sent_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "concluded",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ApplicationContractConclusion"
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "services",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ApplicationContractService"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ApplicationContractService",
+      "go_type": "carecontracthttp.ApplicationContractService",
+      "fields": [
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "module_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]
