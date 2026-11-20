@@ -149,15 +149,6 @@ const DOWNLOAD_POLICY_FACTORIES: Record<string, string[]> = {
 // Non-JSON resources deliberately outside the private-download rule. Image,
 // legal-document and subscription caching is not changed by #5119.
 const NON_DOWNLOAD_RESOURCES: Record<string, string> = {
-  "public/enrollment-form-legal-documents/[filename]":
-    "Public form PDF, public cache policy",
-  "public/enrollment-legal-documents/[filename]":
-    "Public legal PDF, public cache policy",
-  "public/login-image/[filename]": "Public login image, public cache policy",
-  "students/[id]/photo/[filename]":
-    "Photo with existing backend revalidation policy",
-  "calendar-feed/[token]": "Subscription feed, private max-age=3600",
-  "request-feed/[token]": "Subscription feed, already private no-store",
   "sse/events": "Live stream, existing SSE cache/abort contract",
   "parent/sse/events": "Live stream, existing SSE cache/abort contract",
   "school/sse/events": "Live stream, existing SSE cache/abort contract",

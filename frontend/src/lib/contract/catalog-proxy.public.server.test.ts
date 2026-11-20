@@ -72,6 +72,21 @@ const publicRoutes: CatalogRoute[] = [
     response: fileAnswer,
     publicFile: "the one-time link is the credential",
   },
+  // A public asset any cache may keep, and a feed its client keeps (#2352).
+  {
+    method: "GET",
+    pattern: "/api/rows/public/assets/{filename}",
+    response: fileAnswer,
+    publicFile: "a school's public asset",
+    fileCache: "public, max-age=86400",
+  },
+  {
+    method: "GET",
+    pattern: "/api/rows/public/{token}/feed",
+    response: fileAnswer,
+    publicFile: "the feed token is the credential",
+    fileCache: "private, max-age=3600",
+  },
   // A public file without the marker, and a public upload, stay refused.
   {
     method: "GET",
@@ -378,6 +393,46 @@ describe("makeCatalogProxy, public routes", () => {
         expect(sessionReads).toBe(0);
       },
     );
+
+    it("keeps the route's public cache on a public asset only when served", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(pdf, {
+          headers: { "Content-Type": "image/png", "Cache-Control": "no-store" },
+        }),
+      );
+      const served = await call("GET", ["rows", "public", "assets", "a.png"], {
+        headers: credentials,
+      });
+      expect(served.status).toBe(200);
+      expect(served.headers.get("Content-Type")).toBe("image/png");
+      expect(served.headers.get("Cache-Control")).toBe("public, max-age=86400");
+      expect(sentHeaders()).not.toHaveProperty("Authorization");
+      expect(sentHeaders()).not.toHaveProperty("Cookie");
+
+      fetchMock.mockResolvedValueOnce(problem(404, "general.not_found"));
+      const missing = await call("GET", ["rows", "public", "assets", "b.png"]);
+      expect(missing.status).toBe(404);
+      expect(missing.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+
+    it("keeps a feed's private cache on the feed, never on its refusal", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("BEGIN:VCALENDAR", {
+          headers: { "Content-Type": "text/calendar; charset=utf-8" },
+        }),
+      );
+      const feed = await call("GET", ["rows", "public", "tok", "feed"]);
+      expect(feed.status).toBe(200);
+      expect(feed.headers.get("Content-Type")).toBe(
+        "text/calendar; charset=utf-8",
+      );
+      expect(feed.headers.get("Cache-Control")).toBe("private, max-age=3600");
+      expect(await feed.text()).toBe("BEGIN:VCALENDAR");
+
+      fetchMock.mockResolvedValueOnce(problem(404, "general.not_found"));
+      const unknown = await call("GET", ["rows", "public", "tok", "feed"]);
+      expect(unknown.headers.get("Cache-Control")).toBe("private, no-store");
+    });
 
     it("keeps the backend limiter's 429 and Retry-After", async () => {
       fetchMock.mockResolvedValueOnce(

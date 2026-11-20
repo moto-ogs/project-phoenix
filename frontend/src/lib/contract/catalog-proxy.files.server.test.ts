@@ -26,6 +26,27 @@ const portal = makePortalHandlers(testPortalBinding(mockAuth));
 
 const LIMIT = 1024;
 const routes: CatalogRoute[] = [
+  // A photo behind an upload URL: kept privately, revalidated with a 304.
+  {
+    method: "GET",
+    pattern: "/traeger/rows/{id}/photo/{filename}",
+    response: fileAnswer,
+    fileCache: "private, max-age=86400, immutable",
+    conditionalGet: true,
+  },
+  // A public cache on a session file is never kept, nor an unknown value.
+  {
+    method: "GET",
+    pattern: "/traeger/rows/{id}/public-logo",
+    response: fileAnswer,
+    fileCache: "public, max-age=86400",
+  },
+  {
+    method: "GET",
+    pattern: "/traeger/rows/{id}/sheet",
+    response: fileAnswer,
+    fileCache: "private, max-age=31536000",
+  },
   {
     method: "GET",
     pattern: "/traeger/rows/export",
@@ -326,6 +347,130 @@ describe("catalog file cache", () => {
     expect(privateCacheControl("max-age=60, x-private")).toBe(
       "private, no-store",
     );
+  });
+});
+
+describe("catalog file route with its own cache (#2352)", () => {
+  const photo = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+  const lastModified = "Wed, 09 Sep 2026 10:00:00 GMT";
+  const photoAnswer = () =>
+    new Response(photo, {
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "private, max-age=86400, immutable",
+        ETag: 'W/"abc123"',
+        "Last-Modified": lastModified,
+        "Set-Cookie": "backend=1",
+      },
+    });
+  const getPhoto = (headers: Record<string, string> = {}) =>
+    call("GET", ["rows", "42", "photo", "42_abc.jpg"], { headers });
+  const sent = (index = 0) => {
+    const init = mockFetch.mock.calls[index]?.[1] as RequestInit | undefined;
+    return (init?.headers ?? {}) as Record<string, string>;
+  };
+
+  it("streams the photo with the route's cache and its validators", async () => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    const response = await getPhoto();
+
+    expect(response.status).toBe(200);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(photo);
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=86400, immutable",
+    );
+    expect(response.headers.get("ETag")).toBe('W/"abc123"');
+    expect(response.headers.get("Last-Modified")).toBe(lastModified);
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(response.headers.get("X-Moto-Catalog-Keep-Cache")).toBeNull();
+    expect(mockFetch.mock.calls[0]?.[0]).toBe(
+      "http://backend/traeger/rows/42/photo/42_abc.jpg",
+    );
+  });
+
+  it("forwards If-None-Match and If-Modified-Since with the bearer", async () => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    await getPhoto({
+      "If-None-Match": 'W/"abc123"',
+      "If-Modified-Since": lastModified,
+      "If-Match": "x",
+    });
+    expect(sent()["If-None-Match"]).toBe('W/"abc123"');
+    expect(sent()["If-Modified-Since"]).toBe(lastModified);
+    expect(sent()).not.toHaveProperty("If-Match");
+    expect(sent().Authorization).toBe("Bearer org-token");
+  });
+
+  it("adds no conditional header the browser did not send", async () => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    await getPhoto();
+    expect(Object.keys(sent()).filter((name) => /^if-/i.test(name))).toEqual(
+      [],
+    );
+  });
+
+  it("hands the backend's 304 back with its validators and no body", async () => {
+    mockFetch.mockResolvedValue(
+      new Response(null, {
+        status: 304,
+        headers: { ETag: 'W/"abc123"', "Last-Modified": lastModified },
+      }),
+    );
+    const response = await getPhoto({ "If-None-Match": 'W/"abc123"' });
+
+    expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=86400, immutable",
+    );
+    expect(response.headers.get("ETag")).toBe('W/"abc123"');
+    expect(response.headers.get("Last-Modified")).toBe(lastModified);
+  });
+
+  it("repeats the conditional GET once with the renewed session", async () => {
+    mockAuth
+      .mockResolvedValueOnce({ user: { token: "stale-token" } })
+      .mockResolvedValueOnce({ user: { token: "stale-token" } })
+      .mockResolvedValue({ user: { token: "fresh-token" } });
+    mockFetch
+      .mockResolvedValueOnce(problem(401, "auth.token_expired"))
+      .mockResolvedValueOnce(photoAnswer());
+    const response = await getPhoto({ "If-None-Match": 'W/"abc123"' });
+
+    expect(response.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(sent(1).Authorization).toBe("Bearer fresh-token");
+    expect(sent(1)["If-None-Match"]).toBe('W/"abc123"');
+  });
+
+  it("keeps a refusal private and uncached", async () => {
+    mockFetch.mockResolvedValue(problem(404, "students.photo_not_found"));
+    const response = await getPhoto();
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("answers 401 without a session, privately, before the backend", async () => {
+    mockAuth.mockResolvedValue(null);
+    const response = await getPhoto();
+    expect(response.status).toBe(401);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a public cache on a session file", "public-logo"],
+    ["a value Go never reviewed", "sheet"],
+  ])("keeps no cache for %s", async (_name, file) => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    const response = await call("GET", ["rows", "42", file], {
+      headers: { "If-None-Match": 'W/"abc123"' },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(response.headers.get("ETag")).toBeNull();
+    expect(sent()).not.toHaveProperty("If-None-Match");
   });
 });
 

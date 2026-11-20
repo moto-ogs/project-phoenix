@@ -74,8 +74,13 @@ import { routes as parentHolidayRegistrations } from "./parent-holiday-registrat
 import { routes as parentMe } from "./parent-me.generated";
 import { routes as parentNewsAttachments } from "./parent-news-attachments.generated";
 import { routes as platform } from "./platform.generated";
+import { routes as publicCalendar } from "./public-calendar.generated";
 import { routes as publicCareContractSigning } from "./public-care-contract-signing.generated";
+import { routes as publicEnrollmentFormLegalDocuments } from "./public-enrollment-form-legal-documents.generated";
+import { routes as publicEnrollmentLegalDocuments } from "./public-enrollment-legal-documents.generated";
+import { routes as publicLoginImage } from "./public-login-image.generated";
 import { routes as publicPayrollDownload } from "./public-payroll-download.generated";
+import { routes as publicRequestFeed } from "./public-request-feed.generated";
 import { routes as pwa } from "./pwa.generated";
 import { routes as reminders } from "./reminders.generated";
 import { routes as rooms } from "./rooms.generated";
@@ -833,12 +838,17 @@ export const portalRoutes = {
     operatorAuth["POST /operator/auth/email-confirm"],
     parentAuth["POST /parent/auth/password-reset"],
     parentAuth["POST /parent/auth/password-reset/confirm"],
+    publicCalendar["GET /public/calendar/{token}"],
     publicCareContractSigning["GET /public/care-contract-signing/{link}"],
     publicCareContractSigning["GET /public/care-contract-signing/{link}/document"],
     publicCareContractSigning["GET /public/care-contract-signing/{link}/family-children"],
     publicCareContractSigning["POST /public/care-contract-signing/{link}/sign"],
     publicCareContractSigning["PUT /public/care-contract-signing/{link}/family-children"],
+    publicEnrollmentFormLegalDocuments["GET /public/enrollment-form-legal-documents/{filename}"],
+    publicEnrollmentLegalDocuments["GET /public/enrollment-legal-documents/{filename}"],
+    publicLoginImage["GET /public/login-image/{filename}"],
     publicPayrollDownload["POST /public/payroll-download/{link}"],
+    publicRequestFeed["GET /public/request-feed/{token}"],
     schoolAuth["POST /school/auth/password-reset"],
     schoolAuth["POST /school/auth/password-reset/confirm"],
     traegerAuth["POST /traeger/auth/password-reset"],
@@ -1520,6 +1530,7 @@ export const portalRoutes = {
     students["GET /api/students/{id}/note-subjects"],
     students["GET /api/students/{id}/notes"],
     students["GET /api/students/{id}/partial-absences"],
+    students["GET /api/students/{id}/photo/{filename}"],
     students["GET /api/students/{id}/pickup-schedules"],
     students["GET /api/students/{id}/privacy-consent"],
     students["GET /api/students/{id}/status-days"],

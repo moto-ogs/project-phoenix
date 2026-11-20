@@ -58,17 +58,17 @@ func mountPublicRoutes(root chi.Router, metricsToken string, ping func(context.C
 	// Public login image serving (no auth - displayed on the login page before authentication)
 	root.Get("/public/login-image/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParam(r, "filename")
-		apiCommon.ServeImage(w, r, "public/uploads/login-images", filename, "public, max-age=86400", uploads)
+		apiCommon.ServePublicAsset(w, r, "public/uploads/login-images", filename, apiCommon.PublicImageAsset, uploads)
 	})
 
 	// Public enrollment legal document serving (no auth - parents read it before submitting).
 	root.Get("/public/enrollment-legal-documents/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParam(r, "filename")
-		apiCommon.ServeFile(w, r, "public/uploads/enrollment-legal-documents", filename, "public, max-age=86400", uploads)
+		apiCommon.ServePublicAsset(w, r, "public/uploads/enrollment-legal-documents", filename, apiCommon.PublicPDFAsset, uploads)
 	})
 	root.Get("/public/enrollment-form-legal-documents/{filename}", func(w http.ResponseWriter, r *http.Request) {
 		filename := chi.URLParam(r, "filename")
-		apiCommon.ServeFile(w, r, "public/uploads/enrollment-form-legal-documents", filename, "public, max-age=86400", uploads)
+		apiCommon.ServePublicAsset(w, r, "public/uploads/enrollment-form-legal-documents", filename, apiCommon.PublicPDFAsset, uploads)
 	})
 
 	root.With(metricsAuthMiddleware(metricsToken)).Handle("/internal/metrics", metricsHandler())

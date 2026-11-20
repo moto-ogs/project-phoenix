@@ -372,6 +372,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields,
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile,
+		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
 		PrivateCache: route.PrivateCache,
 	}
 	for _, portal := range route.Portals {

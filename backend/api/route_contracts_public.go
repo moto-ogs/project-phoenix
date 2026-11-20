@@ -10,6 +10,7 @@ import (
 	parentAuthHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/parentauth"
 	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	schoolPortalHTTP "github.com/moto-ogs/project-phoenix/modules/schoolportal"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
 	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
@@ -28,6 +29,11 @@ func publicContractMounts() []contractMount {
 		{holidayQuoteMount, parentBillingHTTP.HolidayQuoteRouteContracts()},
 		{"/public/care-contract-signing", careContractHTTP.SigningRouteContracts()},
 		{"/public/payroll-download", timeTrackingHTTP.PayrollDownloadRouteContracts()},
+		{"/public/calendar", calendarAPI.PublicFeedRouteContracts()},
+		{"/public/request-feed", publicRequestFeedRouteContracts()},
+		{"/public/login-image", publicAssetRouteContracts("a school's login image, shown before sign-in; no personal data")},
+		{"/public/enrollment-legal-documents", publicAssetRouteContracts("a school's legal text for the online registration; no personal data")},
+		{"/public/enrollment-form-legal-documents", publicAssetRouteContracts("a legal text of a registration form; no personal data")},
 		{"/operator", identityOperatorAPI.PublicRouteContracts()},
 		// The reset link and its request in every portal with a password
 		// reset; the operator's has none.
@@ -38,6 +44,27 @@ func publicContractMounts() []contractMount {
 		{"/traeger/auth", common.PasswordResetRouteContracts()},
 		// The invitation and holiday links and the school list below /auth.
 		{"/auth", accountHTTP.PublicRouteContracts()},
+	}
+}
+
+// publicRequestFeedRouteContracts registers the parents' request feed the
+// root mounts (#2352): Care Plan's request-feed adapter may not import
+// api/common, so the root names it, as it does the staff's feed controls.
+// The feed stays private and uncached.
+func publicRequestFeedRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{token}", Portals: []common.PortalScope{common.PortalPublic}, File: true,
+			PublicFile: "the feed token is the RSS reader's only credential; readers poll without a session"},
+	}
+}
+
+// publicAssetRouteContracts registers one public upload folder the root
+// serves with ServePublicAsset (#2352): its files are public on purpose and
+// any cache may keep them for a day.
+func publicAssetRouteContracts(reason string) []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{filename}", Portals: []common.PortalScope{common.PortalPublic}, File: true,
+			PublicFile: reason, FileCache: common.FileCachePublicAsset},
 	}
 }
 

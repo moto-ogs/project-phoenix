@@ -6356,6 +6356,16 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/{id}/photo/{filename}",
+      "portals": [
+        "tenant"
+      ],
+      "file": true,
+      "file_cache": "private, max-age=86400, immutable",
+      "conditional_get": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/{id}/pickup-schedules",
       "portals": [
         "tenant"
@@ -9470,6 +9480,16 @@
     },
     {
       "method": "GET",
+      "pattern": "/public/calendar/{token}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the calendar token is the subscriber's only credential; calendar apps poll without a session",
+      "file_cache": "private, max-age=3600"
+    },
+    {
+      "method": "GET",
       "pattern": "/public/care-contract-signing/{link}",
       "portals": [
         "public"
@@ -9498,6 +9518,45 @@
         "kind": "ref",
         "ref": "SigningFamilyChildrenResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/enrollment-form-legal-documents/{filename}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "a legal text of a registration form; no personal data",
+      "file_cache": "public, max-age=86400"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/enrollment-legal-documents/{filename}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "a school's legal text for the online registration; no personal data",
+      "file_cache": "public, max-age=86400"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/login-image/{filename}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "a school's login image, shown before sign-in; no personal data",
+      "file_cache": "public, max-age=86400"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/request-feed/{token}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the feed token is the RSS reader's only credential; readers poll without a session"
     },
     {
       "method": "GET",
