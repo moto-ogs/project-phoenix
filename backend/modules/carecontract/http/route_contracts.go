@@ -118,3 +118,21 @@ func SigningRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/{link}/family-children", Portals: portals, Request: SigningFamilyChildrenRequest{}, Response: SigningFamilyChildrenResponse{}, MaxBodyBytes: familyChildrenBodyBytes},
 	}
 }
+
+// ApplicationRouteContracts registers the school's read of the contracts of
+// its application children (#4788), relative to /api/care-contracts.
+func ApplicationRouteContracts() []common.RouteContract {
+	return []common.RouteContract{{
+		Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant},
+		Query:    []common.QueryParam{{Name: "request_child_ids", Kind: common.QueryString}},
+		Response: []ApplicationContractResponse{},
+		Enums: []common.EnumContract{{
+			Name: "ApplicationContractStatus", Fields: []string{"ApplicationContractResponse.status"},
+			Values: []string{carecontract.StatusSent, carecontract.StatusActive, carecontract.StatusTerminated,
+				carecontract.StatusWithdrawn, carecontract.StatusEnded},
+		}, {
+			Name: "ApplicationContractConclusionMethod", Fields: []string{"ApplicationContractConclusion.method"},
+			Values: []string{carecontract.MethodWithApplication, carecontract.MethodElectronic, carecontract.MethodPaper},
+		}},
+	}}
+}

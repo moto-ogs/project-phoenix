@@ -53,6 +53,7 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { Textarea } from "~/components/ui/textarea";
 import { AdminLegalEvidence } from "~/components/enrollment/admin-legal-evidence";
 import { AdminEnrollmentSignature } from "~/components/enrollment/admin-enrollment-signature";
+import { AdminEnrollmentContracts } from "~/components/enrollment/admin-enrollment-contracts";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { enrolledClassLabel } from "~/lib/school-class-label";
@@ -730,6 +731,11 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
                 signature={data.signature}
               />
             ) : null}
+
+            <AdminEnrollmentContracts
+              requestId={requestId}
+              childList={data.children}
+            />
 
             <SectionCard
               title="Angaben der Kinder"

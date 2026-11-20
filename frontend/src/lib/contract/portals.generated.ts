@@ -23,6 +23,7 @@ import { routes as authStaffPreview } from "./auth-staff-preview.generated";
 import { routes as authTenants } from "./auth-tenants.generated";
 import { routes as birthdays } from "./birthdays.generated";
 import { routes as calendar } from "./calendar.generated";
+import { routes as careContracts } from "./care-contracts.generated";
 import { routes as catererAccount } from "./caterer-account.generated";
 import { routes as catererAuth } from "./caterer-auth.generated";
 import { routes as catererInvitations } from "./caterer-invitations.generated";
@@ -1018,6 +1019,7 @@ export const portalRoutes = {
     calendar["POST /api/calendar/feed/rotate"],
     calendar["POST /api/calendar/recipients/{recipientId}/response"],
     calendar["PUT /api/calendar/appointments/{appointmentId}"],
+    careContracts["GET /api/care-contracts/"],
     classListEntries["DELETE /api/class-list-entries/{id}"],
     classListEntries["GET /api/class-list-entries/"],
     classListEntries["POST /api/class-list-entries/"],

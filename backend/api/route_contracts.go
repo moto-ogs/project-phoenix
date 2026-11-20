@@ -176,6 +176,7 @@ func contractMounts() []contractMount {
 		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
 		{"/api/students", groupLiveHTTP.RouteContracts()},
 		{"/api/search", schoolSearchHTTP.RouteContracts()},
+		{"/api/care-contracts", careContractHTTP.ApplicationRouteContracts()},
 		{"/parent", parentAPI.MeRouteContracts()},
 		{"/parent", parentPortalRouteContracts()},
 		{"/api/notifications", notificationRouteContracts(common.PortalTenant)},

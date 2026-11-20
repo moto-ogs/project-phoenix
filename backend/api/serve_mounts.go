@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
+	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
+
 	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -130,6 +133,10 @@ func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsServi
 	for _, module := range []moduleRoute{schoolSetup, staffOnboarding} {
 		tenant.Mount(module.pattern, module.router)
 	}
+	// The contracts of the application children as the school reads them
+	// (#4788, ADR 0088 section 7), behind the right of the enrollment detail.
+	tenant.Mount("/care-contracts", careContractHTTP.NewApplicationContractResource(careContractCompose.NewApplicationContracts(),
+		apiCommon.RequiresPermission(permissions.ConfigManage)).Router(ProtectedTenantRoutes))
 	return mountSchoolSearch(tenant, caller, answers, notes, activities, today)
 }
 

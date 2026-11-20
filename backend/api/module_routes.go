@@ -148,6 +148,10 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/guardians/*/invite", settings.ModuleElternApp},
 	{"/api/guardians/students/*/invite", settings.ModuleElternApp},
 
+	// Verträge und Dokumente: the school reads the contracts the Träger made
+	// from its application children (#4788).
+	{"/api/care-contracts", settings.ModuleVertraege},
+
 	// Online-Anmeldung: phases, forms, care offerings and requests, and the
 	// public intake and status links.
 	{"/api/enrollment", settings.ModuleOnlineAnmeldung},
