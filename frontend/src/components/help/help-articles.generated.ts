@@ -1026,6 +1026,11 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
+          // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
+          // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
+          "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",

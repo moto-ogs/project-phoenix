@@ -20,7 +20,8 @@ const (
 
 // PublicRouteContracts registers the parent-facing routes that reach the
 // backend without a session (#2352), relative to /api/enrollment. The form
-// bootstrap and the upload keep their BFF files. The signature proof is a
+// bootstrap keeps its BFF file. The upload is a public upload of the form;
+// the backend counts the attempt by IP before it reads the body. The signature proof is a
 // public file at /requests/{statusToken}/signature-proof; the status read
 // forwards no format, so its ?format=pdf stays off the proxy.
 func PublicRouteContracts() []common.RouteContract {
@@ -31,6 +32,9 @@ func PublicRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/phases/public/{tenantSlug}", Portals: portals, Response: []PublicPhase{}},
 		{Method: "GET", Pattern: "/legal/{tenantSlug}", Portals: portals, Query: lateInvite, Response: PublicLegalTextsResponse{}},
 		{Method: "GET", Pattern: "/legal/{tenantSlug}/{phaseId}", Portals: portals, Query: lateInvite, Response: PublicLegalTextsResponse{}},
+		{Method: "POST", Pattern: "/{tenantSlug}/uploads", Portals: portals, Multipart: true, Response: UploadReceipt{},
+			MaxBodyBytes: MaxUploadBodyBytes, TooLargeCode: common.CodeEnrollmentUploadInvalid,
+			PublicUpload: "the public enrollment form takes proofs before any account exists; the backend limits attempts per IP and school"},
 		{Method: "POST", Pattern: "/{tenantSlug}/submit", Portals: portals, Query: lateInvite, Request: SubmitEnrollmentRequest{}, Response: SubmitEnrollmentResponse{}, MaxBodyBytes: publicFormBodyBytes},
 		{Method: "GET", Pattern: request, Portals: portals, Response: StatusResponse{}},
 		{Method: "PATCH", Pattern: request, Portals: portals, Request: EditPatchRequest{}, Response: EditPatchResponse{}, MaxBodyBytes: publicFormBodyBytes},
@@ -52,14 +56,17 @@ func PublicRouteContracts() []common.RouteContract {
 // PublicHolidayRegistrationRouteContracts registers the one link of a
 // published holiday period (#4661) and the status link of a sent
 // registration (#6676), relative to /traeger/holiday-registrations. Both run
-// without a session, as do the form documents the period's link opens. The
-// proof upload keeps its BFF file.
+// without a session, as do the form documents the period's link opens and
+// the proof upload.
 func PublicHolidayRegistrationRouteContracts() []common.RouteContract {
 	portals := publicPortal
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/status/{statusToken}", Portals: portals, Response: HolidayRegistrationStatusResponse{}},
 		{Method: "GET", Pattern: "/{token}", Portals: portals, Response: PublicHolidayRegistrationOfferResponse{}},
 		{Method: "POST", Pattern: "/{token}", Portals: portals, Request: HolidayRegistrationRequest{}, Response: HolidayRegistrationSubmitResponse{}, MaxBodyBytes: publicFormBodyBytes},
+		{Method: "POST", Pattern: "/{token}/uploads", Portals: portals, Multipart: true, Response: UploadReceipt{},
+			MaxBodyBytes: MaxUploadBodyBytes, TooLargeCode: common.CodeEnrollmentUploadInvalid,
+			PublicUpload: "the published link of a holiday period takes proofs of benefits; the backend limits attempts per IP and Träger"},
 		{Method: "GET", Pattern: "/{token}/documents/{documentId}", Portals: portals, File: true,
 			PublicFile: "the published link of a holiday period opens the form documents it lists"},
 	}

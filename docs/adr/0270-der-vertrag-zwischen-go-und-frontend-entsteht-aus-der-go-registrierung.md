@@ -239,6 +239,51 @@ aus. Dieser Nachtrag ersetzt ihn für markierte Einzelrouten.
   öffnet, und die Log-Redaction ihres Pfads im BFF und im Backend.
 - Befristete oder signierte Datei-URLs sind nicht Teil dieser Entscheidung.
 
+## Nachtrag vom 2026-11-20: Öffentliche Uploads
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Drei
+Routendateien bauten das Multipart eines Uploads neu und gaben nur gelistete
+Felder weiter: die Nachweise der Online-Anmeldung
+(`/api/enrollment/{tenantSlug}/uploads`, ohne Sitzung), die Nachweise des
+Ferienlinks (ohne Sitzung) und die Nachweise der Anmeldung im Elternportal.
+Der erste Punkt der Grenzen des Nachtrags „Öffentliche Datei-Routen“ ließ die
+beiden öffentlichen als Dateien stehen. Dieser Nachtrag ersetzt ihn.
+
+### Entscheidung
+
+1. **Ein öffentlicher Upload öffnet nur ein Merkmal seiner Route.**
+   `common.RouteContract.PublicUpload` nennt den Grund, warum ein Formular
+   oder Link ohne Sitzung eine Datei senden darf. Der Generator lehnt ab:
+   einen öffentlichen Upload ohne Merkmal und das Merkmal an einer Route,
+   die kein Multipart-Upload oder nicht nur im Portal `public` ist. Grenze
+   und Code (`MaxBodyBytes`, `TooLargeCode`) bleiben Pflicht. Im Modell
+   `public_upload`, im erzeugten Code `publicUpload`; der Proxy nimmt einen
+   öffentlichen Upload ohne diesen Wert nicht an.
+2. **Der Weg trägt keine Berechtigung des Geräts.** Kein Sitzungs-Lesen,
+   `sendBackend(…, null, …)`: kein Bearer, keine Cookies, kein
+   `Idempotency-Key`. `X-Forwarded-For` geht mit.
+3. **Größe vor dem Lesen, Zählung vor dem Body.** Der Proxy prüft
+   `Content-Length` vor dem Aufruf (fehlt: 411, zu groß: 413 mit dem Code
+   der Route) und zählt beim Streamen. Das Backend zählt den Versuch je
+   Client-IP und Schule bzw. Träger, bevor es den Body liest
+   (`CountUploadAttempt`, `CountHolidayProofUpload`), dazu die Limiter der
+   Anmeldung und des Ferienlinks; der BFF hatte kein eigenes Limit.
+4. **Die Felder prüft das Backend.** Jeder der drei Handler nimmt genau eine
+   Datei `file` und je einmal seine Textfelder an (`onlyFormParts`) und
+   lehnt jeden anderen Teil mit 400 ab, bevor er speichert. Größe, Inhalt
+   und Endung prüfte das Backend schon.
+5. **Antwort.** JSON durch den Decoder der Route in der Hülle des Katalogs,
+   `private, no-store`, Status des Backends (201).
+
+### Grenzen
+
+- Ein gestreamter Upload hält während des Sendens eine Verbindung zum
+  Backend; vorher puffert der BFF ihn vollständig. Die Zählung je IP
+  geschieht trotzdem vor dem ersten gelesenen Byte.
+- Eine neue öffentliche Upload-Route braucht das Merkmal, eine IP-Zählung
+  im Handler vor dem Lesen, die Freigabe ihres Pfads in `HOST_RULES` und
+  die Log-Redaction eines Tokens im Pfad.
+
 ## Nachtrag vom 2026-11-19: Prüfungen und Umformungen gehören ins Backend
 
 Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Viele
@@ -326,4 +371,4 @@ diese Fälle nicht mehr.
 
 - Ein neuer Cache-Wert braucht einen Nachtrag und einen Eintrag in beiden
   Listen.
-- Ein Upload ohne Sitzung bleibt Gegenstand eines eigenen Nachtrags.
+- Uploads ohne Sitzung folgen dem Nachtrag „Öffentliche Uploads“.

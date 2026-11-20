@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,6 +91,50 @@ func TestTodayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 	fatal := errors.New("savepoint control failed")
 	_, err = build(fakeIsolation{fatal: fatal}).Today(context.Background())
 	require.ErrorIs(t, err, fatal)
+}
+
+// TestTodayOrdersEachSection composes fake sources (#7660): no source of
+// the staff ticket has a time of day yet, so the order of the four kinds of
+// rows is fixed here. Inside a section: new full-day changes, timed changes
+// by start, long changes since an earlier day, summaries.
+func TestTodayOrdersEachSection(t *testing.T) {
+	t.Parallel()
+	day := calendar.NewDate(2026, 9, 9)
+	at := func(hour int) *time.Time {
+		instant := day.BerlinMidnight().Add(time.Duration(hour) * time.Hour)
+		return &instant
+	}
+	since := day.AddDays(-5)
+	count := 2
+	named := func(name string, extra SourceEntry) SourceEntry {
+		extra.Kind = KindStaffAbsent
+		extra.People = []Person{{StaffID: 1, Name: name, Role: RoleAbsent}}
+		return extra
+	}
+	v := &view{
+		today: func() calendar.Date { return day }, isolation: fakeIsolation{},
+		logger: slog.New(slog.DiscardHandler),
+		sources: []sourceRead{{source: SourceStaff, read: entriesOf(
+			SourceEntry{Kind: KindStaffAbsentCount, Count: &count},
+			named("Long", SourceEntry{Since: &since}),
+			named("Late", SourceEntry{StartsAt: at(15), EndsAt: at(16)}),
+			named("Early", SourceEntry{StartsAt: at(8), EndsAt: at(9)}),
+			named("New", SourceEntry{}),
+			named("Mine", SourceEntry{Involved: true, StartsAt: at(7)}),
+		)}},
+	}
+
+	overview, err := v.Today(context.Background())
+	require.NoError(t, err)
+	got := make([]string, 0, len(overview.Entries))
+	for _, entry := range overview.Entries {
+		got = append(got, string(entry.Section)+":"+firstName(entry))
+	}
+	assert.Equal(t, []string{"you:Mine", "school:New", "school:Early", "school:Late", "school:Long", "school:"}, got)
+	assert.False(t, overview.Entries[0].AllDay, "a change with a start has a time of day")
+	assert.Equal(t, at(8), overview.Entries[2].StartsAt)
+	assert.Equal(t, at(9), overview.Entries[2].EndsAt)
+	assert.True(t, overview.Entries[1].AllDay)
 }
 
 // TestNewRequiresEveryPort keeps missing wiring a configuration error.

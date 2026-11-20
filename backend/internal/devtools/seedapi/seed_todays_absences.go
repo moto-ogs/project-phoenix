@@ -9,13 +9,23 @@ import (
 )
 
 // The staff members of today's absences, as indices into DemoStaff: the third
-// is ill, the fifth stands in for her, and the seventh is on vacation. None of
-// them is a Pädagogische Fachkraft, so the simulation, which clocks those in,
-// never stamps an absent person (#3892).
+// is ill, the fifth stands in for her, the seventh is on vacation until later
+// this week, and the eighth is on a training that began two days ago. None
+// of them is a Pädagogische Fachkraft, so the simulation, which clocks those
+// in, never stamps an absent person (#3892).
 const (
 	sickTodayStaffIndex       = 2
 	substituteTodayStaffIndex = 4
 	vacationTodayStaffIndex   = 6
+	trainingTodayStaffIndex   = 7
+)
+
+// The long absences of today give "Heute anders" its "bis" and "seit" rows
+// (#7660): the vacation lasts four more days, the training began two days
+// ago and ends today.
+const (
+	vacationTodayExtraDays = 4
+	trainingTodayPastDays  = 2
 )
 
 // seedTodaysAbsencesStep makes today a day with a real substitution case: one
@@ -39,8 +49,8 @@ func (seedTodaysAbsencesStep) Run(_ context.Context, rt *Runtime) error {
 
 func seedTodaysAbsences(rt *Runtime, today seedDate) error {
 	staffIDs := orderedSeedStaffIDs(rt.FixedSeeder)
-	if len(staffIDs) <= vacationTodayStaffIndex {
-		return fmt.Errorf("today's absences need %d staff members, got %d", vacationTodayStaffIndex+1, len(staffIDs))
+	if len(staffIDs) <= trainingTodayStaffIndex {
+		return fmt.Errorf("today's absences need %d staff members, got %d", trainingTodayStaffIndex+1, len(staffIDs))
 	}
 	if today.Weekday() == time.Saturday || today.Weekday() == time.Sunday {
 		fmt.Println("  weekend: no absences today")
@@ -50,8 +60,11 @@ func seedTodaysAbsences(rt *Runtime, today seedDate) error {
 	defer rt.Client.BindAuth(currentAuth)
 	rt.Client.BindAuth(rt.TenantAuth)
 
-	if err := postStaffAbsence(rt, staffIDs[vacationTodayStaffIndex], today.UTCMidnight(), "vacation", "Urlaub", nil); err != nil {
+	if err := postStaffAbsenceRange(rt, staffIDs[vacationTodayStaffIndex], today, today.AddDays(vacationTodayExtraDays), "vacation", "Urlaub"); err != nil {
 		return fmt.Errorf("seed today's vacation: %w", err)
+	}
+	if err := postStaffAbsenceRange(rt, staffIDs[trainingTodayStaffIndex], today.AddDays(-trainingTodayPastDays), today, "training", "Fortbildung"); err != nil {
+		return fmt.Errorf("seed today's training: %w", err)
 	}
 	sickID := staffIDs[sickTodayStaffIndex]
 	if err := postStaffAbsence(rt, sickID, today.UTCMidnight(), "sick", "Krankmeldung am Morgen telefonisch", nil); err != nil {
@@ -62,7 +75,7 @@ func seedTodaysAbsences(rt *Runtime, today seedDate) error {
 		return err
 	}
 	if len(covered) == 0 {
-		fmt.Println("  1 vacation and 1 sick report today, no block to cover")
+		fmt.Println("  1 vacation, 1 training and 1 sick report today, no block to cover")
 		return nil
 	}
 	if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/deviations", covered[0]), map[string]any{
@@ -73,8 +86,16 @@ func seedTodaysAbsences(rt *Runtime, today seedDate) error {
 	}); err != nil {
 		return fmt.Errorf("seed today's substitution: %w", err)
 	}
-	fmt.Printf("  1 vacation and 1 sick report today, %d blocks covered\n", len(covered))
+	fmt.Printf("  1 vacation, 1 training and 1 sick report today, %d blocks covered\n", len(covered))
 	return nil
+}
+
+// postStaffAbsenceRange reports an absence over several days.
+func postStaffAbsenceRange(rt *Runtime, staffID int64, from, to seedDate, absenceType, note string) error {
+	_, err := rt.Client.Post(fmt.Sprintf("/api/staff/%d/absences", staffID), map[string]any{
+		"absence_type": absenceType, "date_start": from.String(), "date_end": to.String(), "note": note,
+	})
+	return err
 }
 
 // coveredSubstituteBlocks are the blocks of the ill colleague the stand-in
