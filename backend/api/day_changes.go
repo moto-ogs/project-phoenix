@@ -59,8 +59,8 @@ func newDayChangesStaffNames(persons peoplePorts.PersonDirectory) dayChangesStaf
 		}
 		names := make(map[int64]string, len(members))
 		for id, member := range members {
-			if member != nil && member.Person != nil {
-				names[id] = member.Person.FirstName + " " + member.Person.LastName
+			if name := member.DisplayName(); name != "" {
+				names[id] = name
 			}
 		}
 		return names, nil

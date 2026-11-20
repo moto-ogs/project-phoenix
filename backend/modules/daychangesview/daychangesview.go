@@ -196,6 +196,8 @@ type StaffNotices interface {
 // Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
+// Consecutive sources share one isolation, so a source must only read: a
+// later source's failure rolls back everything since the isolation began.
 type Isolation interface {
 	Run(ctx context.Context, read func(context.Context) error) error
 	// IsFatal reports an error of the isolation itself: the state of the

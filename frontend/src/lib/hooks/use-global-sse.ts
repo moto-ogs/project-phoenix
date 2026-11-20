@@ -986,9 +986,9 @@ export function useGlobalSSE(): SSEHookState {
       });
     }
 
-    // Hinweise der Leitung (#7667): the day's notices of the account feed
-    // „Heute anders“ (above), the Tagesinformationen page and the count in the
-    // navigation; all three read the same key.
+    // Hinweise der Leitung (#7667): „Heute anders“ reloads above; the
+    // Tagesinformationen page, the start page block and the count in the
+    // navigation read the day's notices of the account under this key.
     if (hasPendingStaffNoticesEvent.current) {
       mutate(
         (key) =>

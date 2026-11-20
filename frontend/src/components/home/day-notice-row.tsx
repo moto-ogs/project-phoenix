@@ -4,11 +4,13 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { Button } from "~/components/ui/button";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { trackEvent } from "~/lib/analytics";
 import type { DayChange, DayChangeNotice } from "~/lib/day-changes";
+import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import {
   acknowledgeStaffNotice,
@@ -41,11 +43,18 @@ export function DayNoticeRow({
   const invalidate = useInvalidateMatching();
   const { show: showError } = useApiErrorDisplay();
   const [pending, setPending] = useState(false);
+  // Nachladen nach der Kenntnisnahme: ein Fehler dabei ist ein Ladefehler an
+  // der Zeile, keine gescheiterte Kenntnisnahme (#6652).
+  const afterAcknowledge = useRefreshAfterWrite(
+    "die Übersicht „Heute anders“",
+    onChanged,
+  );
   const latestConfirmRef = useRef<() => void>(() => undefined);
   const open = notice.requiresAcknowledgement && !notice.acknowledged;
 
   const confirm = async () => {
     setPending(true);
+    let failed = false;
     try {
       await acknowledgeStaffNotice(notice.id);
     } catch (err) {
@@ -57,6 +66,12 @@ export function DayNoticeRow({
         retry: () => latestConfirmRef.current(),
       });
       setPending(false);
+      failed = true;
+    }
+    if (failed) {
+      // Eine veraltete Ansicht (der Hinweis gilt nicht mehr oder verlangt
+      // keine Kenntnisnahme mehr) zeigt danach den aktuellen Stand.
+      void afterAcknowledge.refresh();
       return;
     }
     // Die Seite Tagesinformationen, der Zähler in der Navigation und die
@@ -65,15 +80,7 @@ export function DayNoticeRow({
     const acknowledgements = staffNoticeKeys.acknowledgements(notice.id);
     void invalidate((key) => key === today || key === acknowledgements);
     window.dispatchEvent(new Event(STAFF_NOTICES_REFRESH_EVENT));
-    try {
-      await onChanged();
-    } catch (err) {
-      // Die Kenntnisnahme ist gespeichert; ein Fehler beim Nachladen zeigt
-      // der Baustein selbst als Ladefehler.
-      logger.warn("day_notice_refresh_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+    await afterAcknowledge.refresh();
     setPending(false);
     // Der Knopf ist weg; der Fokus geht auf den Hinweis an seinem neuen Platz.
     requestAnimationFrame(() => {
@@ -100,7 +107,8 @@ export function DayNoticeRow({
         ) : null}
       </span>
       {notice.body ? (
-        <span className="line-clamp-2 block text-xs whitespace-pre-line text-gray-600">
+        // Der ganze Text: „gelesen“ heißt den ganzen Hinweis, nicht einen Teil.
+        <span className="block text-xs whitespace-pre-line text-gray-600">
           {notice.body}
         </span>
       ) : null}
@@ -138,6 +146,7 @@ export function DayNoticeRow({
           </Button>
         </div>
       ) : null}
+      <LoadErrorAlert error={afterAcknowledge.error} className="mt-1" />
     </li>
   );
 }

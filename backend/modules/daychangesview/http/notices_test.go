@@ -80,9 +80,14 @@ func sourceStatus(overview wireOverview, source string) string {
 // id of the notice it answers with, if any.
 func writeNotice(t *testing.T, router chi.Router, path string, accountID, tenantID int64, payload any, perms ...string) string {
 	t.Helper()
+	return sendNotice(t, router, http.MethodPost, path, accountID, tenantID, payload, perms...)
+}
+
+func sendNotice(t *testing.T, router chi.Router, method, path string, accountID, tenantID int64, payload any, perms ...string) string {
+	t.Helper()
 	raw, err := json.Marshal(payload)
 	require.NoError(t, err)
-	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(raw))
+	req := httptest.NewRequest(method, path, bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+testutil.MintTestJWT(t, testutil.TenantUserTestClaims(int(accountID), tenantID, perms...)))
 	rec := testutil.ExecuteRequestForTest(t, router, req)
@@ -142,7 +147,11 @@ func TestDayChangesNoticeSource(t *testing.T) {
 	create(noticeInput{Title: "Baustelle", ValidFrom: day.AddDays(-3).String(), ValidUntil: until(3)})
 	create(noticeInput{Title: "Abgelaufen", ValidFrom: day.AddDays(-5).String(), ValidUntil: until(-1)})
 	create(noticeInput{Title: "Donnerstags", ValidFrom: day.AddDays(-7).String(), Weekdays: []int16{4}})
-	create(noticeInput{Title: "Nur Lehrkräfte", ValidFrom: day.String(), Audience: "lehrkraft"})
+	teachersOnly := noticeInput{Title: "Nur Lehrkräfte", ValidFrom: day.String(), Audience: "lehrkraft"}
+	teachersID := create(teachersOnly)
+	teachersOnly.Active, teachersOnly.Priority, teachersOnly.Body = true, "info", "Geändert"
+	sendNotice(t, notices, http.MethodPut, "/api/staff-notices/"+teachersID, leadAccount.ID, tenantID, teachersOnly, "admin:*")
+	sendNotice(t, notices, http.MethodDelete, "/api/staff-notices/"+teachersID, leadAccount.ID, tenantID, nil, "admin:*")
 	t.Run("other school", func(t *testing.T) {
 		testpkg.OwnTenant(t)
 		_, foreignLead := testpkg.CreateTestStaffWithAccount(t, db, "Xaver", "Fremd")
@@ -153,8 +162,10 @@ func TestDayChangesNoticeSource(t *testing.T) {
 
 	t.Run("a new or changed notice wakes the overview without content", func(t *testing.T) {
 		sources, content := signals()
-		assert.Len(t, sources, 5, "one signal per saved notice of the school, after its commit")
-		assert.Equal(t, "staff_notice_create", sources[0])
+		assert.Equal(t, []string{
+			"staff_notice_create", "staff_notice_create", "staff_notice_create", "staff_notice_create", "staff_notice_create",
+			"staff_notice_update", "staff_notice_delete",
+		}, sources, "one signal per write of the school's notices, after its commit")
 		assert.False(t, content, "the signal carries nothing but its source")
 	})
 
