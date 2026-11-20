@@ -246,6 +246,15 @@ describe("DayChangesBlock", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("erfasst den Klick auf einen Hinweis nur mit seiner Art", () => {
+    serve({ entries: [elternabend(false)] });
+    render(<DayChangesBlock />);
+    fireEvent.click(screen.getByRole("link", { name: /Elternabend/ }));
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "staff_notice",
+    });
+  });
+
   it("nennt eine ausgefallene Quelle der Hinweise", () => {
     serve({ failedSources: ["notices"] });
     render(<DayChangesBlock />);
