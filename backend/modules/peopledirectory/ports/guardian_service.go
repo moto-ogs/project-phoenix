@@ -46,9 +46,6 @@ type GuardianInvitations interface {
 	// without a recorded recipient come along, also after they ran out, so
 	// the list can show them as dead links (#6294).
 	ListOpen(ctx context.Context, guardianProfileIDs []int64) ([]GuardianInvitationRecord, error)
-	// ListRedeemable returns the invitations of the school in context whose
-	// link can still be spent.
-	ListRedeemable(ctx context.Context) ([]GuardianInvitationRecord, error)
 }
 
 // GuardianServiceDependencies contains all dependencies required by the guardian service

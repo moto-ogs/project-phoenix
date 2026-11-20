@@ -19,7 +19,7 @@ export function traegerTestSystemTopic(): HelpTopic {
       "Melde dich im Träger-Portal an.",
       "Gehörst du auch zum echten Träger? Wähle den Test-Träger aus.",
       "Oben steht der Hinweis `Testsystem`. So erkennst du das Testsystem.",
-      "Die Seite `Schulen` zeigt die Test-Schulen. Probiere alles aus.",
+      "Unter `Schulen` in der Navigation stehen die Test-Schulen. Probiere alles aus.",
     ],
     result:
       "Wenn du fertig bist, löscht das moto-Team das Testsystem mit allen Test-Schulen.",

@@ -43,6 +43,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/schedules/timeframes/",
     portals: ["tenant"],
+    deprecated: true,
     query: ["description", "page", "page_size"],
     response: paginated(z.array(TimeframeResponseSchema)),
   },

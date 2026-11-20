@@ -19,79 +19,12 @@ func attendanceState() *ports.AttendanceState {
 	return &ports.AttendanceState{Status: "checked_in", Date: calendar.NewDate(2026, 8, 5), CheckInTime: &checkIn, CheckedInBy: "Staff Member"}
 }
 
-func TestAttendanceStatus(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-
-	t.Run("answers the state with the group", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.people.students[testPersonID].GroupID = ptr(int64(3))
-		h.groups.group = &ports.Group{ID: 3, Name: "Test Class 1a"}
-		h.attendance.state = attendanceState()
-
-		status, err := h.service().AttendanceStatus(ctx, testTag)
-
-		require.NoError(t, err)
-		assert.Equal(t, devicescan.AttendanceStudent{ID: testStudentID, FirstName: "Max", LastName: "Muster", Group: &devicescan.AttendanceGroup{ID: 3, Name: "Test Class 1a"}}, status.Student)
-		assert.Equal(t, "checked_in", status.Attendance.Status)
-		assert.Equal(t, "2026-08-05", status.Attendance.Date)
-		assert.Equal(t, "Staff Member", status.Attendance.CheckedInBy)
-	})
-	t.Run("a group lookup failure only drops the group", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.people.students[testPersonID].GroupID = ptr(int64(3))
-		h.groups.err = errBoom
-		h.attendance.state = attendanceState()
-
-		status, err := h.service().AttendanceStatus(ctx, testTag)
-
-		require.NoError(t, err)
-		assert.Nil(t, status.Student.Group)
-	})
-	t.Run("an empty tag is invalid", func(t *testing.T) {
-		t.Parallel()
-		_, err := newHarness(t).service().AttendanceStatus(ctx, "")
-		requireFailure(t, err, devicescan.FailureInvalidRequest, devicescan.MessageRFIDParameterRequired)
-	})
-	t.Run("a staff card is not a student", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		delete(h.people.students, testPersonID)
-		_, err := h.service().AttendanceStatus(ctx, testTag)
-		requireFailure(t, err, devicescan.FailureNotFound, devicescan.MessagePersonNotStudent)
-	})
-	t.Run("an alumnus is not a student", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.people.students[testPersonID].Alumnus = true
-		_, err := h.service().AttendanceStatus(ctx, testTag)
-		requireFailure(t, err, devicescan.FailureNotFound, devicescan.MessagePersonNotStudent)
-	})
-	t.Run("a status lookup failure is a server fault", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.attendance.statusErr = errors.New("active: GetStudentAttendanceStatus: database operation failed")
-		_, err := h.service().AttendanceStatus(ctx, testTag)
-		requireFailure(t, err, devicescan.FailureInternal, "active: GetStudentAttendanceStatus: database operation failed")
-	})
-	t.Run("requires a device", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.principals.device = nil
-		_, err := h.service().AttendanceStatus(ctx, testTag)
-		require.ErrorIs(t, err, devicescan.ErrDeviceUnauthorized)
-	})
-}
-
-// The three attendance routes distinguish a missing card (404 plus an
+// The attendance routes distinguish a missing card (404 plus an
 // unregistered-scan record) from a lookup failure (500, no record).
 func TestAttendanceRFIDLookupDistinguishesMissingTagFromFailure(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	routes := map[string]func(s *Service) error{
-		"status": func(s *Service) error { _, err := s.AttendanceStatus(ctx, "UNKNOWN"); return err },
 		"toggle": func(s *Service) error {
 			_, err := s.ToggleAttendance(ctx, devicescan.AttendanceToggleCommand{RFIDTag: "UNKNOWN", Action: devicescan.AttendanceActionConfirm})
 			return err
@@ -154,6 +87,43 @@ func TestToggleAttendance(t *testing.T) {
 		assert.Equal(t, "checked_in", result.Attendance.Status)
 		assert.Nil(t, result.FeedbackEnabled)
 		assert.Equal(t, []toggleCall{{StudentID: testStudentID, StaffID: 0, DeviceID: testDeviceID, SkipAuthCheck: false}}, h.attendance.toggles, "kiosk scans stay device-attributed")
+	})
+	t.Run("answers the child with the education group", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		h.people.students[testPersonID].GroupID = ptr(int64(3))
+		h.groups.group = &ports.Group{ID: 3, Name: "Test Class 1a"}
+		h.attendance.toggleAction = devicescan.ScanActionCheckedIn
+		h.attendance.state = attendanceState()
+
+		result, err := h.service().ToggleAttendance(ctx, confirm)
+
+		require.NoError(t, err)
+		assert.Equal(t, devicescan.AttendanceStudent{ID: testStudentID, FirstName: "Max", LastName: "Muster", Group: &devicescan.AttendanceGroup{ID: 3, Name: "Test Class 1a"}}, result.Student)
+		require.NotNil(t, result.Attendance)
+		assert.Equal(t, "2026-08-05", result.Attendance.Date)
+		assert.Equal(t, "Staff Member", result.Attendance.CheckedInBy)
+	})
+	t.Run("a group lookup failure only drops the group", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		h.people.students[testPersonID].GroupID = ptr(int64(3))
+		h.groups.err = errBoom
+		h.attendance.toggleAction = devicescan.ScanActionCheckedIn
+		h.attendance.state = attendanceState()
+
+		result, err := h.service().ToggleAttendance(ctx, confirm)
+
+		require.NoError(t, err)
+		assert.Nil(t, result.Student.Group)
+	})
+	t.Run("a staff card is not a student", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		delete(h.people.students, testPersonID)
+		_, err := h.service().ToggleAttendance(ctx, confirm)
+		requireFailure(t, err, devicescan.FailureNotFound, devicescan.MessagePersonNotStudent)
+		assert.Empty(t, h.attendance.toggles)
 	})
 	t.Run("checkout farewell", func(t *testing.T) {
 		t.Parallel()
@@ -306,7 +276,6 @@ func TestKioskStudentLookupFailuresAreInternal(t *testing.T) {
 			_, err := s.BookOpenRoom(ctx, devicescan.OpenRoomCommand{RFIDTag: testTag, RoomID: testRoomID})
 			return err
 		},
-		"status": func(s *Service) error { _, err := s.AttendanceStatus(ctx, testTag); return err },
 		"toggle": func(s *Service) error {
 			_, err := s.ToggleAttendance(ctx, devicescan.AttendanceToggleCommand{RFIDTag: testTag, Action: devicescan.AttendanceActionConfirm})
 			return err

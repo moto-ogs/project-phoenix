@@ -132,10 +132,15 @@ type signatureProof struct {
 
 var errSignatureProofMissing = errors.New("enrollment request has no signature")
 
+// signatureProofRoute marks a read on the proof's own path (#2352).
+type signatureProofRoute struct{}
+
 // wantsProofPDF reports whether a detail read asks for the signature proof
-// (?format=pdf) instead of the JSON detail.
+// instead of the JSON detail: on the proof's own path, or with ?format=pdf,
+// which stays for callers of the detail path.
 func wantsProofPDF(r *http.Request) bool {
-	return r.URL.Query().Get("format") == "pdf"
+	onProofRoute, _ := r.Context().Value(signatureProofRoute{}).(bool)
+	return onProofRoute || r.URL.Query().Get("format") == "pdf"
 }
 
 // writeAdminSignatureProof answers the staff proof of a signed request.

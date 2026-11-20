@@ -436,8 +436,8 @@ function StudentsPageContent() {
   const studentsWithArrival = useMemo(
     () => new Set(filteredStudents.map((s) => String(s.id))),
     // NOTE: v1 defaults every student to "has arrival" so no false-positive
-    // warnings are shown in the list. A bulk arrival-status endpoint (arrival-times/bulk)
-    // can later drive real warnings — reference arrivalRevision below to refetch on save.
+    // warnings are shown in the list. The bulk arrival-status endpoint
+    // (arrival-schedules/status) can later drive real warnings — reference arrivalRevision below to refetch on save.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filteredStudents, arrivalRevision],
   );

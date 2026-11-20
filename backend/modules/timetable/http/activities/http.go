@@ -65,7 +65,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(withTx).Get("/categories", rs.listCategories)
 
 		rs.mountCategories(r, withTx)
-		r.With(withTx).Get("/timespans", rs.getTimespans)
 
 		// Basic Activity Group operations (Write) - All authenticated users can create/update/delete
 		r.With(withTx).Post("/", rs.createActivity)
@@ -85,8 +84,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
 			Post("/{id}/supervisors", rs.assignSupervisor)
 		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
-			Put("/{id}/supervisors/{supervisorId}", rs.updateSupervisorRole)
-		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
 			Delete("/{id}/supervisors/{supervisorId}", rs.removeSupervisor)
 
 		// Student Enrollment
@@ -94,8 +91,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 			Get("/{id}/students", rs.getActivityStudents)
 		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
 			Get("/students/{studentId}", rs.getStudentEnrollments)
-		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
-			Get("/students/{studentId}/available", rs.getAvailableActivities)
 		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).
 			Post("/{id}/students/{studentId}", rs.enrollStudent)
 		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).

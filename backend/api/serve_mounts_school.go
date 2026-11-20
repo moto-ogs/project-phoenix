@@ -16,7 +16,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
 
-	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	communicationModule "github.com/moto-ogs/project-phoenix/modules/communication"
@@ -222,7 +221,6 @@ func newTimetableResource(
 		ClosingDays:             calendar,
 		Holidays:                calendar,
 		SchoolVacations:         vacations,
-		IsLocalSeed:             func(r *http.Request) bool { return apiCommon.IsLocalSeedRequest(r, viper.GetString("app_env")) },
 		SchoolVacationHints:     vacationHints,
 		CalendarPeriodUsage:     calendarPeriodUsage{usage: newCalendarPeriodUsage(timetableOwner), shiftSeries: shiftSeries},
 		MaterializationService:  materialization,

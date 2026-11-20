@@ -179,13 +179,13 @@ func TestAdminSignatureProofFailureStillRejectsPDF(t *testing.T) {
 	adminTransactions := 0
 	var savepointActions []tenant.SavepointAction
 
-	request := httptest.NewRequest(http.MethodGet, "/admin/requests/42?format=pdf", nil)
+	request := httptest.NewRequest(http.MethodGet, "/admin/requests/42/signature-proof", nil)
 	route := chi.NewRouteContext()
 	route.URLParams.Add("id", "42")
 	request = request.WithContext(context.WithValue(signatureResilienceTestContext(t, &adminTransactions, &savepointActions), chi.RouteCtxKey, route))
 	response := httptest.NewRecorder()
 
-	rs.getAdminRequest(response, request)
+	rs.getAdminSignatureProof(response, request)
 
 	assert.Equal(t, http.StatusInternalServerError, response.Code, response.Body.String())
 	assert.Equal(t, 1, service.signatureProofCalls)

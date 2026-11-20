@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   int64StringOrNumber,
   nullable,
   object,
@@ -91,6 +92,12 @@ export const routes = {
     pattern: "/api/birthdays/opt-out",
     portals: ["tenant"],
     response: success(optOutResponseSchema),
+  },
+  "POST /api/birthdays/staff-export": {
+    method: "POST",
+    pattern: "/api/birthdays/staff-export",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "PUT /api/birthdays/opt-out": {
     method: "PUT",

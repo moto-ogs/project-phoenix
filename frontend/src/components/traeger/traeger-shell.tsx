@@ -10,6 +10,7 @@ import { PortalShell } from "~/components/ui/portal-shell";
 import { TraegerBottomNav } from "./shell/traeger-bottom-nav";
 import { TraegerNotificationFeedProvider } from "./shell/traeger-notification-feed";
 import { TraegerReturnPathMemory } from "./shell/traeger-return-path";
+import { TraegerSearchProvider } from "./shell/traeger-search";
 import { TraegerSidebar } from "./shell/traeger-sidebar";
 import { TraegerTestSystemNotice } from "./traeger-test-system-notice";
 
@@ -56,29 +57,32 @@ export function TraegerShell({
   const demoBannerShown = useDemoBannerShown();
   return (
     <TraegerNotificationFeedProvider>
-      <div className={demoBannerShown ? "pt-12" : undefined}>
-        <PortalShell
-          header={<Header notificationBell={<NotificationFeedBell />} />}
-          headerClassName={`sticky ${demoBannerShown ? "top-12" : "top-0"} ${Z_LAYER.header}`}
-          topLayer={
-            <>
-              {demoBannerShown ? <DemoBanner /> : null}
-              {testSystem ? <TraegerTestSystemNotice /> : null}
-            </>
-          }
-          sidebar={<TraegerSidebar federalStates={federalStates} />}
-          bottomNav={<TraegerBottomNav federalStates={federalStates} />}
-          // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
-          // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
-          // Unterkante (TENANT-PAGE-SPEC, Regel 6).
-          contentClassName="flex flex-1 flex-col"
-        >
-          <Suspense fallback={null}>
-            <TraegerReturnPathMemory />
-          </Suspense>
-          {children}
-        </PortalShell>
-      </div>
+      {/* Die Suche nach Seiten und Schulen mit Strg+K (#7648). */}
+      <TraegerSearchProvider federalStates={federalStates}>
+        <div className={demoBannerShown ? "pt-12" : undefined}>
+          <PortalShell
+            header={<Header notificationBell={<NotificationFeedBell />} />}
+            headerClassName={`sticky ${demoBannerShown ? "top-12" : "top-0"} ${Z_LAYER.header}`}
+            topLayer={
+              <>
+                {demoBannerShown ? <DemoBanner /> : null}
+                {testSystem ? <TraegerTestSystemNotice /> : null}
+              </>
+            }
+            sidebar={<TraegerSidebar federalStates={federalStates} />}
+            bottomNav={<TraegerBottomNav federalStates={federalStates} />}
+            // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
+            // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
+            // Unterkante (TENANT-PAGE-SPEC, Regel 6).
+            contentClassName="flex flex-1 flex-col"
+          >
+            <Suspense fallback={null}>
+              <TraegerReturnPathMemory />
+            </Suspense>
+            {children}
+          </PortalShell>
+        </div>
+      </TraegerSearchProvider>
       <NotificationsSheet feedOnly />
     </TraegerNotificationFeedProvider>
   );

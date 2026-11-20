@@ -1141,18 +1141,3 @@ func (m *mockInstanceService) MoveStaffBetweenBlocks(ctx context.Context, target
 	}
 	return &timetable.MoveStaffResult{}, nil
 }
-
-// AcknowledgeUnderstaffed records the forwarded args for the mock-only handler
-// tests, or delegates to a real service (the DB-backed past-block guard test).
-func (m *mockInstanceService) AcknowledgeUnderstaffed(ctx context.Context, id int64, ack bool, note *string, actor *int64) (*timetable.LifecycleInstance, error) {
-	if m.real != nil {
-		return m.real.AcknowledgeUnderstaffed(ctx, id, ack, note, actor)
-	}
-	m.lastAckID = id
-	m.lastAckValue = ack
-	m.lastAckNote = note
-	if m.ackErr != nil {
-		return nil, m.ackErr
-	}
-	return m.ackRes, nil
-}

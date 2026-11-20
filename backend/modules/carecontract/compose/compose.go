@@ -64,9 +64,9 @@ func NewContractMailRenderer() carecontract.ContractMailRenderer {
 	return application.RenderContractMail
 }
 
-// NewBookedCare builds the school's read of the booked care of its contracts, the Soll of Soll und
-// Ist (#4683, ADR 0156), in the tenant transaction of the school the caller holds.
-func NewBookedCare() carecontract.BookedCare { return postgres.NewBookedCare() }
+// NewBookedCare (the Soll of Soll und Ist, #4683, ADR 0156) and NewApplicationContracts (#4788) read the school's contracts in its tenant transaction.
+func NewBookedCare() carecontract.BookedCare                     { return postgres.NewBookedCare() }
+func NewApplicationContracts() carecontract.ApplicationContracts { return postgres.NewBookedCare() }
 
 // NewOverrunEvaluations evaluates the overruns of the Träger's schools (#4683, ADR 0156) in own units on the day today.
 func NewOverrunEvaluations(ports OverrunPorts, today func() calendar.Date) carecontract.OverrunEvaluations {

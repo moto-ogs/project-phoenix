@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef } from "react";
+import type { Session } from "next-auth";
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
 import {
@@ -36,8 +37,11 @@ import {
 export function PersonalStorageGuard({
   homeHref,
 }: {
-  /** Start page of the portal; read only when the page has to leave. */
-  readonly homeHref: () => string;
+  /**
+   * Start page of the portal; read only when the page has to leave. It gets
+   * the new session, or null when another tab changed the account.
+   */
+  readonly homeHref: (session: Session | null) => string;
 }) {
   const { data: session, status } = useSession();
   const owner =
@@ -48,9 +52,11 @@ export function PersonalStorageGuard({
   // Das Konto, das diese Seite zeigt: das erste, das sie angemeldet sieht.
   const pageAccountRef = useRef<string | null>(null);
   const homeHrefRef = useRef(homeHref);
+  const sessionRef = useRef<Session | null>(session ?? null);
   useLayoutEffect(() => {
     homeHrefRef.current = homeHref;
-  }, [homeHref]);
+    sessionRef.current = session ?? null;
+  }, [homeHref, session]);
 
   useLayoutEffect(() => {
     // Während die Sitzung lädt, bleibt alles stehen: ein Abruf ist kein
@@ -64,7 +70,7 @@ export function PersonalStorageGuard({
     if (pageAccountRef.current === null) {
       pageAccountRef.current = account;
     } else if (pageAccountRef.current !== account) {
-      leaveForAnotherAccount(homeHrefRef.current());
+      leaveForAnotherAccount(homeHrefRef.current(sessionRef.current));
     }
   }, [status, owner, account]);
 
@@ -77,7 +83,7 @@ export function PersonalStorageGuard({
           nextAccount !== null &&
           nextAccount !== pageAccountRef.current
         ) {
-          leaveForAnotherAccount(homeHrefRef.current());
+          leaveForAnotherAccount(homeHrefRef.current(null));
         }
       }),
     [],

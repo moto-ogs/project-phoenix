@@ -375,8 +375,6 @@ type GuardianQuery interface {
 type GuardianProfileQuery interface {
 	FindGuardian(context.Context, int64) (Guardian, error)
 	ListGuardians(ctx context.Context, page, pageSize int) ([]Guardian, error)
-	ListGuardiansWithoutAccount(context.Context) ([]Guardian, error)
-	ListInvitableGuardians(context.Context) ([]Guardian, error)
 	// SearchGuardians matches name and email; limit caps the slice.
 	SearchGuardians(ctx context.Context, text string, limit int) ([]GuardianMatch, error)
 	// FindGuardianByEmail returns the tenant's guardian whose e-mail equals

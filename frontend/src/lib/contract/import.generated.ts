@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   multipart,
@@ -537,7 +538,55 @@ export const StaffImportResultSchema: z.ZodType<StaffImportResult, unknown> = ob
   errors: nullable(arr(StaffImportErrorSchema)),
 });
 
+/** Query of GET /api/import/class-list-entries/template */
+export interface GetImportClassListEntriesTemplateQuery {
+  format?: "csv" | "xlsx";
+}
+
+/** Query of GET /api/import/opening-balances/template */
+export interface GetImportOpeningBalancesTemplateQuery {
+  format?: "csv" | "xlsx";
+}
+
+/** Query of GET /api/import/students/template */
+export interface GetImportStudentsTemplateQuery {
+  format?: "csv" | "xlsx";
+}
+
+/** Query of GET /api/import/teachers/template */
+export interface GetImportTeachersTemplateQuery {
+  format?: "csv" | "xlsx";
+}
+
 export const routes = {
+  "GET /api/import/class-list-entries/template": {
+    method: "GET",
+    pattern: "/api/import/class-list-entries/template",
+    portals: ["tenant"],
+    query: ["format"],
+    response: fileAnswer,
+  },
+  "GET /api/import/opening-balances/template": {
+    method: "GET",
+    pattern: "/api/import/opening-balances/template",
+    portals: ["tenant"],
+    query: ["format"],
+    response: fileAnswer,
+  },
+  "GET /api/import/students/template": {
+    method: "GET",
+    pattern: "/api/import/students/template",
+    portals: ["tenant"],
+    query: ["format"],
+    response: fileAnswer,
+  },
+  "GET /api/import/teachers/template": {
+    method: "GET",
+    pattern: "/api/import/teachers/template",
+    portals: ["tenant"],
+    query: ["format"],
+    response: fileAnswer,
+  },
   "POST /api/import/class-list-entries/import": {
     method: "POST",
     pattern: "/api/import/class-list-entries/import",

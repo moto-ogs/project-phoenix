@@ -2,5 +2,5 @@
   "scenario": "services.feedback.submit_batch.entries_8",
   "max": 4,
   "exact": true,
-  "description": "Public Feedback SubmitBatch with real owner persistence and own tenant transaction, settings already enabled by a pure resolver. Successful ordered input batch with per-entry readback; rollback and non-reused IDs is guarded separately. Not an HTTP budget."
+  "description": "Feedback batch write with real owner persistence and own tenant transaction: since #2352 the demo seed's FeedbackHistory.RecordFeedbackHistory (ADR 0298), which took over the batch insert of the removed SubmitBatch. Successful ordered input batch with readback; rollback and non-reused IDs is guarded separately. Not an HTTP budget."
 }

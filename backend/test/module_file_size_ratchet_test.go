@@ -66,7 +66,7 @@ var moduleFileSizeAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go": 1465,
 	// ADR 0087.
-	"internal/devtools/simulate/demo_day.go": 818,
+	"internal/devtools/simulate/demo_day.go": 805,
 	// ADR 0087.
 	"observability/prometheus.go": 1662,
 	// ADR 0087.

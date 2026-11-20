@@ -37,16 +37,6 @@ func (s *Service) ListSchedules(ctx context.Context, filter timetable.ScheduleFi
 	return result, err
 }
 
-func (s *Service) FindTemplateStartTimes(ctx context.Context, groupIDs []int64) (result []timetable.TemplateStartTime, err error) {
-	err = s.run(ctx, "find_template_start_times", func(ctx context.Context, stats *domain.OperationStats) error {
-		values, queryStats, findErr := s.store.FindTemplateStartTimes(ctx, groupIDs)
-		stats.Add(queryStats)
-		result = values
-		return findErr
-	})
-	return result, err
-}
-
 func (s *Service) CreateSchedule(ctx context.Context, fields timetable.ScheduleInput) (result timetable.Schedule, err error) {
 	if !normalizeSchedule(&fields) {
 		return timetable.Schedule{}, s.reject("create_schedule", timetable.ErrInvalidSchedule)

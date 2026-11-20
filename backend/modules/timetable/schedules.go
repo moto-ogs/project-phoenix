@@ -42,9 +42,3 @@ type ScheduleFilter struct {
 	GroupIDs []int64
 	Weekday  *int
 }
-
-type TemplateStartTime struct {
-	ActivityGroupID int64
-	Weekday         int
-	StartTime       time.Time
-}

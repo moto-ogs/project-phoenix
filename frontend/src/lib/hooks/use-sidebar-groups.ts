@@ -1,166 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-
 import {
   getStaffNavGroupForPathname,
   STAFF_NAV_GROUPS,
   type StaffNavGroupKey,
 } from "~/lib/staff-navigation";
+import { useStoredOpenGroups } from "./use-stored-open-groups";
 
-const STORAGE_KEY = "sidebar-open-groups";
+const openGroupsStorageKey = "sidebar-open-groups";
 
-const KNOWN_GROUP_KEYS = new Set<string>(
+const KNOWN_GROUP_KEYS: ReadonlySet<string> = new Set<string>(
   STAFF_NAV_GROUPS.map((group) => group.key),
 );
 
-function isGroupKey(value: unknown): value is StaffNavGroupKey {
-  return typeof value === "string" && KNOWN_GROUP_KEYS.has(value);
-}
-
-function readStoredGroups(): readonly StaffNavGroupKey[] | null {
-  try {
-    const raw = globalThis.localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return parsed.filter(isGroupKey);
-  } catch {
-    // Unreadable or corrupt entry: fall back to the default groups.
-    return null;
-  }
-}
-
-function writeStoredGroups(groups: readonly StaffNavGroupKey[]) {
-  try {
-    globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
-  } catch {
-    // Ohne Speicher (privater Modus, volle Quota) gilt der Zustand nur für
-    // diese Sitzung.
-  }
-}
-
 /**
- * Jede eingehängte Instanz (Seitenleiste und Mehr-Menü, #7048) hört hier mit.
- * Beide hängen gleichzeitig ein, auch wenn je nach Breite nur eine zu sehen
- * ist; ohne Abgleich schriebe die eine später ihren veralteten Stand zurück.
- */
-const listeners = new Set<(groups: readonly StaffNavGroupKey[]) => void>();
-
-function withGroup(
-  groups: readonly StaffNavGroupKey[],
-  group: StaffNavGroupKey | null,
-): readonly StaffNavGroupKey[] {
-  if (!group || groups.includes(group)) return groups;
-  return [...groups, group];
-}
-
-/**
- * Welche Gruppen der Seitenleiste offen stehen (#2826).
+ * Welche Gruppen der Seitenleiste der OGS-App offen stehen (#2826).
  *
- * Mehrere Gruppen können gleichzeitig offen sein; jede klappt unabhängig.
  * Beim ersten Besuch stehen `defaultGroups` offen
- * (`getStaffNavDefaultOpenGroups`, je nach Rolle). Was die Person
- * auf- oder zuklappt, merkt sich der Browser (`sidebar-open-groups`). Die
- * Gruppe der aktuellen Seite öffnet sich von selbst, ohne die anderen zu
- * schließen; ein Seitenwechsel schließt nichts — sonst müsste man nach
- * jedem Klick wieder aufklappen, was man gerade gebraucht hat.
- *
- * Der erste Render kennt den Speicher nicht (Server und Client müssen
- * dasselbe Bild liefern), deshalb wird der gespeicherte Stand erst nach dem
- * Einhängen übernommen — dasselbe Muster wie useSidebarAccordion.
- *
- * Alle eingehängten Instanzen teilen einen Stand: Seitenleiste und Mehr-Menü
- * (#7048) zeigen dieselben offenen Gruppen.
- *
- * Geschrieben wird nur bei einer echten Änderung (Klick, Auto-Aufklappen,
- * Übernahme des Speichers), nie aus einem Effekt, der den Zustand
- * beobachtet: der liefe beim Einhängen mit dem Standard los und überschriebe
- * den gespeicherten Stand, bevor er gelesen ist (Reacts doppeltes Einhängen
- * im Entwicklungsmodus macht genau das sichtbar).
+ * (`getStaffNavDefaultOpenGroups`, je nach Rolle). Was die Person auf- oder
+ * zuklappt, merkt sich der Browser (`sidebar-open-groups`); die Gruppe der
+ * aktuellen Seite öffnet sich von selbst. Seitenleiste und Mehr-Menü (#7048)
+ * teilen einen Stand. Das Verhalten im Einzelnen: `useStoredOpenGroups`.
  */
 export function useSidebarGroups(
   pathname: string,
   fromParam: string | null | undefined,
   defaultGroups: readonly StaffNavGroupKey[],
 ) {
-  const currentGroup = getStaffNavGroupForPathname(pathname, fromParam);
-  const [openGroups, setOpenGroups] = useState<readonly StaffNavGroupKey[]>(
-    () => withGroup(defaultGroups, currentGroup),
-  );
-  // Der jeweils letzte Stand, auch zwischen zwei Renderings: die Effekte
-  // unten dürfen nicht auf einem veralteten `openGroups` aufsetzen.
-  const latest = useRef(openGroups);
-
-  const apply = useCallback((next: readonly StaffNavGroupKey[]) => {
-    writeStoredGroups(next);
-    for (const listener of listeners) listener(next);
-  }, []);
-
-  useEffect(() => {
-    const listener = (next: readonly StaffNavGroupKey[]) => {
-      latest.current = next;
-      setOpenGroups(next);
-    };
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }, []);
-
-  useEffect(() => {
-    const stored = readStoredGroups();
-    if (!stored) return;
-    // Der gespeicherte Stand ersetzt den Standard; die Gruppe der aktuellen
-    // Seite bleibt in jedem Fall offen.
-    apply(withGroup(stored, getStaffNavGroupForPathname(pathname, fromParam)));
-    // Nur einmal nach dem Einhängen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Die Rolle steht erst fest, wenn die Sitzung geladen ist. Bis die Person
-  // selbst etwas auf- oder zugeklappt hat (dann gibt es einen gespeicherten
-  // Stand), folgt die Anzeige der Voreinstellung der Rolle. Geschrieben wird
-  // dabei nichts: eine Voreinstellung ist keine Entscheidung der Person.
-  const defaultKey = defaultGroups.join(",");
-  const isFirstDefault = useRef(true);
-  useEffect(() => {
-    if (isFirstDefault.current) {
-      isFirstDefault.current = false;
-      return;
-    }
-    if (readStoredGroups()) return;
-    const next = withGroup(
-      defaultGroups,
-      getStaffNavGroupForPathname(pathname, fromParam),
-    );
-    latest.current = next;
-    setOpenGroups(next);
-    // Nur bei einer anderen Voreinstellung, nicht bei jedem Seitenwechsel.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultKey]);
-
-  useEffect(() => {
-    if (!currentGroup || latest.current.includes(currentGroup)) return;
-    apply(withGroup(latest.current, currentGroup));
-  }, [currentGroup, apply]);
-
-  const toggleGroup = useCallback(
-    (group: StaffNavGroupKey) => {
-      const current = latest.current;
-      apply(
-        current.includes(group)
-          ? current.filter((key) => key !== group)
-          : [...current, group],
-      );
-    },
-    [apply],
-  );
-
-  const isGroupOpen = useCallback(
-    (group: StaffNavGroupKey) => openGroups.includes(group),
-    [openGroups],
-  );
-
-  return { openGroups, isGroupOpen, toggleGroup };
+  return useStoredOpenGroups<StaffNavGroupKey>({
+    storageKey: openGroupsStorageKey,
+    knownKeys: KNOWN_GROUP_KEYS,
+    currentGroup: getStaffNavGroupForPathname(pathname, fromParam),
+    defaultGroups,
+  });
 }

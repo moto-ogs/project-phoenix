@@ -315,7 +315,7 @@ export async function downloadHolidayParticipants(
   format: "csv" | "xlsx",
 ): Promise<void> {
   const response = await transportFetch(
-    `${BASE}/${encodeURIComponent(weekId)}/participants/export/${format}`,
+    `${BASE}/${encodeURIComponent(weekId)}/participants/export?format=${format}`,
     { cache: "no-store" },
   );
   if (!response.ok) {

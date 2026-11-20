@@ -134,15 +134,15 @@ func resourceAlias(resource string) string {
 		parts[i] = upperFirst(parts[i])
 	}
 	alias := strings.Join(parts, "")
-	// A resource named like a JavaScript keyword (`/api/import`) cannot be a
-	// binding of the import table.
+	// A resource such as /api/import names a reserved word, which the import
+	// of portals.generated.ts cannot bind.
 	if reservedWords[alias] {
 		return alias + "Routes"
 	}
 	return alias
 }
 
-// reservedWords are JavaScript's reserved words, strict mode included.
+// reservedWords are the ECMAScript words an import binding may not take.
 var reservedWords = map[string]bool{
 	"await": true, "break": true, "case": true, "catch": true, "class": true, "const": true,
 	"continue": true, "debugger": true, "default": true, "delete": true, "do": true, "else": true,
@@ -150,8 +150,8 @@ var reservedWords = map[string]bool{
 	"function": true, "if": true, "implements": true, "import": true, "in": true, "instanceof": true,
 	"interface": true, "let": true, "new": true, "null": true, "package": true, "private": true,
 	"protected": true, "public": true, "return": true, "static": true, "super": true, "switch": true,
-	"this": true, "throw": true, "true": true, "try": true, "typeof": true, "var": true, "void": true,
-	"while": true, "with": true, "yield": true,
+	"this": true, "throw": true, "true": true, "try": true, "typeof": true, "var": true,
+	"void": true, "while": true, "with": true, "yield": true,
 }
 
 func routeSchemas(r Route) []Schema {
@@ -356,6 +356,9 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	}
 	if route.PublicFile != "" {
 		fmt.Fprintf(out, "    publicFile: %q,\n", route.PublicFile)
+	}
+	if route.PrivateCache {
+		out.WriteString("    privateCache: true,\n")
 	}
 	if len(route.Query) > 0 {
 		names := make([]string, len(route.Query))

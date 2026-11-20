@@ -15,8 +15,6 @@ const (
 	opGetSubstitutedIDs   = "get substituted group IDs"
 	opGetMySchoolClasses  = "get my school classes"
 	opGetSupervisedGroups = "get supervised groups"
-	opGetGroupStudents    = "get group students"
-	opGetGroupVisits      = "get group visits"
 )
 
 // MyGroupIDs returns the educational groups of the caller: the groups of
@@ -311,75 +309,4 @@ func mergeIDs(primary, additional []int64) []int64 {
 		result = append(result, id)
 	}
 	return result
-}
-
-// GroupStudentIDs returns the students with a visit in a room session the
-// caller reaches.
-func (c *CallerContext) GroupStudentIDs(ctx context.Context, sessionID int64) ([]int64, error) {
-	visits, err := c.reachableSessionVisits(ctx, opGetGroupStudents, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	seen := make(map[int64]struct{}, len(visits))
-	for _, visit := range visits {
-		seen[visit.StudentID] = struct{}{}
-	}
-	return slices.Collect(maps.Keys(seen)), nil
-}
-
-// GroupVisits returns the open visits of a room session the caller reaches.
-func (c *CallerContext) GroupVisits(ctx context.Context, sessionID int64) ([]domain.CallerVisit, error) {
-	visits, err := c.reachableSessionVisits(ctx, opGetGroupVisits, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	var open []domain.CallerVisit
-	for _, visit := range visits {
-		if visit.ExitTime == nil {
-			open = append(open, visit)
-		}
-	}
-	return open, nil
-}
-
-// reachableSessionVisits reads the visits of a room session the caller
-// reaches, naming op in every error.
-func (c *CallerContext) reachableSessionVisits(ctx context.Context, op string, sessionID int64) ([]domain.CallerVisit, error) {
-	if err := c.checkSessionAccess(ctx, sessionID); err != nil {
-		return nil, &domain.CallerError{Op: op, Err: err}
-	}
-	visits, err := c.deps.Sessions.SessionVisits(ctx, sessionID)
-	if err != nil {
-		return nil, &domain.CallerError{Op: op, Err: err}
-	}
-	return visits, nil
-}
-
-// checkSessionAccess requires the session to exist and to be one of the
-// caller's active or supervised sessions.
-func (c *CallerContext) checkSessionAccess(ctx context.Context, sessionID int64) error {
-	exists, err := c.deps.Sessions.SessionExists(ctx, sessionID)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		// A missing session is an expected refusal (#4599), distinct from
-		// ErrCallerGroupNotFound; /api/me answers it with 404.
-		return domain.ErrCallerSessionNotFound
-	}
-	active, err := c.MyActiveSessionIDs(ctx)
-	if err != nil {
-		return err
-	}
-	if slices.Contains(active, sessionID) {
-		return nil
-	}
-	supervised, err := c.MySupervisedSessionIDs(ctx)
-	if err != nil {
-		return err
-	}
-	if slices.Contains(supervised, sessionID) {
-		return nil
-	}
-	return domain.ErrCallerNotAuthorized
 }

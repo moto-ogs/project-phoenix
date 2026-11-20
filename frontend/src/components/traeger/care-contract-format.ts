@@ -135,9 +135,12 @@ export function formatServiceDays(
   if (days.length === 0) return "–";
   return days
     .map((day) => {
-      const ends = day.services.map(
-        (service) => service.endsAt || service.moduleName,
-      );
+      const ends = day.services.map((service) => {
+        const end = service.endsAt || service.moduleName;
+        return service.lastDay
+          ? `${end}, gebucht bis ${formatDate(service.lastDay)}`
+          : end;
+      });
       const timed = day.services.every((service) => service.endsAt);
       return `${WEEKDAY_SHORT[day.weekday]} ${timed ? "bis " : ""}${ends.join(" und ")}`;
     })

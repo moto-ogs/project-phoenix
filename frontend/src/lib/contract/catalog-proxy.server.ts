@@ -50,6 +50,8 @@ export interface CatalogRoute {
    * served.
    */
   readonly publicFile?: string;
+  /** A file the browser may keep: its private Cache-Control passes. */
+  readonly privateCache?: boolean;
 }
 
 export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -70,6 +72,21 @@ type PortalHandlers = Pick<
 type Envelope = z.ZodType<{ data: unknown }>;
 
 const segmentsOf = (path: string) => path.split("/").filter(Boolean);
+
+/**
+ * The Cache-Control a `privateCache` file leaves with: the backend's own
+ * value when it keeps the file in the browser alone, else none at all. A
+ * shared cache never stores a session's file.
+ */
+export function privateCacheControl(value: string | null): string {
+  const directives = (value ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((directive) => directive.trim());
+  return directives.includes("private") && !directives.includes("public")
+    ? (value as string)
+    : "private, no-store";
+}
 
 const MIB = 1024 * 1024;
 
@@ -410,30 +427,46 @@ export function makeCatalogProxy(
    * A file streams through with its file headers (fileResponse), and every
    * answer of the route, refusals and session failures included, is private
    * and uncached, as `withPrivateDownloadNoStore` makes a download route
-   * file. A file a POST asks for reads its JSON body within the route's
-   * limit, so the renewal's retry can send it again.
+   * file. Only a `privateCache` file that arrives keeps the backend's
+   * private Cache-Control (an image whose address names its version). A
+   * file a POST asks for reads its JSON body within the route's limit, so
+   * the renewal's retry can send it again.
    */
   function streamedHandler(route: CatalogRoute) {
-    return withPrivateDownloadNoStore(
-      portal.route(async (request, _token, params) => {
-        const { endpoint } = target(request, params.path);
-        if (isUpload(route)) return upload(route, request, endpoint);
-        const json =
-          method === "GET"
-            ? undefined
-            : await parseRequestBody(request, route.maxBodyBytes);
-        const backend = await portal.backendFetch(request, endpoint, {
-          method,
-          json,
-          idempotencyKey:
-            method === "GET" ? null : request.headers.get("Idempotency-Key"),
-          ...(route.noRetryAfterRenewal && {
-            retry: { off: route.noRetryAfterRenewal },
-          }),
-        });
-        return fileResponse(backend, request);
-      }),
-    );
+    const handler = portal.route(async (request, _token, params) => {
+      const { endpoint } = target(request, params.path);
+      if (isUpload(route)) return upload(route, request, endpoint);
+      const json =
+        method === "GET"
+          ? undefined
+          : await parseRequestBody(request, route.maxBodyBytes);
+      const backend = await portal.backendFetch(request, endpoint, {
+        method,
+        json,
+        idempotencyKey:
+          method === "GET" ? null : request.headers.get("Idempotency-Key"),
+        ...(route.noRetryAfterRenewal && {
+          retry: { off: route.noRetryAfterRenewal },
+        }),
+      });
+      const response = await fileResponse(backend, request);
+      if (route.privateCache && backend.ok) {
+        response.headers.set(
+          "Cache-Control",
+          privateCacheControl(backend.headers.get("Cache-Control")),
+        );
+      }
+      return response;
+    });
+    const uncached = withPrivateDownloadNoStore(handler);
+    if (!route.privateCache) return uncached;
+    return async (request: NextRequest, context: RouteContext) => {
+      const response = await handler(request, context);
+      // A refusal or session failure is never kept.
+      return response.ok
+        ? response
+        : withPrivateDownloadNoStore(() => response)();
+    };
   }
 
   type Options = {
@@ -566,9 +599,12 @@ export function handOffUnder(
   head: HandOffHead,
   handler: (request: NextRequest, context: RouteContext) => Promise<Response>,
 ) {
-  return (request: NextRequest, context: RouteContext) =>
+  // Next passes `params: undefined` to a route file without a dynamic
+  // segment (`auth/tenants/route.ts`); such a file has no tail.
+  return (request: NextRequest, context: Partial<RouteContext> | undefined) =>
     handler(request, {
-      params: context.params.then((params) => {
+      params: Promise.resolve(context?.params).then((given) => {
+        const params = given ?? {};
         const tail = params.path;
         const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
         const lead = typeof head === "function" ? head(params) : head;

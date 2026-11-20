@@ -124,11 +124,6 @@ func (s PresenceSettings) ExcusedClearMode(ctx context.Context) (string, error) 
 	return s.source.ResolveString(ctx, configModels.KeyExcusedClearMode)
 }
 
-// SessionInactivityTimeoutMinutes is how long a kiosk session may idle.
-func (s PresenceSettings) SessionInactivityTimeoutMinutes(ctx context.Context) (int, error) {
-	return s.source.ResolveInt(ctx, configModels.KeySessionInactivityTimeoutMin)
-}
-
 // AttendanceEditScope gates who may edit recorded attendance.
 func (s PresenceSettings) AttendanceEditScope(ctx context.Context) (string, error) {
 	return s.source.ResolveString(ctx, configModels.KeyAttendanceEditScope)

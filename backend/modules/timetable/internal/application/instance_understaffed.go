@@ -8,7 +8,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	scheduleModel "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The "deliberately unstaffed" acknowledgement (Vertretungsplan, #1840): a
@@ -131,31 +130,6 @@ func (s *InstanceLifecycleService) ClearUnderstaffedAckIfStaffed(ctx context.Con
 		return err
 	}
 	return s.clearStaleAckIfStaffed(ctx, instance, actorAccountID)
-}
-
-// AcknowledgeUnderstaffed applies the standalone acknowledgement. Past
-// blocks are historical record; the date gate is on the Berlin calendar
-// day, because a past occurrence can still be planned. The write serializes
-// with same-day staffing saves and refuses a block a concurrent edit moved.
-func (s *InstanceLifecycleService) AcknowledgeUnderstaffed(ctx context.Context, instanceID int64, ack bool, note *string, actorAccountID *int64) (*timetable.LifecycleInstance, error) {
-	instance, err := s.loadDeviationInstance(ctx, instanceID)
-	if err != nil {
-		return nil, err
-	}
-	if instance.Date.Before(calendar.DateFromTime(s.now())) {
-		return nil, timetable.DeviationBadRequest(msgInstanceInPast).WithCode(timetable.CodeInstanceInPast)
-	}
-	if err := s.acquireSubstituteDayLock(ctx, calendar.Date(instance.Date)); err != nil {
-		return nil, timetable.DeviationInternal("lock day failed", err)
-	}
-	locked, err := s.loadDeviationInstance(ctx, instanceID)
-	if err != nil {
-		return nil, err
-	}
-	if locked.Date != instance.Date {
-		return nil, timetable.DeviationConflict(timetable.CodeInstanceMoved, msgInstanceMoved)
-	}
-	return s.SetUnderstaffedAck(ctx, instanceID, ack, note, actorAccountID)
 }
 
 // loadDeviationInstance loads the target block for the staffing writes,

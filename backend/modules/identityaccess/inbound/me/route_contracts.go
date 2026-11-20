@@ -16,5 +16,8 @@ func RouteContracts(staff, groups, sessions, navigation any) []common.RouteContr
 		{Method: "GET", Pattern: "/groups/", Portals: portals, Response: groups},
 		{Method: "GET", Pattern: "/groups/supervised", Portals: portals, Response: sessions},
 		{Method: "GET", Pattern: "/navigation", Portals: portals, Response: navigation},
+		// The caller's own avatar; the handler keeps it a day in the
+		// browser's private cache (#2352).
+		{Method: "GET", Pattern: "/profile/avatar/{filename}", Portals: portals, File: true, PrivateCache: true},
 	}
 }

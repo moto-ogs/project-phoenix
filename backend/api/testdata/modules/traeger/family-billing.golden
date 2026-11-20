@@ -1,3 +1,2 @@
-DELETE /traeger/family-billing/{id} -> basis
 GET /traeger/family-billing/ -> basis
 PUT /traeger/family-billing/ -> basis

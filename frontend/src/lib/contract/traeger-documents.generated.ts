@@ -133,6 +133,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(SharedDocumentSchema)),
   },
+  "GET /api/traeger-documents/{id}/file": {
+    method: "GET",
+    pattern: "/api/traeger-documents/{id}/file",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /traeger/documents/": {
     method: "GET",
     pattern: "/traeger/documents/",

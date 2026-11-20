@@ -69,7 +69,6 @@ type Store interface {
 	ReplaceGroupTargets(context.Context, int64, []timetable.GroupTargetInput) (domain.OperationStats, error)
 	FindSchedule(context.Context, int64) (timetable.Schedule, bool, domain.OperationStats, error)
 	ListSchedules(context.Context, timetable.ScheduleFilter) ([]timetable.Schedule, domain.OperationStats, error)
-	FindTemplateStartTimes(context.Context, []int64) ([]timetable.TemplateStartTime, domain.OperationStats, error)
 	CreateSchedule(context.Context, timetable.ScheduleInput) (timetable.Schedule, domain.OperationStats, error)
 	UpdateSchedule(context.Context, int64, timetable.ScheduleInput) (timetable.Schedule, bool, domain.OperationStats, error)
 	DeleteSchedule(context.Context, int64) (domain.OperationStats, error)
