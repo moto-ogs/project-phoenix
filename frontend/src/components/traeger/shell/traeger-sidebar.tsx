@@ -26,6 +26,7 @@ import {
   traegerSettingsNavItemsFor,
 } from "./traeger-nav-items";
 import { useTraegerReturnHref } from "./traeger-return-path";
+import { TraegerSearchButton } from "./traeger-search";
 
 /** Eigener Schlüssel fürs Träger-Portal; die OGS-App nutzt `sidebar-open-groups`. */
 const openGroupsStorageKey = "traeger-sidebar-open-groups";
@@ -86,6 +87,8 @@ export function TraegerSidebar({
   return (
     <PortalSidebar
       topOffset={topOffset}
+      // Die Suche nach Seiten und Schulen (#7648) steht über den Zielen.
+      search={<TraegerSearchButton />}
       secondaryLabel="Hilfe und Einstellungen"
       secondary={
         <>

@@ -16,6 +16,7 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * dessen Recht die Liste der Schulen (#7646).
  * Der Code per E-Mail ist Pflicht, beim ersten Mal mit Einrichtung (#4651).
  * „Passwort vergessen?“ schickt den Link auf den Träger-Host (#5149).
+ * Die Suche nach Seiten und Schulen mit Strg+K (#7648).
  */
 export function traegerLoginTopic(): HelpTopic {
   return {
@@ -60,6 +61,8 @@ export function traegerLoginTopic(): HelpTopic {
       "Gemerkte Geräte stehen unter `Konto` bei `Meine vertrauten Geräte`. Dort entfernst du ein Gerät wieder.",
       "Am Computer stehen die Bereiche links in der Navigation. Auf dem Handy stehen sie unten. Was dort keinen Platz hat, findest du unter `Mehr`.",
       "Am Computer stehen die Bereiche in Gruppen wie `Übersicht` oder `Finanzen`. Wähle den Namen einer Gruppe. Dann klappt sie zu oder auf. moto merkt sich das auf diesem Gerät. Öffnest du eine Seite, ist ihre Gruppe offen.",
+      "Suchst du eine Seite oder eine Schule? Drücke Strg und K. Am Mac drücke ⌘ und K. Oder wähle oben in der Navigation `Suchen`. Auf dem Handy wählst du unten die Lupe.",
+      "Gib den Namen einer Seite oder Schule ein. Auch der Ort einer Schule passt. Wähle einen Treffer, oder wähle ihn mit den Pfeiltasten und drücke Enter. Du findest nur Seiten, die du öffnen darfst.",
       "`Einstellungen` steht unten in der Navigation. Ein Klick darauf zeigt dort die Einstellungen. `Zurück zur App` führt zurück.",
       "Ein Klick auf das Logo oben links führt zurück zum `Dashboard`. Ohne das Dashboard führt er zu `Schulen`.",
     ],

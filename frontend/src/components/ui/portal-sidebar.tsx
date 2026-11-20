@@ -149,6 +149,7 @@ export function PortalSidebar({
   navLabel = "Hauptnavigation",
   secondary,
   secondaryLabel = "Hilfe",
+  search,
   topOffset,
   className,
 }: {
@@ -163,11 +164,19 @@ export function PortalSidebar({
   readonly secondary?: ReactNode;
   /** Der Name des unteren Blocks für Vorleseprogramme. */
   readonly secondaryLabel?: string;
+  /**
+   * Der Such-Knopf über den Zielen (Träger-Portal, #7648). Er gehört nicht
+   * zur Navigation: Er öffnet einen Dialog, keine Seite.
+   */
+  readonly search?: ReactNode;
   readonly topOffset?: PortalSidebarTopOffset;
   readonly className?: string;
 }) {
   return (
     <PortalSidebarFrame topOffset={topOffset} className={className}>
+      {search ? (
+        <div className={`${SIDEBAR_NAV_PADDING} pb-0`}>{search}</div>
+      ) : null}
       <nav
         aria-label={navLabel}
         className={`flex-1 overflow-y-auto ${SIDEBAR_NAV_PADDING}`}

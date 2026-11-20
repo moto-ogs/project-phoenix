@@ -25,7 +25,13 @@ vi.mock("next-auth/react", () => ({
 }));
 
 import { TraegerReturnPathMemory } from "./traeger-return-path";
+import { TraegerSearchProvider } from "./traeger-search";
 import { TraegerSidebar } from "./traeger-sidebar";
+
+// The search reads the school list from the shared cache (#7648).
+vi.mock("../use-traeger-schools", () => ({
+  useTraegerSchools: () => ({ schools: [], error: null }),
+}));
 
 const ALL_RIGHTS = [
   "traeger_overview:read",
@@ -403,5 +409,25 @@ describe("TraegerSidebar", () => {
         await expectIdleRenderBudget(<TraegerSidebar />);
       },
     );
+  });
+
+  it("puts the search button above the main navigation (#7648)", async () => {
+    const user = userEvent.setup();
+    sessionUser.permissions = ALL_RIGHTS;
+    render(
+      <TraegerSearchProvider>
+        <TraegerSidebar />
+      </TraegerSearchProvider>,
+    );
+
+    const search = screen.getByRole("button", { name: /^Suchen/ });
+    expect(search).toHaveAttribute("aria-keyshortcuts", "Control+K Meta+K");
+    // A dialog opener, not a target of the navigation.
+    expect(mainNav().queryByRole("button", { name: /^Suchen/ })).toBeNull();
+
+    await user.click(search);
+    expect(
+      await screen.findByRole("combobox", { name: "Suchen" }),
+    ).toBeInTheDocument();
   });
 });
