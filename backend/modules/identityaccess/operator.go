@@ -43,8 +43,9 @@ type OperatorDirectory interface {
 
 // OperatorSessionLiveness confirms on every operator request that the
 // operator is active and that the refresh family the access token names is
-// still live and the operator's own. A refusal is ErrOperatorInactive or
-// ErrOperatorNotFound; any other error means the check could not run.
+// still live and the operator's own. A refusal is ErrOperatorInactive,
+// ErrOperatorSessionEnded or ErrOperatorNotFound; any other error means the
+// check could not run.
 type OperatorSessionLiveness interface {
 	VerifyOperatorSession(ctx context.Context, operatorID int64, familyID string) error
 }

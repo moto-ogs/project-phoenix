@@ -17,7 +17,13 @@ var (
 	// expired, was rotated already, was revoked, or never existed
 	// server-side.
 	ErrOperatorRefreshTokenInvalid = errors.New("operator refresh token is invalid")
-	ErrOperatorPasswordMismatch    = errors.New("current password is incorrect")
+	// ErrOperatorSessionEnded refuses an access token whose refresh family
+	// is gone, expired, another operator's, or not named at all: the session
+	// ended (logout, password change, cap) and needs a new sign-in. It is no
+	// statement about the account; a deactivated operator stays
+	// ErrOperatorInactive.
+	ErrOperatorSessionEnded     = errors.New("operator session ended")
+	ErrOperatorPasswordMismatch = errors.New("current password is incorrect")
 	// ErrOperatorAuthenticationUnavailable reports a module composed without
 	// the operator dependencies (repository fixtures, CLI roots that only
 	// read).

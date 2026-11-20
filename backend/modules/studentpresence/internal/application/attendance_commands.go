@@ -25,20 +25,6 @@ func (s *Service) RecordAttendance(ctx context.Context, value studentpresence.At
 	return attendanceToPublic(row), err
 }
 
-func (s *Service) ReviseAttendance(ctx context.Context, value studentpresence.Attendance) (studentpresence.Attendance, error) {
-	row, err := attendanceFromPublic(value)
-	if err != nil {
-		return studentpresence.Attendance{}, err
-	}
-	err = s.runWrite(ctx, "revise_attendance", func(txCtx context.Context) (ports.Stats, error) {
-		if row.StudentID <= 0 || row.Date == "" || row.CheckInTime.IsZero() || row.DeviceID <= 0 || row.ID <= 0 {
-			return ports.Stats{}, errors.New("student presence: invalid attendance")
-		}
-		return s.store.ReviseAttendance(txCtx, row)
-	})
-	return attendanceToPublic(row), err
-}
-
 func (s *Service) DeleteAttendance(ctx context.Context, id int64) error {
 	return s.runWrite(ctx, "delete_attendance", func(txCtx context.Context) (ports.Stats, error) {
 		if id <= 0 {

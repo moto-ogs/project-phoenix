@@ -195,6 +195,38 @@ func TestBuildRejects(t *testing.T) {
 	publicBeside.Portals = []string{PublicPortal, "tenant"}
 	publicLink := get("/api/rows/{token}", inner{})
 	publicLink.Portals = []string{PublicPortal}
+	fileAndJSON := get("/api/rows/export", inner{})
+	fileAndJSON.File = true
+	publicFile := fileRoute("/api/links/{token}/file")
+	publicFile.Portals = []string{PublicPortal}
+	markedSessionFile := fileRoute("/api/rows/{id}/file")
+	markedSessionFile.PublicFile = "the link is the credential"
+	markedPublicJSON := get("/api/links/{token}", inner{})
+	markedPublicJSON.Portals = []string{PublicPortal}
+	markedPublicJSON.PublicFile = "the link is the credential"
+	publicFileWithBody := fileRoute("/api/links/{token}/file")
+	publicFileWithBody.Method = "POST"
+	publicFileWithBody.Portals = []string{PublicPortal}
+	publicFileWithBody.PublicFile = "the link is the credential"
+	publicFileWithBody.Request = body{}
+	publicFileWithBody.MaxBodyBytes = 1024
+	publicUpload := upload()
+	publicUpload.Portals = []string{PublicPortal}
+	uploadWithoutLimit := upload()
+	uploadWithoutLimit.MaxBodyBytes = 0
+	uploadWithoutCode := upload()
+	uploadWithoutCode.TooLargeCode = ""
+	uploadAndBody := upload()
+	uploadAndBody.Request = body{}
+	uploadAndFile := upload()
+	uploadAndFile.Response = nil
+	uploadAndFile.File = true
+	uploadOnGet := upload()
+	uploadOnGet.Method = "GET"
+	uploadRetry := upload()
+	uploadRetry.NoRetryAfterRenewal = "stores the file twice"
+	strayCode := post(body{})
+	strayCode.TooLargeCode = "files.file_too_large"
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -226,6 +258,19 @@ func TestBuildRejects(t *testing.T) {
 		"a public route that names a retry":         {[]Registration{publicRetry}, Options{Identifiers: identifiers}, "has no session to renew"},
 		"a public route beside a session portal":    {[]Registration{publicBeside}, Options{Identifiers: identifiers}, "names no session portal"},
 		"a public pattern a session pattern takes":  {[]Registration{publicLink, get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers}, "overlaps the session route GET /api/rows/{id}"},
+		"a file with a JSON response":               {[]Registration{fileAndJSON}, Options{Identifiers: identifiers}, "registers a file and a JSON response"},
+		"a public file":                             {[]Registration{publicFile}, Options{Identifiers: identifiers}, "answers JSON only"},
+		"a public file marker on a session file":    {[]Registration{markedSessionFile}, Options{Identifiers: identifiers}, "PublicFile marks a file of the portal"},
+		"a public file marker on a JSON route":      {[]Registration{markedPublicJSON}, Options{Identifiers: identifiers}, "PublicFile marks a file of the portal"},
+		"a public file that reads a body":           {[]Registration{publicFileWithBody}, Options{Identifiers: identifiers}, "a public file reads no request body"},
+		"a public upload":                           {[]Registration{publicUpload}, Options{Identifiers: identifiers}, "takes no upload"},
+		"an upload without a body limit":            {[]Registration{uploadWithoutLimit}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
+		"an upload without its too large code":      {[]Registration{uploadWithoutCode}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
+		"an upload beside a JSON body":              {[]Registration{uploadAndBody}, Options{Identifiers: identifiers}, "a multipart upload and a JSON request body"},
+		"an upload with a file response":            {[]Registration{uploadAndFile}, Options{Identifiers: identifiers}, "a multipart upload cannot answer a file"},
+		"an upload on a GET":                        {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
+		"an upload that names a retry":              {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
+		"a too large code without an upload":        {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -435,6 +480,42 @@ func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(source, "maxBodyBytes"))
 }
 
+func fileRoute(pattern string) Registration {
+	return Registration{Method: "GET", Pattern: pattern, Portals: []string{"tenant"}, File: true}
+}
+
+func upload() Registration {
+	return Registration{
+		Method: "POST", Pattern: "/api/rows/{id}/files", Portals: []string{"tenant"},
+		Multipart: true, MaxBodyBytes: 1 << 20, TooLargeCode: "files.file_too_large", Response: inner{},
+	}
+}
+
+// A file answer and a multipart upload are kinds of their own in the model
+// and on the route object: no decoder for the file, no body type for the
+// upload, and the upload names its limit and the code of a larger body.
+func TestTypeScriptWritesAFileAndAnUpload(t *testing.T) {
+	t.Parallel()
+	export := fileRoute("/api/rows/export")
+	export.Query = []QueryParam{{Name: "format", Kind: "string"}}
+	doc, err := Build([]Registration{export, upload()}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	encoded, err := json.Marshal(doc.Routes)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"file":true`)
+	assert.Contains(t, string(encoded), `"max_body_bytes":1048576,"multipart":true,"too_large_code":"files.file_too_large"`)
+	assert.Nil(t, doc.Routes[0].Response)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: [\"format\"],\n    response: fileAnswer,\n  },\n")
+	assert.Contains(t, source, "    maxBodyBytes: 1048576,\n    tooLargeCode: \"files.file_too_large\",\n    request: multipart,\n    response: success(innerSchema),\n")
+	assert.Contains(t, source, "  fileAnswer,\n")
+	assert.Contains(t, source, "  multipart,\n")
+	assert.NotContains(t, source, "requestBody")
+}
+
 // Two portals mount the same handlers, so two resources answer with one Go
 // type. It is written once and both files import it.
 func TestTypeScriptWritesATypeOfTwoResourcesOnce(t *testing.T) {
@@ -572,6 +653,24 @@ func TestATypeOfACycleReadsTheLaterSchemaLazily(t *testing.T) {
 	require.True(t, first >= 0 && second > first, source)
 	assert.Contains(t, source, "  session: optional(lazy(() => sessionSchema)),")
 	assert.Contains(t, source, "  supervisors: optional(arr(nullable(supervisorSchema))),")
+}
+
+// A public file opens only with its own marker, and the marker travels to
+// the proxy, which serves no unmarked public file (ADR 0270, #2352).
+func TestAMarkedPublicFileIsBuiltWithItsReason(t *testing.T) {
+	t.Parallel()
+	download := fileRoute("/api/links/{token}")
+	download.Method = "POST"
+	download.Portals = []string{PublicPortal}
+	download.PublicFile = "the link of the mail is the credential"
+	doc, err := Build([]Registration{download}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	encoded, err := json.Marshal(doc.Routes)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"file":true,"public_file":"the link of the mail is the credential"`)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["links.generated.ts"], "    portals: [\"public\"],\n    publicFile: \"the link of the mail is the credential\",\n")
 }
 
 func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {

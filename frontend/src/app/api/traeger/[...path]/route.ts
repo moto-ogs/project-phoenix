@@ -5,11 +5,12 @@ import { catalogProxy } from "~/lib/traeger/route-wrapper.server";
  * The Träger portal's proxy (#2352). It answers every `/api/traeger/…` path without a
  * route file of its own, and forwards only what the generated contract
  * registers for the portal `org`; everything else is a 404. A route
- * with behavior of its own (session, files, uploads, SSE) keeps its file, and
+ * with behavior of its own (session, SSE, a file or upload it reshapes) keeps its file, and
  * Next prefers that file over this one.
  */
 const routes = portalRoutes.org;
-// The routes of a link or a public form, served without a session.
+// The routes of a link or a public form, served without a session: the
+// holiday link with the form documents it opens.
 const publicRoutes = portalRoutes.public;
 
 export const GET = catalogProxy(routes, "GET", publicRoutes);

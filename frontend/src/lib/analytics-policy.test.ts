@@ -918,6 +918,68 @@ describe("filterAnalyticsEvent", () => {
     }
   });
 
+  // Erste Schritte der Eltern (#7557): feste Checkliste und fester
+  // Schritt-Schlüssel; jeder andere Wert und jedes andere Ereignis fällt weg.
+  it("keeps the onboarding checklist events with allowlisted values only", () => {
+    const parents: AnalyticsContext = { ...ogs, surface: "parents" };
+    for (const step of [
+      "start",
+      "child_data",
+      "messages_news",
+      "install_app",
+      "notifications",
+    ]) {
+      const result = filterAnalyticsEvent(
+        parents,
+        capture("onboarding_checklist_step_done", {
+          checklist: "parent_first_steps",
+          checklist_step: step,
+        }),
+      );
+      expect(result?.event).toBe("onboarding_checklist_step_done");
+      expect(result?.properties.checklist).toBe("parent_first_steps");
+      expect(result?.properties.checklist_step).toBe(step);
+      expect(result?.properties.surface).toBe("parents");
+    }
+    for (const event of [
+      "onboarding_checklist_dismissed",
+      "onboarding_checklist_completed",
+    ]) {
+      const result = filterAnalyticsEvent(
+        parents,
+        capture(event, { checklist: "parent_first_steps" }),
+      );
+      expect(result?.event).toBe(event);
+      expect(result?.properties.checklist).toBe("parent_first_steps");
+    }
+
+    const leaked = filterAnalyticsEvent(
+      parents,
+      capture("onboarding_checklist_step_done", {
+        checklist: "Checkliste von Frau Müller",
+        checklist_step: "childData",
+        step_title: "Angaben zu Lena ändern",
+      }),
+    );
+    expect(leaked?.event).toBe("onboarding_checklist_step_done");
+    expect(leaked?.properties).not.toHaveProperty("checklist");
+    expect(leaked?.properties).not.toHaveProperty("checklist_step");
+    expect(leaked?.properties).not.toHaveProperty("step_title");
+
+    for (const event of [
+      "onboarding_checklist_step_skipped",
+      "onboarding_checklist_opened",
+      "parent_first_steps_completed",
+    ]) {
+      expect(
+        filterAnalyticsEvent(
+          parents,
+          capture(event, { checklist: "parent_first_steps" }),
+        ),
+      ).toBeNull();
+    }
+  });
+
   it("drops a free-text role or a non-numeric school", () => {
     const result = filterAnalyticsEvent(
       ogs,

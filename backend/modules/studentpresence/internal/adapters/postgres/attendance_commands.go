@@ -15,32 +15,6 @@ func (s *Store) RecordAttendance(ctx context.Context, row *ports.Attendance) (po
 	return stats, err
 }
 
-func (s *Store) ReviseAttendance(ctx context.Context, row *ports.Attendance) (ports.Stats, error) {
-	db, tenantID, err := s.database(ctx)
-	if err != nil {
-		return ports.Stats{}, err
-	}
-	if row.TenantID != 0 && row.TenantID != tenantID {
-		return ports.Stats{}, errors.New("student presence: attendance belongs to another tenant")
-	}
-	row.TenantID = tenantID
-	started := time.Now()
-	result, err := db.NewUpdate().Model(attendanceRowFromRecord(row)).ModelTableExpr(`active.attendance AS "attendance"`).
-		WherePK().Where("attendance.tenant_id = ?", tenantID).Exec(ctx)
-	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
-	if err != nil {
-		return stats, fmt.Errorf("update attendance: %w", err)
-	}
-	stats.Rows, err = result.RowsAffected()
-	if err != nil {
-		return stats, fmt.Errorf("update attendance: %w", err)
-	}
-	if stats.Rows != 1 {
-		return stats, fmt.Errorf("expected 1 rows affected, got %d", stats.Rows)
-	}
-	return stats, nil
-}
-
 func (s *Store) DeleteAttendance(ctx context.Context, id int64) (ports.Stats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {

@@ -10,11 +10,12 @@ import {
   underOutsideHead,
 } from "~/lib/contract/catalog-outside-mounts";
 import { portalRoutes } from "~/lib/contract/portals.generated";
+import { fileAnswer, multipart } from "~/lib/contract/runtime";
 
 /**
  * A registered route reaches its portal's catalog proxy only when no route
- * file with a dynamic segment stands in front of it: Next prefers
- * `billing-families/[id]` over `[...path]` for
+ * file with a dynamic segment stands in front of it: Next would prefer a
+ * `billing-families/[id]/route.ts` over `[...path]` for
  * `billing-families/debtor-number-format`, and that file would answer with
  * its own backend call (#2352). Such a route keeps a literal route file that
  * hands the request to the proxy.
@@ -38,18 +39,22 @@ const BFF_PREFIX: Record<SessionPortal, [string, string]> = {
  */
 const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/invitations/[[...path]]": "tenant",
+  "/api/auth/guardian-invitations/[...path]": "tenant",
+  "/api/auth/holiday-parent-setups/[...path]": "tenant",
+  "/api/auth/tenants": "tenant",
   "/api/auth/roles/[[...path]]": "tenant",
   "/api/auth/permissions/[[...path]]": "tenant",
   "/api/auth/accounts/[accountId]/[...path]": "tenant",
-  "/api/auth/mfa/trusted-devices/[...path]": "tenant",
-  "/api/auth/passkeys/[...path]": "tenant",
+  "/api/auth/mfa/trusted-devices/[[...path]]": "tenant",
+  "/api/auth/passkeys/[[...path]]": "tenant",
   "/api/auth/account/[...path]": "tenant",
   "/api/auth/link-to-tenant/[[...path]]": "tenant",
   "/api/auth/register/[[...path]]": "tenant",
   "/api/auth/staff-preview/[...path]": "tenant",
   "/api/auth/password-reset/[[...path]]": "tenant",
-  "/api/caterer/auth/mfa/trusted-devices/[...path]": "caterer",
-  "/api/caterer/auth/passkeys/[...path]": "caterer",
+  "/api/auth/password/[[...path]]": "tenant",
+  "/api/caterer/auth/mfa/trusted-devices/[[...path]]": "caterer",
+  "/api/caterer/auth/passkeys/[[...path]]": "caterer",
   "/api/caterer/auth/password-reset/[[...path]]": "caterer",
   "/api/parent/auth/password-reset/[[...path]]": "parent",
   "/api/school/auth/mfa/[...path]": "school",
@@ -58,7 +63,7 @@ const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/traeger/auth/password-reset/[[...path]]": "org",
   "/api/operator/auth/email-confirm/[[...path]]": "platform",
   "/api/operator/auth/mfa/[...path]": "platform",
-  "/api/operator/auth/passkeys/[...path]": "platform",
+  "/api/operator/auth/passkeys/[[...path]]": "platform",
 };
 
 const apiDir = path.dirname(new URL(import.meta.url).pathname);
@@ -132,6 +137,13 @@ const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
     return {
       portal: name,
       pattern,
+      // A file answer or a multipart upload (ADR 0270, addendum 2026-11-19).
+      streamed: routes.some(
+        (route) =>
+          route.pattern === pattern &&
+          ((route as { response: unknown }).response === fileAnswer ||
+            (route as { request?: unknown }).request === multipart),
+      ),
       // Without a trailing slash, as the browser calls it.
       bff:
         portal === null
@@ -215,6 +227,32 @@ describe("route file in front of a portal's catalog proxy", () => {
 });
 
 /**
+ * A file or upload the contract registers streams through the catalog proxy,
+ * which answers it private and uncached (#2352). A route file of its own on
+ * the same path would win and keep the old helper alive beside the
+ * contract: the file goes once its route is registered.
+ */
+describe("registered file or upload route", () => {
+  const streamed = cases.filter((entry) => entry.streamed);
+
+  it("exists in the contract", () => {
+    expect(streamed.length).toBeGreaterThan(0);
+  });
+
+  it.each(streamed)(
+    "$portal $bff reaches the catalog proxy, not a route file",
+    ({ bff, catchAlls }) => {
+      const sample = bff!
+        .split("/")
+        .map((segment) => (isParam(segment) ? "1" : segment))
+        .join("/");
+      const selected = routeFiles.find(({ match }) => match(sample))?.route;
+      expect(catchAlls).toContain(selected);
+    },
+  );
+});
+
+/**
  * Paths whose own route file is gone (#2352, #7563): Next must hand them to
  * the portal's catch-all, not to a dynamic neighbour or Auth.js. Before,
  * `time-tracking/[id]` caught `time-tracking/current` and literal hand-off
@@ -232,12 +270,62 @@ describe("path freed from its own route file", () => {
     ["/api/enrollment/legal/schule/1", "/api/[...path]"],
     ["/api/staff/shifts/overview", "/api/[...path]"],
     ["/api/timetable/conflict-check", "/api/[...path]"],
+    // Its hand-off file is gone: billing-families/[id] has no route file.
     [
       "/api/traeger/billing-families/debtor-number-format",
-      "/api/traeger/billing-families/debtor-number-format",
+      "/api/traeger/[...path]",
     ],
     ["/api/operator/schools/1/pwa-usage", "/api/operator/[...path]"],
     ["/api/parent/me/calendar", "/api/parent/[...path]"],
+    // Former temporary route files of the previous bundle (#2352, #7563).
+    ["/api/students", "/api/[...path]"],
+    ["/api/students/1", "/api/[...path]"],
+    ["/api/students/change-requests", "/api/[...path]"],
+    ["/api/students/day-log", "/api/[...path]"],
+    ["/api/students/ogs-group-live", "/api/[...path]"],
+    ["/api/students/1/documents", "/api/students/[id]/documents"],
+    ["/api/staff/1", "/api/[...path]"],
+    ["/api/staff/by-role", "/api/[...path]"],
+    ["/api/staff/qualification-types", "/api/[...path]"],
+    ["/api/rooms/1", "/api/[...path]"],
+    ["/api/rooms/by-category", "/api/[...path]"],
+    ["/api/activities/1", "/api/[...path]"],
+    ["/api/activities/quick-create", "/api/[...path]"],
+    ["/api/iot/device-slots", "/api/[...path]"],
+    ["/api/search", "/api/[...path]"],
+    // A list on the bare path reaches the portal's proxy, not Auth.js.
+    ["/api/auth/passkeys", "/api/auth/passkeys/[[...path]]"],
+    ["/api/auth/passkeys/register/options", "/api/auth/passkeys/[[...path]]"],
+    [
+      "/api/auth/mfa/trusted-devices",
+      "/api/auth/mfa/trusted-devices/[[...path]]",
+    ],
+    ["/api/auth/password", "/api/auth/password/[[...path]]"],
+    ["/api/auth/accounts/1/mfa", "/api/auth/accounts/[accountId]/[...path]"],
+    [
+      "/api/caterer/auth/mfa/trusted-devices",
+      "/api/caterer/auth/mfa/trusted-devices/[[...path]]",
+    ],
+    ["/api/caterer/auth/passkeys", "/api/caterer/auth/passkeys/[[...path]]"],
+    ["/api/caterer/account/password", "/api/caterer/[...path]"],
+    ["/api/caterer/account/mfa/disable", "/api/caterer/[...path]"],
+    ["/api/operator/auth/passkeys", "/api/operator/auth/passkeys/[[...path]]"],
+    ["/api/operator/profile/password", "/api/operator/[...path]"],
+    ["/api/school/auth/mfa/trusted-devices", "/api/school/auth/mfa/[...path]"],
+    [
+      "/api/traeger/auth/mfa/trusted-devices",
+      "/api/traeger/auth/mfa/[...path]",
+    ],
+    ["/api/parent/me/mfa", "/api/parent/[...path]"],
+    ["/api/parent/me/children/1/sick-note", "/api/parent/[...path]"],
+    // Files and an upload of the contract (#2352).
+    ["/api/students/day-log/export", "/api/[...path]"],
+    ["/api/traeger/access-log/export", "/api/traeger/[...path]"],
+    ["/api/traeger/documents/1/file", "/api/traeger/[...path]"],
+    [
+      "/api/traeger/holiday-periods/1/registrations/2/proofs",
+      "/api/traeger/[...path]",
+    ],
   ])("%s goes to %s", (sample, expected) => {
     expect(routeFiles.find(({ match }) => match(sample))?.route).toBe(expected);
   });

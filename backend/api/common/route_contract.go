@@ -63,6 +63,28 @@ type RouteContract struct {
 	// MaxBodyBytes is the largest request body the proxy reads; it answers a
 	// larger one 413 without calling the backend. Zero sets no limit.
 	MaxBodyBytes int
+	// File replaces Response on a route that answers a file: its bytes with
+	// Content-Type and Content-Disposition instead of the envelope. The proxy
+	// streams them through and never caches them; an error keeps the envelope.
+	File bool
+	// Multipart replaces Request on a route that takes a multipart/form-data
+	// upload. The proxy streams the body to the backend without reading it,
+	// sends it once (no retry after a session renewal) and needs
+	// MaxBodyBytes and TooLargeCode. MaxBodyBytes leaves room for the
+	// multipart frame, so a file a little too large still reaches the
+	// backend's own check.
+	Multipart bool
+	// TooLargeCode is the registered error code the proxy answers a multipart
+	// body over MaxBodyBytes with: the code the backend answers a too large
+	// file with, so the client shows the same text.
+	TooLargeCode string
+	// PublicFile opens a file to the portal public, route by route
+	// (#2352, ADR 0270): it says why the link in the path alone may hand out
+	// the file. The proxy sends no session, no bearer and no body, and the
+	// backend's limiter of the link keys the request by client IP. Only a
+	// File route of the portal public names it; a public file without it is
+	// refused, as is a public upload.
+	PublicFile string
 }
 
 // QueryKind is the value form of a query parameter.

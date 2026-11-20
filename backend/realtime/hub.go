@@ -97,6 +97,9 @@ type Hub struct {
 	logger              *slog.Logger
 	observeConnection   ConnectionObserver
 	observeBroadcast    BroadcastObserver
+	// draining closes when the process starts to stop (Drain). Every open
+	// stream then ends, so its browser reconnects to another replica (#7226).
+	draining chan struct{}
 }
 
 // getLogger returns a nil-safe logger, falling back to slog.Default() if logger is nil
@@ -128,8 +131,31 @@ func NewHub(logger *slog.Logger, observers ...Observers) *Hub {
 		logger:               logger,
 		observeConnection:    observe.Connection,
 		observeBroadcast:     observe.Broadcast,
+		draining:             make(chan struct{}),
 	}
 }
+
+// Drain ends the streams of this process: every open stream and every stream
+// that registers afterwards sees Draining closed and returns, so its browser
+// reconnects through the load balancer to another replica (#7226). The
+// process root calls it once the process starts to stop. Repeated calls are
+// harmless.
+func (h *Hub) Drain() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.draining == nil {
+		return
+	}
+	select {
+	case <-h.draining:
+	default:
+		close(h.draining)
+		h.getLogger().Info("SSE hub draining", slog.Int("open_streams", len(h.clients)))
+	}
+}
+
+// Draining is closed once Drain ran. A hub not built by NewHub never drains.
+func (h *Hub) Draining() <-chan struct{} { return h.draining }
 
 // Register adds a STAFF (tenant-portal) client to the hub and subscribes them to
 // the specified active groups.

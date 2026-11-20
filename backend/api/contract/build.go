@@ -145,13 +145,17 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 	route := Route{
 		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
 		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
+		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
 		return route, fmt.Errorf("invalid route registration %q", where)
 	}
-	if rc.MaxBodyBytes < 0 || (rc.MaxBodyBytes > 0 && rc.Request == nil) {
+	if rc.MaxBodyBytes < 0 || (rc.MaxBodyBytes > 0 && rc.Request == nil && !rc.Multipart) {
 		return route, fmt.Errorf("%s: a body limit needs a positive size and a request body", where)
+	}
+	if err := multipartTraits(rc, where); err != nil {
+		return route, err
 	}
 	if len(rc.Portals) == 0 {
 		return route, fmt.Errorf("%s names no portal", where)
@@ -187,14 +191,49 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 	return query, nil
 }
 
+// multipartTraits refuses an upload the proxy cannot stream: one without a
+// bound, without the code of its refusal, beside a JSON body or file answer,
+// or with a retry trait although an upload is sent only once.
+func multipartTraits(rc Registration, where string) error {
+	if !rc.Multipart {
+		if rc.TooLargeCode != "" {
+			return fmt.Errorf("%s: TooLargeCode belongs to a multipart upload", where)
+		}
+		return nil
+	}
+	switch {
+	case !slices.Contains([]string{"POST", "PUT", "PATCH"}, rc.Method):
+		return fmt.Errorf("%s: a multipart upload is a POST, PUT or PATCH", where)
+	case rc.Request != nil:
+		return fmt.Errorf("%s registers a multipart upload and a JSON request body", where)
+	case rc.File:
+		return fmt.Errorf("%s: a multipart upload cannot answer a file", where)
+	case rc.MaxBodyBytes == 0 || rc.TooLargeCode == "":
+		return fmt.Errorf("%s: a multipart upload needs MaxBodyBytes and TooLargeCode", where)
+	case rc.NoRetryAfterRenewal != "":
+		return fmt.Errorf("%s: a multipart upload is sent once; drop NoRetryAfterRenewal", where)
+	}
+	return nil
+}
+
+// withoutData handles the two answers that carry no data member: a file and
+// no data. It reports whether the registration was one of them.
+func withoutData(route *Route, rc Registration) (bool, error) {
+	data := rc.Response != nil || rc.Variants != nil || rc.Paginated
+	switch {
+	case rc.File && (data || rc.NoData):
+		return true, fmt.Errorf("%s registers a file and a JSON response", route.Key())
+	case rc.NoData && data:
+		return true, fmt.Errorf("%s registers a response and no data", route.Key())
+	}
+	route.NoData = rc.NoData
+	return rc.File || rc.NoData, nil
+}
+
 func (b *builder) responses(route *Route, rc Registration, options Options) error {
 	where := route.Key()
-	if rc.NoData {
-		if rc.Response != nil || rc.Variants != nil || rc.Paginated {
-			return fmt.Errorf("%s registers a response and no data", where)
-		}
-		route.NoData = true
-		return nil
+	if handled, err := withoutData(route, rc); handled {
+		return err
 	}
 	if rc.Variants == nil {
 		if rc.Response == nil {

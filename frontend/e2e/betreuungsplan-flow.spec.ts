@@ -77,9 +77,13 @@ async function createGapInstance(
 ): Promise<{ id: string; startTime: string }> {
   const startTime = "11:00";
   const endTime = "12:00";
-  const rooms = (await (await page.request.get(`${base}/api/rooms`)).json()) as
-    { data: Array<{ id: string | number }> } | Array<{ id: string | number }>;
-  const roomList = Array.isArray(rooms) ? rooms : rooms.data;
+  // The catalog proxy answers the contract's list in the envelope.
+  const rooms = (await (
+    await page.request.get(`${base}/api/rooms`)
+  ).json()) as {
+    data: Array<{ id: string }>;
+  };
+  const roomList = rooms.data;
   expect(
     roomList.length,
     "Tenant braucht mindestens einen Raum",

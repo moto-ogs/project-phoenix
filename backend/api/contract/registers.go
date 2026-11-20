@@ -63,6 +63,14 @@ type Registration struct {
 	// common.RouteContract.
 	NoRetryAfterRenewal string
 	MaxBodyBytes        int
+	// File, Multipart and TooLargeCode are the file traits of
+	// common.RouteContract.
+	File         bool
+	Multipart    bool
+	TooLargeCode string
+	// PublicFile is the marker of common.RouteContract that opens one
+	// file to the portal public.
+	PublicFile string
 }
 
 // VariantSpec is a response whose shape a query parameter selects.

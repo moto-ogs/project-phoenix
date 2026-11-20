@@ -103,14 +103,26 @@ export function readBrowserEvents(
   return events;
 }
 
+/** The values of a `const NAME = [...] as const` list in analytics-policy.ts. */
+function readPolicyList(name, source) {
+  const body = new RegExp(`const ${name} = \\[([\\s\\S]*?)\\] as const;`).exec(source)?.[1];
+  const values = body ? [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, value]) => value) : [];
+  if (values.length === 0) throw new Error(`analytics-policy.ts has no ${name}`);
+  return values;
+}
+
 /** The allowed surfaces of the entry (ONBOARDING_SURFACES in analytics-policy.ts). */
 export function readOnboardingSurfaces(
   source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
 ) {
-  const body = /const ONBOARDING_SURFACES = \[([\s\S]*?)\] as const;/.exec(source)?.[1];
-  const surfaces = body ? [...body.matchAll(/^\s*"([a-z_]+)",/gm)].map(([, surface]) => surface) : [];
-  if (surfaces.length === 0) throw new Error('analytics-policy.ts has no ONBOARDING_SURFACES');
-  return surfaces;
+  return readPolicyList('ONBOARDING_SURFACES', source);
+}
+
+/** The allowed steps of the parents' first steps (ONBOARDING_CHECKLIST_STEPS in analytics-policy.ts). */
+export function readOnboardingChecklistSteps(
+  source = readFileSync(resolve(repositoryRoot, 'frontend/src/lib/analytics-policy.ts'), 'utf8'),
+) {
+  return readPolicyList('ONBOARDING_CHECKLIST_STEPS', source);
 }
 
 // --- query builders ----------------------------------------------------------
@@ -357,6 +369,23 @@ export const NO_FEATURE_PAGES = Object.freeze({
   school: ['/login', '/invite', '/reset-password'],
 });
 
+/** Server events of the care worker's first steps (#7553, core_actions.go). */
+export const STAFF_FIRST_STEPS_EVENTS = Object.freeze(['staff_first_step_changed', 'staff_first_steps_completed', 'staff_first_steps_dismissed']);
+
+/**
+ * German names of the first steps' steps, one per STAFF_ONBOARDING_STEP_KEYS
+ * in staff-onboarding-api.ts (the test compares both), as the checklist
+ * titles them.
+ */
+export const STAFF_FIRST_STEP_LABELS = Object.freeze({
+  groups: 'Meine Gruppe ansehen',
+  students: 'Ein Kind finden und Angaben ansehen',
+  attendance: 'Ein Kind an- und abmelden',
+  calendar: 'Meine Termine ansehen',
+  supervision: 'Eine Aufsicht starten',
+  work_time: 'Arbeitszeit erfassen',
+});
+
 /**
  * Events that are no feature use: sessions, devices, the demo funnel, and
  * what the school's caterer saves (an outside party; the caterer dashboard
@@ -366,6 +395,8 @@ const NO_FEATURE_EVENTS = [
   'login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'page_viewed',
   // The install hint and its browser dialog: getting in, not using a feature.
   'pwa_installed', 'pwa_install_prompt_shown', 'pwa_install_prompt_accepted', 'pwa_install_prompt_dismissed',
+  // The care worker's first steps (#7553): getting in, not using a feature.
+  ...STAFF_FIRST_STEPS_EVENTS,
   'caterer_invite_accepted', 'meal_order_confirmed',
   // Clicks inside a page the browser reports (tab, bell): the page view
   // already counts the feature, a click is no action of its own.
@@ -384,6 +415,19 @@ export const ONBOARDING_SURFACE_LABELS = Object.freeze({
   notification_setup: 'Benachrichtigungs-Einrichtung',
   install_hint: 'Installations-Hinweis',
   samsung_hint: 'Samsung-Hinweis',
+});
+
+/**
+ * German names of the steps of the parents' first steps (#7557), one per value
+ * of ONBOARDING_CHECKLIST_STEPS in analytics-policy.ts (the test compares both).
+ * `messages_news` is „Nachrichten finden“ where the school sends no letters.
+ */
+export const PARENT_FIRST_STEP_LABELS = Object.freeze({
+  start: 'Startseite kennenlernen',
+  child_data: 'Angaben zum Kind ändern',
+  messages_news: 'Nachrichten und Elternbriefe finden',
+  install_app: 'moto als App hinzufügen',
+  notifications: 'Benachrichtigungen einschalten',
 });
 
 /** Area unmatched pages and events fall into; growing means FEATURES lacks an entry. */
@@ -439,9 +483,39 @@ const quoted = (name) => `\`${name}\``;
 /** Browser events of the entry's self-opening surfaces (analytics-policy.ts). */
 const ONBOARDING_SURFACE_EVENTS = ['onboarding_surface_shown', 'onboarding_surface_accepted', 'onboarding_surface_dismissed'];
 
+/** Browser events of the parents' first steps (analytics-policy.ts, #7557). */
+const PARENT_CHECKLIST_EVENTS = ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed'];
+
 /** HogQL: the German name of an event's surface; an unknown value shows as itself. */
 const sqlArray = (values) => `[${values.map(sqlString).join(', ')}]`;
+const staffStepLabel = `transform(toString(properties.step), ${sqlArray(Object.keys(STAFF_FIRST_STEP_LABELS))}, ${sqlArray(Object.values(STAFF_FIRST_STEP_LABELS))}, toString(properties.step))`;
+const parentStepLabel = `transform(toString(properties.checklist_step), ${sqlArray(Object.keys(PARENT_FIRST_STEP_LABELS))}, ${sqlArray(Object.values(PARENT_FIRST_STEP_LABELS))}, toString(properties.checklist_step))`;
 const surfaceLabel = `transform(toString(properties.onboarding_surface), ${sqlArray(Object.keys(ONBOARDING_SURFACE_LABELS))}, ${sqlArray(Object.values(ONBOARDING_SURFACE_LABELS))}, toString(properties.onboarding_surface))`;
+
+/**
+ * Core actions of the leadership's setup checklist (#7554), sent by the
+ * server for every school that allows the usage analytics, with or without
+ * the person's consent. A done step has no event: the server derives it.
+ */
+const SETUP_CHECKLIST_EVENTS = {
+  completed: 'onboarding_setup_checklist_completed',
+  dismissed: 'onboarding_setup_checklist_dismissed',
+  stepSkipped: 'onboarding_setup_checklist_step_skipped',
+};
+
+/**
+ * German names of the setup checklist's steps (schoolsetup.StepKeys), short
+ * forms of the checklist's titles (a query naming a person fails the guard).
+ */
+export const SETUP_CHECKLIST_STEP_LABELS = Object.freeze({
+  team: 'Team einladen',
+  rooms: 'Raum anlegen',
+  groups: 'Gruppe anlegen',
+  students: 'Kind anlegen',
+  guardians: 'Eltern einladen',
+  worktime: 'Arbeitszeitmodelle eintragen',
+});
+const setupStepLabel = `transform(toString(properties.step), ${sqlArray(Object.keys(SETUP_CHECKLIST_STEP_LABELS))}, ${sqlArray(Object.values(SETUP_CHECKLIST_STEP_LABELS))}, toString(properties.step))`;
 
 /** HogQL: the product name of a school portal (`surface`). */
 const portalLabel = (surface) => `multiIf(${surface} = 'ogs', 'OGS-App', ${surface} = 'school', 'Schul-App', ${surface} = 'parents', 'Eltern-App', 'unbekannt')`;
@@ -1130,8 +1204,42 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
     },
     {
       name: 'Nutzungsanalyse: Einstieg',
-      description: 'Was beim Einstieg in moto von selbst aufgeht und was Personen damit tun, in echten Schulen (deployment = moto-app.de). Die Flächen meldet der Browser, also nur mit Einwilligung: Personen ohne Einwilligung und die allererste Sitzung vor der Einwilligung fehlen. Die Werte sind deshalb verzerrt und kein Gesamtwert. ' + WORKDAYS_NOTE,
+      description: 'Was beim Einstieg in moto von selbst aufgeht und was Personen damit tun, in echten Schulen (deployment = moto-app.de). Die Flächen meldet der Browser, also nur mit Einwilligung: Personen ohne Einwilligung und die allererste Sitzung vor der Einwilligung fehlen. Die Werte sind deshalb verzerrt und kein Gesamtwert. Kacheln „vom Server“ zählen dagegen jede Schule, die die Nutzungsanalyse zulässt, auch ohne Einwilligung der Person. ' + WORKDAYS_NOTE,
       insights: [
+        {
+          name: 'Einstieg: Erste Schritte der Betreuung abgeschlossen oder ausgeblendet (vom Server)',
+          description: 'Vom Server, also auch ohne Einwilligung, letzte 30 Tage. Wie oft Betreuungskräfte ihre Ersten Schritte mit „Abschließen“ beendet oder vorher mit „Ausblenden“ geschlossen haben, und der Anteil an beiden zusammen. Personen werden nicht gezählt.',
+          ...hogql('production', (where) => `
+select
+  countIf(event = 'staff_first_steps_completed') as Abgeschlossen,
+  countIf(event = 'staff_first_steps_dismissed') as Ausgeblendet,
+  round(100 * countIf(event = 'staff_first_steps_completed') / greatest(count(), 1), 1) as ${quoted('Abschlussquote in Prozent')},
+  round(100 * countIf(event = 'staff_first_steps_dismissed') / greatest(count(), 1), 1) as ${quoted('Schließquote in Prozent')},
+  uniq(properties.school_id) as Schulen
+from events
+where ${where}
+  and event in ${sqlList(['staff_first_steps_completed', 'staff_first_steps_dismissed'])}
+  and properties.surface = 'ogs'
+  and timestamp > now() - interval 30 day`),
+        },
+        {
+          name: 'Einstieg: Erste Schritte der Betreuung je Schritt (vom Server)',
+          description: 'Vom Server, also auch ohne Einwilligung, letzte 30 Tage. Je Schritt: wie oft er erledigt, übersprungen oder wieder geöffnet wurde. Viele Übersprünge zeigen einen Schritt, den Betreuungskräfte nicht brauchen.',
+          ...hogql('production', (where) => `
+select
+  ${staffStepLabel} as Schritt,
+  countIf(properties.action = 'done') as Erledigt,
+  countIf(properties.action = 'skipped') as ${quoted('Übersprungen')},
+  countIf(properties.action = 'reopened') as ${quoted('Wieder geöffnet')},
+  uniq(properties.school_id) as Schulen
+from events
+where ${where}
+  and event = 'staff_first_step_changed'
+  and properties.surface = 'ogs'
+  and timestamp > now() - interval 30 day
+group by Schritt
+order by ${quoted('Übersprungen')} desc`),
+        },
         {
           name: 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)',
           description: 'Nur mit Einwilligung, letzte 30 Tage. Je Fläche und Portal: wie oft sie erschien, wie oft die Person ihr Angebot annahm und wie oft sie sie schloss. Die Antwort im Installations-Dialog des Browsers steht nicht hier.',
@@ -1178,6 +1286,90 @@ from (
 )
 group by Portal, Flaechen
 order by Portal, Flaechen`),
+        },
+        {
+          name: 'Einstieg: Erste Schritte der Eltern (nur mit Einwilligung)',
+          description: 'Nur mit Einwilligung, letzte 30 Tage, Eltern-App. Wie oft die Liste von selbst aufging, welche Schritte erledigt wurden und wie oft Eltern die Liste ausblendeten oder mit „Erste Schritte abschließen“ abschlossen; der Anteil bezieht sich auf „von selbst geöffnet“. Der Fortschritt liegt nur im Browser; ein neues Gerät beginnt von vorn. Die allererste Sitzung vor der Einwilligung fehlt immer.',
+          ...hogql('production', (where) => `
+select
+  multiIf(
+    event = 'onboarding_surface_shown', '1 Von selbst geöffnet',
+    event = 'onboarding_checklist_step_done', '2 Schritt erledigt',
+    event = 'onboarding_checklist_dismissed', '3 Ausgeblendet',
+    '4 Abgeschlossen') as Ereignis,
+  if(event = 'onboarding_checklist_step_done', ${parentStepLabel}, '–') as Schritt,
+  count() as Anzahl,
+  round(100 * count() / greatest(sum(countIf(event = 'onboarding_surface_shown')) over (), 1), 1) as ${quoted('Anteil an „von selbst geöffnet“ in Prozent')},
+  uniq(properties.$session_id) as Sitzungen
+from events
+where ${where}
+  and properties.surface = 'parents'
+  and (
+    (event = 'onboarding_surface_shown' and properties.onboarding_surface = 'parent_first_steps')
+    or (event in ${sqlList(PARENT_CHECKLIST_EVENTS)} and properties.checklist = 'parent_first_steps')
+  )
+  and timestamp > now() - interval 30 day
+group by Ereignis, Schritt
+order by Ereignis, Anzahl desc`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: abgeschlossen und ausgeblendet',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Schulen, deren Leitung in der Checkliste etwas tat: abschließen, Schritt überspringen oder ausblenden. Abschließen gilt für die Schule, Ausblenden für eine Person; die Schule zählt als ausgeblendet, sobald jemand ausblendet. Nur angesehene Checklisten fehlen; sie stehen in der Kachel je Fläche.',
+          ...hogql('production', (where) => `
+select
+  count() as ${quoted('Schulen mit Checkliste')},
+  countIf(HatAbgeschlossen = 1) as ${quoted('Abgeschlossen')},
+  countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) as ${quoted('Ausgeblendet ohne Abschluss')},
+  round(100 * countIf(HatAbgeschlossen = 1) / greatest(count(), 1), 1) as ${quoted('Abgeschlossen in Prozent')},
+  round(100 * countIf(HatAusgeblendet = 1 and HatAbgeschlossen = 0) / greatest(count(), 1), 1) as ${quoted('Ausgeblendet in Prozent')}
+from (
+  select
+    toString(properties.school_id) as Schule_ID,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.completed)}) > 0 as HatAbgeschlossen,
+    countIf(event = ${sqlString(SETUP_CHECKLIST_EVENTS.dismissed)}) > 0 as HatAusgeblendet
+  from events
+  where ${where}
+    and event in ${sqlList(Object.values(SETUP_CHECKLIST_EVENTS))}
+    and ${SCHOOL_EVENT}
+    and timestamp > now() - interval 30 day
+  group by Schule_ID
+)`),
+        },
+        {
+          name: 'Einrichtungs-Checkliste: übersprungene Schritte',
+          description: 'Vom Server, auch ohne Einwilligung, letzte 30 Tage. Welche Schritte die Leitung überspringt, und in wie vielen Schulen. Wer einen Sprung zurücknimmt und neu überspringt, zählt bei „Übersprungen“ doppelt, bei „Schulen“ nicht.',
+          ...hogql('production', (where) => `
+select
+  ${setupStepLabel} as Schritt,
+  count() as ${quoted('Übersprungen')},
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and event = ${sqlString(SETUP_CHECKLIST_EVENTS.stepSkipped)}
+  and ${SCHOOL_EVENT}
+  and timestamp > now() - interval 30 day
+group by Schritt
+order by Schulen desc`),
+        },
+        {
+          name: 'Einstieg: Benachrichtigungs-Einrichtung je Portal (nur mit Einwilligung)',
+          description: 'Nur mit Einwilligung, letzte 30 Tage. Der Benachrichtigungs-Dialog, der sich nach dem Login von selbst öffnet, je Portal: wie oft er erschien, eingeschaltet wurde (fertig) und auf später geschoben (Später erinnern, Verstanden, Anleitung schließen, X). Ein Neustart aus den Einstellungen zählt nicht. Vorher-Wert für #7542.',
+          ...hogql('production', (where) => `
+select
+  ${portalLabel('properties.surface')} as Portal,
+  countIf(event = 'onboarding_surface_shown') as Angezeigt,
+  countIf(event = 'onboarding_surface_accepted') as Eingeschaltet,
+  countIf(event = 'onboarding_surface_dismissed') as ${quoted('Auf später')},
+  round(100 * countIf(event = 'onboarding_surface_accepted') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Eingeschaltet in Prozent')},
+  round(100 * countIf(event = 'onboarding_surface_dismissed') / greatest(countIf(event = 'onboarding_surface_shown'), 1), 1) as ${quoted('Auf später in Prozent')}
+from events
+where ${where}
+  and event in ${sqlList(ONBOARDING_SURFACE_EVENTS)}
+  and properties.onboarding_surface = 'notification_setup'
+  and ${portalCondition}
+  and timestamp > now() - interval 30 day
+group by Portal
+order by Angezeigt desc`),
         },
       ],
     },

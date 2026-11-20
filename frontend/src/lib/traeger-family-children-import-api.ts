@@ -103,7 +103,7 @@ interface BackendRow {
   child_birth_date: string | null;
   school_name: string;
   children: number | null;
-  contract_id?: number;
+  contract_id?: string;
   valid_from: string | null;
   confirmed_children: number | null;
   problems: FamilyImportProblem[] | null;
@@ -114,9 +114,9 @@ interface BackendResult {
   encoding: string;
   delimiter: string;
   headers: string[] | null;
-  mapping: { columns: Record<FamilyImportField, string>; school_id: number };
+  mapping: { columns: Record<FamilyImportField, string>; school_id: string };
   unmapped: FamilyImportField[] | null;
-  schools: { id: number; name: string }[] | null;
+  schools: { id: string; name: string }[] | null;
   fingerprint?: string;
   applied: boolean;
   counts: FamilyImportCounts;
@@ -140,6 +140,9 @@ function mapRow(row: BackendRow): FamilyImportRow {
   };
 }
 
+/** The school of a mapping as the catalog proxy sends it; "0" names none. */
+const mappedSchoolId = (id: string): string => (id === "0" ? "" : id);
+
 function mapImportResult(result: BackendResult): FamilyImportResult {
   return {
     encoding: result.encoding,
@@ -147,9 +150,7 @@ function mapImportResult(result: BackendResult): FamilyImportResult {
     headers: result.headers ?? [],
     mapping: {
       columns: result.mapping.columns,
-      schoolId: result.mapping.school_id
-        ? String(result.mapping.school_id)
-        : "",
+      schoolId: mappedSchoolId(result.mapping.school_id),
     },
     unmapped: result.unmapped ?? [],
     schools: (result.schools ?? []).map((school) => ({

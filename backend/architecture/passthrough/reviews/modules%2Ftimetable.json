@@ -522,11 +522,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromInstanceStudentRecords.ReconcileAttendanceInterval",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromInstanceStudentRecords.ReleasePartialAbsence",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

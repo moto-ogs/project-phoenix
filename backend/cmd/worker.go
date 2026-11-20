@@ -15,7 +15,7 @@ may start beside a serve process that still runs the embedded worker.
 It needs the same configuration as serve and listens on PORT for /health
 (alive), /ready (holds the lease) and /internal/metrics.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runServeRoot(cmd, api.ServeWorkerOnly)
+		return runServeRoot(cmd, api.ServeWorkerOnly, 0)
 	},
 }
 

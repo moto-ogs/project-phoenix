@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
+  fileAnswer,
   int64StringOrNumber,
   nullable,
   object,
@@ -103,6 +104,22 @@ export interface GetTraegerCareTimeOverrunsChildrenQuery {
   to?: string;
 }
 
+/** Query of GET /traeger/care-time-overruns/children/export */
+export interface GetTraegerCareTimeOverrunsChildrenExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  from?: string;
+  school_id?: string;
+  to?: string;
+}
+
+/** Query of GET /traeger/care-time-overruns/export */
+export interface GetTraegerCareTimeOverrunsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  from?: string;
+  school_id?: string;
+  to?: string;
+}
+
 export const routes = {
   "GET /traeger/care-time-overruns/": {
     method: "GET",
@@ -117,5 +134,19 @@ export const routes = {
     portals: ["org"],
     query: ["from", "school_id", "to"],
     response: success(OverrunEvaluationSchema),
+  },
+  "GET /traeger/care-time-overruns/children/export": {
+    method: "GET",
+    pattern: "/traeger/care-time-overruns/children/export",
+    portals: ["org"],
+    query: ["format", "from", "school_id", "to"],
+    response: fileAnswer,
+  },
+  "GET /traeger/care-time-overruns/export": {
+    method: "GET",
+    pattern: "/traeger/care-time-overruns/export",
+    portals: ["org"],
+    query: ["format", "from", "school_id", "to"],
+    response: fileAnswer,
   },
 } as const;

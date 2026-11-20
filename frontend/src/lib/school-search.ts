@@ -1,6 +1,5 @@
 import { bffJson } from "~/lib/bff-fetch";
 import type { SchoolSearchRequest } from "~/lib/contract/search.generated";
-import { CONTRACT_WIRE } from "~/lib/contract/wire";
 import {
   mapSchoolSearchResult,
   type BackendSchoolSearchResult,
@@ -31,7 +30,6 @@ export async function searchSchool(
     method: "POST",
     body: { query } satisfies SchoolSearchRequest,
     signal,
-    headers: CONTRACT_WIRE,
   });
   return mapSchoolSearchResult(result);
 }

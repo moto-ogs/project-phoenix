@@ -184,6 +184,10 @@ function PaymentTextWarningLinks({
   );
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const HOLIDAY_RUN_INFO =
+  "Hier findest du die Rechnungen dieses Ferienzeitraums. Vor der Freigabe kannst du sie prüfen und ändern. Danach bleiben sie festgeschrieben.";
+
 export default function TraegerBillingRunPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
@@ -374,6 +378,7 @@ export default function TraegerBillingRunPage() {
 
   return (
     <TenantPage
+      info={HOLIDAY_RUN_INFO}
       title={run?.periodName ?? "Abrechnungslauf"}
       leading={<ConceptIconTile concept={holidayWeeksConcept} size="page" />}
       back

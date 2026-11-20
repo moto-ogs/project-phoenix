@@ -45,9 +45,11 @@ export const CATALOG_OUTSIDE_MOUNTS = {
 
 /**
  * The same for the routes without a session (`portalRoutes.public`): the
- * one-time link of a care contract mail lives at
- * `/public/care-contract-signing`, and the staff portal's proxy serves it as
- * `/api/public/care-contract-signing/…`, the path the link's page calls. The
+ * links and the school list below `/auth` reach the staff proxy through its
+ * hand-off files (`app/api/auth/…`). The one-time link of a care contract
+ * mail lives at `/public/care-contract-signing`, and the staff portal's proxy
+ * serves it as `/api/public/care-contract-signing/…`, the path the link's
+ * page calls. The
  * staff portal's password reset lives at `/auth/password-reset` beside
  * `/api`; its hand-off file below `/api/auth` reaches it.
  *
@@ -59,7 +61,20 @@ export const CATALOG_OUTSIDE_MOUNTS = {
  * have to name the head as well, for no gain.
  */
 export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
-  tenant: ["/public/care-contract-signing", "/auth/password-reset"],
+  tenant: [
+    "/public/care-contract-signing",
+    // The one-time download link of the payroll office (#4805): a public
+    // file its contract marks, served like the signing link.
+    "/public/payroll-download",
+    "/auth/password-reset",
+    // The links of an invitation mail and of the holiday registration, and
+    // the school list (#2352). Each names its exact path: `/auth/invitations`
+    // also holds the staff portal's session routes.
+    "/auth/invitations/{token}/",
+    "/auth/guardian-invitations/{token}/accept",
+    "/auth/holiday-parent-setups/{token}/",
+    "/auth/tenants/",
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 const isParam = (segment: string) =>

@@ -114,3 +114,126 @@ angemeldet. Daraus folgen drei Ergänzungen:
 - **Eine Route, deren Antwort ein anderer Owner rendert**, meldet der Owner
   des Handlers an; die Wurzel nennt den Antworttyp, so wie sie auch die
   Antwortfunktion bindet.
+
+## Nachtrag vom 2026-11-19: Dateien und Uploads
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Rund
+170 Routendateien des Frontends reichen nur eine Datei-Antwort oder einen
+Upload durch (`proxyFile`, `proxyUpload` und Verwandte). Der Katalog-Proxy
+konnte das nicht: Er liest jede Antwort als JSON durch einen Decoder und jeden
+Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
+
+### Entscheidung
+
+1. **Datei und Multipart sind eigene Arten im Vertrag, kein JSON mit
+   Decoder.** `common.RouteContract` meldet sie mit `File` (statt
+   `Response`) und `Multipart` (statt `Request`) an. Im Modell stehen sie als
+   `file` und `multipart`, im erzeugten Code als `response: fileAnswer` und
+   `request: multipart`. Der Generator lehnt eine Datei-Route mit
+   JSON-Antwort, einen Upload mit JSON-Body und einen Upload ohne Grenze ab.
+2. **Der Proxy streamt beides ungelesen.** Die Datei geht mit den Headern
+   durch, die `fileResponse` schon heute durchlässt (`Content-Type`,
+   `Content-Disposition`, `Content-Length`, `X-Content-Type-Options`);
+   `Range`, `ETag`, `Last-Modified` und `Accept-Ranges` gingen nie durch und
+   gehen auch jetzt nicht durch. Jede Antwort einer Datei-Route ist
+   `private, no-store`, auch eine Ablehnung, wie bei
+   `withPrivateDownloadNoStore`. Ein Backend-Fehler bleibt sein
+   Problem-JSON. Die Sandbox-CSP eines hochgeladenen Dokuments setzt
+   `src/proxy.ts` weiter nach dem Pfad (`SANDBOXED_FILE_ROUTES`), gleich ob
+   eine Routendatei oder der Katalog antwortet.
+3. **Ein Upload nennt seine Grenze und seinen Code im Vertrag.**
+   `MaxBodyBytes` ist die Grenze des ganzen Bodys mit Platz für den
+   Multipart-Rahmen, `TooLargeCode` der Code, mit dem das Backend eine zu
+   große Datei ablehnt. Der Proxy prüft `Content-Length` vor jedem
+   Backend-Aufruf (fehlt sie: 411, ist sie zu groß: 413 mit diesem Code und
+   `max_bytes`/`max_mb`) und zählt beim Streamen mit; ein längerer Body als
+   angegeben bricht den Aufruf ab und wird ebenfalls 413.
+4. **Ein Upload geht einmal.** Sein Body ist beim Senden schon unterwegs und
+   lässt sich nach einer Sitzungserneuerung nicht wiederholen. Auth.js
+   erneuert den Token fünf Minuten vor Ablauf
+   (`ACCESS_TOKEN_REFRESH_BUFFER_MS`); ein 401 des Backends ist deshalb eine
+   echte Ablehnung und wird so beantwortet. Ein JSON-Body einer Datei-Route
+   (Brief-Vorschau per POST) wird begrenzt gelesen und darf wiederholt
+   werden.
+5. **Portal und Sitzung prüft der Proxy wie bei JSON.** Eine Route, die der
+   Vertrag dem Portal nicht zuordnet, ist 404 vor Sitzung und Backend; ohne
+   Sitzung 401; nur registrierte Query-Parameter gehen durch.
+
+### Grenzen
+
+- Öffentliche Datei-Routen (`public/*`, Feed- und Link-Routen mit Token)
+  bleiben eigene Dateien. Der sitzungsfreie Weg des Proxys beantwortet nur
+  JSON; der Generator lehnt eine öffentliche Datei oder einen öffentlichen
+  Upload ab.
+- Eine Datei, die mehr tut als durchzureichen (eigener Cache-Header für ein
+  Logo, Umformung, Prüfung im BFF, mehrere Backend-Aufrufe), bleibt eine
+  eigene Datei.
+- Die Upload-Antwort ist JSON und läuft durch den Decoder der Route; sie hat
+  danach die Hülle des Katalogs (`success`, `message`, `data`) statt der des
+  Backends. Ein Client, der mehr als `data` liest, zieht beim Umzug mit.
+- Ein gestreamter Upload läuft unter dem Header-Timeout des Backend-Clients
+  (90 s ab Beginn des Sendens). Bisher lief er erst nach dem vollständigen
+  Lesen an.
+
+## Nachtrag vom 2026-11-19: Öffentliche Datei-Routen
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Vier
+Routendateien reichten nur die Datei hinter einem Link durch: das PDF des
+Vertragslinks (`/public/care-contract-signing/{link}/document`), die Datei
+des Lohnbüros (`POST /public/payroll-download/{link}`), den
+Unterschriftsnachweis des Anmelde-Statuslinks und die Formulardokumente des
+Ferienlinks. Der erste Punkt der Grenzen des vorigen Nachtrags schloss sie
+aus. Dieser Nachtrag ersetzt ihn für markierte Einzelrouten.
+
+### Entscheidung
+
+1. **Eine öffentliche Datei öffnet nur ein Merkmal ihrer Route.**
+   `common.RouteContract.PublicFile` nennt den Grund, warum der Link im Pfad
+   allein die Datei herausgeben darf. Es gibt keinen Schalter für ein Portal
+   oder einen Mount. Der Generator lehnt ab: eine öffentliche Datei ohne
+   Merkmal, das Merkmal an einer Route, die keine Datei oder nicht nur im
+   Portal `public` ist, eine öffentliche Datei mit Request-Body und jeden
+   öffentlichen Upload. Im Modell steht es als `public_file`, im erzeugten
+   Code als `publicFile`; der Proxy dient eine öffentliche Datei ohne diesen
+   Wert nicht, auch wenn ein Eintrag ihn verlöre.
+2. **Der Weg trägt keine Berechtigung des Geräts.** Der Proxy liest keine
+   Sitzung und ruft das Backend mit `sendBackend(…, null, …)`: kein Bearer,
+   keine Cookies, kein Body, kein `Idempotency-Key`. Ein angemeldetes
+   Schulgerät öffnet den Link also wie jeder andere Browser.
+3. **Die Grenze bleibt die des Backends.** Der BFF hatte für diese Links nie
+   ein eigenes Limit. Begrenzt wird je Client-IP im Backend:
+   `careContractSigningRateLimit`, `holidayRegistrationRateLimit`, das Limit
+   `enrollment-link` über `isPublicEnrollmentRequest` (es liest die
+   Routentabelle der Anmeldung, also auch die neue Route) und für das
+   Lohnbüro der allgemeine Limiter, der ohne Bearer nach IP zählt.
+   `sendBackend` gibt die IP weiter (`X-Forwarded-For`, siehe
+   `docs/agents/contracts.md`, Client IP and rate limits); ein 429 geht mit
+   `Retry-After` durch. Ein verstümmelter Link erreicht jetzt das Backend
+   statt einer BFF-Prüfung und verbraucht damit ein Token des Limits.
+4. **Status und Fehler sind die des Backends.** Das Backend antwortet einem
+   ungültigen, verbrauchten oder fehlerhaften Link schon mit dem Code, den
+   der BFF vorher selbst setzte: 410 `care_contract.signing_link_invalid`
+   (`parseLink` in Care Contract) und 404
+   `workforce.payroll_download_unavailable` (`parsePayrollLink`). Die
+   Vorprüfungen im BFF entfallen.
+5. **Jede Antwort ist privat und ungespeichert.** Datei, Ablehnung und
+   Fehler tragen `private, no-store`, gleich was das Backend sendet. Die
+   Datei geht mit `Content-Type`, `Content-Disposition`, `Content-Length` und
+   `X-Content-Type-Options` durch, ungepuffert.
+6. **Der Pfad ist der Backend-Pfad.** Der Nachweis bekommt die Route
+   `GET /api/enrollment/requests/{statusToken}/signature-proof`, denn
+   `?format=pdf` an der Statusroute kann der Katalog nicht als zweite
+   Antwortart führen; `?format=pdf` bleibt im Backend für Bestandsaufrufe.
+   Das Ferienformular ruft `/api/traeger/holiday-registrations/…` über den
+   Proxy des Trägers statt `/api/holiday-registrations/…`.
+
+### Grenzen
+
+- Ein Upload ohne Sitzung (Nachweise der Anmeldung und des Ferienlinks)
+  bleibt eine eigene Routendatei.
+- Ein Link, dessen Datei der BFF prüft oder umformt, bleibt eine eigene
+  Datei. Eine neue öffentliche Datei braucht das Merkmal, einen Kopf in
+  `CATALOG_PUBLIC_OUTSIDE_MOUNTS`, wenn sie neben dem Mount liegt, eine
+  Freigabe in `HOST_RULES` von `src/proxy.ts` für jeden Portal-Host, der sie
+  öffnet, und die Log-Redaction ihres Pfads im BFF und im Backend.
+- Befristete oder signierte Datei-URLs sind nicht Teil dieser Entscheidung.

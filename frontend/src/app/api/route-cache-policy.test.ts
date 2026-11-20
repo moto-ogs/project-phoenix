@@ -2,6 +2,8 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { fileAnswer } from "~/lib/contract/runtime";
 import { PRIVATE_DOWNLOAD_ROUTES } from "~/test/private-download-routes";
 
 /**
@@ -340,8 +342,22 @@ function exportedHandlers(file: string): Map<string, boolean> {
 describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
-  it("finds the route handlers", () => {
-    expect(files.length).toBeGreaterThan(200);
+  it("finds catalog and nested login handlers for every portal", () => {
+    for (const portal of [
+      "",
+      "operator",
+      "parent",
+      "school",
+      "caterer",
+      "traeger",
+    ]) {
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "[...path]", "route.ts"),
+      );
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "auth", "login", "route.ts"),
+      );
+    }
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {
@@ -427,6 +443,30 @@ describe("private download cache policy (#5119)", () => {
     );
     expect(
       Object.keys(NON_DOWNLOAD_RESOURCES).filter((route) => !routes.has(route)),
+    ).toEqual([]);
+  });
+
+  it("leaves a download the contract registers to the catalog proxy (#2352)", () => {
+    // `/traeger/x/{id}/file` and `/api/x/{id}` stand for the BFF folders
+    // `traeger/x/[id]/file` and `x/[id]`; parameter names do not matter.
+    const folder = (route: string) =>
+      route
+        .replace(/^\/(?:api\/)?/, "")
+        .replace(/\{[^}]+\}|\[[^\]]+\]/g, "[]")
+        .replace(/\/$/, "");
+    const contractFiles = Object.values(portalRoutes)
+      .flat()
+      .filter((route) => route.response === fileAnswer)
+      .map((route) => `${folder(route.pattern)}:${route.method}`);
+    expect(contractFiles.length).toBeGreaterThan(0);
+    const listed = new Set(
+      PRIVATE_DOWNLOAD_ROUTES.map(
+        ([route, method]) => `${folder(route)}:${method}`,
+      ),
+    );
+    expect(
+      contractFiles.filter((route) => listed.has(route)),
+      "the catalog proxy answers this file private and uncached; delete its route file and its entry here",
     ).toEqual([]);
   });
 

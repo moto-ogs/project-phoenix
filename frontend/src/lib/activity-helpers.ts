@@ -272,30 +272,6 @@ export function mapActivityCategoryResponse(
   };
 }
 
-/**
- * Body the category proxy routes accept — mirrors the backend CategoryRequest
- * (#2131). is_system/archived_at are server-managed and deliberately absent.
- */
-export interface CategoryWriteRequest {
-  name: string;
-  description?: string;
-  color?: string;
-}
-
-/**
- * Narrows an incoming proxy body to the fields the backend accepts, so POST
- * and PUT can never drift apart or forward a server-managed field.
- */
-export function toCategoryWriteBody(
-  body: CategoryWriteRequest,
-): CategoryWriteRequest {
-  return {
-    name: body.name,
-    description: body.description,
-    color: body.color,
-  };
-}
-
 // Map enrolled students from backend enrollment structure
 export function mapStudentEnrollmentResponse(
   enrollment: BackendStudentEnrollment,
@@ -367,67 +343,7 @@ export function mapSupervisorOption(
   return { id, name: name || `Supervisor ${id}` };
 }
 
-/*
- * Temporary (#7563): until the next production deploy the route files under
- * app/api/activities stay for installed bundles of the previous release, and
- * they answer the shapes they mapped themselves. The readers below take that
- * shape or the contract's, so an open tab works on either side of the
- * deploy. After the files are gone, map the contract shape directly.
- */
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function asDate(value: unknown): Date {
-  return value instanceof Date ? value : new Date(String(value));
-}
-
-/** An activity of the contract, or of a route file of the previous release. */
-export function readActivity(raw: unknown): Activity {
-  if (isRecord(raw) && "is_open_ags" in raw) {
-    const legacy = raw as unknown as Activity;
-    return {
-      ...legacy,
-      created_at: asDate(legacy.created_at),
-      updated_at: asDate(legacy.updated_at),
-      times: legacy.times?.map((time) => ({
-        ...time,
-        created_at: asDate(time.created_at),
-        updated_at: asDate(time.updated_at),
-      })),
-    };
-  }
-  return mapActivityResponse(raw as ActivityResponse);
-}
-
-/** A category of the contract, or of a route file of the previous release. */
-export function readActivityCategory(raw: unknown): ActivityCategory {
-  if (isRecord(raw) && !("is_system" in raw) && "isSystem" in raw) {
-    const legacy = raw as unknown as ActivityCategory;
-    return {
-      ...legacy,
-      created_at: asDate(legacy.created_at),
-      updated_at: asDate(legacy.updated_at),
-    };
-  }
-  return mapActivityCategoryResponse(raw as ActivityCategoryResponse);
-}
-
 // Request/Response types
-export interface CreateActivityRequest {
-  name: string;
-  max_participants: number | null;
-  is_open: boolean;
-  category_id: number;
-  planned_room_id?: number;
-  supervisor_ids?: number[];
-  schedules?: {
-    weekday: number;
-    timeframe_id?: number;
-  }[];
-}
-
 export interface UpdateActivityRequest {
   name: string;
   max_participants: number | null;

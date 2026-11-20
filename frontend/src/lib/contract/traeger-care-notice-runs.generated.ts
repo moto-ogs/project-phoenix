@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -381,6 +382,26 @@ export interface CareNoticeRunRequest {
   notice_date?: string | null;
 }
 
+/** Query of GET /traeger/care-notice-runs/export */
+export interface GetTraegerCareNoticeRunsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
+/** Query of GET /traeger/care-notice-runs/{id}/export */
+export interface GetTraegerCareNoticeRunsIdExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
+/** Query of GET /traeger/care-notice-runs/{id}/letters/export */
+export interface GetTraegerCareNoticeRunsIdLettersExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
+/** Query of GET /traeger/care-notice-runs/{id}/letters/print */
+export interface GetTraegerCareNoticeRunsIdLettersPrintQuery {
+  only?: "without_email";
+}
+
 export const routes = {
   "GET /traeger/care-notice-runs/": {
     method: "GET",
@@ -388,11 +409,25 @@ export const routes = {
     portals: ["org"],
     response: success(CareNoticeRunListSchema),
   },
+  "GET /traeger/care-notice-runs/export": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
   "GET /traeger/care-notice-runs/{id}": {
     method: "GET",
     pattern: "/traeger/care-notice-runs/{id}",
     portals: ["org"],
     response: success(CareNoticeRunDetailSchema),
+  },
+  "GET /traeger/care-notice-runs/{id}/export": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/care-notice-runs/{id}/letters": {
     method: "GET",
@@ -400,11 +435,31 @@ export const routes = {
     portals: ["org"],
     response: success(CareNoticeLettersSchema),
   },
+  "GET /traeger/care-notice-runs/{id}/letters/export": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/letters/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
+  "GET /traeger/care-notice-runs/{id}/letters/print": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/letters/print",
+    portals: ["org"],
+    query: ["only"],
+    response: fileAnswer,
+  },
   "GET /traeger/care-notice-runs/{id}/notices/{contractID}/letter": {
     method: "GET",
     pattern: "/traeger/care-notice-runs/{id}/notices/{contractID}/letter",
     portals: ["org"],
     response: success(CareNoticeLetterSchema),
+  },
+  "GET /traeger/care-notice-runs/{id}/notices/{contractID}/pdf": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/notices/{contractID}/pdf",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/care-notice-runs/": {
     method: "POST",

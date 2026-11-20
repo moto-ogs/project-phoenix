@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth"
@@ -48,6 +49,10 @@ type ServeConfig struct {
 	// Process selects what this root runs (#2726). The zero value keeps the
 	// HTTP API with its embedded Worker.
 	Process ServeProcess
+	// DrainDelay keeps a stopping process serving with failing probes before
+	// its listener closes, so the load balancer drops it first (#7226). Zero
+	// stops at once; at most maxDrainDelay.
+	DrainDelay time.Duration
 }
 
 // TurnstileKeys are the platform's Cloudflare Turnstile keys. The site key
@@ -90,6 +95,10 @@ type Runtime struct {
 	workerStop      sync.Once
 	logger          *slog.Logger
 	resourcesUnsafe bool
+	// streams ends the realtime streams when the process stops (#7226).
+	streams    streamDrainer
+	drainDelay time.Duration
+	draining   atomic.Bool
 }
 
 // processResource is a process-scoped resource the Runtime releases on
@@ -160,6 +169,9 @@ func newRuntime(config ServeConfig) (*Runtime, error) {
 	if err := validateServeProcess(config.Process); err != nil {
 		return nil, err
 	}
+	if config.DrainDelay < 0 || config.DrainDelay > maxDrainDelay {
+		return nil, fmt.Errorf("serve drain delay must be between 0 and %s", maxDrainDelay)
+	}
 
 	config.Logger.Info("initializing API server")
 	metricsToken, err := observability.MetricsBearerTokenFromEnv(os.Getenv)
@@ -182,18 +194,31 @@ func newRuntime(config ServeConfig) (*Runtime, error) {
 	if config.Process == ServeAPIOnly {
 		config.Logger.Info("embedded worker disabled; a standalone worker runs the jobs")
 	}
-	return &Runtime{
-		server: &http.Server{
-			Addr:    resolveListenAddr(config.Port),
-			Handler: processHandler(config.Process, handler, worker, metricsToken),
-			// ReadTimeout stays modest to protect against slowloris attacks,
-			// but WriteTimeout must be disabled to allow long-lived SSE streams.
-			ReadTimeout:  15 * time.Second,
-			WriteTimeout: 0,
-			IdleTimeout:  0,
-		},
+	runtime := &Runtime{
 		handler: handler, db: db, realtimeTransport: transport, worker: runtimeWorker(worker), capacityLogger: capacity, tracker: tracker, logger: config.Logger,
-	}, nil
+		streams: hub, drainDelay: config.DrainDelay,
+	}
+	runtime.server = runtime.newHTTPServer(config.Port, drainingProbes(&runtime.draining, processHandler(config.Process, handler, worker, metricsToken)))
+	return runtime, nil
+}
+
+// newHTTPServer builds the listener's server. Every shutdown path ends the
+// open realtime streams; otherwise Shutdown waits for them until its
+// deadline (#7226).
+func (runtime *Runtime) newHTTPServer(port string, handler http.Handler) *http.Server {
+	server := &http.Server{
+		Addr:    resolveListenAddr(port),
+		Handler: handler,
+		// ReadTimeout stays modest to protect against slowloris attacks,
+		// but WriteTimeout must be disabled to allow long-lived SSE streams.
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 0,
+		IdleTimeout:  0,
+	}
+	if runtime.streams != nil {
+		server.RegisterOnShutdown(runtime.streams.Drain)
+	}
+	return server
 }
 
 // runtimeWorker keeps a missing Worker a nil interface, so an API-only
@@ -318,7 +343,7 @@ func (runtime *Runtime) Serve(ctx context.Context) error {
 	case err := <-serveErr:
 		runErr = runtime.handleServeExit(err)
 	case <-ctx.Done():
-		runErr = runtime.shutdown(ctx.Err())
+		runErr = runtime.drainAndShutdown(ctx.Err())
 	}
 	if runErr == nil {
 		runtime.logger.Info("server gracefully stopped")

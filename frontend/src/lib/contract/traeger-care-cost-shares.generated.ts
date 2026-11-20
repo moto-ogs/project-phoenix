@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -100,6 +101,11 @@ export interface CareCostShareRequest {
   checked_on?: string | null;
 }
 
+/** Query of GET /traeger/care-cost-shares/export */
+export interface GetTraegerCareCostSharesExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/care-cost-shares/{id}": {
     method: "DELETE",
@@ -112,6 +118,13 @@ export const routes = {
     pattern: "/traeger/care-cost-shares/",
     portals: ["org"],
     response: success(CareCostShareSetSchema),
+  },
+  "GET /traeger/care-cost-shares/export": {
+    method: "GET",
+    pattern: "/traeger/care-cost-shares/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "POST /traeger/care-cost-shares/": {
     method: "POST",

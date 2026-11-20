@@ -5,7 +5,9 @@
 //   node scripts/check-caddyfile.mjs [file]
 //     Every reverse_proxy imports the client_ip_upstream snippet, so the
 //     upstream sees exactly one X-Forwarded-For value and the real
-//     X-Forwarded-Host. Runs in CI.
+//     X-Forwarded-Host. Every app proxy balances a replica pool whose event
+//     streams pass unbuffered and outlive the 75 s client watchdog (#7226).
+//     Runs in CI.
 //   node scripts/check-caddyfile.mjs --cloudflare [file]
 //     Additionally compares trusted_proxies with Cloudflare's published
 //     ranges and prints the difference plus the corrected line. A new edge
@@ -82,6 +84,65 @@ export function checkReverseProxies(source) {
   return errors;
 }
 
+// The fixed ports of the moto apps; each must sit in a replica pool (#7226).
+export const appPorts = ['3000', '3001', '8080', '8081'];
+const watchdogSeconds = 75;
+
+function blockOf(lines, start) {
+  const block = [];
+  let depth = 0;
+  for (let i = start; i < lines.length; i++) {
+    if (i > start) block.push(lines[i]);
+    for (const char of lines[i]) depth += char === '{' ? 1 : char === '}' ? -1 : 0;
+    if (depth <= 0) break;
+  }
+  return block;
+}
+
+function seconds(duration) {
+  const match = /^(\d+)(ms|s|m|h)$/.exec(duration);
+  if (!match) return null;
+  return Number(match[1]) * { ms: 0.001, s: 1, m: 60, h: 3600 }[match[2]];
+}
+
+// Replica pools (#7226): every reverse_proxy that reaches an app imports
+// (replica_pool) with a health URI and names more than one upstream; the
+// snippet balances, health-checks and flushes event streams at once; no
+// timeout cuts a stream before the client watchdog would.
+export function checkReplicaPools(source) {
+  const lines = structuralLines(source);
+  const errors = [];
+  lines.forEach((line, index) => {
+    if (!/^reverse_proxy\s/.test(line)) return;
+    const upstreams = line.replace(/\{$/, '').trim().split(/\s+/).slice(1);
+    if (!upstreams.some(upstream => appPorts.includes(upstream.split(':').pop()))) return;
+    const where = `line ${index + 1}: ${line}`;
+    if (upstreams.length < 2) errors.push(`${where} names one upstream; an app proxy balances a replica pool.`);
+    const block = line.endsWith('{') ? blockOf(lines, index) : [];
+    if (!block.some(entry => /^import replica_pool \/\S*health$/.test(entry))) {
+      errors.push(`${where} does not import replica_pool with a health URI.`);
+    }
+  });
+  const start = lines.findIndex(line => /^\(replica_pool\)\s*\{$/.test(line));
+  if (start < 0) {
+    errors.push('The (replica_pool) snippet is missing.');
+  } else {
+    const directives = blockOf(lines, start);
+    for (const required of ['flush_interval -1', 'health_uri {args[0]}', 'lb_try_duration 5s']) {
+      if (!directives.includes(required)) errors.push(`The (replica_pool) snippet lacks "${required}".`);
+    }
+  }
+  lines.forEach((line, index) => {
+    const timeout = /^(idle|read_timeout|write_timeout|stream_timeout|read|write)\s+(\S+)$/.exec(line);
+    if (!timeout) return;
+    const value = seconds(timeout[2]);
+    if (value !== null && value <= watchdogSeconds) {
+      errors.push(`line ${index + 1}: ${line} ends streams within the ${watchdogSeconds} s client watchdog.`);
+    }
+  });
+  return errors;
+}
+
 export function trustedProxies(source) {
   const line = structuralLines(source).find(l => /^trusted_proxies\s+static(\s|$)/.test(l));
   if (!line) throw new Error('No "trusted_proxies static" line found.');
@@ -132,7 +193,7 @@ export async function main(args, { fetchImpl, log = console.log, error = console
   const compare = args.includes('--cloudflare');
   const file = args.find(arg => !arg.startsWith('--')) ?? defaultCaddyfile;
   const source = readFileSync(file, 'utf8');
-  const errors = checkReverseProxies(source);
+  const errors = [...checkReverseProxies(source), ...checkReplicaPools(source)];
   for (const message of errors) error(message);
   if (compare) {
     const published = await fetchPublished(fetchImpl);
@@ -144,7 +205,7 @@ export async function main(args, { fetchImpl, log = console.log, error = console
       log(`trusted_proxies match Cloudflare's ${published.length} published ranges.`);
     }
   }
-  if (!errors.length) log(`${file}: every reverse_proxy imports client_ip_upstream.`);
+  if (!errors.length) log(`${file}: every reverse_proxy imports client_ip_upstream; every app proxy balances a replica pool.`);
   return errors.length ? 1 : 0;
 }
 

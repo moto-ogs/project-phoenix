@@ -4,6 +4,7 @@ import { clientIdentityHeaders } from "~/lib/client-headers.server";
 import { type Logger } from "~/lib/logger";
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { captureBffException } from "~/lib/sentry-bff.server";
+import { onDrain } from "~/lib/process-drain.server";
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
@@ -86,13 +87,26 @@ export async function proxySSEStream(
 
     const reader = backendResponse.body.getReader();
     let downstreamCancelled = false;
+    let stopDrainWatch: () => void = () => undefined;
 
     const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // This replica stops (#7226): end the stream cleanly, so the
+        // browser sees EOF and reconnects to another replica.
+        stopDrainWatch = onDrain(() => {
+          if (downstreamCancelled) return;
+          downstreamCancelled = true;
+          cleanup();
+          upstreamController.abort();
+          controller.close();
+        });
+      },
       async pull(controller) {
         try {
           const { done, value } = await reader.read();
 
           if (done) {
+            stopDrainWatch();
             cleanup();
             if (!downstreamCancelled) {
               controller.close();
@@ -104,6 +118,7 @@ export async function proxySSEStream(
             controller.enqueue(value);
           }
         } catch (error) {
+          stopDrainWatch();
           cleanup();
 
           if (
@@ -119,6 +134,7 @@ export async function proxySSEStream(
       },
       async cancel() {
         downstreamCancelled = true;
+        stopDrainWatch();
         cleanup();
         upstreamController.abort();
 

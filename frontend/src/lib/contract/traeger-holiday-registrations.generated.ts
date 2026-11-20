@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -307,6 +308,13 @@ export const routes = {
     pattern: "/traeger/holiday-registrations/{token}",
     portals: ["public"],
     response: success(PublicHolidayRegistrationOfferResponseSchema),
+  },
+  "GET /traeger/holiday-registrations/{token}/documents/{documentId}": {
+    method: "GET",
+    pattern: "/traeger/holiday-registrations/{token}/documents/{documentId}",
+    portals: ["public"],
+    publicFile: "the published link of a holiday period opens the form documents it lists",
+    response: fileAnswer,
   },
   "POST /traeger/holiday-registrations/{token}": {
     method: "POST",

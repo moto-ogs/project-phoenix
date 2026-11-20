@@ -53,19 +53,7 @@ export async function fetchDeviceSlots(): Promise<DeviceSlots> {
       `device slots failed (${response.status})`,
     );
   }
-  const json = (await response.json()) as {
-    data: DeviceSlotsResponse | DeviceSlots;
-  };
-  return readDeviceSlots(json.data);
-}
-
-/**
- * The catalog proxy hands on the contract's `DeviceSlotsResponse`; until the
- * next production deploy the temporary route file of #7563 still answers
- * with the mapped `DeviceSlots`.
- */
-export function readDeviceSlots(
-  data: DeviceSlotsResponse | DeviceSlots,
-): DeviceSlots {
-  return "booked" in data ? data : mapDeviceSlots(data);
+  // The catalog proxy hands on the contract's `DeviceSlotsResponse`.
+  const json = (await response.json()) as { data: DeviceSlotsResponse };
+  return mapDeviceSlots(json.data);
 }

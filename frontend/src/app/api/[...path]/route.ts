@@ -8,9 +8,11 @@ import { catalogProxy } from "~/lib/route-wrapper.server";
  * portal (`/api/parent/…`) never matches: every pattern of this list starts
  * with the backend's `/api/` or with a path of the portal's fixed list beside
  * that mount (`lib/contract/catalog-outside-mounts.ts`). The public routes
- * under `/api` (enrollment links and forms) and the care contract link run
- * here without a session. A route with behavior of its own (session, files,
- * uploads, SSE) keeps its file, and Next prefers that file over this one.
+ * under `/api` (enrollment links and forms), the care contract link and the
+ * payroll office's download link run here without a session, their marked
+ * files included (ADR 0270). A route with behavior of its own (session, SSE, a
+ * file or upload it reshapes) keeps its file, and Next prefers that file over
+ * this one.
  */
 const routes = portalRoutes.tenant;
 // The routes of a link or a public form, served without a session.

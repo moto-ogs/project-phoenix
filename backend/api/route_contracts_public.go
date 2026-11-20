@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	schoolPortalHTTP "github.com/moto-ogs/project-phoenix/modules/schoolportal"
 	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
+	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 )
 
@@ -26,6 +27,7 @@ func publicContractMounts() []contractMount {
 		{holidayRegistrationPath, enrollmentHTTP.PublicHolidayRegistrationRouteContracts()},
 		{holidayQuoteMount, parentBillingHTTP.HolidayQuoteRouteContracts()},
 		{"/public/care-contract-signing", careContractHTTP.SigningRouteContracts()},
+		{"/public/payroll-download", timeTrackingHTTP.PayrollDownloadRouteContracts()},
 		{"/operator", identityOperatorAPI.PublicRouteContracts()},
 		// The reset link and its request in every portal with a password
 		// reset; the operator's has none.
@@ -34,6 +36,8 @@ func publicContractMounts() []contractMount {
 		{"/parent/auth", common.PasswordResetRouteContracts()},
 		{"/school/auth", common.PasswordResetRouteContracts()},
 		{"/traeger/auth", common.PasswordResetRouteContracts()},
+		// The invitation and holiday links and the school list below /auth.
+		{"/auth", accountHTTP.PublicRouteContracts()},
 	}
 }
 

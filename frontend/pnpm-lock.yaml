@@ -21,6 +21,8 @@ overrides:
   glob@>=9.0.0 <14.0.2: 14.0.2
   minimatch@<11.0.1: 11.0.1
 
+packageExtensionsChecksum: sha256-or2gFU4LmOQQoBw9YGm4NKJ4uJ+cRNy3tGDZMVkeocc=
+
 importers:
 
   .:
@@ -9159,6 +9161,7 @@ snapshots:
       safe-regex: 2.1.1
       semver: 7.8.6
       tsconfig-paths-webpack-plugin: 4.2.0
+      typescript: 6.0.3
       watskeburt: 6.0.0
 
   dequal@2.0.3: {}

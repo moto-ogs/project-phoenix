@@ -141,6 +141,10 @@ function childrenLabel(count: number): string {
   return count === 1 ? "1 Kind" : `${count} Kinder`;
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const NOTICE_RUN_INFO =
+  "Hier findest du die Jahresbescheide für die Familien. Vor dem Ausstellen kannst du die Zeilen prüfen. Danach bleiben die Bescheide festgeschrieben.";
+
 export default function TraegerCareNoticeRunPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -242,6 +246,7 @@ export default function TraegerCareNoticeRunPage() {
 
   return (
     <TenantPage
+      info={NOTICE_RUN_INFO}
       leading={<ConceptIconTile concept={billingConcept} size="page" />}
       title={run ? `Jahresbescheide ${run.year}` : "Jahreslauf"}
       back

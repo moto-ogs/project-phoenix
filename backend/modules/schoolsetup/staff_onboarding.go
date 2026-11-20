@@ -17,10 +17,12 @@ import (
 type StaffOnboardingService interface {
 	StaffStatus(ctx context.Context, tenantID, accountID int64) (StaffStatus, error)
 	// SetStaffStepState marks a step done, skipped or open again. An unknown
-	// step returns ErrUnknownStep, an unknown state ErrUnknownStepState.
-	SetStaffStepState(ctx context.Context, tenantID, accountID int64, step, state string) error
+	// step returns ErrUnknownStep, an unknown state ErrUnknownStepState. Its
+	// result reports whether the checklist state changed.
+	SetStaffStepState(ctx context.Context, tenantID, accountID int64, step, state string) (bool, error)
 	// SetStaffDismissed hides the checklist for the person, or brings it back.
-	SetStaffDismissed(ctx context.Context, tenantID, accountID int64, dismissed bool) error
+	// Its result reports whether the checklist state changed.
+	SetStaffDismissed(ctx context.Context, tenantID, accountID int64, dismissed bool) (bool, error)
 }
 
 // StaffStepKey names one step of the care worker's first steps.
@@ -84,6 +86,14 @@ type StaffStatus struct {
 	SkippedSteps []string `json:"skipped_steps"`
 }
 
+// StaffWriteStatus is the fresh checklist state after a write. Changed is
+// false for idempotent requests whose visible onboarding state was already
+// the requested one.
+type StaffWriteStatus struct {
+	StaffStatus
+	Changed bool `json:"changed"`
+}
+
 // StaffState is the stored progress of one person. A person without a state
 // has not started; every account that was active when the table was created
 // got a dismissed state, so only people who join afterwards see the
@@ -97,8 +107,24 @@ type StaffState struct {
 }
 
 // SetStepState moves the step into the given state; a step is never done and
-// skipped at once.
-func (s *StaffState) SetStepState(step StaffStepKey, state string) {
+// skipped at once. It returns false when the step was already in that state.
+func (s *StaffState) SetStepState(step StaffStepKey, state string) bool {
+	done := slices.Contains(s.DoneSteps, string(step))
+	skipped := slices.Contains(s.SkippedSteps, string(step))
+	switch state {
+	case StaffStepStateDone:
+		if done && !skipped {
+			return false
+		}
+	case StaffStepStateSkipped:
+		if skipped && !done {
+			return false
+		}
+	case StaffStepStateOpen:
+		if !done && !skipped {
+			return false
+		}
+	}
 	s.DoneSteps = without(s.DoneSteps, string(step))
 	s.SkippedSteps = without(s.SkippedSteps, string(step))
 	switch state {
@@ -107,6 +133,7 @@ func (s *StaffState) SetStepState(step StaffStepKey, state string) {
 	case StaffStepStateSkipped:
 		s.SkippedSteps = append(s.SkippedSteps, string(step))
 	}
+	return true
 }
 
 func without(keys []string, key string) []string {

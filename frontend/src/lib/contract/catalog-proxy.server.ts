@@ -1,12 +1,20 @@
 // The one proxy of a portal (#2352): it forwards a request only when the
 // generated contract lists the route for that portal, and checks the answer
-// against the route's decoder (ADR 0270).
+// against the route's decoder (ADR 0270). A file answer and a multipart
+// upload stream through it unread (ADR 0270, addendum of 2026-11-19); a
+// public file only where its contract marks it (addendum "Öffentliche
+// Datei-Routen").
 import { NextResponse, type NextRequest } from "next/server";
 import type { z } from "zod";
 import { bffError, handleApiError } from "~/lib/api-response-error.server";
 import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
+import type { ErrorCode } from "~/lib/error-codes.generated";
+import { fileResponse } from "~/lib/file-response.server";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
-import { applyPrivateNoStore } from "~/lib/private-no-store";
+import {
+  applyPrivateNoStore,
+  withPrivateDownloadNoStore,
+} from "~/lib/private-no-store";
 import {
   parseRequestBody,
   wrapInApiResponse,
@@ -14,6 +22,7 @@ import {
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
 import { decodeContract } from "./client.server";
+import { fileAnswer, multipart } from "./runtime";
 
 /** A generated route entry, as `portalRoutes` lists it. */
 export interface CatalogRoute {
@@ -31,18 +40,62 @@ export interface CatalogRoute {
   readonly noRetryAfterRenewal?: string;
   /** The largest request body read; a larger one is answered 413. */
   readonly maxBodyBytes?: number;
+  /** `multipart` for an upload; a JSON body names no runtime value. */
+  readonly request?: unknown;
+  /** The code of an upload over `maxBodyBytes`. */
+  readonly tooLargeCode?: ErrorCode;
+  /**
+   * Why a file of the portal `public` may leave without a session: the
+   * contract's marker of that one route. A public file without it is never
+   * served.
+   */
+  readonly publicFile?: string;
 }
 
 export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 type PortalHandlers = Pick<
   ReturnType<typeof makePortalHandlers>,
-  "get" | "post" | "put" | "patch" | "del" | "delWithBody" | "api"
+  | "get"
+  | "post"
+  | "put"
+  | "patch"
+  | "del"
+  | "delWithBody"
+  | "api"
+  | "route"
+  | "backendFetch"
 >;
 
 type Envelope = z.ZodType<{ data: unknown }>;
 
 const segmentsOf = (path: string) => path.split("/").filter(Boolean);
+
+const MIB = 1024 * 1024;
+
+/**
+ * Passes a request body on unread and counts it; past `limit` bytes the
+ * stream fails, which aborts the backend call.
+ */
+function boundedStream(body: ReadableStream<Uint8Array> | null, limit: number) {
+  let size = 0;
+  let over = false;
+  const counter = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      size += chunk.byteLength;
+      if (size > limit) {
+        over = true;
+        controller.error(new Error(`upload exceeds ${limit} bytes`));
+        return;
+      }
+      controller.enqueue(chunk);
+    },
+  });
+  return {
+    body: body?.pipeThrough(counter),
+    exceeded: () => over,
+  };
+}
 
 const isParam = (segment: string) =>
   segment.startsWith("{") && segment.endsWith("}");
@@ -61,8 +114,26 @@ type ServedRoute = CatalogRoute & {
   response: Envelope | Readonly<Record<string, Envelope>>;
 };
 
+const isFile = (route: CatalogRoute) => route.response === fileAnswer;
+const isUpload = (route: CatalogRoute) => route.request === multipart;
+
+/** A route whose body or answer the proxy streams instead of reading. */
+const isStreamed = (route: CatalogRoute) => isFile(route) || isUpload(route);
+
+/**
+ * A file the contract opens to the portal `public`, route by route. An
+ * upload never is one, and neither is a file without the marker.
+ */
+const isPublicFile = (route: CatalogRoute) =>
+  isFile(route) &&
+  !isUpload(route) &&
+  typeof route.publicFile === "string" &&
+  route.publicFile.length > 0;
+
+const PRIVATE_NO_STORE = "private, no-store";
+
 function isServable(route: CatalogRoute): route is ServedRoute {
-  if (isDecoder(route.response)) return true;
+  if (isDecoder(route.response) || isFile(route)) return true;
   const variants = route.response as Record<string, unknown> | null;
   return (
     route.variantParam !== undefined &&
@@ -163,6 +234,9 @@ export function makeCatalogProxy(
     list
       .filter((route) => route.method === method)
       .filter(isServable)
+      // The session-free path answers JSON, and a file only where the
+      // contract marks it; Go refuses an unmarked public file.
+      .filter((route) => !isPublic || !isStreamed(route) || isPublicFile(route))
       .map((route) => ({ route, pattern: segmentsOf(route.pattern), isPublic }))
       .filter(({ pattern }) =>
         under.some((head) => underOutsideHead(pattern, head)),
@@ -193,7 +267,10 @@ export function makeCatalogProxy(
       : null;
   }
 
-  const notFound = () => bffError(404, "route not found");
+  // An unknown path is mostly a tab whose app predates a release that moved
+  // or removed the route: its code asks the reader to reload the page.
+  const notFound = () =>
+    bffError(404, "route not found", { code: "general.route_not_found" });
 
   function target(request: NextRequest, path: unknown) {
     const found = find(path);
@@ -278,6 +355,87 @@ export function makeCatalogProxy(
     return decoded(route, request, answer);
   };
 
+  /**
+   * An upload's body leaves for the backend while the browser still sends
+   * it, so it cannot be sent again after a session renewal; Auth.js renews
+   * the token before it runs out, so a 401 here is the backend's refusal.
+   * A body over the route's limit is answered 413 with the route's code:
+   * by its Content-Length before any backend call, and while it streams if
+   * it is longer than it said.
+   */
+  async function upload(
+    route: CatalogRoute,
+    request: NextRequest,
+    endpoint: string,
+  ): Promise<Response> {
+    const contentType = request.headers.get("content-type") ?? "";
+    if (!/^multipart\/form-data\s*;/i.test(contentType)) {
+      throw bffError(400, "Expected a multipart upload");
+    }
+    const limit = route.maxBodyBytes ?? 0;
+    const tooLarge = () =>
+      bffError(413, `request body exceeds ${limit} bytes`, {
+        code: route.tooLargeCode,
+        details: { max_bytes: limit, max_mb: Math.floor(limit / MIB) },
+      });
+    const declared = request.headers.get("content-length");
+    if (declared === null) {
+      throw bffError(411, "an upload needs a Content-Length");
+    }
+    if (!/^\d+$/.test(declared)) throw bffError(400, "invalid Content-Length");
+    if (Number(declared) > limit) throw tooLarge();
+    const counted = boundedStream(request.body, limit);
+    let response: Response;
+    try {
+      response = await portal.backendFetch(request, endpoint, {
+        method,
+        body: counted.body,
+        contentType,
+        idempotencyKey: request.headers.get("Idempotency-Key"),
+        retry: { off: "the upload's body streams once" },
+      });
+    } catch (error) {
+      if (counted.exceeded()) throw tooLarge();
+      throw error;
+    }
+    if (counted.exceeded()) throw tooLarge();
+    const answer = await readBackendJson<unknown>(response);
+    return NextResponse.json(
+      wrapInApiResponse(decoded(route as ServedRoute, request, answer)),
+      { status: response.status === 204 ? 200 : response.status },
+    );
+  }
+
+  /**
+   * A file streams through with its file headers (fileResponse), and every
+   * answer of the route, refusals and session failures included, is private
+   * and uncached, as `withPrivateDownloadNoStore` makes a download route
+   * file. A file a POST asks for reads its JSON body within the route's
+   * limit, so the renewal's retry can send it again.
+   */
+  function streamedHandler(route: CatalogRoute) {
+    return withPrivateDownloadNoStore(
+      portal.route(async (request, _token, params) => {
+        const { endpoint } = target(request, params.path);
+        if (isUpload(route)) return upload(route, request, endpoint);
+        const json =
+          method === "GET"
+            ? undefined
+            : await parseRequestBody(request, route.maxBodyBytes);
+        const backend = await portal.backendFetch(request, endpoint, {
+          method,
+          json,
+          idempotencyKey:
+            method === "GET" ? null : request.headers.get("Idempotency-Key"),
+          ...(route.noRetryAfterRenewal && {
+            retry: { off: route.noRetryAfterRenewal },
+          }),
+        });
+        return fileResponse(backend, request);
+      }),
+    );
+  }
+
   type Options = {
     retry?: { off: string };
     maxBodyBytes?: number;
@@ -292,9 +450,17 @@ export function makeCatalogProxy(
 
   // One handler per route: its contract decides the renewal's retry and the
   // body limit before the body is read.
-  const handlers = new Map<CatalogRoute, ReturnType<typeof factories.GET>>();
-  function handlerOf(route: CatalogRoute) {
+  type Handler = (
+    request: NextRequest,
+    context: RouteContext,
+  ) => Promise<Response>;
+  const handlers = new Map<CatalogRoute, Handler>();
+  function handlerOf(route: CatalogRoute): Handler {
     let handler = handlers.get(route);
+    if (!handler && isStreamed(route)) {
+      handler = streamedHandler(route);
+      handlers.set(route, handler);
+    }
     if (!handler) {
       handler = factories[method]({
         ...(route.noRetryAfterRenewal
@@ -305,6 +471,24 @@ export function makeCatalogProxy(
       handlers.set(route, handler);
     }
     return handler;
+  }
+
+  /**
+   * A public file (#2352): the link in the path is the only credential, so
+   * the request carries no session, no bearer, no body and no idempotency
+   * key; `sendBackend` adds the client IP the backend's limiter of the link
+   * keys on. The bytes stream through with their file headers, and every
+   * answer, a refusal included, is private and uncached.
+   */
+  async function servePublicFile(
+    request: NextRequest,
+    context: RouteContext,
+  ): Promise<Response> {
+    const { endpoint } = target(request, (await context.params)?.path);
+    return fileResponse(
+      await sendBackend(endpoint, null, { method, request }),
+      request,
+    );
   }
 
   /**
@@ -342,17 +526,20 @@ export function makeCatalogProxy(
       applyPrivateNoStore(response.headers);
       return response;
     }
+    const file = isPublicFile(found.route);
     let response: Response;
     try {
-      response = await servePublic(
-        request,
-        found.route as ServedRoute,
-        context,
-      );
+      response = file
+        ? await servePublicFile(request, context)
+        : await servePublic(request, found.route as ServedRoute, context);
     } catch (error) {
       response = handleApiError(error, request);
     }
-    applyPrivateNoStore(response.headers);
+    if (file) {
+      response.headers.set("Cache-Control", PRIVATE_NO_STORE);
+    } else {
+      applyPrivateNoStore(response.headers);
+    }
     return response;
   };
 }
@@ -379,9 +566,12 @@ export function handOffUnder(
   head: HandOffHead,
   handler: (request: NextRequest, context: RouteContext) => Promise<Response>,
 ) {
-  return (request: NextRequest, context: RouteContext) =>
+  // Next passes `params: undefined` to a route file without a dynamic
+  // segment (`auth/tenants/route.ts`); such a file has no tail.
+  return (request: NextRequest, context: Partial<RouteContext> | undefined) =>
     handler(request, {
-      params: context.params.then((params) => {
+      params: Promise.resolve(context?.params).then((given) => {
+        const params = given ?? {};
         const tail = params.path;
         const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
         const lead = typeof head === "function" ? head(params) : head;

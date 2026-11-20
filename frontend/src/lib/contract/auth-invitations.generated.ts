@@ -67,6 +67,31 @@ export const SchoolInvitationResponseSchema: z.ZodType<SchoolInvitationResponse,
   provider_block: optional(str),
 });
 
+/** Go: account.InvitationValidationResponse */
+export interface InvitationValidationResponse {
+  target_portal: string;
+  requires_account_login: boolean;
+  email: string;
+  role_name: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  caregiver_enabled: boolean;
+  expires_at: string;
+}
+
+export const InvitationValidationResponseSchema: z.ZodType<InvitationValidationResponse, unknown> = object<InvitationValidationResponse>({
+  target_portal: str,
+  requires_account_login: bool,
+  email: str,
+  role_name: str,
+  first_name: optional(str),
+  last_name: optional(str),
+  position: optional(str),
+  caregiver_enabled: bool,
+  expires_at: instant,
+});
+
 /** Go: account.CreateSchoolInvitationRequest */
 export interface CreateSchoolInvitationRequest {
   employment_action?: string;
@@ -131,6 +156,12 @@ export const routes = {
     pattern: "/auth/invitations/",
     portals: ["tenant"],
     response: success(z.array(SchoolInvitationResponseSchema)),
+  },
+  "GET /auth/invitations/{token}": {
+    method: "GET",
+    pattern: "/auth/invitations/{token}",
+    portals: ["public"],
+    response: success(InvitationValidationResponseSchema),
   },
   "POST /auth/invitations/": {
     method: "POST",

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -115,6 +116,13 @@ export interface GetTraegerClosingDaysQuery {
   to?: string;
 }
 
+/** Query of GET /traeger/closing-days/export */
+export interface GetTraegerClosingDaysExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  from?: string;
+  to?: string;
+}
+
 export const routes = {
   "DELETE /traeger/closing-days/{id}": {
     method: "DELETE",
@@ -129,6 +137,13 @@ export const routes = {
     portals: ["org"],
     query: ["from", "to"],
     response: success(CalendarSchema),
+  },
+  "GET /traeger/closing-days/export": {
+    method: "GET",
+    pattern: "/traeger/closing-days/export",
+    portals: ["org"],
+    query: ["format", "from", "to"],
+    response: fileAnswer,
   },
   "POST /traeger/closing-days/": {
     method: "POST",

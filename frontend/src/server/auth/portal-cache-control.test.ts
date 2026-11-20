@@ -183,6 +183,41 @@ describe("portal route wrappers send private, no-store", () => {
   });
 });
 
+describe("the Träger portal's catalog proxy sends private, no-store", () => {
+  it("also on an answer outside the contract (502)", async () => {
+    // Formerly asserted for the hand-off file
+    // traeger/billing-families/debtor-number-format, which wrapped itself;
+    // the catch-all serves the path now (#2352).
+    mockFetch.mockResolvedValue(
+      backendJson(200, {
+        status: "success",
+        data: {
+          digits_only: true,
+          min_digits: "4",
+          max_digits: 10,
+          scope: "payer",
+        },
+      }),
+    );
+    const { portalRoutes } = await import("~/lib/contract/portals.generated");
+    const { catalogProxy } = await import("~/lib/traeger/route-wrapper.server");
+
+    const response = await catalogProxy(portalRoutes.org, "GET")(
+      new NextRequest(
+        "http://localhost:3000/api/traeger/billing-families/debtor-number-format",
+      ),
+      {
+        params: Promise.resolve({
+          path: ["billing-families", "debtor-number-format"],
+        }),
+      },
+    );
+
+    expect(response.status).toBe(502);
+    expect(response.headers.get("Cache-Control")).toBe(PRIVATE_NO_STORE);
+  });
+});
+
 describe("tenant routes on a school subdomain (#5130)", () => {
   const tenantRoutes = routes.filter(([portal]) => portal.startsWith("tenant"));
 

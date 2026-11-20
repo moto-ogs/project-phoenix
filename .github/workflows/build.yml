@@ -455,6 +455,11 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: sops decrypt environments/staging.sops.env > /tmp/staging.env
 
+      # Before the release touches the server: the stack's database pools,
+      # LISTEN connections and replicas must fit max_connections (#7226).
+      - name: Check database connection budget
+        run: python3 scripts/check-db-connection-budget.py environments/staging.compose.yml /tmp/staging.env
+
       - name: Deploy to staging
         id: deploy
         env:
@@ -580,6 +585,11 @@ jobs:
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: sops decrypt environments/production.sops.env > /tmp/production.env
+
+      # Before the release touches the server: the stack's database pools,
+      # LISTEN connections and replicas must fit max_connections (#7226).
+      - name: Check database connection budget
+        run: python3 scripts/check-db-connection-budget.py environments/production.compose.yml /tmp/production.env
 
       - name: Deploy to production
         id: deploy
@@ -707,6 +717,11 @@ jobs:
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: sops decrypt environments/demo.sops.env > /tmp/demo.env
+
+      # Before the release touches the server: the stack's database pools,
+      # LISTEN connections and replicas must fit max_connections (#7226).
+      - name: Check database connection budget
+        run: python3 scripts/check-db-connection-budget.py environments/demo.compose.yml /tmp/demo.env
 
       - name: Deploy to demo
         id: deploy
