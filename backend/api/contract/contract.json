@@ -2031,6 +2031,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/day-changes/today",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "Overview"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/display/",
       "portals": [
         "tenant"
@@ -22013,6 +22024,25 @@
       ]
     },
     {
+      "name": "Kind",
+      "values": [
+        "group_substitution",
+        "group_substitution_count",
+        "staff_absent",
+        "staff_absent_count"
+      ]
+    },
+    {
+      "name": "LinkTarget",
+      "values": [
+        "group_handovers",
+        "own_absences",
+        "staff_absences",
+        "staff_list",
+        "staff_member"
+      ]
+    },
+    {
       "name": "MatchField",
       "values": [
         "class",
@@ -22024,6 +22054,14 @@
         "parent_note",
         "phone",
         "student_note"
+      ]
+    },
+    {
+      "name": "PersonRole",
+      "values": [
+        "absent",
+        "replaced",
+        "substitute"
       ]
     },
     {
@@ -22042,10 +22080,30 @@
       ]
     },
     {
+      "name": "Section",
+      "values": [
+        "school",
+        "you"
+      ]
+    },
+    {
       "name": "ShiftTypeRemovalOutcome",
       "values": [
         "archived",
         "deleted"
+      ]
+    },
+    {
+      "name": "Source",
+      "values": [
+        "staff"
+      ]
+    },
+    {
+      "name": "SourceState",
+      "values": [
+        "failed",
+        "loaded"
       ]
     },
     {
@@ -47392,6 +47450,86 @@
       ]
     },
     {
+      "name": "Entry",
+      "go_type": "daychangesview.Entry",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "Kind"
+          }
+        },
+        {
+          "name": "section",
+          "schema": {
+            "kind": "enum",
+            "ref": "Section"
+          }
+        },
+        {
+          "name": "all_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "people",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Person"
+            }
+          }
+        },
+        {
+          "name": "group",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Group"
+          }
+        },
+        {
+          "name": "link",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Link"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "EntryRequest",
       "go_type": "worktimemodels.EntryRequest",
       "request": true,
@@ -50275,6 +50413,24 @@
               "kind": "ref",
               "ref": "GapInstance"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Group",
+      "go_type": "daychangesview.Group",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -60226,6 +60382,26 @@
       ]
     },
     {
+      "name": "Link",
+      "go_type": "daychangesview.Link",
+      "fields": [
+        {
+          "name": "target",
+          "schema": {
+            "kind": "enum",
+            "ref": "LinkTarget"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
       "name": "LinkToTenantRequest",
       "go_type": "account.LinkToTenantRequest",
       "request": true,
@@ -65700,6 +65876,41 @@
       ]
     },
     {
+      "name": "Overview",
+      "go_type": "daychangesview.Overview",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "sources",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SourceStatus"
+            }
+          }
+        },
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "Entry"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "OverviewResponse",
       "go_type": "staffshifts.OverviewResponse",
       "fields": [
@@ -68626,6 +68837,37 @@
           "name": "updated_at",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Person",
+      "go_type": "daychangesview.Person",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role",
+          "schema": {
+            "kind": "enum",
+            "ref": "PersonRole"
+          }
+        },
+        {
+          "name": "is_self",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -83534,6 +83776,26 @@
           "schema": {
             "kind": "instant",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "SourceStatus",
+      "go_type": "daychangesview.SourceStatus",
+      "fields": [
+        {
+          "name": "source",
+          "schema": {
+            "kind": "enum",
+            "ref": "Source"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "SourceState"
           }
         }
       ]

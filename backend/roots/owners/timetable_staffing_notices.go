@@ -108,6 +108,17 @@ func (h timetableGroupHandovers) GroupHandovers(ctx context.Context, groupIDs []
 	return result, nil
 }
 
+// GroupTeacherStaff names the teachers of OGS groups as staff ids. The staff
+// notices (#7138) and "Heute anders" (#7659) read the same group team.
+type GroupTeacherStaff interface {
+	GroupTeacherStaffIDs(ctx context.Context, groupIDs []int64) (map[int64][]int64, error)
+}
+
+// NewGroupTeacherStaff reads the group teachers through School Membership.
+func NewGroupTeacherStaff(membership schoolmembership.Query) GroupTeacherStaff {
+	return timetableGroupTeachers{membership: membership}
+}
+
 // timetableGroupTeachers names the teachers of OGS groups as staff ids: the
 // group assignments, then the teachers' staff records, two batched reads.
 type timetableGroupTeachers struct {

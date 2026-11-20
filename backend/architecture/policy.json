@@ -1,6 +1,6 @@
 {
   "schema_version": 5,
-  "policy_epoch": 106,
+  "policy_epoch": 107,
   "module_path": "github.com/moto-ogs/project-phoenix",
   "shared_kernel_types": [
     "CorrelationID",
