@@ -70,6 +70,7 @@ describe("DayChangesBlock", () => {
     expect(useSWRAuth).toHaveBeenCalledWith(
       "home-day-changes:account-a",
       expect.any(Function),
+      { revalidateOnFocus: true },
     );
   });
 

@@ -234,7 +234,7 @@ func (v *view) Today(ctx context.Context) (Overview, error) {
 			if v.isolation.IsFatal(err) {
 				return Overview{}, fmt.Errorf("day changes source %s: %w", source.source, err)
 			}
-			// No personal data: the source and the error class only.
+			// The source and the error; source reads name no person in their errors.
 			v.logger.ErrorContext(ctx, "day changes source failed",
 				"source", string(source.source),
 				"error", err.Error(),

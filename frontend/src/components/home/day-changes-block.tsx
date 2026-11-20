@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import {
@@ -52,6 +52,9 @@ export function DayChangesBlock() {
   const { data, error, isLoading, mutate } = useSWRAuth<DayChangesOverview>(
     homeKeys.dayChanges(accountId),
     fetchDayChanges,
+    // Abgleich beim Fokus des Fensters (#7659), zusätzlich zu den
+    // SSE-Ereignissen und dem Abgleich nach erneuter Verbindung.
+    { revalidateOnFocus: true },
   );
   const loadError = useSwrLoadError(error, "die Übersicht „Heute anders“", () =>
     mutate(),
@@ -146,18 +149,19 @@ function DayChangesSection({
 }) {
   const isPhone = useMediaQuery(BELOW_SM);
   const [expanded, setExpanded] = useState(false);
+  const headingId = useId();
+  const listRef = useRef<HTMLUListElement>(null);
   const capped = capOnPhone && isPhone && !expanded;
   const visible = capped ? entries.slice(0, PHONE_SCHOOL_ROWS) : entries;
-  const headingId = `day-changes-${title === "Schule" ? "school" : "you"}`;
 
   return (
     <section aria-labelledby={headingId} className="min-w-0">
       <SectionLabel id={headingId} as="h3" className="mb-2">
         {title}
       </SectionLabel>
-      <ul className="space-y-2">
+      <ul ref={listRef} className="space-y-2">
         {visible.map((entry, index) => (
-          <DayChangeRow key={`${entry.kind}-${index}`} entry={entry} />
+          <DayChangeRow key={dayChangeKey(entry, index)} entry={entry} />
         ))}
       </ul>
       {capped && entries.length > PHONE_SCHOOL_ROWS ? (
@@ -170,6 +174,14 @@ function DayChangesSection({
           onClick={() => {
             setExpanded(true);
             trackEvent("day_changes_show_all");
+            // Der Knopf verschwindet; der Fokus geht auf den ersten neuen
+            // Eintrag statt an den Seitenanfang.
+            requestAnimationFrame(() => {
+              const rows = listRef.current?.querySelectorAll<HTMLElement>(
+                ":scope > li > a, :scope > li > div",
+              );
+              rows?.[PHONE_SCHOOL_ROWS]?.focus();
+            });
           }}
         >
           Alle anzeigen ({entries.length})
@@ -177,6 +189,12 @@ function DayChangesSection({
       ) : null}
     </section>
   );
+}
+
+/** Stabil über ein Neuladen hinweg: Art, Personen und Gruppe. */
+function dayChangeKey(entry: DayChange, index: number): string {
+  const people = entry.people.map((person) => person.staffId).join(",");
+  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${people || entry.groupName ? "" : index}`;
 }
 
 function DayChangeRow({ entry }: { readonly entry: DayChange }) {

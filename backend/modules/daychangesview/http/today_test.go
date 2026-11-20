@@ -159,6 +159,15 @@ func TestDayChangesStaffSource(t *testing.T) {
 		assertNoReason(t, body)
 	})
 
+	t.Run("care staff without users:read keeps its own entries and gets no numbers", func(t *testing.T) {
+		overview, _ := read(t, router, carerAccount.ID, tenantID)
+		assert.Equal(t, []string{
+			"you group_substitution Tom Hilfe/substitute @Igel bis 2026-09-10 ->group_handovers",
+			"you staff_absent Ben Kollege/absent bis 2026-09-11 ->staff_member",
+		}, summary(overview.Entries))
+		assert.Equal(t, "loaded", overview.Sources[0].Status)
+	})
+
 	t.Run("lead sees every name of the school and no other school", func(t *testing.T) {
 		overview, body := read(t, router, leadAccount.ID, tenantID, "users:read", "vacation:approve")
 		assert.Equal(t, []string{
