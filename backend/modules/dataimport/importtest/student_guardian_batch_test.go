@@ -148,7 +148,7 @@ func TestStudentGuardianBatchKeepsOtherRowsInPlace(t *testing.T) {
 }
 
 // TestStudentGuardianBatchAddsNoWait (Befundklasse 1): with a 1 s read
-// timeout, a holder of the school row for 0.25 s delays the upload once, at
+// timeout, a holder of the school row for 0.7 s delays the upload once, at
 // the first statement that references the school, as on the row path; the
 // bundled guardian statements reference only the school row the
 // transaction already holds and rows of their own transaction, so they wait
@@ -156,7 +156,7 @@ func TestStudentGuardianBatchKeepsOtherRowsInPlace(t *testing.T) {
 // nothing replays.
 func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 	t.Parallel()
-	const readTimeout, hold, limit = time.Second, 250 * time.Millisecond, 800 * time.Millisecond
+	const readTimeout, hold, limit = time.Second, 700 * time.Millisecond, 800 * time.Millisecond
 	db := testpkg.SetupIsolatedTestDB(t)
 	pool, name := namedImportPool(t, testpkg.IsolatedTestDSN(t), readTimeout)
 	for _, bounded := range []bool{true, false} {
