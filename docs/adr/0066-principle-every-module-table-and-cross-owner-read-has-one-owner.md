@@ -114,6 +114,9 @@ decision amends this ADR or names it.
    retains the existing port-composed Staff Directory and Emergency Snapshot
    owners without SQL grants; it gives selection criteria for future cuts.
    Consumer-port reads do not generally require a projection owner.
+   [ADR 0299](0299-heute-anders-liest-die-quellen-ueber-ports-in-einer-eigenen-leseprojektion.md)
+   adds `day-changes-view` as a port-composed read owner under ADR 0081's
+   criteria; it holds no SQL grant.
 7. **`tenant_safe` on a cross-tenant read means operator scope or Träger
    scope.** An installation-wide read runs inside the cross-tenant
    administrative transaction, and its routes sit behind the operator gates.
