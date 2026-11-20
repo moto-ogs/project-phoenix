@@ -369,6 +369,32 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
     expect(live?.textContent).toContain("„Heute anders“ hat sich geändert.");
     expect(live?.textContent).not.toBe(first);
   });
+
+  it("sagt einen geänderten Zeitraum einer bestehenden Änderung an", () => {
+    serve({
+      entries: [
+        absent("Ben", "you", {
+          startsAt: "2026-09-09T08:00:00+02:00",
+          endsAt: "2026-09-09T09:00:00+02:00",
+        }),
+      ],
+    });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({
+      entries: [
+        absent("Ben", "you", {
+          startsAt: "2026-09-09T08:00:00+02:00",
+          endsAt: "2026-09-09T10:00:00+02:00",
+        }),
+      ],
+    });
+    rerender(<DayChangesBlock />);
+
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+  });
 });
 
 describe("Texte der Gruppen-Vertretung", () => {

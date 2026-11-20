@@ -121,11 +121,28 @@ function DayChangesAnnouncer({
   readonly overview: DayChangesOverview | undefined;
 }) {
   const keys = overview ? dayChangeKeys(shownEntries(overview)) : null;
-  // Die Zahl einer Zusammenfassung gehört nicht in den Schlüssel der Zeile,
-  // aber in die Signatur: „2 weitere“ zu „3 weitere“ ist eine Änderung.
+  // Der Schlüssel hält die Identität einer Zeile; die Signatur enthält jeden
+  // Wert, den ihre Darstellung verwendet. So wird auch ein geänderter
+  // Zeitraum angesagt, ohne die Zeile als neue Änderung zu zählen.
   const signature = overview
     ? shownEntries(overview)
-        .map((entry, index) => `${keys?.[index]}=${entry.count ?? ""}`)
+        .map((entry, index) =>
+          JSON.stringify([
+            keys?.[index],
+            entry.halfDay,
+            entry.since,
+            entry.until,
+            entry.startsAt,
+            entry.endsAt,
+            entry.people.map((person) => [
+              person.name,
+              person.role,
+              person.isSelf,
+            ]),
+            entry.groupName,
+            entry.count,
+          ]),
+        )
         .join("|")
     : null;
   const [last, setLast] = useState<{
