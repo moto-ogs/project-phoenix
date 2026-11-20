@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   acceptTraegerInvitation: vi.fn(),
   traegerLogin: vi.fn(),
   signIn: vi.fn(),
+  getSession: vi.fn(),
   query: { value: "token=abc" },
 }));
 
@@ -18,7 +19,10 @@ vi.mock("~/lib/traeger-api", () => ({
   acceptTraegerInvitation: mocks.acceptTraegerInvitation,
   traegerLogin: mocks.traegerLogin,
 }));
-vi.mock("next-auth/react", () => ({ signIn: mocks.signIn }));
+vi.mock("next-auth/react", () => ({
+  signIn: mocks.signIn,
+  getSession: mocks.getSession,
+}));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(mocks.query.value),
 }));
@@ -32,6 +36,15 @@ const PREVIEW = {
   requiresExistingPassword: false,
   expiresAt: "2026-09-11T10:00:00Z",
 };
+
+const DASHBOARD_RIGHT = "traeger_overview:read";
+
+function sessionWith(...permissions: string[]) {
+  return {
+    user: { scope: "org", token: "access-token", permissions },
+    expires: "2099-01-01T00:00:00Z",
+  };
+}
 
 function renderPage() {
   return render(
@@ -49,6 +62,10 @@ describe("TraegerInvitePage", () => {
     mocks.acceptTraegerInvitation.mockReset();
     mocks.traegerLogin.mockReset();
     mocks.signIn.mockReset();
+    // The new member may open the dashboard: the start (#7646).
+    mocks.getSession
+      .mockReset()
+      .mockResolvedValue(sessionWith(DASHBOARD_RIGHT));
     mocks.query.value = "token=abc";
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
     _resetTraegerHostCache();
@@ -117,7 +134,7 @@ describe("TraegerInvitePage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Einladung annehmen" }));
 
-    await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/uebersicht"));
     expect(mocks.acceptTraegerInvitation).toHaveBeenCalledWith("abc", {
       name: "Eva Müller",
       password: "Sicher1234%",
