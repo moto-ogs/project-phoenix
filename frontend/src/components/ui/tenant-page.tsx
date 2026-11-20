@@ -563,6 +563,34 @@ function useEmptyActionGuard(
   });
 }
 
+/**
+ * Kurze Wörter sollen im mobilen Seitenkopf vollständig in die nächste Zeile
+ * wandern. Lange Wörter dürfen nach Silben trennen und brauchen zusätzlich
+ * eine sichere Notbremse für IDs und URLs ohne Trennstelle.
+ */
+function TenantPageTitle({ title }: Readonly<{ title: string }>) {
+  return title.split(/(\s+)/).map((part, index) =>
+    /\s/.test(part) ? (
+      part
+    ) : (
+      <span
+        // Der Index ist stabil, weil die Zeichenfolge des Titels selbst die
+        // Liste bestimmt und sich nur bei einem neuen Titel ändert.
+        key={index}
+        className={cn(
+          part.length < 14 && "whitespace-nowrap",
+          // Wie `hyphenate-limit-chars`: Kurze Wörter bleiben ganz. Bei
+          // langen IDs oder URLs ohne deutsche Trennstelle verhindert
+          // `wrap-anywhere` aber ein Überlaufen des Kopfes.
+          part.length >= 14 && "max-sm:wrap-anywhere",
+        )}
+      >
+        {part}
+      </span>
+    ),
+  );
+}
+
 function TenantPageView({
   title,
   stats,
@@ -669,11 +697,11 @@ function TenantPageView({
               die Kopfkarte wuchs um genau den toten Streifen, den sie auf
               dem Desktop nicht mehr hat.
               `max-sm:min-w-min`: Auf dem Telefon ist der Titelblock nie
-              schmaler als sein längstes Wort samt Info-Knopf. Passen Hilfe,
-              Status und Kebab daneben nicht mehr, rücken sie in die nächste
-              Zeile, statt dem Titel ein kurzes Wort mitten durchzubrechen
-              („Anmel|dung“, #7649). Wörter ab 14 Zeichen bleiben trennbar
-              (s. u.) und zählen nur mit ihrer längsten Silbengruppe. */}
+              schmaler als sein längstes kurzes Wort samt Info-Knopf. Passen
+              Hilfe, Status und Kebab daneben nicht mehr, rücken sie in die
+              nächste Zeile, statt dem Titel ein kurzes Wort mitten
+              durchzubrechen („Anmel|dung“, #7649). Lange Wörter bleiben
+              trennbar (s. u.); ID- und URL-Tokens brechen im Notfall um. */}
           <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-min">
             {leading}
             <div className="min-w-0">
@@ -702,7 +730,7 @@ function TenantPageView({
                     HEAD_TITLE_SIZE[prominent ? "prominent" : "standard"],
                   )}
                 >
-                  {title}
+                  <TenantPageTitle title={title} />
                 </h1>
                 {info != null && (
                   <TenantPageInfo title={title}>{info}</TenantPageInfo>
@@ -713,7 +741,7 @@ function TenantPageView({
                   Kinderseite rendert ein div). In einem p wäre das ungültiges
                   HTML und ein Hydration-Fehler. */}
               {statusLine != null && (
-                <div className="mt-1 text-sm leading-5 text-gray-600">
+                <div className="mt-1 text-sm leading-5 text-gray-600 max-sm:wrap-anywhere">
                   {statusLine}
                 </div>
               )}

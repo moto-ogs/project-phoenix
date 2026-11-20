@@ -83,6 +83,33 @@ function cases(): readonly { name: string; props: HeadProps }[] {
         overflowMenu: menu,
       },
     },
+    {
+      // Importierte IDs und URLs haben keine deutsche Trennstelle. Sie dürfen
+      // den mobilen Kopf trotzdem nicht verbreitern.
+      name: "untrennbarer Titel",
+      props: {
+        title: "device://A8GZQX0B7F3M9K2R5V1N6C4D",
+        info: "Erklärung",
+        actions: createElement(Badge, { tone: "blue", label: "Entwurf" }),
+        overflowMenu: menu,
+      },
+    },
+    {
+      // `stats` ist ein beliebiger ReactNode. Auch ein Knoten, der selbst
+      // nicht umbrechen darf, darf die Breite des Titelblocks nicht setzen.
+      name: "untrennbarer Status",
+      props: {
+        title: "Anmeldung",
+        info: "Erklärung",
+        stats: createElement(
+          "span",
+          { className: "whitespace-nowrap" },
+          "https://example.invalid/status/A8GZQX0B7F3M9K2R5V1N6C4D",
+        ),
+        actions: createElement(Badge, { tone: "blue", label: "Entwurf" }),
+        overflowMenu: menu,
+      },
+    },
   ];
 }
 
@@ -105,18 +132,14 @@ async function renderHead(page: Page, props: HeadProps): Promise<void> {
 /** Wörter des Titels, die über mehr als eine Zeile laufen. */
 async function brokenWords(page: Page): Promise<string[]> {
   return page.locator("h1").evaluate((h1) => {
-    const text = h1.firstChild;
-    if (!(text instanceof Text)) throw new Error("title is not plain text");
     const broken: string[] = [];
-    const pattern = /\S+/g;
-    for (const match of text.data.matchAll(pattern)) {
+    for (const word of h1.querySelectorAll("span")) {
       const range = document.createRange();
-      range.setStart(text, match.index);
-      range.setEnd(text, match.index + match[0].length);
+      range.selectNodeContents(word);
       const tops = new Set(
         [...range.getClientRects()].map((rect) => Math.round(rect.top)),
       );
-      if (tops.size > 1) broken.push(match[0]);
+      if (tops.size > 1) broken.push(word.textContent ?? "");
     }
     return broken;
   });
