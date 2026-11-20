@@ -315,6 +315,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
   },
 ];
 
+/**
+ * Die Schlüssel aller Gruppen der Hauptnavigation, auch ohne erlaubtes Ziel.
+ * Beim ersten Besuch stehen sie alle offen (#7647).
+ */
+export const TRAEGER_NAV_GROUP_KEYS: readonly string[] = TRAEGER_NAV_GROUPS.map(
+  (group) => group.key,
+);
+
 /** Der Einstieg unten in der Hauptnavigation; sein Ziel ist der erste erlaubte Eintrag. */
 export const TRAEGER_SETTINGS_NAV = {
   key: "einstellungen-bereich",

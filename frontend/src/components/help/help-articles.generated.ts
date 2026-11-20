@@ -14314,6 +14314,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Ein gemerktes Gerät gilt nur für das Träger-Portal und nur für diesen Träger. In einer OGS merkst du das Gerät dort noch einmal.",
       "Gemerkte Geräte stehen unter `Konto` bei `Meine vertrauten Geräte`. Dort entfernst du ein Gerät wieder.",
       "Am Computer stehen die Bereiche links in der Navigation. Auf dem Handy stehen sie unten. Was dort keinen Platz hat, findest du unter `Mehr`.",
+      "Am Computer stehen die Bereiche in Gruppen wie `Übersicht` oder `Finanzen`. Wähle den Namen einer Gruppe, um sie zu- oder aufzuklappen. moto merkt sich das. Die Gruppe der Seite, auf der du bist, bleibt immer offen.",
       "`Einstellungen` steht unten in der Navigation. Ein Klick darauf zeigt dort die Einstellungen. `Zurück zur App` führt zurück.",
     ],
     troubleshootingDetails: [
