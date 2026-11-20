@@ -2152,7 +2152,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			// The import audit upserts one child the school already has.
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
-				"data":   map[string]any{"CreatedCount": 0, "UpdatedCount": 1, "ErrorCount": 0},
+				"data":   map[string]any{"created_count": 0, "updated_count": 1, "error_count": 0},
 			})
 
 		case "/api/files/audience":

@@ -51,6 +51,11 @@ import {
 } from "~/lib/import-batch-result";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import type {
+  OpeningBalanceImportError,
+  OpeningBalanceImportResult,
+  ValidationError,
+} from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -62,42 +67,12 @@ const OPENING_BALANCES_DESCRIPTION =
 
 const logger = createLogger({ component: "OpeningBalanceImportPage" });
 
-// Wire-Format des generischen Imports (PascalCase, siehe
-// services/import/import_service.go). Zeilen ohne Befund tauchen NICHT in
-// `Errors` auf, nur fehlerhafte und mit Hinweisen versehene Zeilen.
-interface ImportValidationError {
-  field: string;
-  message: string;
-  code: string;
-  severity: "error" | "warning";
-}
-
-interface OpeningBalanceRowData {
-  personnel_number?: string;
-  first_name?: string;
-  last_name?: string;
-  hours_balance?: string;
-  vacation_entitled?: string;
-  vacation_carryover?: string;
-  vacation_remaining?: string;
-}
-
-interface ImportRowResult {
-  RowNumber: number;
-  Data: OpeningBalanceRowData;
-  Errors: ImportValidationError[];
-  Timestamp: string;
-}
-
-interface ImportResult {
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  ErrorCount: number;
-  WarningCount: number;
-  Errors: ImportRowResult[];
-  DryRun: boolean;
-}
+// Vertragsformat der Übernahme (ADR 0270, #2352). Zeilen ohne Befund
+// tauchen NICHT in `errors` auf, nur fehlerhafte und mit Hinweisen
+// versehene Zeilen.
+type ImportValidationError = ValidationError;
+type ImportRowResult = OpeningBalanceImportError;
+type ImportResult = OpeningBalanceImportResult;
 
 type RowStatus = "ok" | "warning" | "error";
 
@@ -118,7 +93,10 @@ const STATUS_TONE = {
   error: { tone: "red", label: "Fehler" },
 } as const;
 
-function rowStatusFor(errors: readonly ImportValidationError[]): RowStatus {
+function rowStatusFor(
+  findings: readonly ImportValidationError[] | null,
+): RowStatus {
+  const errors = findings ?? [];
   if (errors.some((e) => e.severity === "error")) return "error";
   if (errors.length > 0) return "warning";
   return "ok";
@@ -131,12 +109,12 @@ function cellValue(raw: string | undefined): string {
 }
 
 function toDisplayRow(row: ImportRowResult): DisplayRow {
-  const data = row.Data ?? {};
+  const data = row.data ?? {};
   const name = `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim();
   return {
-    key: `row-${row.RowNumber}`,
-    rowNumber: row.RowNumber,
-    status: rowStatusFor(row.Errors),
+    key: `row-${row.row_number}`,
+    rowNumber: row.row_number,
+    status: rowStatusFor(row.errors),
     name: name === "" ? "Ohne Namen" : name,
     personnelNumber: data.personnel_number?.trim() ?? "",
     values: [
@@ -145,7 +123,7 @@ function toDisplayRow(row: ImportRowResult): DisplayRow {
       { label: "Übertrag", value: cellValue(data.vacation_carryover) },
       { label: "Resturlaub", value: cellValue(data.vacation_remaining) },
     ],
-    messages: row.Errors.map((e) => e.message),
+    messages: (row.errors ?? []).map((e) => e.message),
     isSummary: false,
   };
 }
@@ -169,8 +147,8 @@ function summaryRow(count: number): DisplayRow {
 }
 
 function buildDisplayRows(result: ImportResult): DisplayRow[] {
-  const listed = (result.Errors ?? []).map(toDisplayRow);
-  const untouched = result.TotalRows - listed.length;
+  const listed = (result.errors ?? []).map(toDisplayRow);
+  const untouched = result.total_rows - listed.length;
   return untouched > 0 ? [...listed, summaryRow(untouched)] : listed;
 }
 
@@ -424,12 +402,12 @@ function OpeningBalanceImportPageContent() {
           setImportResult(interrupted as ImportResult);
           setImportInterrupted(true);
           setPreviewResult(null);
-          setPreviewRows((interrupted.Errors ?? []).map(toDisplayRow));
+          setPreviewRows((interrupted.errors ?? []).map(toDisplayRow));
           setBatchNotice(importBatchFailureMessage(interrupted));
           logger.error("opening_balance_import_batch_failed", {
-            created: interrupted.CreatedCount,
-            updated: interrupted.UpdatedCount,
-            errors: interrupted.ErrorCount,
+            created: interrupted.created_count,
+            updated: interrupted.updated_count,
+            errors: interrupted.error_count,
           });
           return;
         }
@@ -440,17 +418,17 @@ function OpeningBalanceImportPageContent() {
       setImportResult(result);
       setImportInterrupted(false);
       setPreviewResult(null);
-      setPreviewRows((result.Errors ?? []).map(toDisplayRow));
+      setPreviewRows((result.errors ?? []).map(toDisplayRow));
 
-      if (result.ErrorCount > 0) {
+      if (result.error_count > 0) {
         toast.warning(
-          `Die Übernahme ist fertig: ${result.CreatedCount} übernommen, ${result.ErrorCount} übersprungen.`,
+          `Die Übernahme ist fertig: ${result.created_count} übernommen, ${result.error_count} übersprungen.`,
         );
       } else {
         toast.success(
-          result.CreatedCount === 1
+          result.created_count === 1
             ? "1 Übernahme ist gebucht."
-            : `${result.CreatedCount} Übernahmen sind gebucht.`,
+            : `${result.created_count} Übernahmen sind gebucht.`,
         );
       }
     } catch (err) {
@@ -509,12 +487,13 @@ function OpeningBalanceImportPageContent() {
               }
             : { label: "Übernahme abgeschlossen" }
           : {
-              value: balanceResult?.TotalRows ?? 0,
-              label: (balanceResult?.TotalRows ?? 0) === 1 ? "Zeile" : "Zeilen",
+              value: balanceResult?.total_rows ?? 0,
+              label:
+                (balanceResult?.total_rows ?? 0) === 1 ? "Zeile" : "Zeilen",
             },
         ...((!importResult || importInterrupted) &&
-        (balanceResult?.ErrorCount ?? 0) > 0
-          ? [{ value: balanceResult?.ErrorCount, label: "Fehler" }]
+        (balanceResult?.error_count ?? 0) > 0
+          ? [{ value: balanceResult?.error_count, label: "Fehler" }]
           : []),
         ...(effectiveDate
           ? [{ label: `Stichtag ${formatDate(effectiveDate)}` }]
@@ -553,8 +532,8 @@ function OpeningBalanceImportPageContent() {
     );
   }
 
-  const importable = previewResult?.CreatedCount ?? 0;
-  const previewErrors = previewResult?.ErrorCount ?? 0;
+  const importable = previewResult?.created_count ?? 0;
+  const previewErrors = previewResult?.error_count ?? 0;
   const showPreview = previewResult !== null && importResult === null;
   const importButtonLabel = isImporting
     ? "Wird übernommen…"
@@ -680,13 +659,13 @@ function OpeningBalanceImportPageContent() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatCard
               label="Zeilen"
-              value={previewResult.TotalRows}
+              value={previewResult.total_rows}
               tone="neutral"
             />
             <StatCard label="Übernehmbar" value={importable} tone="neutral" />
             <StatCard
               label="Hinweise"
-              value={previewResult.WarningCount}
+              value={previewResult.warning_count}
               tone="neutral"
             />
             <StatCard label="Fehler" value={previewErrors} tone="neutral" />
@@ -736,22 +715,22 @@ function OpeningBalanceImportPageContent() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatCard
               label="Zeilen"
-              value={importResult.TotalRows}
+              value={importResult.total_rows}
               tone="neutral"
             />
             <StatCard
               label="Übernommen"
-              value={importResult.CreatedCount}
+              value={importResult.created_count}
               tone="neutral"
             />
             <StatCard
               label="Hinweise"
-              value={importResult.WarningCount ?? 0}
+              value={importResult.warning_count ?? 0}
               tone="neutral"
             />
             <StatCard
               label="Fehler"
-              value={importResult.ErrorCount}
+              value={importResult.error_count}
               tone="neutral"
             />
           </div>

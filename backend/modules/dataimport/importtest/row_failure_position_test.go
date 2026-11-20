@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -167,27 +166,12 @@ func TestImportBatchesRefusedRowKeepsTheRowPathOutcome(t *testing.T) {
 					}
 					require.Equal(t, committed, outcome.created+outcome.updated, "acknowledged counters")
 					require.Equal(t, committed, outcome.persisted, "only earlier chunks persist")
-					require.Equal(t, map[int][]string{p.k + 1: {c.code + ": injected owner write failure"}}, trimFailures(outcome.failures))
+					require.Equal(t, map[int][]string{p.k + 1: {c.code + ": Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut."}}, outcome.failures)
 				})
 			}()
 		}
 	}
 	running.Wait()
-}
-
-// trimFailures keeps the code and the injected cause of each message.
-func trimFailures(failures map[int][]string) map[int][]string {
-	trimmed := make(map[int][]string, len(failures))
-	for row, messages := range failures {
-		for _, message := range messages {
-			code, _, _ := strings.Cut(message, ": ")
-			if strings.Contains(message, "injected owner write failure") {
-				message = code + ": injected owner write failure"
-			}
-			trimmed[row] = append(trimmed[row], message)
-		}
-	}
-	return trimmed
 }
 
 func uploadContext(t *testing.T, db *bun.DB, permissions ...string) context.Context {

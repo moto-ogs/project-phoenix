@@ -432,6 +432,34 @@ describe("catalog multipart upload", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  // An import whose later batch failed answers 500 with the saved part in
+  // details.result; the page shows it (#2352, readImportBatchFailure).
+  it("keeps a coded 500 with its details, such as a failed import batch", async () => {
+    const result = { total_rows: 3, created_count: 2, errors: [] };
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          detail: "batch 2 failed",
+          code: "import.import_batch_failed",
+          details: { result },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+    );
+    const response = await upload("abcd");
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({
+      code: "import.import_batch_failed",
+      details: { result },
+    });
+  });
+
   it("passes the backend's refusal of the file on as its problem", async () => {
     mockFetch.mockResolvedValue(problem(400, "enrollment.upload_invalid"));
 

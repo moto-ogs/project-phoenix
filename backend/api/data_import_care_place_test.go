@@ -22,7 +22,7 @@ func TestImportStudents_ClassChangePreservesCarePlaceStatus(t *testing.T) {
 			first := "Vorname,Nachname,Klasse,Geburtstag,Datenschutz\nLea,Lang,1A,03.02.2018,Ja\n"
 			rr := testutil.ExecuteRequest(router, newMultipartRequestWithMode(t, "/students/import", "k.csv", first, "create", claims))
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-			require.Contains(t, rr.Body.String(), `"CreatedCount":1`)
+			require.Contains(t, rr.Body.String(), `"created_count":1`)
 
 			var studentID int64
 			require.NoError(t, tc.db.NewRaw(`SELECT student_profile_id FROM users.student_school_memberships
@@ -34,7 +34,7 @@ func TestImportStudents_ClassChangePreservesCarePlaceStatus(t *testing.T) {
 			second := "Vorname,Nachname,Klasse,Geburtstag,Datenschutz\nLea,Lang,2A,03.02.2018,Ja\n"
 			rr = testutil.ExecuteRequest(router, newMultipartRequestWithMode(t, "/students/import", "k.csv", second, "upsert", claims))
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-			require.Contains(t, rr.Body.String(), `"UpdatedCount":1`)
+			require.Contains(t, rr.Body.String(), `"updated_count":1`)
 			var stored struct {
 				SchoolClass      string `bun:"school_class"`
 				WithoutCarePlace bool   `bun:"without_care_place"`
