@@ -294,22 +294,25 @@ describe("TraegerSidebar", () => {
   });
 
   describe("collapsible groups (#7647)", () => {
+    // Mit dem Recht für die Personalakten, damit alle vier Gruppen stehen.
+    const EVERY_GROUP_RIGHTS = [...ALL_RIGHTS, "traeger_staff:manage"];
+
     function groupHeading(name: string) {
       return mainNav().getByRole("button", { name });
     }
 
     it("shows every group open to a new person", () => {
-      sessionUser.permissions = ALL_RIGHTS;
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
       mockPathname.mockReturnValue("/ferien");
       render(<TraegerSidebar />);
 
-      for (const name of ["Übersicht", "Betreuung", "Finanzen"]) {
+      for (const name of ["Übersicht", "Betreuung", "Personal", "Finanzen"]) {
         expect(groupHeading(name)).toHaveAttribute("aria-expanded", "true");
       }
     });
 
     it("keeps a closed group closed after a reload", async () => {
-      sessionUser.permissions = ALL_RIGHTS;
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
       mockPathname.mockReturnValue("/ferien");
       const user = userEvent.setup();
       const first = render(<TraegerSidebar />);
@@ -336,7 +339,7 @@ describe("TraegerSidebar", () => {
     });
 
     it("opens the group of the current page even if it was closed", async () => {
-      sessionUser.permissions = ALL_RIGHTS;
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
       localStorage.setItem(
         "traeger-sidebar-open-groups",
         JSON.stringify(["uebersicht"]),
@@ -356,7 +359,7 @@ describe("TraegerSidebar", () => {
     });
 
     it("toggles a group by keyboard", async () => {
-      sessionUser.permissions = ALL_RIGHTS;
+      sessionUser.permissions = EVERY_GROUP_RIGHTS;
       mockPathname.mockReturnValue("/ferien");
       const user = userEvent.setup();
       render(<TraegerSidebar />);

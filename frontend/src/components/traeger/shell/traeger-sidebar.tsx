@@ -21,6 +21,7 @@ import {
   TRAEGER_HELP_NAV,
   TRAEGER_NAV_GROUP_KEYS,
   TRAEGER_SETTINGS_NAV,
+  traegerNavGroupKeyFor,
   traegerNavGroupsFor,
   traegerSettingsNavItemsFor,
 } from "./traeger-nav-items";
@@ -52,14 +53,10 @@ export function TraegerSidebar({
   const groups = traegerNavGroupsFor(session ?? null, federalStates);
   // Einklappbare Gruppen wie in der OGS-App (#7647): anfangs alle offen, der
   // Zustand bleibt im Browser, die Gruppe der aktuellen Seite ist immer offen.
-  const currentGroup =
-    groups.find((group) =>
-      group.items.some((item) => isTraegerNavActive(item.href, pathname)),
-    )?.key ?? null;
   const { isGroupOpen, toggleGroup } = useStoredOpenGroups({
     storageKey: OPEN_GROUPS_STORAGE_KEY,
     knownKeys: KNOWN_GROUP_KEYS,
-    currentGroup,
+    currentGroup: traegerNavGroupKeyFor(groups, pathname),
     defaultGroups: TRAEGER_NAV_GROUP_KEYS,
   });
 
