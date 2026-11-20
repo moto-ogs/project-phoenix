@@ -34,6 +34,7 @@ export function staffNoticesTopic(): HelpTopic {
       "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
       "Mit `Kenntnisnahme verlangen` siehst du später, wer den Hinweis bestätigt hat.",
+      "Das Team sieht den Hinweis an seinen Tagen auch auf der `Startseite` in `Heute anders`. Dort kann es ihn gleich mit `Zur Kenntnis nehmen` bestätigen.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
       "Du selbst bekommst zu deinem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
       "Speicherst du einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn du den Haken setzt.",

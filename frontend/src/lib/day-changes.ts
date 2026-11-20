@@ -5,6 +5,7 @@
  */
 import { bffJson } from "~/lib/bff-fetch";
 import type {
+  DayNotice,
   Entry,
   Kind,
   LinkTarget,
@@ -19,6 +20,17 @@ export interface DayChangePerson {
   readonly name: string;
   readonly role: PersonRole | (string & {});
   readonly isSelf: boolean;
+}
+
+/** Ein Hinweis der Leitung (#7667); Titel und Text schreibt die Leitung. */
+export interface DayChangeNotice {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  readonly important: boolean;
+  readonly requiresAcknowledgement: boolean;
+  /** Die eigene Kenntnisnahme ist gespeichert. */
+  readonly acknowledged: boolean;
 }
 
 export interface DayChange {
@@ -42,6 +54,8 @@ export interface DayChange {
     readonly staffId: string | null;
   } | null;
   readonly count: number | null;
+  /** Nur bei der Art `staff_notice`. */
+  readonly notice?: DayChangeNotice | null;
 }
 
 export interface DayChangesOverview {
@@ -49,6 +63,18 @@ export interface DayChangesOverview {
   /** Quellen, die gerade nicht geladen werden konnten. */
   readonly failedSources: readonly (Source | (string & {}))[];
   readonly entries: readonly DayChange[];
+}
+
+function mapNotice(notice: DayNotice | null): DayChangeNotice | null {
+  if (!notice) return null;
+  return {
+    id: notice.id,
+    title: notice.title,
+    body: notice.body,
+    important: notice.priority === "important",
+    requiresAcknowledgement: notice.requires_acknowledgement,
+    acknowledged: notice.acknowledged,
+  };
 }
 
 function mapEntry(entry: Entry): DayChange {
@@ -71,6 +97,7 @@ function mapEntry(entry: Entry): DayChange {
       ? { target: entry.link.target, staffId: entry.link.staff_id ?? null }
       : null,
     count: entry.count,
+    notice: mapNotice(entry.notice ?? null),
   };
 }
 

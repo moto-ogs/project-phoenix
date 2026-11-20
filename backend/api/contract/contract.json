@@ -22722,7 +22722,8 @@
         "group_substitution",
         "group_substitution_count",
         "staff_absent",
-        "staff_absent_count"
+        "staff_absent_count",
+        "staff_notice"
       ]
     },
     {
@@ -22732,7 +22733,8 @@
         "own_absences",
         "staff_absences",
         "staff_list",
-        "staff_member"
+        "staff_member",
+        "staff_notices"
       ]
     },
     {
@@ -22747,6 +22749,13 @@
         "parent_note",
         "phone",
         "student_note"
+      ]
+    },
+    {
+      "name": "NoticePriority",
+      "values": [
+        "important",
+        "info"
       ]
     },
     {
@@ -22789,6 +22798,7 @@
     {
       "name": "Source",
       "values": [
+        "notices",
         "staff"
       ]
     },
@@ -46037,6 +46047,49 @@
       ]
     },
     {
+      "name": "DayNotice",
+      "go_type": "daychangesview.DayNotice",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "schema": {
+            "kind": "enum",
+            "ref": "NoticePriority"
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayReport",
       "go_type": "classday.DayReport",
       "fields": [
@@ -48626,6 +48679,14 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        },
+        {
+          "name": "notice",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayNotice"
           }
         }
       ]
