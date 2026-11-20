@@ -84,36 +84,35 @@ beforeEach(() => {
 });
 
 describe("public links below the staff portal's auth", () => {
-  it.each(["42", 42])(
-    "accepts a guardian invitation with account ID %j without a bearer",
-    async (accountID) => {
-      const { POST } =
-        await import("./auth/guardian-invitations/[...path]/route");
-      answer({ account_id: accountID, email: "a@example.test" }, 201);
-      const body = { password: "pw-1", confirm_password: "pw-1" };
-
-      const response = await call(POST, "POST", ["tok", "accept"], body);
-
-      expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({
-        success: true,
-        message: "Success",
-        data: { account_id: "42", email: "a@example.test" },
-      });
-      expect(response.headers.get("Cache-Control")).toContain("no-store");
-      expect(sent()).toEqual({
-        path: "/auth/guardian-invitations/tok/accept",
-        method: "POST",
-        authorization: null,
-        body,
-      });
-    },
-  );
-
-  it("rejects a guardian account ID that lost numeric precision", async () => {
+  it("accepts a guardian invitation without a bearer", async () => {
     const { POST } =
       await import("./auth/guardian-invitations/[...path]/route");
-    answer({ account_id: 2 ** 53, email: "a@example.test" }, 201);
+    answer({ account_id: "42", email: "a@example.test" }, 201);
+    const body = { password: "pw-1", confirm_password: "pw-1" };
+
+    const response = await call(POST, "POST", ["tok", "accept"], body);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      success: true,
+      message: "Success",
+      data: { account_id: "42", email: "a@example.test" },
+    });
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(sent()).toEqual({
+      path: "/auth/guardian-invitations/tok/accept",
+      method: "POST",
+      authorization: null,
+      body,
+    });
+  });
+
+  // The account ID travels as a decimal string only (ADR 0270); the
+  // transition that also read a number ended with the deploy (#2352).
+  it("rejects a numeric guardian account ID", async () => {
+    const { POST } =
+      await import("./auth/guardian-invitations/[...path]/route");
+    answer({ account_id: 42, email: "a@example.test" }, 201);
 
     const response = await call(POST, "POST", ["tok", "accept"], {
       password: "pw-1",
@@ -199,6 +198,24 @@ describe("public links below the staff portal's auth", () => {
       path: "/auth/tenants",
       authorization: null,
     });
+  });
+
+  it("lists the schools when Next passes no params to the static route", async () => {
+    // Next 16 hands a route file without a dynamic segment `params: undefined`.
+    const { GET } = await import("./auth/tenants/route");
+    answer([{ slug: "a", name: "A", subdomain: "a", organization_name: "T" }]);
+
+    const response = await (
+      GET as unknown as (
+        request: NextRequest,
+        context: { params?: Promise<Record<string, unknown>> },
+      ) => Promise<Response>
+    )(new NextRequest("http://localhost/x"), {
+      params: undefined,
+    });
+
+    expect(response.status).toBe(200);
+    expect(sent()).toMatchObject({ path: "/auth/tenants" });
   });
 
   it("validates a staff invitation link without a bearer", async () => {

@@ -52,18 +52,6 @@ describe("categoryService requests", () => {
     );
   });
 
-  // Temporary (#7563): the previous release's route file answers the mapped
-  // shape until the next production deploy.
-  it("takes the mapped shape of the previous release's route file", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ data: [mapped] }, { status: 200 }),
-    );
-
-    await expect(categoryService.getManagedCategories()).resolves.toEqual([
-      mapped,
-    ]);
-  });
-
   it("maps a nullable list to an empty list", async () => {
     mockSessionFetch.mockResolvedValueOnce(
       Response.json({ data: null }, { status: 200 }),

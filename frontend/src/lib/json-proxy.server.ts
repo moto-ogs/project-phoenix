@@ -143,21 +143,3 @@ export async function forwardJsonRequest(
     return handleApiError(error, request);
   }
 }
-
-/**
- * Temporary (#2352): the `onSuccess` of a route file that stays one release
- * for an installed app with an older bundle. The backend answers in the
- * envelope now; the older bundle reads the bare data, so the file passes on
- * `data` with the backend's status. Delete it with its last route file after
- * the next production deploy.
- */
-export async function answerWithoutEnvelope(
-  response: Response,
-): Promise<Response> {
-  const body = (await response.json()) as unknown;
-  const data =
-    typeof body === "object" && body !== null && "data" in body
-      ? (body as { data: unknown }).data
-      : body;
-  return Response.json(data, { status: response.status });
-}

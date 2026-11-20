@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   DEPLOYMENTS,
@@ -8,6 +9,9 @@ import {
   ON_WORKDAY,
   POSTHOG_HOST,
   SCHOOL_BREAKDOWN,
+  SETUP_CHECKLIST_STEP_LABELS,
+  STAFF_FIRST_STEPS_EVENTS,
+  STAFF_FIRST_STEP_LABELS,
   check,
   dashboards,
   featureExpression,
@@ -233,6 +237,62 @@ test('the entry dashboard counts self-opening surfaces from consenting browsers 
   }
 });
 
+// Ankündigung (#7555): the server counts it for the school, also without
+// consent, so its tile is the one entry tile without the consent mark.
+test('the entry dashboard shows the announcement seen and closed from the server, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Ankündigung gesehen und geschlossen');
+  assert.ok(tile, 'the announcement tile exists');
+  assert.equal(tile.deployment, 'production');
+  assert.match(tile.description, /auch ohne Einwilligung/);
+  const query = tile.query.source.query;
+  for (const event of ['announcement_seen', 'announcement_dismissed']) {
+    assert.match(query, new RegExp(`'${event}'`), event);
+  }
+  assert.doesNotMatch(query, /Geschlossen in Prozent/, 'bulk closing can include announcements not shown');
+  assert.match(tile.description, /keinen Prozentwert/);
+  assert.doesNotMatch(query, /distinct_id|person|\$session_id/, 'no person and no session');
+
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['announcement_seen', 'announcement_dismissed']) {
+    assert.ok(noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard counts the care worker\'s first steps from the server, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const hiding = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Betreuung abgeschlossen oder ausgeblendet (vom Server)');
+  const perStep = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Betreuung je Schritt (vom Server)');
+  assert.ok(hiding && perStep, 'both tiles exist');
+  for (const tile of [hiding, perStep]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /auch ohne Einwilligung/, tile.name);
+    assert.doesNotMatch(tile.query.source.query, /distinct_id|\$session_id|person/, `${tile.name} counts no people`);
+  }
+  assert.match(hiding.query.source.query, /'staff_first_steps_completed'/);
+  assert.match(hiding.query.source.query, /'staff_first_steps_dismissed'/);
+  for (const action of ['done', 'skipped', 'reopened']) {
+    assert.match(perStep.query.source.query, new RegExp(`properties\\.action = '${action}'`), action);
+  }
+
+  // Every step of the checklist has a German name on the tile.
+  const api = readFileSync(new URL('../frontend/src/lib/staff-onboarding-api.ts', import.meta.url), 'utf8');
+  const keys = api.match(/STAFF_ONBOARDING_STEP_KEYS[^=]*=\s*\[([^\]]*)\]/)?.[1].match(/"[a-z_]+"/g).map((key) => key.slice(1, -1));
+  assert.deepEqual(Object.keys(STAFF_FIRST_STEP_LABELS), keys);
+  for (const [value, label] of Object.entries(STAFF_FIRST_STEP_LABELS)) {
+    assert.ok(perStep.query.source.query.includes(`'${value}'`) && perStep.query.source.query.includes(`'${label}'`), value);
+  }
+
+  // The server events fall outside „Sonstiges“.
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of STAFF_FIRST_STEPS_EVENTS) {
+    assert.ok(FEATURES.every((f) => !f.events?.includes(event)), event);
+    assert.ok(noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
 test('the entry dashboard shows the parents\' first steps from consenting browsers only, never as feature use', () => {
   const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
   const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Eltern (nur mit Einwilligung)');
@@ -261,6 +321,42 @@ test('the entry dashboard shows the parents\' first steps from consenting browse
   for (const event of ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed']) {
     assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
     assert.ok(noFeature.includes("startsWith(event, 'onboarding_')") || noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard shows the setup checklist from the server: completed, dismissed and skipped steps', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const outcome = dashboard.insights.find((insight) => insight.name === 'Einrichtungs-Checkliste: abgeschlossen und ausgeblendet');
+  const skipped = dashboard.insights.find((insight) => insight.name === 'Einrichtungs-Checkliste: übersprungene Schritte');
+  assert.ok(outcome && skipped, 'both tiles exist');
+  for (const tile of [outcome, skipped]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /auch ohne Einwilligung/, tile.name);
+  }
+  assert.match(outcome.query.source.query, /'onboarding_setup_checklist_completed'/);
+  assert.match(outcome.query.source.query, /'onboarding_setup_checklist_dismissed'/);
+  assert.match(outcome.query.source.query, /group by Schule_ID/, 'a rate per school, never per person');
+  assert.match(outcome.query.source.query, /countIf\(HatAbgeschlossen = 1\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /countIf\(HatAusgeblendet = 1 and HatAbgeschlossen = 0\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /as HatAbgeschlossen/, 'the inner flag differs from the visible aggregate');
+  assert.match(skipped.query.source.query, /'onboarding_setup_checklist_step_skipped'/);
+
+  // Every step of the wizard (schoolsetup.StepKeys) has its German name on the tile.
+  const wizard = readFileSync(new URL('../backend/modules/schoolsetup/schoolsetup.go', import.meta.url), 'utf8');
+  const steps = [...wizard.matchAll(/^\s*Step\w+ StepKey = "(\w+)"/gm)].map((match) => match[1]);
+  assert.ok(steps.length > 0, 'reads the step keys');
+  assert.deepEqual(Object.keys(SETUP_CHECKLIST_STEP_LABELS).sort(), steps.sort());
+  for (const [value, label] of Object.entries(SETUP_CHECKLIST_STEP_LABELS)) {
+    assert.ok(skipped.query.source.query.includes(`'${value}'`) && skipped.query.source.query.includes(`'${label}'`), value);
+  }
+
+  // The server's checklist events are no feature use and stay out of „Sonstiges“.
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  assert.ok(noFeature.includes("startsWith(event, 'onboarding_')"));
+  for (const event of ['onboarding_setup_checklist_completed', 'onboarding_setup_checklist_dismissed', 'onboarding_setup_checklist_step_skipped']) {
+    assert.ok(event.startsWith('onboarding_'), `${event} is no feature use`);
+    assert.ok(FEATURES.every((feature) => !feature.events?.includes(event)), event);
   }
 });
 

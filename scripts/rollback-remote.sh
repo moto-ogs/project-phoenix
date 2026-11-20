@@ -22,8 +22,11 @@ bundle="${deployment_directory%/*}/backups/$DEPLOY_DIR/$backup_id"
 bash "$script_dir/restore-db.sh" "$bundle"
 # The restored Compose file decides: a demo snapshot brings demo-runtime along.
 listed=$(bash "$script_dir/release-backup.sh" app-services)
-if ! docker compose up -d --wait --remove-orphans server frontend; then
-  docker compose stop server frontend || true
+gated=$(bash "$script_dir/release-backup.sh" gate-services)
+# shellcheck disable=SC2086 # service names, split on purpose
+if ! docker compose up -d --wait --remove-orphans $gated || ! bash "$script_dir/release-backup.sh" check-replicas; then
+  # shellcheck disable=SC2086
+  docker compose stop $gated || true
   echo 'Restored application failed healthchecks and was stopped' >&2
   exit 1
 fi

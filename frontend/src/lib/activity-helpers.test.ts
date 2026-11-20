@@ -12,8 +12,6 @@ import {
   mapStudentEnrollmentsResponse,
   isActivityCreator,
   mapSupervisorOption,
-  readActivity,
-  readActivityCategory,
   isSystemActivity,
 } from "./activity-helpers";
 import type {
@@ -271,50 +269,6 @@ describe("mapActivityResponse schedules", () => {
 
     expect(result.times?.[0]?.weekday).toBe("1");
     expect(result.times?.[0]?.timeframe_id).toBeUndefined();
-  });
-});
-
-describe("readActivity", () => {
-  it("maps the contract's shape", () => {
-    const result = readActivity(sampleBackendActivity);
-
-    expect(result.id).toBe("1");
-    expect(result.is_open_ags).toBe(true);
-    expect(result.ag_category_id).toBe("5");
-    expect(result.created_at).toBeInstanceOf(Date);
-  });
-
-  it("takes the shape of the previous release's route file as it is", () => {
-    const mapped = mapActivityResponse(sampleBackendActivity);
-    const sent = JSON.parse(JSON.stringify(mapped)) as unknown;
-
-    expect(readActivity(sent)).toEqual(mapped);
-  });
-});
-
-describe("readActivityCategory", () => {
-  const category: ActivityCategoryResponse = {
-    id: "3",
-    name: "Kreativ",
-    shift_type_id: "8",
-    is_system: true,
-    archived_at: "2024-02-01T00:00:00Z",
-    usage_count: 4,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-15T12:00:00Z",
-  };
-
-  it("maps the contract's shape", () => {
-    expect(readActivityCategory(category)).toEqual(
-      mapActivityCategoryResponse(category),
-    );
-  });
-
-  it("takes the shape of the previous release's route file as it is", () => {
-    const mapped = mapActivityCategoryResponse(category);
-    const sent = JSON.parse(JSON.stringify(mapped)) as unknown;
-
-    expect(readActivityCategory(sent)).toEqual(mapped);
   });
 });
 

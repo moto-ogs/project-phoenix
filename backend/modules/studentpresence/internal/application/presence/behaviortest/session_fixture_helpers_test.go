@@ -21,16 +21,6 @@ func sessionSupervisors(records studentpresence.SessionRecords) ports.GroupSuper
 	return supervisors
 }
 
-// sessionOf copies a stored fixture session into the value the service reads
-// and writes.
-func sessionOf(row *testpkg.ActiveGroupRow) *ports.ActiveGroup {
-	return &ports.ActiveGroup{
-		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TenantID: row.TenantID,
-		StartTime: row.StartTime, EndTime: row.EndTime, LastActivity: row.LastActivity,
-		TimeoutMinutes: row.TimeoutMinutes, GroupID: row.GroupID, DeviceID: row.DeviceID, RoomID: row.RoomID,
-	}
-}
-
 // supervisorOf copies a stored fixture supervision into the value the
 // service reads and writes.
 func supervisorOf(row *testpkg.GroupSupervisorRow) *ports.GroupSupervisor {

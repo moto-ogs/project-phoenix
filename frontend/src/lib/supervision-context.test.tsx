@@ -1141,7 +1141,7 @@ describe("SupervisionProvider state optimization", () => {
   });
 
   it("should not update state when groups remain the same", async () => {
-    const initialGroups = { groups: [{ id: 1, name: "Group A" }] };
+    const initialGroups = { data: [{ id: 1, name: "Group A" }] };
     setupFetchMock({ groups: initialGroups });
 
     const { result, rerender } = renderHook(() => useSupervision(), {
@@ -1259,30 +1259,6 @@ describe("SupervisionProvider API response handling", () => {
     // A failed own-supervision request does not hide the shared rooms.
     expect(result.current.supervisedRooms).toHaveLength(1);
     expect(result.current.supervisedRooms[0]?.isOpenRoom).toBe(true);
-  });
-
-  it("should handle groups API with nested data structure", async () => {
-    setupFetchMock({
-      groups: {
-        data: {
-          groups: [
-            { id: 1, name: "Nested Group A" },
-            { id: 2, name: "Nested Group B" },
-          ],
-        },
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    expect(result.current.hasGroups).toBe(true);
-    expect(result.current.groups).toHaveLength(2);
   });
 
   it("should sort groups by German locale", async () => {
@@ -2365,7 +2341,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
               ok: true,
               json: async () => {
                 oldResponseRead = true;
-                return { groups: [{ id: 2, name: "Schule 2" }] };
+                return { data: [{ id: 2, name: "Schule 2" }] };
               },
             });
         });
@@ -2413,7 +2389,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
                 ok: true,
                 json: async () => {
                   oldResponseRead = true;
-                  return { groups: [{ id: 2, name: "Alte Sitzung" }] };
+                  return { data: [{ id: 2, name: "Alte Sitzung" }] };
                 },
               });
           });
@@ -2423,7 +2399,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
             resolve({
               ok: true,
               json: async () => ({
-                groups: [{ id: 2, name: "Neue Sitzung" }],
+                data: [{ id: 2, name: "Neue Sitzung" }],
               }),
             });
         });
@@ -2499,7 +2475,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
         ok: true,
         json: async () =>
           url.includes("/api/students/ogs-group-navigation")
-            ? { groups: [{ id: 9, name: "Schule 3" }] }
+            ? { data: [{ id: 9, name: "Schule 3" }] }
             : { data: [] },
       });
     });

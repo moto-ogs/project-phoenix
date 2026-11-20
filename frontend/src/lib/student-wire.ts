@@ -1,7 +1,6 @@
 // The student as the contract sends and receives it, and the one translation
 // to and from the browser's Student. lib/student-api maps every answer of the
-// catalog proxy here; the temporary student BFF routes (#7563) use the same
-// translation for an older app bundle.
+// catalog proxy here (#7563).
 
 import { parseAttendanceActor } from "~/lib/attendance-actor";
 // Types only: the browser loads this module, and a value import would pull

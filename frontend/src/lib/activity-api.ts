@@ -1,4 +1,8 @@
 // lib/activity-api.ts
+import type {
+  ActivityCategoryResponse,
+  ActivityResponse,
+} from "./contract/activities.generated";
 import { sessionFetch } from "./session-cache";
 import { handleDomainApiError } from "./api-helpers";
 import { ApiError, apiErrorFromResponse } from "./api-error";
@@ -12,8 +16,8 @@ function handleActivityApiError(error: unknown, context: string): never {
 }
 import {
   mapStudentEnrollmentResponse,
-  readActivity,
-  readActivityCategory,
+  mapActivityCategoryResponse,
+  mapActivityResponse,
   type Activity,
   type ActivityCategory,
   type UpdateActivityRequest,
@@ -37,22 +41,11 @@ function buildActivitiesUrl(baseUrl: string, filters?: ActivityFilter): string {
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 }
 
-/** The data of GET /api/activities: the contract's list, or the paged
- * object of the previous release's route file (Temporary, #7563). */
-function parseActivitiesResponse(responseData: unknown): Activity[] {
-  let data: unknown =
-    responseData && typeof responseData === "object" && "data" in responseData
-      ? responseData.data
-      : responseData;
-  if (
-    data &&
-    typeof data === "object" &&
-    !Array.isArray(data) &&
-    "data" in data
-  ) {
-    data = data.data;
-  }
-  return Array.isArray(data) ? data.map(readActivity) : [];
+/** The data of GET /api/activities: the contract's list in the envelope. */
+function parseActivitiesResponse(responseData: {
+  data: ActivityResponse[] | null;
+}): Activity[] {
+  return (responseData.data ?? []).map(mapActivityResponse);
 }
 
 // Helper: Parse enrolled students response
@@ -128,8 +121,9 @@ export async function fetchActivities(
     throw await apiErrorFromResponse(response, `API error: ${response.status}`);
   }
 
-  const responseData = (await response.json()) as unknown;
-  return parseActivitiesResponse(responseData);
+  return parseActivitiesResponse(
+    (await response.json()) as { data: ActivityResponse[] | null },
+  );
 }
 
 // Get enrolled students for an activity
@@ -173,12 +167,8 @@ export async function updateActivity(
     throw await apiErrorFromResponse(response, `API error: ${response.status}`);
   }
 
-  const responseData = (await response.json()) as unknown;
-  return readActivity(
-    responseData && typeof responseData === "object" && "data" in responseData
-      ? responseData.data
-      : responseData,
-  );
+  const responseData = (await response.json()) as { data: ActivityResponse };
+  return mapActivityResponse(responseData.data);
 }
 
 // Delete an activity
@@ -210,14 +200,10 @@ export async function getCategories(): Promise<ActivityCategory[]> {
       );
     }
 
-    const responseData = (await response.json()) as unknown;
-    const rawCategories =
-      responseData && typeof responseData === "object" && "data" in responseData
-        ? responseData.data
-        : responseData;
-    return Array.isArray(rawCategories)
-      ? rawCategories.map(readActivityCategory)
-      : [];
+    const responseData = (await response.json()) as {
+      data: ActivityCategoryResponse[] | null;
+    };
+    return (responseData.data ?? []).map(mapActivityCategoryResponse);
   } catch (error) {
     handleActivityApiError(error, "fetch categories");
   }

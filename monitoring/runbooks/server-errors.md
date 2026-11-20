@@ -4,7 +4,7 @@ Zwei Regeln aus `grafana/provisioning/alerting/server-errors.yml` (#2953):
 
 | Regel | Quelle | Schwelle |
 |---|---|---|
-| Server error spike | `{env="prod",service="server"}`, `level="ERROR"` | mehr als 10 Zeilen in 5 Minuten |
+| Server error spike | `{env="prod",service=~"server|worker"}`, `level="ERROR"` | mehr als 10 Zeilen in 5 Minuten |
 | Postgres errors | `{env="prod",service="postgres"}`, `ERROR:` oder `PANIC:` | mehr als 5 Zeilen in 5 Minuten |
 
 ## Was zählt, was nicht
@@ -40,8 +40,8 @@ ein eigenes Signal, kein Query-Fehler.
 
 ## Bekannte Grenzen
 
-- Die Loki-Labels `service="server"` und `service="postgres"` folgen den
-  journald-Tags `prod-server` und `prod-postgres` aus
+- Die Loki-Labels `service="server"`, `service="worker"` und `service="postgres"` folgen den
+  journald-Tags `prod-server`, `prod-worker` und `prod-postgres` aus
   `environments/production.compose.yml`. Bei einer Änderung am Alloy-Mapping
   beide Regeln anpassen.
 - `response_write_failure` (Client hat die Verbindung abgebrochen) bleibt

@@ -1,5 +1,6 @@
+import type { ActivityCategoryResponse } from "./contract/activities.generated";
 import {
-  readActivityCategory,
+  mapActivityCategoryResponse,
   type ActivityCategory,
 } from "./activity-helpers";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
@@ -21,8 +22,8 @@ interface ReferenceEnvelope<T> {
   readonly pagination?: { readonly total_pages?: number };
 }
 
-function unwrapReferences<T>(body: ReferenceEnvelope<T> | T[]): T[] {
-  return Array.isArray(body) ? body : (body.data ?? []);
+function unwrapReferences<T>(body: ReferenceEnvelope<T>): T[] {
+  return body.data ?? [];
 }
 
 async function readReferenceResponse<T>(response: Response): Promise<T> {
@@ -45,12 +46,13 @@ export async function fetchPlannerRooms(): Promise<PlannerRoomReference[]> {
       `/api/rooms?page=${page}&page_size=${pageSize}`,
       { credentials: "include" },
     );
-    const body = await readReferenceResponse<
-      ReferenceEnvelope<PlannerRoomReference> | PlannerRoomReference[]
-    >(response);
+    const body =
+      await readReferenceResponse<ReferenceEnvelope<PlannerRoomReference>>(
+        response,
+      );
     const pageRooms = unwrapReferences(body);
     rooms.push(...pageRooms);
-    const pagination = Array.isArray(body) ? undefined : body.pagination;
+    const pagination = body.pagination;
     // The catalog proxy hands on the list without its pagination (#7563): a
     // full page then means another page may follow.
     totalPages =
@@ -67,18 +69,20 @@ export async function fetchPlannerActivityCategories(): Promise<
   const response = await transportFetch("/api/activities/categories", {
     credentials: "include",
   });
-  const body = await readReferenceResponse<
-    ReferenceEnvelope<unknown> | unknown[]
-  >(response);
-  return unwrapReferences(body).map(readActivityCategory);
+  const body =
+    await readReferenceResponse<ReferenceEnvelope<ActivityCategoryResponse>>(
+      response,
+    );
+  return unwrapReferences(body).map(mapActivityCategoryResponse);
 }
 
 export async function fetchPlannerGroups(): Promise<PlannerGroupReference[]> {
   const response = await transportFetch("/api/groups?page_size=1000", {
     credentials: "include",
   });
-  const body = await readReferenceResponse<
-    ReferenceEnvelope<PlannerGroupReference> | PlannerGroupReference[]
-  >(response);
+  const body =
+    await readReferenceResponse<ReferenceEnvelope<PlannerGroupReference>>(
+      response,
+    );
   return unwrapReferences(body);
 }

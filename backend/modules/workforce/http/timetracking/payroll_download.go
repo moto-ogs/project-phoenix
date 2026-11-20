@@ -42,6 +42,16 @@ func (rs *PayrollDownloadResource) PublicRouter() chi.Router {
 	return router
 }
 
+// PayrollDownloadRouteContracts registers the link for the frontend's
+// catalog proxy (#2352), relative to /public/payroll-download: a public file
+// the proxy fetches with POST, without a session and without a body.
+func PayrollDownloadRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "POST", Pattern: "/{link}", Portals: []common.PortalScope{common.PortalPublic}, File: true,
+			PublicFile: "the one-time link of the payroll mail is the payroll office's only credential"},
+	}
+}
+
 var errPayrollLinkMalformed = errors.New("payroll download link is malformed")
 
 func parsePayrollLink(link string) (int64, string, error) {

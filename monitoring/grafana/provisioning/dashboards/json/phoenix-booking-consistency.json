@@ -75,7 +75,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({env=\"$env\",service=\"server\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" [26h])) or vector(0)",
+          "expr": "sum(count_over_time({env=\"$env\",service=~\"server|worker\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" [26h])) or vector(0)",
           "queryType": "instant",
           "editorMode": "code",
           "legendFormat": "records"
@@ -94,7 +94,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time({env=\"$env\",service=\"server\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,pickup_projection_missing_days | unwrap pickup_projection_missing_days [26h])",
+          "expr": "last_over_time({env=\"$env\",service=~\"server|worker\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,pickup_projection_missing_days | unwrap pickup_projection_missing_days [26h])",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "tenant {{tenant_id}}"
@@ -113,7 +113,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time({env=\"$env\",service=\"server\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,approved_without_required_offering | unwrap approved_without_required_offering [26h])",
+          "expr": "last_over_time({env=\"$env\",service=~\"server|worker\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,approved_without_required_offering | unwrap approved_without_required_offering [26h])",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "tenant {{tenant_id}}"
@@ -132,7 +132,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time({env=\"$env\",service=\"server\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,approved_without_optional_offering | unwrap approved_without_optional_offering [26h])",
+          "expr": "last_over_time({env=\"$env\",service=~\"server|worker\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,approved_without_optional_offering | unwrap approved_without_optional_offering [26h])",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "tenant {{tenant_id}}"
@@ -151,7 +151,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time({env=\"$env\",service=\"server\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,total_findings | unwrap total_findings [26h])",
+          "expr": "last_over_time({env=\"$env\",service=~\"server|worker\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | keep tenant_id,total_findings | unwrap total_findings [26h])",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "tenant {{tenant_id}}"
@@ -178,7 +178,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{env=\"$env\",service=\"server\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | line_format \"audit_date={{.audit_date}} tenant_id={{.tenant_id}} pickup_projection_missing_days={{.pickup_projection_missing_days}} approved_without_required_offering={{.approved_without_required_offering}} approved_without_optional_offering={{.approved_without_optional_offering}} total_findings={{.total_findings}}\"",
+          "expr": "{env=\"$env\",service=~\"server|worker\"} |= \"booking consistency audit\" | json | msg=~\"booking consistency audit (passed|found drift)\" | line_format \"audit_date={{.audit_date}} tenant_id={{.tenant_id}} pickup_projection_missing_days={{.pickup_projection_missing_days}} approved_without_required_offering={{.approved_without_required_offering}} approved_without_optional_offering={{.approved_without_optional_offering}} total_findings={{.total_findings}}\"",
           "queryType": "range",
           "editorMode": "code"
         }
@@ -203,7 +203,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{env=\"$env\",service=\"server\"} |~ \"booking consistency audit failed|tenant operation failed, continuing to next tenant\" | json | level=\"ERROR\" | msg=~\"booking consistency audit failed|tenant operation failed, continuing to next tenant\" | operation=~\"booking-consistency-audit|\"",
+          "expr": "{env=\"$env\",service=~\"server|worker\"} |~ \"booking consistency audit failed|tenant operation failed, continuing to next tenant\" | json | level=\"ERROR\" | msg=~\"booking consistency audit failed|tenant operation failed, continuing to next tenant\" | operation=~\"booking-consistency-audit|\"",
           "queryType": "range",
           "editorMode": "code"
         }

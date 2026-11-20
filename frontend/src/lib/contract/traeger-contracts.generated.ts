@@ -4,8 +4,10 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
+  multipart,
   noData,
   nullable,
   object,
@@ -429,6 +431,14 @@ export interface GetTraegerContractsCandidatesQuery {
   school_id?: string;
 }
 
+/** Query of GET /traeger/contracts/export */
+export interface GetTraegerContractsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  school_id?: string;
+  search?: string;
+  status?: string;
+}
+
 export const routes = {
   "DELETE /traeger/contracts/{id}": {
     method: "DELETE",
@@ -456,11 +466,36 @@ export const routes = {
     portals: ["org"],
     response: success(z.array(SchoolConclusionSchema)),
   },
+  "GET /traeger/contracts/export": {
+    method: "GET",
+    pattern: "/traeger/contracts/export",
+    portals: ["org"],
+    query: ["format", "school_id", "search", "status"],
+    response: fileAnswer,
+  },
   "GET /traeger/contracts/{id}": {
     method: "GET",
     pattern: "/traeger/contracts/{id}",
     portals: ["org"],
     response: success(ContractDetailSchema),
+  },
+  "GET /traeger/contracts/{id}/document": {
+    method: "GET",
+    pattern: "/traeger/contracts/{id}/document",
+    portals: ["org"],
+    response: fileAnswer,
+  },
+  "GET /traeger/contracts/{id}/paper-signature": {
+    method: "GET",
+    pattern: "/traeger/contracts/{id}/paper-signature",
+    portals: ["org"],
+    response: fileAnswer,
+  },
+  "GET /traeger/contracts/{id}/versions/{number}/document": {
+    method: "GET",
+    pattern: "/traeger/contracts/{id}/versions/{number}/document",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/contracts/": {
     method: "POST",
@@ -475,5 +510,14 @@ export const routes = {
     portals: ["org"],
     request: requestBody<SendRequest>(),
     response: success(SendResultSchema),
+  },
+  "POST /traeger/contracts/{id}/paper-signature": {
+    method: "POST",
+    pattern: "/traeger/contracts/{id}/paper-signature",
+    portals: ["org"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "care_contract.paper_document_invalid",
+    request: multipart,
+    response: noData,
   },
 } as const;

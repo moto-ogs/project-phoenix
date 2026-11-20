@@ -18,9 +18,9 @@ groups:
             datasourceUid: P8E80F9AEF21F6940
             model:
               expr: >-
-                (sum(count_over_time({env="prod",service="server"} |= "booking consistency audit failed" | json | msg="booking consistency audit failed" [5m])) or vector(0))
+                (sum(count_over_time({env="prod",service=~"server|worker"} |= "booking consistency audit failed" | json | msg="booking consistency audit failed" [5m])) or vector(0))
                 +
-                (sum(count_over_time({env="prod",service="server"} |= "booking-consistency-audit" | json | operation="booking-consistency-audit" | level="ERROR" [5m])) or vector(0))
+                (sum(count_over_time({env="prod",service=~"server|worker"} |= "booking-consistency-audit" | json | operation="booking-consistency-audit" | level="ERROR" [5m])) or vector(0))
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -91,7 +91,7 @@ groups:
             datasourceUid: P8E80F9AEF21F6940
             model:
               expr: >-
-                sum(count_over_time({env="prod",service="server"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" [25h59m])) or vector(0)
+                sum(count_over_time({env="prod",service=~"server|worker"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" [25h59m])) or vector(0)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -163,12 +163,12 @@ groups:
             model:
               expr: >-
                 (
-                  last_over_time({env="prod",service="server"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" | tenant_id="4" | label_format category="pickup_projection_missing_days" | keep tenant_id,category,pickup_projection_missing_days | unwrap pickup_projection_missing_days [26h]) - 10
+                  last_over_time({env="prod",service=~"server|worker"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" | tenant_id="4" | label_format category="pickup_projection_missing_days" | keep tenant_id,category,pickup_projection_missing_days | unwrap pickup_projection_missing_days [26h]) - 10
                 )
                 or
-                last_over_time({env="prod",service="server"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" | tenant_id!="4" | tenant_id!="6" | label_format category="pickup_projection_missing_days" | keep tenant_id,category,pickup_projection_missing_days | unwrap pickup_projection_missing_days [26h])
+                last_over_time({env="prod",service=~"server|worker"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" | tenant_id!="4" | tenant_id!="6" | label_format category="pickup_projection_missing_days" | keep tenant_id,category,pickup_projection_missing_days | unwrap pickup_projection_missing_days [26h])
                 or
-                last_over_time({env="prod",service="server"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" | tenant_id!="6" | label_format category="approved_without_required_offering" | keep tenant_id,category,approved_without_required_offering | unwrap approved_without_required_offering [26h])
+                last_over_time({env="prod",service=~"server|worker"} |= "booking consistency audit" | json | msg=~"booking consistency audit (passed|found drift)" | tenant_id!="6" | label_format category="approved_without_required_offering" | keep tenant_id,category,approved_without_required_offering | unwrap approved_without_required_offering [26h])
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
