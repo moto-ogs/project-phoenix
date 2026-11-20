@@ -34,7 +34,7 @@ type applicationContractRow struct {
 // was not rejected, in one statement for all children.
 const applicationContractsSQL = `SELECT c.id AS contract_id, c.request_child_id, c.status, c.sent_at,
 		c.concluded_at, c.conclusion_method, c.ends_on, v.effective_from,
-		CASE WHEN v.id IS NULL THEN '[]' ELSE ` + servicesSQL + ` END AS services
+		CASE WHEN v.id IS NULL OR c.status = ? THEN '[]' ELSE ` + servicesSQL + ` END AS services
 	FROM care_contract.contracts AS c
 	LEFT JOIN LATERAL (
 		SELECT cv.id, cv.organization_id, cv.effective_from
@@ -56,7 +56,7 @@ func (BookedCare) ApplicationContracts(ctx context.Context, requestChildIDs []in
 		return nil, err
 	}
 	var rows []applicationContractRow
-	if err := db.NewRaw(applicationContractsSQL, carecontract.VersionRejected, school,
+	if err := db.NewRaw(applicationContractsSQL, carecontract.StatusWithdrawn, carecontract.VersionRejected, school,
 		pgdialect.Array(requestChildIDs), carecontract.StatusDraft).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read application contracts: %w", err)
 	}

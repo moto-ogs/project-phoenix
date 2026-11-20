@@ -105,6 +105,38 @@ describe("AdminEnrollmentContracts", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("shows the last day of each booked service", () => {
+    useSWRAuth.mockReturnValue({
+      data: [
+        contract({
+          services: [
+            {
+              weekday: "mon",
+              module_name: "Früh",
+              ends_at: "08:00",
+              last_day: "2026-10-31",
+            },
+            {
+              weekday: "mon",
+              module_name: "Ganztag",
+              ends_at: "16:00",
+              last_day: "2026-11-30",
+            },
+          ],
+        }),
+      ],
+      error: undefined,
+      mutate: vi.fn(),
+    });
+    render(<AdminEnrollmentContracts requestId="5" childList={children} />);
+
+    expect(
+      screen.getByText(
+        "Gebucht ab 14.09.2026: Mo bis 08:00, gebucht bis 31.10.2026 und 16:00, gebucht bis 30.11.2026",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("uses a fresh cache entry when the enrollment's children change", () => {
     useSWRAuth.mockReturnValue({ data: [], error: undefined, mutate: vi.fn() });
     const { rerender } = render(

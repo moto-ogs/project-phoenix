@@ -683,6 +683,60 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "reason": "Platform protocol participation (mutation): care-contract reaches modules/auditlog/compose.Command.Append (audit-platform) through api.applicationContractAccessLog.RecordApplicationContractAccess. A school portal read of application contracts appends the contract IDs and row count in the school's existing tenant transaction (ADR 0153 section 8). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-contract",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "reason": "Platform protocol participation (mutation): care-contract reaches modules/auditlog/records.AppendStore.Append (audit-platform) through api.applicationContractAccessLog.RecordApplicationContractAccess. A school portal read of application contracts appends the contract IDs and row count in the school's existing tenant transaction (ADR 0153 section 8). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "reason": "Platform protocol participation (mutation): care-contract reaches modules/auditlog/records.Command.Append (audit-platform) through api.applicationContractAccessLog.RecordApplicationContractAccess. A school portal read of application contracts appends the contract IDs and row count in the school's existing tenant transaction (ADR 0153 section 8). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "reason": "Platform protocol participation (mutation): care-contract reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through api.applicationContractAccessLog.RecordApplicationContractAccess. A school portal read of application contracts appends the contract IDs and row count in the school's existing tenant transaction (ADR 0153 section 8). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "reason": "Reads the authorized staff claims from the request context to attribute the mandatory audit entry. No persistent, lock or scope effect.",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/internal/application/listrenderer.RendererService.CombineLetters",
       "classification": "query",
       "effect": "query",
