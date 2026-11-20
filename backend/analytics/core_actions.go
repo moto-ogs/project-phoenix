@@ -212,8 +212,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/api/parent-announcements/{announcementId}/reminder"}:                  notCaptured,
 	{http.MethodPost, "/api/parent-announcements/{announcementId}/resend-failed"}:            notCaptured,
 	{http.MethodPost, "/api/parent-announcements/{announcementId}/unpublish"}:                notCaptured,
-	{http.MethodPost, "/api/platform/announcements/{id}/dismiss"}:                            notCaptured,
-	{http.MethodPost, "/api/platform/announcements/{id}/seen"}:                               notCaptured,
+	{http.MethodPost, "/api/platform/announcements/{id}/dismiss"}:                            event("announcement_dismissed"), // #7555: closed by "Verstanden" or the X
+	{http.MethodPost, "/api/platform/announcements/{id}/seen"}:                               event("announcement_seen"),      // #7555: the modal shows it; counts without consent (#7541)
 	{http.MethodPost, "/api/pwa/usage"}:                                                      notCaptured,
 	{http.MethodPost, "/api/rooms/"}:                                                         notCaptured,
 	{http.MethodPost, "/api/rooms/export"}:                                                   export("rooms"),

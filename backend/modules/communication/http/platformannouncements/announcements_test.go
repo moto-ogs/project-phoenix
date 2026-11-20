@@ -54,7 +54,7 @@ func testRuntime() platformannouncements.Runtime {
 			return id, true
 		},
 		Failure: func(w http.ResponseWriter, _ *http.Request, failure platformannouncements.Failure) {
-			write(w, http.StatusInternalServerError, testEnvelope{Status: "error", Error: failure.Message})
+			write(w, failure.Status, testEnvelope{Status: "error", Error: failure.Message})
 		},
 	}
 }
@@ -69,8 +69,8 @@ const (
 type mockPlatformAnnouncementService struct {
 	getUnreadForUserFn func(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) ([]*platformModel.Announcement, error)
 	countUnreadFn      func(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) (int, error)
-	markSeenFn         func(ctx context.Context, userID, announcementID int64) error
-	markDismissedFn    func(ctx context.Context, userID, announcementID int64) error
+	markSeenFn         func(ctx context.Context, viewer platformModel.AnnouncementViewer, announcementID int64) error
+	markDismissedFn    func(ctx context.Context, viewer platformModel.AnnouncementViewer, announcementID int64) error
 }
 
 func (m *mockPlatformAnnouncementService) CreateAnnouncement(ctx context.Context, announcement *platformModel.Announcement, operatorID int64, clientIP net.IP) error {
@@ -115,16 +115,16 @@ func (m *mockPlatformAnnouncementService) CountUnread(ctx context.Context, userI
 	return 0, nil
 }
 
-func (m *mockPlatformAnnouncementService) MarkSeen(ctx context.Context, userID, announcementID int64) error {
+func (m *mockPlatformAnnouncementService) MarkSeen(ctx context.Context, viewer platformModel.AnnouncementViewer, announcementID int64) error {
 	if m.markSeenFn != nil {
-		return m.markSeenFn(ctx, userID, announcementID)
+		return m.markSeenFn(ctx, viewer, announcementID)
 	}
 	return nil
 }
 
-func (m *mockPlatformAnnouncementService) MarkDismissed(ctx context.Context, userID, announcementID int64) error {
+func (m *mockPlatformAnnouncementService) MarkDismissed(ctx context.Context, viewer platformModel.AnnouncementViewer, announcementID int64) error {
 	if m.markDismissedFn != nil {
-		return m.markDismissedFn(ctx, userID, announcementID)
+		return m.markDismissedFn(ctx, viewer, announcementID)
 	}
 	return nil
 }
@@ -216,7 +216,7 @@ func TestMarkDismissed_ServiceError(t *testing.T) {
 	t.Parallel()
 
 	mockService := &mockPlatformAnnouncementService{
-		markDismissedFn: func(ctx context.Context, userID, announcementID int64) error {
+		markDismissedFn: func(ctx context.Context, viewer platformModel.AnnouncementViewer, announcementID int64) error {
 			return errors.New("database error")
 		},
 	}
@@ -363,7 +363,7 @@ func TestMarkSeen_SuccessAndErrors(t *testing.T) {
 	tests := []struct {
 		name       string
 		id         string
-		markSeenFn func(context.Context, int64, int64) error
+		markSeenFn func(context.Context, platformModel.AnnouncementViewer, int64) error
 		wantStatus int
 		wantBody   string
 	}{
@@ -381,10 +381,19 @@ func TestMarkSeen_SuccessAndErrors(t *testing.T) {
 		{
 			name: "service error",
 			id:   "1",
-			markSeenFn: func(_ context.Context, _, _ int64) error {
+			markSeenFn: func(_ context.Context, _ platformModel.AnnouncementViewer, _ int64) error {
 				return errors.New("database error")
 			},
 			wantStatus: http.StatusInternalServerError,
+			wantBody:   "failed to mark announcement as seen",
+		},
+		{
+			name: "unavailable announcement",
+			id:   "1",
+			markSeenFn: func(_ context.Context, _ platformModel.AnnouncementViewer, _ int64) error {
+				return &platformModel.AnnouncementNotFoundError{AnnouncementID: 1}
+			},
+			wantStatus: http.StatusNotFound,
 			wantBody:   "failed to mark announcement as seen",
 		},
 	}
