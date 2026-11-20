@@ -187,3 +187,32 @@ describe("DayChangesBlock", () => {
     });
   });
 });
+
+describe("Texte der Gruppen-Vertretung", () => {
+  it("nennt die Gruppe mit passendem Artikel", async () => {
+    const { dayChangeText } = await import("./day-changes-text");
+    const handover = (groupName: string, people: DayChange["people"]) =>
+      dayChangeText(change({ kind: "group_substitution", groupName, people }));
+    expect(
+      handover("Sternengruppe", [
+        {
+          staffId: "1",
+          name: "Daria Nowak",
+          role: "substitute",
+          isSelf: false,
+        },
+      ]),
+    ).toBe("Daria Nowak vertritt heute die Sternengruppe.");
+    expect(
+      handover("Igel", [
+        {
+          staffId: "1",
+          name: "Daria Nowak",
+          role: "substitute",
+          isSelf: false,
+        },
+        { staffId: "2", name: "Anna", role: "replaced", isSelf: true },
+      ]),
+    ).toBe("Daria Nowak vertritt dich heute in der Gruppe Igel.");
+  });
+});

@@ -31,19 +31,30 @@ function staffAbsentCountText(change: DayChange): string {
     : `${count} weitere Personen aus dem Team sind heute nicht da.`;
 }
 
+/**
+ * Der Gruppenname mit Artikel: „die Gruppe Igel“, aber „die Sternengruppe“,
+ * wenn der Name schon „gruppe“ enthält. `dative` für „in der …“.
+ */
+function groupPhrase(name: string | null, dative: boolean): string {
+  const article = dative ? "der" : "die";
+  if (!name) return dative ? "einer Gruppe" : "eine Gruppe";
+  return /gruppe/i.test(name)
+    ? `${article} ${name}`
+    : `${article} Gruppe ${name}`;
+}
+
 function groupSubstitutionText(change: DayChange): string {
   const substitute = personWith(change, "substitute");
   const replaced = personWith(change, "replaced");
-  const group = change.groupName
-    ? `die Gruppe ${change.groupName}`
-    : "eine Gruppe";
+  const group = groupPhrase(change.groupName, false);
+  const inGroup = `in ${groupPhrase(change.groupName, true)}`;
   if (substitute?.isSelf) {
     return replaced
-      ? `Du vertrittst heute ${nameOf(replaced)} in ${group}.`
+      ? `Du vertrittst heute ${nameOf(replaced)} ${inGroup}.`
       : `Du vertrittst heute ${group}.`;
   }
   if (replaced?.isSelf) {
-    return `${nameOf(substitute)} vertritt dich heute in ${group}.`;
+    return `${nameOf(substitute)} vertritt dich heute ${inGroup}.`;
   }
   return `${nameOf(substitute)} vertritt heute ${group}.`;
 }
