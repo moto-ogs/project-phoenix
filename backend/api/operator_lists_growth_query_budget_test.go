@@ -213,7 +213,6 @@ func TestOperatorIdentityListsPositiveGrowthQueryBudget(t *testing.T) {
 			{fmt.Sprintf("/operator/accounts/%d/tenants/", account.ID), "operator.lists.account_tenants_slash", "tenant_id", tenants, 0},
 			{rolesPath, "operator.lists.account_tenant_roles", "id", roles, roleBaseline},
 			{"/operator/auth/passkeys", "operator.lists.passkeys", "id", passkeys, 0},
-			{"/operator/auth/passkeys/", "operator.lists.passkeys_slash", "id", passkeys, 0},
 			{"/operator/auth/mfa/trusted-devices", "operator.lists.trusted_devices", "id", devices, 0},
 		} {
 			t.Run(fmt.Sprintf("%s/N%d", tc.scenario, n), func(t *testing.T) {
@@ -297,8 +296,6 @@ func assertOperatorListBudget(t *testing.T, scenario string, statements querybud
 		querybudgets.AssertQueryBudget(t, "operator.lists.organizations", statements)
 	case "operator.lists.passkeys":
 		querybudgets.AssertQueryBudget(t, "operator.lists.passkeys", statements)
-	case "operator.lists.passkeys_slash":
-		querybudgets.AssertQueryBudget(t, "operator.lists.passkeys_slash", statements)
 	case "operator.lists.roles":
 		querybudgets.AssertQueryBudget(t, "operator.lists.roles", statements)
 	case "operator.lists.school_accounts":

@@ -18,5 +18,10 @@
     "scenario": "api.traeger.key_date_counts",
     "route": "GET /traeger/schools/key-date-counts",
     "issue": 7301
+  },
+  {
+    "scenario": "operator.lists.passkeys_slash",
+    "route": "GET /operator/auth/passkeys/",
+    "issue": 2352
   }
 ]
