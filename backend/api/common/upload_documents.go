@@ -62,9 +62,14 @@ var documentUploadKinds = []ooxmlKind{docxKind}
 // officeUploadKinds is what the school file storage accepts.
 var officeUploadKinds = []ooxmlKind{docxKind, xlsxKind, pptxKind}
 
+// scanUploadKinds is what a scanned paper document may be: no Office file.
+var scanUploadKinds []ooxmlKind
+
 const invalidDocumentTypeMessage = "Diese Datei ist nicht erlaubt. Erlaubt sind PDF, DOCX, PNG und JPEG."
 
 const invalidOfficeFileTypeMessage = "Diese Datei ist nicht erlaubt. Erlaubt sind PDF, DOCX, XLSX, PPTX, PNG und JPEG."
+
+const invalidScanTypeMessage = "Diese Datei ist nicht erlaubt. Erlaubt sind PDF, PNG und JPEG."
 
 // ParseDocumentWithLimits parses a multipart document upload and validates
 // the content via magic bytes: PDF, PNG and JPEG directly, DOCX as a ZIP
@@ -82,6 +87,12 @@ func ParseOfficeFileWithLimits(w http.ResponseWriter, r *http.Request, fieldName
 	return parseValidatedUpload(w, r, fieldName, maxFileSize, maxBodySize, officeUploadKinds, invalidOfficeFileTypeMessage)
 }
 
+// ParseScanWithLimits is ParseDocumentWithLimits for a scanned or
+// photographed paper document: PDF, PNG and JPEG, no Office file.
+func ParseScanWithLimits(w http.ResponseWriter, r *http.Request, fieldName string, maxFileSize, maxBodySize int64) (*UploadedFile, error) {
+	return parseValidatedUpload(w, r, fieldName, maxFileSize, maxBodySize, scanUploadKinds, invalidScanTypeMessage)
+}
+
 func parseValidatedUpload(w http.ResponseWriter, r *http.Request, fieldName string, maxFileSize, maxBodySize int64, kinds []ooxmlKind, invalidMessage string) (*UploadedFile, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 
@@ -95,7 +106,7 @@ func parseValidatedUpload(w http.ResponseWriter, r *http.Request, fieldName stri
 	if err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			return nil, uploadRefusal{code: CodeFilesFileTooLarge, text: "file too large"}
+			return nil, tooLargeRefusal(maxFileSize)
 		}
 		return nil, uploadRefusal{code: CodeFilesFileUnreadable, text: "cannot read upload"}
 	}
@@ -106,7 +117,7 @@ func parseValidatedUpload(w http.ResponseWriter, r *http.Request, fieldName stri
 	}
 	if header.Size > maxFileSize {
 		_ = file.Close()
-		return nil, uploadRefusal{code: CodeFilesFileTooLarge, text: "file too large"}
+		return nil, tooLargeRefusal(maxFileSize)
 	}
 
 	contentType, err := detectDocumentContentType(file, header.Filename, kinds, invalidMessage)
@@ -116,9 +127,11 @@ func parseValidatedUpload(w http.ResponseWriter, r *http.Request, fieldName stri
 	}
 
 	return &UploadedFile{
-		File:        file,
-		Filename:    header.Filename,
-		ContentType: contentType,
+		File:           file,
+		Filename:       header.Filename,
+		ContentType:    contentType,
+		DeclaredType:   declaredType(header),
+		ClientFilename: clientFilename(header),
 	}, nil
 }
 
@@ -176,6 +189,8 @@ func ExtensionMatchesContent(filename, contentType string) bool {
 		return contentType == "application/pdf"
 	case ".png":
 		return contentType == "image/png"
+	case ".webp":
+		return contentType == "image/webp"
 	case ".jpg", ".jpeg":
 		return contentType == "image/jpeg" || contentType == "image/jpg"
 	case docxKind.extension:
@@ -229,9 +244,15 @@ func isOOXML(file io.ReadSeeker, kind ooxmlKind) bool {
 type uploadRefusal struct {
 	code string
 	text string
+	// maxFile is the advertised limit a size refusal ran into.
+	maxFile int64
 }
 
 func (e uploadRefusal) Error() string { return e.text }
+
+func tooLargeRefusal(maxFile int64) uploadRefusal {
+	return uploadRefusal{code: CodeFilesFileTooLarge, text: ErrUploadTooLarge.Error(), maxFile: maxFile}
+}
 
 // IsUploadTypeNotAllowed reports a content-type refusal from the upload parser.
 func IsUploadTypeNotAllowed(err error) bool {

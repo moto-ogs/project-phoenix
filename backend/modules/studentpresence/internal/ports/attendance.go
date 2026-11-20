@@ -36,7 +36,6 @@ type AttendanceDay struct {
 type AttendanceStore interface {
 	ListAttendanceDays(context.Context, Date, Date) ([]AttendanceDay, Stats, error)
 	RecordAttendance(context.Context, *Attendance) (Stats, error)
-	ReviseAttendance(context.Context, *Attendance) (Stats, error)
 	DeleteAttendance(context.Context, int64) (Stats, error)
 	EnsureAttendanceBatch(context.Context, []*Attendance) ([]int64, Stats, error)
 	CloseStaleAttendance(context.Context, int64, time.Time, time.Time) (Stats, error)

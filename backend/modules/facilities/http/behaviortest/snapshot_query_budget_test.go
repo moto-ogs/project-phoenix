@@ -28,6 +28,9 @@ func TestRoomSnapshotExportQueryBudget(t *testing.T) {
 		req = req.WithContext(counter.Context(req.Context()))
 		rr := testutil.ExecuteWithAuth(t, testpkg.MountedQueryBudgetRouter("/api/rooms", tc.router), req, testutil.AdminTestClaims(1))
 		assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		// The catalog proxy passes the backend's file headers on (#2352).
+		assert.Equal(t, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", rr.Header().Get("Content-Type"))
+		assert.Regexp(t, `^attachment; filename=".+\.xlsx"`, rr.Header().Get("Content-Disposition"))
 		return counter.Measurement(counter.Operation("SELECT"))
 	}
 	small := run()

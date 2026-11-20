@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"image/jpeg"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -50,7 +51,15 @@ func buildMultipart(t *testing.T, fieldName, filename string, fileBytes []byte, 
 	mw := multipart.NewWriter(body)
 
 	if fileBytes != nil {
-		fw, err := mw.CreateFormFile(fieldName, filename)
+		// Declared like a browser: the type its extension names.
+		declared := mime.TypeByExtension(filepath.Ext(filename))
+		if declared == "" {
+			declared = "application/octet-stream"
+		}
+		fw, err := mw.CreatePart(map[string][]string{
+			"Content-Disposition": {mime.FormatMediaType("form-data", map[string]string{"name": fieldName, "filename": filename})},
+			"Content-Type":        {declared},
+		})
 		require.NoError(t, err, "create form file")
 		_, err = io.Copy(fw, bytes.NewReader(fileBytes))
 		require.NoError(t, err, "copy bytes into form file")

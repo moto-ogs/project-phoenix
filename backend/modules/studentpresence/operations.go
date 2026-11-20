@@ -32,22 +32,19 @@ func NormalizeCheckoutNote(note string) (string, error) {
 // messages are wire contracts: the web routes render them verbatim and the
 // kiosk maps several of them to German text.
 var (
-	ErrGroupSupervisorNotFound   = errors.New("group supervisor not found")
-	ErrGroupMappingNotFound      = errors.New("group mapping not found")
-	ErrStaffNotFound             = errors.New("staff member not found")
-	ErrStudentNotFound           = errors.New("student not found")
-	ErrStudentGraduated          = errors.New("student has graduated and cannot check in")
-	ErrStudentCareEnded          = errors.New("student care has ended and cannot check in")
-	ErrGroupAlreadyEnded         = errors.New("active group session already ended")
-	ErrVisitAlreadyEnded         = errors.New("visit already ended")
-	ErrSupervisionAlreadyEnded   = errors.New("supervision already ended")
-	ErrCombinedGroupAlreadyEnded = errors.New("combined group already ended")
-	ErrStudentAlreadyInGroup     = errors.New("student already present in this group")
-	ErrGroupAlreadyInCombination = errors.New("group already part of this combination")
-	ErrInvalidTimeRange          = errors.New("invalid time range")
-	ErrCannotDeleteActiveGroup   = errors.New("cannot delete active group with active visits")
-	ErrStudentAlreadyActive      = errors.New("student already has an active visit")
-	ErrStaffAlreadySupervising   = errors.New("staff member already supervising this group")
+	ErrGroupSupervisorNotFound = errors.New("group supervisor not found")
+	ErrStaffNotFound           = errors.New("staff member not found")
+	ErrStudentNotFound         = errors.New("student not found")
+	ErrStudentGraduated        = errors.New("student has graduated and cannot check in")
+	ErrStudentCareEnded        = errors.New("student care has ended and cannot check in")
+	ErrGroupAlreadyEnded       = errors.New("active group session already ended")
+	ErrVisitAlreadyEnded       = errors.New("visit already ended")
+	ErrSupervisionAlreadyEnded = errors.New("supervision already ended")
+	ErrStudentAlreadyInGroup   = errors.New("student already present in this group")
+	ErrInvalidTimeRange        = errors.New("invalid time range")
+	ErrCannotDeleteActiveGroup = errors.New("cannot delete active group with active visits")
+	ErrStudentAlreadyActive    = errors.New("student already has an active visit")
+	ErrStaffAlreadySupervising = errors.New("staff member already supervising this group")
 	// ErrLastSupervisor refuses to release a supervision when nobody else
 	// supervises the session: the session would run unsupervised (#4763).
 	ErrLastSupervisor       = errors.New("no other supervisor stays with the session")
@@ -233,12 +230,6 @@ func (s *AttendanceStatus) PickupTime() *time.Time {
 	return s.CheckOutTime
 }
 
-// CheckoutOutcome is the outcome of an explicit school checkout.
-type CheckoutOutcome struct {
-	Action       string
-	AttendanceID int64
-}
-
 // StudentMoveAuthorization carries the caller facts a bulk move revalidates
 // against the locked move state inside the command.
 type StudentMoveAuthorization struct {
@@ -338,14 +329,6 @@ type SessionActivitySummary struct {
 	PlannedRoomID   *int64
 	IsSystem        bool
 	IsOpen          bool
-}
-
-// UnclaimedSession is an open session without supervisors together with the
-// room and template projections the claiming view renders.
-type UnclaimedSession struct {
-	UnclaimedGroup
-	Room     *SessionRoomSummary
-	Activity *SessionActivitySummary
 }
 
 // VisitsFromAnotherSchool reports whether a child of the home school is a

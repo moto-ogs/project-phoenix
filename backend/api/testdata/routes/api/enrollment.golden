@@ -18,6 +18,7 @@ GET /api/enrollment/admin/requests/{id}/children/{childId}/offering-adjustments
 GET /api/enrollment/admin/requests/{id}/delete-impact
 GET /api/enrollment/admin/requests/{id}/form-labels
 GET /api/enrollment/admin/requests/{id}/mails
+GET /api/enrollment/admin/requests/{id}/signature-proof
 GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}
 GET /api/enrollment/admin/students/{studentId}/requests/
 GET /api/enrollment/care-offerings/

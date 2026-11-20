@@ -57,6 +57,7 @@ func StaffRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/appointments", Portals: portals, Request: createAppointmentRequest{}, Response: calendarService.AppointmentDetail{}},
 		{Method: "GET", Pattern: "/appointments/{appointmentId}", Portals: portals, Response: calendarService.AppointmentDetail{}},
 		{Method: "GET", Pattern: "/appointments/{appointmentId}/mails", Portals: portals, Response: calendarService.AppointmentMails{}},
+		{Method: "GET", Pattern: "/appointments/{appointmentId}/ics", Portals: portals, File: true},
 		{Method: "PUT", Pattern: "/appointments/{appointmentId}", Portals: portals, Request: updateAppointmentRequest{}, Response: calendarService.AppointmentDetail{}},
 		{Method: "DELETE", Pattern: "/appointments/{appointmentId}", Portals: portals, Response: CalendarStatusResponse{}},
 		{Method: "POST", Pattern: "/appointments/{appointmentId}/cancel", Portals: portals, Response: calendarService.AppointmentDetail{}},

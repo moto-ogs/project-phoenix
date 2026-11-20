@@ -84,7 +84,7 @@ func (rs *Resource) runClassListImport(w http.ResponseWriter, r *http.Request, d
 	}
 
 	if dryRun {
-		rs.runtime.Success(w, r, http.StatusOK, result, "Import-Vorschau erfolgreich")
+		rs.runtime.Success(w, r, http.StatusOK, importModels.NewClassListImportResult(result), "Import-Vorschau erfolgreich")
 		return
 	}
 	slog.Default().Info("Class list entry import completed",
@@ -95,5 +95,5 @@ func (rs *Resource) runClassListImport(w http.ResponseWriter, r *http.Request, d
 	message := fmt.Sprintf("Import abgeschlossen: %d erstellt, %d Fehler",
 		result.CreatedCount, result.ErrorCount)
 
-	rs.runtime.Success(w, r, http.StatusOK, result, message)
+	rs.runtime.Success(w, r, http.StatusOK, importModels.NewClassListImportResult(result), message)
 }

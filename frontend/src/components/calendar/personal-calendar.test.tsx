@@ -520,7 +520,7 @@ describe("PersonalCalendar", () => {
         events={[cancelled]}
         weekStart={new Date(2026, 0, 5)}
         onRespond={onRespond}
-        icsHrefBase="/api/parent/calendar/appointments"
+        icsHrefBase="/api/parent/me/calendar/appointments"
       />,
     );
 
@@ -538,7 +538,7 @@ describe("PersonalCalendar", () => {
       <PersonalCalendar
         events={[appointment]}
         weekStart={new Date(2026, 0, 5)}
-        icsHrefBase="/api/parent/calendar/appointments"
+        icsHrefBase="/api/parent/me/calendar/appointments"
       />,
     );
 
@@ -548,7 +548,7 @@ describe("PersonalCalendar", () => {
     });
     expect(link).toHaveAttribute(
       "href",
-      "/api/parent/calendar/appointments/1/ics",
+      "/api/parent/me/calendar/appointments/1/ics",
     );
   });
 

@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/feedback"
 	"github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres"
@@ -39,6 +40,20 @@ func New(dependencies Dependencies) (feedback.Capability, error) {
 	observe := ports.Observer(dependencies.Observe)
 	service := application.New(store, dependencies.Settings, TransactionFunc(tenant.NewTransactionRunner().RunInTx), observe, today)
 	return service, nil
+}
+
+// PastFeedback is one rating the demo seed's history writer records, on the
+// calendar day Date.
+type (
+	PastFeedback = feedback.CreateEntry
+	Date         = feedback.Date
+)
+
+// NewFeedbackHistory is the demo seed's writer of past ratings (ADR 0298);
+// now is the clock whose Berlin day the ratings must lie before.
+func NewFeedbackHistory(now func() time.Time) feedback.FeedbackHistory {
+	store := postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
+	return application.NewFeedbackHistory(store, TransactionFunc(tenant.NewTransactionRunner().RunInTx), application.NewCurrentDate(feedback.TodayOf(now)))
 }
 
 // Settings are the feedback settings resolvers, bound at construction.

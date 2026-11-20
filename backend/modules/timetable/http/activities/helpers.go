@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 
@@ -221,12 +220,4 @@ func (rs *Resource) getEnrollmentCount(ctx context.Context, activityID int64) (i
 		return 0, err
 	}
 	return len(students), nil
-}
-
-// formatEndTime safely formats the end time, handling nil values
-func formatEndTime(endTime *time.Time) string {
-	if endTime == nil {
-		return ""
-	}
-	return endTime.Format("15:04")
 }

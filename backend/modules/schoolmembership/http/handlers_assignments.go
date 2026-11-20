@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/render"
-	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 )
 
 // getStaffGroups lists the groups a Betreuungskraft is assigned to. A staff
@@ -81,55 +80,6 @@ func (rs *Resource) updateStaffSchoolClasses(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: id, SchoolClasses: classes}, "School classes updated successfully")
-}
-
-// getAvailableStaff lists the teachers that can be assigned, with their staff
-// and person data.
-func (rs *Resource) getAvailableStaff(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	teachers, err := rs.membership.ListTeachers(ctx, schoolmembership.TeacherFilter{})
-	if err != nil {
-		rs.internal(w, r, err)
-		return
-	}
-	staffIDs := make([]int64, 0, len(teachers))
-	for _, teacher := range teachers {
-		staffIDs = append(staffIDs, teacher.StaffID)
-	}
-	responses := make([]StaffRecordResponse, 0, len(teachers))
-	if len(staffIDs) == 0 {
-		rs.respond(w, r, http.StatusOK, responses, "Available staff members retrieved successfully")
-		return
-	}
-
-	members, err := rs.membership.ListStaff(ctx, schoolmembership.StaffFilter{IDs: staffIDs})
-	if err != nil {
-		rs.internal(w, r, err)
-		return
-	}
-	byID := make(map[int64]schoolmembership.Staff, len(members))
-	for _, staff := range members {
-		byID[staff.ID] = staff
-	}
-	persons, err := rs.personIndex(ctx, members)
-	if err != nil {
-		rs.internal(w, r, err)
-		return
-	}
-	access := rs.fieldAccess(ctx)
-
-	for _, teacher := range teachers {
-		staff, found := byID[teacher.StaffID]
-		if !found {
-			continue
-		}
-		person := persons[staff.PersonID]
-		if person == nil {
-			continue
-		}
-		responses = append(responses, buildStaffRecordResponse(access, staff, person, teacher, enrichment{}))
-	}
-	rs.respond(w, r, http.StatusOK, responses, "Available staff members retrieved successfully")
 }
 
 // getStaffByRole answers GET /by-role?role=user or ?roles=teacher,staff,user.

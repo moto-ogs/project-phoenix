@@ -30,5 +30,8 @@ func RouteContracts() []common.RouteContract {
 			Method: "GET", Pattern: "/{id}/photo/{filename}", Portals: portals, File: true,
 			FileCache: studentPhotoCacheControl, ConditionalGet: true,
 		},
+		{Method: "POST", Pattern: "/{id}/photo", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxStudentPhotoBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: studentPhotoUploadedResponse{}},
+		{Method: "DELETE", Pattern: "/{id}/photo", Portals: portals, NoData: true},
 	}
 }

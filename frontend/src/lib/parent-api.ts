@@ -1469,7 +1469,7 @@ export function announcementAttachmentDownloadUrl(
   announcementId: string,
   attachmentId: string,
 ): string {
-  return `/api/parent/me/news/${encodeURIComponent(announcementId)}/attachments/${encodeURIComponent(attachmentId)}/download`;
+  return `/api/parent/parent-news-attachments/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download`;
 }
 
 /**
@@ -1675,7 +1675,7 @@ export function declarationProofAttachmentDownloadUrl(
   studentId: string,
   attachmentId: string,
 ): string {
-  return `/api/parent/me/news/${encodeURIComponent(announcementId)}/attachments/${encodeURIComponent(attachmentId)}/download?student_id=${encodeURIComponent(studentId)}`;
+  return `/api/parent/parent-news-attachments/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download?student_id=${encodeURIComponent(studentId)}`;
 }
 
 /** Portal page that shows the proof for one child. */

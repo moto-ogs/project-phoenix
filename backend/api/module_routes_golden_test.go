@@ -187,7 +187,7 @@ func checkModuleBookingGate(t *testing.T, api *goldenRuntime) {
 		{settings.ModuleMittagessen, http.MethodGet, "/api/meal-plan/?week_start=2026-10-19"},
 		{settings.ModuleMittagessen, http.MethodGet, "/api/meal-caterer/"},
 		{settings.ModuleElternApp, http.MethodGet, "/api/messages/unread-count"},
-		{settings.ModuleElternApp, http.MethodGet, "/api/guardians/invitations/pending"},
+		{settings.ModuleElternApp, http.MethodGet, "/api/guardians/invitations/pending-approval"},
 		{settings.ModuleOnlineAnmeldung, http.MethodGet, "/api/enrollment/phases/"},
 		{settings.ModuleDienstplan, http.MethodGet, "/api/shift-types/"},
 		{settings.ModuleDienstplan, http.MethodGet, "/api/time-tracking/shifts?from=2026-10-19&to=2026-10-25"},

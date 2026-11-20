@@ -151,7 +151,18 @@ describe("session reads of every BFF route", () => {
         .map((file) => path.dirname(file).split(path.sep).join("/"))
         .sort(),
     );
-    expect(routes).toContain("[...path]");
+    // Catch-all and nested login anchors cover each portal's tree.
+    for (const portal of [
+      "",
+      "operator/",
+      "parent/",
+      "school/",
+      "caterer/",
+      "traeger/",
+    ]) {
+      expect(routes).toContain(`${portal}[...path]`);
+      expect(routes).toContain(`${portal}auth/login`);
+    }
   });
 
   it("reads every session inside the portal's response wrapper", async () => {

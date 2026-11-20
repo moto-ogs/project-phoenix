@@ -35,24 +35,6 @@ func parseIDOrRender[I IDType](w http.ResponseWriter, r *http.Request, param, in
 	return I(id), true
 }
 
-// IDAction returns a handler that parses one URL id parameter, invokes fn,
-// and responds 204 No Content on success. Errors render via renderErr.
-func IDAction[I IDType](param, invalidMsg string, fn func(ctx context.Context, id I) error, renderErr func(error) render.Renderer) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id, ok := parseIDOrRender[I](w, r, param, invalidMsg)
-		if !ok {
-			return
-		}
-
-		if err := fn(r.Context(), id); err != nil {
-			RenderError(w, r, renderErr(err))
-			return
-		}
-
-		RespondNoContent(w, r)
-	}
-}
-
 // IDFetch returns a handler that parses one URL id parameter, fetches a
 // payload via fn, and responds 200 with the payload wrapped in the standard
 // success envelope.

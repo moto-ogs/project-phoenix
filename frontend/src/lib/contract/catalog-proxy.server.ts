@@ -54,6 +54,8 @@ export interface CatalogRoute {
   readonly fileCache?: string;
   /** Forward the validators of a conditional GET and hand back its 304. */
   readonly conditionalGet?: boolean;
+  /** A file the browser may keep: its private Cache-Control passes. */
+  readonly privateCache?: boolean;
 }
 
 export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -74,6 +76,21 @@ type PortalHandlers = Pick<
 type Envelope = z.ZodType<{ data: unknown }>;
 
 const segmentsOf = (path: string) => path.split("/").filter(Boolean);
+
+/**
+ * The Cache-Control a `privateCache` file leaves with: the backend's own
+ * value when it keeps the file in the browser alone, else none at all. A
+ * shared cache never stores a session's file.
+ */
+export function privateCacheControl(value: string | null): string {
+  const directives = (value ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((directive) => directive.trim());
+  return directives.includes("private") && !directives.includes("public")
+    ? (value as string)
+    : "private, no-store";
+}
 
 const MIB = 1024 * 1024;
 
@@ -190,7 +207,11 @@ async function fileAnswerOf(
   backend: Response,
   request: Request,
 ): Promise<Response> {
-  const cache = cacheOf(route);
+  const cache =
+    cacheOf(route) ??
+    (route.fileCache === undefined && route.privateCache && !isPublicFile(route)
+      ? privateCacheControl(backend.headers.get("Cache-Control"))
+      : null);
   if (route.conditionalGet && cache && backend.status === 304) {
     const headers = new Headers({
       "Cache-Control": cache,
@@ -522,9 +543,11 @@ export function makeCatalogProxy(
   /**
    * A file streams through with its file headers (fileResponse), and every
    * answer of the route, refusals and session failures included, is private
-   * and uncached, as `withPrivateDownloadNoStore` makes a download route
-   * file. A file a POST asks for reads its JSON body within the route's
-   * limit, so the renewal's retry can send it again.
+   * and uncached unless its contract names a cache policy. A `privateCache`
+   * file keeps the backend's private Cache-Control; `fileCache` names a
+   * fixed reviewed value and takes precedence when both are present. A
+   * file a POST asks for reads its JSON body within the route's limit, so
+   * the renewal's retry can send it again.
    */
   function streamedHandler(route: CatalogRoute) {
     const handler = portal.route(async (request, _token, params) => {
@@ -686,9 +709,12 @@ export function handOffUnder(
   head: HandOffHead,
   handler: (request: NextRequest, context: RouteContext) => Promise<Response>,
 ) {
-  return (request: NextRequest, context: RouteContext) =>
+  // Next passes `params: undefined` to a route file without a dynamic
+  // segment (`auth/tenants/route.ts`); such a file has no tail.
+  return (request: NextRequest, context: Partial<RouteContext> | undefined) =>
     handler(request, {
-      params: context.params.then((params) => {
+      params: Promise.resolve(context?.params).then((given) => {
+        const params = given ?? {};
         const tail = params.path;
         const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
         const lead = typeof head === "function" ? head(params) : head;

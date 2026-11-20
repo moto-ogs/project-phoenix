@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   nullable,
   num,
@@ -356,6 +357,12 @@ export const routes = {
     pattern: "/api/surveys/{surveyId}/results",
     portals: ["tenant"],
     response: success(surveyResultsResponseSchema),
+  },
+  "GET /api/surveys/{surveyId}/results/export": {
+    method: "GET",
+    pattern: "/api/surveys/{surveyId}/results/export",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "POST /api/surveys/": {
     method: "POST",

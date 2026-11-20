@@ -13,41 +13,6 @@ import (
 )
 
 // =============================================================================
-// FormatEndTimeForTest Tests
-// =============================================================================
-
-func TestFormatEndTime_WithTime(t *testing.T) {
-	t.Parallel()
-
-	endTime := time.Date(2024, 1, 15, 14, 30, 0, 0, time.UTC)
-	result := httpadapter.FormatEndTimeForTest(&endTime)
-	assert.Equal(t, "14:30", result)
-}
-
-func TestFormatEndTime_NilTime(t *testing.T) {
-	t.Parallel()
-
-	result := httpadapter.FormatEndTimeForTest(nil)
-	assert.Equal(t, "", result)
-}
-
-func TestFormatEndTime_Midnight(t *testing.T) {
-	t.Parallel()
-
-	endTime := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
-	result := httpadapter.FormatEndTimeForTest(&endTime)
-	assert.Equal(t, "00:00", result)
-}
-
-func TestFormatEndTime_BeforeMidnight(t *testing.T) {
-	t.Parallel()
-
-	endTime := time.Date(2024, 1, 15, 23, 59, 0, 0, time.UTC)
-	result := httpadapter.FormatEndTimeForTest(&endTime)
-	assert.Equal(t, "23:59", result)
-}
-
-// =============================================================================
 // Request Type Tests
 // =============================================================================
 

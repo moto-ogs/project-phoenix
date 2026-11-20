@@ -2,9 +2,11 @@
 
 import type { ReactNode } from "react";
 
+import { Search } from "lucide-react";
 import { useState } from "react";
 import {
   PortalBottomNav,
+  PortalBottomNavButton,
   PortalBottomNavLink,
   PortalNavSheetLink,
 } from "~/components/ui/portal-bottom-nav";
@@ -57,6 +59,7 @@ export function PortalOverflowBottomNav({
   moreDescription = "Weitere Bereiche",
   activeInMore = false,
   moreIcon,
+  search,
 }: {
   readonly items: readonly PortalOverflowNavItem[];
   /** Das Attribut, das jeden Eintrag für Touren und Tests benennt. */
@@ -77,12 +80,22 @@ export function PortalOverflowBottomNav({
    * Listen-Symbol des OGS-Portals. Ohne Angabe bleiben die Punkte.
    */
   readonly moreIcon?: ReactNode;
+  /**
+   * Opt-in: eine Lupe, die die Suche des Portals öffnet (Träger-Portal,
+   * #7648), wie „Suchen“ in der Leiste der OGS-App. Sie steht hinter den
+   * Zielen vor „Mehr“ und belegt eines der fünf Felder.
+   */
+  readonly search?: {
+    readonly label: string;
+    readonly onOpen: () => void;
+  };
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const crowded = items.length > MAX_SLOTS;
-  const barItems = crowded ? items.slice(0, MAX_SLOTS - 1) : items;
-  const moreItems = crowded ? items.slice(MAX_SLOTS - 1) : [];
+  const slots = search ? MAX_SLOTS - 1 : MAX_SLOTS;
+  const crowded = items.length > slots;
+  const barItems = crowded ? items.slice(0, slots - 1) : items;
+  const moreItems = crowded ? items.slice(slots - 1) : [];
 
   const linkProps = (item: PortalOverflowNavItem) => ({
     href: item.href,
@@ -93,16 +106,32 @@ export function PortalOverflowBottomNav({
     [navItemAttribute]: item.key,
   });
 
-  const barLinks = barItems.map((item) => (
-    <PortalBottomNavLink
-      key={item.key}
-      {...linkProps(item)}
-      shortLabel={item.shortLabel}
-      paddingClassName={PADDING}
-      labelClassName={LABEL}
-      shrinkActive
-    />
-  ));
+  const barLinks = [
+    ...barItems.map((item) => (
+      <PortalBottomNavLink
+        key={item.key}
+        {...linkProps(item)}
+        shortLabel={item.shortLabel}
+        paddingClassName={PADDING}
+        labelClassName={LABEL}
+        shrinkActive
+      />
+    )),
+    search ? (
+      <PortalBottomNavButton
+        key="search"
+        {...{ [navItemAttribute]: "search" }}
+        label={search.label}
+        icon={<Search className="h-5 w-5 flex-shrink-0" aria-hidden="true" />}
+        active={false}
+        onClick={search.onOpen}
+        aria-haspopup="dialog"
+        paddingClassName={PADDING}
+        labelClassName={LABEL}
+        shrinkActive
+      />
+    ) : null,
+  ];
 
   const moreAttribute: Record<`data-${string}`, string> = {
     [navItemAttribute]: "more",

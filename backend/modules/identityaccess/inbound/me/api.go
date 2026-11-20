@@ -19,11 +19,8 @@ import (
 // the routes have always had.
 type Rows interface {
 	StaffRow(ctx context.Context, staffID int64) (any, error)
-	TeacherRow(ctx context.Context, teacherID int64) (any, error)
 	EducationalGroupRows(ctx context.Context, groups []identityaccess.CallerGroup) (any, error)
-	ActivityGroupRows(ctx context.Context, ids []int64) (any, error)
 	SessionRows(ctx context.Context, ids []int64) (any, error)
-	StudentRows(ctx context.Context, ids []int64) (any, error)
 	// NavigationRow renders the navigation context with the school
 	// switches the route resolved; the root names its type in RouteContracts.
 	NavigationRow(ctx context.Context, navigation identityaccess.CallerNavigation, switches identityaccess.SchoolSwitches) (any, error)
@@ -51,7 +48,6 @@ func NewResource(caller identityaccess.CallerContext, rows Rows, configureSessio
 	configureSession(res.router)
 	withTx := common.TenantTxMiddleware
 
-	res.router.With(withTx).Get("/", res.getCurrentUser)
 	res.router.With(withTx).Get("/profile", res.getCurrentProfile)
 	res.router.With(withTx).Put("/profile", res.updateCurrentProfile)
 	res.router.With(withTx).Post("/profile/avatar", res.uploadAvatar)
@@ -59,18 +55,11 @@ func NewResource(caller identityaccess.CallerContext, rows Rows, configureSessio
 	res.router.With(withTx).Get("/profile/avatar/{filename}", res.serveAvatar)
 	res.router.With(withTx).Get("/staff", res.getCurrentStaff)
 	res.router.With(withTx).Get("/navigation", res.getNavigation)
-	res.router.With(withTx).Get("/teacher", res.getCurrentTeacher)
 
 	// Callers always reach their own groups; no permission beyond the chain.
 	res.router.Route("/groups", func(router chi.Router) {
 		router.With(withTx).Get("/", res.getMyGroups)
-		router.With(withTx).Get("/activity", res.getMyActivityGroups)
-		router.With(withTx).Get("/active", res.getMyActiveGroups)
 		router.With(withTx).Get("/supervised", res.getMySupervisedGroups)
-		router.Route("/{groupID}", func(router chi.Router) {
-			router.With(withTx).Get("/students", res.getGroupStudents)
-			router.With(withTx).Get("/visits", res.getGroupVisits)
-		})
 	})
 	return res
 }
@@ -88,11 +77,6 @@ func (res *Resource) respond(w http.ResponseWriter, r *http.Request, data any, e
 	common.Respond(w, r, http.StatusOK, data, message)
 }
 
-func (res *Resource) getCurrentUser(w http.ResponseWriter, r *http.Request) {
-	account, err := res.caller.Account(r.Context())
-	res.respond(w, r, currentUserResponse(account), err, "Current user retrieved successfully")
-}
-
 func (res *Resource) getCurrentStaff(w http.ResponseWriter, r *http.Request) {
 	staff, err := res.staffRow(r.Context())
 	res.respond(w, r, staff, err, "Current staff profile retrieved successfully")
@@ -104,19 +88,6 @@ func (res *Resource) staffRow(ctx context.Context) (any, error) {
 		return nil, err
 	}
 	return res.rows.StaffRow(ctx, staffID)
-}
-
-func (res *Resource) getCurrentTeacher(w http.ResponseWriter, r *http.Request) {
-	teacher, err := res.teacherRow(r.Context())
-	res.respond(w, r, teacher, err, "Current teacher profile retrieved successfully")
-}
-
-func (res *Resource) teacherRow(ctx context.Context) (any, error) {
-	teacherID, err := res.caller.TeacherID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return res.rows.TeacherRow(ctx, teacherID)
 }
 
 func (res *Resource) getNavigation(w http.ResponseWriter, r *http.Request) {
@@ -162,16 +133,6 @@ func (res *Resource) myGroupRows(ctx context.Context) (any, error) {
 	return res.rows.EducationalGroupRows(ctx, groups)
 }
 
-func (res *Resource) getMyActivityGroups(w http.ResponseWriter, r *http.Request) {
-	groups, err := res.idRows(r.Context(), res.caller.MyActivityGroupIDs, res.rows.ActivityGroupRows)
-	res.respond(w, r, groups, err, "Activity groups retrieved successfully")
-}
-
-func (res *Resource) getMyActiveGroups(w http.ResponseWriter, r *http.Request) {
-	groups, err := res.idRows(r.Context(), res.caller.MyActiveSessionIDs, res.rows.SessionRows)
-	res.respond(w, r, groups, err, "Active groups retrieved successfully")
-}
-
 func (res *Resource) getMySupervisedGroups(w http.ResponseWriter, r *http.Request) {
 	groups, err := res.idRows(r.Context(), res.caller.MySupervisedSessionIDs, res.rows.SessionRows)
 	res.respond(w, r, groups, err, "Supervised groups retrieved successfully")
@@ -187,28 +148,6 @@ func (res *Resource) idRows(
 		return nil, err
 	}
 	return rows(ctx, resolved)
-}
-
-func (res *Resource) getGroupStudents(w http.ResponseWriter, r *http.Request) {
-	groupID, err := common.ParseIDParam(r, "groupID")
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	students, err := res.idRows(r.Context(), func(ctx context.Context) ([]int64, error) {
-		return res.caller.GroupStudentIDs(ctx, groupID)
-	}, res.rows.StudentRows)
-	res.respond(w, r, students, err, "Group students retrieved successfully")
-}
-
-func (res *Resource) getGroupVisits(w http.ResponseWriter, r *http.Request) {
-	groupID, err := common.ParseIDParam(r, "groupID")
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	visits, err := res.caller.GroupVisits(r.Context(), groupID)
-	res.respond(w, r, groupVisitResponses(visits), err, "Group visits retrieved successfully")
 }
 
 // ErrorRenderer maps caller-context errors to HTTP responses. Matched via

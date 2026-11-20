@@ -95,9 +95,9 @@ type operatorSchoolSettings struct {
 // operatorRouter builds the operator routes. billing (#2791) and
 // schoolSettings (#2736) are optional: without them their routes are not
 // mounted. unregisteredTagScans is the optional Device Fleet review of
-// unregistered RFID scans (#3232). demoPresenceHistory is Student Presence's
-// write of past care days for the public demo's seeder (ADR 0127); the root
-// passes it under APP_ENV=demo only. The auth limiter guards operator login
+// unregistered RFID scans (#3232). demo holds the seed writes of the public
+// demo's seeder (ADR 0127, ADR 0298); the root passes them under APP_ENV=demo
+// only. The auth limiter guards operator login
 // against brute force; e-mail confirmation and invitations have their own
 // limiters and fall back to the auth limiter.
 func operatorRouter(
@@ -110,7 +110,7 @@ func operatorRouter(
 	limiters authRateLimiters,
 	staffPersonMerge http.Handler,
 	sampleChildren http.HandlerFunc,
-	demoPresenceHistory http.HandlerFunc,
+	demo demoOperatorRoutes,
 	now func() time.Time,
 ) chi.Router {
 	// The root provides the session chains; without the signer the verifier
@@ -148,7 +148,10 @@ func operatorRouter(
 		if schoolSettings != nil && schoolSettings.traegerValues != nil {
 			mountOperatorTraegerSettingsRoutes(r, provisioningRoutes, schoolSettings.traegerValues)
 		}
-		mountOperatorSchoolRoutes(r, provisioningRoutes, identityRoutes.mfaAdmin, schoolSettings, demoPresenceHistory)
+		mountOperatorSchoolRoutes(r, provisioningRoutes, identityRoutes.mfaAdmin, schoolSettings, demo)
+		if demo.schoolVacations != nil {
+			r.Post("/demo-school-vacations", demo.schoolVacations)
+		}
 		mountOperatorPersonRoutes(r, provisioningRoutes)
 		r.Mount("/staff-person-merges", staffPersonMerge)
 		mountOperatorTagScanRoutes(r, unregisteredTagScans, provisioningRoutes)
@@ -263,7 +266,6 @@ func mountOperatorBillingRoutes(r chi.Router, billing *provisioningOperatorAPI.B
 		r.Delete("/key-day-overrides/schools/{schoolId}", billing.ResetSchoolKeyDay)
 		r.Get("/key-date-counts", billing.ListKeyDateCounts)
 		r.Get("/key-date-counts/export", billing.ExportKeyDateCounts)
-		r.Post("/key-date-counts/seed", billing.SeedKeyDateCounts)
 	})
 }
 
@@ -275,14 +277,11 @@ func mountOperatorBillingRoutes(r chi.Router, billing *provisioningOperatorAPI.B
 // A protected subtree on /auth/passkeys shadows those public login routes in
 // chi and makes anonymous passkey login fail with 401.
 //
-// Register the list endpoint under BOTH the no-slash and trailing-slash forms:
-// chi treats "/auth/passkeys" and "/auth/passkeys/" as distinct patterns (no
-// RedirectSlashes on this router), and the old r.Route("/auth/passkeys").Get("/")
-// form answered both. The proxy sends the slash form, but direct authenticated
-// operator clients hit the no-slash form, so dropping it 404s them.
+// The list answers only the contract form GET /auth/passkeys without a
+// trailing slash; the catalog proxy builds backend paths without empty
+// segments, so since the catalog proxy (#2352) no client sends the slash form.
 func (rs operatorIdentityRoutes) mountPasskeyRoutes(r chi.Router) {
 	r.Get("/auth/passkeys", rs.passkeys.PasskeyList)
-	r.Get("/auth/passkeys/", rs.passkeys.PasskeyList)
 	r.Post("/auth/passkeys/enrollment/challenge", rs.passkeys.PasskeyEnrollmentChallenge)
 	r.Post("/auth/passkeys/register/options", rs.passkeys.PasskeyRegisterOptions)
 	r.Post("/auth/passkeys/register/verify", rs.passkeys.PasskeyRegisterVerify)
@@ -381,13 +380,13 @@ func mountOperatorTraegerStaffReleaseRoutes(r chi.Router, provisioning *provisio
 }
 
 // mountOperatorSchoolRoutes registers the /schools subtree, including the
-// optional per-school settings endpoints and the demo's presence history.
+// optional per-school settings endpoints and the demo's seed writes.
 func mountOperatorSchoolRoutes(
 	r chi.Router,
 	provisioning *provisioningOperatorAPI.ProvisioningResource,
 	mfaAdmin *identityOperatorAPI.SchoolAccountMFAResource,
 	schoolSettings *operatorSchoolSettings,
-	demoPresenceHistory http.HandlerFunc,
+	demo demoOperatorRoutes,
 ) {
 	r.Route("/schools", func(r chi.Router) {
 		r.Get("/", provisioning.AuditReadAccess(organizationtenancy.ReadSchools, provisioning.ListSchools))
@@ -417,10 +416,13 @@ func mountOperatorSchoolRoutes(
 		r.Put("/{id}/device-slots", provisioning.SetSchoolDeviceSlots)
 		r.Get("/{id}/persons", provisioning.AuditReadAccess(organizationtenancy.ReadSchoolPersons, provisioning.ListSchoolPersons))
 		r.Get("/{id}/pwa-usage", provisioning.GetSchoolPWAUsage)
-		if demoPresenceHistory != nil {
-			history := provisioning.AuditReadAccess(organizationtenancy.ReadDemoPresenceHistory, demoPresenceHistory)
+		if demo.presenceHistory != nil {
+			history := provisioning.AuditReadAccess(organizationtenancy.ReadDemoPresenceHistory, demo.presenceHistory)
 			r.Get("/{id}/demo-presence-history", history)
 			r.Post("/{id}/demo-presence-history", history)
+		}
+		if demo.feedbackHistory != nil {
+			r.Post("/{id}/demo-feedback-history", demo.feedbackHistory)
 		}
 		if schoolSettings != nil {
 			values := schoolSettings.values
@@ -488,12 +490,9 @@ func (rs operatorIdentityRoutes) mountAccountTenantAccessRoutes(r chi.Router, pr
 	if rs.account == nil {
 		return
 	}
-	// Chi treats collection paths with and without a trailing slash as distinct
-	// routes. The operator client deliberately uses the canonical no-slash form.
+	// The operator client uses the canonical no-slash form.
 	r.Get("/accounts/{accountId}/tenants", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.ListAccountTenantAccess))
-	r.Get("/accounts/{accountId}/tenants/", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.ListAccountTenantAccess))
 	r.Post("/accounts/{accountId}/tenants", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.GrantAccountTenantAccess))
-	r.Post("/accounts/{accountId}/tenants/", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.GrantAccountTenantAccess))
 	r.Get("/accounts/{accountId}/tenants/{tenantId}/roles", rs.account.ListAssignableSchoolRoles)
 	r.Put("/accounts/{accountId}/tenants/{tenantId}", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.UpdateAccountTenantRole))
 	r.Delete("/accounts/{accountId}/tenants/{tenantId}", provisioning.AuditReadAccess(organizationtenancy.ReadAccountTenants, rs.account.RevokeAccountTenantAccess))

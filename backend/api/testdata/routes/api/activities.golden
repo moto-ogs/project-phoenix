@@ -5,9 +5,7 @@ DELETE /api/activities/{id}/supervisors/{supervisorId}
 GET /api/activities/
 GET /api/activities/categories
 GET /api/activities/students/{studentId}
-GET /api/activities/students/{studentId}/available
 GET /api/activities/supervisors/available
-GET /api/activities/timespans
 GET /api/activities/{id}
 GET /api/activities/{id}/schedules
 GET /api/activities/{id}/schedules/{scheduleId}
@@ -22,4 +20,3 @@ POST /api/activities/{id}/supervisors
 PUT /api/activities/categories/{categoryId}
 PUT /api/activities/{id}
 PUT /api/activities/{id}/students
-PUT /api/activities/{id}/supervisors/{supervisorId}

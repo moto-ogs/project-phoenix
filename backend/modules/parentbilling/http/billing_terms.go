@@ -57,7 +57,6 @@ func (rs *BillingTermsResource) FamilyRouter(protectedTraegerRoutes func(chi.Rou
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.listFamilies)
 		billing.Put("/", rs.saveFamily)
-		billing.Delete("/{id}", rs.deleteFamily)
 	})
 	return r
 }
@@ -220,24 +219,6 @@ func (rs *BillingTermsResource) saveFamily(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	common.Respond(w, r, http.StatusOK, FamilyBillingResponse{Family: family}, "Family billing saved successfully")
-}
-
-func (rs *BillingTermsResource) deleteFamily(w http.ResponseWriter, r *http.Request) {
-	reviewer, ok := reviewerOf(w, r)
-	if !ok {
-		return
-	}
-	id, err := common.ParseIDParam(r, "id")
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	if err := rs.terms.DeleteFamilyBilling(r.Context(), reviewer, id); err != nil {
-		tenant.MarkRollback(r.Context())
-		renderTermsError(w, r, err, common.CodeParentBillingFamilyBillingInvalid)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, FamilyBillingResponse{}, "Family billing deleted successfully")
 }
 
 func (rs *BillingTermsResource) setCareDueDates(w http.ResponseWriter, r *http.Request) {

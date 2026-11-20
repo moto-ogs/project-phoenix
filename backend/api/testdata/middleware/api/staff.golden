@@ -46,7 +46,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/staff/
 	GET /api/staff/absences/pending
 	GET /api/staff/absences/requests
-	GET /api/staff/available
 	GET /api/staff/by-role
 	GET /api/staff/dashboard-summary
 	GET /api/staff/documents-directory

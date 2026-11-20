@@ -200,6 +200,24 @@ describe("public links below the staff portal's auth", () => {
     });
   });
 
+  it("lists the schools when Next passes no params to the static route", async () => {
+    // Next 16 hands a route file without a dynamic segment `params: undefined`.
+    const { GET } = await import("./auth/tenants/route");
+    answer([{ slug: "a", name: "A", subdomain: "a", organization_name: "T" }]);
+
+    const response = await (
+      GET as unknown as (
+        request: NextRequest,
+        context: { params?: Promise<Record<string, unknown>> },
+      ) => Promise<Response>
+    )(new NextRequest("http://localhost/x"), {
+      params: undefined,
+    });
+
+    expect(response.status).toBe(200);
+    expect(sent()).toMatchObject({ path: "/auth/tenants" });
+  });
+
   it("validates a staff invitation link without a bearer", async () => {
     const { GET } = await import("./auth/invitations/[[...path]]/route");
     answer({

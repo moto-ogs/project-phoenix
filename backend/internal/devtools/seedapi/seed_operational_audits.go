@@ -27,9 +27,9 @@ func (seedImportAuditStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	var resp struct {
 		Data struct {
-			CreatedCount int
-			UpdatedCount int
-			ErrorCount   int
+			CreatedCount int `json:"created_count"`
+			UpdatedCount int `json:"updated_count"`
+			ErrorCount   int `json:"error_count"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &resp); err != nil {

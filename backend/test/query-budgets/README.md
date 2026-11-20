@@ -36,7 +36,10 @@ A contract disappears only with its own explicit route at the immutable Git
 base: add a record to `architecture/query-budget-retirements.json` and remove
 that route from the router golden. A retained budget whose route leaves is
 orphaned until its field names the newly measured route (ADR 0160). Existing
-maxima and exactness stay shrink-only.
+maxima and exactness stay shrink-only. When the route was the only line of its
+golden file, `-update-goldens` deletes that file; add a record naming the file
+and all its base routes to `architecture/route-golden-retirements.json` as well
+(ADR 0160, addendum of 2026-11-20).
 
 ## Explicit initial route capture
 

@@ -2797,7 +2797,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.AcknowledgeSchoolVacation",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -2807,7 +2807,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.AcknowledgeSchoolVacation",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -2839,7 +2839,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.TenantSchoolVacations",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -2849,7 +2849,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.TenantSchoolVacations",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -2861,6 +2861,17 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationSeed.SeedSchoolVacations",
       "reason": "Platform protocol participation (scope): school-calendar reaches tenant.WithinAdmin (tenant-runtime) through modules/schoolcalendar/internal/application.SchoolVacationService.SeedSchoolVacations. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationSeed.SeedSchoolVacations",
+      "reason": "Platform protocol participation (scope): the demo seed's vacation writer (dev tools and the demo-only operator route, ADR 0298) reaches tenant.WithinAdmin (tenant-runtime) through modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations, which stores every state's windows in its own administrative transaction. Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"
@@ -2881,7 +2892,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.AcknowledgeSchoolVacation",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -2891,7 +2902,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.AcknowledgeSchoolVacation",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -2901,7 +2912,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.TenantSchoolVacations",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -2911,7 +2922,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.TenantSchoolVacations",
-      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-calendar reaches modules/settings/records.SettingsService.ResolveString (settings-platform) through modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations: the federal state of the school vacations (#5345). No persistent, lock or scope effect (ADR 0098). Re-reviewed for #2352: the evidence moved because the timetable vacation port lost the seed (ADR 0298); the read is unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"

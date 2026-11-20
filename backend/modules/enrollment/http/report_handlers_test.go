@@ -72,6 +72,10 @@ func TestClassRosterExportRequiresConfigManageAndUsersRead(t *testing.T) {
 	configAndUsersReadRecorder := httptest.NewRecorder()
 	served.ServeHTTP(configAndUsersReadRecorder, configAndUsersRead)
 	assert.Equal(t, http.StatusOK, configAndUsersReadRecorder.Code)
+	// The browser receives the file through the catalog proxy, which adds no
+	// type or name of its own (#2352).
+	assert.Equal(t, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", configAndUsersReadRecorder.Header().Get("Content-Type"))
+	assert.Regexp(t, `^attachment; filename=".+\.xlsx"`, configAndUsersReadRecorder.Header().Get("Content-Disposition"))
 }
 
 func TestBuildClassRosterTableDocumentRendersPhaseAwareCells(t *testing.T) {

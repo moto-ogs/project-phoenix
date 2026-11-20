@@ -51,18 +51,6 @@ func (r GuardianInvitationReads) ListOpenGuardianInvitations(ctx context.Context
 	return guardianInvitationList(invitations, err)
 }
 
-// ListRedeemableGuardianInvitations returns the invitations of the school in
-// context whose link can still be spent.
-func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {
-	var invitations []domain.GuardianInvitation
-	err := r.run(ctx, func(txCtx context.Context) error {
-		var err error
-		invitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx)
-		return err
-	})
-	return guardianInvitationList(invitations, err)
-}
-
 func guardianInvitationList(invitations []domain.GuardianInvitation, err error) ([]identityaccess.GuardianInvitation, error) {
 	if err != nil {
 		return nil, invitationError(failed(opGuardianInviteFetch, err))
@@ -82,13 +70,6 @@ func (l *AccountLifecycle) ListOpenGuardianInvitations(ctx context.Context, guar
 		return nil, errAccountLifecycleUnavailable
 	}
 	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead).ListOpenGuardianInvitations(bindRuntime(l.auth.attach, ctx), guardianProfileIDs)
-}
-
-func (l *AccountLifecycle) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {
-	if l == nil {
-		return nil, errAccountLifecycleUnavailable
-	}
-	return NewGuardianInvitationReads(l.invitations, l.sessions.tx.RunRead).ListRedeemableGuardianInvitations(bindRuntime(l.auth.attach, ctx))
 }
 
 // NewGuardianInvitationInvalidation binds the guarded command independently of

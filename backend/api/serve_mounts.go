@@ -5,7 +5,13 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
+
+	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
+	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
+	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 
 	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
@@ -114,7 +120,7 @@ func renderEmailWebhookFailure(w http.ResponseWriter, r *http.Request, err error
 // mountModuleRoutes mounts the route groups modules serve themselves.
 func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsService, caller *owners.CallerRows, answers enrollmentOwner.StudentAnswers,
 	notes peopleOwner.StudentNoteSearch, activities activityContract.ActivityService, staffOverview schoolSetupTargetCoverage,
-	today func() calendar.Date,
+	accessLog owners.DataAccessAppender, today func() calendar.Date,
 ) error {
 	schoolSetup, err := newSchoolSetupRoute(schoolSetupCompose.Dependencies{
 		Settings: SchoolSetupSettings{Settings: settings},
@@ -130,7 +136,35 @@ func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsServi
 	for _, module := range []moduleRoute{schoolSetup, staffOnboarding} {
 		tenant.Mount(module.pattern, module.router)
 	}
+	// The contracts of the application children as the school reads them
+	// (#4788, ADR 0088 section 7), behind the right of the enrollment detail.
+	tenant.Mount("/care-contracts", careContractHTTP.NewApplicationContractResource(careContractCompose.NewApplicationContracts(),
+		applicationContractAccessLog{log: accessLog},
+		apiCommon.RequiresPermission(permissions.ConfigManage)).Router(ProtectedTenantRoutes))
 	return mountSchoolSearch(tenant, caller, answers, notes, activities, today)
+}
+
+// applicationContractAccessLog records the school's read of the contracts
+// created from one enrollment. It runs in the route's tenant transaction, so
+// the evidence remains at the school that is the place of care (ADR 0153).
+type applicationContractAccessLog struct {
+	log owners.DataAccessAppender
+}
+
+func (l applicationContractAccessLog) RecordApplicationContractAccess(ctx context.Context, contracts []carecontract.ApplicationContract) error {
+	claims := sessiontoken.ClaimsFromCtx(ctx)
+	contractIDs := make([]int64, len(contracts))
+	for i, contract := range contracts {
+		contractIDs[i] = contract.ContractID
+	}
+	now := time.Now()
+	return l.log.Create(ctx, &auditModels.DataAccessLog{
+		ActorAccountID: int64(claims.ID), ActorRole: strings.Join(claims.Roles, ","),
+		ResourceType: auditModels.ResourceTypeCareContracts, RangeStart: now, RangeEnd: now,
+		Metadata: map[string]any{
+			"channel": "school_portal", "view": "application_contracts", "rows": len(contracts), "contract_ids": contractIDs,
+		},
+	})
 }
 
 // mountPeopleRoutes serves the people directory, guardians, statistics,

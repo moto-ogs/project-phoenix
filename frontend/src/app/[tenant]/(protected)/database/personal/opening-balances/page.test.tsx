@@ -95,16 +95,16 @@ function previewResponse(overrides: Record<string, unknown> = {}) {
     json: () =>
       Promise.resolve({
         data: {
-          TotalRows: 3,
-          CreatedCount: 2,
-          UpdatedCount: 0,
-          ErrorCount: 1,
-          WarningCount: 0,
-          DryRun: true,
-          Errors: [
+          total_rows: 3,
+          created_count: 2,
+          updated_count: 0,
+          error_count: 1,
+          warning_count: 0,
+          dry_run: true,
+          errors: [
             {
-              RowNumber: 4,
-              Data: {
+              row_number: 4,
+              data: {
                 personnel_number: "1003",
                 first_name: "Clara",
                 last_name: "Weber",
@@ -113,7 +113,7 @@ function previewResponse(overrides: Record<string, unknown> = {}) {
                 vacation_carryover: "0",
                 vacation_remaining: "28",
               },
-              Errors: [
+              errors: [
                 {
                   field: "vacation",
                   message: "Für diese Person besteht bereits eine Übernahme",
@@ -121,7 +121,7 @@ function previewResponse(overrides: Record<string, unknown> = {}) {
                   severity: "error",
                 },
               ],
-              Timestamp: "2026-08-03T10:00:00Z",
+              timestamp: "2026-08-03T10:00:00Z",
             },
           ],
           ...overrides,
@@ -317,13 +317,13 @@ describe("OpeningBalanceImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 2,
-              UpdatedCount: 0,
-              ErrorCount: 1,
-              WarningCount: 0,
-              DryRun: false,
-              Errors: [],
+              total_rows: 3,
+              created_count: 2,
+              updated_count: 0,
+              error_count: 1,
+              warning_count: 0,
+              dry_run: false,
+              errors: [],
             },
           }),
       });
@@ -362,20 +362,20 @@ describe("OpeningBalanceImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                WarningCount: 0,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                warning_count: 0,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       personnel_number: "1003",
                       first_name: "Clara",
                       last_name: "Weber",
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",

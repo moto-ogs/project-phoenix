@@ -34,6 +34,12 @@ func staffMembershipRouteContracts() []common.RouteContract {
 		tenantRoute("GET", "/former", nil, []staffHTTP.FormerStaffResponse{}, listFilters...),
 		staffRecordRoute(tenantRoute("POST", "/", staffHTTP.StaffRequest{}, staffHTTP.StaffRecordResponse{})),
 		staffRecordRoute(tenantRoute("GET", "/{id}", nil, staffHTTP.StaffRecordResponse{})),
+		// The avatar image; ?v names the stored file, and only a current
+		// version stays in the browser's private cache for a day (#2352).
+		{
+			Method: "GET", Pattern: "/{id}/avatar", Portals: []common.PortalScope{common.PortalTenant},
+			Query: []common.QueryParam{{Name: "v", Kind: common.QueryString}}, File: true, PrivateCache: true,
+		},
 		staffRecordRoute(tenantRoute("PUT", "/{id}", staffHTTP.StaffRequest{}, staffHTTP.StaffRecordResponse{})),
 		tenantRoute("DELETE", "/{id}", nil, nil),
 		staffRecordRoute(tenantRoute("POST", "/externals", staffHTTP.ExternalStaffRequest{}, staffHTTP.ExternalStaffResponse{})),
@@ -112,5 +118,6 @@ func staffShiftRouteContracts() []common.RouteContract {
 		tenantRoute("GET", "/series/{id}", nil, staffshiftsHTTP.SeriesDetailResponse{}),
 		tenantRoute("PUT", "/series/{id}/split", nil, staffshiftsHTTP.SeriesResponse{}),
 		tenantRoute("DELETE", "/series/{id}", nil, staffshiftsHTTP.SeriesResponse{}, common.QueryParam{Name: "from", Kind: common.QueryDate}),
+		{Method: "POST", Pattern: "/export", Portals: []common.PortalScope{common.PortalTenant}, File: true},
 	}
 }

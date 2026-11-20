@@ -10,6 +10,7 @@
  */
 import type { Session } from "next-auth";
 import { hasPermission } from "~/lib/auth-utils";
+import { isTraegerNavActive } from "./traeger-nav-active";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
 import { backConcept } from "~/lib/concepts/back";
@@ -315,6 +316,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
   },
 ];
 
+/**
+ * Die Schlüssel aller Gruppen der Hauptnavigation, auch ohne erlaubtes Ziel.
+ * Beim ersten Besuch stehen sie alle offen (#7647).
+ */
+export const TRAEGER_NAV_GROUP_KEYS: readonly string[] = TRAEGER_NAV_GROUPS.map(
+  (group) => group.key,
+);
+
 /** Der Einstieg unten in der Hauptnavigation; sein Ziel ist der erste erlaubte Eintrag. */
 export const TRAEGER_SETTINGS_NAV = {
   key: "einstellungen-bereich",
@@ -414,6 +423,21 @@ export function traegerNavGroupsFor(
 }
 
 /**
+ * Die Gruppe, in der die aktuelle Seite liegt; `null` außerhalb jeder Gruppe
+ * (Einstellungen). Sie steht in der Seitenleiste immer offen (#7647).
+ */
+export function traegerNavGroupKeyFor(
+  groups: readonly TraegerNavGroup[],
+  pathname: string,
+): string | null {
+  return (
+    groups.find((group) =>
+      group.items.some((item) => isTraegerNavActive(item.href, pathname)),
+    )?.key ?? null
+  );
+}
+
+/**
  * Die Einträge der Einstellungen, die diese Person sehen darf. Eine leere
  * Liste heißt: kein Eintrag „Einstellungen".
  */
@@ -430,4 +454,56 @@ function visibleFor(
   return items.filter(
     (item) => item.right === null || hasPermission(session, item.right),
   );
+}
+
+/** Eine Seite, die die Suche des Träger-Portals findet (#7648). */
+export interface TraegerSearchPage {
+  readonly key: string;
+  /** Pfad mit /traeger-Präfix wie in der Leiste; die Hilfe ist schon fertig. */
+  readonly href: string;
+  readonly label: string;
+  /** Der Bereich, in dem die Seite in der Seitenleiste steht. */
+  readonly area: string;
+  readonly concept: MotoConcept;
+  /** Die Hilfe öffnet in einem neuen Tab, wie in der Leiste. */
+  readonly newTab?: true;
+}
+
+/**
+ * Alle Seiten der Seitenleiste und der Einstellungen, die die Sitzung sehen
+ * darf, für die Suche (#7648). Dieselbe Rechte-Filterung wie die Leisten:
+ * was dort fehlt, findet auch die Suche nicht.
+ */
+export function traegerSearchPagesFor(
+  session: Session | null,
+  federalStates?: readonly string[],
+): readonly TraegerSearchPage[] {
+  const main = traegerNavGroupsFor(session, federalStates).flatMap((group) =>
+    group.items.map((item) => ({
+      key: item.key,
+      href: item.href,
+      label: item.label,
+      area: group.label,
+      concept: item.concept,
+    })),
+  );
+  const settings = traegerSettingsNavItemsFor(session).map((item) => ({
+    key: item.key,
+    href: item.href,
+    label: item.label,
+    area: TRAEGER_SETTINGS_NAV.label,
+    concept: item.concept,
+  }));
+  return [
+    ...main,
+    ...settings,
+    {
+      key: TRAEGER_HELP_NAV.key,
+      href: TRAEGER_HELP_NAV.href,
+      label: TRAEGER_HELP_NAV.label,
+      area: "Hilfe und Einstellungen",
+      concept: TRAEGER_HELP_NAV.concept,
+      newTab: true,
+    },
+  ];
 }

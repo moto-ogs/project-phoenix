@@ -33,6 +33,16 @@ func RouteContracts(portal common.PortalScope) []common.RouteContract {
 		{Method: "GET", Pattern: "/{announcementId}/declaration-status", Portals: portals, Response: declarationStatusResponse{}},
 		{Method: "POST", Pattern: "/{announcementId}/remind", Portals: portals, Response: remindedResponse{}},
 		{Method: "POST", Pattern: "/{announcementId}/resend-failed", Portals: portals, Response: resentResponse{}},
+		// The printable letters and the declaration report (csv history or
+		// pdf proof, one child with student_id) answer files (#2352).
+		{Method: "GET", Pattern: "/{announcementId}/letters-pdf", Portals: portals, File: true},
+		{
+			Method: "GET", Pattern: "/{announcementId}/declaration-export", Portals: portals, File: true,
+			Query: []common.QueryParam{
+				{Name: "format", Kind: common.QueryString, Values: []string{"csv", "pdf"}},
+				{Name: "student_id", Kind: common.QueryID},
+			},
+		},
 	}
 	if !tenant {
 		return routes

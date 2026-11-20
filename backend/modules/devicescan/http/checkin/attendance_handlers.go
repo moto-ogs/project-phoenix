@@ -4,25 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 )
-
-// getAttendanceStatus answers a student's attendance status by RFID.
-func (rs *AttendanceResource) getAttendanceStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := rs.attendance.AttendanceStatus(r.Context(), chi.URLParam(r, "rfid"))
-	if err != nil {
-		rs.fail(w, r, err)
-		return
-	}
-	response := AttendanceStatusResponse{
-		Student:    attendanceStudentInfo(status.Student),
-		Attendance: attendanceInfo(status.Attendance),
-	}
-	rs.runtime.Success(w, r, http.StatusOK, response, "Student attendance status retrieved successfully")
-}
 
 // toggleAttendance confirms, cancels or finalizes a student's attendance.
 func (rs *AttendanceResource) toggleAttendance(w http.ResponseWriter, r *http.Request) {

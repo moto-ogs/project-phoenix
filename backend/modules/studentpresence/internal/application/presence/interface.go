@@ -14,15 +14,12 @@ type Service interface {
 	// Active Group operations
 	GetActiveGroup(ctx context.Context, id int64) (*ports.ActiveGroup, error)
 	CreateActiveGroup(ctx context.Context, group *ports.ActiveGroup) error
-	UpdateActiveGroup(ctx context.Context, group *ports.ActiveGroup) error
 	DeleteActiveGroup(ctx context.Context, id int64) error
 	FindDeviceActiveGroupInRoom(ctx context.Context, roomID int64, deviceID int64) (*ports.ActiveGroup, error)
 	EndActiveGroupSession(ctx context.Context, id int64) error
 
 	// Visit operations
 	CreateVisit(ctx context.Context, visit *studentpresence.Visit) error
-	UpdateVisit(ctx context.Context, visit *studentpresence.Visit) error
-	DeleteVisit(ctx context.Context, id int64) error
 	FindVisitsByStudentID(ctx context.Context, studentID int64) ([]studentpresence.Visit, error)
 	EndVisit(ctx context.Context, id int64) error
 	LockStudent(ctx context.Context, studentID int64) error
@@ -37,23 +34,13 @@ type Service interface {
 	AssignTransitStudentsToActiveGroup(ctx context.Context, studentIDs []int64, activeGroupID int64) (*TransitAssignResult, error)
 	AssignTransitStudentsToActiveGroupAuthorized(ctx context.Context, studentIDs []int64, activeGroupID int64, auth StudentMoveAuthorization) (*TransitAssignResult, error)
 	MoveStudentsToActiveGroupAuthorized(ctx context.Context, studentIDs []int64, activeGroupID int64, auth StudentMoveAuthorization) (*StudentMoveResult, error)
-	MoveStudentsToTransitAuthorized(ctx context.Context, studentIDs []int64, auth StudentMoveAuthorization) (*StudentMoveResult, error)
 	CheckInStudentsToSessionAuthorized(ctx context.Context, studentIDs []int64, activeGroupID, staffID int64, auth StudentMoveAuthorization, keepPresent bool) (*StudentMoveResult, error)
 	CheckInStudentsToOpenRoomSessionAuthorized(ctx context.Context, studentIDs []int64, roomSessionID, staffID int64, auth StudentMoveAuthorization, keepPresent bool) (*StudentMoveResult, error)
 
 	// Group Supervisor operations
 	CreateGroupSupervisor(ctx context.Context, supervisor *ports.GroupSupervisor) error
-	UpdateGroupSupervisor(ctx context.Context, supervisor *ports.GroupSupervisor) error
-	DeleteGroupSupervisor(ctx context.Context, id int64) error
 	EndSupervision(ctx context.Context, id int64) error
 	ReleaseSupervision(ctx context.Context, activeGroupID, staffID int64) (studentpresence.GroupSupervision, error)
-
-	// Combined Group operations
-	CreateCombinedGroup(ctx context.Context, group *studentpresence.CombinedGroup) error
-	UpdateCombinedGroup(ctx context.Context, group *studentpresence.CombinedGroup) error
-	DeleteCombinedGroup(ctx context.Context, id int64) error
-	EndCombinedGroup(ctx context.Context, id int64) error
-	CreateCombinedGroupWithGroups(ctx context.Context, group *studentpresence.CombinedGroup, groupIDs []int64) error
 
 	// Activity Session Management with Conflict Detection
 	StartActivitySessionWithSupervisors(ctx context.Context, activityID, deviceID int64, supervisorIDs []int64, roomID *int64) (*ports.ActiveGroup, error)
@@ -66,10 +53,7 @@ type Service interface {
 	UpdateActiveGroupSupervisors(ctx context.Context, activeGroupID int64, supervisorIDs []int64) (*ports.ActiveGroup, error)
 
 	// Session timeout operations
-	ProcessSessionTimeout(ctx context.Context, deviceID int64) (*TimeoutResult, error)
 	UpdateSessionActivity(ctx context.Context, activeGroupID int64) error
-	ValidateSessionTimeout(ctx context.Context, deviceID int64, timeoutMinutes int) error
-	GetSessionTimeoutInfo(ctx context.Context, deviceID int64) (*SessionTimeoutInfo, error)
 	CleanupAbandonedSessions(ctx context.Context, olderThan time.Duration) (int, error)
 
 	// Daily session management
@@ -152,7 +136,6 @@ type (
 	StudentMoveResult         = studentpresence.StudentMoveResult
 	StudentMoveAuthorization  = studentpresence.StudentMoveAuthorization
 	TimeoutResult             = studentpresence.TimeoutResult
-	SessionTimeoutInfo        = studentpresence.SessionTimeoutInfo
 	CleanupResult             = studentpresence.CleanupResult
 	CleanupError              = studentpresence.CleanupError
 	RetentionStats            = studentpresence.RetentionStats

@@ -51,9 +51,10 @@ export interface StaffDocumentList {
   visibleCategories: StaffDocumentCategory[];
 }
 
+// The catalog renders the ids as decimal strings (#2352).
 interface BackendStaffDocument {
-  id: number;
-  staff_id: number;
+  id: string;
+  staff_id: string;
   category: StaffDocumentCategory;
   filename: string;
   size_bytes: number;
@@ -64,15 +65,15 @@ interface BackendStaffDocument {
 }
 
 interface BackendStaffDocumentList {
-  staff_id: number;
+  staff_id: string;
   documents: BackendStaffDocument[];
   visible_categories: StaffDocumentCategory[];
 }
 
 function mapDocument(data: BackendStaffDocument): StaffDocument {
   return {
-    id: data.id.toString(),
-    staffId: data.staff_id.toString(),
+    id: data.id,
+    staffId: data.staff_id,
     category: data.category,
     filename: data.filename,
     sizeBytes: data.size_bytes,

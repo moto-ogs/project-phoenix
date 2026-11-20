@@ -108,12 +108,8 @@ func TestVisitFacadeCannotReadLockOrModifyAnotherTenant(t *testing.T) {
 		ended, err := module.CloseVisits(txCtx, []int64{foreign.ID}, time.Now())
 		require.NoError(t, err)
 		assert.Empty(t, ended)
-		return module.DeleteVisit(txCtx, foreign.ID)
+		return nil
 	}))
-	copy := foreign
-	copy.TenantID = tenant.FromContext(ctx)
-	_, err = module.ReviseVisit(ctx, copy)
-	require.Error(t, err)
 	stored, err := module.FindVisit(foreignCtx, foreign.ID)
 	require.NoError(t, err)
 	assert.Nil(t, stored.ExitTime)

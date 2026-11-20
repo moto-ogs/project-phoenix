@@ -403,7 +403,7 @@ func recordBlockingErrors[T any](s *ImportService[T], result *importModels.Impor
 func (s *ImportService[T]) processDryRunRow(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int) bool {
 	existingID, err := s.config.FindExisting(ctx, *row)
 	if err != nil {
-		recordDuplicateCheckError(s, result, rowNum, row, err)
+		recordDuplicateCheckError(s, result, rowNum, row)
 		return false
 	}
 
@@ -463,7 +463,7 @@ func recordWillUpdateInfo[T any](s *ImportService[T], result *importModels.Impor
 func (s *ImportService[T]) processActualImportRow(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int) bool {
 	existingID, err := s.config.FindExisting(ctx, *row)
 	if err != nil {
-		recordDuplicateCheckError(s, result, rowNum, row, err)
+		recordDuplicateCheckError(s, result, rowNum, row)
 		return false
 	}
 
@@ -512,7 +512,7 @@ func (s *ImportService[T]) performImportAction(ctx context.Context, request impo
 // performCreateAction performs the create operation
 func (s *ImportService[T]) performCreateAction(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int) bool {
 	if _, err := s.config.Create(ctx, *row); err != nil {
-		recordCreationError(s, result, rowNum, row, err)
+		recordCreationError(s, result, rowNum, row)
 		return request.StopOnError
 	}
 	result.CreatedCount++
@@ -522,7 +522,7 @@ func (s *ImportService[T]) performCreateAction(ctx context.Context, request impo
 // performUpdateAction performs the update operation
 func (s *ImportService[T]) performUpdateAction(ctx context.Context, request importModels.ImportRequest[T], result *importModels.ImportResult[T], row *T, rowNum int, existingID *int64) bool {
 	if err := s.config.Update(ctx, *existingID, *row); err != nil {
-		recordUpdateError(s, result, rowNum, row, err)
+		recordUpdateError(s, result, rowNum, row)
 		return request.StopOnError
 	}
 	result.UpdatedCount++
@@ -530,10 +530,10 @@ func (s *ImportService[T]) performUpdateAction(ctx context.Context, request impo
 }
 
 // recordDuplicateCheckError records a duplicate check error
-func recordDuplicateCheckError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, err error) {
+func recordDuplicateCheckError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T) {
 	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "duplicate_check",
-		Message:  fmt.Sprintf("Fehler bei Duplikatprüfung: %s", err.Error()),
+		Message:  "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.",
 		Code:     "duplicate_check_failed",
 		Severity: importModels.ErrorSeverityError,
 	}})
@@ -563,10 +563,10 @@ func recordNotFoundError[T any](s *ImportService[T], result *importModels.Import
 }
 
 // recordCreationError records a creation error
-func recordCreationError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, err error) {
+func recordCreationError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T) {
 	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "creation",
-		Message:  fmt.Sprintf("Fehler beim Erstellen: %s", err.Error()),
+		Message:  "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.",
 		Code:     "creation_failed",
 		Severity: importModels.ErrorSeverityError,
 	}})
@@ -574,10 +574,10 @@ func recordCreationError[T any](s *ImportService[T], result *importModels.Import
 }
 
 // recordUpdateError records an update error
-func recordUpdateError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T, err error) {
+func recordUpdateError[T any](s *ImportService[T], result *importModels.ImportResult[T], rowNum int, row *T) {
 	appendRowErrors(s.now(), result, rowNum, row, []importModels.ValidationError{{
 		Field:    "update",
-		Message:  fmt.Sprintf("Fehler beim Aktualisieren: %s", err.Error()),
+		Message:  "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.",
 		Code:     "update_failed",
 		Severity: importModels.ErrorSeverityError,
 	}})

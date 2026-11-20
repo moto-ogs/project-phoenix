@@ -61,7 +61,7 @@ func (rs *Resource) PreviewStaffImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rs.runtime.Success(w, r, http.StatusOK, result, "Import-Vorschau erfolgreich")
+	rs.runtime.Success(w, r, http.StatusOK, importModels.NewStaffImportResult(result), "Import-Vorschau erfolgreich")
 }
 
 // msgStaffImportModeForbidden is shown when a create-only importer asks for
@@ -117,5 +117,5 @@ func (rs *Resource) ImportStaff(w http.ResponseWriter, r *http.Request) {
 	message := fmt.Sprintf("Import abgeschlossen: %d erstellt, %d aktualisiert, %d Fehler",
 		result.CreatedCount, result.UpdatedCount, result.ErrorCount)
 
-	rs.runtime.Success(w, r, http.StatusOK, result, message)
+	rs.runtime.Success(w, r, http.StatusOK, importModels.NewStaffImportResult(result), message)
 }

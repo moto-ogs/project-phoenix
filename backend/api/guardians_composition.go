@@ -156,21 +156,6 @@ func NewGuardiansResource(module peopleModule.Capability, runtime GuardianDirect
 				EmailSent: summary.EmailSent, Token: summary.Token,
 			}, nil
 		},
-		ListPendingInvitations: func(ctx context.Context) ([]usersAPI.PendingGuardianInvitation, error) {
-			invitations, err := runtime.ListPendingInvitations(ctx)
-			if err != nil {
-				return nil, err
-			}
-			result := make([]usersAPI.PendingGuardianInvitation, 0, len(invitations))
-			for _, invitation := range invitations {
-				result = append(result, usersAPI.PendingGuardianInvitation{
-					ID: invitation.ID, GuardianProfileID: invitation.GuardianProfileID, CreatedAt: invitation.CreatedAt,
-					ExpiresAt: invitation.ExpiresAt, EmailSentAt: invitation.EmailSentAt, EmailError: invitation.EmailError,
-					EmailRetryCount: invitation.EmailRetryCount,
-				})
-			}
-			return result, nil
-		},
 		InviteGuardianToStudent: func(ctx context.Context, input usersAPI.GuardianInvite) (usersAPI.GuardianInviteResult, error) {
 			result, err := runtime.InviteGuardianToStudent(ctx, GuardianInviteInput{
 				StudentID: input.StudentID, Email: input.Email, FirstName: input.FirstName, LastName: input.LastName,

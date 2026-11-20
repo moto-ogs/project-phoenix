@@ -14,6 +14,8 @@ func BillingRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/key-day-overrides/schools/{schoolId}", Portals: operator, Request: updateBillingKeyDayRequest{}, Response: billingKeyDayResponse{}, Enums: overrideScopes},
 		{Method: "DELETE", Pattern: "/key-day-overrides/schools/{schoolId}", Portals: operator, Response: billingKeyDayResponse{}, Enums: overrideScopes},
 		billingKeyDateCountContract(),
+		// The CSV of one month (YYYY-MM) or of every month (#2791, #2352).
+		{Method: "GET", Pattern: "/key-date-counts/export", Portals: operator, Query: []common.QueryParam{{Name: "month", Kind: common.QueryString}}, File: true},
 	}
 }
 

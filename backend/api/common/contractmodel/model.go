@@ -105,6 +105,9 @@ type Route struct {
 	// ConditionalGet lets the proxy forward If-None-Match and
 	// If-Modified-Since and hand a 304 with its validators back.
 	ConditionalGet bool `json:"conditional_get,omitempty"`
+	// PrivateCache says the proxy passes a file's private Cache-Control on
+	// instead of private, no-store.
+	PrivateCache bool `json:"private_cache,omitempty"`
 }
 
 // The Cache-Control values a file route may name (#2352, ADR 0270). The

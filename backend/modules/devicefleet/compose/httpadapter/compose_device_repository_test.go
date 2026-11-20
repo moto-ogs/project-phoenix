@@ -25,7 +25,6 @@ type deviceRepository interface {
 	FindByAPIKey(context.Context, string) (*devicefleet.Device, error)
 	List(context.Context, map[string]any) ([]*devicefleet.Device, error)
 	UpdateRoomID(context.Context, int64, int64) error
-	CountDevicesByType(context.Context) (map[string]int, error)
 }
 
 // newDeviceRepository serves the retained device repository shape from the
@@ -310,46 +309,6 @@ func TestDeviceRepository_FindByAPIKey(t *testing.T) {
 // ============================================================================
 // Specialized Query Tests
 // ============================================================================
-
-func TestDeviceRepository_CountDevicesByType(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := newDeviceRepository(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("counts devices grouped by type", func(t *testing.T) {
-		uniqueType := fmt.Sprintf("count-type-%d", time.Now().UnixNano())
-
-		// Create multiple devices of the same type
-		device1 := &devicefleet.Device{
-			DeviceID:   fmt.Sprintf("count-device-1-%d", time.Now().UnixNano()),
-			DeviceType: uniqueType,
-			Status:     devicefleet.DeviceStatusActive,
-		}
-		device2 := &devicefleet.Device{
-			DeviceID:   fmt.Sprintf("count-device-2-%d", time.Now().UnixNano()),
-			DeviceType: uniqueType,
-			Status:     devicefleet.DeviceStatusActive,
-		}
-
-		err := repo.Create(ctx, device1)
-		require.NoError(t, err)
-
-		err = repo.Create(ctx, device2)
-		require.NoError(t, err)
-
-		counts, err := repo.CountDevicesByType(ctx)
-		require.NoError(t, err)
-		assert.NotEmpty(t, counts)
-
-		// Our unique type should have at least 2 devices
-		count, exists := counts[uniqueType]
-		assert.True(t, exists)
-		assert.GreaterOrEqual(t, count, 2)
-	})
-}
 
 func TestDeviceRepository_UpdateRoomID(t *testing.T) {
 	t.Parallel()

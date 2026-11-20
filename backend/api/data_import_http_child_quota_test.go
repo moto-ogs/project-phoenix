@@ -37,8 +37,8 @@ type childQuotaPreview struct {
 
 type previewBody struct {
 	Data struct {
-		CreatedCount int                `json:"CreatedCount"`
-		UpdatedCount int                `json:"UpdatedCount"`
+		CreatedCount int                `json:"created_count"`
+		UpdatedCount int                `json:"updated_count"`
 		ChildQuota   *childQuotaPreview `json:"child_quota"`
 	} `json:"data"`
 }
@@ -142,7 +142,7 @@ func TestImportStudents_CreatesChildrenTheChildQuotaCanHold(t *testing.T) {
 		newChildrenCSV(2), "create", adminBearer(t, account.ID)))
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-	assert.Contains(t, rr.Body.String(), `"CreatedCount":2`)
+	assert.Contains(t, rr.Body.String(), `"created_count":2`)
 	assert.Equal(t, 3, liveMemberships(t, tc))
 }
 
@@ -170,7 +170,7 @@ func TestImportStudents_UpdatesChildrenWhenTheChildQuotaIsFull(t *testing.T) {
 			rr = testutil.ExecuteRequest(router, newMultipartRequestWithMode(t, "/students/import", "k.csv",
 				csv, mode, adminBearer(t, account.ID)))
 			require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-			assert.Contains(t, rr.Body.String(), `"UpdatedCount":1`)
+			assert.Contains(t, rr.Body.String(), `"updated_count":1`)
 			assert.Equal(t, 1, liveMemberships(t, tc))
 		})
 	}
@@ -250,7 +250,7 @@ func TestBatchFailure_KeepsProgressAndNamesTheChildQuotaRefusal(t *testing.T) {
 	runtime := dataImportHTTPRuntime(nil, nil, nil)
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/students/import", nil)
-	progress := map[string]int{"CreatedCount": 100, "UpdatedCount": 0, "ErrorCount": 0, "TotalRows": 160}
+	progress := map[string]int{"created_count": 100, "updated_count": 0, "error_count": 0, "total_rows": 160}
 
 	runtime.Failure(rr, req, importAPI.Failure{Status: http.StatusInternalServerError, Message: "Import fehlgeschlagen",
 		Code: "import.import_batch_failed", Result: progress,

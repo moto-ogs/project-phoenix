@@ -154,7 +154,8 @@ func TestStudentPresenceMigrationRuntime(t *testing.T) {
 					}
 				}
 				// Fixture cleanup is outside the measured query and transaction context.
-				require.NoError(t, module.DeleteVisit(ctx, visit.ID))
+				_, err = db.NewRaw("DELETE FROM active.visits WHERE id = ?", visit.ID).Exec(ctx)
+				require.NoError(t, err)
 				require.NoError(t, module.DeleteAttendance(ctx, attendance.ID))
 			}
 			locks := stopSampling()

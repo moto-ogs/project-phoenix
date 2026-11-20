@@ -3,7 +3,6 @@ DELETE /operator/billing/key-day-overrides/schools/{schoolId} -> basis
 GET /operator/billing/key-date-counts -> basis
 GET /operator/billing/key-date-counts/export -> basis
 GET /operator/billing/key-day -> basis
-POST /operator/billing/key-date-counts/seed -> basis
 PUT /operator/billing/key-day -> basis
 PUT /operator/billing/key-day-overrides/organizations/{organizationId} -> basis
 PUT /operator/billing/key-day-overrides/schools/{schoolId} -> basis

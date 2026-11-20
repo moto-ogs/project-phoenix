@@ -2,12 +2,8 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/modules/feedback"
 
 	"github.com/moto-ogs/project-phoenix/modules/feedback/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -53,53 +49,6 @@ func (s *Store) Create(ctx context.Context, entry domain.Entry) (domain.Entry, d
 	}
 	stats.Rows = 1
 	return toDomain(value), stats, nil
-}
-
-func (s *Store) Get(ctx context.Context, id int64) (domain.Entry, domain.OperationStats, error) {
-	db, tenantID, err := s.database(ctx)
-	if err != nil {
-		return domain.Entry{}, domain.OperationStats{}, err
-	}
-	stats := domain.OperationStats{Queries: 1}
-	var value row
-	err = db.NewSelect().Model(&value).
-		ModelTableExpr(`feedback.entries AS "entry"`).
-		Where(`"entry".tenant_id = ?`, tenantID).
-		Where(`"entry".id = ?`, id).
-		Scan(ctx)
-	if errors.Is(err, sql.ErrNoRows) {
-		return domain.Entry{}, stats, &feedback.EntryNotFoundError{EntryID: id}
-	}
-	if err != nil {
-		return domain.Entry{}, stats, fmt.Errorf("feedback postgres: get entry: %w", err)
-	}
-	return toDomain(value), stats, nil
-}
-
-func (s *Store) Delete(ctx context.Context, id int64) (domain.OperationStats, error) {
-	db, tenantID, err := s.database(ctx)
-	if err != nil {
-		return domain.OperationStats{}, err
-	}
-	query := db.NewDelete().Model((*row)(nil)).
-		ModelTableExpr(`feedback.entries AS "entry"`).
-		Where(`"entry".tenant_id = ?`, tenantID).
-		Where(`"entry".id = ?`, id)
-	started := time.Now()
-	result, err := query.Exec(ctx)
-	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
-	if err != nil {
-		return stats, fmt.Errorf("feedback postgres: delete entry: %w", err)
-	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return stats, fmt.Errorf("feedback postgres: count deleted entries: %w", err)
-	}
-	if rows == 0 {
-		return stats, &feedback.EntryNotFoundError{EntryID: id}
-	}
-	stats.Rows = rows
-	return stats, nil
 }
 
 func (s *Store) List(ctx context.Context, filter domain.Filter) ([]domain.Entry, domain.OperationStats, error) {

@@ -168,10 +168,10 @@ func (rs *Resource) serveContent(w http.ResponseWriter, r *http.Request, content
 	http.ServeContent(w, r, content.Filename, content.ModTime, io.NewSectionReader(content.Object, 0, content.Object.Size()))
 }
 
-// parseUpload reads the multipart file, validates it by magic bytes and
-// returns the capability upload plus the closer for the temporary file.
+// parseUpload reads the multipart file, validates it by magic bytes, its
+// declared type and its name (#2352) and returns the capability upload plus the closer for the temporary file.
 func parseUpload(w http.ResponseWriter, r *http.Request) (filestorage.Upload, func(), error) {
-	uploaded, err := common.ParseOfficeFileWithLimits(w, r, "file", maxFile, maxBody)
+	uploaded, err := common.Declared(common.ParseOfficeFileWithLimits, common.DeclaredOfficeTypes)(w, r, "file", maxFile, maxBody)
 	if err != nil {
 		return filestorage.Upload{}, func() {}, err
 	}

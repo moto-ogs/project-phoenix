@@ -1064,9 +1064,6 @@ func (detailedPresenceSettings) AttendanceEditScope(context.Context) (string, er
 func (detailedPresenceSettings) OperationalOverviewScope(context.Context) (string, error) {
 	return "", nil
 }
-func (detailedPresenceSettings) SessionInactivityTimeoutMinutes(context.Context) (int, error) {
-	return 0, nil
-}
 func (detailedPresenceSettings) WebParticipantLimitEnforced(context.Context) (bool, error) {
 	return false, nil
 }

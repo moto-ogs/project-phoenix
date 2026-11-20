@@ -516,9 +516,6 @@ type GuardianProfileRepository interface {
 	// FindByAccountID retrieves a guardian profile by their account ID
 	FindByAccountID(ctx context.Context, accountID int64) (*peopledirectory.GuardianProfileSnapshot, error)
 
-	// FindWithoutAccount retrieves guardian profiles without portal accounts
-	FindWithoutAccount(ctx context.Context) ([]*peopledirectory.GuardianProfileSnapshot, error)
-
 	// FindInvitable retrieves guardians who can be invited (has email, no account)
 	FindInvitable(ctx context.Context) ([]*peopledirectory.GuardianProfileSnapshot, error)
 

@@ -48,6 +48,7 @@ func MeRouteContracts() []common.RouteContract {
 			Query:    []common.QueryParam{{Name: "occurrence_date", Kind: common.QueryDate}},
 			Response: calendarService.AppointmentOverview{},
 		},
+		{Method: "GET", Pattern: "/me/calendar/appointments/{appointmentId}/ics", Portals: portals, File: true},
 		{Method: "GET", Pattern: "/me/calendar/feed", Portals: portals, Response: ParentCalendarFeedResponse{}},
 		{Method: "POST", Pattern: "/me/calendar/feed/rotate", Portals: portals, Response: ParentCalendarFeedResponse{}},
 		{

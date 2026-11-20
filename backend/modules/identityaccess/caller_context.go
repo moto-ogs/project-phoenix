@@ -95,18 +95,6 @@ type CallerPerson struct {
 	UpdatedAt time.Time
 }
 
-// CallerVisit is one visit of a room session.
-type CallerVisit struct {
-	ID            int64
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	TenantID      int64
-	StudentID     int64
-	ActiveGroupID int64
-	EntryTime     time.Time
-	ExitTime      *time.Time
-}
-
 // CallerGroup is one of the caller's educational groups. ViaSubstitution is
 // true when an active substitution with an unassigned regular staff slot is
 // the caller's access path.
@@ -193,8 +181,6 @@ type CallerReach interface {
 	MyActivityGroupIDs(context.Context) ([]int64, error)
 	MyActiveSessionIDs(context.Context) ([]int64, error)
 	MySupervisedSessionIDs(context.Context) ([]int64, error)
-	GroupStudentIDs(ctx context.Context, sessionID int64) ([]int64, error)
-	GroupVisits(ctx context.Context, sessionID int64) ([]CallerVisit, error)
 	Navigation(context.Context) (CallerNavigation, error)
 	SSESubscription(context.Context) (SSESubscription, error)
 }

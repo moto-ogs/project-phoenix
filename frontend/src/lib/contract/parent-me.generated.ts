@@ -4,10 +4,12 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
   int64StringOrNumber,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -2348,6 +2350,25 @@ export interface PostMessageRequest {
   audience?: string;
 }
 
+/** Go: parent.messageAttachmentResponse */
+export interface messageAttachmentResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  width?: number;
+  height?: number;
+}
+
+export const messageAttachmentResponseSchema: z.ZodType<messageAttachmentResponse, unknown> = object<messageAttachmentResponse>({
+  id: int64String,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  width: optional(safeInt),
+  height: optional(safeInt),
+});
+
 /** Go: parentauth.ParentMFAChallengeResponse */
 export interface ParentMFAChallengeResponse {
   challenge_token: string;
@@ -2635,8 +2656,18 @@ export interface GetParentMeMessagesChildrenStudentIdQuery {
   audience?: string;
 }
 
+/** Query of GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download */
+export interface GetParentMeMessagesChildrenStudentIdAttachmentsAttachmentIdDownloadQuery {
+  inline?: string;
+}
+
 /** Query of GET /parent/me/news/{announcementId}/declaration/proof */
 export interface GetParentMeNewsAnnouncementIdDeclarationProofQuery {
+  student_id?: string;
+}
+
+/** Query of GET /parent/me/news/{announcementId}/declaration/proof/pdf */
+export interface GetParentMeNewsAnnouncementIdDeclarationProofPdfQuery {
   student_id?: string;
 }
 
@@ -2703,6 +2734,12 @@ export const routes = {
     portals: ["parent"],
     query: ["from", "to"],
     response: success(ParentCalendarResponseSchema),
+  },
+  "GET /parent/me/calendar/appointments/{appointmentId}/ics": {
+    method: "GET",
+    pattern: "/parent/me/calendar/appointments/{appointmentId}/ics",
+    portals: ["parent"],
+    response: fileAnswer,
   },
   "GET /parent/me/calendar/appointments/{appointmentId}/overview": {
     method: "GET",
@@ -2823,6 +2860,12 @@ export const routes = {
     portals: ["parent"],
     response: success(z.array(pickupPermissionRequestResponseSchema)),
   },
+  "GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
   "GET /parent/me/children/{studentId}/related-accounts": {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/related-accounts",
@@ -2890,6 +2933,12 @@ export const routes = {
     portals: ["parent"],
     response: success(ContractNoticeOptionsSchema),
   },
+  "GET /parent/me/documents/{organizationId}/contracts/{contractId}/pdf": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
   "GET /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate": {
     method: "GET",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
@@ -2901,6 +2950,18 @@ export const routes = {
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/signing",
     portals: ["parent"],
     response: success(SigningViewSchema),
+  },
+  "GET /parent/me/documents/{organizationId}/shared/{documentId}/file": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/shared/{documentId}/file",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
+  "GET /parent/me/documents/{organizationId}/{documentId}/pdf": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/{documentId}/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
   },
   "GET /parent/me/enrollable-schools": {
     method: "GET",
@@ -2932,6 +2993,13 @@ export const routes = {
     portals: ["parent"],
     query: ["audience"],
     response: success(ThreadViewResponseSchema),
+  },
+  "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download": {
+    method: "GET",
+    pattern: "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+    portals: ["parent"],
+    query: ["inline"],
+    response: fileAnswer,
   },
   "GET /parent/me/messages/children/{studentId}/threads": {
     method: "GET",
@@ -2987,6 +3055,13 @@ export const routes = {
     portals: ["parent"],
     query: ["student_id"],
     response: success(declarationProofResponseSchema),
+  },
+  "GET /parent/me/news/{announcementId}/declaration/proof/pdf": {
+    method: "GET",
+    pattern: "/parent/me/news/{announcementId}/declaration/proof/pdf",
+    portals: ["parent"],
+    query: ["student_id"],
+    response: fileAnswer,
   },
   "GET /parent/me/news/{announcementId}/survey": {
     method: "GET",
@@ -3161,6 +3236,15 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<PostMessageRequest>(),
     response: success(ThreadViewResponseSchema),
+  },
+  "POST /parent/me/messages/children/{studentId}/attachments": {
+    method: "POST",
+    pattern: "/parent/me/messages/children/{studentId}/attachments",
+    portals: ["parent"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(messageAttachmentResponseSchema),
   },
   "POST /parent/me/mfa/disable": {
     method: "POST",
