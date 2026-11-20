@@ -20,9 +20,9 @@ const (
 
 // PublicRouteContracts registers the parent-facing routes that reach the
 // backend without a session (#2352), relative to /api/enrollment. The form
-// bootstrap and the upload keep their BFF files; GET /requests/{statusToken}
-// with ?format=pdf is the signature proof's file route, so its contract
-// forwards no format.
+// bootstrap and the upload keep their BFF files. The signature proof is a
+// public file at /requests/{statusToken}/signature-proof; the status read
+// forwards no format, so its ?format=pdf stays off the proxy.
 func PublicRouteContracts() []common.RouteContract {
 	portals := publicPortal
 	lateInvite := []common.QueryParam{{Name: "late_invite", Kind: common.QueryString}}
@@ -35,6 +35,8 @@ func PublicRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: request, Portals: portals, Response: StatusResponse{}},
 		{Method: "PATCH", Pattern: request, Portals: portals, Request: EditPatchRequest{}, Response: EditPatchResponse{}, MaxBodyBytes: publicFormBodyBytes},
 		{Method: "PUT", Pattern: request, Portals: portals, Request: SubmitEnrollmentRequest{}, Response: SubmitEnrollmentResponse{}, MaxBodyBytes: publicFormBodyBytes},
+		{Method: "GET", Pattern: request + "/signature-proof", Portals: portals, File: true,
+			PublicFile: "the status link of the mail is the parents' only credential for their own proof"},
 		{Method: "GET", Pattern: request + "/edit-bootstrap", Portals: portals, Response: EditBootstrapResponse{}},
 		{Method: "GET", Pattern: request + "/form-labels", Portals: portals, Response: FormLabelsResponse{}},
 		{Method: "GET", Pattern: request + "/change-requests", Portals: portals, Response: []ChangeRequestResponse{}},
@@ -50,13 +52,15 @@ func PublicRouteContracts() []common.RouteContract {
 // PublicHolidayRegistrationRouteContracts registers the one link of a
 // published holiday period (#4661) and the status link of a sent
 // registration (#6676), relative to /traeger/holiday-registrations. Both run
-// without a session. The proof upload and the form documents keep their BFF
-// files.
+// without a session, as do the form documents the period's link opens. The
+// proof upload keeps its BFF file.
 func PublicHolidayRegistrationRouteContracts() []common.RouteContract {
 	portals := publicPortal
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/status/{statusToken}", Portals: portals, Response: HolidayRegistrationStatusResponse{}},
 		{Method: "GET", Pattern: "/{token}", Portals: portals, Response: PublicHolidayRegistrationOfferResponse{}},
 		{Method: "POST", Pattern: "/{token}", Portals: portals, Request: HolidayRegistrationRequest{}, Response: HolidayRegistrationSubmitResponse{}, MaxBodyBytes: publicFormBodyBytes},
+		{Method: "GET", Pattern: "/{token}/documents/{documentId}", Portals: portals, File: true,
+			PublicFile: "the published link of a holiday period opens the form documents it lists"},
 	}
 }

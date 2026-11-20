@@ -125,11 +125,31 @@ const routes: Array<
     async () => (await import("./[...path]/route")).GET,
     { path: ["students", "day-log", "export"] },
   ],
+  // A public file the contract marks runs through the catalog proxy's
+  // session-free path (#2352).
   [
     "token-bound proof",
     "GET",
-    async () =>
-      (await import("./enrollment/requests/[token]/signature-proof/route")).GET,
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["enrollment", "requests", "status-token", "signature-proof"] },
+  ],
+  [
+    "payroll link",
+    "POST",
+    async () => (await import("./[...path]/route")).POST,
+    { path: ["public", "payroll-download", "1.status-token"] },
+  ],
+  [
+    "holiday form document",
+    "GET",
+    async () => (await import("./traeger/[...path]/route")).GET,
+    { path: ["holiday-registrations", "period-link", "documents", "2"] },
+  ],
+  [
+    "care contract document",
+    "GET",
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["public", "care-contract-signing", "42.link", "document"] },
   ],
 ];
 
@@ -269,5 +289,95 @@ describe("private file responses (#5119)", () => {
       value: new Uint8Array([3, 4]),
     });
     expect((await reader.read()).done).toBe(true);
+  });
+});
+
+// The four token links of #2352, on the real catch-all routes and the
+// generated contract: a signed-in device sends neither its bearer nor its
+// cookies, and a link the contract does not mark as a public file stays 404.
+describe("public file routes (#2352)", () => {
+  const links: Array<[string, string, () => Promise<Route>, string[], string]> =
+    [
+      [
+        "enrollment proof",
+        "GET",
+        async () => (await import("./[...path]/route")).GET,
+        ["enrollment", "requests", "status-token", "signature-proof"],
+        "http://localhost:8080/api/enrollment/requests/status-token/signature-proof",
+      ],
+      [
+        "payroll link",
+        "POST",
+        async () => (await import("./[...path]/route")).POST,
+        ["public", "payroll-download", "1.link-token"],
+        "http://localhost:8080/public/payroll-download/1.link-token",
+      ],
+      [
+        "care contract document",
+        "GET",
+        async () => (await import("./[...path]/route")).GET,
+        ["public", "care-contract-signing", "42.link", "document"],
+        "http://localhost:8080/public/care-contract-signing/42.link/document",
+      ],
+      [
+        "holiday form document",
+        "GET",
+        async () => (await import("./traeger/[...path]/route")).GET,
+        ["holiday-registrations", "period-link", "documents", "2"],
+        "http://localhost:8080/traeger/holiday-registrations/period-link/documents/2",
+      ],
+    ];
+
+  it.each(links)(
+    "%s: reaches the backend without the device's session",
+    async (_name, method, load, path, backendUrl) => {
+      mockFetch.mockResolvedValue(
+        new Response(new Uint8Array([1]), {
+          headers: { "Content-Type": "application/pdf" },
+        }),
+      );
+      const route = await load();
+      const response = await route(
+        new NextRequest("http://localhost:3000/api/x?format=pdf", {
+          method,
+          headers: {
+            Cookie: "authjs.session-token=staff-session",
+            Authorization: "Bearer forged",
+            "X-Forwarded-For": "203.0.113.7",
+          },
+        }),
+        { params: Promise.resolve({ path }) as Promise<never> },
+      );
+      expect(response.status).toBe(200);
+      expect(mockAuth).not.toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe(backendUrl);
+      const sent = Object.keys(init.headers ?? {}).map((name) =>
+        name.toLowerCase(),
+      );
+      expect(sent).not.toContain("authorization");
+      expect(sent).not.toContain("cookie");
+      expect((init.headers as Record<string, string>)["X-Forwarded-For"]).toBe(
+        "203.0.113.7",
+      );
+      expect(init.body).toBeUndefined();
+    },
+  );
+
+  it("answers the old holiday document path 404, as a route nobody serves", async () => {
+    const { GET } = await import("./[...path]/route");
+    const response = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/holiday-registrations/period-link/documents/2",
+      ),
+      {
+        params: Promise.resolve({
+          path: ["holiday-registrations", "period-link", "documents", "2"],
+        }) as Promise<never>,
+      },
+    );
+    expect(response.status).toBe(404);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   nullable,
   object,
@@ -55,6 +56,13 @@ export const routes = {
     pattern: "/public/care-contract-signing/{link}",
     portals: ["public"],
     response: success(SigningViewSchema),
+  },
+  "GET /public/care-contract-signing/{link}/document": {
+    method: "GET",
+    pattern: "/public/care-contract-signing/{link}/document",
+    portals: ["public"],
+    publicFile: "the one-time link of the contract mail is the parents' only credential for the contract it names",
+    response: fileAnswer,
   },
   "GET /public/care-contract-signing/{link}/family-children": {
     method: "GET",

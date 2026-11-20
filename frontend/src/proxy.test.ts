@@ -291,7 +291,7 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
     "/api/traeger/holiday-periods/7/form/documents/8",
     "/api/traeger-documents/9/file",
     "/api/traeger/documents/1/file",
-    "/api/holiday-registrations/token/documents/2",
+    "/api/traeger/holiday-registrations/token/documents/2",
     "/api/messages/attachments/3/download",
     "/api/staff-messages/attachments/4/download",
     "/api/school/staff-messages/attachments/5/download",
@@ -360,7 +360,6 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
       "announcement-attachments/[announcementId]/[attachmentId]/download",
       "enrollment/admin/requests/[id]/uploads/[uploadId]",
       "files/folders/[folderId]/files/[fileId]/download",
-      "holiday-registrations/[token]/documents/[documentId]",
       "messages/attachments/[attachmentId]/download",
       "parent/me/messages/children/[studentId]/attachments/[attachmentId]/download",
       "parent/me/news/[announcementId]/attachments/[attachmentId]/download",
@@ -374,6 +373,7 @@ describe("sandbox CSP of uploaded files (#5275)", () => {
       "traeger/documents/[id]/file",
       "traeger/holiday-periods/[id]/form/documents/[documentId]",
       "traeger/holiday-periods/[id]/registrations/[registrationId]/proofs/[proofId]",
+      "traeger/holiday-registrations/[token]/documents/[documentId]",
     ]);
   });
 });
