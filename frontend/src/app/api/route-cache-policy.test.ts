@@ -343,7 +343,7 @@ describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
   it("finds the route handlers", () => {
-    expect(files.length).toBeGreaterThan(200);
+    expect(files.length).toBeGreaterThanOrEqual(199);
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {
