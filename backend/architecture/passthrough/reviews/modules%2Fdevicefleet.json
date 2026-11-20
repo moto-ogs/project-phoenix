@@ -12,26 +12,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/devicefleet/administration.GetDeviceTypeStatistics",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/administration.GetDevicesByRegisteredBy",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/administration.GetDevicesByType",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/administration.GetOfflineDevices",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/devicefleet/administration.GetPersistedDeviceRoomName",
       "reason": "Owner-edge error translation: validates the persisted write result and preserves GetDeviceByID invalid-ID, not-found and AdministrationError identity while resolving only the fresh Facilities room projection. No unchanged forwarding debt or new floor allowance."
     },
@@ -132,11 +112,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/devicefleet/internal/application/Service.CountDevicesByType",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/devicefleet/internal/application/Service.DeleteDevice",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -177,47 +152,12 @@
     },
     {
       "decision": "0090",
-      "id": "modules/devicefleet/internal/application/deviceservice/service.DetectNewDevices",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/internal/application/deviceservice/service.GetActiveDevices",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/devicefleet/internal/application/deviceservice/service.GetDeviceByDeviceID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
       "id": "modules/devicefleet/internal/application/deviceservice/service.GetDeviceByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/internal/application/deviceservice/service.GetDevicesByRegisteredBy",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/internal/application/deviceservice/service.GetDevicesByStatus",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/internal/application/deviceservice/service.GetDevicesByType",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/internal/application/deviceservice/service.GetDevicesRequiringMaintenance",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/devicefleet/internal/application/deviceservice/service.GetOfflineDevices",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

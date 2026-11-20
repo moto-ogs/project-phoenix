@@ -14,7 +14,6 @@ type Query interface {
 	OpenRoomSessionQuery
 	RoomHistoryQuery
 	RoomOccupancyQuery
-	CombinedGroupQuery
 	AttendanceQuery
 	ActivitySessionQuery
 	SessionAttendanceQuery
@@ -41,13 +40,6 @@ type LiveGroupQuery interface {
 	RoomUtilization(context.Context, []StudentVisitWindow) ([]RoomUtilization, error)
 }
 
-// CombinedGroupQuery reads combined groups and their group mappings.
-type CombinedGroupQuery interface {
-	GetCombinedGroup(context.Context, int64) (CombinedGroup, error)
-	ListCombinedGroups(context.Context, CombinedGroupFilter) ([]CombinedGroup, error)
-	ListGroupMappings(context.Context, GroupMappingFilter) ([]GroupMapping, error)
-}
-
 // PresenceDay is one day a child was recorded as present.
 type PresenceDay struct {
 	StudentID int64
@@ -70,7 +62,6 @@ type PresenceRecordQuery interface {
 type Command interface {
 	GroupSupervisionCommand
 	LiveGroupCommand
-	CombinedGroupCommand
 	AttendanceCommand
 	ActivitySessionCommand
 	SessionAttendanceCommand
@@ -102,18 +93,6 @@ type LiveGroupCommand interface {
 	DeleteGroup(context.Context, int64) error
 	RecordGroupActivity(context.Context, int64, time.Time) error
 	LockRoomSessionWrites(context.Context, int64) error
-}
-
-// CombinedGroupCommand writes combined groups and their group mappings.
-type CombinedGroupCommand interface {
-	RecordCombination(context.Context, time.Time, *time.Time) (CombinedGroup, error)
-	ReviseCombination(context.Context, int64, time.Time, *time.Time) (CombinedGroup, error)
-	DeleteCombination(context.Context, int64) error
-	EndCombination(context.Context, int64, time.Time) error
-	RecordGroupMapping(context.Context, int64, int64) (GroupMapping, error)
-	DeleteGroupMapping(context.Context, int64) error
-	AddGroupToCombination(context.Context, int64, int64) error
-	RemoveGroupFromCombination(context.Context, int64, int64) error
 }
 
 // PresenceRecordCommand locks, closes and restores recorded presence for
@@ -158,14 +137,4 @@ type RoomUtilization struct {
 	DistinctStudents int
 	StudentMinutes   int
 	PeakOccupancy    int
-}
-
-type GroupMapping struct {
-	ID, TenantID                         int64
-	CreatedAt, UpdatedAt                 time.Time
-	ActiveCombinedGroupID, ActiveGroupID int64
-}
-type GroupMappingFilter struct {
-	CombinedGroupID *int64
-	ActiveGroupID   *int64
 }

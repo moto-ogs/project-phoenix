@@ -2833,38 +2833,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardiansWithoutAccount",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListInvitableGuardians",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPaymentExportRows",
       "binding_digest": "9d5225d088bf94806e40271f914cfb23",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPaymentExportRows",
@@ -6745,22 +6713,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListGuardiansWithoutAccount",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListInvitableGuardians",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListPaymentExportRows",
       "binding_digest": "9d5225d088bf94806e40271f914cfb23",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPaymentExportRows",
@@ -8780,38 +8732,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansByID",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardiansByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardiansWithoutAccount",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardiansWithoutAccount",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardiansWithoutAccount",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListInvitableGuardians",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListInvitableGuardians",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListInvitableGuardians",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""

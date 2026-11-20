@@ -256,23 +256,6 @@ func createUnplannedPresentIfAbsent(ctx context.Context, rows ports.ParticipantR
 	return legacyInstanceStudent(participant, attendance), nil
 }
 
-// reconcileAttendanceInterval replaces a listed child's observed interval
-// when the row still carries the caller's previous one.
-func reconcileAttendanceInterval(ctx context.Context, rows ports.ParticipantRows, instanceID, studentID int64, previousCheckIn time.Time, previousCheckOut *time.Time, updatedCheckIn time.Time, updatedCheckOut *time.Time) (bool, error) {
-	ids, err := participantIDsOf(ctx, rows.Reads, []scheduleModels.InstanceStudentKey{{InstanceID: instanceID, StudentID: studentID}}, false)
-	if err != nil {
-		return false, WrapDatabaseError("reconcile slot attendance interval", err)
-	}
-	if len(ids) == 0 {
-		return false, nil
-	}
-	updated, err := rows.Presence.ReconcileParticipantInterval(ctx, ids[0], previousCheckIn, previousCheckOut, updatedCheckIn, updatedCheckOut)
-	if err != nil {
-		return false, WrapDatabaseError("reconcile slot attendance interval", err)
-	}
-	return updated, nil
-}
-
 // patchAttendanceFields writes only the fields the patch carries; callers
 // validate cross-field invariants before.
 func patchAttendanceFields(ctx context.Context, presence ports.ParticipantPresence, id int64, patch scheduleModels.AttendanceFieldPatch) error {

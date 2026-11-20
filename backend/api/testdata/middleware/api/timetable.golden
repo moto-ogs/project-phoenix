@@ -49,7 +49,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /api/timetable/templates/{id}
 	GET /api/timetable/conflicts
 	GET /api/timetable/deviations/history
-	GET /api/timetable/exception-conflicts
 	GET /api/timetable/gaps
 	GET /api/timetable/instances/
 	GET /api/timetable/instances/edited-in-window
@@ -60,8 +59,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/timetable/offering-sources
 	GET /api/timetable/offering-sources/combined-counts
 	GET /api/timetable/operations/active-groups/{id}/roster
-	GET /api/timetable/operations/active-sessions
-	GET /api/timetable/operations/capabilities
 	GET /api/timetable/operations/instances/{id}/roster
 	GET /api/timetable/operations/planned-now
 	GET /api/timetable/planning-tracks/
@@ -71,7 +68,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	POST /api/timetable/instances/
 	POST /api/timetable/instances/bulk-cancel
 	POST /api/timetable/instances/re-plan-week
-	POST /api/timetable/instances/{id}/acknowledge-understaffed
 	POST /api/timetable/instances/{id}/convert-to-series
 	POST /api/timetable/instances/{id}/deviations
 	POST /api/timetable/instances/{id}/move-staff

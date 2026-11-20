@@ -11,9 +11,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// errPickupBaselineMissing reports a composition without the pickup
-// baseline; ErrArrivalBaselineMissing is the arrival twin.
-var errPickupBaselineMissing = errors.New("load pickup schedules: baseline projection is not configured")
+// ErrArrivalBaselineMissing and errPickupBaselineMissing report a
+// composition without the arrival or pickup baseline.
+var (
+	ErrArrivalBaselineMissing = errors.New("load arrival schedules: baseline projection is not configured")
+	errPickupBaselineMissing  = errors.New("load pickup schedules: baseline projection is not configured")
+)
 
 func (d *timetableData) StudentWeek(ctx context.Context, studentID int64, from, to calendar.Date) (*timetable.StudentWeek, error) {
 	week := &timetable.StudentWeek{

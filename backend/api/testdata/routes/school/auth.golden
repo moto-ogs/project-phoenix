@@ -7,4 +7,3 @@ POST /school/auth/mfa/resend
 POST /school/auth/mfa/verify
 POST /school/auth/password-reset
 POST /school/auth/password-reset/confirm
-POST /school/auth/switch-school

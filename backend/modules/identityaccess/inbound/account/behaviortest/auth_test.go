@@ -742,61 +742,6 @@ func TestInvitationAcceptance(t *testing.T) {
 // PROTECTED ENDPOINT TESTS
 // ============================================================================
 
-// TestGetAccount tests the get account endpoint (protected)
-func TestGetAccount(t *testing.T) {
-	t.Parallel()
-	tc, router := setupProtectedRouter(t)
-
-	// Create a test account
-	account := testpkg.CreateTestAccount(t, tc.db, "getaccount@example.com")
-
-	t.Run("success with valid claims", func(t *testing.T) {
-		claims := testutil.Claims{
-			ID:          int(account.ID),
-			TenantID:    testpkg.Tenant(t),
-			Sub:         account.Email,
-			Username:    "testuser",
-			Roles:       []string{"user"},
-			Permissions: []string{"users:read"},
-		}
-
-		req := testutil.NewJSONRequest(t, "GET", "/auth/account", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"users:read"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-		data, ok := response["data"].(map[string]interface{})
-		require.True(t, ok, "Expected data to be an object")
-		assert.Equal(t, float64(account.ID), data["id"])
-		assert.Equal(t, account.Email, data["email"])
-	})
-
-	t.Run("returns permissions from claims", func(t *testing.T) {
-		claims := testutil.Claims{
-			ID:          int(account.ID),
-			TenantID:    testpkg.Tenant(t),
-			Sub:         account.Email,
-			Username:    "testuser",
-			Roles:       []string{"admin"},
-			Permissions: []string{"admin:*", "users:manage", "roles:manage"},
-		}
-
-		req := testutil.NewJSONRequest(t, "GET", "/auth/account", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"admin:*", "users:manage", "roles:manage"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-		data, ok := response["data"].(map[string]interface{})
-		require.True(t, ok, "Expected data to be an object")
-
-		permissions, ok := data["permissions"].([]interface{})
-		require.True(t, ok, "Expected permissions to be an array")
-		assert.Len(t, permissions, 3)
-	})
-}
-
 // TestChangePassword tests the change password endpoint (protected)
 func TestChangePassword(t *testing.T) {
 	t.Parallel()
@@ -1345,71 +1290,6 @@ func TestRolePermissionAssignment(t *testing.T) {
 // EXTENDED PERMISSION MANAGEMENT TESTS
 // ============================================================================
 
-// TestPermissionUpdate tests permission update endpoint
-func TestPermissionUpdate(t *testing.T) {
-	t.Parallel()
-	tc, router := setupProtectedRouter(t)
-	adminClaims := testutil.AdminTestClaims(1)
-	adminClaims.Scope = tenant.ScopePlatform
-	adminClaims.TenantID = 0
-
-	t.Run("update permission with permission", func(t *testing.T) {
-		permission := testpkg.CreateTestPermission(t, tc.db, "UpdatePerm", "testres", "read")
-
-		body := map[string]string{
-			"name":        fmt.Sprintf("updated-perm-%d", time.Now().UnixNano()),
-			"description": "Updated description",
-			"resource":    "updatedres",
-			"action":      "write",
-		}
-
-		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/permissions/%d", permission.ID), body)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"permissions:update"})
-
-		assert.Equal(t, http.StatusNoContent, rr.Code, "Body: %s", rr.Body.String())
-	})
-
-	t.Run("update permission not found", func(t *testing.T) {
-		body := map[string]string{
-			"name":        "some-name",
-			"description": "Some description",
-			"resource":    "test",
-			"action":      "read",
-		}
-
-		req := testutil.NewJSONRequest(t, "PUT", "/auth/permissions/99999", body)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"permissions:update"})
-
-		testutil.AssertNotFound(t, rr)
-	})
-}
-
-// TestPermissionDelete tests permission delete endpoint
-func TestPermissionDelete(t *testing.T) {
-	t.Parallel()
-	tc, router := setupProtectedRouter(t)
-	adminClaims := testutil.AdminTestClaims(1)
-	platformClaims := adminClaims
-	platformClaims.Scope = tenant.ScopePlatform
-	platformClaims.TenantID = 0
-
-	t.Run("delete permission with permission", func(t *testing.T) {
-		permission := testpkg.CreateTestPermission(t, tc.db, "DeletePerm", "testres", "read")
-
-		req := testutil.NewJSONRequest(t, "DELETE", fmt.Sprintf("/auth/permissions/%d", permission.ID), nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, platformClaims, []string{"permissions:delete"})
-
-		assert.Equal(t, http.StatusNoContent, rr.Code, "Body: %s", rr.Body.String())
-	})
-
-	t.Run("delete permission forbidden without permission", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "DELETE", "/auth/permissions/1", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{})
-
-		testutil.AssertForbidden(t, rr)
-	})
-}
-
 // ============================================================================
 // ACCOUNT ROLE ASSIGNMENT TESTS
 // ============================================================================
@@ -1588,61 +1468,9 @@ func TestAccountUpdate(t *testing.T) {
 	})
 }
 
-// TestGetAccountsByRole tests get accounts by role endpoint
-func TestGetAccountsByRole(t *testing.T) {
-	t.Parallel()
-	_, router := setupProtectedRouter(t)
-	adminClaims := testutil.AdminTestClaims(1)
-
-	t.Run("get accounts by role", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts/by-role/admin", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:read"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	})
-
-	t.Run("get accounts by role forbidden without permission", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts/by-role/admin", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{})
-
-		testutil.AssertForbidden(t, rr)
-	})
-}
-
 // ============================================================================
 // TOKEN MANAGEMENT TESTS
 // ============================================================================
-
-// TestTokenManagement tests token management endpoints
-func TestTokenManagement(t *testing.T) {
-	t.Parallel()
-	tc, router := setupProtectedRouter(t)
-	adminClaims := testutil.AdminTestClaims(1)
-
-	t.Run("get active tokens", func(t *testing.T) {
-		account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("tokens%d", time.Now().UnixNano()))
-
-		req := testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/accounts/%d/tokens", account.ID), nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	})
-
-	t.Run("revoke all tokens", func(t *testing.T) {
-		account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("revoke%d", time.Now().UnixNano()))
-
-		req := testutil.NewJSONRequest(t, "DELETE", fmt.Sprintf("/auth/accounts/%d/tokens", account.ID), nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
-
-		assert.Equal(t, http.StatusNoContent, rr.Code, "Body: %s", rr.Body.String())
-	})
-
-	t.Run("token operations forbidden without permission", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts/1/tokens", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{})
-		testutil.AssertForbidden(t, rr)
-	})
-}
 
 // ============================================================================
 // INVITATION MANAGEMENT TESTS

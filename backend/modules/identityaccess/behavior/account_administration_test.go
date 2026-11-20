@@ -14,33 +14,6 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// The caller's own account is readable without the management predicate,
-// because the account holder proves who they are with their session, not
-// with a school membership. Every other account is only readable inside the
-// predicate — and an account outside it reads as missing, so the boundary
-// never reveals that it exists (#3332).
-func TestFindOwnAccountIgnoresTheManagementBoundary(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	administration := setupAuthFactory(t, db)
-
-	// An account with no membership at the school in context: the
-	// administration may not touch it, its holder may still read it.
-	account := testpkg.CreateTestAccount(t, db, "own-account-unmapped")
-	testpkg.UnclaimTestAccount(t, db, account.ID)
-	testpkg.OwnTestAccount(t, db, account.ID)
-	ctx := testpkg.Ctx(t)
-
-	own, err := administration.FindOwnAccount(ctx, account.ID)
-	require.NoError(t, err)
-	assert.Equal(t, account.ID, own.ID)
-	assert.Equal(t, account.Email, own.Email)
-
-	_, err = administration.FindManageableAccount(ctx, account.ID)
-	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
-}
-
 // The address rule the retained account model applied on every write still
 // applies: an update normalizes it, so a capitalized input can never create
 // a second spelling of the same address.
@@ -132,18 +105,11 @@ func TestAccountAdministrationIgnoresErasedAccounts(t *testing.T) {
 	_, err = db.NewRaw(`UPDATE auth.accounts SET personal_data_erased_at = NOW() WHERE id = ?`, account.ID).Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = administration.FindOwnAccount(ctx, account.ID)
-	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
 	_, err = administration.FindManageableAccount(ctx, account.ID)
 	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
 	listed, err := administration.ListManageableAccounts(ctx, identityaccess.AccountListFilter{})
 	require.NoError(t, err)
 	for _, listedAccount := range listed {
-		assert.NotEqual(t, account.ID, listedAccount.ID)
-	}
-	byRole, err := administration.ListManageableAccountsByRole(ctx, role.Name)
-	require.NoError(t, err)
-	for _, listedAccount := range byRole {
 		assert.NotEqual(t, account.ID, listedAccount.ID)
 	}
 

@@ -55,10 +55,6 @@ type AttendanceSyncer interface {
 	// current snapshot for SSE display.
 	MirrorCheckOutForVisit(ctx context.Context, visit *Visit) (*AttendanceSnapshot, error)
 
-	// MirrorVisitRevision replaces a slot interval only when it still matches
-	// previous. Read and write failures must roll back the caller's visit edit.
-	MirrorVisitRevision(ctx context.Context, previous, updated *Visit) error
-
 	// MirrorCheckOutAt closes the most recently checked-in open slot for a
 	// roomless attendance flow.
 	MirrorCheckOutAt(ctx context.Context, studentID int64, at time.Time) error

@@ -6,6 +6,8 @@ package audience
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -62,19 +64,17 @@ func unreadArgs(userID int64, roles []string, tenantID, orgID int64) []any {
 	return []any{userID, tenantID, orgID, pgdialect.Array(roles)}
 }
 
-const unreadFrom = ` FROM platform.announcements a
+const audienceFrom = ` FROM platform.announcements a
 	JOIN auth.accounts acc ON acc.id = ?
 	JOIN auth.account_tenants at ON at.account_id = acc.id AND at.tenant_id = ? AND at.status = 'active'
-	JOIN platform.schools s ON s.id = at.tenant_id AND s.organization_id = ? AND s.deleted_at IS NULL
-	LEFT JOIN platform.announcement_views v ON v.announcement_id = a.id AND v.user_id = acc.id`
+	JOIN platform.schools s ON s.id = at.tenant_id AND s.organization_id = ? AND s.deleted_at IS NULL`
 
-const unreadWhere = `
+const audienceWhere = `
 	WHERE a.active = true
 		AND a.published_at IS NOT NULL
 		AND a.published_at <= CURRENT_TIMESTAMP
 		AND (a.expires_at IS NULL OR a.expires_at > CURRENT_TIMESTAMP)
 		AND a.published_at >= GREATEST(s.created_at, COALESCE(at.invited_at, at.created_at), acc.created_at)
-		AND v.seen_at IS NULL
 		AND (a.target_roles = '{}'
 			OR a.target_roles && ?::text[]
 			OR EXISTS (
@@ -88,6 +88,26 @@ const unreadWhere = `
 			OR (a.target_tenant_ids != '{}' AND at.tenant_id = ANY(a.target_tenant_ids))
 			OR (a.target_org_ids != '{}' AND s.organization_id = ANY(a.target_org_ids))
 		)`
+
+const unreadFrom = audienceFrom + `
+	LEFT JOIN platform.announcement_views v ON v.announcement_id = a.id AND v.user_id = acc.id`
+
+const unreadWhere = audienceWhere + `
+		AND COALESCE(v.dismissed, FALSE) = FALSE
+		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL)`
+
+// A dismissal without seen_at is a post-#7555 queued announcement closed by
+// the bulk action. It remains reportable so a delayed /seen request records
+// the modal that was actually displayed. Historical views have seen_at but no
+// shown_at, so they remain closed even when their old row was dismissed.
+const seeableWhere = audienceWhere + `
+		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL)`
+
+// dismissed views remain dismissible so a client can safely repeat an
+// acknowledgement after losing its successful response. Historical views stay
+// closed: they have seen_at but no shown_at and were never dismissed.
+const dismissibleWhere = audienceWhere + `
+		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL OR v.dismissed = TRUE)`
 
 func (p *Projection) Unread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) ([]contract.Announcement, contract.Stats, error) {
 	db, err := p.database(ctx)
@@ -110,21 +130,51 @@ func (p *Projection) Unread(ctx context.Context, userID int64, roles []string, t
 	return result, stats, nil
 }
 
-func (p *Projection) CountUnread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) (int, contract.Stats, error) {
+// CanSee validates and locks a currently visible announcement for the
+// authenticated school session. The lock keeps publication and targeting
+// stable until the caller records its view in the same transaction.
+func (p *Projection) CanSee(ctx context.Context, userID int64, roles []string, tenantID, orgID, announcementID int64) (bool, contract.Stats, error) {
 	db, err := p.database(ctx)
 	if err != nil {
-		return 0, contract.Stats{}, err
+		return false, contract.Stats{}, err
 	}
-	var count int
 	stats := contract.Stats{Queries: 1}
 	started := time.Now()
-	err = db.NewRaw(`SELECT COUNT(*)`+unreadFrom+unreadWhere, unreadArgs(userID, roles, tenantID, orgID)...).Scan(ctx, &count)
+	var id int64
+	err = db.NewRaw(`SELECT a.id`+unreadFrom+seeableWhere+`
+		AND a.id = ? FOR SHARE OF a`, append(unreadArgs(userID, roles, tenantID, orgID), announcementID)...).Scan(ctx, &id)
 	stats.StatementDuration = time.Since(started)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, stats, nil
+	}
 	if err != nil {
-		return 0, stats, fmt.Errorf("announcement audience projection: count unread: %w", err)
+		return false, stats, fmt.Errorf("announcement audience projection: validate announcement: %w", err)
 	}
 	stats.Rows = 1
-	return count, stats, nil
+	return true, stats, nil
+}
+
+// CanDismiss validates and locks an announcement a caller may acknowledge.
+// A previously dismissed announcement remains valid for a repeat request.
+func (p *Projection) CanDismiss(ctx context.Context, userID int64, roles []string, tenantID, orgID, announcementID int64) (bool, contract.Stats, error) {
+	db, err := p.database(ctx)
+	if err != nil {
+		return false, contract.Stats{}, err
+	}
+	stats := contract.Stats{Queries: 1}
+	started := time.Now()
+	var id int64
+	err = db.NewRaw(`SELECT a.id`+unreadFrom+dismissibleWhere+`
+		AND a.id = ? FOR SHARE OF a`, append(unreadArgs(userID, roles, tenantID, orgID), announcementID)...).Scan(ctx, &id)
+	stats.StatementDuration = time.Since(started)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, stats, nil
+	}
+	if err != nil {
+		return false, stats, fmt.Errorf("announcement audience projection: validate announcement: %w", err)
+	}
+	stats.Rows = 1
+	return true, stats, nil
 }
 
 func (p *Projection) TargetCount(ctx context.Context, value contract.Target) (int, contract.Stats, error) {
@@ -176,23 +226,26 @@ func (p *Projection) ViewDetails(ctx context.Context, announcementID int64) ([]c
 		return nil, contract.Stats{}, err
 	}
 	var rows []struct {
-		UserID       int64     `bun:"user_id"`
-		AccountEmail string    `bun:"account_email"`
-		UserName     string    `bun:"user_name"`
-		SeenAt       time.Time `bun:"seen_at"`
-		Dismissed    bool      `bun:"dismissed"`
+		UserID       int64      `bun:"user_id"`
+		AccountEmail string     `bun:"account_email"`
+		UserName     string     `bun:"user_name"`
+		SeenAt       time.Time  `bun:"seen_at"`
+		ShownAt      *time.Time `bun:"shown_at"`
+		DismissedAt  *time.Time `bun:"dismissed_at"`
+		Dismissed    bool       `bun:"dismissed"`
 	}
 	stats := contract.Stats{Queries: 1}
 	started := time.Now()
-	err = db.NewRaw(`SELECT user_id, account_email, user_name, seen_at, dismissed
+	err = db.NewRaw(`SELECT user_id, account_email, user_name, seen_at, shown_at, dismissed_at, dismissed
 		FROM (
 			SELECT DISTINCT ON (v.user_id) v.user_id, acc.email AS account_email,
-				acc.email AS user_name, v.seen_at, v.dismissed
+				acc.email AS user_name, COALESCE(v.seen_at, v.dismissed_at) AS seen_at,
+				v.shown_at, v.dismissed_at, v.dismissed
 			FROM platform.announcement_views v
 			JOIN auth.accounts acc ON acc.id = v.user_id
 			WHERE v.announcement_id = ?
-			ORDER BY v.user_id, v.seen_at DESC
-		) AS latest_view ORDER BY seen_at DESC`, announcementID).Scan(ctx, &rows)
+			ORDER BY v.user_id, COALESCE(v.seen_at, v.dismissed_at) DESC NULLS LAST
+		) AS latest_view ORDER BY seen_at DESC NULLS LAST`, announcementID).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return nil, stats, fmt.Errorf("announcement audience projection: get view details: %w", err)
@@ -202,7 +255,7 @@ func (p *Projection) ViewDetails(ctx context.Context, announcementID int64) ([]c
 	for _, row := range rows {
 		result = append(result, contract.ViewDetail{
 			UserID: row.UserID, AccountEmail: row.AccountEmail, UserName: row.UserName,
-			SeenAt: row.SeenAt, Dismissed: row.Dismissed,
+			SeenAt: row.SeenAt, ShownAt: row.ShownAt, DismissedAt: row.DismissedAt, Dismissed: row.Dismissed,
 		})
 	}
 	return result, stats, nil

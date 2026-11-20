@@ -12,21 +12,16 @@ import (
 // The ErrStudentAlreadyActive 409: issue #844 added a DB-level partial
 // unique index on active.visits; the presence command translates the
 // resulting 23505 to ErrStudentAlreadyActive for ALL visit admissions, so the
-// admin POST /active/visits route must answer 409 like the IoT checkin path,
-// not 400.
+// web admission routes answer 409 like the IoT checkin path, not 400.
 var errorRules = []common.ErrorRule{
 	{Target: studentpresence.ErrVisitWriteConflict, Render: common.ErrorConflict},
 	{Target: studentpresence.ErrGroupNotFound, Render: common.ErrorNotFound},
 	{Target: studentpresence.ErrVisitNotFound, Render: common.ErrorNotFound},
 	{Target: studentpresence.ErrGroupSupervisorNotFound, Render: common.ErrorNotFound},
-	{Target: studentpresence.ErrCombinedGroupNotFound, Render: common.ErrorNotFound},
-	{Target: studentpresence.ErrGroupMappingNotFound, Render: common.ErrorNotFound},
 	{Target: studentpresence.ErrInvalidData, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrGroupAlreadyEnded, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrVisitAlreadyEnded, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrSupervisionAlreadyEnded, Render: common.ErrorInvalidRequest},
-	{Target: studentpresence.ErrCombinedGroupAlreadyEnded, Render: common.ErrorInvalidRequest},
-	{Target: studentpresence.ErrGroupAlreadyInCombination, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrStudentAlreadyInGroup, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrStudentAlreadyActive, Render: common.ErrorConflict},
 	{Target: studentpresence.ErrStudentsNotPresent, Render: common.ErrorConflict},
@@ -41,9 +36,6 @@ var errorRules = []common.ErrorRule{
 	// A web assignment beyond the activity's participant limit (#3632) is a
 	// business rejection: 409 with its code and the numbers as details.
 	{Target: studentpresence.ErrActivityParticipantLimitExceeded, Render: common.ErrorBusinessRejection},
-	// A visit correction that would overlap another visit of the child is a
-	// business rejection too (#5710): 409 with its code and the other visit.
-	{Target: studentpresence.ErrVisitOverlap, Render: common.ErrorBusinessRejection},
 	{Target: studentpresence.ErrNoRoomAvailable, Render: common.ErrorInvalidRequest},
 	{Target: studentpresence.ErrStudentNotFound, Render: common.ErrorNotFound},
 	{Target: studentpresence.ErrStaffNotFound, Render: common.ErrorNotFound},

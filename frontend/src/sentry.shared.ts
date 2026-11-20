@@ -6,9 +6,9 @@ import { isSentryUserPseudonym } from "~/lib/sentry-user-pseudonym";
 const routerStateParseMessage =
   "The router state header was sent but could not be parsed.";
 
-// Calendar- and request-feed capability tokens ride in URL paths. Redact them
-// from every recorded URL/path so a Sentry event cannot leak a replayable
-// secret. This mirrors the backend request-log redactor.
+// Calendar, request-feed and public credential tokens ride in URL paths.
+// Redact them from every recorded URL/path so a Sentry event cannot leak a
+// replayable secret. This mirrors the backend request-log redactor.
 const feedTokenPatterns = [
   SIGNING_TOKEN_PATH_PATTERN,
   /(\/api\/calendar-feed\/)[^/?#\s"]+/g,

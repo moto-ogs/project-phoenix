@@ -282,7 +282,6 @@ func (rs *Resource) mountAuthenticatedRoutes(r chi.Router, configureSession func
 	r.With(common.RequiresPermission("admin:*"), common.TenantTxMiddleware).Get("/staff-preview/candidates", rs.listStaffPreviewCandidates)
 
 	// Current user routes
-	r.Get("/account", rs.getAccount)
 	r.Get("/account/tenants", rs.listAccountTenants)
 
 	// Password change - users can change their own password without special permissions
@@ -307,7 +306,6 @@ func (rs *Resource) mountAuthenticatedRoutes(r chi.Router, configureSession func
 	// Account management routes
 	r.Route("/accounts", func(r chi.Router) {
 		r.With(common.RequiresPermission(permUsersList)).Get("/", rs.listAccounts)
-		r.With(common.RequiresPermission("users:read")).Get("/by-role/{roleName}", rs.getAccountsByRole)
 		r.Route("/{accountId}", rs.mountAccountRoutes)
 	})
 
@@ -372,8 +370,6 @@ func (rs *Resource) mountRoleAndPermissionRoutes(r chi.Router) {
 		r.With(common.RequiresPermission("permissions:read")).Get("/", rs.listPermissions)
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission("permissions:read")).Get("/", rs.getPermissionByID)
-			r.With(requirePlatformScope, common.RequiresPermission("permissions:update")).Put("/", rs.updatePermission)
-			r.With(requirePlatformScope, common.RequiresPermission("permissions:delete")).Delete("/", rs.deletePermission)
 		})
 	})
 }
@@ -405,12 +401,6 @@ func (rs *Resource) mountTransactionalAccountRoutes(r chi.Router) {
 		r.With(common.RequiresPermission(permUsersManage)).Put("/", rs.replaceAccountRole)
 	})
 
-	// Token management
-	r.Route("/tokens", func(r chi.Router) {
-		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getActiveTokens)
-		r.With(common.RequiresPermission(permUsersManage)).Delete("/", common.IDAction("accountId", common.MsgInvalidAccountID, rs.revokeAllTokens, common.ErrorInternalServer))
-	})
-
 	// MFA admin override ("Godmode") — issue #1308 Phase 6.
 	// users:manage at the route layer; the service does its own
 	// defense-in-depth permission re-check.
@@ -437,17 +427,6 @@ func (rs *Resource) mountInvitationRoutes(r chi.Router) {
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission(permUsersManage)).Post("/resend", rs.resendInvitation)
 			r.With(common.RequiresPermission(permUsersManage)).Delete("/", rs.revokeInvitation)
-		})
-	})
-
-	// Guardian invitations — public accept handled above; admins
-	// can resend a still-valid invitation. Create endpoint is
-	// deliberately omitted in PR 3 (per parent-enrollment plan):
-	// the decision service in PR 8 calls Service.Create directly
-	// when approving the first child.
-	r.Route("/guardian-invitations", func(r chi.Router) {
-		r.Route("/{id}", func(r chi.Router) {
-			r.With(common.RequiresPermission(permUsersManage)).Post("/resend", rs.resendGuardianInvitation)
 		})
 	})
 

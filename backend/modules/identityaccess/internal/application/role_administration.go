@@ -743,34 +743,3 @@ func (r *RoleAdministration) CreatePermission(ctx context.Context, name, descrip
 	})
 	return
 }
-
-func (r *RoleAdministration) UpdatePermission(ctx context.Context, permission identityaccess.Permission) (err error) {
-	if r == nil {
-		return errRoleAdministrationUnavailable
-	}
-	operation := func(ctx context.Context) error {
-		if err := r.store.UpdatePermission(bindRuntime(r.attach, ctx), domain.ManagedPermission(permission)); err != nil {
-			return roleError(failed("update permission", err))
-		}
-		return nil
-	}
-	err = globalIdentityRead(ctx, r.runtime, func(txCtx context.Context) error {
-		err = operation(txCtx)
-		return err
-	})
-	return
-}
-
-func (r *RoleAdministration) DeletePermission(ctx context.Context, id int64) (err error) {
-	if r == nil {
-		return errRoleAdministrationUnavailable
-	}
-	operation := func(ctx context.Context) error {
-		return roleError(r.deletePermission(bindRuntime(r.attach, ctx), id))
-	}
-	err = globalIdentityRead(ctx, r.runtime, func(txCtx context.Context) error {
-		err = operation(txCtx)
-		return err
-	})
-	return
-}

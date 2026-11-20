@@ -19,33 +19,6 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// An admin transfer holds the target session while its capacity check waits
-// for the room. The concurrent scan must not form a visit/session cycle.
-func TestAdminTransferAndScanDoNotDeadlock(t *testing.T) {
-	t.Parallel()
-	f := newBulkMoveScanFixture(t)
-	visit, err := f.k.presence(t).FindVisit(testpkg.Ctx(t), f.visit)
-	require.NoError(t, err)
-	visit.ActiveGroupID = f.scanStay
-	holder := holdRow(t, f.k.db, "SELECT id FROM facilities.rooms WHERE id = ? FOR UPDATE", f.scanRoom)
-	operations := api.NewActiveTestPresence(testpkg.NewDatabase(t, f.k.db), testpkg.TenantRuntime(t, f.k.db)).PresenceOperations()
-	transferred := startLockOrderCommand(t, func(ctx context.Context) error { return operations.AmendVisit(ctx, *visit) })
-	transferPID := awaitWaiterOf(t, f.k.db, holder.pid)
-	scan := startLockOrderScan(t, f.k, f.tag, f.scanRoom, f.scanDevice, f.scanStaff)
-	awaitWaiterOf(t, f.k.db, transferPID)
-	holder.commit(t)
-	require.NoError(t, awaitReattach(t, transferred), "admin transfer must not deadlock against the scan")
-	response := awaitScan(t, scan)
-	testutil.AssertSuccessResponse(t, response, 200)
-	require.Equal(t, "checked_out", responseData(t, response.Body.Bytes())["action"])
-	open, err := f.k.presence(t).ListVisits(testpkg.Ctx(t), studentpresence.VisitFilter{StudentIDs: []int64{f.student}, OpenOnly: true})
-	require.NoError(t, err)
-	require.Empty(t, open, "the scan sees the committed move into its room and checks the child out")
-	var attendance int
-	require.NoError(t, f.k.db.NewRaw("SELECT count(*) FROM active.attendance WHERE tenant_id = ? AND student_id = ? AND check_out_time IS NULL", testpkg.Tenant(t), f.student).Scan(testpkg.Ctx(t), &attendance))
-	require.Equal(t, 1, attendance)
-}
-
 // A second visit, earlier in ID order, holds the lifecycle writer between
 // its first and second visit. The real scan closes the second visit and then
 // touches the same device session. This exposes session -> visit against
@@ -273,28 +246,6 @@ func prepareTimetableScanCase(t *testing.T, scenario sessionEndScanCase, f bulkM
 	return scenario
 }
 
-func TestScanAndAdminReopenDoNotDeadlock(t *testing.T) {
-	t.Parallel()
-	f, _ := newSessionEndScanFixture(t)
-	_, _, target := f.k.roomWithSession(t, "Admin Reopen Target")
-	visit, err := f.k.presence(t).FindVisit(testpkg.Ctx(t), f.visit)
-	require.NoError(t, err)
-	visit.ActiveGroupID = target
-	operations := api.NewActiveTestPresence(testpkg.NewDatabase(t, f.k.db), testpkg.TenantRuntime(t, f.k.db)).PresenceOperations()
-	holder := holdRow(t, f.k.db, "SELECT id FROM active.groups WHERE id = ? FOR UPDATE", f.scanStay)
-	scan := startLockOrderScan(t, f.k, f.tag, f.scanRoom, f.scanDevice, f.scanStaff)
-	scanPID := awaitWaiterOf(t, f.k.db, holder.pid)
-	amended := startLockOrderCommand(t, func(ctx context.Context) error { return operations.AmendVisit(ctx, *visit) })
-	awaitWaiterOf(t, f.k.db, scanPID)
-	holder.commit(t)
-	testutil.AssertSuccessResponse(t, awaitScan(t, scan), 200)
-	require.NoError(t, awaitReattach(t, amended))
-	open, err := f.k.presence(t).ListVisits(testpkg.Ctx(t), studentpresence.VisitFilter{StudentIDs: []int64{f.student}, OpenOnly: true})
-	require.NoError(t, err)
-	require.Len(t, open, 1)
-	require.Equal(t, target, open[0].ActiveGroupID)
-}
-
 func newForceStartScanFixture(t *testing.T) reattachScanFixture {
 	t.Helper()
 	f := newReattachScanFixture(t)
@@ -396,34 +347,6 @@ func awaitLockOrderActor(t *testing.T, done <-chan struct{}) {
 	}
 }
 
-func TestAdminTransferAndBulkMoveDoNotDeadlock(t *testing.T) {
-	t.Parallel()
-	f := newBulkMoveScanFixture(t)
-	visit, err := f.k.presence(t).FindVisit(testpkg.Ctx(t), f.visit)
-	require.NoError(t, err)
-	visit.ActiveGroupID = f.moveTarget
-	at := time.Now()
-	visit.ExitTime = &at
-	operations := api.NewActiveTestPresence(testpkg.NewDatabase(t, f.k.db), testpkg.TenantRuntime(t, f.k.db)).PresenceOperations()
-	holder := holdRow(t, f.k.db, "SELECT id FROM active.visits WHERE id = ? FOR UPDATE", f.visit)
-	moved := startLockOrderCommand(t, func(ctx context.Context) error {
-		_, err := f.active.MoveStudentsToActiveGroupAuthorized(ctx, []int64{f.student}, f.moveTarget, studentpresence.StudentMoveAuthorization{BypassResourceChecks: true})
-		return err
-	})
-	awaitWaiterOf(t, f.k.db, holder.pid)
-	amended := startLockOrderCommand(t, func(ctx context.Context) error { return operations.AmendVisit(ctx, *visit) })
-	// An admin now takes the visit first. A move waiting for that visit must
-	// not already own its target session, or it would close the inverse edge.
-	require.NoError(t, testpkg.WithTenantTx(t, testpkg.Ctx(t), f.k.db, testpkg.Tenant(t), func(ctx context.Context, tx bun.Tx) error {
-		var id int64
-		return tx.NewRaw("SELECT id FROM active.groups WHERE tenant_id = ? AND id = ? FOR UPDATE NOWAIT", testpkg.Tenant(t), f.moveTarget).Scan(ctx, &id)
-	}))
-	holder.commit(t)
-	require.NoError(t, awaitReattach(t, moved))
-	require.NoError(t, awaitReattach(t, amended))
-	f.assertOnlyOpenVisitIn(t, f.moveTarget)
-}
-
 // reattachKiosk composes the check-in route on a pool of the test's own
 // (#5269): the row holder, the scan and session start requests and the lock
 // diagnostics hold connections at the same time, so they must not compete
@@ -435,31 +358,4 @@ func reattachKiosk(t *testing.T) *kiosk {
 	module, err := api.NewCheckinTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
 	return &kiosk{db: db, resource: checkinAPI.NewResource(module.DeviceScan, testRuntime(), nil), rosters: module.Rosters}
-}
-
-func TestVisitIntervalRevisionWaitsForTheBulkMoveChild(t *testing.T) {
-	t.Parallel()
-	f := newBulkMoveScanFixture(t)
-	// An interval correction of the first visit can also revise the matching
-	// school attendance. Match the fixture intervals before either actor starts.
-	_, err := f.k.db.NewRaw(`UPDATE active.visits SET entry_time = (SELECT check_in_time FROM active.attendance WHERE tenant_id = ? AND id = ?) WHERE tenant_id = ? AND id = ?`, testpkg.Tenant(t), f.attendance, testpkg.Tenant(t), f.visit).Exec(testpkg.Ctx(t))
-	require.NoError(t, err)
-	visit, err := f.k.presence(t).FindVisit(testpkg.Ctx(t), f.visit)
-	require.NoError(t, err)
-	visit.EntryTime = visit.EntryTime.Add(-time.Minute)
-	operations := api.NewActiveTestPresence(testpkg.NewDatabase(t, f.k.db), testpkg.TenantRuntime(t, f.k.db)).PresenceOperations()
-	holder := holdRow(t, f.k.db, "SELECT id FROM active.attendance WHERE id = ? FOR UPDATE", f.attendance)
-	moved := startLockOrderCommand(t, func(ctx context.Context) error {
-		_, err := f.active.MoveStudentsToActiveGroupAuthorized(ctx, []int64{f.student}, f.moveTarget, studentpresence.StudentMoveAuthorization{BypassResourceChecks: true})
-		return err
-	})
-	movePID := awaitWaiterOf(t, f.k.db, holder.pid)
-	amended := startLockOrderCommand(t, func(ctx context.Context) error { return operations.AmendVisit(ctx, *visit) })
-	// Without the child prefix, the amendment owns the visit and waits for
-	// attendance, while the move will own attendance and wait for that visit.
-	awaitWaiterOf(t, f.k.db, movePID)
-	holder.commit(t)
-	require.NoError(t, awaitReattach(t, moved))
-	require.ErrorIs(t, awaitReattach(t, amended), studentpresence.ErrStudentAlreadyActive, "reopening the ended interval must conflict with the move's replacement visit")
-	f.assertOnlyOpenVisitIn(t, f.moveTarget)
 }

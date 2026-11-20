@@ -334,24 +334,6 @@ func (rs *GuardianResource) renderGuardianDeleteError(w http.ResponseWriter, r *
 	}
 }
 
-func (rs *GuardianResource) listGuardiansWithoutAccount(w http.ResponseWriter, r *http.Request) {
-	guardians, err := rs.directory.ListGuardiansWithoutAccount(r.Context())
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, newGuardianResponses(guardians), "Guardians without accounts retrieved successfully")
-}
-
-func (rs *GuardianResource) listInvitableGuardians(w http.ResponseWriter, r *http.Request) {
-	guardians, err := rs.directory.ListInvitableGuardians(r.Context())
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, newGuardianResponses(guardians), "Invitable guardians retrieved successfully")
-}
-
 // sendInvitation is the staff-initiated per-guardian invitation. The raw
 // token is exposed to the local seeder only.
 func (rs *GuardianResource) sendInvitation(w http.ResponseWriter, r *http.Request) {

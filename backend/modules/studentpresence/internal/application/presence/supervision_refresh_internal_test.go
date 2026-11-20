@@ -2,7 +2,6 @@ package presence
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -24,21 +23,6 @@ type refreshRecordingPublisher struct {
 func (p *refreshRecordingPublisher) SupervisionChanged(_ context.Context, activeGroupID int64, reason string) {
 	p.refreshes = append(p.refreshes, supervisionRefresh{activeGroupID: activeGroupID, reason: reason})
 }
-
-type visitOwnerForRefreshTest struct {
-	StudentPresence
-	visit     *studentpresence.Visit
-	deleteErr error
-}
-
-func (r *visitOwnerForRefreshTest) FindVisit(context.Context, int64) (*studentpresence.Visit, error) {
-	if r.visit == nil {
-		return nil, studentpresence.ErrVisitNotFound
-	}
-	return r.visit, nil
-}
-
-func (r *visitOwnerForRefreshTest) DeleteVisit(context.Context, int64) error { return r.deleteErr }
 
 // refreshTestContext runs units of work in place, with after-commit hooks:
 // the refresh must wait for the commit and vanish on a rollback (#5017).
@@ -76,19 +60,4 @@ func TestClaimAnnouncesTheNewSupervisor(t *testing.T) {
 	_, err = svc.ClaimActiveGroup(ctx, 7, 84, "")
 	require.ErrorIs(t, err, ErrStaffAlreadySupervising)
 	require.Len(t, publisher.refreshes, 1, "a refused claim announces nothing")
-}
-
-func TestDeleteVisitAnnouncesItsSession(t *testing.T) {
-	t.Parallel()
-	ctx := refreshTestContext(t)
-	publisher := &refreshRecordingPublisher{}
-	owner := &visitOwnerForRefreshTest{visit: &studentpresence.Visit{ID: 3, ActiveGroupID: 11}}
-	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, SchoolPresence: owner, Broadcaster: publisher}}
-
-	require.NoError(t, svc.DeleteVisit(ctx, 3))
-	require.Equal(t, []supervisionRefresh{{activeGroupID: 11, reason: activeSupervisionReasonStudentMoved}}, publisher.refreshes)
-
-	owner.deleteErr = errors.New("delete failed")
-	require.Error(t, svc.DeleteVisit(ctx, 3))
-	require.Len(t, publisher.refreshes, 1, "a failed delete announces nothing")
 }
