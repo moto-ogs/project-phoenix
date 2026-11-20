@@ -7,7 +7,7 @@ import {
 } from "~/lib/staff-navigation";
 import { useStoredOpenGroups } from "./use-stored-open-groups";
 
-const STORAGE_KEY = "sidebar-open-groups";
+const openGroupsStorageKey = "sidebar-open-groups";
 
 const KNOWN_GROUP_KEYS: ReadonlySet<string> = new Set<string>(
   STAFF_NAV_GROUPS.map((group) => group.key),
@@ -28,7 +28,7 @@ export function useSidebarGroups(
   defaultGroups: readonly StaffNavGroupKey[],
 ) {
   return useStoredOpenGroups<StaffNavGroupKey>({
-    storageKey: STORAGE_KEY,
+    storageKey: openGroupsStorageKey,
     knownKeys: KNOWN_GROUP_KEYS,
     currentGroup: getStaffNavGroupForPathname(pathname, fromParam),
     defaultGroups,

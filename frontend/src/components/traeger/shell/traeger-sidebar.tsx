@@ -28,7 +28,7 @@ import {
 import { useTraegerReturnHref } from "./traeger-return-path";
 
 /** Eigener Schlüssel fürs Träger-Portal; die OGS-App nutzt `sidebar-open-groups`. */
-const OPEN_GROUPS_STORAGE_KEY = "traeger-sidebar-open-groups";
+const openGroupsStorageKey = "traeger-sidebar-open-groups";
 const KNOWN_GROUP_KEYS: ReadonlySet<string> = new Set(TRAEGER_NAV_GROUP_KEYS);
 
 /**
@@ -54,7 +54,7 @@ export function TraegerSidebar({
   // Einklappbare Gruppen wie in der OGS-App (#7647): anfangs alle offen, der
   // Zustand bleibt im Browser, die Gruppe der aktuellen Seite ist immer offen.
   const { isGroupOpen, toggleGroup } = useStoredOpenGroups({
-    storageKey: OPEN_GROUPS_STORAGE_KEY,
+    storageKey: openGroupsStorageKey,
     knownKeys: KNOWN_GROUP_KEYS,
     currentGroup: traegerNavGroupKeyFor(groups, pathname),
     defaultGroups: TRAEGER_NAV_GROUP_KEYS,
