@@ -662,8 +662,14 @@ function TenantPageView({
               schob eine zweizeilige Statuszeile auf dem Telefon selbst das
               einzelne Kebab-Menü in eine eigene, linksbündige Zeile -- und
               die Kopfkarte wuchs um genau den toten Streifen, den sie auf
-              dem Desktop nicht mehr hat. */}
-          <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-[6rem]">
+              dem Desktop nicht mehr hat.
+              `max-sm:min-w-min`: Auf dem Telefon ist der Titelblock nie
+              schmaler als sein längstes Wort samt Info-Knopf. Passen Hilfe,
+              Status und Kebab daneben nicht mehr, rücken sie in die nächste
+              Zeile, statt dem Titel ein kurzes Wort mitten durchzubrechen
+              („Anmel|dung“, #7649). Wörter ab 14 Zeichen bleiben trennbar
+              (s. u.) und zählen nur mit ihrer längsten Silbengruppe. */}
+          <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-min">
             {leading}
             <div className="min-w-0">
               <div className="flex items-center gap-1">
@@ -722,7 +728,7 @@ function TenantPageView({
           <div
             className={cn(
               // Die Aktionen stehen neben dem Titel, solange sie neben
-              // seiner Mindestbreite (6rem unter sm) Platz haben; sonst
+              // seiner Mindestbreite (unter sm: längstes Wort) Platz haben; sonst
               // brechen sie als Gruppe in eine eigene Zeile um und stehen
               // dort rechts (`ml-auto`), wie auf dem Desktop. Linksbündig
               // stand der tote Raum rechts neben den Knöpfen. `max-w-full`:
