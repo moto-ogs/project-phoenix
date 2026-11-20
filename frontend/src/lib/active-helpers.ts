@@ -48,11 +48,11 @@ export interface BackendVisit {
   is_active: boolean;
   notes?: string;
   student_name?: string;
-  // Optional display fields available on /active/groups/{id}/visits/display
+  // Optional display fields, set only by reads that join student display data
   school_class?: string;
   group_name?: string; // Student's OGS group (not the active group)
   active_group_name?: string;
-  // Status flags surfaced by the visits/display endpoint
+  // Status flags, set only by reads that join student display data
   sick?: boolean;
   sick_since?: string;
   excused?: boolean;
@@ -122,7 +122,7 @@ export interface Visit {
   schoolClass?: string;
   groupName?: string;
   activeGroupName?: string;
-  // Status flags (populated by the visits/display endpoint)
+  // Status flags (set only by reads that join student display data)
   sick?: boolean;
   sickSince?: string;
   excused?: boolean;

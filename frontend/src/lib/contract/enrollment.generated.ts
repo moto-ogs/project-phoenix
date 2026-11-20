@@ -2161,6 +2161,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(RequestMailOutcomeSchema)),
   },
+  "GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /api/enrollment/admin/students/{studentId}/requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/students/{studentId}/requests/",
@@ -2185,6 +2191,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(CareOfferingResponseSchema),
   },
   "GET /api/enrollment/legal/{tenantSlug}": {
@@ -2316,6 +2323,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/schema/{id}",
     portals: ["tenant"],
+    deprecated: true,
     response: success(FormSchemaResponseSchema),
   },
   "PATCH /api/enrollment/requests/{statusToken}": {

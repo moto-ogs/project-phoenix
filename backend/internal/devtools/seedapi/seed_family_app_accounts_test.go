@@ -76,23 +76,41 @@ func TestFamiliesWithoutAppAreReEnrolled(t *testing.T) {
 }
 
 // The parents of approved online enrollments get an account, except two the
-// school still sees waiting. The listing carries no token (#4902).
+// school still sees waiting. The guardian list of each child marks an open
+// invitation as pending; the listing carries no token (#4902). A child whose
+// care starts later must also get an account, even on a later student page.
 func TestEnrollmentInvitationsKeepTwoOpen(t *testing.T) {
 	t.Parallel()
 
+	guardians := map[string]string{
+		"/api/guardians/students/11/guardians": `[{"guardian":{"id":"704"},"account_status":"pending"},{"guardian":{"id":"801"},"account_status":"active"}]`,
+		"/api/guardians/students/12/guardians": `[{"guardian":{"id":"701"},"account_status":"pending"},{"guardian":{"id":"703"},"account_status":"pending"}]`,
+		"/api/guardians/students/13/guardians": `[{"guardian":{"id":"702"},"account_status":"pending"},{"guardian":{"id":"704"},"account_status":"pending"},{"guardian":{"id":"802"},"account_status":"none"}]`,
+		"/api/guardians/students/14/guardians": `[{"guardian":{"id":"705"},"account_status":"pending"}]`,
+	}
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
-		assert.Equal(t, "/api/guardians/invitations/pending", r.URL.Path)
-		_, _ = fmt.Fprint(w, `{"status":"success","data":[`+
-			`{"id":1,"guardian_profile_id":704},{"id":2,"guardian_profile_id":701},`+
-			`{"id":3,"guardian_profile_id":703},{"id":4,"guardian_profile_id":702}]}`)
+		if r.URL.Path == "/api/students" {
+			if r.URL.Query().Get("page") == "2" {
+				// Like the administrative list, include the child awaiting care
+				// start only when the caller asks for pending children too.
+				students := `[]`
+				if r.URL.Query().Get("include_pending_withdrawals") == "true" {
+					students = `[{"id":"14"}]`
+				}
+				_, _ = fmt.Fprint(w, `{"status":"success","data":`+students+`,"pagination":{"total_pages":2}}`)
+				return
+			}
+			_, _ = fmt.Fprint(w, `{"status":"success","data":[{"id":"11"},{"id":"12"},{"id":"13"}],"pagination":{"total_pages":2}}`)
+			return
+		}
+		body, ok := guardians[r.URL.Path]
+		require.True(t, ok, "unexpected path %s", r.URL.Path)
+		_, _ = fmt.Fprint(w, `{"status":"success","data":`+body+`}`)
 	})
 	defer srv.Close()
 
 	rt := &Runtime{Client: newTestClient(srv.URL, false)}
 	invitations, err := enrollmentInvitationsToAccept(rt, AuthRef{Token: "admin"})
 	require.NoError(t, err)
-	assert.Equal(t, []enrollmentInvitation{
-		{ID: 3, GuardianProfileID: 703},
-		{ID: 1, GuardianProfileID: 704},
-	}, invitations)
+	assert.Equal(t, []int64{703, 704, 705}, invitations)
 }

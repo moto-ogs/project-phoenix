@@ -277,9 +277,6 @@ func TestGuardianInvitationBelongsToItsSchoolOnly(t *testing.T) {
 	require.NotEqual(t, testpkg.Tenant(t), otherTenant)
 	foreignCtx := testpkg.TenantContext(otherTenant)
 
-	require.Error(t, env.service.ResendGuardianInvitation(foreignCtx, invitation.ID, creatorID),
-		"another school must not resend this invitation")
-
 	pending, err := env.service.ListPendingApprovalsDetailed(foreignCtx)
 	require.NoError(t, err)
 	for _, view := range pending {
@@ -482,58 +479,6 @@ func TestGuardianInvitationService_Accept_AlreadyAccepted(t *testing.T) {
 		ConfirmPassword: strongTestPassword,
 	})
 	require.ErrorIs(t, err, identityaccess.ErrInvitationUsed, "second accept must reject already-accepted token")
-}
-
-func TestGuardianInvitationService_Resend_ResetsEmailColumns(t *testing.T) {
-	t.Parallel()
-
-	// Wire the outbox path (what production uses since PR 5). The legacy
-	// dispatcher path would asynchronously re-populate email_sent_at after
-	// delivery, racing the nil assertions below.
-	outbox := api.NewCapturingOutbox()
-	env := setupGuardianInvitationTest(t, func(_ *bun.DB, cfg *api.GuardianInvitationTestConfig) {
-		cfg.Outbox = outbox
-	})
-
-	profile := testpkg.CreateTestGuardianProfile(t, env.db, "resend-test")
-	creatorID := env.inviterAccountID(t)
-
-	ctx := testpkg.Ctx(t)
-	invitation, err := env.service.CreateGuardianInvitation(ctx, identityaccess.GuardianInvitationRequest{
-		GuardianProfileID: profile.ID,
-		CreatedBy:         creatorID,
-	})
-	require.NoError(t, err)
-
-	// Stamp a fake error so we can verify Resend clears it.
-	_, err = env.db.NewUpdate().
-		TableExpr("auth.guardian_invitations").
-		Set("email_sent_at = ?", time.Now()).
-		Set("email_error = ?", "previous send failed").
-		Set("email_retry_count = ?", 2).
-		Where("id = ?", invitation.ID).
-		Exec(context.Background())
-	require.NoError(t, err)
-
-	assert.Equal(t, sha256Hex(invitation.Token), testpkg.GuardianInvitationByID(t, env.db, invitation.ID).Token,
-		"the link is stored as hash only")
-
-	require.NoError(t, env.service.ResendGuardianInvitation(ctx, invitation.ID, creatorID))
-
-	updated := testpkg.GuardianInvitationByID(t, env.db, invitation.ID)
-	assert.Nil(t, updated.EmailSentAt, "email_sent_at must be cleared on resend")
-	assert.Nil(t, updated.EmailError, "email_error must be cleared on resend")
-
-	// Only the hash is stored (#4902): the resend mails a new link and the
-	// previous one stops working.
-	requests := outbox.Requests()
-	resent := mailedLinkTokenPattern.FindStringSubmatch(fmt.Sprint(requests[len(requests)-1].Payload["invitation_url"]))
-	require.Len(t, resent, 2, "the resent mail carries a link")
-	assert.NotEqual(t, invitation.Token, resent[1])
-	_, err = env.service.ValidateGuardianInvitation(context.Background(), invitation.Token)
-	require.ErrorIs(t, err, identityaccess.ErrInvitationNotFound, "the previous link stops working")
-	_, err = env.service.ValidateGuardianInvitation(context.Background(), resent[1])
-	require.NoError(t, err, "the resent link is usable")
 }
 
 // --- Enrollment backfill on accept ---

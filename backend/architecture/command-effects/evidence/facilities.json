@@ -1281,22 +1281,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetSessionTimeoutInfo",
-      "binding_digest": "3463d3cfb265152f3164c2d54fffa9db",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetSessionTimeoutInfo",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetSessionTimeoutInfo",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetSessionTimeoutInfo",
-      "binding_digest": "8a40095e9e7fcf2b1469463dd97bf6eb",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetSessionTimeoutInfo",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetSessionTimeoutInfo",
-      "target_owner": "student-presence"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.GetStudentAttendanceStatus",
       "binding_digest": "6f56d89ff8ece74600776a43e7bd9121",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.GetStudentAttendanceStatus",
@@ -1569,22 +1553,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ProcessSessionTimeout",
-      "binding_digest": "7d9eb5353631cbce9a15874206f2a4d1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ProcessSessionTimeout",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ProcessSessionTimeout",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ProcessSessionTimeout",
-      "binding_digest": "fda0b7052984bb0ca10ba2ad038a66f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ProcessSessionTimeout",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ProcessSessionTimeout",
-      "target_owner": "student-presence"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ReleaseSupervision",
       "binding_digest": "e5c21136b11b21630d34c3a2c565e32f",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ReleaseSupervision",
@@ -1678,22 +1646,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.UpdateSessionActivity",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.UpdateSessionActivity",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ValidateSessionTimeout",
-      "binding_digest": "2663c32363ca36297ea97e1ae079cc6a",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ValidateSessionTimeout",
-      "source_owner": "facilities",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.presenceFacade.ValidateSessionTimeout",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ValidateSessionTimeout",
-      "binding_digest": "b4a984332b668babe0ce3f32363b81ef",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ValidateSessionTimeout",
-      "source_owner": "facilities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Presence.ValidateSessionTimeout",
       "target_owner": "student-presence"
     }
   ]

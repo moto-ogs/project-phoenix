@@ -47,12 +47,12 @@ const PRIVATE_NO_STORE = "private, no-store";
 
 type Route = (
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> },
+  context: { params: Promise<Record<string, string | string[]>> },
 ) => Promise<Response>;
 
 // On the subdomain of the session's own school (7), so the tenant wrapper's
 // school check (#5130) lets the request through to the cache policy.
-function call(route: Route, params: Record<string, string> = {}) {
+function call(route: Route, params: Record<string, string | string[]> = {}) {
   return route(
     new NextRequest("http://schule-a.localhost:3000/api/example", {
       headers: { host: "schule-a.localhost:3000" },
@@ -319,10 +319,12 @@ describe("file and stream routes keep their own headers", () => {
         },
       }),
     );
-    const { GET } =
-      await import("~/app/api/students/[id]/documents/[documentId]/download/route");
+    // The download streams through the portal's catalog proxy (#2352).
+    const { GET } = await import("~/app/api/[...path]/route");
 
-    const response = await call(GET as Route, { id: "5", documentId: "9" });
+    const response = await call(GET as Route, {
+      path: ["students", "5", "documents", "9", "download"],
+    });
 
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("Content-Disposition")).toBe(

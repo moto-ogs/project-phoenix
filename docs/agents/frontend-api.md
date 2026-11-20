@@ -128,9 +128,7 @@ success wrapper. Their **backend errors still use the shared error path**:
 | Route(s)                                                                                                                                                                                                                                                   | Success-path reason                                                                                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `api/sse/events`, `api/parent/sse/events`, `api/school/sse/events`                                                                                                                                                                                         | `proxySSEStream` preserves a live event stream and abort propagation; a buffered JSON wrapper would prevent streaming.      |
-| `api/students/export`, `api/students/day-log/export`, `api/students/[id]/attendance-history/export`                                                                                          | CSV/PDF export bytes and download headers must remain intact.                                                               |
-| `api/staff/time-tracking/export`, `api/operator/billing/key-date-counts/export` | CSV/PDF export bytes and download headers must remain intact; portal auth stays distinct.                                   |
-| `api/announcement-attachments/[announcementId]/[attachmentId]/download`, `api/files/folders/[folderId]/files/[fileId]/download`, `api/staff/[id]/documents/[documentId]/download`, `api/students/[id]/documents/[documentId]/download`                     | Attachment bytes, MIME types, and dispositions are passed through.                                                          |
+| `api/students/day-log/export` | CSV/PDF export bytes and download headers must remain intact. |
 | `api/parent/me/news/[announcementId]/attachments/[attachmentId]/download`                                                                                                                                                                                  | Parent attachment bytes retain disposition and `nosniff` headers; parent relationship authorization remains in the backend. |
 | `api/parent-announcements/[announcementId]/declaration-export`, `api/parent/me/news/[announcementId]/declaration/proof/pdf`                                                                                                                                | Declaration exports and parent proof PDFs retain backend download headers and portal-specific session refresh behavior. |
 | `api/public/enrollment-form-legal-documents/[filename]`, `api/public/enrollment-legal-documents/[filename]`, `api/public/login-image/[filename]`, `api/me/profile/avatar/[filename]`, `api/staff/[id]/avatar`, `api/students/[id]/photo/[filename]`        | Public or user image/PDF responses retain content-type and caching behavior.                                                |
@@ -138,8 +136,9 @@ success wrapper. Their **backend errors still use the shared error path**:
 
 ### Private download inventory (#5119)
 
-The complete route/method inventory lives in
-`frontend/src/test/private-download-routes.ts` (57 handlers). The download
+The route/method inventory for downloads with a route file lives in
+`frontend/src/test/private-download-routes.ts`. Catalog file routes instead
+use the portal proxy's private, uncached response. The download
 rule in `route-cache-policy.test.ts` requires the explicit wrapper on each
 entry; an ordinary JSON or portal wrapper does not satisfy it. It also scans
 file constructors, file factories and download paths for missing entries.
@@ -180,7 +179,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | --- | --- |
 | `activities/[id]/supervisors/[supervisorId]` | Refreshes the session before forwarding; an exhausted refresh answers 401 with `general.permission`. |
 | `announcement-attachments/[announcementId]` | Multipart attachment upload uses the shared file-upload validator. |
-| `announcement-attachments/[announcementId]/[attachmentId]/download` | Streams attachment bytes and disposition for a browser download. |
 | `auth/login` | Relays login response cookies as well as the backend body. |
 | `auth/logout` | Uses the tenant refresh token for revocation; the browser still clears its local session. |
 | `calendar-feed/[token]` | Returns iCalendar text; the path token is the subscription credential. |
@@ -191,11 +189,9 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]` | Combines public form metadata with optional session-backed profile prefetch. |
 | `enrollment/legal-documents` | Multipart legal-document upload uses the shared file-upload validator. |
 | `files/folders/[folderId]/files` | Multipart folder-file upload uses the shared file-upload validator. |
-| `files/folders/[folderId]/files/[fileId]/download` | Streams folder-file bytes and disposition. |
 | `invitations/accept` | Maps signup fields and chooses the signed invitation-owner session when an existing account accepts. |
 | `me/profile/avatar` | Validates image magic bytes and MIME before upload through the shared upload wrapper. |
 | `me/profile/avatar/[filename]` | Serves avatar image bytes with MIME and cache headers. |
-| `operator/billing/key-date-counts/export` | Streams operator billing export bytes with no-store caching and operator refresh. |
 | `parent/me/news/[announcementId]/attachments/[attachmentId]/download` | Streams a parent-authorized attachment with disposition and nosniff headers. |
 | `parent-announcements/[announcementId]/declaration-export` | Streams a declaration PDF or CSV report with tenant-session refresh. |
 | `parent/me/news/[announcementId]/declaration/proof/pdf` | Streams a parent-authorized declaration proof PDF with parent-session refresh. |
@@ -208,8 +204,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `settings/login-image` | Uploads validated tenant image data and invalidates the tenant cache. |
 | `staff/[id]/avatar` | Returns image bytes, MIME type, and cache headers. |
 | `staff/[id]/documents` | Multipart staff-document upload uses the shared file-upload validator. |
-| `staff/[id]/documents/[documentId]/download` | Streams one staff document with its MIME type and disposition. |
-| `staff/time-tracking/export` | Streams staff time-tracking export bytes. |
 | `students/[id]/photo/[filename]` | Serves student photo bytes with MIME, cache headers and the 304 revalidation path. |
 | `traeger/auth/logout` | Uses the Träger refresh token, not the access token, to revoke the `org` session. |
 
@@ -221,10 +215,11 @@ the factory instead of a direct fetch: downloads `proxyFile` (client
 identity, one refreshed retry; the route wraps it in
 `withPrivateDownloadNoStore`), uploads `proxyFileUpload`
 (`lib/file-upload-wrapper.server.ts`: file validation, listed form fields,
-client identity, one refreshed retry). Under `students/` these are the six
-downloads (accident-report PDF, attendance-history and day-log exports,
-document download, care-request proof, student export) and the three uploads
-(documents, photo, accident-report paper copy).
+client identity, one refreshed retry). Under `students/` the day-log export
+is the one download left with a route file, beside the three uploads
+(documents, photo, accident-report paper copy); the other student downloads
+stream through the catalog proxy (#2352). `students/export` keeps a literal
+catalog hand-off.
 
 The three SSE routes (`sse/events`, `parent/sse/events`, and
 `school/sse/events`) use `proxySSEStream` separately: each must keep its own

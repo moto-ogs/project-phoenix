@@ -6,74 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
-	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
-
-// #5206: a kiosk start that joins a device-less room stay moves the open
-// visits of the device's recently ended session before it locks the stay.
-// A web move of one of those visits into the stay locks the stay and then
-// the visit, so it takes the stay's room lock first, as a push move does;
-// without it the two would wait on each other. A third transaction holds the
-// stay's row, so both writers queue on locks, not on sleeps.
-func TestReattachAndWebVisitMoveIntoTheStayDoNotDeadlock(t *testing.T) {
-	t.Parallel()
-	// The holder, both writers and the lock diagnostics hold connections at
-	// once; a pool of the test's own keeps them off the shared one (#5269).
-	db := testpkg.SetupClosableTestDB(t)
-	t.Cleanup(func() { assert.NoError(t, db.Close()) })
-	svc := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	room := testpkg.CreateTestRoom(t, db, "Reattach Web Hof")
-	activity := testpkg.CreateTestActivityGroup(t, db, "Reattach Web Freispiel")
-	markActivitySystem(t, db, activity.ID)
-	stay := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-	staff := testpkg.CreateTestStaff(t, db, "Reattach", "Web")
-	device := testpkg.CreateTestDevice(t, db, "reattach-web-kiosk")
-	ended := testpkg.CreateTestActiveGroup(t, db, testpkg.CreateTestActivityGroup(t, db, "Reattach Web Mensa").ID,
-		testpkg.CreateTestRoom(t, db, "Reattach Web Mensa").ID)
-	testpkg.LinkDeviceToActiveGroup(t, db, ended.ID, device.ID)
-	moved := testpkg.CreateTestStudent(t, db, "Verschoben", "Web", "2a")
-	takenOver := testpkg.CreateTestStudent(t, db, "Uebernommen", "Web", "2a")
-	movedVisit := testpkg.CreateTestVisit(t, db, moved.ID, ended.ID, time.Now().Add(-time.Hour), nil)
-	testpkg.CreateTestVisit(t, db, takenOver.ID, ended.ID, time.Now().Add(-time.Hour), nil)
-	// Ended on the service's clock, which also decides what is recent.
-	_, err := db.NewUpdate().TableExpr("active.groups").Set("end_time = ?", time.Now().Add(-5*time.Minute)).
-		Where("id = ?", ended.ID).Where("tenant_id = ?", testpkg.Tenant(t)).Exec(ctx)
-	require.NoError(t, err)
-
-	holder := holdStayRow(t, db, stay.ID)
-	webMove := make(chan error, 1)
-	go func() {
-		webMove <- svc.UpdateVisit(ctx, &studentpresence.Visit{
-			ID: movedVisit.ID, TenantID: movedVisit.TenantID, StudentID: moved.ID,
-			ActiveGroupID: stay.ID, EntryTime: movedVisit.EntryTime,
-		})
-	}()
-	webPID := awaitBlockedOn(t, db, holder.pid, 0)
-	reattach := make(chan error, 1)
-	go func() {
-		_, err := svc.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff.ID}, &room.ID)
-		reattach <- err
-	}()
-	awaitBlockedOn(t, db, holder.pid, webPID)
-	holder.commit(t)
-
-	require.NoError(t, awaitResult(t, webMove), "the web move must not lose against the reattach")
-	require.NoError(t, awaitResult(t, reattach), "the reattach must not lose against the web move")
-	visits, err := testSchoolPresence(t, db).ListVisits(ctx, studentpresence.VisitFilter{StudentIDs: []int64{moved.ID, takenOver.ID}, OpenOnly: true})
-	require.NoError(t, err)
-	sessions := map[int64]int64{}
-	for _, visit := range visits {
-		sessions[visit.StudentID] = visit.ActiveGroupID
-	}
-	assert.Equal(t, map[int64]int64{moved.ID: stay.ID, takenOver.ID: stay.ID}, sessions, "each child has one open visit, in the stay")
-}
 
 type stayRowHolder struct {
 	pid         int

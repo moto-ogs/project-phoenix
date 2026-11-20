@@ -67,18 +67,19 @@ const routes: Array<
     "student export",
     "POST",
     async () => (await import("./students/export/route")).POST,
+    {},
   ],
   [
     "staff streaming export",
     "GET",
-    async () => (await import("./staff/time-tracking/export/route")).GET,
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["staff", "time-tracking", "export"] },
   ],
   [
     "student document",
     "GET",
-    async () =>
-      (await import("./students/[id]/documents/[documentId]/download/route"))
-        .GET,
+    async () => (await import("./[...path]/route")).GET,
+    { path: ["students", "1", "documents", "2", "download"] },
   ],
   [
     "parent document",
@@ -99,8 +100,8 @@ const routes: Array<
   [
     "operator export",
     "GET",
-    async () =>
-      (await import("./operator/billing/key-date-counts/export/route")).GET,
+    async () => (await import("./operator/[...path]/route")).GET,
+    { path: ["billing", "key-date-counts", "export"] },
   ],
   // A file the contract registers runs through the portal's catalog proxy.
   [
@@ -222,7 +223,7 @@ describe("private file responses (#5119)", () => {
       }),
     );
     const { POST } = await import("./students/export/route");
-    const response = await call(POST, "POST");
+    const response = await call(POST, "POST", {});
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(response.headers.get("Content-Type")).toBe(contentType);
@@ -270,8 +271,10 @@ describe("private file responses (#5119)", () => {
         headers: { "Content-Type": "application/pdf", "Content-Length": "4" },
       }),
     );
-    const { GET } = await import("./staff/time-tracking/export/route");
-    const response = await call(GET, "GET");
+    const { GET } = await import("./[...path]/route");
+    const response = await call(GET, "GET", {
+      path: ["staff", "time-tracking", "export"],
+    });
     expect(response.status).toBe(200);
     // Taken over at once (forwardedBody), so a collected upstream Response
     // cannot cancel it; the reads below prove it still streams unbuffered.

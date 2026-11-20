@@ -10,6 +10,7 @@
  */
 import type { Session } from "next-auth";
 import { hasPermission } from "~/lib/auth-utils";
+import { isTraegerNavActive } from "./traeger-nav-active";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
 import { backConcept } from "~/lib/concepts/back";
@@ -315,6 +316,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
   },
 ];
 
+/**
+ * Die Schlüssel aller Gruppen der Hauptnavigation, auch ohne erlaubtes Ziel.
+ * Beim ersten Besuch stehen sie alle offen (#7647).
+ */
+export const TRAEGER_NAV_GROUP_KEYS: readonly string[] = TRAEGER_NAV_GROUPS.map(
+  (group) => group.key,
+);
+
 /** Der Einstieg unten in der Hauptnavigation; sein Ziel ist der erste erlaubte Eintrag. */
 export const TRAEGER_SETTINGS_NAV = {
   key: "einstellungen-bereich",
@@ -411,6 +420,21 @@ export function traegerNavGroupsFor(
         federalStates.includes(item.federalState),
     ),
   })).filter((group) => group.items.length > 0);
+}
+
+/**
+ * Die Gruppe, in der die aktuelle Seite liegt; `null` außerhalb jeder Gruppe
+ * (Einstellungen). Sie steht in der Seitenleiste immer offen (#7647).
+ */
+export function traegerNavGroupKeyFor(
+  groups: readonly TraegerNavGroup[],
+  pathname: string,
+): string | null {
+  return (
+    groups.find((group) =>
+      group.items.some((item) => isTraegerNavActive(item.href, pathname)),
+    )?.key ?? null
+  );
 }
 
 /**

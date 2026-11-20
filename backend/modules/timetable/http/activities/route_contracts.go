@@ -36,18 +36,20 @@ func RouteContracts() []apiCommon.RouteContract {
 			{Name: "replacement_staff_id", Kind: apiCommon.QueryID},
 		}, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/students/{studentId}", Portals: portals, NoData: true},
-		{Method: "GET", Pattern: "/{id}/schedules", Portals: portals, Response: []ActivityScheduleResponse{}},
-		{Method: "GET", Pattern: routeScheduleByID, Portals: portals, Response: ActivityScheduleResponse{}},
+		{Method: "GET", Pattern: "/{id}/schedules", Portals: portals, Deprecated: true, Response: []ActivityScheduleResponse{}},
+		{Method: "GET", Pattern: routeScheduleByID, Portals: portals, Deprecated: true, Response: ActivityScheduleResponse{}},
 	}
 }
 
 // ScheduleRouteContracts registers the timeframe list under /api/schedules.
+// No client calls it; it is deprecated for one release before it leaves
+// (ADR 0270, #2352).
 func ScheduleRouteContracts() []apiCommon.RouteContract {
 	return []apiCommon.RouteContract{
 		{Method: "GET", Pattern: "/timeframes/", Portals: []apiCommon.PortalScope{apiCommon.PortalTenant}, Query: []apiCommon.QueryParam{
 			{Name: "description", Kind: apiCommon.QueryString},
 			{Name: "page", Kind: apiCommon.QueryInt},
 			{Name: "page_size", Kind: apiCommon.QueryInt},
-		}, Paginated: true, Response: []TimeframeResponse{}},
+		}, Paginated: true, Response: []TimeframeResponse{}, Deprecated: true},
 	}
 }

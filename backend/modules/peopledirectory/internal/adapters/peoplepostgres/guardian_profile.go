@@ -308,29 +308,6 @@ func (r *guardianProfileRepository) FindByAccountID(ctx context.Context, account
 	return profile, nil
 }
 
-// FindWithoutAccount retrieves guardian profiles without portal accounts
-func (r *guardianProfileRepository) FindWithoutAccount(ctx context.Context) ([]*users.GuardianProfile, error) {
-	var profiles []*users.GuardianProfile
-
-	ambientDB8, databaseErr8 := r.runtime.DB(ctx)
-	if databaseErr8 != nil {
-		return *new([]*users.GuardianProfile), databaseErr8
-	}
-	err := ambientDB8.NewSelect().
-		Model(&profiles).
-		ModelTableExpr(`users.guardian_profiles AS "guardian_profile"`).
-		Where(`"guardian_profile".account_id IS NULL`).
-		Where(`"guardian_profile".has_account = ?`, false).
-		Order(`last_name ASC`, `first_name ASC`).
-		Scan(ctx)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to find guardians without account: %w", err)
-	}
-
-	return profiles, nil
-}
-
 // FindInvitable retrieves guardians who can be invited (has email, no account)
 func (r *guardianProfileRepository) FindInvitable(ctx context.Context) ([]*users.GuardianProfile, error) {
 	var profiles []*users.GuardianProfile

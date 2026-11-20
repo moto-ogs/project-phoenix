@@ -119,6 +119,8 @@ func StaffAdminRouteContracts() []common.RouteContract {
 			{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
 			{Name: "format", Kind: common.QueryString, Values: []string{"csv", "pdf", "xlsx"}},
 		}},
+		// Files stream through the portal's proxy (#2352).
+		{Method: "GET", Pattern: "/{id}/documents/{documentId}/download", Portals: portals, File: true},
 	}
 	routes = append(routes, staffAdminPersonnelContracts(route)...)
 	routes = append(routes, staffAdminCrossStaffContracts(route)...)
@@ -163,6 +165,8 @@ func staffAdminCrossStaffContracts(route contractRoute) []common.RouteContract {
 			common.QueryParam{Name: "limit", Kind: common.QueryInt}, common.QueryParam{Name: "sources", Kind: common.QueryString},
 			common.QueryParam{Name: "cursor", Kind: common.QueryString}),
 		route("GET", "/time-tracking/export/datev-report", nil, workforce.DatevExportReport{}, export...),
+		// The export file of the same query (#1417 2b), through the portal's proxy (#2352).
+		{Method: "GET", Pattern: "/time-tracking/export", Portals: []common.PortalScope{common.PortalTenant}, Query: export, File: true},
 		route("GET", "/time-tracking/export/sftp-status", nil, ExportTransferStatus{}),
 		route("POST", "/time-tracking/export/sftp", TransferExportRequest{}, ExportTransferResponse{}),
 		route("GET", "/time-tracking/payroll-dispatch", nil, workforce.PayrollDispatchOverview{}),

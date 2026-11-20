@@ -171,6 +171,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/rooms/by-category",
     portals: ["tenant"],
+    deprecated: true,
     query: ["category"],
     response: success(z.array(RoomResponseSchema)),
   },

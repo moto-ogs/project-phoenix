@@ -54,14 +54,6 @@ func TestErrorRenderer_AllNotFoundErrors(t *testing.T) {
 			name: "ErrGroupSupervisorNotFound",
 			err:  operationError("test", studentpresence.ErrGroupSupervisorNotFound),
 		},
-		{
-			name: "ErrCombinedGroupNotFound",
-			err:  operationError("test", studentpresence.ErrCombinedGroupNotFound),
-		},
-		{
-			name: "ErrGroupMappingNotFound",
-			err:  operationError("test", studentpresence.ErrGroupMappingNotFound),
-		},
 	}
 
 	for _, tt := range tests {
@@ -95,14 +87,6 @@ func TestErrorRenderer_AllBadRequestErrors(t *testing.T) {
 		{
 			name: "ErrSupervisionAlreadyEnded",
 			err:  operationError("test", studentpresence.ErrSupervisionAlreadyEnded),
-		},
-		{
-			name: "ErrCombinedGroupAlreadyEnded",
-			err:  operationError("test", studentpresence.ErrCombinedGroupAlreadyEnded),
-		},
-		{
-			name: "ErrGroupAlreadyInCombination",
-			err:  operationError("test", studentpresence.ErrGroupAlreadyInCombination),
 		},
 		{
 			name: "ErrStudentAlreadyInGroup",

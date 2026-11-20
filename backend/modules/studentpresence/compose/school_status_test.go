@@ -83,7 +83,7 @@ func TestSchoolStatusesUseLatestStayAndKeepYardAndCheckoutSemantics(t *testing.T
 	assertStatus("checked_in")
 	yard := at.Add(10 * time.Minute)
 	row.YardSince = &yard
-	_, err = module.ReviseAttendance(ctx, row)
+	_, err = db.NewRaw("UPDATE active.attendance SET yard_since = ? WHERE id = ?", yard, row.ID).Exec(ctx)
 	require.NoError(t, err)
 	assertStatus("on_yard")
 	_, err = module.CloseAttendance(ctx, studentpresence.AttendanceCheckout{StudentIDs: []int64{student.ID}, Date: day, At: at.Add(20 * time.Minute)})

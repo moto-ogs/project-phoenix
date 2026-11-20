@@ -43,4 +43,10 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "POST /api/platform/announcements/{id}/seen": {
+    method: "POST",
+    pattern: "/api/platform/announcements/{id}/seen",
+    portals: ["tenant"],
+    response: noData,
+  },
 } as const;

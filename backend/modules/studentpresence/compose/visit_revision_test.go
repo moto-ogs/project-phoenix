@@ -98,10 +98,12 @@ func TestVisitRevisionFollowsEveryOpenCountChange(t *testing.T) {
 	assert.Equal(t, countSnapshot{count: 0, revision: 4}, readSnapshot(t, ctx, module, target.ID),
 		"one statement closing several visits raises the revision once")
 
-	require.NoError(t, module.DeleteVisit(ctx, second.ID))
+	_, err = db.NewRaw("DELETE FROM active.visits WHERE id = ?", second.ID).Exec(ctx)
+	require.NoError(t, err)
 	assert.Equal(t, countSnapshot{count: 0, revision: 4}, readSnapshot(t, ctx, module, target.ID), "deleting a closed visit keeps the revision")
 	fourth := openVisit(t, ctx, module, db, target.ID, "Fourth")
-	require.NoError(t, module.DeleteVisit(ctx, fourth.ID))
+	_, err = db.NewRaw("DELETE FROM active.visits WHERE id = ?", fourth.ID).Exec(ctx)
+	require.NoError(t, err)
 	assert.Equal(t, countSnapshot{count: 0, revision: 6}, readSnapshot(t, ctx, module, target.ID), "opening and deleting an open visit raise it twice")
 	assert.NotZero(t, third.ID)
 }
@@ -348,7 +350,7 @@ func newSession(t *testing.T, db *bun.DB, name string) *testpkg.ActiveGroupRow {
 
 // TestVisitWritesTakeNoSessionLock pins that the revision adds no lock edge:
 // while another transaction holds a session FOR UPDATE (as a session end
-// does), closing, moving and deleting its visits complete without waiting,
+// does), closing its visits completes without waiting,
 // and two check-ins into one session do not wait for each other.
 func TestVisitWritesTakeNoSessionLock(t *testing.T) {
 	t.Parallel()
@@ -358,8 +360,6 @@ func TestVisitWritesTakeNoSessionLock(t *testing.T) {
 	group := newSession(t, db, "No lock")
 	other := newSession(t, db, "No lock other")
 	closing := openVisit(t, ctx, module, db, group.ID, "Closing")
-	moving := openVisit(t, ctx, module, db, group.ID, "Moving")
-	deleting := openVisit(t, ctx, module, db, group.ID, "Deleting")
 	before := readSnapshot(t, ctx, module, group.ID)
 
 	holder := startTx(t, ctx, db)
@@ -369,20 +369,12 @@ func TestVisitWritesTakeNoSessionLock(t *testing.T) {
 	}))
 	writer := startTx(t, ctx, db)
 	awaitStep(t, writer.run(func(txCtx context.Context) error {
-		if _, err := module.CloseVisits(txCtx, []int64{closing.ID}, time.Now()); err != nil {
-			return err
-		}
-		moved := moving
-		moved.ActiveGroupID = other.ID
-		if _, err := module.ReviseVisit(txCtx, moved); err != nil {
-			return err
-		}
-		return module.DeleteVisit(txCtx, deleting.ID)
+		_, err := module.CloseVisits(txCtx, []int64{closing.ID}, time.Now())
+		return err
 	}))
 	writer.commit(t)
 	holder.commit(t)
-	assert.Equal(t, countSnapshot{count: 0, revision: before.revision + 3}, readSnapshot(t, ctx, module, group.ID))
-	assert.Equal(t, countSnapshot{count: 1, revision: 1}, readSnapshot(t, ctx, module, other.ID))
+	assert.Equal(t, countSnapshot{count: 0, revision: before.revision + 1}, readSnapshot(t, ctx, module, group.ID))
 
 	first := startTx(t, ctx, db)
 	second := startTx(t, ctx, db)
@@ -398,7 +390,7 @@ func TestVisitWritesTakeNoSessionLock(t *testing.T) {
 	awaitStep(t, second.run(record(secondStudent.ID)))
 	second.commit(t)
 	first.commit(t)
-	assert.Equal(t, countSnapshot{count: 3, revision: 3}, readSnapshot(t, ctx, module, other.ID))
+	assert.Equal(t, countSnapshot{count: 2, revision: 2}, readSnapshot(t, ctx, module, other.ID))
 }
 
 // TestConcurrentWritersOfOneSessionMeetOnTheNextRead pins the remaining
@@ -460,7 +452,8 @@ func TestNightlyCloseCompactsEventsWithoutChangingRevisions(t *testing.T) {
 	_, err := module.CloseVisits(ctx, []int64{leaving.ID}, time.Now())
 	require.NoError(t, err)
 	gone := openVisit(t, ctx, module, db, deleted.ID, "Gone")
-	require.NoError(t, module.DeleteVisit(ctx, gone.ID))
+	_, err = db.NewRaw("DELETE FROM active.visits WHERE id = ?", gone.ID).Exec(ctx)
+	require.NoError(t, err)
 	openVisit(t, ctx, module, db, running.ID, "Running")
 	_, err = db.NewRaw("UPDATE active.groups SET end_time = NOW() WHERE id = ?", ended.ID).Exec(ctx)
 	require.NoError(t, err)
@@ -643,55 +636,6 @@ func TestCareExitAndSessionEndDoNotDeadlock(t *testing.T) {
 
 	assert.Equal(t, countSnapshot{count: 0, revision: 4}, readSnapshot(t, ctx, module, group.ID),
 		"two openings, the care exit and the session end each raised the revision")
-}
-
-// TestAdminTransferWaitingCheckoutAndSessionEndDoNotDeadlock: an admin
-// moves a visit to another session (target guard lock, then the update)
-// while a checkout of that visit waits; the checkout then closes the moved
-// visit, and a session end of the target waits for it.
-func TestAdminTransferWaitingCheckoutAndSessionEndDoNotDeadlock(t *testing.T) {
-	t.Parallel()
-	db := lockScenarioDB(t)
-	ctx := testpkg.Ctx(t)
-	module := newRevisionModule(t, db)
-	source := newSession(t, db, "Transfer source")
-	target := newSession(t, db, "Transfer target")
-	visit := openVisit(t, ctx, module, db, source.ID, "Moved")
-
-	admin := startTx(t, ctx, db)
-	checkout := startTx(t, ctx, db)
-	sessionEnd := startTx(t, ctx, db)
-	awaitStep(t, admin.run(func(txCtx context.Context) error {
-		if _, err := module.LockGroup(txCtx, target.ID); err != nil {
-			return err
-		}
-		moved := visit
-		moved.ActiveGroupID = target.ID
-		_, err := module.ReviseVisit(txCtx, moved)
-		return err
-	}))
-	closing := checkout.run(func(txCtx context.Context) error {
-		_, err := module.CloseVisits(txCtx, []int64{visit.ID}, time.Now())
-		return err
-	})
-	awaitBlockedBy(t, db, checkout, admin)
-	admin.commit(t)
-	awaitStep(t, closing)
-	awaitStep(t, sessionEnd.run(func(txCtx context.Context) error {
-		_, err := module.LockGroup(txCtx, target.ID)
-		return err
-	}))
-	ending := sessionEnd.run(func(txCtx context.Context) error {
-		_, err := module.EndGroupSession(txCtx, target.ID, time.Now())
-		return err
-	})
-	awaitBlockedBy(t, db, sessionEnd, checkout)
-	checkout.commit(t)
-	awaitStep(t, ending)
-	sessionEnd.commit(t)
-
-	assert.Equal(t, countSnapshot{count: 0, revision: 2}, readSnapshot(t, ctx, module, source.ID), "opened, then moved out")
-	assert.Equal(t, countSnapshot{count: 0, revision: 2}, readSnapshot(t, ctx, module, target.ID), "moved in, then closed")
 }
 
 // TestReattachAndScanDoNotDeadlock: a device reattaches to its session (the

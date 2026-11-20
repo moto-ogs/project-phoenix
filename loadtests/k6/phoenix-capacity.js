@@ -83,12 +83,12 @@ export function dashboardRead() {
   }
 
   const responses = http.batch([
-    ["GET", `${apiBaseUrl}/api/me`, null, { headers: webHeaders(), tags: { endpoint: "me" }, timeout: "10s" }],
-    ["GET", `${apiBaseUrl}/api/me/groups/active`, null, { headers: webHeaders(), tags: { endpoint: "active_groups" }, timeout: "10s" }],
+    ["GET", `${apiBaseUrl}/api/me/navigation`, null, { headers: webHeaders(), tags: { endpoint: "me" }, timeout: "10s" }],
+    ["GET", `${apiBaseUrl}/api/me/groups/supervised`, null, { headers: webHeaders(), tags: { endpoint: "active_groups" }, timeout: "10s" }],
     ["GET", `${apiBaseUrl}/api/active/analytics/dashboard`, null, { headers: webHeaders(), tags: { endpoint: "dashboard_analytics" }, timeout: "10s" }],
   ]);
 
-  const ok = responses.every((res) => res.status >= 200 && res.status < 500);
+  const ok = responses.every((res) => res.status >= 200 && res.status < 300);
   dashboardFailures.add(!ok);
   sleep(numberEnv("WEB_THINK_TIME_SECONDS", 5));
 }

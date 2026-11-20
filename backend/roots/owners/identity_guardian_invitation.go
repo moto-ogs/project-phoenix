@@ -192,14 +192,6 @@ func (r guardianInvitationReads) ListOpen(ctx context.Context, guardianProfileID
 	return guardianListRecords(invitations), nil
 }
 
-func (r guardianInvitationReads) ListRedeemable(ctx context.Context) ([]peoplePorts.GuardianInvitationRecord, error) {
-	invitations, err := r.reads.ListRedeemableGuardianInvitations(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return guardianListRecords(invitations), nil
-}
-
 // ListByProfile serves the parents portal, which reads the same rows with a
 // narrower record.
 func (r guardianInvitationReads) ListByProfile(ctx context.Context, guardianProfileID int64) ([]parentportal.GuardianInvitationRecord, error) {

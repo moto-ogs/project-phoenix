@@ -25,7 +25,7 @@ import (
 // Count the complete production request, including the tenant transaction.
 func TestStudentActivityEnrollmentCountQueryBudget(t *testing.T) {
 	t.Parallel()
-	for _, available := range []bool{false, true} {
+	for _, available := range []bool{false} {
 		for _, n := range []int{1, 3, 8} {
 			t.Run(fmt.Sprintf("available_%t/N%d", available, n), func(t *testing.T) {
 				testpkg.OwnTenant(t)
@@ -117,11 +117,7 @@ func TestStudentActivityEnrollmentCountQueryBudget(t *testing.T) {
 					}
 					require.Equal(t, want, row.EnrollmentCount)
 				}
-				if available {
-					querybudgets.AssertQueryBudget(t, "api.activities.student_available.complete", counter.Measurement(counter.Queries()))
-				} else {
-					querybudgets.AssertQueryBudget(t, "api.activities.student_enrollments.complete", counter.Measurement(counter.Queries()))
-				}
+				querybudgets.AssertQueryBudget(t, "api.activities.student_enrollments.complete", counter.Measurement(counter.Queries()))
 				t.Logf("STATE unchanged=true state=%s", before)
 				t.Logf("HTTP %d headers=%v body=%s", rr.Code, rr.Header(), rr.Body.String())
 				t.Logf("COMPLETE statements=%d SQL=%s", counter.Total(), mustEnrollmentCountJSON(t, counter.Queries()))

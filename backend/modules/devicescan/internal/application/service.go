@@ -194,19 +194,6 @@ func (s *Service) pingDevice(ctx context.Context, deviceID string) error {
 	return nil
 }
 
-// Status reports the authenticated device's own view.
-func (s *Service) Status(ctx context.Context) (*devicescan.DeviceStatus, error) {
-	device, err := s.device(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &devicescan.DeviceStatus{
-		Device:          publicDevice(device),
-		IsOnline:        s.fleet.IsDeviceOnline(ctx, devicefleet.Device{LastSeen: device.LastSeen}),
-		AuthenticatedAt: s.now(),
-	}, nil
-}
-
 // recordUnregisteredScan best-effort persists a scan of a card that
 // resolves to no person, stamped with the scanning device. A persistence
 // error only logs: the scan response must not fail because bookkeeping did.

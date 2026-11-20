@@ -566,9 +566,12 @@ export function handOffUnder(
   head: HandOffHead,
   handler: (request: NextRequest, context: RouteContext) => Promise<Response>,
 ) {
-  return (request: NextRequest, context: RouteContext) =>
+  // Next passes `params: undefined` to a route file without a dynamic
+  // segment (`auth/tenants/route.ts`); such a file has no tail.
+  return (request: NextRequest, context: Partial<RouteContext> | undefined) =>
     handler(request, {
-      params: context.params.then((params) => {
+      params: Promise.resolve(context?.params).then((given) => {
+        const params = given ?? {};
         const tail = params.path;
         const rest = Array.isArray(tail) ? tail : tail ? [tail] : [];
         const lead = typeof head === "function" ? head(params) : head;

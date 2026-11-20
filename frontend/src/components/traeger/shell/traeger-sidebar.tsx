@@ -10,6 +10,7 @@ import {
 } from "~/components/ui/portal-sidebar";
 import { portalSidebarTopOffset } from "~/components/ui/sidebar-geometry";
 import { useDemoBannerShown } from "~/components/demo/demo-banner";
+import { useStoredOpenGroups } from "~/lib/hooks/use-stored-open-groups";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   isTraegerNavActive,
@@ -18,11 +19,17 @@ import {
 import {
   TRAEGER_BACK_NAV,
   TRAEGER_HELP_NAV,
+  TRAEGER_NAV_GROUP_KEYS,
   TRAEGER_SETTINGS_NAV,
+  traegerNavGroupKeyFor,
   traegerNavGroupsFor,
   traegerSettingsNavItemsFor,
 } from "./traeger-nav-items";
 import { useTraegerReturnHref } from "./traeger-return-path";
+
+/** Eigener Schlüssel fürs Träger-Portal; die OGS-App nutzt `sidebar-open-groups`. */
+const openGroupsStorageKey = "traeger-sidebar-open-groups";
+const KNOWN_GROUP_KEYS: ReadonlySet<string> = new Set(TRAEGER_NAV_GROUP_KEYS);
 
 /**
  * Die dauerhafte Seitennavigation des Träger-Portals ab 1024 px (#5145):
@@ -43,6 +50,15 @@ export function TraegerSidebar({
   const returnHref = useTraegerReturnHref();
   // The demo banner (#6193) sits above the header; the sidebar moves with it.
   const topOffset = portalSidebarTopOffset(useDemoBannerShown());
+  const groups = traegerNavGroupsFor(session ?? null, federalStates);
+  // Einklappbare Gruppen wie in der OGS-App (#7647): anfangs alle offen, der
+  // Zustand bleibt im Browser, die Gruppe der aktuellen Seite ist immer offen.
+  const { isGroupOpen, toggleGroup } = useStoredOpenGroups({
+    storageKey: openGroupsStorageKey,
+    knownKeys: KNOWN_GROUP_KEYS,
+    currentGroup: traegerNavGroupKeyFor(groups, pathname),
+    defaultGroups: TRAEGER_NAV_GROUP_KEYS,
+  });
 
   if (isTraegerSettingsPath(pathname)) {
     return (
@@ -93,8 +109,13 @@ export function TraegerSidebar({
         </>
       }
     >
-      {traegerNavGroupsFor(session ?? null, federalStates).map((group) => (
-        <PortalSidebarGroup key={group.key} label={group.label}>
+      {groups.map((group) => (
+        <PortalSidebarGroup
+          key={group.key}
+          label={group.label}
+          isOpen={isGroupOpen(group.key)}
+          onToggle={() => toggleGroup(group.key)}
+        >
           {group.items.map((item) => (
             <PortalSidebarLink
               key={item.key}

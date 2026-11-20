@@ -47,9 +47,3 @@ type DatevReadiness struct {
 	MissingSettings []string `json:"missing_settings"`
 	InvalidSettings []string `json:"invalid_settings"`
 }
-
-// DatevExport is the DATEV booking batch of a Träger. The caller opens the
-// Träger transaction of the session's Träger.
-type DatevExport interface {
-	DatevReadiness(ctx context.Context, reviewer HolidayReviewer) (DatevReadiness, error)
-}

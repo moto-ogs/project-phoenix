@@ -10,12 +10,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 )
 
-// AttendanceStatusResponse represents the response for checking a student's attendance status
-type AttendanceStatusResponse struct {
-	Student    AttendanceStudentInfo `json:"student"`
-	Attendance AttendanceInfo        `json:"attendance"`
-}
-
 // AttendanceStudentInfo represents student information in attendance responses
 type AttendanceStudentInfo struct {
 	ID        int64                `json:"id"`

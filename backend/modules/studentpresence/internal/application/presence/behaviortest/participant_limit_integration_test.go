@@ -259,30 +259,6 @@ func TestParticipantLimit_DeviceAdmissionRefusesFullSession(t *testing.T) {
 	assert.Equal(t, 1, openVisitsIn(t, service, fixture.session.ID))
 }
 
-func TestWebParticipantLimit_VisitTransfer(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	forbidWebOverbooking(t, db)
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-	target := newLimitFixture(t, db, "limit-transfer-target", 1, 1, 0)
-	source := testpkg.CreateTestActiveGroup(t, db, testpkg.CreateTestActivityGroup(t, db, "limit-transfer-source").ID, target.room)
-	student := testpkg.CreateTestStudent(t, db, "Transfer", "Limit", "L1")
-	testpkg.CreateTestAttendance(t, db, student.ID, target.staff, target.device, time.Now().Add(-time.Hour), nil)
-	stored := testpkg.CreateTestVisit(t, db, student.ID, source.ID, time.Now().Add(-20*time.Minute), nil)
-
-	moved := &studentpresence.Visit{
-		ID: stored.ID, TenantID: stored.TenantID, StudentID: student.ID,
-		ActiveGroupID: target.session.ID, EntryTime: stored.EntryTime,
-	}
-	err := service.UpdateVisit(ctx, moved)
-
-	requireLimitRefusal(t, err, 1, 1, 1)
-	visit, err := service.GetStudentCurrentVisit(ctx, student.ID)
-	require.NoError(t, err)
-	assert.Equal(t, source.ID, visit.ActiveGroupID)
-}
-
 func TestWebParticipantLimit_BulkMoveMovesNobody(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -324,47 +300,4 @@ func TestWebParticipantLimit_OpenRoomMove(t *testing.T) {
 	visit, err := service.GetStudentCurrentVisit(ctx, child)
 	require.NoError(t, err)
 	assert.Equal(t, source.ID, visit.ActiveGroupID)
-}
-
-func TestWebParticipantLimit_VisitReopen(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	forbidWebOverbooking(t, db)
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-	fixture := newLimitFixture(t, db, "limit-reopen", 1, 1, 0)
-	student := testpkg.CreateTestStudent(t, db, "Reopen", "Limit", "L1")
-	entry := time.Now().Add(-40 * time.Minute)
-	exit := time.Now().Add(-10 * time.Minute)
-	testpkg.CreateTestAttendance(t, db, student.ID, fixture.staff, fixture.device, time.Now().Add(-time.Hour), nil)
-	closed := testpkg.CreateTestVisit(t, db, student.ID, fixture.session.ID, entry, &exit)
-
-	reopened := &studentpresence.Visit{
-		ID: closed.ID, TenantID: closed.TenantID, StudentID: student.ID,
-		ActiveGroupID: fixture.session.ID, EntryTime: closed.EntryTime,
-	}
-	err := service.UpdateVisit(ctx, reopened)
-
-	requireLimitRefusal(t, err, 1, 1, 1)
-	assert.Equal(t, 1, openVisitsIn(t, service, fixture.session.ID))
-}
-
-func TestWebParticipantLimit_SessionActivitySwitch(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	forbidWebOverbooking(t, db)
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-	fixture := newLimitFixture(t, db, "limit-switch-source", 0, 3, 0)
-	smaller := testpkg.CreateTestActivityGroupWithLimit(t, db, "limit-switch-target", 2)
-
-	session, err := service.GetActiveGroup(ctx, fixture.session.ID)
-	require.NoError(t, err)
-	session.GroupID = &smaller.ID
-	err = service.UpdateActiveGroup(ctx, session)
-
-	requireLimitRefusal(t, err, 0, 2, 3)
-	unchanged, err := service.GetActiveGroup(ctx, fixture.session.ID)
-	require.NoError(t, err)
-	assert.NotEqual(t, smaller.ID, *unchanged.GroupID)
 }
