@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -111,11 +112,16 @@ type SourceEntry struct {
 	HalfDay bool
 	// Since is the first day of a change that began before the day; Until
 	// the last day of one that lasts beyond it. Nil otherwise.
-	Since  *calendar.Date
-	Until  *calendar.Date
-	People []Person
-	Group  *Group
-	Link   *Link
+	Since *calendar.Date
+	Until *calendar.Date
+	// StartsAt and EndsAt are the instants of a change with a time of day;
+	// both nil for a full-day change. A source sets EndsAt only together
+	// with StartsAt.
+	StartsAt *time.Time
+	EndsAt   *time.Time
+	People   []Person
+	Group    *Group
+	Link     *Link
 	// Count is set on the summary kinds only.
 	Count *int
 }
@@ -124,16 +130,19 @@ type SourceEntry struct {
 type Entry struct {
 	Kind    Kind    `json:"kind"`
 	Section Section `json:"section"`
-	// AllDay is true for changes without a time of day; every staff entry of
-	// v1 is one.
+	// AllDay is true for changes without a time of day (StartsAt nil).
 	AllDay  bool           `json:"all_day"`
 	HalfDay bool           `json:"half_day"`
 	Since   *calendar.Date `json:"since"`
 	Until   *calendar.Date `json:"until"`
-	People  []Person       `json:"people"`
-	Group   *Group         `json:"group"`
-	Link    *Link          `json:"link"`
-	Count   *int           `json:"count"`
+	// StartsAt and EndsAt are instants; the frontend shows the school's wall
+	// clock and folds a change whose end has passed into "erledigt" (#7660).
+	StartsAt *time.Time `json:"starts_at"`
+	EndsAt   *time.Time `json:"ends_at"`
+	People   []Person   `json:"people"`
+	Group    *Group     `json:"group"`
+	Link     *Link      `json:"link"`
+	Count    *int       `json:"count"`
 }
 
 // SourceStatus reports one source.
@@ -261,16 +270,18 @@ func toEntry(entry SourceEntry) Entry {
 		people = []Person{}
 	}
 	return Entry{
-		Kind: entry.Kind, Section: section, AllDay: true, HalfDay: entry.HalfDay,
-		Since: entry.Since, Until: entry.Until, People: people, Group: entry.Group,
-		Link: entry.Link, Count: entry.Count,
+		Kind: entry.Kind, Section: section, AllDay: entry.StartsAt == nil, HalfDay: entry.HalfDay,
+		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
+		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count,
 	}
 }
 
-// sortEntries puts "Betrifft dich" before "Schule". Inside a section, new
-// changes stand first, the long ones that began before today follow
-// compactly, and the summaries close the section. Ties sort by kind, first
-// name and group, so the order is stable.
+// sortEntries puts "Betrifft dich" before "Schule". Inside a section (#7660),
+// new full-day changes stand first, the changes with a time of day follow by
+// their start, then the long ones that began before today compactly, and the
+// summaries close the section. The frontend folds what has ended into
+// "erledigt". Ties sort by kind, first name and group, so the order is
+// stable.
 func sortEntries(entries []Entry) {
 	sort.SliceStable(entries, func(i, j int) bool {
 		a, b := entries[i], entries[j]
@@ -279,6 +290,9 @@ func sortEntries(entries []Entry) {
 		}
 		if ra, rb := rank(a), rank(b); ra != rb {
 			return ra < rb
+		}
+		if a.StartsAt != nil && b.StartsAt != nil && !a.StartsAt.Equal(*b.StartsAt) {
+			return a.StartsAt.Before(*b.StartsAt)
 		}
 		if a.Kind != b.Kind {
 			return a.Kind < b.Kind
@@ -293,8 +307,10 @@ func sortEntries(entries []Entry) {
 func rank(entry Entry) int {
 	switch {
 	case entry.Count != nil:
-		return 2
+		return 3
 	case entry.Since != nil:
+		return 2
+	case entry.StartsAt != nil:
 		return 1
 	default:
 		return 0

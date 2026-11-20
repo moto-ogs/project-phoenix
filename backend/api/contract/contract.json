@@ -48581,6 +48581,20 @@
           }
         },
         {
+          "name": "starts_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
           "name": "people",
           "schema": {
             "kind": "array",
