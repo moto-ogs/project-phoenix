@@ -129,7 +129,7 @@ success wrapper. Their **backend errors still use the shared error path**:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `api/sse/events`, `api/parent/sse/events`, `api/school/sse/events`                                                                                                                                                                                         | `proxySSEStream` preserves a live event stream and abort propagation; a buffered JSON wrapper would prevent streaming.      |
 | `api/students/export`, `api/students/day-log/export` | CSV/PDF export bytes and download headers must remain intact. |
-| `api/public/enrollment-form-legal-documents/[filename]`, `api/public/enrollment-legal-documents/[filename]`, `api/public/login-image/[filename]`, `api/me/profile/avatar/[filename]`, `api/staff/[id]/avatar`, `api/students/[id]/photo/[filename]`        | Public or user image/PDF responses retain content-type and caching behavior.                                                |
+| `api/public/enrollment-form-legal-documents/[filename]`, `api/public/enrollment-legal-documents/[filename]`, `api/public/login-image/[filename]`, `api/students/[id]/photo/[filename]` | Public or user image/PDF responses retain content-type and caching behavior. |
 | `api/calendar-feed/[token]`, `api/request-feed/[token]`                                                                                                                                                                                                    | iCalendar/RSS subscriptions retain their wire format and cache policy; the path token is the subscription credential.       |
 
 ### Private download inventory (#5119)
@@ -157,8 +157,7 @@ inventory is `NON_DOWNLOAD_RESOURCES` in `route-cache-policy.test.ts`:
 | Excluded resource | Retained policy and reason |
 | --- | --- |
 | Public login images and enrollment legal/form PDFs | Public assets, `public, max-age=86400` or the form PDF's upstream policy. |
-| Profile/staff avatars and student photos | Existing private image cache/revalidation policy; these are display resources, not exports. |
-| Träger logo | Brand image through `proxyFile`, existing `no-store` policy. |
+| Student photos | Existing private image cache/revalidation policy; a display resource, not an export. |
 | Calendar and request subscription feeds | Existing `private, max-age=3600` and `private, no-store`, respectively; subscription wire format unchanged. |
 | Tenant, parent and school SSE | Existing SSE headers, live streaming and abort behavior unchanged. |
 
@@ -188,7 +187,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `files/folders/[folderId]/files` | Multipart folder-file upload uses the shared file-upload validator. |
 | `invitations/accept` | Maps signup fields and chooses the signed invitation-owner session when an existing account accepts. |
 | `me/profile/avatar` | Validates image magic bytes and MIME before upload through the shared upload wrapper. |
-| `me/profile/avatar/[filename]` | Serves avatar image bytes with MIME and cache headers. |
 | `public/enrollment-form-legal-documents/[filename]` | Serves a public form PDF as a body stream. |
 | `public/enrollment-legal-documents/[filename]` | Serves a public legal PDF with MIME validation and cache policy. |
 | `public/login-image/[filename]` | Serves a public login image with MIME validation and cache policy. |
@@ -196,7 +194,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `school/auth/logout` | Uses the school refresh token, not the access token, to revoke the scoped session. |
 | `settings/enrollment/legal-agb-document` | Multipart legal PDF upload uses the shared file-upload validator. |
 | `settings/login-image` | Uploads validated tenant image data and invalidates the tenant cache. |
-| `staff/[id]/avatar` | Returns image bytes, MIME type, and cache headers. |
 | `staff/[id]/documents` | Multipart staff-document upload uses the shared file-upload validator. |
 | `students/[id]/photo/[filename]` | Serves student photo bytes with MIME, cache headers and the 304 revalidation path. |
 | `traeger/auth/logout` | Uses the Träger refresh token, not the access token, to revoke the `org` session. |
@@ -338,6 +335,11 @@ The key is the scope claim of the portal's session token
   names the file's `Content-Type` and `Content-Disposition` itself; the proxy
   adds no fallback. A BFF-side ID, query or format check moves to the Go
   handler, and the client sends the backend's parameters and body as they are.
+  A file the browser may keep (an avatar, the Träger logo, whose address names
+  its version) registers `PrivateCache: true`; the handler sets its private
+  Cache-Control, and the proxy passes it on only for such a route and only
+  when it says `private` and not `public`. Every refusal stays
+  `private, no-store`.
 - A file of the portal `public` (a token link) needs `PublicFile`, the reason
   its link alone may open it; the generator refuses an unmarked public file,
   a public upload, and a marker on any other route. The proxy fetches it

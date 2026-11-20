@@ -146,16 +146,11 @@ const DOWNLOAD_POLICY_FACTORIES: Record<string, string[]> = {
 // Non-JSON resources deliberately outside the private-download rule. Image,
 // legal-document and subscription caching is not changed by #5119.
 const NON_DOWNLOAD_RESOURCES: Record<string, string> = {
-  "traeger/master-data/logo":
-    "Authenticated brand image, existing no-store policy",
   "public/enrollment-form-legal-documents/[filename]":
     "Public form PDF, public cache policy",
   "public/enrollment-legal-documents/[filename]":
     "Public legal PDF, public cache policy",
   "public/login-image/[filename]": "Public login image, public cache policy",
-  "me/profile/avatar/[filename]":
-    "Session avatar, existing private image cache",
-  "staff/[id]/avatar": "Staff avatar, existing private image cache",
   "students/[id]/photo/[filename]":
     "Photo with existing backend revalidation policy",
   "calendar-feed/[token]": "Subscription feed, private max-age=3600",

@@ -23,6 +23,7 @@ import { routes as authStaffPreview } from "./auth-staff-preview.generated";
 import { routes as authTenants } from "./auth-tenants.generated";
 import { routes as birthdays } from "./birthdays.generated";
 import { routes as calendar } from "./calendar.generated";
+import { routes as careContracts } from "./care-contracts.generated";
 import { routes as catererAccount } from "./caterer-account.generated";
 import { routes as catererAuth } from "./caterer-auth.generated";
 import { routes as catererInvitations } from "./caterer-invitations.generated";
@@ -442,15 +443,18 @@ export const portalRoutes = {
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/criteria"],
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/details"],
     traegerMasterData["DELETE /traeger/master-data/bank-accounts/{id}"],
+    traegerMasterData["DELETE /traeger/master-data/logo"],
     traegerMasterData["GET /traeger/master-data/"],
     traegerMasterData["GET /traeger/master-data/document-templates"],
     traegerMasterData["GET /traeger/master-data/document-templates/export"],
     traegerMasterData["GET /traeger/master-data/document-templates/{kind}"],
+    traegerMasterData["GET /traeger/master-data/logo"],
     traegerMasterData["POST /traeger/master-data/bank-accounts"],
     traegerMasterData["POST /traeger/master-data/document-templates/{kind}/preview"],
     traegerMasterData["POST /traeger/master-data/document-templates/{kind}/versions"],
     traegerMasterData["PUT /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["PUT /traeger/master-data/contact"],
+    traegerMasterData["PUT /traeger/master-data/logo"],
     traegerMasterData["PUT /traeger/master-data/withdrawal-contact"],
     traegerNotifications["GET /traeger/notifications/feed/"],
     traegerNotifications["GET /traeger/notifications/feed/unread-count"],
@@ -1042,6 +1046,7 @@ export const portalRoutes = {
     calendar["POST /api/calendar/feed/rotate"],
     calendar["POST /api/calendar/recipients/{recipientId}/response"],
     calendar["PUT /api/calendar/appointments/{appointmentId}"],
+    careContracts["GET /api/care-contracts/"],
     classListEntries["DELETE /api/class-list-entries/{id}"],
     classListEntries["GET /api/class-list-entries/"],
     classListEntries["POST /api/class-list-entries/"],
@@ -1190,6 +1195,7 @@ export const portalRoutes = {
     me["GET /api/me/groups/supervised"],
     me["GET /api/me/navigation"],
     me["GET /api/me/profile"],
+    me["GET /api/me/profile/avatar/{filename}"],
     me["GET /api/me/staff"],
     me["PUT /api/me/profile"],
     mealBillingMonths["GET /api/meal-billing-months/"],
@@ -1339,6 +1345,7 @@ export const portalRoutes = {
     staff["GET /api/staff/time-tracking/target-coverage"],
     staff["GET /api/staff/{id}"],
     staff["GET /api/staff/{id}/absences"],
+    staff["GET /api/staff/{id}/avatar"],
     staff["GET /api/staff/{id}/documents/{documentId}/download"],
     staff["GET /api/staff/{id}/payroll-number"],
     staff["GET /api/staff/{id}/qualifications"],

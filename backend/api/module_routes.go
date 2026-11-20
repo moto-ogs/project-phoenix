@@ -159,6 +159,10 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/enrollment/form-bootstrap/public", settings.ModuleOnlineAnmeldung},
 	{"/api/enrollment/legal", settings.ModuleOnlineAnmeldung},
 	{"/api/enrollment/requests", settings.ModuleOnlineAnmeldung},
+	// The contracts the Träger made from the application children, read on
+	// the enrollment detail (#4788). Not Verträge und Dokumente: that switch
+	// is not offered yet, and the Träger portal concludes contracts without it.
+	{"/api/care-contracts", settings.ModuleOnlineAnmeldung},
 
 	// Dienstplan.
 	{"/api/staff-shifts", settings.ModuleDienstplan},
