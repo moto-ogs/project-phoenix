@@ -431,7 +431,8 @@ describe("TraegerLoginPage", () => {
 
   it("starts on the school list when the new session cannot be read (#7646)", async () => {
     mockLogin.mockResolvedValue({ status: "authenticated" });
-    mockGetSession.mockRejectedValue(new Error("offline"));
+    // next-auth answers a failed read with null.
+    mockGetSession.mockResolvedValue(null);
     render(<TraegerLoginPage />);
 
     submitCredentials();

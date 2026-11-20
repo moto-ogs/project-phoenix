@@ -14,6 +14,9 @@ import { getSession } from "next-auth/react";
 import { hasPermission } from "~/lib/auth-utils";
 import { traegerPath } from "~/lib/traeger-url";
 
+/** So lange wartet die Anmeldung höchstens auf die neue Sitzung. */
+const SESSION_WAIT_MS = 5000;
+
 /** Das Recht, das das Dashboard öffnet (#4674). */
 const DASHBOARD_RIGHT = "traeger_overview:read";
 const DASHBOARD_PATH = "/traeger/uebersicht";
@@ -33,10 +36,18 @@ export function traegerHomeHref(session: Session | null): string {
 
 /**
  * Das Startziel direkt nach einer Anmeldung: Der Provider kennt die neue
- * Sitzung noch nicht, also liest sie diese Funktion einmal. Scheitert das,
- * führt sie zur Schulliste, die jede Person öffnen darf.
+ * Sitzung noch nicht, also liest sie diese Funktion einmal. Kommt keine
+ * Sitzung (Fehler, null oder keine Antwort nach `SESSION_WAIT_MS`), führt sie
+ * zur Schulliste, die jede Person öffnen darf; die Anmeldung bleibt nie im
+ * Ladezustand stehen.
  */
 export async function fetchTraegerHomeHref(): Promise<string> {
-  const session = await getSession({ broadcast: false }).catch(() => null);
+  const noAnswer = new Promise<null>((resolve) => {
+    setTimeout(() => resolve(null), SESSION_WAIT_MS);
+  });
+  const session = await Promise.race([
+    getSession({ broadcast: false }).catch(() => null),
+    noAnswer,
+  ]);
   return traegerHomeHref(session);
 }

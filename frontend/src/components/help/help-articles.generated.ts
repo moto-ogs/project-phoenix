@@ -14248,7 +14248,7 @@ export const traegerInvitationTopic =
         "Wähle `Weiter zum Dashboard`.",
       ],
       result:
-        "moto öffnet die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
+        "moto öffnet das `Dashboard`. Darfst du es nicht sehen, öffnet moto die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
       notes: [
         "Mit derselben E-Mail-Adresse und demselben Passwort meldest du dich später an.",
         "Ein Konto in einer Schule brauchst du dafür nicht.",
@@ -14321,7 +14321,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Gemerkte Geräte stehen unter `Konto` bei `Meine vertrauten Geräte`. Dort entfernst du ein Gerät wieder.",
       "Am Computer stehen die Bereiche links in der Navigation. Auf dem Handy stehen sie unten. Was dort keinen Platz hat, findest du unter `Mehr`.",
       "`Einstellungen` steht unten in der Navigation. Ein Klick darauf zeigt dort die Einstellungen. `Zurück zur App` führt zurück.",
-      "Ein Klick auf das Logo oben links führt immer zum Start zurück.",
+      "Ein Klick auf das Logo oben links führt zurück zum `Dashboard`. Ohne das Dashboard führt er zu `Schulen`.",
     ],
     troubleshootingDetails: [
       "Keine E-Mail mit Code? Schau im Spam-Ordner nach. Wähle sonst `Neuen Code anfordern`.",
@@ -15650,7 +15650,7 @@ export const traegerTestSystemTopic =
         "Melde dich im Träger-Portal an.",
         "Gehörst du auch zum echten Träger? Wähle den Test-Träger aus.",
         "Oben steht der Hinweis `Testsystem`. So erkennst du das Testsystem.",
-        "Die Seite `Schulen` zeigt die Test-Schulen. Probiere alles aus.",
+        "Unter `Schulen` in der Navigation stehen die Test-Schulen. Probiere alles aus.",
       ],
       result:
         "Wenn du fertig bist, löscht das moto-Team das Testsystem mit allen Test-Schulen.",

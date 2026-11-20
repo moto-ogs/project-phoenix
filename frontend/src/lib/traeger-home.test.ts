@@ -1,7 +1,12 @@
 import type { Session } from "next-auth";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { traegerNavGroupsFor } from "~/components/traeger/shell/traeger-nav-items";
-import { traegerHomePath } from "./traeger-home";
+
+const { mockGetSession } = vi.hoisted(() => ({ mockGetSession: vi.fn() }));
+vi.mock("next-auth/react", () => ({ getSession: mockGetSession }));
+vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
+
+import { fetchTraegerHomeHref, traegerHomePath } from "./traeger-home";
 
 function sessionWith(permissions: string[]): Session {
   return {
@@ -43,5 +48,21 @@ describe("traegerHomePath", () => {
         showsDashboard,
       );
     }
+  });
+});
+
+describe("fetchTraegerHomeHref", () => {
+  it("reads the new session once without telling other tabs", async () => {
+    mockGetSession.mockResolvedValue(sessionWith(["traeger_overview:read"]));
+    await expect(fetchTraegerHomeHref()).resolves.toBe("/traeger/uebersicht");
+    expect(mockGetSession).toHaveBeenCalledWith({ broadcast: false });
+  });
+
+  it("does not wait for a session that never answers", async () => {
+    vi.useFakeTimers();
+    mockGetSession.mockReturnValue(new Promise(() => undefined));
+    const href = fetchTraegerHomeHref();
+    await vi.advanceTimersByTimeAsync(5000);
+    await expect(href).resolves.toBe("/traeger");
   });
 });
