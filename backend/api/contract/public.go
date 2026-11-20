@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/api/common/contractmodel"
 )
 
 // PublicPortal is the pseudo-portal of the routes a request reaches without
@@ -112,4 +114,25 @@ func isParamSegment(segment string) bool {
 
 func segments(pattern string) []string {
 	return strings.FieldsFunc(pattern, func(r rune) bool { return r == '/' })
+}
+
+// fileCacheTraits keeps a route's cache traits on what the proxy can honour
+// (#2352, ADR 0270): a FileCache value of the closed list on a file it hands
+// out, a public value only where PublicFile opens the file, and a
+// conditional GET only on a GET file that names how long it may be kept.
+func fileCacheTraits(rc Registration, where string) error {
+	if rc.FileCache != "" {
+		switch {
+		case !rc.File || rc.Multipart:
+			return fmt.Errorf("%s: FileCache belongs to a file route", where)
+		case !slices.Contains(contractmodel.FileCacheValues, rc.FileCache):
+			return fmt.Errorf("%s: FileCache %q is none of the reviewed values", where, rc.FileCache)
+		case strings.HasPrefix(rc.FileCache, "public") && rc.PublicFile == "":
+			return fmt.Errorf("%s: a public FileCache needs PublicFile", where)
+		}
+	}
+	if rc.ConditionalGet && (rc.Method != "GET" || !rc.File || rc.FileCache == "") {
+		return fmt.Errorf("%s: ConditionalGet belongs to a GET file route with FileCache", where)
+	}
+	return nil
 }

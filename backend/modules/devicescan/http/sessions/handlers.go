@@ -104,24 +104,3 @@ func (rs *Resource) updateSessionSupervisors(w http.ResponseWriter, r *http.Requ
 	}
 	rs.runtime.Success(w, r, http.StatusOK, response, "Supervisors updated successfully")
 }
-
-func (rs *Resource) checkSessionConflict(w http.ResponseWriter, r *http.Request) {
-	if !rs.requireDevice(w, r) {
-		return
-	}
-	req := &SessionStartRequest{}
-	if err := render.Bind(r, req); err != nil {
-		rs.runtime.Failure(w, r, http.StatusBadRequest, err, "")
-		return
-	}
-	response, err := rs.Lifecycle.CheckSessionConflict(r.Context(), req.ActivityID)
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-	if response.HasConflict {
-		rs.runtime.Conflict(w, r, "Conflict detected", response)
-		return
-	}
-	rs.runtime.Success(w, r, http.StatusOK, response, "No conflicts detected")
-}

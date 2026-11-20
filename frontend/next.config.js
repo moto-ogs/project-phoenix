@@ -16,6 +16,25 @@ const config = {
   // trailing slash of its endpoints (/e/, /flags/). src/proxy.ts removes the
   // trailing slash for every other path, as Next.js does by default.
   skipTrailingSlashRedirect: true,
+  // Calendar apps and RSS readers keep the feed address of the day they
+  // subscribed (#2352). It names no backend path, so it is rewritten to the
+  // backend's: the staff portal's catalog proxy serves the feed there as a
+  // public file of its contract, without a session. src/proxy.ts checks the
+  // host against the address before the rewrite.
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/api/calendar-feed/:token",
+          destination: "/api/public/calendar/:token",
+        },
+        {
+          source: "/api/request-feed/:token",
+          destination: "/api/public/request-feed/:token",
+        },
+      ],
+    };
+  },
   async redirects() {
     // :tenant must exclude the literal "api" segment: next.config redirects
     // run before route handlers, so an unguarded /:tenant/... source would

@@ -340,6 +340,28 @@ describe("operator proxy factories", () => {
     expect(response.status).toBe(204);
     await expect(response.text()).resolves.toBe("");
   });
+
+  it("sends the passkey list on the bare path to the contract form without a slash (#2352)", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "success", data: [] }),
+    });
+    const { GET } =
+      await import("~/app/api/operator/auth/passkeys/[[...path]]/route");
+
+    const response = await GET(
+      createProxyRequest("/api/operator/auth/passkeys"),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://localhost:8080/operator/auth/passkeys",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
 });
 
 describe("operator JSON proxies", () => {

@@ -1,5 +1,7 @@
 package common
 
+import "github.com/moto-ogs/project-phoenix/api/common/contractmodel"
+
 // PortalScope names a portal whose proxy may reach a route. For a session
 // portal the value is the scope claim of that portal's session token;
 // PortalPublic admits no session at all.
@@ -74,6 +76,12 @@ type RouteContract struct {
 	// multipart frame, so a file a little too large still reaches the
 	// backend's own check.
 	Multipart bool
+	// PrivateCache lets a file stay in the browser's own cache: the proxy
+	// passes the handler's Cache-Control on when it is private, for an image
+	// whose address carries its version. Any other value, a public one
+	// included, and every refusal leave as private, no-store. Only a File
+	// route may set it.
+	PrivateCache bool
 	// TooLargeCode is the registered error code the proxy answers a multipart
 	// body over MaxBodyBytes with: the code the backend answers a too large
 	// file with, so the client shows the same text.
@@ -92,7 +100,25 @@ type RouteContract struct {
 	// key, and the backend counts the attempt by client IP before it reads
 	// the body. Only a Multipart route of the portal public names it.
 	PublicUpload string
+
+	// FileCache is the Cache-Control the proxy keeps on a file the backend
+	// handed out, route by route (#2352, ADR 0270): one of the FileCache*
+	// values. Without it every answer of a file route is private and
+	// uncached. A public value needs PublicFile.
+	FileCache string
+	// ConditionalGet lets the proxy forward If-None-Match and
+	// If-Modified-Since to a GET file route and hand its 304 back with
+	// ETag, Last-Modified and FileCache. It needs FileCache.
+	ConditionalGet bool
 }
+
+// The Cache-Control values a file route may name in FileCache; the handler
+// sends the same value, so a direct call and the proxy agree.
+const (
+	FileCachePublicAsset         = contractmodel.FileCachePublicAsset
+	FileCachePrivateHour         = contractmodel.FileCachePrivateHour
+	FileCachePrivateImmutableDay = contractmodel.FileCachePrivateImmutableDay
+)
 
 // QueryKind is the value form of a query parameter.
 type QueryKind string

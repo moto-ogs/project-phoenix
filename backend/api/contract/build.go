@@ -146,6 +146,8 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
 		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
+		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
+		PrivateCache: rc.PrivateCache,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
@@ -156,6 +158,12 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 	}
 	if err := multipartTraits(rc, where); err != nil {
 		return route, err
+	}
+	if err := fileCacheTraits(rc, where); err != nil {
+		return route, err
+	}
+	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {
+		return route, fmt.Errorf("%s: PrivateCache belongs to a file route of a session portal", where)
 	}
 	if len(rc.Portals) == 0 {
 		return route, fmt.Errorf("%s names no portal", where)

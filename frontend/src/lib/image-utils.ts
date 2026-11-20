@@ -38,8 +38,9 @@ export async function compressAvatar(file: File): Promise<File> {
   try {
     const compressedBlob = await imageCompression(file, options);
 
-    // Create new File with a single safe extension. The upload proxy rejects
-    // multiple-dot filenames as suspicious, and compression always emits JPEG.
+    // Create new File with a single safe extension. The backend rejects
+    // a name with ".." and an extension that does not name the content, and
+    // compression always emits JPEG.
     const newFileName = safeJpegFilename(file.name);
 
     // Convert blob to File with proper name and type

@@ -376,6 +376,7 @@ func TestImportService_Import(t *testing.T) {
 		assert.Equal(t, 1, result.ErrorCount)
 		assert.Len(t, result.Errors, 1)
 		assert.Equal(t, "creation_failed", result.Errors[0].Errors[0].Code)
+		assert.Equal(t, "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.", result.Errors[0].Errors[0].Message)
 	})
 
 	t.Run("records update errors", func(t *testing.T) {
@@ -401,6 +402,7 @@ func TestImportService_Import(t *testing.T) {
 		assert.Equal(t, 1, result.ErrorCount)
 		assert.Len(t, result.Errors, 1)
 		assert.Equal(t, "update_failed", result.Errors[0].Errors[0].Code)
+		assert.Equal(t, "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.", result.Errors[0].Errors[0].Message)
 	})
 
 	t.Run("records duplicate check errors", func(t *testing.T) {
@@ -423,6 +425,7 @@ func TestImportService_Import(t *testing.T) {
 		assert.Equal(t, 1, result.ErrorCount)
 		assert.Len(t, result.Errors, 1)
 		assert.Equal(t, "duplicate_check_failed", result.Errors[0].Errors[0].Code)
+		assert.Equal(t, "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.", result.Errors[0].Errors[0].Message)
 	})
 
 	t.Run("in create mode records error for existing entity", func(t *testing.T) {
@@ -718,5 +721,6 @@ func TestImportService_DryRunDuplicateCheckError(t *testing.T) {
 		require.NotNil(t, result)
 		assert.Equal(t, 1, result.ErrorCount)
 		assert.Equal(t, "duplicate_check_failed", result.Errors[0].Errors[0].Code)
+		assert.Equal(t, "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.", result.Errors[0].Errors[0].Message)
 	})
 }

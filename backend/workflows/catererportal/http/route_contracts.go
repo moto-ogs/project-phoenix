@@ -28,7 +28,18 @@ func RouteContracts() []common.RouteContract {
 			Request: changePasswordRequest{}, NoData: true,
 			NoRetryAfterRenewal: "a renewed session would send the current password twice",
 		},
+		{
+			Method: "GET", Pattern: "/orders/export",
+			Portals: []common.PortalScope{common.PortalCaterer},
+			Query:   exportQuery, File: true,
+		},
 	}
+}
+
+// exportQuery is what exportWindow reads for a delivery list.
+var exportQuery = []common.QueryParam{
+	{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
+	{Name: "format", Kind: common.QueryString, Values: []string{"csv", "pdf", "xlsx"}},
 }
 
 // SupplyEndedResponse says whether ending the supply ended a running one.
@@ -37,8 +48,7 @@ type SupplyEndedResponse struct {
 }
 
 // SchoolRouteContracts registers the school's side of its caterer, with
-// patterns relative to /api/meal-caterer. The delivery list answers a file
-// and keeps its route file.
+// patterns relative to /api/meal-caterer. The delivery list answers a file.
 func SchoolRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
@@ -46,6 +56,7 @@ func SchoolRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/invitations", Portals: portals, Request: inviteRequest{}, Response: InvitationResponse{}},
 		{Method: "DELETE", Pattern: "/invitations/{invitationId}", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/supply", Portals: portals, Response: SupplyEndedResponse{}},
+		{Method: "GET", Pattern: "/orders/export", Portals: portals, Query: exportQuery, File: true},
 	}
 }
 

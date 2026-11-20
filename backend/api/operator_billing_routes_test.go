@@ -44,7 +44,7 @@ func TestOperatorBillingRoutesKeepTheKeyDayAndTheOwnDays(t *testing.T) {
 	billing, err := owners.NewOperatorBilling(slog.Default())
 	require.NoError(t, err)
 	operator := chi.NewRouter()
-	mountOperatorBillingRoutes(operator, provisioningAPI.NewBillingResource(billing, nil, nil, time.Now))
+	mountOperatorBillingRoutes(operator, provisioningAPI.NewBillingResource(billing, nil))
 	router := chi.NewRouter()
 	router.Mount("/operator", operator)
 	f := operatorProvisioningRoutes{db: db, router: router, ctx: provisioningContext(t, db), operatorID: testpkg.CreateTestOperator(t, db).ID}

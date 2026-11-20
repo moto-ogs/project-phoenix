@@ -86,41 +86,6 @@ func (s *AccountAuthentication) requireSchoolTarget(ctx context.Context, op stri
 	return s.requireSchoolPortal(ctx, op, account.ID, tenantID)
 }
 
-// SwitchSchool re-authenticates a school-portal session to another school
-// where the account holds a school-portal role. The signed source family must
-// still carry live MFA proof if the target school's current policy requires it.
-func (s *AccountAuthentication) SwitchSchool(ctx context.Context, accountID int64, tenantSlug, ipAddress, userAgent, sourceFamilyID string) (string, string, error) {
-	return runFlow2(ctx, s.flow(), func(ctx context.Context) (string, string, error) {
-		account, err := s.loadActiveAccountForSchoolMint(ctx, "switch school", accountID)
-		if err != nil {
-			return "", "", err
-		}
-		var targetTenantID int64
-		if err := s.runtime.WithAdminTx(ctx, func(adminCtx context.Context) error {
-			tenantID, _, resolveErr := s.resolveAccountTenantBySlug(adminCtx, accountID, tenantSlug)
-			if resolveErr != nil {
-				return resolveErr
-			}
-			targetTenantID = tenantID
-			return nil
-		}); err != nil {
-			return "", "", err
-		}
-		if err := s.requireSchoolTarget(ctx, "switch school", account, targetTenantID); err != nil {
-			return "", "", err
-		}
-		minted, err := s.mintAccountSession(ctx, mintRequest{
-			portal: domain.PortalSchool, account: account, tenantID: targetTenantID,
-			sourceFamilyID: sourceFamilyID, retireFamilyID: sourceFamilyID,
-			audit: &mintAudit{event: domain.AuthEventTenantSwitch, ipAddress: ipAddress, userAgent: userAgent, schoolID: targetTenantID},
-		})
-		if err != nil {
-			return "", "", wrapSchoolMintError("switch school", err)
-		}
-		return minted.accessToken, minted.refreshToken, nil
-	})
-}
-
 // loadActiveAccountForSchoolMint fetches the account a non-password school
 // mint is about to issue a token for. Only a genuine miss is
 // ErrAccountNotFound; a database failure propagates as a retryable error

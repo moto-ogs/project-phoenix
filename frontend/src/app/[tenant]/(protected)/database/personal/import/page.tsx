@@ -49,6 +49,11 @@ import { rolesConfig } from "~/components/database/configs/roles.config";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import type {
+  StaffImportError,
+  StaffImportResult,
+  ValidationError,
+} from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -57,40 +62,10 @@ const PERSONAL_IMPORT_INFO =
 
 const logger = createLogger({ component: "StaffImportPage" });
 
-// Types matching the backend API response
-interface ImportError {
-  field: string;
-  message: string;
-  code: string;
-  severity: "error" | "warning" | "info";
-}
-
-interface ImportRowResult {
-  RowNumber: number;
-  Data: {
-    first_name: string;
-    last_name: string;
-    email?: string;
-    role_name: string;
-    position?: string;
-  };
-  Errors: ImportError[];
-  Timestamp: string;
-}
-
-interface ImportResult {
-  StartedAt: string;
-  CompletedAt: string;
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  SkippedCount: number;
-  ErrorCount: number;
-  WarningCount: number;
-  Errors: ImportRowResult[];
-  BulkActions: string[];
-  DryRun: boolean;
-}
+// Vertragsformat des Imports (ADR 0270, #2352).
+type ImportError = ValidationError;
+type ImportRowResult = StaffImportError;
+type ImportResult = StaffImportResult;
 
 type RowStatus = "new" | "existing" | "error" | "warning";
 
@@ -106,7 +81,8 @@ interface DisplayStaff {
   position: string;
 }
 
-function rowStatusFor(errors: ImportError[]): RowStatus {
+function rowStatusFor(findings: readonly ImportError[] | null): RowStatus {
+  const errors = findings ?? [];
   const isExisting = errors.some(
     (e) => e.code === "already_exists" || e.code === "will_update",
   );
@@ -118,19 +94,19 @@ function rowStatusFor(errors: ImportError[]): RowStatus {
 
 function toDisplayStaff(row: ImportRowResult): DisplayStaff {
   return {
-    row: row.RowNumber,
-    status: rowStatusFor(row.Errors),
-    errors: row.Errors.filter((e) => e.severity !== "info").map(
-      (e) => e.message,
-    ),
-    notes: row.Errors.filter((e) => e.severity === "info").map(
-      (e) => e.message,
-    ),
-    first_name: row.Data.first_name,
-    last_name: row.Data.last_name,
-    email: row.Data.email ?? "",
-    role_name: row.Data.role_name,
-    position: row.Data.position ?? "",
+    row: row.row_number,
+    status: rowStatusFor(row.errors),
+    errors: (row.errors ?? [])
+      .filter((e) => e.severity !== "info")
+      .map((e) => e.message),
+    notes: (row.errors ?? [])
+      .filter((e) => e.severity === "info")
+      .map((e) => e.message),
+    first_name: row.data.first_name,
+    last_name: row.data.last_name,
+    email: row.data.email ?? "",
+    role_name: row.data.role_name,
+    position: row.data.position ?? "",
   };
 }
 
@@ -249,19 +225,19 @@ export default function StaffImportPage() {
         }
 
         const importData = result.data as ImportResult;
-        const displayData: DisplayStaff[] = (importData.Errors ?? []).map(
+        const displayData: DisplayStaff[] = (importData.errors ?? []).map(
           toDisplayStaff,
         );
 
         // Rows without issues are not in the Errors array — summarise them.
-        const newCount = importData.TotalRows - displayData.length;
+        const newCount = importData.total_rows - displayData.length;
         if (newCount > 0 && displayData.length === 0) {
           displayData.push({
             row: 0,
             status: "new",
             errors: [],
             notes: [],
-            first_name: `${importData.TotalRows} Mitarbeitende`,
+            first_name: `${importData.total_rows} Mitarbeitende`,
             last_name: "bereit zum Import",
             email: "",
             role_name: "",
@@ -323,12 +299,12 @@ export default function StaffImportPage() {
         if (interrupted) {
           setImportResult(interrupted as ImportResult);
           setImportInterrupted(true);
-          setPreviewData((interrupted.Errors ?? []).map(toDisplayStaff));
+          setPreviewData((interrupted.errors ?? []).map(toDisplayStaff));
           setBatchNotice(importBatchFailureMessage(interrupted));
           logger.error("staff_import_batch_failed", {
-            created: interrupted.CreatedCount,
-            updated: interrupted.UpdatedCount,
-            errors: interrupted.ErrorCount,
+            created: interrupted.created_count,
+            updated: interrupted.updated_count,
+            errors: interrupted.error_count,
           });
           return;
         }
@@ -339,16 +315,16 @@ export default function StaffImportPage() {
       setImportResult(importData);
       setImportInterrupted(false);
 
-      if (importData.ErrorCount > 0) {
+      if (importData.error_count > 0) {
         // Partial success: keep preview visible so the user sees which rows failed.
-        setPreviewData(importData.Errors.map(toDisplayStaff));
+        setPreviewData((importData.errors ?? []).map(toDisplayStaff));
         toast.warning(
-          `Der Import ist fertig: ${importData.CreatedCount} angelegt, ${importData.UpdatedCount} aktualisiert, ${importData.ErrorCount} übersprungen.`,
+          `Der Import ist fertig: ${importData.created_count} angelegt, ${importData.updated_count} aktualisiert, ${importData.error_count} übersprungen.`,
         );
       } else {
         setImportComplete(true);
         toast.success(
-          `Der Import ist fertig: ${importData.CreatedCount} angelegt, ${importData.UpdatedCount} aktualisiert.`,
+          `Der Import ist fertig: ${importData.created_count} angelegt, ${importData.updated_count} aktualisiert.`,
         );
         resetForm();
       }
@@ -388,17 +364,18 @@ export default function StaffImportPage() {
     }
   };
 
-  const alreadyExists = countAlreadyExistsRows(importResult?.Errors);
+  const alreadyExists = countAlreadyExistsRows(importResult?.errors);
   const stats = {
-    total: importResult?.TotalRows ?? 0,
-    new: importResult?.CreatedCount ?? 0,
-    existing: (importResult?.UpdatedCount ?? 0) + alreadyExists,
-    errors: (importResult?.ErrorCount ?? 0) - alreadyExists,
+    total: importResult?.total_rows ?? 0,
+    new: importResult?.created_count ?? 0,
+    existing: (importResult?.updated_count ?? 0) + alreadyExists,
+    errors: (importResult?.error_count ?? 0) - alreadyExists,
   };
   const importable =
     mode === "update"
-      ? (importResult?.UpdatedCount ?? 0)
-      : stats.new + (mode === "upsert" ? (importResult?.UpdatedCount ?? 0) : 0);
+      ? (importResult?.updated_count ?? 0)
+      : stats.new +
+        (mode === "upsert" ? (importResult?.updated_count ?? 0) : 0);
   const importLabel = importInterrupted
     ? "Erneut versuchen"
     : mode === "create"

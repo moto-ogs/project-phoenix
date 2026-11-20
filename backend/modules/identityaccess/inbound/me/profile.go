@@ -17,6 +17,7 @@ import (
 // Avatar upload constants
 const (
 	maxUploadSize   = 5 * 1024 * 1024 // 5MB
+	maxUploadBody   = maxUploadSize + 4096
 	avatarDir       = "public/uploads/avatars"
 	globalAvatarDir = "global"
 )
@@ -33,24 +34,6 @@ type ProfileUpdateRequest struct {
 func (req *ProfileUpdateRequest) Bind(_ *http.Request) error {
 	// No required fields for updates - all are optional
 	return nil
-}
-
-// currentUser is the account the /api/me route renders.
-type currentUser struct {
-	ID            int64      `json:"id"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-	Email         string     `json:"email"`
-	Username      *string    `json:"username,omitempty"`
-	Avatar        string     `json:"avatar,omitempty"`
-	Active        bool       `json:"active"`
-	IsPasswordOTP bool       `json:"is_password_otp"`
-	LastLogin     *time.Time `json:"last_login,omitempty"`
-}
-
-func currentUserResponse(account identityaccess.AccountMetadata) *currentUser {
-	user := currentUser(account)
-	return &user
 }
 
 // ProfileResponse is the profile the /api/me/profile routes render: the
@@ -110,10 +93,9 @@ func (res *Resource) updateCurrentProfile(w http.ResponseWriter, r *http.Request
 // uploadAvatar stores an uploaded avatar image and points the caller's
 // avatar at it; the file is removed again when the update fails.
 func (res *Resource) uploadAvatar(w http.ResponseWriter, r *http.Request) {
-	uploaded, err := common.ParseImage(w, r, "avatar", maxUploadSize)
+	uploaded, err := common.Declared(common.ParseImageWithLimits, common.DeclaredImageTypes)(w, r, "avatar", maxUploadSize, maxUploadBody)
 	if err != nil {
-		render.Status(r, http.StatusBadRequest)
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		common.RenderError(w, r, common.ErrorUpload(err, maxUploadSize))
 		return
 	}
 	defer common.CloseFile(uploaded.File)

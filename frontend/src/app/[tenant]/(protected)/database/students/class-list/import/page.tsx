@@ -41,6 +41,11 @@ import {
   importBatchSavedCount,
   readImportBatchFailure,
 } from "~/lib/import-batch-result";
+import type {
+  ClassListImportError,
+  ClassListImportResult,
+  ValidationError,
+} from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -49,37 +54,9 @@ const CLASS_LIST_IMPORT_INFO =
 
 const logger = createLogger({ component: "ClassListImportPage" });
 
-interface ImportError {
-  field: string;
-  message: string;
-  code: string;
-  severity: "error" | "warning" | "info";
-}
-
-interface ImportRowResult {
-  RowNumber: number;
-  Data: {
-    first_name: string;
-    last_name: string;
-    school_class: string;
-  };
-  Errors: ImportError[];
-  Timestamp: string;
-}
-
-interface ImportResult {
-  StartedAt: string;
-  CompletedAt: string;
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  SkippedCount: number;
-  ErrorCount: number;
-  WarningCount: number;
-  Errors: ImportRowResult[];
-  BulkActions: string[];
-  DryRun: boolean;
-}
+type ImportError = ValidationError;
+type ImportRowResult = ClassListImportError;
+type ImportResult = ClassListImportResult;
 
 type RowStatus = "new" | "existing" | "error" | "warning";
 
@@ -92,7 +69,8 @@ interface DisplayEntry {
   school_class: string;
 }
 
-function rowStatusFor(errors: ImportError[]): RowStatus {
+function rowStatusFor(findings: readonly ImportError[] | null): RowStatus {
+  const errors = findings ?? [];
   const isExisting = errors.some((e) => e.code === "already_exists");
   if (isExisting) return "existing";
   if (errors.some((e) => e.severity === "error")) return "error";
@@ -102,12 +80,12 @@ function rowStatusFor(errors: ImportError[]): RowStatus {
 
 function toDisplayEntry(row: ImportRowResult): DisplayEntry {
   return {
-    row: row.RowNumber,
-    status: rowStatusFor(row.Errors),
-    errors: row.Errors.map((e) => e.message),
-    first_name: row.Data.first_name,
-    last_name: row.Data.last_name,
-    school_class: row.Data.school_class,
+    row: row.row_number,
+    status: rowStatusFor(row.errors),
+    errors: (row.errors ?? []).map((e) => e.message),
+    first_name: row.data.first_name,
+    last_name: row.data.last_name,
+    school_class: row.data.school_class,
   };
 }
 
@@ -201,18 +179,18 @@ export default function ClassListImportPage() {
         }
 
         const importData = result.data as ImportResult;
-        const displayData: DisplayEntry[] = (importData.Errors ?? []).map(
+        const displayData: DisplayEntry[] = (importData.errors ?? []).map(
           toDisplayEntry,
         );
 
         // Rows without issues are not in the Errors array — summarise them.
-        const newCount = importData.TotalRows - displayData.length;
+        const newCount = importData.total_rows - displayData.length;
         if (newCount > 0 && displayData.length === 0) {
           displayData.push({
             row: 0,
             status: "new",
             errors: [],
-            first_name: `${importData.TotalRows} Einträge`,
+            first_name: `${importData.total_rows} Einträge`,
             last_name: "bereit zum Import",
             school_class: "",
           });
@@ -259,12 +237,12 @@ export default function ClassListImportPage() {
         if (interrupted) {
           setImportResult(interrupted as ImportResult);
           setImportInterrupted(true);
-          setPreviewData((interrupted.Errors ?? []).map(toDisplayEntry));
+          setPreviewData((interrupted.errors ?? []).map(toDisplayEntry));
           setBatchNotice(importBatchFailureMessage(interrupted));
           logger.error("class_list_import_batch_failed", {
-            created: interrupted.CreatedCount,
-            updated: interrupted.UpdatedCount,
-            errors: interrupted.ErrorCount,
+            created: interrupted.created_count,
+            updated: interrupted.updated_count,
+            errors: interrupted.error_count,
           });
           return;
         }
@@ -275,22 +253,22 @@ export default function ClassListImportPage() {
       setImportResult(importData);
       setImportInterrupted(false);
 
-      if (importData.ErrorCount > 0) {
+      if (importData.error_count > 0) {
         // Partial success: keep preview visible so the user sees which rows
         // were skipped (already on the class list) or failed.
-        setPreviewData(importData.Errors.map(toDisplayEntry));
-        const skipped = countAlreadyExistsRows(importData.Errors);
-        const failed = importData.ErrorCount - skipped;
+        setPreviewData((importData.errors ?? []).map(toDisplayEntry));
+        const skipped = countAlreadyExistsRows(importData.errors);
+        const failed = importData.error_count - skipped;
         toast.warning(
-          `Der Import ist fertig: ${importData.CreatedCount} angelegt, ${skipped} übersprungen` +
+          `Der Import ist fertig: ${importData.created_count} angelegt, ${skipped} übersprungen` +
             (failed > 0 ? `, ${failed} fehlgeschlagen.` : "."),
         );
       } else {
         setImportComplete(true);
         toast.success(
-          importData.CreatedCount === 1
+          importData.created_count === 1
             ? "1 Eintrag ist angelegt."
-            : `${importData.CreatedCount} Einträge sind angelegt.`,
+            : `${importData.created_count} Einträge sind angelegt.`,
         );
         resetForm();
       }
@@ -330,12 +308,12 @@ export default function ClassListImportPage() {
     }
   };
 
-  const existingCount = countAlreadyExistsRows(importResult?.Errors);
+  const existingCount = countAlreadyExistsRows(importResult?.errors);
   const stats = {
-    total: importResult?.TotalRows ?? 0,
-    new: importResult?.CreatedCount ?? 0,
+    total: importResult?.total_rows ?? 0,
+    new: importResult?.created_count ?? 0,
     existing: existingCount,
-    errors: (importResult?.ErrorCount ?? 0) - existingCount,
+    errors: (importResult?.error_count ?? 0) - existingCount,
   };
 
   // Statuszeile des Seitenkopfs: der Stand des Imports.

@@ -147,16 +147,21 @@ func TestStudentGuardianBatchKeepsOtherRowsInPlace(t *testing.T) {
 	require.Equal(t, rowPath, batch)
 }
 
-// TestStudentGuardianBatchAddsNoWait (Befundklasse 1): with a 1 s read
-// timeout, a holder of the school row for 0.25 s delays the upload once, at
-// the first statement that references the school, as on the row path; the
-// bundled guardian statements reference only the school row the
-// transaction already holds and rows of their own transaction, so they wait
-// for nothing. Bounded and unbounded end with 200, nothing is cancelled,
-// nothing replays.
+// TestStudentGuardianBatchAddsNoWait (Befundklasse 1): with a 2 s read
+// timeout and a 1.5 s batch bound, a holder of the school row for 0.7 s
+// delays the upload once, at the first statement that references the school,
+// as on the row path. The bundled guardian statements reference only the
+// school row the transaction already holds and rows of their own transaction,
+// so they wait for nothing. An unrelated locked guardian and the upload's
+// lock status prove that through pg_blocking_pids and pg_stat_activity.
+// Bounded and unbounded end with 200, nothing is cancelled, nothing replays.
 func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 	t.Parallel()
-	const readTimeout, hold, limit = time.Second, 250 * time.Millisecond, 800 * time.Millisecond
+	const (
+		readTimeout = 2 * time.Second
+		hold        = 700 * time.Millisecond
+		limit       = 1500 * time.Millisecond
+	)
 	db := testpkg.SetupIsolatedTestDB(t)
 	pool, name := namedImportPool(t, testpkg.IsolatedTestDSN(t), readTimeout)
 	for _, bounded := range []bool{true, false} {
@@ -169,6 +174,15 @@ func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 			actor := newImporter(t, db)
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
+			unrelated := testpkg.CreateTestGuardianProfileWithExactEmail(t, db, testpkg.Tenant(t), testpkg.GuardianProfileWithEmail{
+				FirstName: "Eltern", LastName: "Unbeteiligt", Email: fmt.Sprintf("unbeteiligt.%d@example.test", testpkg.Tenant(t)),
+			})
+			unrelatedHolder, err := db.BeginTx(ctx, nil)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = unrelatedHolder.Rollback() })
+			unrelatedPID := sessionPID(t, ctx, unrelatedHolder)
+			var unrelatedID int64
+			require.NoError(t, unrelatedHolder.NewRaw(`SELECT id FROM users.guardian_profiles WHERE id = ? FOR UPDATE`, unrelated.ID).Scan(ctx, &unrelatedID))
 			holder, err := db.BeginTx(ctx, nil)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = holder.Rollback() })
@@ -181,7 +195,19 @@ func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 			time.Sleep(hold)
 			require.NoError(t, holder.Rollback())
 
-			upload := awaitStudents(t, done)
+			var upload studentUpload
+			finished := false
+			deadline := time.Now().Add(20 * time.Second)
+			for !finished && !uploadWaitsForAny(t, db, name, []int{unrelatedPID}) && !uploadWaitsForLock(t, db, name) {
+				require.True(t, time.Now().Before(deadline), "the upload neither ended nor waited for a lock")
+				select {
+				case upload = <-done:
+					finished = true
+				case <-time.After(5 * time.Millisecond):
+				}
+			}
+			require.True(t, finished, "the upload waited for a lock after the school row was released")
+			require.NoError(t, unrelatedHolder.Rollback())
 			require.NoError(t, upload.err)
 			require.Equal(t, studentChunkRows, upload.result.CreatedCount)
 			observation := (*module.Observations)[0]
@@ -276,6 +302,17 @@ func uploadWaitsForAny(t *testing.T, db *bun.DB, upload string, holders []int) b
 	t.Helper()
 	var blocked int
 	err := db.NewRaw(`SELECT count(*) FROM pg_stat_activity WHERE application_name = ? AND pg_blocking_pids(pid) && ?::int[]`, upload, pgdialect.Array(holders)).
+		Scan(context.Background(), &blocked)
+	require.NoError(t, err)
+	return blocked > 0
+}
+
+// uploadWaitsForLock reports whether a session of the upload's own pool is
+// waiting for any PostgreSQL lock.
+func uploadWaitsForLock(t *testing.T, db *bun.DB, upload string) bool {
+	t.Helper()
+	var blocked int
+	err := db.NewRaw(`SELECT count(*) FROM pg_stat_activity WHERE application_name = ? AND wait_event_type = 'Lock'`, upload).
 		Scan(context.Background(), &blocked)
 	require.NoError(t, err)
 	return blocked > 0

@@ -1,4 +1,10 @@
-import { globSync, readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  existsSync,
+  globSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -126,10 +132,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
   ],
   "~/lib/backend-proxy-route.server": ["createPublicJsonProxy"],
   "~/lib/auth-proxy.server": ["authStepProxy"],
-  "~/lib/file-upload-wrapper.server": [
-    "createFileUploadHandler",
-    "proxyFileUpload",
-  ],
+  "~/lib/file-upload-wrapper.server": ["createFileUploadHandler"],
 };
 
 /**
@@ -146,20 +149,6 @@ const DOWNLOAD_POLICY_FACTORIES: Record<string, string[]> = {
 // Non-JSON resources deliberately outside the private-download rule. Image,
 // legal-document and subscription caching is not changed by #5119.
 const NON_DOWNLOAD_RESOURCES: Record<string, string> = {
-  "traeger/master-data/logo":
-    "Authenticated brand image, existing no-store policy",
-  "public/enrollment-form-legal-documents/[filename]":
-    "Public form PDF, public cache policy",
-  "public/enrollment-legal-documents/[filename]":
-    "Public legal PDF, public cache policy",
-  "public/login-image/[filename]": "Public login image, public cache policy",
-  "me/profile/avatar/[filename]":
-    "Session avatar, existing private image cache",
-  "staff/[id]/avatar": "Staff avatar, existing private image cache",
-  "students/[id]/photo/[filename]":
-    "Photo with existing backend revalidation policy",
-  "calendar-feed/[token]": "Subscription feed, private max-age=3600",
-  "request-feed/[token]": "Subscription feed, already private no-store",
   "sse/events": "Live stream, existing SSE cache/abort contract",
   "parent/sse/events": "Live stream, existing SSE cache/abort contract",
   "school/sse/events": "Live stream, existing SSE cache/abort contract",
@@ -357,6 +346,25 @@ describe("BFF route cache policy (#4999)", () => {
         "sse/events/route.ts",
       ]),
     );
+    expect(files).toContain(path.join(API_ROOT, "auth/logout/route.ts"));
+    expect(files).toContain(
+      path.join(API_ROOT, "traeger/auth/logout/route.ts"),
+    );
+    for (const portal of [
+      "",
+      "operator",
+      "parent",
+      "school",
+      "caterer",
+      "traeger",
+    ]) {
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "[...path]", "route.ts"),
+      );
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "auth", "login", "route.ts"),
+      );
+    }
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {
@@ -413,16 +421,14 @@ describe("private download cache policy (#5119)", () => {
       const route = path.relative(API_ROOT, path.dirname(file));
       const text = readFileSync(file, "utf8");
       const fileFactory =
-        /\b(?:createFileExportRoute|createFileDownloadRoute|fileResponse|downloadFile|proxyFile)\s*[(<]/.test(
-          text,
-        );
+        /\b(?:fileResponse|downloadFile|proxyFile)\s*[(<]/.test(text);
       const binaryResponse =
         /new (?:Next)?Response\(/.test(text) &&
         /content-disposition|application\/octet-stream|text\/calendar|text\/event-stream|image\//i.test(
           text,
         );
       const downloadPath =
-        /(?:^|\/)(?:export(?:\/\[format\])?|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
+        /(?:^|\/)(?:export|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
           route,
         );
       return (
@@ -453,9 +459,20 @@ describe("private download cache policy (#5119)", () => {
         .replace(/^\/(?:api\/)?/, "")
         .replace(/\{[^}]+\}|\[[^\]]+\]/g, "[]")
         .replace(/\/$/, "");
+    // A literal hand-off in front of a dynamic neighbour (`students/export`
+    // before `students/[id]`) keeps its file, its wrapper and its entry.
+    const handOff = (route: string) => {
+      const file = path.join(API_ROOT, folder(route), "route.ts");
+      return (
+        !folder(route).includes("[]") &&
+        existsSync(file) &&
+        readFileSync(file, "utf8").includes("catalogProxy(")
+      );
+    };
     const contractFiles = Object.values(portalRoutes)
       .flat()
       .filter((route) => route.response === fileAnswer)
+      .filter((route) => !handOff(route.pattern))
       .map((route) => `${folder(route.pattern)}:${route.method}`);
     expect(contractFiles.length).toBeGreaterThan(0);
     const listed = new Set(

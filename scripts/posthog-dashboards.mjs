@@ -369,6 +369,9 @@ export const NO_FEATURE_PAGES = Object.freeze({
   school: ['/login', '/invite', '/reset-password'],
 });
 
+/** Backend events of the announcement (#7555): seen, closed (core_actions.go). */
+const ANNOUNCEMENT_EVENTS = ['announcement_seen', 'announcement_dismissed'];
+
 /** Server events of the care worker's first steps (#7553, core_actions.go). */
 export const STAFF_FIRST_STEPS_EVENTS = Object.freeze(['staff_first_step_changed', 'staff_first_steps_completed', 'staff_first_steps_dismissed']);
 
@@ -398,9 +401,13 @@ const NO_FEATURE_EVENTS = [
   // The care worker's first steps (#7553): getting in, not using a feature.
   ...STAFF_FIRST_STEPS_EVENTS,
   'caterer_invite_accepted', 'meal_order_confirmed',
+  // The announcement of the entry (#7555): backend events of its routes.
+  ...ANNOUNCEMENT_EVENTS,
   // Clicks inside a page the browser reports (tab, bell): the page view
   // already counts the feature, a click is no action of its own.
   'child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read',
+  // „Heute anders“ on the start page (#7659): clicks inside the page.
+  'day_changes_entry_clicked', 'day_changes_show_all',
 ];
 
 /**
@@ -1239,6 +1246,23 @@ where ${where}
   and timestamp > now() - interval 30 day
 group by Schritt
 order by ${quoted('Übersprungen')} desc`),
+        },
+        {
+          name: 'Einstieg: Ankündigung gesehen und geschlossen',
+          description: 'Letzte 30 Tage, auch ohne Einwilligung, je Schule gezählt, ohne Person oder Sitzung. Gesehen: eine Ankündigung erschien im OGS-Portal. Geschlossen: per „Verstanden“ oder X; das X schließt alle wartenden auf einmal. Daher gibt es keinen Prozentwert. Zählt Anzeigen, nicht Personen: eine nicht geschlossene erscheint beim nächsten Laden wieder.',
+          ...hogql('production', (where) => `
+select
+  coalesce(properties.role, 'unbekannt') as Rolle,
+  countIf(event = 'announcement_seen') as Gesehen,
+  countIf(event = 'announcement_dismissed') as Geschlossen,
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and event in ${sqlList(ANNOUNCEMENT_EVENTS)}
+  and ${SCHOOL_EVENT}
+  and timestamp > now() - interval 30 day
+group by Rolle
+order by Gesehen desc`),
         },
         {
           name: 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)',

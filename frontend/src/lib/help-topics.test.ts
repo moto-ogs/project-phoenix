@@ -251,8 +251,8 @@ describe("getParentHelpTopicForPath", () => {
       group: "einstieg",
     });
     // Am Computer, Wie die Seitenleiste geordnet ist, Die einfache
-    // Seitenleiste (#6956), Auf dem Handy oder Tablet, Die Startseite
-    // anpassen (#4347), Hilfe öffnen.
+    // Seitenleiste (#6956), Auf dem Handy oder Tablet, Was heute anders
+    // ist (#7659), Die Startseite anpassen (#4347), Hilfe öffnen.
     expect(
       caregiverTopics[3]?.instructionGroups?.map((group) => group.title),
     ).toEqual([
@@ -260,6 +260,7 @@ describe("getParentHelpTopicForPath", () => {
       "Wie die Seitenleiste geordnet ist",
       "Die einfache Seitenleiste",
       "Auf dem Handy oder Tablet",
+      "Was heute anders ist",
       "Die Startseite anpassen",
       "Hilfe öffnen",
     ]);

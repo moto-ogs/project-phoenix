@@ -214,9 +214,6 @@ func seedBookingProfileAttendance(rt *Runtime, state *SeedState) error {
 	if err := verifyManualVisits(rt); err != nil {
 		return err
 	}
-	if err := verifyManualVisitHistories(rt, students); err != nil {
-		return err
-	}
 	virtual, err := verifyProfileDevices(rt, 1)
 	if err != nil {
 		return err

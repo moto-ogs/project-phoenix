@@ -4,16 +4,16 @@ const importBatchFailedCode: ErrorCode = "import.import_batch_failed";
 const abortingWriteCodes = new Set(["creation_failed", "update_failed"]);
 
 interface ImportBatchRowError {
-  RowNumber: number;
-  Errors?: ReadonlyArray<{ code?: string }>;
+  row_number: number;
+  errors?: ReadonlyArray<{ code?: string }> | null;
 }
 
 export interface ImportBatchResult<T = ImportBatchRowError> {
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  ErrorCount: number;
-  Errors: T[];
+  total_rows: number;
+  created_count: number;
+  updated_count: number;
+  error_count: number;
+  errors: T[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -27,7 +27,7 @@ function importBatchErrors(value: unknown): unknown[] | undefined {
 }
 
 function rowHasAbortingWrite(entry: ImportBatchRowError): boolean {
-  return (entry.Errors ?? []).some((error) =>
+  return (entry.errors ?? []).some((error) =>
     abortingWriteCodes.has(error.code ?? ""),
   );
 }
@@ -35,7 +35,7 @@ function rowHasAbortingWrite(entry: ImportBatchRowError): boolean {
 /**
  * Reads the committed import outcome from an `import.import_batch_failed` envelope.
  * Returns null for any other error so callers keep their generic failure path.
- * A nil Go slice encodes as `Errors: null`; that is an empty list, not a
+ * A nil Go slice encodes as `errors: null`; that is an empty list, not a
  * malformed payload.
  */
 export function readImportBatchFailure<T>(
@@ -48,17 +48,17 @@ export function readImportBatchFailure<T>(
     return null;
   }
   const result = payload.details.result;
-  const errors = importBatchErrors(result.Errors);
+  const errors = importBatchErrors(result.errors);
   if (
-    typeof result.CreatedCount !== "number" ||
-    typeof result.UpdatedCount !== "number" ||
-    typeof result.ErrorCount !== "number" ||
-    typeof result.TotalRows !== "number" ||
+    typeof result.created_count !== "number" ||
+    typeof result.updated_count !== "number" ||
+    typeof result.error_count !== "number" ||
+    typeof result.total_rows !== "number" ||
     errors === undefined
   ) {
     return null;
   }
-  return { ...result, Errors: errors } as unknown as ImportBatchResult<T>;
+  return { ...result, errors: errors } as unknown as ImportBatchResult<T>;
 }
 
 /**
@@ -77,29 +77,29 @@ export function readImportBatchRejection(payload: unknown): unknown {
 }
 
 export function importBatchSavedCount(result: {
-  CreatedCount: number;
-  UpdatedCount: number;
+  created_count: number;
+  updated_count: number;
 }): number {
-  return result.CreatedCount + result.UpdatedCount;
+  return result.created_count + result.updated_count;
 }
 
 /** Create-mode preview records already-written rows as already_exists, not as remaining work. */
 export function countAlreadyExistsRows(
   rows:
-    | ReadonlyArray<{ Errors: ReadonlyArray<{ code: string }> }>
+    | ReadonlyArray<{ errors: ReadonlyArray<{ code: string }> | null }>
     | null
     | undefined,
 ): number {
   return (rows ?? []).filter((row) =>
-    row.Errors.some((error) => error.code === "already_exists"),
+    (row.errors ?? []).some((error) => error.code === "already_exists"),
   ).length;
 }
 
 function importBatchBlockingRow(result: ImportBatchResult): number | undefined {
-  for (let index = result.Errors.length - 1; index >= 0; index -= 1) {
-    const row = result.Errors[index];
-    if (row && row.RowNumber > 0 && rowHasAbortingWrite(row)) {
-      return row.RowNumber;
+  for (let index = result.errors.length - 1; index >= 0; index -= 1) {
+    const row = result.errors[index];
+    if (row && row.row_number > 0 && rowHasAbortingWrite(row)) {
+      return row.row_number;
     }
   }
   return undefined;

@@ -51,7 +51,7 @@ func newOperatorProvisioningRoutes(t *testing.T) operatorProvisioningRoutes {
 	})
 	operator := chi.NewRouter()
 	mountOperatorProvisioningRoutes(operator, resource, nil)
-	mountOperatorSchoolRoutes(operator, resource, nil, nil, nil)
+	mountOperatorSchoolRoutes(operator, resource, nil, nil, demoOperatorRoutes{})
 	router := chi.NewRouter()
 	router.Mount("/operator", operator)
 	return operatorProvisioningRoutes{
@@ -332,13 +332,13 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	f := operatorProvisioningRoutes{router: router, ctx: ctx, operatorID: operatorID}
 	base := fmt.Sprintf("/operator/announcements/%d", announcement.ID)
 
+	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
 	f.call(t, http.MethodPost, base+"/publish", nil, nil)
 	var publishedAt *time.Time
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcements").Column("published_at").Where("id = ?", announcement.ID).Scan(testpkg.Ctx(t), &publishedAt))
 	assert.NotNil(t, publishedAt, "the announcement is published")
 
-	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
-	require.NoError(t, module.MarkSeen(ctx, viewer.ID, announcement.ID))
+	require.NoError(t, module.MarkSeen(ctx, announcementViewer(viewer.ID, testpkg.Tenant(t), tenantOrganizationID(t, db, testpkg.Tenant(t))), announcement.ID))
 	var stats struct {
 		AnnouncementID int64 `json:"announcement_id"`
 		SeenCount      int   `json:"seen_count"`
@@ -347,13 +347,15 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	assert.Equal(t, announcement.ID, stats.AnnouncementID)
 	assert.Equal(t, 1, stats.SeenCount)
 	var views []struct {
-		UserID   int64  `json:"user_id"`
-		UserName string `json:"user_name"`
+		UserID   int64   `json:"user_id"`
+		UserName string  `json:"user_name"`
+		ShownAt  *string `json:"shown_at"`
 	}
 	f.call(t, http.MethodGet, base+"/views", nil, &views)
 	require.Len(t, views, 1)
 	assert.Equal(t, viewer.ID, views[0].UserID)
 	assert.Equal(t, "Route Leserin", views[0].UserName)
+	assert.NotNil(t, views[0].ShownAt)
 }
 
 // The review of unregistered RFID scans lists a Träger's open scans and,

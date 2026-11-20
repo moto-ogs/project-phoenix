@@ -429,20 +429,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (e CallerEngine) GroupStudentIDs(ctx context.Context, sessionID int64) ([]int64, error) {\n\tids, err := e.App.GroupStudentIDs(ctx, sessionID)\n\treturn ids, mapCallerError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupStudentIDs",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
-      "evidence": "func (e CallerEngine) GroupVisits(ctx context.Context, sessionID int64) ([]identityaccess.CallerVisit, error) {\n\tvisits, err := e.App.GroupVisits(ctx, sessionID)\n\tif err != nil {\n\t\treturn nil, mapCallerError(err)\n\t}\n\tvar result []identityaccess.CallerVisit\n\tfor _, visit := range visits {\n\t\tresult = append(result, identityaccess.CallerVisit(visit))\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupVisits",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
       "evidence": "func (e CallerEngine) HasCurrentStaff(ctx context.Context) (bool, error) {\n\tfound, err := e.App.HasCurrentStaff(ctx)\n\treturn found, mapCallerError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/CallerEngine.HasCurrentStaff",
@@ -558,13 +544,6 @@
       "evidence": "func (p CallerPeople) FindPersonByAccount(ctx context.Context, accountID int64) (domain.CallerPerson, bool, error) {\n\tperson, found, err := p.CallerPeople.FindPersonByAccount(ctx, accountID)\n\treturn domain.CallerPerson(person), found, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/CallerPeople.FindPersonByAccount",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s CallerSessions) SessionVisits(ctx context.Context, sessionID int64) ([]domain.CallerVisit, error) {\n\tvisits, err := s.CallerSessions.SessionVisits(ctx, sessionID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]domain.CallerVisit, 0, len(visits))\n\tfor _, visit := range visits {\n\t\tresult = append(result, domain.CallerVisit(visit))\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/CallerSessions.SessionVisits",
       "owner": "modules/identityaccess"
     },
     {
@@ -999,13 +978,6 @@
       "evidence": "func (r GuardianInvitationReads) ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListOpenGuardianInvitations(txCtx, guardianProfileIDs)\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListOpenGuardianInvitations",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx)\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListRedeemableGuardianInvitations",
       "owner": "modules/identityaccess"
     },
     {

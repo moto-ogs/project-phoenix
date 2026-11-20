@@ -5,6 +5,7 @@ import { makePortalHandlers } from "~/lib/portal-handlers.server";
 import { testPortalBinding } from "~/test/portal-binding";
 import {
   makeCatalogProxy,
+  privateCacheControl,
   type CatalogMethod,
   type CatalogRoute,
 } from "./catalog-proxy.server";
@@ -25,10 +26,38 @@ const portal = makePortalHandlers(testPortalBinding(mockAuth));
 
 const LIMIT = 1024;
 const routes: CatalogRoute[] = [
+  // A photo behind an upload URL: kept privately, revalidated with a 304.
+  {
+    method: "GET",
+    pattern: "/traeger/rows/{id}/photo/{filename}",
+    response: fileAnswer,
+    fileCache: "private, max-age=86400, immutable",
+    conditionalGet: true,
+  },
+  // A public cache on a session file is never kept, nor an unknown value.
+  {
+    method: "GET",
+    pattern: "/traeger/rows/{id}/public-logo",
+    response: fileAnswer,
+    fileCache: "public, max-age=86400",
+  },
+  {
+    method: "GET",
+    pattern: "/traeger/rows/{id}/sheet",
+    response: fileAnswer,
+    fileCache: "private, max-age=31536000",
+  },
   {
     method: "GET",
     pattern: "/traeger/rows/export",
     query: ["format", "from"],
+    response: fileAnswer,
+  },
+  {
+    method: "GET",
+    pattern: "/traeger/rows/{id}/logo",
+    query: ["v"],
+    privateCache: true,
     response: fileAnswer,
   },
   {
@@ -239,6 +268,212 @@ describe("catalog file route", () => {
   });
 });
 
+/**
+ * A file the contract marks `privateCache` keeps the backend's private
+ * Cache-Control (an image whose address names its version, #2352); every
+ * other file, and every refusal, stays private and uncached.
+ */
+describe("catalog file cache", () => {
+  const image = (cacheControl?: string) =>
+    new Response(new Uint8Array([0x89, 0x50]), {
+      headers: {
+        "Content-Type": "image/png",
+        ...(cacheControl && { "Cache-Control": cacheControl }),
+      },
+    });
+
+  it("passes a private cache policy of a marked file on", async () => {
+    mockFetch.mockResolvedValue(image("private, max-age=31536000, immutable"));
+
+    const response = await call("GET", ["rows", "7", "logo"], {}, "?v=1");
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=31536000, immutable",
+    );
+    expect(mockFetch.mock.calls[0]?.[0]).toBe(
+      "http://backend/traeger/rows/7/logo?v=1",
+    );
+  });
+
+  it.each([
+    ["a public policy", "public, max-age=86400"],
+    ["a policy that is not private", "max-age=86400"],
+    ["no policy", undefined],
+  ])("never lets a marked file out with %s", async (_name, policy) => {
+    mockFetch.mockResolvedValue(image(policy));
+
+    const response = await call("GET", ["rows", "7", "logo"]);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("keeps a refusal of a marked file uncached", async () => {
+    mockFetch.mockResolvedValue(problem(404, "general.not_found"));
+
+    const response = await call("GET", ["rows", "7", "logo"]);
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("keeps a missing session of a marked file uncached", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const response = await call("GET", ["rows", "7", "logo"]);
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("drops the backend's cache policy of an unmarked file", async () => {
+    mockFetch.mockResolvedValue(
+      new Response("a;b\n", {
+        headers: { "Cache-Control": "private, max-age=86400" },
+      }),
+    );
+
+    const response = await call("GET", ["rows", "export"]);
+
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("reads private and public as directives, not as text", () => {
+    expect(privateCacheControl("Private, Max-Age=60")).toBe(
+      "Private, Max-Age=60",
+    );
+    expect(privateCacheControl("private, public")).toBe("private, no-store");
+    expect(privateCacheControl("max-age=60, x-private")).toBe(
+      "private, no-store",
+    );
+  });
+});
+
+describe("catalog file route with its own cache (#2352)", () => {
+  const photo = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+  const lastModified = "Wed, 09 Sep 2026 10:00:00 GMT";
+  const photoAnswer = () =>
+    new Response(photo, {
+      headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "private, max-age=86400, immutable",
+        ETag: 'W/"abc123"',
+        "Last-Modified": lastModified,
+        "Set-Cookie": "backend=1",
+      },
+    });
+  const getPhoto = (headers: Record<string, string> = {}) =>
+    call("GET", ["rows", "42", "photo", "42_abc.jpg"], { headers });
+  const sent = (index = 0) => {
+    const init = mockFetch.mock.calls[index]?.[1] as RequestInit | undefined;
+    return (init?.headers ?? {}) as Record<string, string>;
+  };
+
+  it("streams the photo with the route's cache and its validators", async () => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    const response = await getPhoto();
+
+    expect(response.status).toBe(200);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(photo);
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=86400, immutable",
+    );
+    expect(response.headers.get("ETag")).toBe('W/"abc123"');
+    expect(response.headers.get("Last-Modified")).toBe(lastModified);
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(response.headers.get("X-Moto-Catalog-Keep-Cache")).toBeNull();
+    expect(mockFetch.mock.calls[0]?.[0]).toBe(
+      "http://backend/traeger/rows/42/photo/42_abc.jpg",
+    );
+  });
+
+  it("forwards If-None-Match and If-Modified-Since with the bearer", async () => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    await getPhoto({
+      "If-None-Match": 'W/"abc123"',
+      "If-Modified-Since": lastModified,
+      "If-Match": "x",
+    });
+    expect(sent()["If-None-Match"]).toBe('W/"abc123"');
+    expect(sent()["If-Modified-Since"]).toBe(lastModified);
+    expect(sent()).not.toHaveProperty("If-Match");
+    expect(sent().Authorization).toBe("Bearer org-token");
+  });
+
+  it("adds no conditional header the browser did not send", async () => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    await getPhoto();
+    expect(Object.keys(sent()).filter((name) => /^if-/i.test(name))).toEqual(
+      [],
+    );
+  });
+
+  it("hands the backend's 304 back with its validators and no body", async () => {
+    mockFetch.mockResolvedValue(
+      new Response(null, {
+        status: 304,
+        headers: { ETag: 'W/"abc123"', "Last-Modified": lastModified },
+      }),
+    );
+    const response = await getPhoto({ "If-None-Match": 'W/"abc123"' });
+
+    expect(response.status).toBe(304);
+    expect(response.body).toBeNull();
+    expect(response.headers.get("Cache-Control")).toBe(
+      "private, max-age=86400, immutable",
+    );
+    expect(response.headers.get("ETag")).toBe('W/"abc123"');
+    expect(response.headers.get("Last-Modified")).toBe(lastModified);
+  });
+
+  it("repeats the conditional GET once with the renewed session", async () => {
+    mockAuth
+      .mockResolvedValueOnce({ user: { token: "stale-token" } })
+      .mockResolvedValueOnce({ user: { token: "stale-token" } })
+      .mockResolvedValue({ user: { token: "fresh-token" } });
+    mockFetch
+      .mockResolvedValueOnce(problem(401, "auth.token_expired"))
+      .mockResolvedValueOnce(photoAnswer());
+    const response = await getPhoto({ "If-None-Match": 'W/"abc123"' });
+
+    expect(response.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(sent(1).Authorization).toBe("Bearer fresh-token");
+    expect(sent(1)["If-None-Match"]).toBe('W/"abc123"');
+  });
+
+  it("keeps a refusal private and uncached", async () => {
+    mockFetch.mockResolvedValue(problem(404, "students.photo_not_found"));
+    const response = await getPhoto();
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("answers 401 without a session, privately, before the backend", async () => {
+    mockAuth.mockResolvedValue(null);
+    const response = await getPhoto();
+    expect(response.status).toBe(401);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a public cache on a session file", "public-logo"],
+    ["a value Go never reviewed", "sheet"],
+  ])("keeps no cache for %s", async (_name, file) => {
+    mockFetch.mockResolvedValue(photoAnswer());
+    const response = await call("GET", ["rows", "42", file], {
+      headers: { "If-None-Match": 'W/"abc123"' },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(response.headers.get("ETag")).toBeNull();
+    expect(sent()).not.toHaveProperty("If-None-Match");
+  });
+});
+
 describe("catalog multipart upload", () => {
   it("normalizes a successful 204 to a 200 no-data envelope", async () => {
     mockFetch.mockResolvedValue(new Response(null, { status: 204 }));
@@ -340,6 +575,34 @@ describe("catalog multipart upload", () => {
 
     expect(response.status).toBe(401);
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  // An import whose later batch failed answers 500 with the saved part in
+  // details.result; the page shows it (#2352, readImportBatchFailure).
+  it("keeps a coded 500 with its details, such as a failed import batch", async () => {
+    const result = { total_rows: 3, created_count: 2, errors: [] };
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          detail: "batch 2 failed",
+          code: "import.import_batch_failed",
+          details: { result },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+    );
+    const response = await upload("abcd");
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({
+      code: "import.import_batch_failed",
+      details: { result },
+    });
   });
 
   it("passes the backend's refusal of the file on as its problem", async () => {

@@ -133,7 +133,25 @@ func resourceAlias(resource string) string {
 	for i := 1; i < len(parts); i++ {
 		parts[i] = upperFirst(parts[i])
 	}
-	return strings.Join(parts, "")
+	alias := strings.Join(parts, "")
+	// A resource such as /api/import names a reserved word, which the import
+	// of portals.generated.ts cannot bind.
+	if reservedWords[alias] {
+		return alias + "Routes"
+	}
+	return alias
+}
+
+// reservedWords are the ECMAScript words an import binding may not take.
+var reservedWords = map[string]bool{
+	"await": true, "break": true, "case": true, "catch": true, "class": true, "const": true,
+	"continue": true, "debugger": true, "default": true, "delete": true, "do": true, "else": true,
+	"enum": true, "export": true, "extends": true, "false": true, "finally": true, "for": true,
+	"function": true, "if": true, "implements": true, "import": true, "in": true, "instanceof": true,
+	"interface": true, "let": true, "new": true, "null": true, "package": true, "private": true,
+	"protected": true, "public": true, "return": true, "static": true, "super": true, "switch": true,
+	"this": true, "throw": true, "true": true, "try": true, "typeof": true, "var": true,
+	"void": true, "while": true, "with": true, "yield": true,
 }
 
 func routeSchemas(r Route) []Schema {
@@ -341,6 +359,15 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	}
 	if route.PublicUpload != "" {
 		fmt.Fprintf(out, "    publicUpload: %q,\n", route.PublicUpload)
+	}
+	if route.FileCache != "" {
+		fmt.Fprintf(out, "    fileCache: %q,\n", route.FileCache)
+	}
+	if route.ConditionalGet {
+		out.WriteString("    conditionalGet: true,\n")
+	}
+	if route.PrivateCache {
+		out.WriteString("    privateCache: true,\n")
 	}
 	if len(route.Query) > 0 {
 		names := make([]string, len(route.Query))

@@ -73,6 +73,11 @@ type Registration struct {
 	PublicFile string
 	// PublicUpload is the marker that opens one upload to the portal public.
 	PublicUpload string
+
+	// FileCache and ConditionalGet are the cache traits of a file route.
+	FileCache      string
+	ConditionalGet bool
+	PrivateCache   bool
 }
 
 // VariantSpec is a response whose shape a query parameter selects.

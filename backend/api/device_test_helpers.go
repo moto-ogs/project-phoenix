@@ -36,5 +36,4 @@ type DeviceTestRecords interface {
 	FindByAPIKey(ctx context.Context, apiKey string) (*devicefleet.Device, error)
 	List(ctx context.Context, filters map[string]any) ([]*devicefleet.Device, error)
 	UpdateRoomID(ctx context.Context, id int64, roomID int64) error
-	CountDevicesByType(ctx context.Context) (map[string]int, error)
 }

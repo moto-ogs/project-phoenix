@@ -49,12 +49,6 @@ func (r *visitRepoForActiveWrapperTest) ListStudentDisplayFacts(context.Context,
 	return result, r.err
 }
 
-type crossTenantRepoForActiveWrapperTest struct {
-	students           []ports.CrossTenantStudent
-	err                error
-	gotHostingTenantID int64
-}
-
 type displayFactsForActiveTest struct {
 	rows []StudentDisplayFacts
 	err  error
@@ -90,22 +84,6 @@ func TestVisitDisplayOmitsUnknownStudentsAndPropagatesDirectoryFailure(t *testin
 	rows, err = svc.GetActiveGroupVisitsWithDisplay(context.Background(), 80)
 	require.ErrorIs(t, err, injected)
 	assert.Nil(t, rows)
-}
-
-func (r *crossTenantRepoForActiveWrapperTest) FindCrossTenantStudents(_ context.Context, hostingTenantID int64) ([]ports.CrossTenantStudent, error) {
-	r.gotHostingTenantID = hostingTenantID
-	return r.students, r.err
-}
-
-type schoolQueryForActiveWrapperTest struct {
-	schools []School
-	err     error
-	gotIDs  []int64
-}
-
-func (q *schoolQueryForActiveWrapperTest) ListSchoolsByID(_ context.Context, ids []int64) ([]School, error) {
-	q.gotIDs = append([]int64(nil), ids...)
-	return q.schools, q.err
 }
 
 type staffRepoForActiveWrapperTest struct {
@@ -352,6 +330,28 @@ func TestClaimActiveGroupUsesPresenceOwner(t *testing.T) {
 	owner.err = studentpresence.ErrAlreadySupervising
 	_, err = svc.ClaimActiveGroup(ctx, 42, 84, "supervisor")
 	require.ErrorIs(t, err, ErrStaffAlreadySupervising)
+}
+
+type crossTenantRepoForActiveWrapperTest struct {
+	students           []ports.CrossTenantStudent
+	err                error
+	gotHostingTenantID int64
+}
+
+func (r *crossTenantRepoForActiveWrapperTest) FindCrossTenantStudents(_ context.Context, hostingTenantID int64) ([]ports.CrossTenantStudent, error) {
+	r.gotHostingTenantID = hostingTenantID
+	return r.students, r.err
+}
+
+type schoolQueryForActiveWrapperTest struct {
+	schools []School
+	err     error
+	gotIDs  []int64
+}
+
+func (q *schoolQueryForActiveWrapperTest) ListSchoolsByID(_ context.Context, ids []int64) ([]School, error) {
+	q.gotIDs = append([]int64(nil), ids...)
+	return q.schools, q.err
 }
 
 func TestGetCrossTenantStudents_Branches(t *testing.T) {

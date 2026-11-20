@@ -36,27 +36,3 @@ func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64)
 	}
 	return row.ID, row.TenantID, true, err
 }
-
-func (p AttendanceRoutePeople) GetStudentByPersonID(ctx context.Context, id int64) (int64, *int64, bool, error) {
-	row, err := p.source.StudentRows().FindByPersonID(ctx, id)
-	if row == nil {
-		return 0, nil, false, err
-	}
-	return row.ID, row.GroupID, true, err
-}
-
-func (p AttendanceRoutePeople) GetTeacherByStaffID(ctx context.Context, id int64) (int64, bool, error) {
-	row, err := p.source.TeacherRows().FindByStaffID(ctx, id)
-	if row == nil {
-		return 0, false, err
-	}
-	return row.ID, true, err
-}
-
-func (p AttendanceRoutePeople) GetStudentByID(ctx context.Context, id int64) (int64, *int64, bool, error) {
-	row, err := p.source.StudentRows().FindByID(ctx, id)
-	if row == nil {
-		return 0, nil, false, err
-	}
-	return row.ID, row.GroupID, true, err
-}

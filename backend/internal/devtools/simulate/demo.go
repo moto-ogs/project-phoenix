@@ -512,9 +512,10 @@ func (d *DemoTicker) sendHome(ctx context.Context, now time.Time, latest map[int
 			continue
 		}
 		sent++
-		// The staff checkout ends the room visit and the day's attendance;
-		// the kiosk could only do that inside a session of its own.
-		if _, err := d.options.Client.Post(fmt.Sprintf("/api/active/visits/student/%d/checkout", student.ID), nil); err != nil {
+		// The web checkout of the child list ends the day's attendance and
+		// any open room visit; the kiosk could only do that inside a session
+		// of its own. A child already gone answers unchanged, not an error.
+		if _, err := d.options.Client.Post(fmt.Sprintf("/api/students/%d/school-checkin", student.ID), map[string]any{"action": "out"}); err != nil {
 			// Also a child that already left on its own; nothing to undo.
 			slog.Debug("demo day: child not sent home",
 				"student_id", student.ID,

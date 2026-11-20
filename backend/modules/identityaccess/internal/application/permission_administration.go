@@ -53,16 +53,6 @@ func (r *RoleAdministration) GetPermissionByName(ctx context.Context, name strin
 	return
 }
 
-func (r *RoleAdministration) deletePermission(ctx context.Context, id int64) error {
-	if err := r.store.DeletePermissionAssignments(ctx, id); err != nil {
-		return failed("delete role permissions", err)
-	}
-	if err := r.store.DeletePermission(ctx, id); err != nil {
-		return failed("delete permission", err)
-	}
-	return nil
-}
-
 // AssignPermissionToRole adds a permission to a custom role.
 func (r *RoleAdministration) AssignPermissionToRole(ctx context.Context, roleID, permissionID int64) (err error) {
 	if r == nil {

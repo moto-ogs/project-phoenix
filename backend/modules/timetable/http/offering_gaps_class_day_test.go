@@ -1,17 +1,21 @@
 package timetablehttp
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -236,4 +240,68 @@ func TestOfferingGapsClassDayQueryBudget(t *testing.T) {
 	t.Logf("query budget: 3 templates → %d queries, 8 templates → %d queries", small, large)
 	assert.Equal(t, small, large, "query count must not grow with the number of Regeltermine")
 	querybudgets.AssertQueryBudget(t, "api.timetable.offering_gaps.class_day", counter.Measurement(counter.Queries()))
+}
+
+// Activity exception fixtures for the offering-gap tests.
+
+// createTestActivityException is a local fixture; it inserts the schedule.activity_exceptions
+// row with raw SQL so the test does not depend on the storage model type.
+func createTestActivityException(
+	t *testing.T,
+	db *bun.DB,
+	activityGroupID int64,
+	date calendar.Date,
+	excType string,
+	startHHMM, endHHMM string,
+	reason string,
+) int64 {
+	t.Helper()
+	return insertTestActivityException(t, db, activityGroupID, date, excType, startHHMM, endHHMM, reason, nil)
+}
+
+// insertTestActivityException writes one schedule.activity_exceptions row;
+// empty strings and a nil room store NULL.
+func insertTestActivityException(
+	t *testing.T,
+	db *bun.DB,
+	activityGroupID int64,
+	date calendar.Date,
+	excType string,
+	startHHMM, endHHMM string,
+	reason string,
+	roomID *int64,
+) int64 {
+	t.Helper()
+	var start, end, reasonValue any
+	if startHHMM != "" {
+		start = parseHHMM(t, startHHMM).Format("15:04:05")
+	}
+	if endHHMM != "" {
+		end = parseHHMM(t, endHHMM).Format("15:04:05")
+	}
+	if reason != "" {
+		reasonValue = reason
+	}
+	var room any
+	if roomID != nil {
+		room = *roomID
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var id int64
+	err := db.NewRaw(`INSERT INTO schedule.activity_exceptions
+		(tenant_id, activity_group_id, exception_date, exception_type, start_time, end_time, room_id, reason)
+		VALUES (?, ?, ?, ?, ?::time, ?::time, ?, ?) RETURNING id`,
+		testpkg.Tenant(t), activityGroupID, date.String(), excType, start, end, room, reasonValue,
+	).Scan(ctx, &id)
+	require.NoError(t, err, "failed to insert activity_exception fixture")
+	return id
+}
+
+func parseHHMM(t *testing.T, hhmm string) time.Time {
+	t.Helper()
+	parsed, err := time.Parse("15:04", hhmm)
+	require.NoError(t, err)
+	return time.Date(2000, 1, 1, parsed.Hour(), parsed.Minute(), 0, 0, time.UTC)
 }

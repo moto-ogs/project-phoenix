@@ -138,7 +138,7 @@ func (rs *Resource) PreviewOpeningBalanceImport(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	rs.runtime.Success(w, r, http.StatusOK, result, "Import-Vorschau erfolgreich")
+	rs.runtime.Success(w, r, http.StatusOK, importModels.NewOpeningBalanceImportResult(result), "Import-Vorschau erfolgreich")
 }
 
 // ImportOpeningBalances resolves the actor, then lets the workflow own its
@@ -190,5 +190,5 @@ func (rs *Resource) ImportOpeningBalances(w http.ResponseWriter, r *http.Request
 	message := fmt.Sprintf("Import abgeschlossen: %d übernommen, %d Fehler",
 		result.CreatedCount, result.ErrorCount)
 
-	rs.runtime.Success(w, r, http.StatusOK, result, message)
+	rs.runtime.Success(w, r, http.StatusOK, importModels.NewOpeningBalanceImportResult(result), message)
 }

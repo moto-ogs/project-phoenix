@@ -45,7 +45,19 @@ func PublicFeed(feeds PublicFeeds) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "text/calendar; charset=utf-8")
 		w.Header().Set("Content-Disposition", textnorm.ContentDisposition("inline", filename))
-		w.Header().Set("Cache-Control", "private, max-age=3600")
+		w.Header().Set("Cache-Control", common.FileCachePrivateHour)
 		_, _ = w.Write([]byte(content))
+	}
+}
+
+// PublicFeedRouteContracts registers the subscription feed for the
+// frontend's catalog proxy (#2352), relative to /public/calendar: a public
+// file the token in the path opens, kept by the subscriber's client for an
+// hour as PublicFeed allows.
+func PublicFeedRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/{token}", Portals: []common.PortalScope{common.PortalPublic}, File: true,
+			PublicFile: "the calendar token is the subscriber's only credential; calendar apps poll without a session",
+			FileCache:  common.FileCachePrivateHour},
 	}
 }

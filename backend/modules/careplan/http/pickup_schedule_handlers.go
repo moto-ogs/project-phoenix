@@ -647,63 +647,6 @@ func (rs *Resource) deleteStudentPickupNote(w http.ResponseWriter, r *http.Reque
 	common.Respond(w, r, http.StatusOK, nil, "Pickup note deleted successfully")
 }
 
-// BulkDayNoteResponse represents a single day note in bulk pickup time responses
-type BulkDayNoteResponse struct {
-	ID      int64  `json:"id"`
-	Content string `json:"content"`
-}
-
-// BulkPickupTimeResponse represents pickup time data for a single student
-type BulkPickupTimeResponse struct {
-	StudentID   int64                 `json:"student_id"`
-	Date        string                `json:"date"`
-	WeekdayName string                `json:"weekday_name"`
-	PickupTime  *string               `json:"pickup_time,omitempty"` // HH:MM format or null
-	IsException bool                  `json:"is_exception"`
-	Notes       string                `json:"notes,omitempty"`
-	DayNotes    []BulkDayNoteResponse `json:"day_notes,omitempty"`
-}
-
-// getBulkPickupTimes handles POST /students/pickup-times/bulk
-// Returns effective pickup times for multiple students on a given date
-func (rs *Resource) getBulkPickupTimes(w http.ResponseWriter, r *http.Request) {
-	handleBulkEffectiveTimes(
-		rs,
-		w,
-		r,
-		"Bulk pickup times retrieved successfully",
-		rs.PickupScheduleService.GetBulkEffectivePickupTimesForDate,
-		mapBulkPickupTimeResponse,
-	)
-}
-
-func mapBulkPickupTimeResponse(
-	studentID int64,
-	effectiveTime *careplan.EffectivePickupTime,
-) BulkPickupTimeResponse {
-	response := BulkPickupTimeResponse{
-		StudentID:   studentID,
-		Date:        effectiveTime.Date.Format(dateFormatISO),
-		WeekdayName: effectiveTime.WeekdayName,
-		IsException: effectiveTime.IsException,
-		Notes:       effectiveTime.Notes,
-	}
-	if effectiveTime.PickupTime != nil {
-		formatted := effectiveTime.PickupTime.Format("15:04")
-		response.PickupTime = &formatted
-	}
-	if len(effectiveTime.DayNotes) > 0 {
-		response.DayNotes = make([]BulkDayNoteResponse, 0, len(effectiveTime.DayNotes))
-		for _, note := range effectiveTime.DayNotes {
-			response.DayNotes = append(response.DayNotes, BulkDayNoteResponse{
-				ID:      note.ID,
-				Content: note.Content,
-			})
-		}
-	}
-	return response
-}
-
 // filterAuthorizedStudentIDs filters the requested student IDs to only those
 // the current user has read access to: admins and verified staff see all
 // requested students, every other caller none (#2329).

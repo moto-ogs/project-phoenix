@@ -5,7 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
 
@@ -101,6 +101,12 @@ function renderRoster(
 }
 
 describe("Hausaufgaben in der Lernzeit (#4796)", () => {
+  beforeAll(async () => {
+    // The retry checks the dialog, not chunk loading. Load the real error
+    // presenter before interactions so its import cannot exhaust the DOM timeout.
+    await import("~/lib/error-presentation");
+  });
+
   it("shows the class homework and saves the feedback with a trimmed note", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     renderRoster(roster, save);

@@ -37,7 +37,7 @@ export const CATALOG_OUTSIDE_MOUNTS = {
     "/analytics-policy",
     "/parent-news-attachments",
   ],
-  school: ["/analytics-consent", "/analytics-policy"],
+  school: ["/analytics-consent", "/analytics-policy", "/school-staff-messages"],
   org: [],
   caterer: [],
   platform: [],
@@ -66,6 +66,16 @@ export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
     // The one-time download link of the payroll office (#4805): a public
     // file its contract marks, served like the signing link.
     "/public/payroll-download",
+    // The subscription feeds (#2352): calendar apps and RSS readers poll
+    // `/api/calendar-feed/{token}` and `/api/request-feed/{token}`, which
+    // next.config.js rewrites to these backend paths; the token is the
+    // only credential.
+    "/public/calendar",
+    "/public/request-feed",
+    // A school's login image and its legal texts, public on purpose.
+    "/public/login-image",
+    "/public/enrollment-legal-documents",
+    "/public/enrollment-form-legal-documents",
     "/auth/password-reset",
     // The links of an invitation mail and of the holiday registration, and
     // the school list (#2352). Each names its exact path: `/auth/invitations`

@@ -987,7 +987,7 @@ func TestRenderErrorCases(t *testing.T) {
 
 	t.Run("internal_server_error", func(t *testing.T) {
 		// Request for student that doesn't exist to trigger error path
-		req := testutil.NewRequest("GET", "/999999/current-visit", nil)
+		req := testutil.NewRequest("GET", "/999999", nil)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 

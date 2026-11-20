@@ -151,7 +151,10 @@ describe("resolveHomeLayout — Standardansicht", () => {
 
     expect(homeProfileFor(leadCareAccess)).toBe("lead_care");
     const keys = keysOf(placements);
-    expect(keys[0]).toBe("section.my_day");
+    // „Heute anders“ steht in jedem Profil ganz oben (#7659), darunter der
+    // eigene Tag.
+    expect(keys[0]).toBe("section.day_changes");
+    expect(keys[1]).toBe("section.my_day");
     expect(keys).toContain("section.my_group");
     expect(keys).toContain("section.open_requests");
     expect(keys).toContain("section.day_flow");
@@ -174,11 +177,12 @@ describe("resolveHomeLayout — Standardansicht", () => {
       return [entry.col, entry.row];
     };
     expect(keysOf(placements)).not.toContain("section.reminders");
-    expect(cell("section.my_day")).toEqual([0, 0]);
-    expect(cell("section.my_group")).toEqual([0, 3]);
+    expect(cell("section.day_changes")).toEqual([0, 0]);
+    expect(cell("section.my_day")).toEqual([0, 2]);
+    expect(cell("section.my_group")).toEqual([0, 5]);
     // Die Tagesinformationen nehmen den Platz der Erinnerungen.
-    expect(cell("section.staff_notices")).toEqual([2, 3]);
-    expect(cell("section.birthdays")).toEqual([0, 5]);
+    expect(cell("section.staff_notices")).toEqual([2, 5]);
+    expect(cell("section.birthdays")).toEqual([0, 7]);
   });
 
   // Die Startseite der Betreuungskraft hatte unten rechts ein Loch: ohne
@@ -368,10 +372,17 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
     );
 
     expect(placements[0]?.key).toBe("section.staff_notices");
+    // Der neue Baustein „Heute anders“ (#7659) erreicht so auch Konten mit
+    // eigener Anordnung: er hängt als Erster der Standardansicht hinten an.
     expect(placements[1]).toMatchObject({
-      key: "tile.students_present",
+      key: "section.day_changes",
       col: 0,
       row: 2,
+    });
+    expect(placements[2]).toMatchObject({
+      key: "tile.students_present",
+      col: 0,
+      row: 4,
     });
     expect(keysOf(placements)).toContain("section.open_requests");
   });

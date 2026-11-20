@@ -23,5 +23,6 @@ func WeekProtocolRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{protocolId}", Portals: portals, Response: weekProtocolResponse{}},
 		{Method: "PUT", Pattern: "/{protocolId}/notes", Portals: portals, Request: weekProtocolNotesRequest{}, Response: weekProtocolResponse{}},
 		{Method: "POST", Pattern: "/{protocolId}/close", Portals: portals, Response: weekProtocolResponse{}},
+		{Method: "GET", Pattern: "/{protocolId}/pdf", Portals: portals, File: true},
 	}
 }

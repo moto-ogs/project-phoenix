@@ -35,10 +35,7 @@ import {
   readImportBatchFailure,
   readImportBatchRejection,
 } from "~/lib/import-batch-result";
-import {
-  importChildQuotaNotice,
-  type ImportChildQuota,
-} from "~/lib/child-quota-import";
+import { importChildQuotaNotice } from "~/lib/child-quota-import";
 import { childQuotaMessage } from "~/lib/child-quota-error";
 import {
   useApiErrorDisplay,
@@ -50,6 +47,11 @@ import {
   importResponseError,
   postImportFile,
 } from "~/lib/import-request";
+import type {
+  StudentImportError,
+  StudentPreviewResponse,
+  ValidationError,
+} from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -58,56 +60,11 @@ const STUDENTS_IMPORT_INFO =
 
 const logger = createLogger({ component: "StudentImportPage" });
 
-// Types matching backend API response
-interface ImportError {
-  field: string;
-  message: string;
-  code: string;
-  severity: "error" | "warning" | "info";
-}
-
-interface ImportRowResult {
-  RowNumber: number;
-  Data: {
-    first_name: string;
-    last_name: string;
-    school_class: string;
-    group_name: string;
-    birthday: string;
-    guardians: Array<{
-      first_name: string;
-      last_name: string;
-      email: string;
-      phone: string;
-      relationship_type: string;
-      is_primary: boolean;
-    }>;
-    health_info?: string;
-    supervisor_notes?: string;
-    extra_info?: string;
-    privacy_accepted: boolean;
-    data_retention_days: number;
-    bus_permission: boolean;
-  };
-  Errors: ImportError[];
-  Timestamp: string;
-}
-
-interface ImportResult {
-  StartedAt: string;
-  CompletedAt: string;
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  SkippedCount: number;
-  ErrorCount: number;
-  WarningCount: number;
-  Errors: ImportRowResult[];
-  BulkActions: string[];
-  DryRun: boolean;
-  /** Nur in der Vorschau einer Schule mit Kinderkontingent (#3571). */
-  child_quota?: ImportChildQuota;
-}
+// Vertragsformat des Imports (ADR 0270, #2352). Die Vorschau trägt
+// zusätzlich das Kinderkontingent der Schule.
+type ImportError = ValidationError;
+type ImportRowResult = StudentImportError;
+type ImportResult = StudentPreviewResponse;
 
 // Status types for display
 type RowStatus = "new" | "existing" | "error" | "warning";
@@ -130,10 +87,11 @@ function childCountLabel(count: number): string {
 }
 
 /** Blocking and warning messages in red; plain hints stay gray. */
-function splitMessages(errors: ImportError[]): {
+function splitMessages(findings: readonly ImportError[] | null): {
   errors: string[];
   notes: string[];
 } {
+  const errors = findings ?? [];
   return {
     errors: errors.filter((e) => e.severity !== "info").map((e) => e.message),
     notes: errors.filter((e) => e.severity === "info").map((e) => e.message),
@@ -142,30 +100,30 @@ function splitMessages(errors: ImportError[]): {
 
 function toDisplayStudent(row: ImportRowResult): DisplayStudent {
   return {
-    row: row.RowNumber,
-    status: row.Errors.some(
+    row: row.row_number,
+    status: (row.errors ?? []).some(
       (error) =>
         error.code === "already_exists" || error.code === "will_update",
     )
       ? "existing"
-      : row.Errors.some((error) => error.severity === "error")
+      : (row.errors ?? []).some((error) => error.severity === "error")
         ? "error"
-        : row.Errors.some((error) => error.severity === "warning")
+        : (row.errors ?? []).some((error) => error.severity === "warning")
           ? "warning"
           : "new",
-    ...splitMessages(row.Errors),
-    first_name: row.Data.first_name,
-    last_name: row.Data.last_name,
-    school_class: row.Data.school_class,
-    group_name: row.Data.group_name ?? "",
-    guardian_info: guardianLabel(row.Data.guardians),
-    health_info: row.Data.health_info ?? "",
+    ...splitMessages(row.errors),
+    first_name: row.data.first_name,
+    last_name: row.data.last_name,
+    school_class: row.data.school_class,
+    group_name: row.data.group_name ?? "",
+    guardian_info: guardianLabel(row.data.guardians),
+    health_info: row.data.health_info ?? "",
   };
 }
 
 /** "Maria Muster (Mutter)" from whatever parts the row carries; empty when none. */
 function guardianLabel(
-  guardians: ImportRowResult["Data"]["guardians"] | undefined,
+  guardians: ImportRowResult["data"]["guardians"] | undefined,
 ): string {
   const first = guardians?.[0];
   if (!first) return "";
@@ -274,13 +232,15 @@ export default function StudentImportPage() {
         const displayData: DisplayStudent[] = [];
 
         // Process errors (rows with issues)
-        if (importData.Errors) {
-          for (const row of importData.Errors) {
-            const hasErrors = row.Errors.some((e) => e.severity === "error");
-            const hasWarnings = row.Errors.some(
+        if (importData.errors) {
+          for (const row of importData.errors) {
+            const hasErrors = (row.errors ?? []).some(
+              (e) => e.severity === "error",
+            );
+            const hasWarnings = (row.errors ?? []).some(
               (e) => e.severity === "warning",
             );
-            const isExisting = row.Errors.some(
+            const isExisting = (row.errors ?? []).some(
               (e) => e.code === "already_exists" || e.code === "will_update",
             );
 
@@ -295,21 +255,21 @@ export default function StudentImportPage() {
             };
 
             displayData.push({
-              row: row.RowNumber,
+              row: row.row_number,
               status: getRowStatus(),
-              ...splitMessages(row.Errors),
-              first_name: row.Data.first_name,
-              last_name: row.Data.last_name,
-              school_class: row.Data.school_class,
-              group_name: row.Data.group_name ?? "",
-              guardian_info: guardianLabel(row.Data.guardians),
-              health_info: row.Data.health_info ?? "",
+              ...splitMessages(row.errors),
+              first_name: row.data.first_name,
+              last_name: row.data.last_name,
+              school_class: row.data.school_class,
+              group_name: row.data.group_name ?? "",
+              guardian_info: guardianLabel(row.data.guardians),
+              health_info: row.data.health_info ?? "",
             });
           }
         }
 
         // Calculate how many are new (total - errors)
-        const newCount = importData.TotalRows - displayData.length;
+        const newCount = importData.total_rows - displayData.length;
 
         // Add placeholder entries for successful rows (they're not in Errors array)
         // Note: In a real implementation, we'd want the backend to return all rows
@@ -320,7 +280,7 @@ export default function StudentImportPage() {
             status: "new",
             errors: [],
             notes: [],
-            first_name: `${importData.TotalRows} Kinder`,
+            first_name: `${importData.total_rows} Kinder`,
             // Passt die Datei nicht ins Kinderkontingent, ist nichts bereit.
             last_name:
               importData.child_quota?.fits === false
@@ -388,7 +348,7 @@ export default function StudentImportPage() {
         if (interrupted) {
           setImportResult(interrupted as ImportResult);
           setImportInterrupted(true);
-          setPreviewData((interrupted.Errors ?? []).map(toDisplayStudent));
+          setPreviewData((interrupted.errors ?? []).map(toDisplayStudent));
           // Ein Stapel kann am Kinderkontingent scheitern, wenn zwischen
           // Vorschau und Start andere Kinder dazukamen.
           setBatchNotice(
@@ -398,9 +358,9 @@ export default function StudentImportPage() {
             ),
           );
           logger.error("student_import_batch_failed", {
-            created: interrupted.CreatedCount,
-            updated: interrupted.UpdatedCount,
-            errors: interrupted.ErrorCount,
+            created: interrupted.created_count,
+            updated: interrupted.updated_count,
+            errors: interrupted.error_count,
           });
           return;
         }
@@ -420,18 +380,18 @@ export default function StudentImportPage() {
       setImportInterrupted(false);
 
       // Handle partial failures vs full success
-      if (importData.ErrorCount > 0) {
+      if (importData.error_count > 0) {
         // Partial success: Show warning and keep form to display error details
         // Don't set importComplete - keep preview visible so user sees which rows failed
-        setPreviewData(importData.Errors.map(toDisplayStudent));
+        setPreviewData((importData.errors ?? []).map(toDisplayStudent));
         toast.warning(
-          `Der Import ist fertig: ${childCountLabel(importData.CreatedCount)} importiert, ${importData.UpdatedCount} aktualisiert, ${importData.ErrorCount} übersprungen.`,
+          `Der Import ist fertig: ${childCountLabel(importData.created_count)} importiert, ${importData.updated_count} aktualisiert, ${importData.error_count} übersprungen.`,
         );
       } else {
         // Full success: Mark complete, show success toast and reset form for next import
         setImportComplete(true);
         toast.success(
-          `Der Import ist fertig: ${childCountLabel(importData.CreatedCount)} importiert, ${importData.UpdatedCount} aktualisiert.`,
+          `Der Import ist fertig: ${childCountLabel(importData.created_count)} importiert, ${importData.updated_count} aktualisiert.`,
         );
         resetForm();
       }
@@ -473,17 +433,18 @@ export default function StudentImportPage() {
 
   // already_exists is a skip, not a blocking preview error. Create-mode
   // recovery re-uploads count committed rows that way; they must not disable Import.
-  const alreadyExists = countAlreadyExistsRows(importResult?.Errors);
+  const alreadyExists = countAlreadyExistsRows(importResult?.errors);
   const stats = {
-    total: importResult?.TotalRows ?? 0,
-    new: importResult?.CreatedCount ?? 0,
-    existing: (importResult?.UpdatedCount ?? 0) + alreadyExists,
-    errors: (importResult?.ErrorCount ?? 0) - alreadyExists,
+    total: importResult?.total_rows ?? 0,
+    new: importResult?.created_count ?? 0,
+    existing: (importResult?.updated_count ?? 0) + alreadyExists,
+    errors: (importResult?.error_count ?? 0) - alreadyExists,
   };
   const importable =
     mode === "update"
-      ? (importResult?.UpdatedCount ?? 0)
-      : stats.new + (mode === "upsert" ? (importResult?.UpdatedCount ?? 0) : 0);
+      ? (importResult?.updated_count ?? 0)
+      : stats.new +
+        (mode === "upsert" ? (importResult?.updated_count ?? 0) : 0);
   const importLabel = importInterrupted
     ? "Erneut versuchen"
     : mode === "create"

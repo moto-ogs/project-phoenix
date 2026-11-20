@@ -77,23 +77,6 @@ func (e CallerEngine) MySupervisedSessionIDs(ctx context.Context) ([]int64, erro
 	return ids, mapCallerError(err)
 }
 
-func (e CallerEngine) GroupStudentIDs(ctx context.Context, sessionID int64) ([]int64, error) {
-	ids, err := e.App.GroupStudentIDs(ctx, sessionID)
-	return ids, mapCallerError(err)
-}
-
-func (e CallerEngine) GroupVisits(ctx context.Context, sessionID int64) ([]identityaccess.CallerVisit, error) {
-	visits, err := e.App.GroupVisits(ctx, sessionID)
-	if err != nil {
-		return nil, mapCallerError(err)
-	}
-	var result []identityaccess.CallerVisit
-	for _, visit := range visits {
-		result = append(result, identityaccess.CallerVisit(visit))
-	}
-	return result, nil
-}
-
 func (e CallerEngine) Navigation(ctx context.Context) (identityaccess.CallerNavigation, error) {
 	navigation, err := e.App.Navigation(ctx)
 	if err != nil {

@@ -277,10 +277,12 @@ func (rs *AnnouncementsResource) GetStats(w http.ResponseWriter, r *http.Request
 
 // AnnouncementViewDetailResponse represents a view detail in the response
 type AnnouncementViewDetailResponse struct {
-	UserID    int64  `json:"user_id"`
-	UserName  string `json:"user_name"`
-	SeenAt    string `json:"seen_at"`
-	Dismissed bool   `json:"dismissed"`
+	UserID      int64   `json:"user_id"`
+	UserName    string  `json:"user_name"`
+	SeenAt      string  `json:"seen_at"`
+	ShownAt     *string `json:"shown_at"`
+	DismissedAt *string `json:"dismissed_at"`
+	Dismissed   bool    `json:"dismissed"`
 }
 
 // GetViewDetails handles getting detailed view information for an announcement
@@ -298,12 +300,21 @@ func (rs *AnnouncementsResource) GetViewDetails(w http.ResponseWriter, r *http.R
 
 	responses := make([]AnnouncementViewDetailResponse, 0, len(details))
 	for _, detail := range details {
-		responses = append(responses, AnnouncementViewDetailResponse{
+		response := AnnouncementViewDetailResponse{
 			UserID:    detail.UserID,
 			UserName:  detail.UserName,
 			SeenAt:    detail.SeenAt.Format(time.RFC3339),
 			Dismissed: detail.Dismissed,
-		})
+		}
+		if detail.ShownAt != nil {
+			shownAt := detail.ShownAt.Format(time.RFC3339)
+			response.ShownAt = &shownAt
+		}
+		if detail.DismissedAt != nil {
+			dismissedAt := detail.DismissedAt.Format(time.RFC3339)
+			response.DismissedAt = &dismissedAt
+		}
+		responses = append(responses, response)
 	}
 
 	common.Respond(w, r, http.StatusOK, responses, "View details retrieved successfully")

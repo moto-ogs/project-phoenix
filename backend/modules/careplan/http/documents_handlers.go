@@ -207,7 +207,7 @@ func (rs *Resource) retryStudentDocumentCleanups(ctx context.Context, studentID 
 // metadata transaction before returning, and this handler disposes of the
 // object on failure.
 func (rs *Resource) uploadStudentDocument(w http.ResponseWriter, r *http.Request) {
-	upload, ok := rs.openStudentDocumentUpload(w, r)
+	upload, ok := rs.openStudentDocumentUpload(w, r, parseStudentDocument)
 	if !ok {
 		return
 	}
@@ -257,9 +257,18 @@ type studentDocumentUpload struct {
 	storedName  string
 }
 
+// Child documents take PDF, DOCX, PNG and JPEG; the paper copy of an accident
+// report is a scan (PDF, PNG, JPEG). Both check the declared type and name
+// on top of the content (#2352).
+var (
+	parseStudentDocument = common.Declared(common.ParseDocumentWithLimits, common.DeclaredDocumentTypes)
+	parseAccidentScan    = common.Declared(common.ParseScanWithLimits, common.DeclaredScanTypes)
+)
+
 // openStudentDocumentUpload resolves the caller, the tenant and the storage
-// and parses the multipart body. The caller closes the uploaded file.
-func (rs *Resource) openStudentDocumentUpload(w http.ResponseWriter, r *http.Request) (*studentDocumentUpload, bool) {
+// and parses the multipart body with parse. The caller closes the uploaded
+// file.
+func (rs *Resource) openStudentDocumentUpload(w http.ResponseWriter, r *http.Request, parse common.UploadParser) (*studentDocumentUpload, bool) {
 	id, ok := common.ParseInt64IDWithError(w, r, "id", common.MsgInvalidStudentID)
 	if !ok {
 		return nil, false
@@ -280,7 +289,7 @@ func (rs *Resource) openStudentDocumentUpload(w http.ResponseWriter, r *http.Req
 		return nil, false
 	}
 
-	uploaded, err := common.ParseDocumentWithLimits(w, r, "file", maxStudentDocumentFile, maxStudentDocumentBody)
+	uploaded, err := parse(w, r, "file", maxStudentDocumentFile, maxStudentDocumentBody)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorUpload(err, maxStudentDocumentFile))
 		return nil, false

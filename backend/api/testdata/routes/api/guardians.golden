@@ -4,14 +4,11 @@ DELETE /api/guardians/{id}/email-block
 DELETE /api/guardians/{id}/email-stop
 DELETE /api/guardians/{id}/phone-numbers/{phoneId}
 GET /api/guardians/
-GET /api/guardians/invitable
-GET /api/guardians/invitations/pending
 GET /api/guardians/invitations/pending-approval
 GET /api/guardians/payment-overview
 GET /api/guardians/search
 GET /api/guardians/students/{studentId}/email-status
 GET /api/guardians/students/{studentId}/guardians
-GET /api/guardians/without-account
 GET /api/guardians/{id}
 GET /api/guardians/{id}/delete-preview
 GET /api/guardians/{id}/payment

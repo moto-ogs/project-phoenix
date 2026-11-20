@@ -25,8 +25,8 @@ func RouteContracts() []common.RouteContract {
 }
 
 // InboxRouteContracts registers the inbox and the conversations with one
-// guardian (ADR 0270), with patterns relative to /api/messages. The
-// attachment upload and download keep their route files.
+// guardian (ADR 0270), with patterns relative to /api/messages. The root
+// mounts the attachment routes beside them (messageattachments).
 func InboxRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	unread := []common.QueryParam{{Name: "unread", Kind: common.QueryBool}}

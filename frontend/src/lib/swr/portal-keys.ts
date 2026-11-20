@@ -355,6 +355,11 @@ export const homeKeys = {
     weekStart ? `birthday-overview:${weekStart}` : "birthday-overview",
   staffSummary: () => "home-staff-summary",
   ownGroup: (accountId: string) => `home-own-group:${accountId}`,
+  /**
+   * „Heute anders“ (#7659): the day's changes as the account may see them.
+   * `dayChanges("")` is the prefix the SSE flush matches.
+   */
+  dayChanges: (accountId: string) => `home-day-changes:${accountId}`,
 } as const;
 
 /**

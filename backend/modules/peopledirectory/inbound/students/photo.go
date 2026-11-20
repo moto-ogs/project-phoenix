@@ -31,6 +31,11 @@ const (
 	msgPhotoNotFound         = "kein Foto hinterlegt"
 )
 
+// studentPhotoUploadedResponse names the served address of the new photo.
+type studentPhotoUploadedResponse struct {
+	PhotoURL string `json:"photo_url"`
+}
+
 // uploadStudentPhoto handles POST /api/students/{id}/photo. Mounted without
 // TenantTxMiddleware so a slow 5 MiB upload doesn't pin a bun pool connection;
 // the caller check and the service's commit each open their own short tx.
@@ -47,9 +52,9 @@ func (rs *Resource) uploadStudentPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uploaded, err := common.ParseImageWithLimits(w, r, "photo", maxStudentPhotoFile, maxStudentPhotoBody)
+	uploaded, err := common.Declared(common.ParseImageWithLimits, common.DeclaredImageTypes)(w, r, "photo", maxStudentPhotoFile, maxStudentPhotoBody)
 	if err != nil {
-		renderError(w, r, common.ErrorInvalidRequest(err))
+		renderError(w, r, common.ErrorUpload(err, maxStudentPhotoFile))
 		return
 	}
 	defer common.CloseFile(uploaded.File)
@@ -79,7 +84,7 @@ func (rs *Resource) uploadStudentPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	servedURL := common.BuildStudentPhotoServeURL(id, newStoredURL)
-	common.Respond(w, r, http.StatusOK, map[string]string{"photo_url": servedURL}, "Foto hochgeladen")
+	common.Respond(w, r, http.StatusOK, studentPhotoUploadedResponse{PhotoURL: servedURL}, "Foto hochgeladen")
 }
 
 // deleteStudentPhoto is idempotent — returns 200 even when no photo was set.
@@ -137,7 +142,7 @@ func (rs *Resource) serveStudentPhoto(w http.ResponseWriter, r *http.Request) {
 
 // studentPhotoCacheControl keeps photo bytes in the viewer's private browser
 // cache for a day; shared caches must not store them.
-const studentPhotoCacheControl = "private, max-age=86400, immutable"
+const studentPhotoCacheControl = common.FileCachePrivateImmutableDay
 
 // mapPhotoUploadError maps service sentinels to HTTP status.
 func mapPhotoUploadError(w http.ResponseWriter, r *http.Request, err error) {

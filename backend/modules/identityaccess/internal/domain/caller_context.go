@@ -50,18 +50,6 @@ type CallerPerson struct {
 	UpdatedAt time.Time
 }
 
-// CallerVisit is an open or closed visit of one room session.
-type CallerVisit struct {
-	ID            int64
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	TenantID      int64
-	StudentID     int64
-	ActiveGroupID int64
-	EntryTime     time.Time
-	ExitTime      *time.Time
-}
-
 // CallerGroup is one of the caller's educational groups.
 type CallerGroup struct {
 	ID              int64

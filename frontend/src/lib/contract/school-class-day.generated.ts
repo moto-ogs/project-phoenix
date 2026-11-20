@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
   int64StringOrNumber,
@@ -543,6 +544,14 @@ export interface GetSchoolClassDayAbsenceListQuery {
   to?: string;
 }
 
+/** Query of GET /school/class-day/absence-list/export */
+export interface GetSchoolClassDayAbsenceListExportQuery {
+  class?: string;
+  format?: "pdf" | "xlsx";
+  from?: string;
+  to?: string;
+}
+
 /** Query of GET /school/class-day/arrival-exceptions */
 export interface GetSchoolClassDayArrivalExceptionsQuery {
   class?: string;
@@ -611,6 +620,13 @@ export const routes = {
     portals: ["school"],
     query: ["class", "from", "to"],
     response: success(AbsenceListReportSchema),
+  },
+  "GET /school/class-day/absence-list/export": {
+    method: "GET",
+    pattern: "/school/class-day/absence-list/export",
+    portals: ["school"],
+    query: ["class", "format", "from", "to"],
+    response: fileAnswer,
   },
   "GET /school/class-day/arrival-exceptions": {
     method: "GET",
