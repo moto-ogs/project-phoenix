@@ -18,6 +18,7 @@ const {
   mockSession,
   mockSearchParamsGet,
   mockEndTraegerSession,
+  mockGetSession,
 } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockSignIn: vi.fn(),
@@ -30,12 +31,14 @@ const {
   },
   mockSearchParamsGet: vi.fn((_key: string): string | null => null),
   mockEndTraegerSession: vi.fn(),
+  mockGetSession: vi.fn(),
 }));
 
 vi.mock("next-auth/react", () => ({
   signIn: (...args: unknown[]) => mockSignIn(...args),
   signOut: (...args: unknown[]) => mockSignOut(...args),
   useSession: () => mockSession.current,
+  getSession: (...args: unknown[]) => mockGetSession(...args),
 }));
 
 const stableSearchParams = { get: mockSearchParamsGet };
@@ -82,6 +85,15 @@ async function enterCode(code: string) {
   });
 }
 
+const DASHBOARD_SESSION = {
+  user: {
+    scope: "org",
+    token: "access-token",
+    permissions: ["traeger_overview:read"],
+  },
+  expires: "2099-01-01T00:00:00Z",
+};
+
 describe("TraegerLoginPage", () => {
   const fetchMock = vi.fn<typeof fetch>();
   let navigate: ReturnType<typeof vi.spyOn>;
@@ -95,6 +107,8 @@ describe("TraegerLoginPage", () => {
     mockSignOut.mockReset().mockResolvedValue(undefined);
     mockEndTraegerSession.mockReset().mockResolvedValue(undefined);
     mockSession.current = { data: null, status: "unauthenticated" };
+    // The new session may open the dashboard: the start (#7646).
+    mockGetSession.mockReset().mockResolvedValue(DASHBOARD_SESSION);
     mockSearchParamsGet.mockReturnValue(null);
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
@@ -146,7 +160,9 @@ describe("TraegerLoginPage", () => {
       remember_device: false,
       organization_id: 7,
     });
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
   });
 
   it("asks for the code until the sign-in completes, also after going back from the code step (#6955)", async () => {
@@ -188,7 +204,9 @@ describe("TraegerLoginPage", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /^Nein, nur anmelden/ }),
     );
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
     expect(sessionStorage.getItem("moto.traeger.sign-in-with-code")).toBeNull();
   });
 
@@ -383,13 +401,51 @@ describe("TraegerLoginPage", () => {
     ).toBeInTheDocument();
     submitCredentials();
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
     expect(mockSignIn).not.toHaveBeenCalled();
     expect(mockLogin).toHaveBeenCalledWith({
       email: "buero@traeger.example",
       password: "secret",
       organizationId: undefined,
     });
+  });
+
+  it("starts on the school list without the dashboard right (#7646)", async () => {
+    mockLogin.mockResolvedValue({ status: "authenticated" });
+    mockGetSession.mockResolvedValue({
+      ...DASHBOARD_SESSION,
+      user: {
+        ...DASHBOARD_SESSION.user,
+        permissions: ["traeger_staff:manage"],
+      },
+    });
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    expect(mockGetSession).toHaveBeenCalledWith({ broadcast: false });
+  });
+
+  it("starts on the school list when the new session cannot be read (#7646)", async () => {
+    mockLogin.mockResolvedValue({ status: "authenticated" });
+    mockGetSession.mockRejectedValue(new Error("offline"));
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+  });
+
+  it("sends an existing session to its start (#7646)", async () => {
+    mockSession.current = { data: DASHBOARD_SESSION, status: "authenticated" };
+    render(<TraegerLoginPage />);
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
   });
 
   it("opens a later choice without the error of an earlier one", async () => {
@@ -452,7 +508,9 @@ describe("TraegerLoginPage", () => {
         organizationId: "9",
       }),
     );
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
   });
 
   it("explains a missing Träger-Portal access with the catalog text", async () => {
