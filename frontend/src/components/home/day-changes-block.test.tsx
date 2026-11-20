@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DayChange, DayChangesOverview } from "~/lib/day-changes";
@@ -47,7 +47,8 @@ const absent = (
 ) =>
   change({
     section,
-    people: [{ staffId: "7", name, role: "absent", isSelf: false }],
+    // Die Person heißt wie ihre ID: jede Zeile hat einen eigenen Schlüssel.
+    people: [{ staffId: name, name, role: "absent", isSelf: false }],
     link: { target: "staff_member", staffId: "7" },
     ...extra,
   });
@@ -261,6 +262,28 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
     expect(trackEvent).toHaveBeenCalledTimes(1);
   });
 
+  it("klappt eine Änderung ein, sobald ihr Ende vorbei ist", () => {
+    vi.useFakeTimers();
+    serve({
+      entries: [
+        absent("Gleich", "school", {
+          startsAt: "2026-09-09T11:00:00+02:00",
+          endsAt: "2026-09-09T12:00:30+02:00",
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+    const school = screen.getByRole("region", { name: "Schule" });
+    expect(rowTexts(school)).toHaveLength(1);
+
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expect(rowTexts(school)).toHaveLength(0);
+    expect(
+      within(school).getByRole("button", { name: "1 erledigt" }),
+    ).toBeInTheDocument();
+  });
+
   it("zeigt am Telefon „Betrifft dich“ ganz und von „Schule“ drei", () => {
     phone.value = true;
     serve({
@@ -330,6 +353,21 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
     rerender(<DayChangesBlock />);
     expect(live).toHaveTextContent("„Heute anders“: 1 neue Änderung.");
     expect(live).not.toHaveTextContent("Ben");
+
+    // Nur die Zahl einer Zusammenfassung ändert sich: auch das wird gesagt,
+    // und zweimal derselbe Satz wird zweimal angesagt.
+    const counted = (count: number) =>
+      serve({ entries: [change({ kind: "staff_absent_count", count })] });
+    counted(2);
+    rerender(<DayChangesBlock />);
+    counted(3);
+    rerender(<DayChangesBlock />);
+    const first = live?.textContent;
+    expect(first).toContain("„Heute anders“ hat sich geändert.");
+    counted(4);
+    rerender(<DayChangesBlock />);
+    expect(live?.textContent).toContain("„Heute anders“ hat sich geändert.");
+    expect(live?.textContent).not.toBe(first);
   });
 });
 

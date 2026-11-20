@@ -120,8 +120,14 @@ function DayChangesAnnouncer({
 }: {
   readonly overview: DayChangesOverview | undefined;
 }) {
-  const keys = overview ? shownEntries(overview).map(dayChangeKey) : null;
-  const signature = keys?.join("|") ?? null;
+  const keys = overview ? dayChangeKeys(shownEntries(overview)) : null;
+  // Die Zahl einer Zusammenfassung gehört nicht in den Schlüssel der Zeile,
+  // aber in die Signatur: „2 weitere“ zu „3 weitere“ ist eine Änderung.
+  const signature = overview
+    ? shownEntries(overview)
+        .map((entry, index) => `${keys?.[index]}=${entry.count ?? ""}`)
+        .join("|")
+    : null;
   const [last, setLast] = useState<{
     keys: readonly string[] | null;
     signature: string | null;
@@ -129,10 +135,16 @@ function DayChangesAnnouncer({
   }>({ keys: null, signature: null, message: "" });
   if (keys && signature !== last.signature) {
     // Abgeleiteter Zustand während des Renderns statt eines Effekts.
+    const message = last.keys ? changeMessage(last.keys, keys) : "";
     setLast({
       keys,
       signature,
-      message: last.keys ? changeMessage(last.keys, keys) : "",
+      // Derselbe Satz zweimal hintereinander würde nicht noch einmal
+      // angesagt; ein geschütztes Leerzeichen macht ihn neu.
+      message:
+        message !== "" && message === last.message
+          ? `${message}\u00a0`
+          : message,
     });
   }
   return (
@@ -230,8 +242,8 @@ function DayChangesSection({
       </SectionLabel>
       {visible.length > 0 ? (
         <ul ref={listRef} className="space-y-2">
-          {visible.map((entry) => (
-            <DayChangeRow key={dayChangeKey(entry)} entry={entry} />
+          {withKeys(visible).map(([key, entry]) => (
+            <DayChangeRow key={key} entry={entry} />
           ))}
         </ul>
       ) : null}
@@ -297,8 +309,8 @@ function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
       </Button>
       <ul id={listId} hidden={!open} className="mt-1 space-y-2">
         {open
-          ? entries.map((entry) => (
-              <DayChangeRow key={dayChangeKey(entry)} entry={entry} muted />
+          ? withKeys(entries).map(([key, entry]) => (
+              <DayChangeRow key={key} entry={entry} muted />
             ))
           : null}
       </ul>
@@ -307,12 +319,27 @@ function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
 }
 
 /**
- * Stabil über ein Neuladen hinweg: Art, Personen, Gruppe und Beginn. Eine
- * Zusammenfassung trägt nur ihre Art, ihre Zahl ändert den Schlüssel nicht.
+ * Stabil über ein Neuladen hinweg: Abschnitt, Art, Personen, Gruppe und
+ * Beginn. Eine Zusammenfassung trägt nur ihre Art, ihre Zahl ändert den
+ * Schlüssel nicht. Gleiche Einträge zählen hoch („#2“), damit jeder
+ * Schlüssel eindeutig bleibt.
  */
-function dayChangeKey(entry: DayChange): string {
-  const people = entry.people.map((person) => person.staffId).join(",");
-  return `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}`;
+function dayChangeKeys(entries: readonly DayChange[]): string[] {
+  const seen = new Map<string, number>();
+  return entries.map((entry) => {
+    const people = entry.people.map((person) => person.staffId).join(",");
+    const base = `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}`;
+    const count = (seen.get(base) ?? 0) + 1;
+    seen.set(base, count);
+    return count === 1 ? base : `${base}#${count}`;
+  });
+}
+
+function withKeys(
+  entries: readonly DayChange[],
+): (readonly [string, DayChange])[] {
+  const keys = dayChangeKeys(entries);
+  return entries.map((entry, index) => [keys[index] ?? "", entry] as const);
 }
 
 function DayChangeRow({
