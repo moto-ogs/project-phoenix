@@ -65,24 +65,3 @@ func (rs *Resource) presenceSupervisor(ctx context.Context, id int64) (Superviso
 	}
 	return rows[0], nil
 }
-
-// presenceSupervisionRow returns the persisted supervision record the update
-// route revises. A missing record fails as not found.
-func (rs *Resource) presenceSupervisionRow(ctx context.Context, id int64) (studentpresence.GroupSupervision, error) {
-	const operation = "GetGroupSupervisor"
-	rows, err := rs.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{IDs: []int64{id}})
-	if err != nil || len(rows) == 0 {
-		return studentpresence.GroupSupervision{}, &presenceError{Op: operation, Err: studentpresence.ErrGroupSupervisorNotFound}
-	}
-	return rows[0], nil
-}
-
-// supervisionRowResponse renders a persisted supervision row when the
-// trailing re-read after a write fails.
-func supervisionRowResponse(row studentpresence.GroupSupervision, today calendar.Date) SupervisorResponse {
-	response, err := presenceSupervisionResponse(row, today)
-	if err != nil {
-		return SupervisorResponse{ID: row.ID, StaffID: row.StaffID, ActiveGroupID: row.GroupID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
-	}
-	return response
-}

@@ -139,63 +139,6 @@ func TestVisitRepository_FindByID(t *testing.T) {
 	})
 }
 
-func TestVisitRepository_Update(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := newPresence(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("updates visit exit time", func(t *testing.T) {
-		data := createVisitTestData(t, db)
-		now := time.Now()
-		visit := studentpresence.Visit{
-			StudentID:     data.Student1ID,
-			ActiveGroupID: data.ActiveGroup.ID,
-			EntryTime:     now,
-		}
-		visit, err := repo.RecordVisit(ctx, visit)
-		require.NoError(t, err)
-
-		exitTime := now.Add(2 * time.Hour)
-		visit.ExitTime = &exitTime
-		visit, err = repo.ReviseVisit(ctx, visit)
-		require.NoError(t, err)
-
-		found, err := repo.FindVisit(ctx, visit.ID)
-		require.NoError(t, err)
-		assert.NotNil(t, found.ExitTime)
-	})
-}
-
-func TestVisitRepository_Delete(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := newPresence(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("deletes existing visit", func(t *testing.T) {
-		data := createVisitTestData(t, db)
-		now := time.Now()
-		visit := studentpresence.Visit{
-			StudentID:     data.Student1ID,
-			ActiveGroupID: data.ActiveGroup.ID,
-			EntryTime:     now,
-		}
-		visit, err := repo.RecordVisit(ctx, visit)
-		require.NoError(t, err)
-
-		err = repo.DeleteVisit(ctx, visit.ID)
-		require.NoError(t, err)
-
-		_, err = repo.FindVisit(ctx, visit.ID)
-		require.Error(t, err)
-	})
-}
-
 // ============================================================================
 // Query Tests
 // ============================================================================

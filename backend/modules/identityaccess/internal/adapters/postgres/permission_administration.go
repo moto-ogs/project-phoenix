@@ -79,35 +79,6 @@ func (s *Store) FindPermissionByName(ctx context.Context, name string) (domain.M
 	return row.domain(), nil
 }
 
-func (s *Store) UpdatePermission(ctx context.Context, permission domain.ManagedPermission) error {
-	if err := permission.Validate(); err != nil {
-		return err
-	}
-	db, err := s.database(ctx)
-	if err != nil {
-		return err
-	}
-	row := permissionRecord(permission)
-	_, err = db.NewUpdate().Model(&row).ModelTableExpr("auth.permissions").
-		Where("id = ?", permission.ID).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("update: %w", err)
-	}
-	return nil
-}
-
-func (s *Store) DeletePermission(ctx context.Context, id int64) error {
-	db, err := s.database(ctx)
-	if err != nil {
-		return err
-	}
-	_, err = db.NewDelete().Table("auth.permissions").Where("id = ?", id).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("delete: %w", err)
-	}
-	return nil
-}
-
 func (s *Store) ListPermissions(ctx context.Context, filter domain.PermissionFilter) ([]domain.ManagedPermission, error) {
 	db, err := s.database(ctx)
 	if err != nil {
@@ -284,18 +255,6 @@ func (s *Store) DeleteRolePermissions(ctx context.Context, roleID int64) error {
 	_, err = db.NewDelete().Table("auth.role_permissions").Where("role_id = ?", roleID).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("delete by role ID: %w", err)
-	}
-	return nil
-}
-
-func (s *Store) DeletePermissionAssignments(ctx context.Context, permissionID int64) error {
-	db, err := s.database(ctx)
-	if err != nil {
-		return err
-	}
-	_, err = db.NewDelete().Table("auth.role_permissions").Where("permission_id = ?", permissionID).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("delete by permission ID: %w", err)
 	}
 	return nil
 }

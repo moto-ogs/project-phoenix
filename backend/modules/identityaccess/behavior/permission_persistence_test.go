@@ -51,7 +51,7 @@ func TestPermissionAdministrationDatabaseFailure(t *testing.T) {
 	identity := roleAdministrationOf(t, setupAuthService(t, db))
 	require.NoError(t, db.Close())
 	ctx := testpkg.Ctx(t)
-	_, err := identity.GetPermission(ctx, 1)
+	_, err := identity.GetPermissionByName(ctx, "permission-unreachable")
 	require.ErrorContains(t, err, "database is closed")
 	_, err = identity.ListPermissions(ctx, identityaccess.PermissionFilter{})
 	require.ErrorContains(t, err, "database is closed")

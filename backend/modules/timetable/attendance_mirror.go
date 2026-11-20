@@ -45,9 +45,6 @@ type AttendanceMirror interface {
 	// MirrorCheckOutForVisit stamps the slot's checkout without changing its
 	// attendance status and returns the current snapshot.
 	MirrorCheckOutForVisit(ctx context.Context, visit AttendanceVisit) (*AttendanceSnapshot, error)
-	// MirrorVisitRevision replaces a slot interval only when it still matches
-	// previous.
-	MirrorVisitRevision(ctx context.Context, previous, updated AttendanceVisit) error
 	// MirrorCheckOutAt closes the most recently checked-in open slot of a
 	// roomless attendance flow.
 	MirrorCheckOutAt(ctx context.Context, studentID int64, at time.Time) error

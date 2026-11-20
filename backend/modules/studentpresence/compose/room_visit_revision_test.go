@@ -110,7 +110,7 @@ func TestRoomRevisionFollowsEveryRoomCountChange(t *testing.T) {
 	tracked := trackRoom(t, ctx, module, room.ID)
 	other := trackRoom(t, ctx, module, elsewhere.ID)
 
-	moving := openVisit(t, ctx, module, db, first.ID, "Moving")
+	openVisit(t, ctx, module, db, first.ID, "Moving")
 	tracked.rose(1, "a check-in into the first session raises the room")
 	openVisit(t, ctx, module, db, second.ID, "Staying")
 	tracked.rose(2, "a check-in into the second session raises the room")
@@ -122,10 +122,9 @@ func TestRoomRevisionFollowsEveryRoomCountChange(t *testing.T) {
 	execSQL(t, ctx, db, "UPDATE active.groups SET last_activity = NOW() WHERE id = ?", first.ID)
 	tracked.kept("a closed visit and a heartbeat keep the room")
 
-	moved := moving
-	moved.ActiveGroupID = away.ID
-	_, err = module.ReviseVisit(ctx, moved)
+	transferred, err := module.TransferOpenVisits(ctx, first.ID, away.ID)
 	require.NoError(t, err)
+	require.EqualValues(t, 1, transferred)
 	tracked.rose(1, "a visit moved out raises the room")
 	other.rose(1, "and the room it moved into")
 
@@ -472,7 +471,7 @@ func roomNightlyCloseKeepsRevisions(t *testing.T, ctx context.Context, db *bun.D
 	stillOpen := openVisit(t, ctx, module, db, ended.ID, "Late")
 	openVisit(t, ctx, module, db, ended.ID, "Kept")
 	gone := openVisit(t, ctx, module, db, deleted.ID, "Gone")
-	require.NoError(t, module.DeleteVisit(ctx, gone.ID))
+	execSQL(t, ctx, db, "DELETE FROM active.visits WHERE id = ?", gone.ID)
 	openVisit(t, ctx, module, db, running.ID, "Running")
 	openVisit(t, ctx, module, db, moved.ID, "Moved")
 	execSQL(t, ctx, db, "UPDATE active.groups SET end_time = NOW() WHERE id = ?", ended.ID)

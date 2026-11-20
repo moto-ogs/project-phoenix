@@ -159,6 +159,12 @@ Usage:
 		}
 		defer closeMeals()
 		options.MealHistory = meals
+		writers, closeWriters, err := openSeedWriters()
+		if err != nil {
+			return err
+		}
+		defer closeWriters()
+		options.FeedbackHistory, options.SchoolVacations, options.BillingKeyDateCounts = writers.feedback, writers.schoolVacations, writers.keyDateCounts
 
 		return defaultSeedRoot.run(cmd.Context(), url, verbose, options, email, password, pin)
 	},

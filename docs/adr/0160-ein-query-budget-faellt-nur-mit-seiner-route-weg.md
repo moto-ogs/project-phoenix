@@ -108,3 +108,44 @@ Budget; seit #6057 ersetzt das explizite Feld diese Ableitung.
   Backfill-Skript verweigert das Überschreiben einer bestehenden anderen Route.
 - Die günstigen Fixtures prüfen Rename, Mount-Präfixe, Beschreibungen ohne
   Route, Nicht-HTTP-Ausnahmen und die Schutzfälle der Stilllegungsprüfung.
+
+## Nachtrag 2026-11-20: Eine Golden-Datei fällt nur mit allen ihren Routen weg
+
+Freigegeben von Yannick Wenger (#2352, Entscheidung B).
+
+Punkt 6 lehnte jede Golden-Datei der Basis ab, die im Kandidaten fehlt.
+`TestFullProductionRouterGolden -update-goldens` löscht aber eine Datei,
+deren letzte Route wegfällt. Eine tote Route, die als einzige in ihrer Datei
+steht, ließ sich deshalb nicht entfernen (#2352: `DELETE /auth/tokens/expired`,
+`GET /traeger/datev-export/readiness`, `GET /parent/me/enrollments`).
+
+1. **Eigenes Register.** `backend/architecture/route-golden-retirements.json`
+   ist ein JSON-Array von Einträgen
+   `{"file": "auth/tokens.golden", "routes": ["DELETE /auth/tokens/expired"], "issue": 2352}`.
+   Die Form ist streng wie in Punkt 9: keine unbekannten Felder, keine Daten
+   nach dem Array, ein positives Issue, `file` ist ein sauberer relativer
+   `.golden`-Pfad innerhalb von `backend/api/testdata/routes/`, jede Route hat
+   die Form `METHOD /pfad`, keine Route doppelt, keine Datei doppelt.
+2. **Nur neue Einträge zählen.** Wie in Punkt 8 erlaubt nur ein Eintrag, den
+   die Basis nicht schon enthält, etwas. Ein unveränderter historischer
+   Eintrag erlaubt nichts.
+3. **Der Checker beweist die Stilllegung.** Eine Golden-Datei der Basis darf
+   im Kandidaten nur fehlen, wenn ein neuer Eintrag sie nennt, seine Routen
+   genau der kanonischen Routenmenge dieser Datei an der Basis entsprechen und
+   keine dieser Routen noch irgendwo im Kandidaten-Golden steht. Ein neuer
+   Eintrag für eine Datei, die im Kandidaten noch existiert oder die die Basis
+   nicht hat, oder mit abweichender Routenliste ist rot. Lesefehler schlagen
+   fehl. Eine fehlende Datei ohne gültigen Eintrag bleibt rot wie bisher.
+4. **Die Routen der Datei bleiben Basis-Routen.** Ein Query-Budget einer so
+   entfernten Route fällt weiterhin nur mit seinem eigenen Eintrag in
+   `query-budget-retirements.json` weg (Punkt 2).
+5. **Was bleibt.** Punkt 6 gilt sonst unverändert: leere Dateien, Zeilen ohne
+   Route, ein fehlendes Verzeichnis und ein Lauf ohne Route sind rot. Ein
+   Golden für eine Route, die der Router nicht mehr anbietet, fängt weiterhin
+   `TestFullProductionRouterGolden` (Punkt 7).
+
+Prüfung: `retiredRouteGoldens` in
+`backend/internal/architecture/route_golden_retirements.go`; die
+Git-Fixtures in `route_golden_retirements_test.go` decken erlaubtes Löschen,
+Löschen ohne Eintrag, falsche Routen, eine noch vorhandene Datei, einen
+historischen Eintrag und eine in eine andere Datei verschobene Route ab.

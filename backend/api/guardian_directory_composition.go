@@ -41,17 +41,6 @@ type GuardianInvitationSummary struct {
 	Token             string
 }
 
-// PendingGuardianInvitation is one open invitation of the tenant.
-type PendingGuardianInvitation struct {
-	ID                int64
-	GuardianProfileID int64
-	CreatedAt         time.Time
-	ExpiresAt         time.Time
-	EmailSentAt       *time.Time
-	EmailError        *string
-	EmailRetryCount   int
-}
-
 // GuardianInviteInput invites a further guardian to a child by e-mail.
 type GuardianInviteInput struct {
 	StudentID          int64
@@ -109,8 +98,7 @@ type GuardianDirectoryRuntime struct {
 	IsVerifiedStaff func(context.Context) bool
 	MarkRollback    func(context.Context)
 
-	SendInvitation         func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitationSummary, error)
-	ListPendingInvitations func(context.Context) ([]PendingGuardianInvitation, error)
+	SendInvitation func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitationSummary, error)
 
 	InviteGuardianToStudent func(context.Context, GuardianInviteInput) (GuardianInviteResult, error)
 	// BulkInviteGuardians invites the guardians of many children (#3378); a
@@ -155,7 +143,6 @@ func NewGuardianDirectoryRuntime(guardians peoplePorts.GuardianService, renderer
 		},
 		MarkRollback:               runtime.MarkRollback,
 		SendInvitation:             sendInvitation,
-		ListPendingInvitations:     pendingGuardianInvitations(guardians),
 		InviteGuardianToStudent:    inviteGuardian,
 		BulkInviteGuardians:        bulkInvite,
 		ListPendingApprovals:       listApprovals,
@@ -218,24 +205,6 @@ func guardianInvitationFlows(invitations GuardianDirectoryInvitations, runtime p
 		return result, err
 	}
 	return send, invite, bulk
-}
-
-// pendingGuardianInvitations lists the tenant's open invitations.
-func pendingGuardianInvitations(guardians peoplePorts.GuardianService) func(context.Context) ([]PendingGuardianInvitation, error) {
-	return func(ctx context.Context) ([]PendingGuardianInvitation, error) {
-		invitations, err := guardians.GuardianInvitationReads().ListRedeemable(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result := make([]PendingGuardianInvitation, 0, len(invitations))
-		for _, invitation := range invitations {
-			result = append(result, PendingGuardianInvitation{
-				ID: invitation.ID, GuardianProfileID: invitation.GuardianProfileID, CreatedAt: invitation.CreatedAt,
-				ExpiresAt: invitation.ExpiresAt, EmailSentAt: invitation.EmailSentAt, EmailError: invitation.EmailError,
-			})
-		}
-		return result, nil
-	}
 }
 
 // guardianApprovalFlows list, approve and reject the parent-initiated

@@ -204,8 +204,6 @@ type DeviceLookup interface {
 	FindDeviceByAPIKey(context.Context, string, ...DeviceCredentialSchoolCheck) (Device, error)
 	ListDevices(context.Context, DeviceFilter) ([]Device, error)
 	ListDevicesByID(context.Context, []int64) ([]Device, error)
-	ListOfflineDevices(context.Context, time.Duration) ([]Device, error)
-	CountDevicesByType(context.Context) (map[string]int, error)
 	// CountDevicesByTenant and ListDevicesByTenant answer the operator
 	// dashboard's cross-tenant questions without a foreign join.
 	CountDevicesByTenant(context.Context) (map[int64]int, error)

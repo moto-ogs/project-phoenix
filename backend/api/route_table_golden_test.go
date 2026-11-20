@@ -429,6 +429,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("core action classification", func(t *testing.T) { checkCoreActionClassification(t, api) })
 			t.Run("email webhook outside the sessions", func(t *testing.T) { checkEmailWebhookIsNotBehindASession(t, api, db) })
 			t.Run("IoT auth matrix", func(t *testing.T) { checkIoTAuthMatrixGolden(t, api) })
+			t.Run("checkpoint PIN rejections", func(t *testing.T) { checkRuntimeCheckpointPINRejections(t, api) })
 			t.Run("error envelope on every route", func(t *testing.T) { checkErrorEnvelopeOnEveryRoute(t, api) })
 			t.Run("IoT error code declarations", checkIoTErrorCodesGolden)
 			t.Run("IoT error reports relay", func(t *testing.T) { checkIoTErrorReportsRelay(t, api, sentryFake, newKiosk) })

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The behaviour suites in this directory were written against the retained
@@ -20,7 +21,7 @@ type retainedSessionCalls interface {
 	LoginParent(ctx context.Context, email, password string) (string, string, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	RevokeAllTokens(ctx context.Context, accountID int) error
-	GetActiveTokens(ctx context.Context, accountID int) ([]identityaccess.ActiveSession, error)
+	GetActiveTokens(ctx context.Context, accountID int) ([]liveSession, error)
 }
 
 // sessions is the module the shims delegate to.
@@ -42,8 +43,10 @@ func (s *fixtureOwnedAuthService) RevokeAllTokens(ctx context.Context, accountID
 	return s.sessions().RevokeAllTokensWithReason(ctx, int64(accountID), "administrative_revoke")
 }
 
-func (s *fixtureOwnedAuthService) GetActiveTokens(ctx context.Context, accountID int) ([]identityaccess.ActiveSession, error) {
-	return s.sessions().ListActiveSessions(ctx, int64(accountID))
+// GetActiveTokens reads the account's live refresh sessions in the
+// context's school, as the session store filters them.
+func (s *fixtureOwnedAuthService) GetActiveTokens(ctx context.Context, accountID int) ([]liveSession, error) {
+	return liveSessions(ctx, s.db, testpkg.Tenant(s.t), int64(accountID))
 }
 
 // tenantPasswordLogin is the tenant password login the HTTP route runs, on a

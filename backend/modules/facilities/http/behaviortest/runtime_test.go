@@ -403,66 +403,6 @@ func TestGetRoomsByCategory(t *testing.T) {
 	})
 }
 
-// =============================================================================
-// Building and Category List Tests
-// =============================================================================
-
-func TestGetBuildingList(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_building_list", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/buildings", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), "buildings", "Response should contain buildings")
-	})
-}
-
-func TestGetCategoryList(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_category_list", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/categories", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), "categories", "Response should contain categories")
-	})
-}
-
-// =============================================================================
-// Available Rooms Tests
-// =============================================================================
-
-func TestGetAvailableRooms(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_available_rooms", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/available", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-	})
-
-	t.Run("success_with_capacity_filter", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/available?capacity=20", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-	})
-}
-
 // The Settings Platform registry keys that gate the room history. The
 // literals pin the registry contract the routes resolve.
 const (

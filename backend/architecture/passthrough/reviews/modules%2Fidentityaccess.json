@@ -307,16 +307,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupStudentIDs",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupVisits",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/identityaccess/internal/application/CallerEngine.HasCurrentStaff",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -398,11 +388,6 @@
     {
       "decision": "0090",
       "id": "modules/identityaccess/internal/application/CallerPeople.FindPersonByAccount",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/identityaccess/internal/application/CallerSessions.SessionVisits",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -713,11 +698,6 @@
     {
       "decision": "0090",
       "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListOpenGuardianInvitations",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListRedeemableGuardianInvitations",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

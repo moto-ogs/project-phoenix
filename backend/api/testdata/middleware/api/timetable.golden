@@ -1,9 +1,6 @@
 # Each unindented line is a middleware chain, outermost first.
 # The indented routes below it run through exactly that chain.
 
-api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRuntimeMiddleware.# > api.AuthorizationObserverMiddleware.# > api/common.TenantRuntimeObserverMiddleware.# > api/common.TenantRequestObserverMiddleware.# > github.com/go-chi/chi/v5/middleware.ClientIPFromXFFTrustedProxies.# > api.syncClientIPToRemoteAddr > api.(*httpMetrics).middleware-fm > github.com/samber/slog-chi.NewWithConfig.# > github.com/go-chi/chi/v5/middleware.Recoverer > api.ServerErrorReporting > middleware.SecurityHeaders > api.RequestSettingsCacheMiddleware > api.RequestIdentityCacheMiddleware > github.com/go-chi/jwtauth/v5.Verify.# > modules/identityaccess/sessiontoken.ParseVerified > modules/identityaccess/sessiontoken.RequireLiveSession.# > api.moduleRoutesMiddleware.# > api.SentrySessionContext.# > analytics.CoreActionMiddleware.# > github.com/go-chi/render.SetContentType.# > modules/identityaccess/sessiontoken.Authenticator > api.ReadOnlyPreviewMiddleware > api.TenantScopeMiddleware > api.SecurityPrincipalMiddleware > api.RequestSettingsCacheMiddleware > api.RequestIdentityCacheMiddleware > api/common.requirePermissions.#
-	POST /api/timetable/school-vacations/seed
-
 api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRuntimeMiddleware.# > api.AuthorizationObserverMiddleware.# > api/common.TenantRuntimeObserverMiddleware.# > api/common.TenantRequestObserverMiddleware.# > github.com/go-chi/chi/v5/middleware.ClientIPFromXFFTrustedProxies.# > api.syncClientIPToRemoteAddr > api.(*httpMetrics).middleware-fm > github.com/samber/slog-chi.NewWithConfig.# > github.com/go-chi/chi/v5/middleware.Recoverer > api.ServerErrorReporting > middleware.SecurityHeaders > api.RequestSettingsCacheMiddleware > api.RequestIdentityCacheMiddleware > github.com/go-chi/jwtauth/v5.Verify.# > modules/identityaccess/sessiontoken.ParseVerified > modules/identityaccess/sessiontoken.RequireLiveSession.# > api.moduleRoutesMiddleware.# > api.SentrySessionContext.# > analytics.CoreActionMiddleware.# > github.com/go-chi/render.SetContentType.# > modules/identityaccess/sessiontoken.Authenticator > api.ReadOnlyPreviewMiddleware > api.TenantScopeMiddleware > api.SecurityPrincipalMiddleware > api.RequestSettingsCacheMiddleware > api.RequestIdentityCacheMiddleware > api/common.requirePermissions.# > api/common.TenantTxMiddleware
 	GET /api/timetable/holidays
 	GET /api/timetable/offering-gaps
@@ -49,7 +46,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /api/timetable/templates/{id}
 	GET /api/timetable/conflicts
 	GET /api/timetable/deviations/history
-	GET /api/timetable/exception-conflicts
 	GET /api/timetable/gaps
 	GET /api/timetable/instances/
 	GET /api/timetable/instances/edited-in-window
@@ -60,8 +56,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/timetable/offering-sources
 	GET /api/timetable/offering-sources/combined-counts
 	GET /api/timetable/operations/active-groups/{id}/roster
-	GET /api/timetable/operations/active-sessions
-	GET /api/timetable/operations/capabilities
 	GET /api/timetable/operations/instances/{id}/roster
 	GET /api/timetable/operations/planned-now
 	GET /api/timetable/planning-tracks/
@@ -71,7 +65,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	POST /api/timetable/instances/
 	POST /api/timetable/instances/bulk-cancel
 	POST /api/timetable/instances/re-plan-week
-	POST /api/timetable/instances/{id}/acknowledge-understaffed
 	POST /api/timetable/instances/{id}/convert-to-series
 	POST /api/timetable/instances/{id}/deviations
 	POST /api/timetable/instances/{id}/move-staff

@@ -2,11 +2,6 @@
   "sites": [
     {
       "decision": "0090",
-      "id": "modules/schoolstructure/compose/TeacherGroupIDs.TeacherGroupIDs",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/schoolstructure/compose/legacyGroupManagement.CountGroups",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

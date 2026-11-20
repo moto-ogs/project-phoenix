@@ -3,17 +3,11 @@
 package presence_test
 
 import (
-	"log/slog"
 	"testing"
 	"time"
 
-	settingsFacts "github.com/moto-ogs/project-phoenix/modules/settings"
-
-	rootAPI "github.com/moto-ogs/project-phoenix/api"
-
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
-	"github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,16 +45,6 @@ func TestLiveGroup_IsOpen(t *testing.T) {
 		}
 		assert.False(t, group.IsOpen())
 	})
-}
-
-// setupPresenceRoute builds the web attendance resource on the package test
-// database.
-func setupPresenceRoute(t *testing.T, db *testpkg.DB) *presence.Resource {
-	t.Helper()
-
-	_, serviceFactory, serviceFactoryPresence, serviceFactoryPeople, serviceFactoryEducation, serviceFactoryCaller, serviceFactoryCare := setupActiveModule(t)
-
-	return presence.NewResource(serviceFactoryPresence.PresenceOperations(), activePeople{source: serviceFactoryPeople.AttendancePeople()}, serviceFactoryEducation.TeacherGroupIDs, activeStaffAccess{source: rootAPI.NewActiveTestAttendanceStaff(serviceFactoryCaller)}, serviceFactory.Settings, rootAPI.ProtectedTenantRoutes, slog.Default(), testPresenceQueries(t, db), requestRuntimeForTest(serviceFactoryCare.WithAttendanceStaff), authorizationForTest(), settingsFacts.NewDisplaySettings(serviceFactory.Settings))
 }
 
 func testPresenceQueries(t *testing.T, db *testpkg.DB) studentpresence.Owner {

@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
@@ -20,9 +19,6 @@ type LifecycleStore interface {
 	ReplaceSupervisors(context.Context, int64, []int64) (ports.LifecycleSession, error)
 	CountOpenVisitsInGroupWithRevision(context.Context, int64) (int, int64, error)
 	Touch(context.Context, int64) error
-	Timeout(context.Context, int64) (devicescan.SessionTimeoutResponse, error)
-	ValidateTimeout(context.Context, int64, int) error
-	TimeoutInfo(context.Context, int64) (devicescan.SessionTimeoutInfoResponse, error)
 }
 
 type LifecyclePeople interface {
@@ -206,32 +202,6 @@ func (s *sessionLifecycle) ReplaceSessionSupervisors(ctx context.Context, sessio
 	return devicescan.UpdateSupervisorsResponse{ActiveGroupID: group.ID, Supervisors: s.supervisorInfos(ctx, active), Status: "success", Message: "Supervisors updated successfully"}, nil
 }
 
-func (s *sessionLifecycle) CheckSessionConflict(ctx context.Context, activityID int64) (devicescan.ConflictInfoResponse, error) {
-	device, err := s.device(ctx)
-	if err != nil {
-		return devicescan.ConflictInfoResponse{}, err
-	}
-	info, err := s.store.Conflict(ctx, activityID, device.ID)
-	if err != nil {
-		return info, classifyPresenceFailure(err)
-	}
-	return info, nil
-}
-
-func (s *sessionLifecycle) TimeoutSession(ctx context.Context) (devicescan.SessionTimeoutResponse, error) {
-	device, err := s.device(ctx)
-	if err != nil {
-		return devicescan.SessionTimeoutResponse{}, err
-	}
-	result, err := s.store.Timeout(ctx, device.ID)
-	if err != nil {
-		return result, classifyPresenceFailure(err)
-	}
-	result.Status = "completed"
-	result.Message = fmt.Sprintf("Session ended due to timeout. %d students checked out.", result.StudentsCheckedOut)
-	return result, nil
-}
-
 func (s *sessionLifecycle) TouchSession(ctx context.Context) (int64, error) {
 	device, err := s.device(ctx)
 	if err != nil {
@@ -248,27 +218,4 @@ func (s *sessionLifecycle) TouchSession(ctx context.Context) (int64, error) {
 		return 0, classifyPresenceFailure(err)
 	}
 	return group.ID, nil
-}
-
-func (s *sessionLifecycle) ValidateTimeout(ctx context.Context, minutes int) error {
-	device, err := s.device(ctx)
-	if err != nil {
-		return err
-	}
-	if err := s.store.ValidateTimeout(ctx, device.ID, minutes); err != nil {
-		return classifyPresenceFailure(err)
-	}
-	return nil
-}
-
-func (s *sessionLifecycle) SessionTimeoutInfo(ctx context.Context) (devicescan.SessionTimeoutInfoResponse, error) {
-	device, err := s.device(ctx)
-	if err != nil {
-		return devicescan.SessionTimeoutInfoResponse{}, err
-	}
-	info, err := s.store.TimeoutInfo(ctx, device.ID)
-	if err != nil {
-		return info, classifyPresenceFailure(err)
-	}
-	return info, nil
 }

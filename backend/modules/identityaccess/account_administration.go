@@ -69,9 +69,9 @@ type OwnPasswordChange struct {
 // the school in context, the manageable schools of their organisation, or every account
 // for a platform-scoped caller and an administrative transaction. An
 // account outside that set reads as ErrAccountNotFound, so the boundary
-// never reveals that it exists. FindOwnAccount and ChangeAccountPassword
-// are the account holder's own business and carry no such predicate; who
-// may ask for them is the request boundary's decision. AnonymizeAccountForDeletion
+// never reveals that it exists. ChangeAccountPassword
+// is the account holder's own business and carries no such predicate; who
+// may ask for it is the request boundary's decision. AnonymizeAccountForDeletion
 // is likewise account-wide and reserved for the authorized platform deletion flow.
 //
 // Refusals arrive wrapped in an AuthenticationError whose Op names the
@@ -82,10 +82,8 @@ type AccountAdministration interface {
 	// authorized platform deletion workflow. It is account-wide, preserves
 	// the caller's transaction, and does not deactivate or unlink the account.
 	AnonymizeAccountForDeletion(ctx context.Context, accountID int64, email string) error
-	FindOwnAccount(ctx context.Context, accountID int64) (ManagedAccount, error)
 	FindManageableAccount(ctx context.Context, accountID int64) (ManagedAccount, error)
 	ListManageableAccounts(ctx context.Context, filter AccountListFilter) ([]ManagedAccount, error)
-	ListManageableAccountsByRole(ctx context.Context, roleName string) ([]ManagedAccount, error)
 	UpdateManageableAccount(ctx context.Context, update AccountIdentityUpdate) error
 	ActivateAccount(ctx context.Context, accountID int64) error
 	DeactivateAccount(ctx context.Context, accountID int64) error

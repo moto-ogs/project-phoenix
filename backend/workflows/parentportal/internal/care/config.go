@@ -27,18 +27,17 @@ type Config struct {
 	Now             func() time.Time
 
 	// Reads of the child, its school and its guardians.
-	ChildRepo             ChildReads
-	EnrollablePhaseRepo   EnrollablePhaseReads
-	EnrollmentSettings    EnrollmentSettings
-	EnrollmentRequestRepo EnrollmentRequestReads
-	StudentRepo           StudentReads
-	PersonRepo            PersonReads
-	GuardianProfileRepo   GuardianProfileReads
-	GuardianPhoneRepo     GuardianPhoneReads
-	StudentGuardianRepo   StudentGuardianReads
-	ChangeRequestRepo     DataRequestReads
-	StatusDayRepo         StatusDayReads
-	Settings              SettingsService
+	ChildRepo           ChildReads
+	EnrollablePhaseRepo EnrollablePhaseReads
+	EnrollmentSettings  EnrollmentSettings
+	StudentRepo         StudentReads
+	PersonRepo          PersonReads
+	GuardianProfileRepo GuardianProfileReads
+	GuardianPhoneRepo   GuardianPhoneReads
+	StudentGuardianRepo StudentGuardianReads
+	ChangeRequestRepo   DataRequestReads
+	StatusDayRepo       StatusDayReads
+	Settings            SettingsService
 
 	// Attendance is the only presence source for parents. Visits and room
 	// locations are deliberately excluded from this consumer contract.

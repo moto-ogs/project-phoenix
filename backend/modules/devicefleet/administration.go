@@ -294,111 +294,6 @@ func (s *administration) UpdateDeviceStatus(ctx context.Context, deviceID string
 	return nil
 }
 
-// PingDevice updates the last seen time for a device.
-func (s *administration) PingDevice(ctx context.Context, deviceID string) error {
-	if deviceID == "" {
-		return &AdministrationError{Op: "PingDevice", Err: errors.New(errDeviceIDEmpty)}
-	}
-	existing, err := s.devices.FindDeviceByDeviceID(ctx, deviceID)
-	if errors.Is(err, ErrDeviceNotFound) {
-		return &AdministrationError{Op: "PingDevice", Err: ErrAdministrationDeviceNotFound}
-	}
-	if err != nil {
-		return &AdministrationError{Op: "PingDevice", Err: err}
-	}
-	if existing.ID <= 0 {
-		return &AdministrationError{Op: "PingDevice", Err: &AdministrationDeviceNotFoundError{DeviceID: deviceID}}
-	}
-	// Address the row by its globally unique primary key, so the ping stays
-	// cross-tenant safe.
-	if err := s.devices.UpdateDeviceLastSeen(ctx, existing.ID, s.now()); err != nil {
-		return &AdministrationError{Op: "PingDevice", Err: err}
-	}
-	return nil
-}
-
-// GetDevicesByType retrieves devices by their type.
-func (s *administration) GetDevicesByType(ctx context.Context, deviceType string) ([]*Device, error) {
-	if deviceType == "" {
-		return nil, &AdministrationError{Op: "GetDevicesByType", Err: errors.New("device type cannot be empty")}
-	}
-	devices, err := s.devices.ListDevices(ctx, DeviceFilter{DeviceType: &deviceType})
-	if err != nil {
-		return nil, &AdministrationError{Op: "GetDevicesByType", Err: err}
-	}
-	return administrationDevicePointers(devices), nil
-}
-
-// GetDevicesByStatus retrieves devices by their status.
-func (s *administration) GetDevicesByStatus(ctx context.Context, status DeviceStatus) ([]*Device, error) {
-	if !ValidDeviceStatus(DeviceStatus(status)) {
-		return nil, &AdministrationError{Op: "GetDevicesByStatus", Err: errors.New("invalid device status")}
-	}
-	return s.listByStatus(ctx, "GetDevicesByStatus", status)
-}
-
-// GetDevicesByRegisteredBy retrieves devices registered by a specific person.
-func (s *administration) GetDevicesByRegisteredBy(ctx context.Context, personID int64) ([]*Device, error) {
-	if personID <= 0 {
-		return nil, &AdministrationError{Op: "GetDevicesByRegisteredBy", Err: errors.New("invalid person ID")}
-	}
-	devices, err := s.devices.ListDevices(ctx, DeviceFilter{RegisteredByID: &personID})
-	if err != nil {
-		return nil, &AdministrationError{Op: "GetDevicesByRegisteredBy", Err: err}
-	}
-	return administrationDevicePointers(devices), nil
-}
-
-// GetActiveDevices retrieves all active devices.
-func (s *administration) GetActiveDevices(ctx context.Context) ([]*Device, error) {
-	return s.listByStatus(ctx, "GetActiveDevices", DeviceStatusActive)
-}
-
-// GetDevicesRequiringMaintenance retrieves all devices requiring maintenance.
-func (s *administration) GetDevicesRequiringMaintenance(ctx context.Context) ([]*Device, error) {
-	return s.listByStatus(ctx, "GetDevicesRequiringMaintenance", DeviceStatusMaintenance)
-}
-
-func (s *administration) listByStatus(ctx context.Context, operation string, status DeviceStatus) ([]*Device, error) {
-	mapped := DeviceStatus(status)
-	devices, err := s.devices.ListDevices(ctx, DeviceFilter{Status: &mapped})
-	if err != nil {
-		return nil, &AdministrationError{Op: operation, Err: err}
-	}
-	return administrationDevicePointers(devices), nil
-}
-
-// GetOfflineDevices retrieves devices offline for at least the given duration.
-func (s *administration) GetOfflineDevices(ctx context.Context, offlineDuration time.Duration) ([]*Device, error) {
-	if offlineDuration <= 0 {
-		return nil, &AdministrationError{Op: "GetOfflineDevices", Err: errors.New("invalid offline duration")}
-	}
-	devices, err := s.devices.ListOfflineDevices(ctx, offlineDuration)
-	if err != nil {
-		return nil, &AdministrationError{Op: "GetOfflineDevices", Err: err}
-	}
-	return administrationDevicePointers(devices), nil
-}
-
-// GetDeviceTypeStatistics retrieves a count of devices by type.
-func (s *administration) GetDeviceTypeStatistics(ctx context.Context) (map[string]int, error) {
-	stats, err := s.devices.CountDevicesByType(ctx)
-	if err != nil {
-		return nil, &AdministrationError{Op: "GetDeviceTypeStatistics", Err: err}
-	}
-	return stats, nil
-}
-
-// DetectNewDevices is a placeholder for network discovery.
-func (s *administration) DetectNewDevices(_ context.Context) ([]*Device, error) {
-	return nil, &AdministrationError{Op: "DetectNewDevices", Err: errors.New("device auto-discovery not implemented")}
-}
-
-// ScanNetwork is a placeholder for network scanning.
-func (s *administration) ScanNetwork(_ context.Context) (map[string]string, error) {
-	return nil, &AdministrationError{Op: "ScanNetwork", Err: errors.New("network scanning not implemented")}
-}
-
 type Administration interface {
 	DeviceAdministration
 	DeviceMonitoring
@@ -424,26 +319,11 @@ type DeviceAdministration interface {
 	ListDevices(ctx context.Context, filter DeviceFilter) ([]*Device, error)
 	// Status operations
 	UpdateDeviceStatus(ctx context.Context, deviceID string, status DeviceStatus) error
-	PingDevice(ctx context.Context, deviceID string) error
 }
 
-// DeviceMonitoring combines device reports and online status.
+// DeviceMonitoring reads the online status of devices.
 type DeviceMonitoring interface {
-	DeviceReporting
 	DeviceOnlineMonitoring
-}
-
-// DeviceReporting reads filtered fleet reports.
-type DeviceReporting interface {
-	// Filtered lookups
-	GetDevicesByType(ctx context.Context, deviceType string) ([]*Device, error)
-	GetDevicesByStatus(ctx context.Context, status DeviceStatus) ([]*Device, error)
-	GetDevicesByRegisteredBy(ctx context.Context, personID int64) ([]*Device, error)
-	// Monitoring and reporting
-	GetActiveDevices(ctx context.Context) ([]*Device, error)
-	GetDevicesRequiringMaintenance(ctx context.Context) ([]*Device, error)
-	GetOfflineDevices(ctx context.Context, offlineDuration time.Duration) ([]*Device, error)
-	GetDeviceTypeStatistics(ctx context.Context) (map[string]int, error)
 }
 
 // DeviceOnlineMonitoring evaluates online status for administration callers.
@@ -459,9 +339,6 @@ type DeviceOnlineMonitoring interface {
 
 // DeviceDiscovery exposes device discovery and the composed fleet.
 type DeviceDiscovery interface {
-	// Network operations
-	DetectNewDevices(ctx context.Context) ([]*Device, error)
-	ScanNetwork(ctx context.Context) (map[string]string, error)
 	// Fleet exposes the Device Fleet owner this service delegates to, so the
 	// composition root binds one instance for every entry point (#2676).
 	Fleet() Capability

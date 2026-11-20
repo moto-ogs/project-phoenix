@@ -494,35 +494,6 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 	common.Respond(w, r, http.StatusOK, result, "Bulk arrival schedules upserted successfully")
 }
 
-// BulkArrivalDayNoteResponse represents a single day note in bulk arrival time responses
-type BulkArrivalDayNoteResponse struct {
-	ID      int64  `json:"id"`
-	Content string `json:"content"`
-}
-
-// BulkArrivalTimeResponse represents arrival time data for a single student
-type BulkArrivalTimeResponse struct {
-	StudentID       int64                        `json:"student_id"`
-	Date            string                       `json:"date"`
-	WeekdayName     string                       `json:"weekday_name"`
-	ExpectedArrival *string                      `json:"expected_arrival,omitempty"` // HH:MM format or null
-	IsException     bool                         `json:"is_exception"`
-	Notes           string                       `json:"notes,omitempty"`
-	DayNotes        []BulkArrivalDayNoteResponse `json:"day_notes,omitempty"`
-}
-
-// getBulkArrivalTimes handles POST /students/arrival-times/bulk
-func (rs *Resource) getBulkArrivalTimes(w http.ResponseWriter, r *http.Request) {
-	handleBulkEffectiveTimes(
-		rs,
-		w,
-		r,
-		"Bulk arrival times retrieved successfully",
-		rs.ArrivalScheduleService.GetBulkEffectiveArrivalTimesForDate,
-		mapBulkArrivalTimeResponse,
-	)
-}
-
 type ArrivalScheduleStatusResponse struct {
 	StudentIDs []int64 `json:"student_ids"`
 }
@@ -559,33 +530,6 @@ func (rs *Resource) getBulkArrivalScheduleStatus(w http.ResponseWriter, r *http.
 		}
 	}
 	common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: studentIDs}, "Bulk arrival schedule status retrieved successfully")
-}
-
-func mapBulkArrivalTimeResponse(
-	studentID int64,
-	effectiveTime *careplan.EffectiveArrivalTime,
-) BulkArrivalTimeResponse {
-	response := BulkArrivalTimeResponse{
-		StudentID:   studentID,
-		Date:        effectiveTime.Date.Format(dateFormatISO),
-		WeekdayName: effectiveTime.WeekdayName,
-		IsException: effectiveTime.IsException,
-		Notes:       effectiveTime.Notes,
-	}
-	if effectiveTime.ArrivalTime != nil {
-		formatted := effectiveTime.ArrivalTime.Format("15:04")
-		response.ExpectedArrival = &formatted
-	}
-	if len(effectiveTime.DayNotes) > 0 {
-		response.DayNotes = make([]BulkArrivalDayNoteResponse, 0, len(effectiveTime.DayNotes))
-		for _, note := range effectiveTime.DayNotes {
-			response.DayNotes = append(response.DayNotes, BulkArrivalDayNoteResponse{
-				ID:      note.ID,
-				Content: note.Content,
-			})
-		}
-	}
-	return response
 }
 
 // ClassArrivalTimesResponse is the current Unterrichtsschluss of one class.

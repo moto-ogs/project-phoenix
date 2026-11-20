@@ -23,26 +23,20 @@ import (
 // that applies to every school and the monthly key-date counts, as JSON and
 // as a CSV download.
 type BillingResource struct {
-	service            organizationtenancy.BillingReport
-	logger             *slog.Logger
-	isLocalSeedRequest func(*http.Request) bool
-	now                func() time.Time
+	service organizationtenancy.BillingReport
+	logger  *slog.Logger
 }
 
-// NewBillingResource creates the billing routes' handlers; now is the
-// root's clock the demo capture stamps its snapshot with; it is required.
-// A nil logger falls back to slog.Default.
-func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.Logger, isLocalSeedRequest func(*http.Request) bool, now func() time.Time) *BillingResource {
+// NewBillingResource creates the billing routes' handlers. A nil logger
+// falls back to slog.Default.
+func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.Logger) *BillingResource {
 	if service == nil {
 		panic("organization tenancy operator: billing report is required")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	if now == nil {
-		panic("organization tenancy operator: billing clock is required")
-	}
-	return &BillingResource{service: service, logger: logger, isLocalSeedRequest: isLocalSeedRequest, now: now}
+	return &BillingResource{service: service, logger: logger}
 }
 
 type billingKeyDayResponse struct {
@@ -124,21 +118,6 @@ func (rs *BillingResource) ListKeyDateCounts(w http.ResponseWriter, r *http.Requ
 		result = append(result, toBillingKeyDateCountResponse(count))
 	}
 	common.Respond(w, r, http.StatusOK, result, "Billing key-date counts retrieved successfully")
-}
-
-// SeedKeyDateCounts writes the deterministic demo snapshot. It is only
-// reachable by the local API seeder and never enables a production capture.
-func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {
-	if rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {
-		common.RenderError(w, r, common.OperatorForbidden("Die Demo-Erfassung ist nur lokal verfügbar."))
-		return
-	}
-	written, err := rs.service.SeedBillingKeyDateCounts(r.Context(), rs.now())
-	if err != nil {
-		common.RenderError(w, r, rs.billingError(r, err))
-		return
-	}
-	common.Respond(w, r, http.StatusCreated, map[string]int{"written": written}, "Demo-Stichtagszahlen erfasst")
 }
 
 // The scopes of an own key day.

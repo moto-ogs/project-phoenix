@@ -702,7 +702,9 @@ it.each([
   "/lohnbuero/42.signing-credential",
   "/public/payroll%2Ddownload/42.signing-credential",
   "/%6cohnbuero/42.signing-credential",
-])("redacts signing URLs from events and spans: %s", (path) => {
+  "/api%2Fpublic%2Fpayroll%2Ddownload%2F42.signing-credential",
+  "/%6cohnbuero%2F42.signing-credential",
+])("redacts public credential URLs from events and spans: %s", (path) => {
   const result = scrubEvent(
     makeEvent({
       request: {

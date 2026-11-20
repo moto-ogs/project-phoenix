@@ -119,33 +119,3 @@ func TestListCategories_ExcludesSystemCategoriesByDefault(t *testing.T) {
 		assert.True(t, ids[system.ID], "system category must appear with include_system=true")
 	})
 }
-
-func TestGetAvailableActivities_ExcludesSystemActivities(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	student := testpkg.CreateTestStudent(t, ctx.db, "Avail", fmt.Sprintf("Student-%d", time.Now().UnixNano()), "1a")
-
-	normal := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("AvailNormal-%d", time.Now().UnixNano()))
-	system := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("AvailSystem-%d", time.Now().UnixNano()))
-
-	// Both groups open for enrollment; one flagged as system infrastructure
-	// (mirrors Schulhof Freispiel/WC, which are created with is_open = true).
-	for _, id := range []int64{normal.ID, system.ID} {
-		_, err := ctx.db.NewUpdate().
-			TableExpr("activities.groups").
-			Set("is_open = TRUE").
-			Where("id = ?", id).
-			Exec(context.Background())
-		require.NoError(t, err)
-	}
-	markGroupAsSystem(t, ctx.db, system.ID)
-
-	req := testutil.NewRequest("GET", fmt.Sprintf("/activities/students/%d/available", student.ID), nil)
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-
-	ids := responseIDs(t, rr.Body.Bytes())
-	assert.True(t, ids[normal.ID], "normal open activity should be available for enrollment")
-	assert.False(t, ids[system.ID], "system activity must never be offered for enrollment")
-}
