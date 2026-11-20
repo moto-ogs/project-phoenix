@@ -237,6 +237,29 @@ test('the entry dashboard counts self-opening surfaces from consenting browsers 
   }
 });
 
+// Ankündigung (#7555): the server counts it for the school, also without
+// consent, so its tile is the one entry tile without the consent mark.
+test('the entry dashboard shows the announcement seen and closed from the server, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Ankündigung gesehen und geschlossen');
+  assert.ok(tile, 'the announcement tile exists');
+  assert.equal(tile.deployment, 'production');
+  assert.match(tile.description, /auch ohne Einwilligung/);
+  const query = tile.query.source.query;
+  for (const event of ['announcement_seen', 'announcement_dismissed']) {
+    assert.match(query, new RegExp(`'${event}'`), event);
+  }
+  assert.doesNotMatch(query, /Geschlossen in Prozent/, 'bulk closing can include announcements not shown');
+  assert.match(tile.description, /keinen Prozentwert/);
+  assert.doesNotMatch(query, /distinct_id|person|\$session_id/, 'no person and no session');
+
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['announcement_seen', 'announcement_dismissed']) {
+    assert.ok(noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
 test('the entry dashboard counts the care worker\'s first steps from the server, never as feature use', () => {
   const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
   const hiding = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Betreuung abgeschlossen oder ausgeblendet (vom Server)');

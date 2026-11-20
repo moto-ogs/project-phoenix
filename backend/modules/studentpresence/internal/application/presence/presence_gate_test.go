@@ -25,7 +25,6 @@ type stubSettingsResolver struct {
 	// error, mimicking how a missing override resolves.
 	stringValues map[string]string
 	stringErr    error
-	intValues    map[string]int
 }
 
 // The questions the service asks. The registry keys they resolve to are named
@@ -36,7 +35,6 @@ const (
 	excusedClearModeQuestion         = "excused clear mode"
 	attendanceEditScopeQuestion      = "attendance edit scope"
 	operationalOverviewScopeQuestion = "operational overview scope"
-	sessionInactivityTimeoutQuestion = "session inactivity timeout"
 )
 
 func (s *stubSettingsResolver) resolveString(question string) (string, error) {
@@ -64,10 +62,6 @@ func (s *stubSettingsResolver) AttendanceEditScope(context.Context) (string, err
 
 func (s *stubSettingsResolver) OperationalOverviewScope(context.Context) (string, error) {
 	return s.resolveString(operationalOverviewScopeQuestion)
-}
-
-func (s *stubSettingsResolver) SessionInactivityTimeoutMinutes(context.Context) (int, error) {
-	return s.intValues[sessionInactivityTimeoutQuestion], nil
 }
 
 func (s *stubSettingsResolver) WebParticipantLimitEnforced(context.Context) (bool, error) {

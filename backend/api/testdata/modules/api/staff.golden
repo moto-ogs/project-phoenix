@@ -12,7 +12,6 @@ GET /api/staff/absences/mails -> zeiterfassung
 GET /api/staff/absences/pending -> zeiterfassung
 GET /api/staff/absences/plan-gaps -> zeiterfassung
 GET /api/staff/absences/requests -> zeiterfassung
-GET /api/staff/available -> basis
 GET /api/staff/by-role -> basis
 GET /api/staff/dashboard-summary -> basis
 GET /api/staff/documents-directory -> personalakte

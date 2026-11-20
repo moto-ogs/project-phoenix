@@ -83,12 +83,19 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 	counter.Stop()
 	foreignTenant, _ := testpkg.CreateTestTenant(t, db)
 	createdAt := time.Now()
+	readerIDs := make([]int64, 0, 8)
+	for index := 0; index < cap(readerIDs); index++ {
+		_, reader := testpkg.CreateTestPersonWithAccount(t, db, "Reader", fmt.Sprintf("%02d", index))
+		testpkg.EnsureAccountTenant(t, db, reader.ID, testpkg.Tenant(t))
+		readerIDs = append(readerIDs, reader.ID)
+	}
 	created := 0
 	var viewedID int64
 	var expectedTitles []string
 	var expectedReaderIDs []int64
 	for _, n := range []int{3, 8} {
 		for created < n {
+			readerID := readerIDs[created]
 			announcement := &communication.Announcement{Title: fmt.Sprintf("Budget-%02d", created), CreatedAt: createdAt.Add(time.Duration(created*2) * time.Second), Content: "Positive growth", Type: communication.TypeAnnouncement, Severity: communication.SeverityInfo, Active: true, TargetTenantIDs: []int64{testpkg.Tenant(t)}}
 			require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
 			ids = append(ids, announcement.ID)
@@ -97,10 +104,8 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			if created == 0 {
 				viewedID = announcement.ID
 			}
-			_, reader := testpkg.CreateTestPersonWithAccount(t, db, "Reader", fmt.Sprintf("%02d", created))
-			testpkg.EnsureAccountTenant(t, db, reader.ID, testpkg.Tenant(t))
-			require.NoError(t, module.MarkDismissed(ctx, reader.ID, viewedID))
-			expectedReaderIDs = append(expectedReaderIDs, reader.ID)
+			require.NoError(t, module.MarkSeen(ctx, communication.AnnouncementViewer{AccountID: readerID, TenantID: testpkg.Tenant(t), OrgID: organizationID}, viewedID))
+			expectedReaderIDs = append(expectedReaderIDs, readerID)
 			// Targeted foreign-school announcements must not leak into unread DTOs.
 			foreign := &communication.Announcement{Title: fmt.Sprintf("Foreign-%02d", created), CreatedAt: createdAt.Add(time.Duration(created*2+1) * time.Second), Content: "Excluded", Type: communication.TypeAnnouncement, Severity: communication.SeverityInfo, Active: true, TargetTenantIDs: []int64{foreignTenant}}
 			require.NoError(t, module.CreateAnnouncement(ctx, foreign, operator.ID, nil))
@@ -153,7 +158,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 					require.Contains(t, expectedReaderIDs, row.UserID)
 					require.Contains(t, row.UserName, "Reader")
 					require.NotEmpty(t, row.SeenAt)
-					require.True(t, row.Dismissed, "the readers closed it, as the app does")
+					require.False(t, row.Dismissed)
 				}
 			}
 			switch entry.name {

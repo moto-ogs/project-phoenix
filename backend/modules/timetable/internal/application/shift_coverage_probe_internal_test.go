@@ -258,10 +258,6 @@ type fakeActivityScheduleReader struct {
 	groupID int64
 }
 
-func (f *fakeActivityScheduleReader) FindTemplateStartTimes(context.Context, []int64) ([]timetable.TemplateStartTime, error) {
-	return nil, errors.New("not used by the shift-coverage probe")
-}
-
 // ListSchedules serves the probe's one read, the schedules of one template.
 func (f *fakeActivityScheduleReader) ListSchedules(_ context.Context, filter timetable.ScheduleFilter) ([]timetable.Schedule, error) {
 	f.calls++

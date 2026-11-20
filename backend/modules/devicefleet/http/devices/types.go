@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	devicefleet "github.com/moto-ogs/project-phoenix/modules/devicefleet"
@@ -74,22 +73,6 @@ func (req *DeviceStatusRequest) Bind(_ *http.Request) error {
 			string(devicefleet.DeviceStatusOffline),
 		)),
 	)
-}
-
-// DeviceStatisticsResponse represents device statistics
-type DeviceStatisticsResponse struct {
-	DeviceTypeCount map[string]int `json:"device_type_count"`
-	TotalDevices    int            `json:"total_devices"`
-	ActiveDevices   int            `json:"active_devices"`
-	OfflineDevices  int            `json:"offline_devices"`
-	LastUpdated     time.Time      `json:"last_updated"`
-}
-
-// NetworkScanResponse represents network scan results
-type NetworkScanResponse struct {
-	Devices      map[string]string `json:"devices"`
-	ScanTime     time.Time         `json:"scan_time"`
-	DevicesFound int               `json:"devices_found"`
 }
 
 // newDeviceResponse converts a device model to a response object. The

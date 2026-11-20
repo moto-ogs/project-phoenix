@@ -30,8 +30,6 @@ func TestAllSettingsRegistered(t *testing.T) {
 		"operations.session_cleanup_enabled",
 		"operations.session_cleanup_interval_minutes",
 		"operations.session_abandoned_threshold_minutes",
-		// Default active-session inactivity timeout (issue #586, Rule 12).
-		"operations.session_inactivity_timeout_minutes",
 		"operations.operational_overview_scope",
 		// Who may set a class-wide arrival day exception (#2962).
 		"operations.class_arrival_exception_editors",

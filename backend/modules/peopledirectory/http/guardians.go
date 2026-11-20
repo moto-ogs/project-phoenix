@@ -209,8 +209,6 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.With(usersRead, withTx).Get("/", rs.listGuardians)
 		r.With(usersRead, withTx).Get("/search", rs.searchGuardiansForPicker)
 		r.With(usersRead, withTx).Get("/{id}", rs.getGuardian)
-		r.With(usersRead, withTx).Get("/without-account", rs.listGuardiansWithoutAccount)
-		r.With(usersRead, withTx).Get("/invitable", rs.listInvitableGuardians)
 
 		r.With(usersCreate, withTx).Post("/", rs.createGuardian)
 		r.With(usersUpdate, withTx).Put("/{id}", rs.updateGuardian)

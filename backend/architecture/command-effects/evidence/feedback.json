@@ -17,25 +17,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.EraseEntry",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.EraseEntry",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.FindEntries",
       "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
       "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.FindEntries",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.LookupEntry",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.LookupEntry",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -113,25 +97,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.Delete",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.Delete",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.DeleteOlderThan",
       "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
       "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.DeleteOlderThan",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.Get",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.Get",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"

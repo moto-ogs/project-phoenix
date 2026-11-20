@@ -63,9 +63,8 @@ func inclusiveDayCount(from, to calendar.Date) int {
 	return from.DaysUntil(to) + 1
 }
 
-// parseTodayFutureDateRange parses the shared query shape of /gaps and
-// /exception-conflicts: `date` required, `date_to` optional (defaults to
-// `date`), the inclusive window capped at MaxTimetableReadRangeDays, and the
+// parseTodayFutureDateRange parses the query shape of /gaps: `date`
+// required, `date_to` optional (defaults to `date`), the inclusive window capped at MaxTimetableReadRangeDays, and the
 // start pinned to today-or-future on the Berlin calendar. Renders the 400 and
 // returns ok=false on any violation. Error strings are a cross-repo contract —
 // keep them byte-identical.

@@ -4,13 +4,11 @@ DELETE /api/guardians/{id}/email-block -> basis
 DELETE /api/guardians/{id}/email-stop -> basis
 DELETE /api/guardians/{id}/phone-numbers/{phoneId} -> basis
 GET /api/guardians/ -> basis
-GET /api/guardians/invitable -> eltern_app
 GET /api/guardians/invitations/pending-approval -> eltern_app
 GET /api/guardians/payment-overview -> basis
 GET /api/guardians/search -> basis
 GET /api/guardians/students/{studentId}/email-status -> basis
 GET /api/guardians/students/{studentId}/guardians -> basis
-GET /api/guardians/without-account -> eltern_app
 GET /api/guardians/{id} -> basis
 GET /api/guardians/{id}/delete-preview -> basis
 GET /api/guardians/{id}/payment -> basis

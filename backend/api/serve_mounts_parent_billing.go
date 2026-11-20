@@ -57,8 +57,7 @@ import (
 // right (#6219),
 // and the SEPA mandates and the creditor at /traeger/sepa-mandates and
 // /traeger/sepa-creditor behind the same right (#4695), and the SEPA direct
-// debit file of the issued runs at /traeger/sepa-debits (#4697), and the
-// check of the DATEV settings at /traeger/datev-export (#4694), the finance
+// debit file of the issued runs at /traeger/sepa-debits (#4697), the finance
 // exports with their protocol at /traeger/finance-exports (#4693), and the
 // details the Träger still has to enter at /traeger/required-details (#7177).
 func mountParentBillingRoutes(root, publicLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings, marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, today func() calendar.Date, now func() time.Time, logger *slog.Logger) {
@@ -89,7 +88,7 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	root.Mount("/traeger/care-cost-shares", reductions.CostShareRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/family-children", familyChildren.Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/care-notice-runs", NewCareNoticeHTTP(organizations, settings, schoolSettings, marks, delivery, outcomes, today, now).Router(ProtectedTraegerRoutes))
-	terms, datev, required := NewBillingTermsHTTP(settings, requiredDetailSources(organizations, settings, schoolSettings), today, now)
+	terms, required := NewBillingTermsHTTP(settings, requiredDetailSources(organizations, settings, schoolSettings), now)
 	root.Mount("/traeger/billing-terms", terms.TermsRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/family-billing", terms.FamilyRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/billing-run-due-dates", terms.DueDateRouter(ProtectedTraegerRoutes))
@@ -98,7 +97,6 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	root.Mount("/traeger/sepa-mandates", mandates.MandateRouter(ProtectedTraegerRoutes))
 	debits := parentBillingCompose.NewSEPADebits(newParentBillingLetterheads(settings), bankData, securityruntime.Fingerprint, today, now)
 	root.Mount("/traeger/sepa-debits", newSEPADebitResource(debits).Router(ProtectedTraegerRoutes))
-	root.Mount("/traeger/datev-export", datev.Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/finance-exports", NewFinanceExportHTTP(financeExports, bookingAccounts).Router(ProtectedTraegerRoutes))
 	transfers := NewTraegerExportTransfers(bankData, now, logger)
 	root.Mount("/traeger/finance-handovers", NewExportHandoverHTTP(financeExports, debits, transfers).Router(ProtectedTraegerRoutes))
@@ -124,17 +122,14 @@ func NewSEPAMandateHTTP(settings TraegerBrandingSettings, cipher parentbilling.B
 // NewBillingTermsHTTP binds the payment terms, the bundling, the family
 // deviations and the due dates of the runs (#4689, ADR 0167) to the right
 // "Abrechnung" and to the parties of the Betreuungsvertrag, which name the
-// family of a contract, in the caller's Träger transaction, and the DATEV
-// booking batch (#4694) to the same right and the DATEV settings of the
-// Träger, and the details the Träger still has to enter (#7177) to every
-// member of the Träger and the sources of details; today and now are the
-// root's clocks.
-func NewBillingTermsHTTP(settings TraegerBrandingSettings, details parentbilling.RequiredDetailSources, today func() calendar.Date, now func() time.Time) (*parentBillingHTTP.BillingTermsResource, *parentBillingHTTP.DatevExportResource, *parentBillingHTTP.RequiredDetailsResource) {
+// family of a contract, in the caller's Träger transaction, and the details
+// the Träger still has to enter (#7177) to every member of the Träger and the
+// sources of details; now is the root's clock.
+func NewBillingTermsHTTP(settings TraegerBrandingSettings, details parentbilling.RequiredDetailSources, now func() time.Time) (*parentBillingHTTP.BillingTermsResource, *parentBillingHTTP.RequiredDetailsResource) {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
-	terms, datev, required := parentBillingCompose.NewBillingTerms(contracts, parentBillingSettings{settings: settings}, parentBillingSettings{settings: settings}, details, today, now)
+	terms, required := parentBillingCompose.NewBillingTerms(contracts, parentBillingSettings{settings: settings}, details, now)
 	requireBilling := common.RequiresPermission(identityaccess.TraegerRightBillingManage)
-	return parentBillingHTTP.NewBillingTermsResource(terms, requireBilling), parentBillingHTTP.NewDatevExportResource(datev, requireBilling),
-		parentBillingHTTP.NewRequiredDetailsResource(required)
+	return parentBillingHTTP.NewBillingTermsResource(terms, requireBilling), parentBillingHTTP.NewRequiredDetailsResource(required)
 }
 
 // NewCareBillingHTTP binds the monthly contribution of the care contract

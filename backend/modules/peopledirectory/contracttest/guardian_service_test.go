@@ -1496,40 +1496,6 @@ func TestGuardianService_ListGuardians(t *testing.T) {
 }
 
 // =============================================================================
-// GetGuardiansWithoutAccount Tests
-// =============================================================================
-
-func TestGuardianService_GetGuardiansWithoutAccount(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupGuardianService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns guardians without accounts", func(t *testing.T) {
-		// ARRANGE
-		guardian := testpkg.CreateTestGuardianProfile(t, db, "no-account")
-
-		// ACT
-		result, err := testpkg.TenantQuery0(t, ctx, db, service.GuardianProfiles().FindWithoutAccount)
-
-		// ASSERT
-		require.NoError(t, err)
-		assert.NotEmpty(t, result)
-		// Verify our guardian is in the list
-		found := false
-		for _, g := range result {
-			if g.ID == guardian.ID {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found, "Created guardian should be in list")
-	})
-}
-
-// =============================================================================
 // GetInvitableGuardians Tests
 // =============================================================================
 

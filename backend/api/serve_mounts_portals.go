@@ -241,6 +241,10 @@ func newPlatformRuntime() platformAnnouncementsHTTP.Runtime {
 		IDParam: apiCommon.ParseInt64IDWithError,
 		Success: apiCommon.Respond,
 		Failure: func(w http.ResponseWriter, r *http.Request, failure platformAnnouncementsHTTP.Failure) {
+			if failure.Status == http.StatusNotFound {
+				apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(failure.Err))
+				return
+			}
 			apiCommon.RenderError(w, r, apiCommon.ErrorInternalServerWrap(failure.Message, failure.Err))
 		},
 	}

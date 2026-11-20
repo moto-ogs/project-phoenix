@@ -20,7 +20,6 @@ const (
 	MessageRFIDTagNotStudentOrStaff     = "RFID tag not assigned to student or staff"
 	MessagePersonNotStudent             = "person is not a student"
 	MessageStudentRFIDRequiredForPickup = "student RFID tag required for pickup query"
-	MessageRFIDParameterRequired        = "RFID parameter is required"
 	MessageInternalServerError          = "Internal server error"
 	MessageDeviceAPIKeyRequired         = "device API key is required"
 
@@ -273,13 +272,6 @@ type DevicePing struct {
 	PingTime      time.Time
 }
 
-// DeviceStatus is the authenticated device's own view.
-type DeviceStatus struct {
-	Device          Device
-	IsOnline        bool
-	AuthenticatedAt time.Time
-}
-
 // AttendanceGroup names the child's education group.
 type AttendanceGroup struct {
 	ID   int64
@@ -303,12 +295,6 @@ type AttendanceState struct {
 	CheckOutTime *time.Time
 	CheckedInBy  string
 	CheckedOutBy string
-}
-
-// AttendanceStatus answers the attendance status lookup.
-type AttendanceStatus struct {
-	Student    AttendanceStudent
-	Attendance AttendanceState
 }
 
 // AttendanceToggleCommand is one attendance action the kiosk confirms.
@@ -346,14 +332,11 @@ type Scanner interface {
 	PickupInfo(ctx context.Context, rfidTag string) (*PickupInfo, error)
 	// Ping records device activity and refreshes the device session.
 	Ping(ctx context.Context) (*DevicePing, error)
-	// Status reports the authenticated device.
-	Status(ctx context.Context) (*DeviceStatus, error)
 }
 
 // Attendance is the daily attendance contract of the kiosk.
 type Attendance interface {
 	DeviceIdentity
-	AttendanceStatus(ctx context.Context, rfidTag string) (*AttendanceStatus, error)
 	// ToggleAttendance requires an existing tenant transaction.
 	ToggleAttendance(ctx context.Context, command AttendanceToggleCommand) (*AttendanceToggleResult, error)
 }

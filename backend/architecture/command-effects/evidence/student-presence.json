@@ -2177,70 +2177,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardiansWithoutAccount",
-      "binding_digest": "439d2b1807da2307de0c293a3daca577",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "binding_digest": "4bb4a1e97196ee0b2aaf0bd9354a5455",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "binding_digest": "3d80bfcc8d5b97a5d3b4f5d5a7781530",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "binding_digest": "3d80bfcc8d5b97a5d3b4f5d5a7781530",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListInvitableGuardians",
-      "binding_digest": "a6daf29190c74ad20f745716b183c9c6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "binding_digest": "e6c76d4c34e47010919a9aa1e8fe28d4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "binding_digest": "ed55567226b4deadc65387948b9c5d77",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "binding_digest": "ed55567226b4deadc65387948b9c5d77",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPaymentExportRows",
       "binding_digest": "cfaf879d867c1a32fad2efdccf0709e2",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPaymentExportRows",
@@ -4737,38 +4673,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.PresenceAttendanceMirror.MirrorVisitRevision",
-      "binding_digest": "d22566453c703da434554f59a7599d6c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.AttendanceSyncer.MirrorVisitRevision",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.AttendanceMirror.MirrorVisitRevision",
-      "target_owner": "timetable-activities"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ApplyActivePartialAbsencesForInstance",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ApplyActivePartialAbsencesForInstance",
@@ -5377,30 +5281,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteExpiredVisits",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteExpiredVisits",
@@ -5449,54 +5329,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DiscardActivitySession",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DiscardActivitySession",
@@ -5516,30 +5348,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DiscardActivitySession",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DiscardActivitySession",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.EndCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.EndCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.EndCombination",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -5793,30 +5601,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.HasAttendance",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.HasAttendance",
@@ -5961,30 +5745,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListExpiredVisitMonths",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListExpiredVisitMonths",
@@ -6004,30 +5764,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListExpiredVisitMonths",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListExpiredVisitMonths",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListGroupMappings",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -6921,30 +6657,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroup",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroup",
@@ -6988,30 +6700,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupActivity",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupActivity",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupMapping",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupMapping",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupMapping",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -7129,30 +6817,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveSupervision",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RemoveSupervision",
@@ -7265,54 +6929,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseGroup",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseGroup",
@@ -7372,30 +6988,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseSupervision",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseSupervision",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseVisit",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseVisit",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -7681,30 +7273,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.AddGroupToCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.AddGroupToCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.AddGroupToCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ApplyActivePartialAbsencesForInstance",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ApplyActivePartialAbsencesForInstance",
@@ -8385,30 +7953,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteExpiredAttendance",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteExpiredAttendance",
@@ -8489,54 +8033,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteGroupMapping",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteGroupMapping",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteVisit",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteVisit",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DiscardActivitySession",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DiscardActivitySession",
@@ -8556,30 +8052,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DiscardActivitySession",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DiscardActivitySession",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.EndCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.EndCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.EndCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -8833,30 +8305,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.GetCombinedGroup",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.GetCombinedGroup",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.GetCombinedGroup",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.HasAttendance",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.HasAttendance",
@@ -9025,30 +8473,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListCombinedGroups",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListCombinedGroups",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListCombinedGroups",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListExpiredVisitMonths",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListExpiredVisitMonths",
@@ -9068,30 +8492,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListExpiredVisitMonths",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListExpiredVisitMonths",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListGroupMappings",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListGroupMappings",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListGroupMappings",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -10033,30 +9433,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroup",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroup",
@@ -10100,30 +9476,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroupActivity",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupActivity",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroupMapping",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroupMapping",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -10260,30 +9612,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReleaseStatusDay",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReleaseStatusDay",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RemoveGroupFromCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RemoveGroupFromCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RemoveGroupFromCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -10409,54 +9737,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseAttendance",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseAttendance",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseAttendance",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseGroup",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseGroup",
@@ -10516,30 +9796,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseSupervision",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseSupervision",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseVisit",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseVisit",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -13769,158 +13025,6 @@
       "target_owner": "school-membership"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByID",
-      "binding_digest": "8c735806edb403c14d195f35917a6797",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StudentRows",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByID",
-      "binding_digest": "84dd5e2027759cc988adee512cb5f6ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByPersonID",
-      "binding_digest": "1a7deba7a41e0cfa91378c3627fc2765",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByPersonID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StudentRows",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByPersonID",
-      "binding_digest": "de045dc02dfb1fc79529744ba257b61b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByPersonID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByPersonID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "binding_digest": "8ebe9384950fd05bd83a6115fc6efd7c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Teacher.SetTenantID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "binding_digest": "b467dc7625facaa72fe4d3389ac86e51",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.TeacherRows",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "binding_digest": "caac504dd79bfdefce2a755334e66976",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.TeacherRepository.FindByStaffID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "binding_digest": "b55e6f0c65f8e7e7507fc112bd0a0b3d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindTeacherByStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "binding_digest": "da7660c6ed4b08db77031ab76ab3e090",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindTeacherByStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AdmitVisit",
-      "binding_digest": "3c4b271ed9cdec05e02edfe22e57bc90",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AdmitVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AdmitVisit",
-      "binding_digest": "732cde3c1a1ab155ad05703d9222c5ba",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AdmitVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendSupervision",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendSupervision",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendSupervision",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendVisit",
-      "binding_digest": "3c4b271ed9cdec05e02edfe22e57bc90",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "binding_digest": "3c4b271ed9cdec05e02edfe22e57bc90",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignTransitStudents",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignTransitStudents",
@@ -14017,30 +13121,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.DeleteGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.DeleteGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.DeleteGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.EndSupervision",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.EndSupervision",
@@ -14097,134 +13177,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.ReviseSession",
-      "binding_digest": "3c4b271ed9cdec05e02edfe22e57bc90",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.ReviseSession",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.FindVisit",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.FindVisit",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.FindVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.FindVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.FindVisit",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.FindVisit",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListLiveGroups",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListLiveGroups",
@@ -14316,30 +13268,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryLiveGroups",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.QueryLiveGroups",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.RemoveGroupFromCombination",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -14407,14 +13335,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff",
       "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.visitAccessQuery.TeacherGroupIDs",
-      "binding_digest": "c4860ea4a02a720f87c00d6409689c4f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.VisitAccessQuery.TeacherGroupIDs",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.GroupManagement.GetTeacherGroups",
-      "target_owner": "school-structure"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.SessionRepository.CheckRoomConflict",
@@ -15977,30 +14897,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.DeleteGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.DeleteGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.DeleteGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.EndDailySessions",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.EndDailySessions",
@@ -16193,14 +15089,6 @@
       "target_owner": "device-fleet"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateActiveGroup",
-      "binding_digest": "3c4b271ed9cdec05e02edfe22e57bc90",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateActiveGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateActiveGroupSupervisors",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateActiveGroupSupervisors",
@@ -16231,38 +15119,6 @@
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateGroupSupervisor",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateVisit",
-      "binding_digest": "3c4b271ed9cdec05e02edfe22e57bc90",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.sessionDevices.ManualAttendanceDeviceID",
@@ -16318,14 +15174,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SettingsResolver.PresenceMode",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.PresenceMode",
-      "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes",
-      "binding_digest": "ffba5c40a47b2d2c7d30f6dbdb6fc7ca",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SettingsResolver.SessionInactivityTimeoutMinutes",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes",
       "target_owner": "settings-platform"
     },
     {
@@ -16585,102 +15433,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.EndCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.EndCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.EndCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndGroup",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.EndGroup",
@@ -16809,30 +15561,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.HasAttendance",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.HasAttendance",
@@ -16876,54 +15604,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListAttendance",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListAttendance",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListGroupMappings",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListGroupMappings",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -17145,54 +15825,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordGroupMapping",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordGroupMapping",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordGroupMapping",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordVisit",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordVisit",
@@ -17212,78 +15844,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordVisit",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordVisit",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseVisit",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseVisit",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -19953,14 +18513,6 @@
       "target_owner": "care-plan"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.AddGroupToCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.AddGroupToCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ApplyPartialAbsences",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ApplyPartialAbsences",
@@ -20169,14 +18721,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteExpiredVisits",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteExpiredVisits",
@@ -20193,14 +18737,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteGroupMapping",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteMorningAttendanceBefore",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteMorningAttendanceBefore",
@@ -20209,25 +18745,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteVisit",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DiscardActivitySession",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DiscardActivitySession",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.EndCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.EndCombination",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -20329,14 +18849,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.GetCombinedGroup",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.GetCombinedGroup",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.HasAttendance",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.HasAttendance",
@@ -20393,25 +18905,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListCombinedGroups",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListCombinedGroups",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListExpiredVisitMonths",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListExpiredVisitMonths",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListGroupMappings",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListGroupMappings",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -20737,14 +19233,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RecordCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RecordCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RecordGroup",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RecordGroup",
@@ -20756,14 +19244,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RecordGroupActivity",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RecordGroupActivity",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RecordGroupMapping",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RecordGroupMapping",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -20833,14 +19313,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RemoveGroupFromCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RemoveGroupFromCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RemoveSupervision",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RemoveSupervision",
@@ -20897,22 +19369,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseAttendance",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseAttendance",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseCombination",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseCombination",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseGroup",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseGroup",
@@ -20932,14 +19388,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseSupervision",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseSupervision",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseVisit",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseVisit",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

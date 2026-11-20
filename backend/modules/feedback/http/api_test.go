@@ -32,13 +32,6 @@ func (e engine) Available(context.Context) (bool, error) { return e.available, e
 func (e engine) Submit(_ context.Context, input feedbackModule.CreateEntry) (feedbackModule.Entry, error) {
 	return feedbackModule.Entry{ID: 7, Value: input.Value, Day: input.Day, Time: input.Time, StudentID: input.StudentID}, e.err
 }
-func (e engine) LookupEntry(context.Context, int64) (feedbackModule.Entry, error) {
-	if e.err != nil {
-		return feedbackModule.Entry{}, e.err
-	}
-	return e.entries[0], nil
-}
-func (e engine) EraseEntry(context.Context, int64) error { return e.err }
 func (e engine) FindEntries(context.Context, feedbackModule.Filter) ([]feedbackModule.Entry, error) {
 	return e.entries, e.err
 }
@@ -163,13 +156,7 @@ func TestStaffWireContractsStayStable(t *testing.T) {
 		body                       any
 		status                     int
 	}{
-		{"list", http.MethodGet, "/", `{"status":"success","data":[` + entryJSON + `],"message":"Feedback entries retrieved successfully"}` + "\n", nil, http.StatusOK},
-		{"get", http.MethodGet, "/7", `{"status":"success","data":` + entryJSON + `,"message":"Feedback entry retrieved successfully"}` + "\n", nil, http.StatusOK},
 		{"student", http.MethodGet, "/student/42", `{"status":"success","data":[` + entryJSON + `],"message":"Student feedback entries retrieved successfully"}` + "\n", nil, http.StatusOK},
-		{"date", http.MethodGet, "/date/2026-08-31", `{"status":"success","data":[` + entryJSON + `],"message":"Date feedback entries retrieved successfully"}` + "\n", nil, http.StatusOK},
-		{"mensa", http.MethodGet, "/mensa", `{"status":"success","data":[` + entryJSON + `],"message":"Mensa feedback entries retrieved successfully"}` + "\n", nil, http.StatusOK},
-		{"create", http.MethodPost, "/", `{"status":"success","data":` + entryJSON + `,"message":"Feedback entry created successfully"}` + "\n", map[string]any{"value": "positive", "day": "2026-08-31", "time": "12:34:56", "student_id": 42}, http.StatusCreated},
-		{"delete", http.MethodDelete, "/7", `{"status":"success","message":"Feedback entry deleted successfully"}` + "\n", nil, http.StatusOK},
 	}
 	resource := testResource(engine{available: true, entries: []feedbackModule.Entry{entry}})
 	for _, test := range tests {
@@ -198,7 +185,7 @@ func TestStaffErrorStatusesStayStable(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			recorder := execute(t, testResource(engine{err: test.err}), http.MethodGet, "/7", nil)
+			recorder := execute(t, testResource(engine{err: test.err}), http.MethodGet, "/student/42", nil)
 			assert.Equal(t, test.code, recorder.Code)
 			assert.Equal(t, test.body+"\n", recorder.Body.String())
 		})
@@ -209,9 +196,6 @@ func TestInvalidPathIDsAnswerBadRequest(t *testing.T) {
 	t.Parallel()
 	resource := testResource(engine{available: true})
 	for _, test := range []struct{ method, target, detail string }{
-		{http.MethodGet, "/abc", "invalid feedback ID"},
-		{http.MethodGet, "/0", "invalid feedback ID"},
-		{http.MethodDelete, "/-1", "invalid feedback ID"},
 		{http.MethodGet, "/student/abc", "invalid student ID"},
 		{http.MethodGet, "/student/0", "invalid student ID"},
 	} {
@@ -239,8 +223,8 @@ func TestStaffResponseObserverUsesActualStatusAndStableCode(t *testing.T) {
 		observations = append(observations, observation{status: status, code: code})
 	})
 
-	execute(t, resource, http.MethodGet, "/invalid", nil)
-	execute(t, resource, http.MethodGet, "/7", nil)
+	execute(t, resource, http.MethodGet, "/student/invalid", nil)
+	execute(t, resource, http.MethodGet, "/student/42", nil)
 
 	assert.Equal(t, []observation{
 		{status: http.StatusBadRequest, code: "invalid_parameters"},

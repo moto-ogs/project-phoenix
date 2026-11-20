@@ -43,52 +43,6 @@ func NewPresenceOperations(value studentpresence.Presence, atSchool AtSchoolCoun
 	return PresenceOperations{Service: service, active: service, sessions: value, atSchool: atSchool, logger: logger}, nil
 }
 
-func (p PresenceOperations) StartSession(ctx context.Context, group studentpresence.LiveGroup) (studentpresence.LiveGroup, error) {
-	row := groupRow(group)
-	if err := p.active.CreateActiveGroup(ctx, row); err != nil {
-		return studentpresence.LiveGroup{}, err
-	}
-	return liveGroup(row), nil
-}
-
-func (p PresenceOperations) ReviseSession(ctx context.Context, group studentpresence.LiveGroup) (studentpresence.LiveGroup, error) {
-	row := groupRow(group)
-	if err := p.active.UpdateActiveGroup(ctx, row); err != nil {
-		return studentpresence.LiveGroup{}, err
-	}
-	return liveGroup(row), nil
-}
-
-func (p PresenceOperations) AdmitVisit(ctx context.Context, visit studentpresence.Visit) (studentpresence.Visit, error) {
-	if err := p.active.CreateVisit(ctx, &visit); err != nil {
-		return studentpresence.Visit{}, err
-	}
-	return visit, nil
-}
-
-func (p PresenceOperations) AmendVisit(ctx context.Context, visit studentpresence.Visit) error {
-	return p.active.UpdateVisit(ctx, &visit)
-}
-
-func (p PresenceOperations) AssignSupervision(ctx context.Context, row studentpresence.GroupSupervision) (studentpresence.GroupSupervision, error) {
-	supervisor, err := supervisorRow(row)
-	if err != nil {
-		return studentpresence.GroupSupervision{}, err
-	}
-	if err := p.active.CreateGroupSupervisor(ctx, supervisor); err != nil {
-		return studentpresence.GroupSupervision{}, err
-	}
-	return groupSupervision(supervisor), nil
-}
-
-func (p PresenceOperations) AmendSupervision(ctx context.Context, row studentpresence.GroupSupervision) error {
-	supervisor, err := supervisorRow(row)
-	if err != nil {
-		return err
-	}
-	return p.active.UpdateGroupSupervisor(ctx, supervisor)
-}
-
 func (p PresenceOperations) ClaimSupervision(ctx context.Context, groupID, staffID int64, role string) (studentpresence.ClaimedSupervision, error) {
 	row, err := p.active.ClaimActiveGroup(ctx, groupID, staffID, role)
 	if err != nil {
@@ -98,43 +52,6 @@ func (p PresenceOperations) ClaimSupervision(ctx context.Context, groupID, staff
 		ID: row.ID, TenantID: row.TenantID, GroupID: row.GroupID, StaffID: row.StaffID,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Role: row.Role, StartDate: row.StartDate.String(),
 	}, nil
-}
-
-func (p PresenceOperations) UnclaimedSessions(ctx context.Context) ([]studentpresence.UnclaimedSession, error) {
-	rows, err := p.active.GetUnclaimedActiveGroups(ctx)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]studentpresence.UnclaimedSession, 0, len(rows))
-	for _, row := range rows {
-		session := studentpresence.UnclaimedSession{UnclaimedGroup: studentpresence.UnclaimedGroup{
-			ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-			StartTime: row.StartTime, LastActivity: row.LastActivity, EndTime: row.EndTime,
-			TimeoutMinutes: row.TimeoutMinutes, GroupID: row.GroupID, DeviceID: row.DeviceID, RoomID: row.RoomID,
-		}}
-		if row.Room != nil {
-			session.Room = &studentpresence.SessionRoomSummary{ID: row.Room.ID, Name: row.Room.Name, Category: row.Room.Category, Color: row.Room.Color}
-		}
-		if row.ActualGroup != nil {
-			session.Activity = &studentpresence.SessionActivitySummary{ID: row.ActualGroup.ID, Name: row.ActualGroup.Name}
-		}
-		result = append(result, session)
-	}
-	return result, nil
-}
-
-func (p PresenceOperations) CreateCombination(ctx context.Context, group studentpresence.CombinedGroup, groupIDs []int64) (studentpresence.CombinedGroup, error) {
-	if err := p.active.CreateCombinedGroupWithGroups(ctx, &group, groupIDs); err != nil {
-		return studentpresence.CombinedGroup{}, err
-	}
-	return group, nil
-}
-
-func (p PresenceOperations) AmendCombination(ctx context.Context, group studentpresence.CombinedGroup) (studentpresence.CombinedGroup, error) {
-	if err := p.active.UpdateCombinedGroup(ctx, &group); err != nil {
-		return studentpresence.CombinedGroup{}, err
-	}
-	return group, nil
 }
 
 func attendanceStatus(status *AttendanceStatus) *studentpresence.AttendanceStatus {
@@ -154,18 +71,6 @@ func (p PresenceOperations) StudentAttendanceStatus(ctx context.Context, student
 		return nil, err
 	}
 	return attendanceStatus(status), nil
-}
-
-func (p PresenceOperations) StudentsAttendanceStatuses(ctx context.Context, studentIDs []int64) (map[int64]*studentpresence.AttendanceStatus, error) {
-	statuses, err := p.active.GetStudentsAttendanceStatuses(ctx, studentIDs)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[int64]*studentpresence.AttendanceStatus, len(statuses))
-	for id, status := range statuses {
-		result[id] = attendanceStatus(status)
-	}
-	return result, nil
 }
 
 func studentMoveResult(result *StudentMoveResult) studentpresence.StudentMoveResult {
@@ -199,32 +104,6 @@ func (p PresenceOperations) MoveStudentsToSession(ctx context.Context, studentID
 		return studentpresence.StudentMoveResult{}, err
 	}
 	return studentMoveResult(result), nil
-}
-
-func (p PresenceOperations) MoveStudentsToTransit(ctx context.Context, studentIDs []int64, auth studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error) {
-	result, err := p.active.MoveStudentsToTransitAuthorized(ctx, studentIDs, auth)
-	if err != nil {
-		return studentpresence.StudentMoveResult{}, err
-	}
-	return studentMoveResult(result), nil
-}
-
-func (p PresenceOperations) SessionVisitsWithDisplay(ctx context.Context, groupID int64) ([]studentpresence.VisitDisplay, error) {
-	rows, err := p.active.GetActiveGroupVisitsWithDisplay(ctx, groupID)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]studentpresence.VisitDisplay, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, studentpresence.VisitDisplay{
-			VisitID: row.VisitID, StudentID: row.StudentID, ActiveGroupID: row.ActiveGroupID,
-			EntryTime: row.EntryTime, ExitTime: row.ExitTime,
-			FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass, OGSGroupName: row.OGSGroupName,
-			Sick: row.Sick, SickSince: row.SickSince, Excused: row.Excused, ExcusedSince: row.ExcusedSince,
-			PhotoPath: row.PhotoPath, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		})
-	}
-	return result, nil
 }
 
 func (p PresenceOperations) SessionRooms(ctx context.Context, ids []int64) ([]studentpresence.SessionRoomSummary, error) {

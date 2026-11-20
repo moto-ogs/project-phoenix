@@ -49,15 +49,6 @@ func (r nativeGuardianProfileRepository) FindByAccountID(ctx context.Context, ac
 	return NativeGuardianProfile(out0), out1
 }
 
-func (r nativeGuardianProfileRepository) FindWithoutAccount(ctx context.Context) ([]*directory.GuardianProfileSnapshot, error) {
-
-	out0, out1 := r.rawGuardianProfileRepository.FindWithoutAccount(ctx)
-
-	return mapRecordSlice(out0, func(value *models.GuardianProfile) *directory.GuardianProfileSnapshot {
-		return NativeGuardianProfile(value)
-	}), out1
-}
-
 func (r nativeGuardianProfileRepository) FindInvitable(ctx context.Context) ([]*directory.GuardianProfileSnapshot, error) {
 
 	out0, out1 := r.rawGuardianProfileRepository.FindInvitable(ctx)

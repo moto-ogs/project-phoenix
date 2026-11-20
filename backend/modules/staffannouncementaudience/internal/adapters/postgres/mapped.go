@@ -29,10 +29,16 @@ func (m Mapped[A, V, S]) Unread(ctx context.Context, userID int64, roles []strin
 	return mapRows(rows, m.rows.Announcement), m.rows.Stats(stats), err
 }
 
-// CountUnread maps Projection.CountUnread.
-func (m Mapped[A, V, S]) CountUnread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) (int, S, error) {
-	count, stats, err := m.projection.CountUnread(ctx, userID, roles, tenantID, orgID)
-	return count, m.rows.Stats(stats), err
+// CanSee maps Projection.CanSee.
+func (m Mapped[A, V, S]) CanSee(ctx context.Context, userID int64, roles []string, tenantID, orgID, announcementID int64) (bool, S, error) {
+	visible, stats, err := m.projection.CanSee(ctx, userID, roles, tenantID, orgID, announcementID)
+	return visible, m.rows.Stats(stats), err
+}
+
+// CanDismiss maps Projection.CanDismiss.
+func (m Mapped[A, V, S]) CanDismiss(ctx context.Context, userID int64, roles []string, tenantID, orgID, announcementID int64) (bool, S, error) {
+	visible, stats, err := m.projection.CanDismiss(ctx, userID, roles, tenantID, orgID, announcementID)
+	return visible, m.rows.Stats(stats), err
 }
 
 // TargetCount maps Projection.TargetCount.

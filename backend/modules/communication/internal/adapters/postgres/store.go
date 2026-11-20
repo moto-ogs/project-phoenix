@@ -43,10 +43,12 @@ type announcementRow struct {
 
 type viewRow struct {
 	bun.BaseModel  `bun:"table:platform.announcement_views,alias:view"`
-	UserID         int64     `bun:"user_id,pk"`
-	AnnouncementID int64     `bun:"announcement_id,pk"`
-	SeenAt         time.Time `bun:"seen_at,notnull"`
-	Dismissed      bool      `bun:"dismissed,notnull"`
+	UserID         int64      `bun:"user_id,pk"`
+	AnnouncementID int64      `bun:"announcement_id,pk"`
+	SeenAt         *time.Time `bun:"seen_at"`
+	ShownAt        *time.Time `bun:"shown_at"`
+	DismissedAt    *time.Time `bun:"dismissed_at"`
+	Dismissed      bool       `bun:"dismissed,notnull"`
 }
 
 // New builds the store; now stamps when an account saw an announcement.
@@ -191,8 +193,15 @@ func (s *Store) Unpublish(ctx context.Context, id int64) (domain.OperationStats,
 		Set("published_at = NULL").Where(`"announcement".id = ?`, id), "unpublish announcement")
 }
 
-// MarkDismissed records that the user saw and closed the announcement.
+func (s *Store) MarkSeen(ctx context.Context, userID, announcementID int64) (domain.OperationStats, error) {
+	return s.mark(ctx, userID, announcementID, false, true)
+}
+
 func (s *Store) MarkDismissed(ctx context.Context, userID, announcementID int64) (domain.OperationStats, error) {
+	return s.mark(ctx, userID, announcementID, true, false)
+}
+
+func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismissed, shown bool) (domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
@@ -200,10 +209,32 @@ func (s *Store) MarkDismissed(ctx context.Context, userID, announcementID int64)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	var conflicted bool
-	row := viewRow{UserID: userID, AnnouncementID: announcementID, SeenAt: s.now(), Dismissed: true}
-	err = db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
-		On("CONFLICT (user_id, announcement_id) DO UPDATE").Set("seen_at = EXCLUDED.seen_at").Set("dismissed = TRUE").
-		Returning("(xmax <> 0) AS conflicted").Scan(ctx, &conflicted)
+	row := viewRow{UserID: userID, AnnouncementID: announcementID, Dismissed: dismissed}
+	if shown {
+		seenAt := s.now()
+		row.SeenAt = &seenAt
+		row.ShownAt = &seenAt
+	}
+	if dismissed {
+		dismissedAt := s.now()
+		row.DismissedAt = &dismissedAt
+	}
+	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
+		On("CONFLICT (user_id, announcement_id) DO UPDATE")
+	if !shown {
+		// Bun omits a nil model field, which would apply the legacy DEFAULT
+		// NOW(). A dismissal-only row must instead retain an empty seen_at.
+		query = query.Value("seen_at", "NULL")
+	}
+	if shown {
+		query = query.Set("seen_at = EXCLUDED.seen_at").
+			Set("shown_at = COALESCE(platform.announcement_views.shown_at, EXCLUDED.shown_at)")
+	}
+	if dismissed {
+		query = query.Set("dismissed = TRUE").
+			Set("dismissed_at = COALESCE(platform.announcement_views.dismissed_at, EXCLUDED.dismissed_at)")
+	}
+	err = query.Returning("(xmax <> 0) AS conflicted").Scan(ctx, &conflicted)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, fmt.Errorf("communication postgres: mark announcement: %w", err)

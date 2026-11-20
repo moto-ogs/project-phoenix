@@ -4,44 +4,12 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 )
-
-// getAccount returns the current user's account details
-func (rs *Resource) getAccount(w http.ResponseWriter, r *http.Request) {
-	// Get user ID and permissions from JWT claims
-	claims := sessiontoken.ClaimsFromCtx(r.Context())
-
-	account, err := rs.Sessions.FindOwnAccount(r.Context(), int64(claims.ID))
-	if err != nil {
-		if errors.Is(err, identityaccess.ErrAccountNotFound) {
-			common.RenderError(w, r, common.ErrorNotFound(identityaccess.ErrAccountNotFound))
-			return
-		}
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	// Convert account to response. The role assignment is not part of the
-	// account row, so the list stays empty here as it was; the caller's
-	// roles and permissions travel in their session.
-	resp := &AccountResponse{
-		ID:          account.ID,
-		Email:       account.Email,
-		Username:    account.Username,
-		Active:      account.Active,
-		Roles:       []string{},
-		Permissions: claims.Permissions,
-	}
-
-	common.Respond(w, r, http.StatusOK, resp, "Account information retrieved successfully")
-}
 
 // Role Management Request/Response Types
 
@@ -187,19 +155,6 @@ func (rs *Resource) listAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accounts, err := rs.Sessions.ListManageableAccounts(r.Context(), filter)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, accountResponses(accounts), "Accounts retrieved successfully")
-}
-
-// getAccountsByRole handles getting accounts by role
-func (rs *Resource) getAccountsByRole(w http.ResponseWriter, r *http.Request) {
-	roleName := chi.URLParam(r, "roleName")
-
-	accounts, err := rs.Sessions.ListManageableAccountsByRole(r.Context(), roleName)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return

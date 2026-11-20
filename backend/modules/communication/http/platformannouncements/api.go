@@ -9,17 +9,13 @@ import (
 )
 
 // Viewer is the authenticated account the announcement routes act for.
-type Viewer struct {
-	AccountID int64
-	Roles     []string
-	TenantID  int64
-	OrgID     int64
-}
+type Viewer = communication.AnnouncementViewer
 
-// Failure is an internal error the composition root renders as a 500.
+// Failure is an announcement route error the composition root renders.
 type Failure struct {
 	Message string
 	Err     error
+	Status  int
 }
 
 // Runtime carries the HTTP runtime the composition root binds: the
@@ -66,7 +62,7 @@ func (rs *Resource) Router() chi.Router {
 		// Announcements for users
 		r.Route("/announcements", func(r chi.Router) {
 			r.Get("/unread", rs.announcementsResource.GetUnread)
-			r.Get("/unread/count", rs.announcementsResource.GetUnreadCount)
+			r.Post("/{id}/seen", rs.announcementsResource.MarkSeen)
 			r.Post("/{id}/dismiss", rs.announcementsResource.MarkDismissed)
 		})
 	})

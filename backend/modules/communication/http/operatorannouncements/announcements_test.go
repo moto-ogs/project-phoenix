@@ -89,11 +89,11 @@ func (m *mockAnnouncementService) GetUnreadForUser(ctx context.Context, userID i
 	return nil, nil
 }
 
-func (m *mockAnnouncementService) CountUnread(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) (int, error) {
-	return 0, nil
+func (m *mockAnnouncementService) MarkSeen(ctx context.Context, viewer platform.AnnouncementViewer, announcementID int64) error {
+	return nil
 }
 
-func (m *mockAnnouncementService) MarkDismissed(ctx context.Context, userID, announcementID int64) error {
+func (m *mockAnnouncementService) MarkDismissed(ctx context.Context, viewer platform.AnnouncementViewer, announcementID int64) error {
 	return nil
 }
 
@@ -901,11 +901,13 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	t.Parallel()
 
 	now := operatorTestNow
+	shownAt := now
+	dismissedAt := now.Add(time.Minute)
 	mock := &mockAnnouncementService{
 		getViewDetailsFn: func(_ context.Context, _ int64) ([]*platform.AnnouncementViewDetail, error) {
 			return []*platform.AnnouncementViewDetail{
-				{UserID: 10, UserName: "Max Mustermann", SeenAt: now, Dismissed: false},
-				{UserID: 20, UserName: "Erika Muster", SeenAt: now, Dismissed: true},
+				{UserID: 10, UserName: "Max Mustermann", SeenAt: now, ShownAt: &shownAt, Dismissed: false},
+				{UserID: 20, UserName: "Erika Muster", SeenAt: dismissedAt, DismissedAt: &dismissedAt, Dismissed: true},
 			}, nil
 		},
 	}
@@ -922,9 +924,13 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	assert.Equal(t, float64(10), first["user_id"])
 	assert.Equal(t, "Max Mustermann", first["user_name"])
 	assert.NotEmpty(t, first["seen_at"])
+	assert.Equal(t, shownAt.Format(time.RFC3339), first["shown_at"])
 	assert.Equal(t, false, first["dismissed"])
 
 	second := data[1].(map[string]any)
+	assert.Equal(t, dismissedAt.Format(time.RFC3339), second["seen_at"])
+	assert.Nil(t, second["shown_at"])
+	assert.Equal(t, dismissedAt.Format(time.RFC3339), second["dismissed_at"])
 	assert.Equal(t, true, second["dismissed"])
 }
 

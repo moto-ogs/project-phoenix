@@ -31,12 +31,10 @@ type AuthRuntime struct {
 	// IssueTokens mints the school-scope pair for an account that proved
 	// its identity through the second factor; the role is re-checked.
 	IssueTokens func(ctx context.Context, proof VerifiedChallenge, ipAddress, userAgent string) (accessToken, refreshToken string, err error)
-	// SwitchSchool re-authenticates a school session at another school.
-	SwitchSchool func(ctx context.Context, accountID int64, tenantSlug, ipAddress, userAgent, sourceFamilyID string) (accessToken, refreshToken string, err error)
 }
 
 func (rt *AuthRuntime) complete() bool {
-	return rt != nil && rt.Login != nil && rt.LoginAtSchool != nil && rt.IssueTokens != nil && rt.SwitchSchool != nil
+	return rt != nil && rt.Login != nil && rt.LoginAtSchool != nil && rt.IssueTokens != nil
 }
 
 // MFARuntime is the school portal's second-factor port. Every challenge call

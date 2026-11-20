@@ -27,13 +27,6 @@ func (e *recordingEngine) Submit(_ context.Context, entry feedback.CreateEntry) 
 	e.created = append(e.created, entry)
 	return feedback.Entry{ID: 1, Value: entry.Value, Day: entry.Day, Time: entry.Time, StudentID: entry.StudentID}, nil
 }
-func (*recordingEngine) SubmitBatch(context.Context, []feedback.CreateEntry) ([]feedback.Entry, error) {
-	return nil, nil
-}
-func (*recordingEngine) LookupEntry(context.Context, int64) (feedback.Entry, error) {
-	return feedback.Entry{}, nil
-}
-func (*recordingEngine) EraseEntry(context.Context, int64) error { return nil }
 func (*recordingEngine) FindEntries(context.Context, feedback.Filter) ([]feedback.Entry, error) {
 	return nil, nil
 }

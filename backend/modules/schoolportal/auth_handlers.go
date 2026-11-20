@@ -36,19 +36,6 @@ func (req *LoginRequest) Bind(_ *http.Request) error {
 	)
 }
 
-// SwitchSchoolRequest is the body shape for POST /school/auth/switch-school.
-type SwitchSchoolRequest struct {
-	TenantSlug string `json:"tenant_slug"`
-}
-
-// Bind validates the switch-school request.
-func (req *SwitchSchoolRequest) Bind(_ *http.Request) error {
-	req.TenantSlug = strings.TrimSpace(req.TenantSlug)
-	return validation.ValidateStruct(req,
-		validation.Field(&req.TenantSlug, validation.Required),
-	)
-}
-
 // login signs a Lehrkraft in to a school-scope session, or answers the
 // second factor still to pass.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
@@ -200,27 +187,6 @@ func (rs *Resource) mfaEnrollConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rs.completeSchoolExchange(w, r, verified, req.RememberDevice)
-}
-
-// switchSchool moves a school session to another school where the account
-// holds a school-portal role.
-func (rs *Resource) switchSchool(w http.ResponseWriter, r *http.Request) {
-	req := &SwitchSchoolRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	if !common.RequireDependency(w, r, rs.AuthService.complete(), errLoginUnavailable) {
-		return
-	}
-	claims := sessiontoken.ClaimsFromCtx(r.Context())
-	client := portalauth.ClientOf(r)
-	accessToken, refreshToken, err := rs.AuthService.SwitchSchool(r.Context(), int64(claims.ID), req.TenantSlug, client.IP, client.UserAgent, claims.FamilyID)
-	if err != nil {
-		portalauth.Render(w, r, err, portalauth.SwitchRules)
-		return
-	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 // listTrustedDevices answers the Lehrkraft's remembered devices at the school

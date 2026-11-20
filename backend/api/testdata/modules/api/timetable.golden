@@ -8,7 +8,6 @@ GET /api/timetable/closing-days/ -> basis
 GET /api/timetable/conflict-acks/ -> basis
 GET /api/timetable/conflicts -> basis
 GET /api/timetable/deviations/history -> basis
-GET /api/timetable/exception-conflicts -> basis
 GET /api/timetable/gaps -> basis
 GET /api/timetable/holidays -> basis
 GET /api/timetable/instances/ -> basis
@@ -23,8 +22,6 @@ GET /api/timetable/offering-sources/combined-counts -> basis
 GET /api/timetable/offering-sources/preview -> basis
 GET /api/timetable/offering-sources/suggestion -> basis
 GET /api/timetable/operations/active-groups/{id}/roster -> basis
-GET /api/timetable/operations/active-sessions -> basis
-GET /api/timetable/operations/capabilities -> basis
 GET /api/timetable/operations/instances/{id}/roster -> basis
 GET /api/timetable/operations/planned-now -> basis
 GET /api/timetable/periods/ -> basis
@@ -47,7 +44,6 @@ POST /api/timetable/closing-days/ -> basis
 POST /api/timetable/instances/ -> basis
 POST /api/timetable/instances/bulk-cancel -> basis
 POST /api/timetable/instances/re-plan-week -> basis
-POST /api/timetable/instances/{id}/acknowledge-understaffed -> basis
 POST /api/timetable/instances/{id}/cancel -> basis
 POST /api/timetable/instances/{id}/complete -> basis
 POST /api/timetable/instances/{id}/convert-to-series -> basis

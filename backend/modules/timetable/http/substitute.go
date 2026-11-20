@@ -32,6 +32,11 @@ type AffectedInstance struct {
 	Action     string `json:"action"`
 }
 
+// understaffedAckNoteMaxLength caps a deviation reason. Mirrors
+// scheduleModel.ActivityExceptionReasonMaxLength (500) so cancel and
+// substitution reasons share one limit.
+const understaffedAckNoteMaxLength = 500
+
 // trimReason normalizes an optional deviation reason: nil/blank becomes nil,
 // and an over-long value is truncated to the shared note ceiling so a single
 // oversized field can never bloat a row. The ceiling counts runes, not bytes:
