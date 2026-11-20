@@ -143,10 +143,15 @@ describe("session reads of every BFF route", () => {
     // Anker: the walk sees the tree, also the portals' own routes.
     expect(routes).toContain("auth/logout");
     expect(routes).toContain("traeger/auth/logout");
-    // The catalog proxy took over the pass-through files (#2352); the walk
-    // still sees the routes with behaviour of their own. The Träger uploads
-    // moved another 12 route files into the catalog.
-    expect(routes.length).toBeGreaterThan(190);
+    // Pass-through files move into the catalog (#2352); its portal handlers
+    // must stay in the walk regardless of the remaining route count.
+    expect(routes).toEqual(
+      expect.arrayContaining(
+        ["", "caterer", "operator", "parent", "school", "traeger"].map(
+          (portal) => path.posix.join(portal, "[...path]"),
+        ),
+      ),
+    );
   });
 
   it("reads every session inside the portal's response wrapper", async () => {
