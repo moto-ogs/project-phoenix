@@ -342,14 +342,22 @@ function exportedHandlers(file: string): Map<string, boolean> {
 describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
-  it("finds the catalog route handlers for every portal", () => {
-    expect(files).toEqual(
-      expect.arrayContaining(
-        ["", "caterer", "operator", "parent", "school", "traeger"].map(
-          (portal) => path.join(API_ROOT, portal, "[...path]", "route.ts"),
-        ),
-      ),
-    );
+  it("finds catalog and nested login handlers for every portal", () => {
+    for (const portal of [
+      "",
+      "operator",
+      "parent",
+      "school",
+      "caterer",
+      "traeger",
+    ]) {
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "[...path]", "route.ts"),
+      );
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "auth", "login", "route.ts"),
+      );
+    }
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {
