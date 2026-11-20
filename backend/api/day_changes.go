@@ -110,6 +110,10 @@ type staffViewer struct {
 	// ownAbsences may open the caller's own time tracking absences.
 	// A staff record alone does not grant that destination.
 	ownAbsences bool
+	// staffRecords may open the staff list and a staff record.
+	staffRecords bool
+	// groupHandovers may open the group substitutions overview.
+	groupHandovers bool
 	// groups are the caller's own groups and those it covers today; team
 	// are the staff of these groups (teachers and today's substitutes).
 	groups map[int64]bool
@@ -160,11 +164,14 @@ func (s dayChangesStaff) handovers(ctx context.Context, day calendar.Date) ([]wo
 func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 	granted := sessiontoken.PermissionsFromCtx(ctx)
 	admin := securityruntime.HasAdminWildcard(granted)
+	roles := sessiontoken.ClaimsFromCtx(ctx).Roles
 	viewer := staffViewer{
 		lead: admin || securityruntime.HasPermission(permissions.VacationApprove, granted) ||
 			securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
-		ownAbsences: securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
-		groups:      map[int64]bool{}, team: map[int64]bool{},
+		ownAbsences:    securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
+		staffRecords:   admin || hasStaffRecordAccess(granted),
+		groupHandovers: admin || hasGroupHandoverAccess(roles, granted),
+		groups:         map[int64]bool{}, team: map[int64]bool{},
 	}
 	viewer.counts = viewer.lead || securityruntime.HasPermission(permissions.UsersRead, granted)
 	staffID, isStaff, err := s.sources.Caller.CurrentStaffID(ctx)
@@ -183,6 +190,27 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		return viewer, nil
 	}
 	return viewer, s.addTeam(ctx, &viewer, groupIDs)
+}
+
+func hasStaffRecordAccess(granted []string) bool {
+	return securityruntime.HasPermission(permissions.UsersRead, granted) ||
+		securityruntime.HasPermission(permissions.StaffManage, granted) ||
+		securityruntime.HasPermission(permissions.StaffStammdaten, granted) ||
+		securityruntime.HasPermission(permissions.TimeTrackingManage, granted)
+}
+
+func hasGroupHandoverAccess(roles, granted []string) bool {
+	return containsRole(roles, "user") || containsRole(roles, "teacher") ||
+		securityruntime.HasPermission(permissions.SubstitutionsRead, granted)
+}
+
+func containsRole(roles []string, role string) bool {
+	for _, candidate := range roles {
+		if candidate == role {
+			return true
+		}
+	}
+	return false
 }
 
 // addTeam names the teachers of the caller's groups. Today's substitutes are
@@ -291,8 +319,10 @@ func (b *staffEntryBuilder) absenceLink(staffID int64, self bool) *daychangesvie
 		return nil
 	case b.viewer.lead:
 		return &daychangesview.Link{Target: daychangesview.LinkStaffAbsences, StaffID: &staffID}
-	default:
+	case b.viewer.staffRecords:
 		return &daychangesview.Link{Target: daychangesview.LinkStaffMember, StaffID: &staffID}
+	default:
+		return nil
 	}
 }
 
@@ -314,11 +344,14 @@ func (b *staffEntryBuilder) handover(row workforce.GroupSubstitution) {
 	}
 	b.groupIDs[row.GroupID] = true
 	since, until := b.span(row.StartDate, row.EndDate)
-	b.entries = append(b.entries, daychangesview.SourceEntry{
+	entry := daychangesview.SourceEntry{
 		Kind: daychangesview.KindGroupSubstitution, Involved: involved, Since: since, Until: until,
 		People: people, Group: &daychangesview.Group{ID: row.GroupID},
-		Link: &daychangesview.Link{Target: daychangesview.LinkGroupHandovers},
-	})
+	}
+	if b.viewer.groupHandovers {
+		entry.Link = &daychangesview.Link{Target: daychangesview.LinkGroupHandovers}
+	}
+	b.entries = append(b.entries, entry)
 }
 
 // span keeps "seit" and "bis" only where the change reaches past the day.
@@ -337,18 +370,20 @@ func (b *staffEntryBuilder) finish(ctx context.Context, names dayChangesStaffNam
 	if err := b.resolveNames(ctx, names, groups); err != nil {
 		return nil, err
 	}
-	b.appendCount(daychangesview.KindStaffAbsentCount, b.absentCount, daychangesview.LinkStaffList)
-	b.appendCount(daychangesview.KindGroupSubstitutionCount, b.handoverCount, daychangesview.LinkGroupHandovers)
+	b.appendCount(daychangesview.KindStaffAbsentCount, b.absentCount, daychangesview.LinkStaffList, b.viewer.staffRecords)
+	b.appendCount(daychangesview.KindGroupSubstitutionCount, b.handoverCount, daychangesview.LinkGroupHandovers, b.viewer.groupHandovers)
 	return b.entries, nil
 }
 
-func (b *staffEntryBuilder) appendCount(kind daychangesview.Kind, count int, target daychangesview.LinkTarget) {
+func (b *staffEntryBuilder) appendCount(kind daychangesview.Kind, count int, target daychangesview.LinkTarget, canOpen bool) {
 	if count == 0 {
 		return
 	}
-	b.entries = append(b.entries, daychangesview.SourceEntry{
-		Kind: kind, Count: &count, Link: &daychangesview.Link{Target: target},
-	})
+	entry := daychangesview.SourceEntry{Kind: kind, Count: &count}
+	if canOpen {
+		entry.Link = &daychangesview.Link{Target: target}
+	}
+	b.entries = append(b.entries, entry)
 }
 
 func (b *staffEntryBuilder) resolveNames(ctx context.Context, names dayChangesStaffNames, groups dayChangesGroups) error {
