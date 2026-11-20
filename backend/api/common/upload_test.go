@@ -463,37 +463,6 @@ func TestServeImage_PathTraversal(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 }
 
-func TestServeFile_ValidPDF(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	filePath := filepath.Join(dir, "terms.pdf")
-	require.NoError(t, os.WriteFile(filePath, makePDFBytes(), 0644))
-
-	req := httptest.NewRequest(http.MethodGet, "/documents/terms.pdf", nil)
-	w := httptest.NewRecorder()
-
-	ServeFile(w, req, dir, "terms.pdf", "public, max-age=3600", nativeUploads.UploadFiles{})
-
-	resp := w.Result()
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Equal(t, "public, max-age=3600", resp.Header.Get("Cache-Control"))
-	assert.Equal(t, "application/pdf", resp.Header.Get("Content-Type"))
-}
-
-func TestServeFile_PathTraversal(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-
-	req := httptest.NewRequest(http.MethodGet, "/documents/../../../etc/passwd", nil)
-	w := httptest.NewRecorder()
-
-	ServeFile(w, req, dir, "../../../etc/passwd", "public, max-age=3600", nativeUploads.UploadFiles{})
-
-	assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
-}
-
 func TestServeImage_NonExistent(t *testing.T) {
 	t.Parallel()
 

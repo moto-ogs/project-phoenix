@@ -200,13 +200,6 @@ func SavePrivateNamedFile(file io.Reader, targetDir, filename string, uploads Up
 	return uploads.SaveNamed(file, targetDir, filename, true)
 }
 
-// ServeFile serves a file from baseDir, validating the path stays within baseDir.
-// If baseDir is relative (e.g. "public/uploads/..."), it is resolved via ResolvePublicDir.
-// cacheControl sets the Cache-Control header (e.g. "private, max-age=86400" or "public, max-age=86400").
-func ServeFile(w http.ResponseWriter, r *http.Request, baseDir, filename, cacheControl string, uploads UploadStorage) {
-	servePublicFile(w, r, baseDir, filename, cacheControl, uploads)
-}
-
 // ServeImage serves an image file from baseDir, validating the path stays within baseDir.
 // If baseDir is relative (e.g. "public/uploads/..."), it is resolved via ResolvePublicDir.
 // cacheControl sets the Cache-Control header (e.g. "private, max-age=86400" or "public, max-age=86400").
