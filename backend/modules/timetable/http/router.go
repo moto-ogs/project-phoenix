@@ -83,11 +83,6 @@ func (rs *Resource) mountCalendarRoutes(r chi.Router, withTx common.Middleware) 
 	r.With(common.RequiresAnyPermission(permissions.SchedulesRead, permissions.CalendarOwn), withTx).Get("/school-vacations", rs.listSchoolVacations)
 	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).Get("/school-vacation-hints", rs.listSchoolVacationHints)
 	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).Post("/school-vacation-hints/acknowledgements", rs.acknowledgeSchoolVacation)
-	if rs.IsLocalSeed != nil {
-		// No tenant transaction: the seed writes the vacations of every
-		// state in its own administrative transaction.
-		r.With(common.RequiresPermission(permissions.SchedulesManage)).Post("/school-vacations/seed", rs.seedSchoolVacations)
-	}
 }
 
 // mountInstancePlanningRoutes registers the planner's reads and writes of

@@ -584,6 +584,35 @@ func TestFullDemoWorkflowSeedsParentLetterAfterParentAccounts(t *testing.T) {
 	require.Greater(t, parentPoll, parentAccounts, "parent poll must follow parent accounts")
 }
 
+// recordingHistoryWriters stand in for the dev tools' database writers.
+type recordingHistoryWriters struct {
+	mu              sync.Mutex
+	feedbackEntries []PastFeedback
+	vacationWindows []SchoolVacationWindow
+	keyDateCaptures int
+}
+
+func (w *recordingHistoryWriters) feedback(_ context.Context, _ int64, entries []PastFeedback) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.feedbackEntries = append(w.feedbackEntries, entries...)
+	return len(entries), nil
+}
+
+func (w *recordingHistoryWriters) vacations(_ context.Context, windows []SchoolVacationWindow) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.vacationWindows = windows
+	return len(windows) * 16, nil
+}
+
+func (w *recordingHistoryWriters) keyDateCounts(context.Context) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.keyDateCaptures++
+	return 1, nil
+}
+
 func TestSeeder_Seed_FullWorkflow(t *testing.T) {
 	t.Parallel()
 	trace := &fullSeedAPITrace{}
@@ -593,10 +622,20 @@ func TestSeeder_Seed_FullWorkflow(t *testing.T) {
 	tmpDir := t.TempDir()
 	statePath := filepath.Join(tmpDir, DefaultSeedStatePath)
 
-	s := NewSeeder(newSeedTestAdapter(srv.URL), newSeedTestRandom(), false, SeedOptions{StatePath: statePath})
+	writers := &recordingHistoryWriters{}
+	s := NewSeeder(newSeedTestAdapter(srv.URL), newSeedTestRandom(), false, SeedOptions{
+		StatePath: statePath, FeedbackHistory: writers.feedback, SchoolVacations: writers.vacations, BillingKeyDateCounts: writers.keyDateCounts,
+	})
 	result, err := s.Seed(context.Background(), "admin@test.de", "pass", "1234")
 	require.NoError(t, err)
 	assert.NotNil(t, result)
+	// The bound writers of the dev tools (ADR 0298) carry what the removed
+	// seed routes wrote: the vacations and the billing snapshot. This mock
+	// serves no past care day, so the feedback history stays empty; its step
+	// has its own test.
+	assert.Empty(t, writers.feedbackEntries)
+	assert.Len(t, writers.vacationWindows, 4)
+	assert.Positive(t, writers.keyDateCaptures)
 	assert.NotNil(t, result.Fixed)
 	assert.Greater(t, result.Fixed.RoomCount, 0)
 	assert.Greater(t, result.Fixed.StaffCount, 0)
@@ -1271,14 +1310,9 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		if weeklyMock.serve(t, w, r) {
 			return
 		}
-		if r.Method == seedHTTPMethodPost && r.URL.Path == "/api/feedback/batch" {
-			// The feedback history (#5029) sends its entries in one batch.
-			var body struct {
-				Entries []feedbackHistoryEntry `json:"entries"`
-			}
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			w.WriteHeader(seedHTTPStatusCreated)
-			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"count": len(body.Entries)}})
+		if r.Method == seedHTTPMethodGet && strings.HasPrefix(r.URL.Path, "/api/feedback/student/") {
+			// The feedback history (#5029) asks one child for a present history.
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
 			return
 		}
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/timetable/periods/" {
@@ -2087,7 +2121,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				"data":   []map[string]any{{"id": idCounter, "name": "Betreuung"}},
 			})
 
-		case "/api/active/visits", "/api/time-tracking/holidays", "/api/timetable/closing-days/", "/api/feedback/date-range":
+		case "/api/active/visits", "/api/time-tracking/holidays", "/api/timetable/closing-days/":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
 				"data":   []any{},

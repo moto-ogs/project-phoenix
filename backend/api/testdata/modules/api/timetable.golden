@@ -74,7 +74,6 @@ POST /api/timetable/pickup-extensions/{id}/resolve -> basis
 POST /api/timetable/planning-tracks/ -> basis
 POST /api/timetable/planning-tracks/{id}/restore -> basis
 POST /api/timetable/school-vacation-hints/acknowledgements -> basis
-POST /api/timetable/school-vacations/seed -> basis
 POST /api/timetable/shift-coverage -> dienstplan
 POST /api/timetable/substitutions/bulk -> basis
 POST /api/timetable/templates -> basis

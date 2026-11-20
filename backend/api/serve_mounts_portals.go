@@ -111,19 +111,10 @@ func newOperatorIdentity(sessionAuth *sessiontoken.TokenAuth, identity operatorI
 	}
 }
 
-// newOperatorRouter composes the operator dashboard. The Device Fleet review
-// of unregistered RFID scans answers in the operator surface's format (#3232).
-func newOperatorRouter(
-	db transactionruntime.Database, logger *slog.Logger, sessionAuth *sessiontoken.TokenAuth, limiters authRateLimiters,
-	iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, settings settingsCompose.SettingsService,
-	hub *realtime.Hub, active studentpresence.Presence, settingsWrites SettingsWrites, identity identityaccess.Owner,
-	provisioning organizationtenancy.OperatorProvisioning, caregivers peoplePorts.CaregiverCapabilityService,
-	lifecycle carePlanModule.CareLifecycle, communication communicationModule.Capability,
-	students importModels.RowImporter[importModels.StudentImportRow], traegerSettings settingsOperatorAPI.TraegerOperations,
-	demoPlans studentpresence.DemoCareDays,
-	now func() time.Time,
-) (chi.Router, error) {
-	tagScanReview := tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
+// newTagScanReview composes Device Fleet's review of unregistered RFID scans;
+// it answers in the operator surface's format (#3232).
+func newTagScanReview(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query) *tagScanOperatorAPI.Resource {
+	return tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
 		Scans:     iot.Fleet(),
 		Directory: tagScanSchoolDirectory{schools: organizations},
 		Surface: tagScanOperatorAPI.Surface{
@@ -134,6 +125,20 @@ func newOperatorRouter(
 			OperatorID:     operatorIDFromSession,
 		},
 	})
+}
+
+// newOperatorRouter composes the operator dashboard.
+func newOperatorRouter(
+	db transactionruntime.Database, logger *slog.Logger, sessionAuth *sessiontoken.TokenAuth, limiters authRateLimiters,
+	iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, settings settingsCompose.SettingsService,
+	hub *realtime.Hub, active studentpresence.Presence, settingsWrites SettingsWrites, identity identityaccess.Owner,
+	provisioning organizationtenancy.OperatorProvisioning, caregivers peoplePorts.CaregiverCapabilityService,
+	lifecycle carePlanModule.CareLifecycle, communication communicationModule.Capability,
+	students importModels.RowImporter[importModels.StudentImportRow], traegerSettings settingsOperatorAPI.TraegerOperations,
+	demoPlans studentpresence.DemoCareDays,
+	now func() time.Time,
+) (chi.Router, error) {
+	tagScanReview := newTagScanReview(iot, organizations)
 	billing, err := owners.NewOperatorBilling(logger)
 	if err != nil {
 		return nil, fmt.Errorf("compose operator billing: %w", err)
@@ -153,17 +158,18 @@ func newOperatorRouter(
 	if err != nil {
 		return nil, err
 	}
-	isLocalSeedRequest := func(r *http.Request) bool {
-		return apiCommon.IsLocalSeedRequest(r, viper.GetString("app_env"))
-	}
 	mergeRoutes, err := newStaffPersonMergeRoutes(db, now)
+	if err != nil {
+		return nil, err
+	}
+	demoRoutes, err := newDemoOperatorRoutes(db, viper.GetString("app_env"), demoPlans)
 	if err != nil {
 		return nil, err
 	}
 	return operatorRouter(
 		newOperatorIdentity(sessionAuth, identity),
 		provisioningConfig,
-		provisioningOperatorAPI.NewBillingResource(billing, nil, isLocalSeedRequest, now),
+		provisioningOperatorAPI.NewBillingResource(billing, nil),
 		&operatorSchoolSettings{
 			values: settingsOperatorAPI.NewSettingsResource(settingsOperatorAPI.SettingsConfig{
 				Settings:   schoolSettings,
@@ -178,7 +184,7 @@ func newOperatorRouter(
 		limiters,
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),
-		newDemoPresenceHistoryRoute(db, viper.GetString("app_env"), demoPlans),
+		demoRoutes,
 		now,
 	), nil
 }

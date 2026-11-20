@@ -20,6 +20,11 @@
     "issue": 7301
   },
   {
+    "scenario": "api.feedback.date_range.positive_growth",
+    "route": "GET /api/feedback/date-range",
+    "issue": 2352
+  },
+  {
     "scenario": "api.students.presence25.arrival_times.n3",
     "route": "POST /api/students/arrival-times/bulk",
     "issue": 2352

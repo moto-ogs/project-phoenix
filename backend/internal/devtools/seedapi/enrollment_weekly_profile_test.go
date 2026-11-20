@@ -91,12 +91,6 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 	}
 	m.nextID++
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method == "POST" && r.URL.Path == "/operator/billing/key-date-counts/seed" {
-		require.Equal(t, "Bearer operator-token", r.Header.Get("Authorization"))
-		require.Equal(t, "true", r.Header.Get(seedTokenHeader))
-		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"written": 4}})
-		return true
-	}
 	// The Kinderkontingent step (#3567) reads the full demo school back to
 	// resend its editable fields with the quota.
 	if r.Method == "GET" && r.URL.Path == "/operator/schools" {
@@ -167,9 +161,9 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		// accepted applications; this fake school has neither.
 		data = []any{}
 	case r.Method == "GET" && (path == "/api/time-tracking/holidays" || path == "/api/timetable/closing-days/" ||
-		path == "/api/timetable/periods/" || path == "/api/feedback/date-range"):
-		// The feedback history (#5029) reads the closed days and its own
-		// past entries; the full demo school's children are not served here.
+		path == "/api/timetable/periods/"):
+		// The feedback history (#5029) reads the closed days; the full demo
+		// school's children are not served here.
 		data = []any{}
 	case path == "/traeger/holiday-periods/criteria":
 		// The criteria of the allocation as stored (#4700).

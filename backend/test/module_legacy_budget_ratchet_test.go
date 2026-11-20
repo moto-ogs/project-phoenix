@@ -220,10 +220,12 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0241: the rooms of the utilization (+13).
 	"modules/facilities/compose":                   197,
 	"modules/facilities/compose/repositoryadapter": 11,
-	"modules/feedback/compose":                     61,
-	"modules/filestorage/compose":                  211,
-	"modules/grouplive/compose":                    14,
-	"modules/guardianlinkview/compose":             8,
+	// Raised by ADR 0298: the demo seed's feedback history writer and the
+	// aliases of its input (+15).
+	"modules/feedback/compose":         76,
+	"modules/filestorage/compose":      211,
+	"modules/grouplive/compose":        14,
+	"modules/guardianlinkview/compose": 8,
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
 	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
@@ -293,8 +295,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0144: the school vacation constructor (+11).
 	// ADR 0269: the default day of the real clock (+4).
 	// ADR 0278: the calendar import of the notices' day clock (+1) and the
-	// root's clock of the Records (+6).
-	"modules/schoolcalendar/compose":        166,
+	// root's clock of the Records (+6). Raised by ADR 0298: the alias of the
+	// demo seed's vacation window (+3).
+	"modules/schoolcalendar/compose":        169,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).

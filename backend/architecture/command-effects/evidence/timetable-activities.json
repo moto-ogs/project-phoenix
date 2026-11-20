@@ -25633,14 +25633,6 @@
       "target_owner": "school-calendar"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations",
-      "binding_digest": "ef2c7211b3d45250eb5ab344b209616b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.SchoolVacations.SeedSchoolVacations",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations",
-      "target_owner": "school-calendar"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.TenantSchoolVacations",
       "binding_digest": "b574a0970a078c9d0e8a2eb5853b369a",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.SchoolVacations.TenantSchoolVacations",
