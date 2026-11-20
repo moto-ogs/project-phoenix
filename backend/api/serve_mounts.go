@@ -117,11 +117,15 @@ func renderEmailWebhookFailure(w http.ResponseWriter, r *http.Request, err error
 	apiCommon.RenderError(w, r, apiCommon.RenderWithRules(err, emailWebhookFailureRules, apiCommon.ErrorInternalServerRenderer("the webhook delivery could not be stored")))
 }
 
-// mountModuleRoutes mounts the route groups modules serve themselves.
+// mountModuleRoutes mounts the route groups modules serve themselves, and
+// "Heute anders" (#7659).
 func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsService, caller *owners.CallerRows, answers enrollmentOwner.StudentAnswers,
 	notes peopleOwner.StudentNoteSearch, activities activityContract.ActivityService, staffOverview schoolSetupTargetCoverage,
-	accessLog owners.DataAccessAppender, today func() calendar.Date,
+	accessLog owners.DataAccessAppender, today func() calendar.Date, dayChanges DayChangesSources,
 ) error {
+	if err := mountDayChanges(tenant, dayChanges); err != nil {
+		return err
+	}
 	schoolSetup, err := newSchoolSetupRoute(schoolSetupCompose.Dependencies{
 		Settings: SchoolSetupSettings{Settings: settings},
 		WorkTime: newSchoolSetupWorkTime(settings, staffOverview),

@@ -32,6 +32,7 @@ import { routes as catererOrders } from "./caterer-orders.generated";
 import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as classListEntries } from "./class-list-entries.generated";
 import { routes as database } from "./database.generated";
+import { routes as dayChanges } from "./day-changes.generated";
 import { routes as display } from "./display.generated";
 import { routes as emergency } from "./emergency.generated";
 import { routes as enrollment } from "./enrollment.generated";
@@ -1054,6 +1055,7 @@ export const portalRoutes = {
     classListEntries["POST /api/class-list-entries/{id}/assign"],
     classListEntries["PUT /api/class-list-entries/{id}"],
     database["GET /api/database/stats"],
+    dayChanges["GET /api/day-changes/today"],
     display["DELETE /api/display/{id}"],
     display["GET /api/display/"],
     display["PATCH /api/display/{id}"],

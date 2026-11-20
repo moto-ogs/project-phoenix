@@ -14,6 +14,7 @@ import (
 	displayHTTP "github.com/moto-ogs/project-phoenix/api/display"
 	parentMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	platformAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
+	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	emergencyHTTP "github.com/moto-ogs/project-phoenix/modules/emergencysnapshot/http"
 	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
@@ -180,6 +181,7 @@ func contractMounts() []contractMount {
 		{"/api/students", enrollmentHTTP.StudentRouteContracts()},
 		{"/api/students", groupLiveHTTP.RouteContracts()},
 		{"/api/search", schoolSearchHTTP.RouteContracts()},
+		{"/api/day-changes", dayChangesHTTP.RouteContracts()},
 		{"/api/care-contracts", careContractHTTP.ApplicationRouteContracts()},
 		{"/parent", parentAPI.MeRouteContracts()},
 		{"/parent", parentPortalRouteContracts()},

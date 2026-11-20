@@ -64,11 +64,12 @@ export const READ_GRID_CLASSES =
  * Höhe einer Zelle der Leseansicht ab `sm`: so viele Rasterzeilen, wie der
  * Baustein belegt. Zeigt die Karte nur ihren Leertext (`HomeCardEmpty`),
  * gilt die Höhe nicht: die Zelle ist dann so hoch wie ihr Text, oder so hoch
- * wie die Nachbarn, die ihre Zeilen offen halten. Ein Browser ohne `:has()`
+ * wie die Nachbarn, die ihre Zeilen offen halten. Ebenso wächst eine Karte,
+ * die ihren Inhalt ganz zeigen muss (`data-home-card-fit`, „Heute anders“). Ein Browser ohne `:has()`
  * behält die feste Höhe.
  */
 export const READ_CELL_CLASSES =
-  "sm:h-[calc(var(--cell-rows)*8rem)] sm:pb-4 sm:has-[[data-home-card-empty]]:h-auto";
+  "sm:h-[calc(var(--cell-rows)*8rem)] sm:pb-4 sm:has-[[data-home-card-empty]]:h-auto sm:has-[[data-home-card-fit]]:h-auto";
 
 /** Die Höhe eines Bausteins in Rasterzeilen, wie READ_CELL_CLASSES sie liest. */
 export function cellRowsVariable(rows: number): Record<string, string> {

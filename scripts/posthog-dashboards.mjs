@@ -406,6 +406,8 @@ const NO_FEATURE_EVENTS = [
   // Clicks inside a page the browser reports (tab, bell): the page view
   // already counts the feature, a click is no action of its own.
   'child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read',
+  // „Heute anders“ on the start page (#7659): clicks inside the page.
+  'day_changes_entry_clicked', 'day_changes_show_all',
 ];
 
 /**

@@ -37,6 +37,7 @@ import { emergencyConcept } from "~/lib/concepts/emergency";
 import { notArrivalConcept } from "~/lib/concepts/notArrival";
 import { unknownConcept } from "~/lib/concepts/unknown";
 import { calendarConcept } from "~/lib/concepts/calendar";
+import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
@@ -131,6 +132,7 @@ const registry = {
   notArrival: notArrivalConcept,
   unknown: unknownConcept,
   calendar: calendarConcept,
+  dayChanges: dayChangesConcept,
   carePlan: carePlanConcept,
   careTimes: careTimesConcept,
   staffPlan: staffPlanConcept,

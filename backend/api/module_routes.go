@@ -81,6 +81,8 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/activities", moduleRouteBasis},
 	{"/api/admin", moduleRouteBasis},
 	{"/api/birthdays", moduleRouteBasis},
+	// "Heute anders" is a block of the Basis start page (#7659).
+	{"/api/day-changes", moduleRouteBasis},
 	{"/api/caldav", moduleRouteBasis},
 	{"/api/calendar", moduleRouteBasis},
 	{"/api/class-list-entries", moduleRouteBasis},
