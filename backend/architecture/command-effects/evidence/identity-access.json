@@ -2809,6 +2809,14 @@
       "target_owner": ""
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.DemoCRMWorker.RunOnce",
+      "binding_digest": "de5f28017df0552f3ba96bc65c58174e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoCRMJobs.RunOnce",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindAccount",
       "binding_digest": "320226bfa8a6488747b6798147203eb9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianAccessQuery.FindAccount",

@@ -1200,7 +1200,7 @@ not composed. The backend routes are public, take no cookies, and rely on
 
 | Route | Contract |
 |---|---|
-| `POST /demo/access-requests` | `email`, `school_name`, `first_name`, `last_name` (both required, at most 120 bytes each, whitespace runs collapsed; the demo school's caregiver and parent carry exactly these names), `contact_opt_in`, optional `phone` (callback number, free text; whitespace runs collapsed, at most 50 bytes; dropped without `contact_opt_in`; not stored, it reaches only the team's lead mail), optional `src` and `role` (a demo role, appended to the mailed link as `&role=`) → always `202 {link_sent: true}`, never the link itself; `422 demo_access_invalid`; `429 demo_access_rate_limited` with `Retry-After` (seconds); `503 demo_capacity_reached` |
+| `POST /demo/access-requests` | `email`, `school_name`, `first_name`, `last_name` (both required, at most 120 bytes each, whitespace runs collapsed; the demo school's caregiver and parent carry exactly these names), `contact_opt_in`, optional `phone` (callback number, free text; whitespace runs collapsed, at most 50 bytes; dropped without `contact_opt_in`; reaches the team's lead mail and, when configured, the temporary CRM queue described below), optional `src` and `role` (a demo role, appended to the mailed link as `&role=`) → always `202 {link_sent: true}`, never the link itself; `422 demo_access_invalid`; `429 demo_access_rate_limited` with `Retry-After` (seconds); `503 demo_capacity_reached` |
 | `GET /demo/access/status` | token in `Authorization: Bearer` → `{status: preparing\|ready\|failed, school_name}` (the OGS name the prospect gave, shown while waiting, #3464), plus `school_url` (origin of the demo school) when `ready` |
 | `POST /demo/access/sessions` | `{token, role?}` → `{access_token, refresh_token, demo: {access_id, role, src, fixed_role, traeger}}` (tenant session; parents portal session for `role: parent`, #3468; Träger-Portal session for `role: traeger`, #6193); `traeger` says whether the school has a Träger of its own; `409 demo_school_preparing`; `422 demo_access_invalid` for an unknown role or `traeger` without an own Träger |
 | `POST /demo/access/reset` | `{token}` → `202 {status: "preparing", entry_url}` (#3470): a fresh demo school is queued for the same access with the same names, the old one is soft-deleted and its sessions are revoked; `entry_url` is the waiting room with the token in the fragment, as in the mailed link. `409 demo_school_preparing` while the current school is still being seeded; `422 demo_access_invalid` for the shared standing school; `429 demo_access_rate_limited` with `Retry-After`, because a restart counts against the same per-address and per-IP windows as a request; `503 demo_capacity_reached` never for a restart, because the old school gives its place back first |
@@ -1210,6 +1210,37 @@ number. Requests during the cooldown still answer `202 {link_sent: true}`
 but send neither the access link nor the lead mail; the submitted number is
 discarded. Outside the cooldown, a request with a number and `contact_opt_in`
 sends the lead mail even for a known address with unchanged contact consent.
+
+HubSpot sync (#7677) is optional and runs only with `APP_ENV=demo` and a
+nonempty `HUBSPOT_DEMO_TOKEN`. Without the token, demo requests and sessions
+keep their existing behavior. A request queues a CRM event under the same
+conditions as the lead mail: a new address, changed contact consent, or a
+callback number. The cooldown queues nothing. Only contacts with
+`contact_opt_in=true` are sent. The first successful redemption
+(`use_count` 0 → 1) queues `started`; later redemptions, role switches and
+resets do not queue another start.
+
+Identity & Access owns `auth.demo_crm_jobs`. Events are inserted in the same
+transaction as the access creation or first redemption. The embedded demo
+Worker leases jobs and serializes them per email address. HTTP calls happen
+outside database transactions and request handlers. Failed transport, 429
+and 5xx responses retry within the existing outbox attempt budget, respecting
+`Retry-After`; permanent errors and exhausted retries erase the payload and
+report a sanitized Worker error. Successful and cancelled jobs are deleted.
+Access expiry deletes remaining jobs through the foreign key. The callback
+number exists only in the requested job payload until completion; it is not
+stored on `auth.demo_accesses` or copied into the started event.
+
+Before each delivery the Worker checks the latest unexpired access's consent.
+A request withdrawing consent deletes queued events for that address. A
+provider request already in flight cannot be retracted. This integration does
+not delete HubSpot contacts or manage HubSpot subscriptions or follow-up
+workflows; those require their separate consent and retention process.
+Contacts are matched by email. Maintained first and last names are preserved;
+blank names are filled. Demo properties record access ID, request/start
+instants, school name, source and contact opt-in. An already started contact
+is not downgraded to requested. Activation requires the private app token and
+matching HubSpot properties; see the runtime environment documentation.
 
 Demo roles (#3467): `caregiver`, `lead`, `all`. A role first becomes the only
 role of the visitor's own caregiver in its school (`user` for `caregiver`,

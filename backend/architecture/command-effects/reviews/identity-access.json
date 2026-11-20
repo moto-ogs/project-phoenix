@@ -3838,6 +3838,17 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.DemoCRMWorker.RunOnce",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoCRMJobs.RunOnce",
+      "reason": "Demo CRM delivery (#7677) reuses the existing Identity command admin gateway for atomic claim/consent checks and independent finalization. Ambient transactions are rejected; the provider call runs outside those units. No cross-owner domain writes are coordinated. Tests cover lease fencing, rollback, consent cancellation and ambient-transaction rejection.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindAccount",
       "classification": "platform",
       "effect": "scope",

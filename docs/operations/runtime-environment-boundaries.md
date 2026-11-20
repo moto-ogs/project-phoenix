@@ -1,6 +1,7 @@
 # Runtime environment boundaries
 
-Staging, production and demo use the same service allowlists. SOPS remains the source
+Staging, production and demo share service allowlists, with the explicit demo-only
+HubSpot exception below. SOPS remains the source
 of secrets. CI delivers the decrypted file for Compose interpolation; containers
 receive only their explicit `environment` entries.
 
@@ -48,6 +49,24 @@ The mail provider group (`EMAIL_PROVIDER`, `EMAIL_FROM_SECURITY_ADDRESS`,
 `EMAIL_FALLBACK_*`, #5933) uses `${KEY-}` until #5935: an environment deploys
 without these keys and keeps plain SMTP. `EMAIL_PROVIDER=lettermint` makes the
 backend refuse to start while one of them is empty.
+`HUBSPOT_DEMO_TOKEN` (#7677) is an optional private-app token exposed only to
+the demo server, which runs its embedded Worker. The demo binding uses
+`${HUBSPOT_DEMO_TOKEN-}`; empty or absent disables the integration. It is absent
+from staging, production, frontend, migration and standalone Worker allowlists,
+and application composition ignores it outside `APP_ENV=demo`. Before
+activation, provision the token through `environments/demo.sops.env` using
+SOPS, with contact read/write scopes and the properties listed below. No
+plaintext host override is an alternative to SOPS.
+
+The HubSpot account must define `moto_demo_status` (enumeration values
+`angefordert`, `gestartet`), `moto_demo_requested_at` and `moto_demo_started_at`
+(datetime), `moto_demo_access_id`, `moto_demo_school_name`, `moto_demo_source`
+(text), and `moto_demo_contact_opt_in` (boolean). The integration also uses standard
+`email`, `firstname`, `lastname` and `phone` properties. Align
+the website privacy notice before activation. Contacts without opt-in are not
+sent. HubSpot follow-up workflows and subscription management are configured
+separately; installing this code sends no marketing email.
+
 There are no invented configuration defaults.
 
 `DB_DEBUG`, `MAILPIT_URL`, `SKIP_ENV_VALIDATION`, and bootstrap account
