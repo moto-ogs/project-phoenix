@@ -39,7 +39,7 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 	t.Parallel()
 	// Initialize the top-level tenant before subtests, including -count reruns.
 	_ = testpkg.Tenant(t)
-	for _, route := range []string{"root", "type", "status", "registered-by", "active", "maintenance", "offline"} {
+	for _, route := range []string{"root"} {
 		t.Run(route, func(t *testing.T) {
 			testpkg.OwnTenant(t)
 			db, fleet := composeDeviceFleet(t)
@@ -53,9 +53,6 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 			registrar := testpkg.CreateTestPerson(t, db, "List", "Target")
 			otherRegistrar := testpkg.CreateTestPerson(t, db, "List", "Other")
 			status := devicefleet.DeviceStatusActive
-			if route == "maintenance" {
-				status = devicefleet.DeviceStatusMaintenance
-			}
 			create := func(school int64, input devicefleet.CreateDevice, backdate bool) devicefleet.Device {
 				input.DeviceID = fmt.Sprintf("list-budget-%d-%s", school, input.DeviceID)
 				var row devicefleet.Device
@@ -109,36 +106,11 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 			router := testutil.NewTenantRouter(db)
 			router.Mount("/", devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), runtime).Router())
 			message, path := "Devices retrieved successfully", "/"
-			switch route {
-			case "type":
-				path = "/type/terminal"
-			case "status":
-				path = "/status/active"
-			case "registered-by":
-				path = fmt.Sprintf("/registered-by/%d", registrar.ID)
-			case "active":
-				path, message = "/active", "Active devices retrieved successfully"
-			case "maintenance":
-				path, message = "/maintenance", "Devices requiring maintenance retrieved successfully"
-			case "offline":
-				path, message = "/offline?duration=24h", "Offline devices retrieved successfully"
-			}
 			want := make(map[int64]deviceListBudgetWire)
-			controlStatus := devicefleet.DeviceStatusInactive
-			if route == "maintenance" {
-				controlStatus = devicefleet.DeviceStatusActive
-			}
-			control := create(tenant, devicefleet.CreateDevice{DeviceID: "control", DeviceType: "sensor", Status: controlStatus, LastSeen: &recent, RegisteredByID: &otherRegistrar.ID}, false)
-			if route == "root" {
-				want[control.ID] = expectedDeviceListWire(control, nil, true)
-			}
-			// A never-seen newly created device is NOT offline. Other routes
-			// use their normal nonmatching controls above.
-			if route == "offline" {
-				create(tenant, devicefleet.CreateDevice{DeviceID: "never-seen-new", DeviceType: "terminal", Status: devicefleet.DeviceStatusOffline}, false)
-			}
+			control := create(tenant, devicefleet.CreateDevice{DeviceID: "control", DeviceType: "sensor", Status: devicefleet.DeviceStatusInactive, LastSeen: &recent, RegisteredByID: &otherRegistrar.ID}, false)
+			want[control.ID] = expectedDeviceListWire(control, nil, true)
 			var manual devicefleet.Device
-			if route == "root" {
+			{
 				// The default root hides this reserved device; explicit type
 				// filters do not. Use the owner seam, not a synthetic ID.
 				manual = create(tenant, devicefleet.CreateDevice{DeviceID: "manual-placeholder", DeviceType: "virtual", Status: devicefleet.DeviceStatusActive}, false)
@@ -173,64 +145,33 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 			grown := 0
 			for _, n := range []int{1, 3, 8} {
 				for grown < n {
-					person := registrar
-					if route != "registered-by" {
-						person = testpkg.CreateTestPerson(t, db, "List", fmt.Sprintf("Registrar%d", grown))
-					}
+					person := testpkg.CreateTestPerson(t, db, "List", fmt.Sprintf("Registrar%d", grown))
 					room := testpkg.CreateTestRoom(t, db, fmt.Sprintf("List room %d", grown))
 					seen := &recent
-					if grown%3 == 1 || route == "offline" {
+					if grown%3 == 1 {
 						seen = &old
 					}
 					if grown%3 == 2 {
 						seen = nil
-					}
-					rowStatus := status
-					if route == "offline" && grown%2 == 1 {
-						rowStatus = devicefleet.DeviceStatusInactive
 					}
 					var name *string
 					if grown%2 == 0 {
 						value := fmt.Sprintf("Device %d", grown)
 						name = &value
 					}
-					row := create(tenant, devicefleet.CreateDevice{DeviceID: fmt.Sprintf("target-%d", grown), DeviceType: "terminal", Name: name, Status: rowStatus, LastSeen: seen, RegisteredByID: &person.ID, RoomID: &room.ID}, route == "offline" && seen == nil)
-					var roomName *string
-					if route != "offline" {
-						roomName = &room.Name
-					}
-					want[row.ID] = expectedDeviceListWire(row, roomName, seen == &recent)
+					row := create(tenant, devicefleet.CreateDevice{DeviceID: fmt.Sprintf("target-%d", grown), DeviceType: "terminal", Name: name, Status: status, LastSeen: seen, RegisteredByID: &person.ID, RoomID: &room.ID}, false)
+					want[row.ID] = expectedDeviceListWire(row, &room.Name, seen == &recent)
 					grown++
 				}
 				t.Run(fmt.Sprintf("N%d", n), func(t *testing.T) {
 					counter := request(t, path, want)
 					require.Len(t, counter.Selects("iot.devices"), 1, "one live-device set read")
 					require.NotEmpty(t, counter.Selects("config.setting_values"), "nonnil LastSeen exercises the online-window setting")
-					rooms := 1
-					if route == "offline" {
-						rooms = 0
-					}
-					require.Len(t, counter.Selects("facilities.rooms"), rooms, "room ID-set read, never one read per device")
-					queries := counter.Measurement(counter.Queries())
-					switch route {
-					case "root":
-						querybudgets.AssertQueryBudget(t, "api.iot.devices.list", queries)
-					case "type":
-						querybudgets.AssertQueryBudget(t, "api.iot.devices.list.type", queries)
-					case "status":
-						querybudgets.AssertQueryBudget(t, "api.iot.devices.list.status", queries)
-					case "registered-by":
-						querybudgets.AssertQueryBudget(t, "api.iot.devices.list.registered_by", queries)
-					case "active":
-						querybudgets.AssertQueryBudget(t, "api.iot.devices.list.active", queries)
-					case "maintenance":
-						querybudgets.AssertQueryBudget(t, "api.iot.devices.list.maintenance", queries)
-					case "offline":
-						querybudgets.AssertQueryBudget(t, "api.iot.devices.list.offline", queries)
-					}
+					require.Len(t, counter.Selects("facilities.rooms"), 1, "room ID-set read, never one read per device")
+					querybudgets.AssertQueryBudget(t, "api.iot.devices.list", counter.Measurement(counter.Queries()))
 				})
 			}
-			if route == "root" {
+			{
 				// Semantic controls, not extra measured samples. The root query
 				// must combine all four filters; search is case-insensitive.
 				for id, row := range want {

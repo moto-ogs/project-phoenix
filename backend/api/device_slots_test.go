@@ -192,9 +192,6 @@ func TestDeviceManagementNeedsDevicesManage(t *testing.T) {
 		{http.MethodPut, fmt.Sprintf("/api/iot/%d", device.ID)},
 		{http.MethodDelete, fmt.Sprintf("/api/iot/%d", device.ID)},
 		{http.MethodPatch, "/api/iot/" + device.DeviceID + "/status"},
-		{http.MethodPost, "/api/iot/" + device.DeviceID + "/ping"},
-		{http.MethodPost, "/api/iot/detect-new"},
-		{http.MethodPost, "/api/iot/scan-network"},
 	} {
 		req := testutil.NewAuthenticatedRequest(t, route.method, route.path,
 			map[string]string{"device_id": "x", "device_type": "rfid_reader", "status": "inactive"},

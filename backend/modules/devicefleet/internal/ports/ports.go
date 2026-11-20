@@ -31,8 +31,6 @@ type DeviceStore interface {
 	FindByAPIKey(context.Context, string) (devicefleet.Device, bool, domain.OperationStats, error)
 	List(context.Context, devicefleet.DeviceFilter) ([]devicefleet.Device, domain.OperationStats, error)
 	ListByIDs(context.Context, []int64) ([]devicefleet.Device, domain.OperationStats, error)
-	ListOffline(context.Context, time.Time) ([]devicefleet.Device, domain.OperationStats, error)
-	CountByType(context.Context) (map[string]int, domain.OperationStats, error)
 	CountByTenant(context.Context) (map[int64]int, domain.OperationStats, error)
 	ListByTenants(context.Context, []int64) ([]devicefleet.Device, domain.OperationStats, error)
 }

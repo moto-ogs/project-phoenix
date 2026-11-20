@@ -338,13 +338,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s PresenceSettings) SessionInactivityTimeoutMinutes(ctx context.Context) (int, error) {\n\treturn s.source.ResolveInt(ctx, configModels.KeySessionInactivityTimeoutMin)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/settings/internal/application/PresenceSettings.SessionInactivityTimeoutMinutes",
-      "owner": "modules/settings"
-    },
-    {
-      "build": "production",
       "evidence": "func (s PresenceSettings) SickClearMode(ctx context.Context) (string, error) {\n\treturn s.source.ResolveString(ctx, configModels.KeySickClearMode)\n}",
       "form": "unclassified-evidence",
       "id": "modules/settings/internal/application/PresenceSettings.SickClearMode",

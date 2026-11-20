@@ -38,12 +38,6 @@ func (routerDeviceScan) PickupInfo(context.Context, string) (*devicescan.PickupI
 func (routerDeviceScan) Ping(context.Context) (*devicescan.DevicePing, error) {
 	return nil, devicescan.ErrDeviceUnauthorized
 }
-func (routerDeviceScan) Status(context.Context) (*devicescan.DeviceStatus, error) {
-	return nil, devicescan.ErrDeviceUnauthorized
-}
-func (routerDeviceScan) AttendanceStatus(context.Context, string) (*devicescan.AttendanceStatus, error) {
-	return nil, devicescan.ErrDeviceUnauthorized
-}
 func (routerDeviceScan) ToggleAttendance(context.Context, devicescan.AttendanceToggleCommand) (*devicescan.AttendanceToggleResult, error) {
 	return nil, devicescan.ErrDeviceUnauthorized
 }

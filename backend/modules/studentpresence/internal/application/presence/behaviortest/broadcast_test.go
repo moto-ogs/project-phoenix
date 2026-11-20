@@ -217,65 +217,6 @@ func TestBroadcast_EndVisitRunsAfterCommit(t *testing.T) {
 	assert.NotEmpty(t, broadcaster.EventsOfType(presenceevents.EventStudentCheckOut))
 }
 
-func TestBroadcast_UpdateVisitMoveSendsMovementEvents(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repos := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
-	reposStructure := owners.NewSchoolStructureSuiteRepositories(testpkg.NewDatabase(t, db))
-	reposPresence := api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db))
-	timetableRepos := api.NewUnobservedTimetableRepositories(testpkg.MustDatabase(db))
-	broadcaster := testpkg.NewRecordingBroadcaster()
-	devices, err := api.NewDeviceRepository(testpkg.NewDatabase(t, db))
-	require.NoError(t, err)
-	rooms, err := api.NewFacilities(testpkg.NewDatabase(t, db))
-	require.NoError(t, err)
-	svc := active.NewService(active.ServiceDependencies{Now: time.Now, PrincipalReader: api.AttendancePrincipal,
-		GroupRepo:          sessionGroups(reposPresence.ActiveGroup),
-		SupervisorRepo:     sessionSupervisors(reposPresence.ActiveGroup),
-		SchoolPresence:     testSchoolPresence(t, db),
-		StudentRepo:        owners.PresenceStudents(testpkg.MustDatabase(db), repos.Student),
-		StaffRepo:          owners.NewAttendanceStaffDirectory(repos.Staff),
-		RoomRepo:           api.NewAttendanceRooms(api.NewRoomRepository(rooms)),
-		ActivityGroupRepo:  owners.NewSessionActivities(timetableRepos.GroupReads()),
-		ActivityCatRepo:    api.NewAttendanceActivityCategories(timetableRepos.ActivityCategory),
-		EducationGroupRepo: owners.NewAttendanceEducationGroups(reposStructure.Group, repos.Student),
-		DeviceRepo:         owners.NewSessionDeviceDirectory(devices, &settingsDouble{ResolveIntFn: func(context.Context, string) (int, error) { return 5, nil }}, nil),
-		DB:                 db,
-		Broadcaster:        owners.NewPresenceEvents(broadcaster, nil),
-		Logger:             slog.Default(),
-	})
-
-	sourceActivity := testpkg.CreateTestActivityGroup(t, db, "broadcast-move-source")
-	targetActivity := testpkg.CreateTestActivityGroup(t, db, "broadcast-move-target")
-	sourceRoom := testpkg.CreateTestRoom(t, db, "Broadcast Move Source Room")
-	targetRoom := testpkg.CreateTestRoom(t, db, "Broadcast Move Target Room")
-	sourceGroup := testpkg.CreateTestActiveGroup(t, db, sourceActivity.ID, sourceRoom.ID)
-	targetGroup := testpkg.CreateTestActiveGroup(t, db, targetActivity.ID, targetRoom.ID)
-	student := testpkg.CreateTestStudent(t, db, "Broadcast", "Move", "4a")
-	visit := testpkg.CreateTestVisit(t, db, student.ID, sourceGroup.ID, time.Now(), nil)
-
-	broadcaster.Reset()
-
-	visit.ActiveGroupID = targetGroup.ID
-	err = svc.UpdateVisit(testpkg.Ctx(t), visit)
-	require.NoError(t, err)
-
-	checkouts := broadcaster.EventsOfType(presenceevents.EventStudentCheckOut)
-	require.NotEmpty(t, checkouts, "expected student_checkout for source group")
-	assert.Equal(t, strconv.FormatInt(sourceGroup.ID, 10), checkouts[0].ActiveGroupID)
-
-	checkins := broadcaster.EventsOfType(presenceevents.EventStudentCheckIn)
-	require.NotEmpty(t, checkins, "expected student_checkin for target group")
-	assert.Equal(t, strconv.FormatInt(targetGroup.ID, 10), checkins[0].ActiveGroupID)
-
-	assert.Len(t, tenantCallsOfType(broadcaster, presenceevents.EventDashboardCountsChanged), 2,
-		"source checkout and target checkin each need one precise aggregate refresh")
-	assert.Empty(t, tenantCallsOfType(broadcaster, presenceevents.EventActiveSupervisionChanged),
-		"visit move must fold both supervision invalidations into the combined refreshes")
-}
-
 func TestBroadcast_StartActivitySessionSendsOneCombinedRefresh(t *testing.T) {
 	t.Parallel()
 

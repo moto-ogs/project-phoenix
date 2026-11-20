@@ -60,29 +60,6 @@ func (s *service) emitVisitCheckout(
 	s.broadcastSupervisionRefresh(ctx, activeGroupID, activeSupervisionReasonStudentMoved, eduGroupIDs)
 }
 
-// broadcastVisitMoved publishes a checkout from the source active group and a
-// checkin into the target active group. Attendance mutation happens before this
-// helper so synchronization does not depend on a broadcaster being configured.
-func (s *service) broadcastVisitMoved(
-	ctx context.Context,
-	previousVisit, movedVisit *studentpresence.Visit,
-	sourceSnapshot, targetSnapshot *AttendanceSnapshot,
-) {
-	if previousVisit == nil || movedVisit == nil {
-		return
-	}
-
-	// Moving a visit used to delegate to broadcastVisitCreated, which also
-	// wakes guardians. Keep that side effect while reusing the resolved student.
-	s.wakeGuardiansAfterCommit(ctx, movedVisit.StudentID)
-	if s.Broadcaster == nil {
-		return
-	}
-	educationGroupID := s.getEducationGroupForSSE(ctx, movedVisit.StudentID)
-	s.emitVisitCheckout(ctx, previousVisit, sourceSnapshot, educationGroupID, "")
-	s.emitVisitCreated(ctx, movedVisit, targetSnapshot, educationGroupID)
-}
-
 // broadcastStudentCheckoutEvents sends a batched checkout SSE notification when
 // a whole session ends. All visits in the batch share one active_group_id (the
 // session). Instead of one student_checkout per student — which produced 2N+

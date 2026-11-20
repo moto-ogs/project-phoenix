@@ -87,9 +87,21 @@ type SeedOptions struct {
 	// nil seeds the past without presence, unless PresenceHistoryRoute is set.
 	PresenceHistory PresenceHistoryWriter
 	MealHistory     func(context.Context, int64, []PastMealDay) error
-	// PresenceHistoryRoute writes them through the operator route only the
-	// public demo's server mounts (APP_ENV=demo, ADR 0127) when
-	// PresenceHistory is nil.
+	// FeedbackHistory writes the children's past ratings (#5029, ADR 0298);
+	// nil seeds the past without them, unless PresenceHistoryRoute is set.
+	FeedbackHistory FeedbackHistoryWriter
+	// SchoolVacations stores the seeded school vacations of every federal
+	// state (#5345, ADR 0298); nil leaves the stored vacations as the sync
+	// wrote them, unless PresenceHistoryRoute is set.
+	SchoolVacations SchoolVacationWriter
+	// BillingKeyDateCounts captures the synthetic billing snapshot of the
+	// current day (ADR 0298); nil seeds none. The public demo has no write
+	// path for it: only an operator sees the figures.
+	BillingKeyDateCounts func(context.Context) (int, error)
+	// PresenceHistoryRoute writes the past presence, the past ratings and the
+	// school vacations through the operator routes only the public demo's
+	// server mounts (APP_ENV=demo, ADR 0127 and ADR 0298) when no writer is
+	// bound.
 	PresenceHistoryRoute bool
 	// ProductScreenshots prepares the school for the product screenshots,
 	// whose simulation runs a single Tuesday: no weekend runs Friday's plan,

@@ -159,27 +159,3 @@ func (s lifecycleStore) ReplaceSupervisors(ctx context.Context, sessionID int64,
 func (s lifecycleStore) Touch(ctx context.Context, sessionID int64) error {
 	return classifyPresence(s.active.UpdateSessionActivity(ctx, sessionID))
 }
-
-func (s lifecycleStore) Timeout(ctx context.Context, deviceID int64) (devicescan.SessionTimeoutResponse, error) {
-	result, err := s.active.ProcessSessionTimeout(ctx, deviceID)
-	if err != nil {
-		classified := classifyPresence(err)
-		if errors.Is(err, studentpresence.ErrNoActiveSession) {
-			classified = mapError(classified, ports.ErrNoActiveSession)
-		}
-		return devicescan.SessionTimeoutResponse{}, classified
-	}
-	return devicescan.SessionTimeoutResponse{SessionID: result.SessionID, ActivityID: result.ActivityID, StudentsCheckedOut: result.StudentsCheckedOut, TimeoutAt: result.TimeoutAt}, nil
-}
-
-func (s lifecycleStore) ValidateTimeout(ctx context.Context, deviceID int64, minutes int) error {
-	return classifyPresence(s.active.ValidateSessionTimeout(ctx, deviceID, minutes))
-}
-
-func (s lifecycleStore) TimeoutInfo(ctx context.Context, deviceID int64) (devicescan.SessionTimeoutInfoResponse, error) {
-	info, err := s.active.GetSessionTimeoutInfo(ctx, deviceID)
-	if err != nil {
-		return devicescan.SessionTimeoutInfoResponse{}, classifyPresence(err)
-	}
-	return devicescan.SessionTimeoutInfoResponse{SessionID: info.SessionID, ActivityID: info.ActivityID, StartTime: info.StartTime, LastActivity: info.LastActivity, TimeoutMinutes: info.TimeoutMinutes, InactivitySeconds: int(info.InactivityDuration.Seconds()), TimeUntilTimeoutSeconds: int(info.TimeUntilTimeout.Seconds()), IsTimedOut: info.IsTimedOut, ActiveStudentCount: info.ActiveStudentCount}, nil
-}

@@ -49,7 +49,7 @@ func operatorListBudgetRouter(t *testing.T, db *bun.DB) (chi.Router, identityacc
 		mountOperatorSchoolRoutes(r, resource, routes.mfaAdmin, &operatorSchoolSettings{
 			values:                 settingsHTTP.NewSettingsResource(settingsHTTP.SettingsConfig{Settings: module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch), OperatorID: operatorIDFromSession}),
 			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.TodayDate),
-		}, nil)
+		}, demoOperatorRoutes{})
 		routes.mountAccountTenantAccessRoutes(r, resource)
 		routes.mountPasskeyRoutes(r)
 		routes.mountTrustedDeviceRoutes(r)
@@ -210,7 +210,6 @@ func TestOperatorIdentityListsPositiveGrowthQueryBudget(t *testing.T) {
 			baseline              int
 		}{
 			{fmt.Sprintf("/operator/accounts/%d/tenants", account.ID), "operator.lists.account_tenants", "tenant_id", tenants, 0},
-			{fmt.Sprintf("/operator/accounts/%d/tenants/", account.ID), "operator.lists.account_tenants_slash", "tenant_id", tenants, 0},
 			{rolesPath, "operator.lists.account_tenant_roles", "id", roles, roleBaseline},
 			{"/operator/auth/passkeys", "operator.lists.passkeys", "id", passkeys, 0},
 			{"/operator/auth/mfa/trusted-devices", "operator.lists.trusted_devices", "id", devices, 0},
@@ -278,8 +277,6 @@ func assertOperatorListBudget(t *testing.T, scenario string, statements querybud
 		querybudgets.AssertQueryBudget(t, "operator.lists.account_tenant_roles", statements)
 	case "operator.lists.account_tenants":
 		querybudgets.AssertQueryBudget(t, "operator.lists.account_tenants", statements)
-	case "operator.lists.account_tenants_slash":
-		querybudgets.AssertQueryBudget(t, "operator.lists.account_tenants_slash", statements)
 	case "operator.lists.accounts":
 		querybudgets.AssertQueryBudget(t, "operator.lists.accounts", statements)
 	case "operator.lists.organization_accounts":

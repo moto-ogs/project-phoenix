@@ -25,18 +25,6 @@ func (s *Service) ListGuardians(ctx context.Context, page, pageSize int) ([]peop
 	})
 }
 
-func (s *Service) ListGuardiansWithoutAccount(ctx context.Context) ([]peopledirectory.Guardian, error) {
-	return guardianQuery(s, "list_guardians_without_account", func(p peopledirectory.GuardianProvider) ([]peopledirectory.Guardian, error) {
-		return p.ListGuardiansWithoutAccount(ctx)
-	})
-}
-
-func (s *Service) ListInvitableGuardians(ctx context.Context) ([]peopledirectory.Guardian, error) {
-	return guardianQuery(s, "list_invitable_guardians", func(p peopledirectory.GuardianProvider) ([]peopledirectory.Guardian, error) {
-		return p.ListInvitableGuardians(ctx)
-	})
-}
-
 func (s *Service) SearchGuardians(ctx context.Context, text string, limit int) ([]peopledirectory.GuardianMatch, error) {
 	text = strings.TrimSpace(text)
 	if text == "" || limit <= 0 {

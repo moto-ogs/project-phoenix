@@ -422,21 +422,6 @@ func TestListCategories_Success(t *testing.T) {
 	assert.NotEmpty(t, data, "Expected at least one category")
 }
 
-func TestGetTimespans_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/activities/timespans", nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-
-	response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-	_, ok := response["data"].([]interface{})
-	require.True(t, ok, "Expected data to be an array")
-}
-
 // =============================================================================
 // SCHEDULE TESTS
 // =============================================================================
@@ -647,19 +632,6 @@ func TestGetStudentEnrollments_Success(t *testing.T) {
 	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 }
 
-func TestGetAvailableActivities_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	student := testpkg.CreateTestStudent(t, ctx.db, "Available", "Student", "1a")
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/activities/students/%d/available", student.ID), nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
 func TestGetAvailableActivities_GraduatedStudentNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := setupActivitiesRoute(t)
@@ -862,70 +834,6 @@ func TestGetActivitySchedule_NotFound(t *testing.T) {
 // =============================================================================
 // ADDITIONAL SUPERVISOR TESTS (0% coverage functions)
 // =============================================================================
-
-func TestUpdateSupervisorRole_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("UpdSupRole-%d", time.Now().UnixNano()))
-	staff := testpkg.CreateTestStaff(t, ctx.db, fmt.Sprintf("SupRole-%d", time.Now().UnixNano()), "Test")
-
-	// Assign supervisor first - get the supervisor record
-	actSvc := ctx.resource.ActivityService
-	supervisor, err := actSvc.AddSupervisor(testpkg.Ctx(t), activity.ID, staff.ID, false) // false = not primary
-	require.NoError(t, err)
-	require.NotNil(t, supervisor)
-
-	body := map[string]interface{}{
-		"is_primary": true, // Use is_primary instead of role
-	}
-
-	req := testutil.NewAuthenticatedRequest(t, "PUT",
-		fmt.Sprintf("/activities/%d/supervisors/%d", activity.ID, supervisor.ID), body) // Use supervisor.ID
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-// Demoting the primary supervisor would leave the activity without one, an
-// expected refusal (#4599): 409 with the class code, not a server error.
-func TestUpdateSupervisorRole_DemotingThePrimaryAnswersConflict(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("DemoteSup-%d", time.Now().UnixNano()))
-	staff := testpkg.CreateTestStaff(t, ctx.db, "Primary", "Supervisor")
-	supervisor, err := ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activity.ID, staff.ID, true)
-	require.NoError(t, err)
-
-	body := map[string]interface{}{"is_primary": false}
-	req := testutil.NewAuthenticatedRequest(t, "PUT",
-		fmt.Sprintf("/activities/%d/supervisors/%d", activity.ID, supervisor.ID), body)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
-	assert.Equal(t, routetest.ClassCode(http.StatusConflict), testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"])
-}
-
-func TestUpdateSupervisorRole_NotFound(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("UpdSupRoleNF-%d", time.Now().UnixNano()))
-
-	body := map[string]interface{}{
-		"role": "primary",
-	}
-
-	req := testutil.NewAuthenticatedRequest(t, "PUT",
-		fmt.Sprintf("/activities/%d/supervisors/999999", activity.ID), body)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertNotFound(t, rr)
-}
 
 func TestRemoveSupervisor_Success(t *testing.T) {
 	t.Parallel()

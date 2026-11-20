@@ -182,9 +182,8 @@ func TestSchoolPortalTokenMatrix(t *testing.T) {
 	}
 
 	// The protected school auth surface follows the same matrix: a tenant
-	// token cannot switch schools.
-	req = httptest.NewRequest(http.MethodPost, "/auth/switch-school", strings.NewReader(`{"tenant_slug":"t1"}`))
-	req.Header.Set("Content-Type", "application/json")
+	// token cannot read the school session's remembered devices.
+	req = httptest.NewRequest(http.MethodGet, "/auth/mfa/trusted-devices", nil)
 	tenantClaims := sessiontoken.AppClaims{ID: int(account.ID), Sub: account.Email, Roles: []string{"lehrkraft"}, TenantID: tenantID, Scope: tenant.ScopeTenant}
 	rec = testutil.ExecuteWithAuthPermissions(t, schoolRouter, req, tenantClaims, []string{"class_day:read"})
 	require.Equal(t, http.StatusUnauthorized, rec.Code, rec.Body.String())
