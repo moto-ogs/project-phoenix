@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
-
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
 
@@ -105,7 +103,7 @@ func TestUploadsReadOnlyTheirOwnParts(t *testing.T) {
 		accepted, input, err := parseEnrollmentUpload(httptest.NewRecorder(),
 			body(file, part{"phase_id", ""}, part{"field_key", ""}, part{"late_invite_token", ""}, part{"status_token", ""}))
 		require.NoError(t, err)
-		common.CloseFile(accepted.File)
+		require.NoError(t, accepted.File.Close())
 		assert.Equal(t, int64(7), input.PhaseID)
 
 		for name, parts := range map[string][]part{
