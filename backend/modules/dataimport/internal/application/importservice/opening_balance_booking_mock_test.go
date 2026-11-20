@@ -476,6 +476,28 @@ func TestOpeningBalanceValidate_ReportsVacationPreflightRejection(t *testing.T) 
 	require.Contains(t, errorCodes(errs), "vacation_opening_preflight_failed")
 }
 
+func TestOpeningBalanceValidate_HidesPreflightDiagnostics(t *testing.T) {
+	t.Parallel()
+	for _, field := range []string{"hours", "vacation"} {
+		t.Run(field, func(t *testing.T) {
+			events := []string{}
+			config, hours, vacation := newBookingConfig(&events)
+			diagnostic := errors.New("database db.internal: constraint failed")
+			hours.validateErr, vacation.preflightErr = diagnostic, diagnostic
+			row := &importModels.OpeningBalanceImportRow{FirstName: "Anna", LastName: "Lehmann"}
+			if field == "hours" {
+				row.HoursBalance = "12,5"
+			} else {
+				row.VacationRemaining = "17,5"
+			}
+			errs := config.Validate(t.Context(), row)
+			require.Len(t, errs, 1)
+			assert.Contains(t, errs[0].Message, "Bitte versuche es erneut")
+			assert.NotContains(t, errs[0].Message, diagnostic.Error())
+		})
+	}
+}
+
 func TestOpeningBalanceValidate_ReportsQuotaLookupFailure(t *testing.T) {
 	t.Parallel()
 
