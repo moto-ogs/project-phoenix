@@ -92,6 +92,7 @@ describe("mapViewDetail", () => {
       user_id: 123,
       user_name: "Max Mustermann",
       seen_at: "2026-03-15T14:30:00Z",
+      shown_at: "2026-03-15T14:30:00Z",
       dismissed: false,
     };
 
@@ -100,6 +101,7 @@ describe("mapViewDetail", () => {
     expect(result.userId).toBe("123");
     expect(result.userName).toBe("Max Mustermann");
     expect(result.seenAt).toBe("2026-03-15T14:30:00Z");
+    expect(result.shownAt).toBe("2026-03-15T14:30:00Z");
     expect(result.dismissed).toBe(false);
   });
 
@@ -108,6 +110,7 @@ describe("mapViewDetail", () => {
       user_id: 456,
       user_name: "Erika Muster",
       seen_at: "2026-03-15T15:00:00Z",
+      shown_at: "2026-03-15T15:00:00Z",
       dismissed: true,
     };
 
@@ -115,6 +118,19 @@ describe("mapViewDetail", () => {
 
     expect(result.userId).toBe("456");
     expect(result.dismissed).toBe(true);
+  });
+
+  it("preserves a dismissal without a displayed announcement", () => {
+    const result = mapViewDetail({
+      user_id: 456,
+      user_name: "Erika Muster",
+      seen_at: null,
+      shown_at: null,
+      dismissed: true,
+    });
+
+    expect(result.seenAt).toBeNull();
+    expect(result.shownAt).toBeNull();
   });
 });
 

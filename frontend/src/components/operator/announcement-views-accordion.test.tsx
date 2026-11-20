@@ -153,12 +153,14 @@ describe("AnnouncementViewsAccordion", () => {
         userId: "1",
         userName: "Alice",
         seenAt: "2024-01-01T10:00:00Z",
+        shownAt: "2024-01-01T10:00:00Z",
         dismissed: true,
       },
       {
         userId: "2",
         userName: "Bob",
         seenAt: "2024-01-01T11:00:00Z",
+        shownAt: "2024-01-01T11:00:00Z",
         dismissed: true,
       },
     ];
@@ -184,12 +186,14 @@ describe("AnnouncementViewsAccordion", () => {
         userId: "1",
         userName: "Alice",
         seenAt: "2024-01-01T10:00:00Z",
+        shownAt: "2024-01-01T10:00:00Z",
         dismissed: true,
       },
       {
         userId: "2",
         userName: "Bob",
         seenAt: "2024-01-01T11:00:00Z",
+        shownAt: "2024-01-01T11:00:00Z",
         dismissed: false,
       },
     ];
@@ -222,6 +226,24 @@ describe("AnnouncementViewsAccordion", () => {
     expect(screen.getByText("(0)")).toBeInTheDocument();
   });
 
+  it("marks a dismissal without a displayed announcement", async () => {
+    mockOperatorAnnouncementsService.fetchViewDetails.mockResolvedValue([
+      {
+        userId: "1",
+        userName: "Alice",
+        seenAt: null,
+        shownAt: null,
+        dismissed: true,
+      },
+    ]);
+
+    render(<AnnouncementViewsAccordion announcementId="42" />);
+    fireEvent.click(screen.getByRole("button", { name: "Lesebestätigungen" }));
+
+    expect(await screen.findByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText(/Nicht angezeigt/)).toBeInTheDocument();
+  });
+
   it("stops statistics polling after closing", async () => {
     vi.useFakeTimers();
     mockOperatorAnnouncementsService.fetchViewDetails.mockResolvedValue([]);
@@ -249,6 +271,7 @@ describe("AnnouncementViewsAccordion", () => {
         userId: "1",
         userName: "Alice",
         seenAt: "2024-01-01T10:00:00Z",
+        shownAt: "2024-01-01T10:00:00Z",
         dismissed: false,
       },
     ];
@@ -328,6 +351,7 @@ describe("AnnouncementViewsAccordion", () => {
           userId: "1",
           userName: "Person A",
           seenAt: "2026-09-09T10:00:00Z",
+          shownAt: "2026-09-09T10:00:00Z",
           dismissed: true,
         },
       ]);

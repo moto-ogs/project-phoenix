@@ -59,14 +59,16 @@ export interface AnnouncementStats {
 export interface BackendAnnouncementViewDetail {
   user_id: number | string;
   user_name: string;
-  seen_at: string;
+  seen_at: string | null;
+  shown_at: string | null;
   dismissed: boolean;
 }
 
 export interface AnnouncementViewDetail {
   userId: string;
   userName: string;
-  seenAt: string;
+  seenAt: string | null;
+  shownAt: string | null;
   dismissed: boolean;
 }
 
@@ -77,6 +79,7 @@ export function mapViewDetail(
     userId: data.user_id.toString(),
     userName: data.user_name,
     seenAt: data.seen_at,
+    shownAt: data.shown_at,
     dismissed: data.dismissed,
   };
 }
