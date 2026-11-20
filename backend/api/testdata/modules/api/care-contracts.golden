@@ -1,1 +1,1 @@
-GET /api/care-contracts/ -> vertraege
+GET /api/care-contracts/ -> online_anmeldung

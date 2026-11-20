@@ -84,7 +84,7 @@ export function contractStateLine(
  * The care contracts the Träger made from this application (#4788, ADR 0088
  * section 7), one row per child. Read-only: the Träger manages contracts in
  * its portal. Stays away while no child has a contract, and where the school
- * did not book the module Verträge und Dokumente.
+ * did not book the module Online-Anmeldung the read belongs to.
  */
 export function AdminEnrollmentContracts({
   requestId,

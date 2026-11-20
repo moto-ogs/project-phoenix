@@ -148,10 +148,6 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/guardians/*/invite", settings.ModuleElternApp},
 	{"/api/guardians/students/*/invite", settings.ModuleElternApp},
 
-	// Verträge und Dokumente: the school reads the contracts the Träger made
-	// from its application children (#4788).
-	{"/api/care-contracts", settings.ModuleVertraege},
-
 	// Online-Anmeldung: phases, forms, care offerings and requests, and the
 	// public intake and status links.
 	{"/api/enrollment", settings.ModuleOnlineAnmeldung},
@@ -161,6 +157,10 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/enrollment/form-bootstrap/public", settings.ModuleOnlineAnmeldung},
 	{"/api/enrollment/legal", settings.ModuleOnlineAnmeldung},
 	{"/api/enrollment/requests", settings.ModuleOnlineAnmeldung},
+	// The contracts the Träger made from the application children, read on
+	// the enrollment detail (#4788). Not Verträge und Dokumente: that switch
+	// is not offered yet, and the Träger portal concludes contracts without it.
+	{"/api/care-contracts", settings.ModuleOnlineAnmeldung},
 
 	// Dienstplan.
 	{"/api/staff-shifts", settings.ModuleDienstplan},

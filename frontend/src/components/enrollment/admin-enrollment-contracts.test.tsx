@@ -105,12 +105,12 @@ describe("AdminEnrollmentContracts", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("stays away where the school did not book the contracts module", () => {
+  it("stays away where the school did not book the module of the read", () => {
     useSWRAuth.mockReturnValue({
       data: undefined,
       error: new ApiError("not booked", 403, {
         code: "module.not_booked",
-        details: { module: "vertraege" },
+        details: { module: "online_anmeldung" },
       }),
       mutate: vi.fn(),
     });
