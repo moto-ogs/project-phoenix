@@ -98,7 +98,10 @@ export function TraegerSearchButton() {
       <Search aria-hidden="true" className="h-4 w-4 text-gray-500" />
       <span className="text-gray-600">{TRAEGER_SEARCH_LABEL}</span>
       {shortcut ? (
-        <span className="ml-auto text-xs text-gray-500">{shortcut}</span>
+        // Das Kürzel nennt `aria-keyshortcuts`; vorgelesen wird nur „Suchen“.
+        <span aria-hidden="true" className="ml-auto text-xs text-gray-500">
+          {shortcut}
+        </span>
       ) : null}
     </Button>
   );
