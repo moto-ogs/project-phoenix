@@ -338,7 +338,7 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	assert.NotNil(t, publishedAt, "the announcement is published")
 
 	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
-	require.NoError(t, module.MarkSeen(ctx, viewer.ID, announcement.ID))
+	require.NoError(t, module.MarkDismissed(ctx, viewer.ID, announcement.ID))
 	var stats struct {
 		AnnouncementID int64 `json:"announcement_id"`
 		SeenCount      int   `json:"seen_count"`

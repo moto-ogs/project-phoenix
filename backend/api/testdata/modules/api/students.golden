@@ -60,11 +60,9 @@ GET /api/students/{id}/photo/{filename} -> basis
 GET /api/students/{id}/pickup-schedules -> basis
 GET /api/students/{id}/privacy-consent -> basis
 GET /api/students/{id}/status-days -> basis
-GET /api/students/{id}/visit-history -> basis
 POST /api/students/ -> basis
 POST /api/students/arrival-schedules/bulk -> basis
 POST /api/students/arrival-schedules/status -> basis
-POST /api/students/arrival-times/bulk -> basis
 POST /api/students/care-end -> basis
 POST /api/students/care-end/cancel -> basis
 POST /api/students/care-end/preview -> basis
@@ -83,7 +81,6 @@ POST /api/students/master-data-change-requests/{requestId}/decide -> basis
 POST /api/students/offering-change-requests/{requestId}/decide -> basis
 POST /api/students/offering-change-requests/{requestId}/preview -> basis
 POST /api/students/pickup-schedules/bulk -> basis
-POST /api/students/pickup-times/bulk -> basis
 POST /api/students/school-checkin/batch -> basis
 POST /api/students/status-days/bulk -> basis
 POST /api/students/{id}/accident-reports -> basis

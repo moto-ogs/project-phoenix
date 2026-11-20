@@ -66,7 +66,6 @@ func checkGuestRoutePermissions(t *testing.T, api *goldenRuntime) {
 			{http.MethodGet, "/api/messages/"},
 			{http.MethodGet, fmt.Sprintf("/api/messages/students/%d/guardians", child.ID)},
 			{http.MethodGet, fmt.Sprintf("/api/students/%d/notes", child.ID)},
-			{http.MethodGet, fmt.Sprintf("/api/students/%d/visit-history", child.ID)},
 			{http.MethodGet, fmt.Sprintf("/api/students/%d/attendance-history/export", child.ID)},
 			{http.MethodPost, "/api/students/export"},
 			{http.MethodGet, "/api/students/day-log/export"},

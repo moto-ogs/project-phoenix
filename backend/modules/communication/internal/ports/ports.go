@@ -17,7 +17,6 @@ type Store interface {
 	List(context.Context, bool) ([]communication.Announcement, domain.OperationStats, error)
 	Publish(context.Context, int64) (domain.OperationStats, error)
 	Unpublish(context.Context, int64) (domain.OperationStats, error)
-	MarkSeen(context.Context, int64, int64) (domain.OperationStats, error)
 	MarkDismissed(context.Context, int64, int64) (domain.OperationStats, error)
 	ViewStats(context.Context, int64) (communication.AnnouncementStats, domain.OperationStats, error)
 }

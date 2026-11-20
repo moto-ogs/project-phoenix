@@ -101,17 +101,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.MarkSeen",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.Capability.MarkSeen",
-      "reason": "Platform protocol participation (scope): communication reaches tenant.WithinAdminRetry (tenant-runtime) through *modules/communication/internal/application.Service.MarkSeen. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdminRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.PublishAnnouncement",
       "classification": "platform",
       "effect": "scope",

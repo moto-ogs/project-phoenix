@@ -93,10 +93,6 @@ func (m *mockAnnouncementService) CountUnread(ctx context.Context, userID int64,
 	return 0, nil
 }
 
-func (m *mockAnnouncementService) MarkSeen(ctx context.Context, userID, announcementID int64) error {
-	return nil
-}
-
 func (m *mockAnnouncementService) MarkDismissed(ctx context.Context, userID, announcementID int64) error {
 	return nil
 }

@@ -6225,13 +6225,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r guardianInvitationReads) ListRedeemable(ctx context.Context) ([]peoplePorts.GuardianInvitationRecord, error) {\n\tinvitations, err := r.reads.ListRedeemableGuardianInvitations(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn guardianListRecords(invitations), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/guardianInvitationReads.ListRedeemable",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (p guardianPickupPort) ChangeGuardianPickupPermission(ctx context.Context, tenantID, relationshipID int64, canPickup *bool, setNotes bool, notes *string) (bool, error) {\n\treturn p.owner.ChangeGuardianPickupPermission(ctx, careplan.GuardianPickupPermissionChange{TenantID: tenantID, RelationshipID: relationshipID, CanPickup: canPickup, SetPickupNotes: setNotes, PickupNotes: notes})\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/guardianPickupPort.ChangeGuardianPickupPermission",

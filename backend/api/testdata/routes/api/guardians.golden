@@ -5,7 +5,6 @@ DELETE /api/guardians/{id}/email-stop
 DELETE /api/guardians/{id}/phone-numbers/{phoneId}
 GET /api/guardians/
 GET /api/guardians/invitable
-GET /api/guardians/invitations/pending
 GET /api/guardians/invitations/pending-approval
 GET /api/guardians/payment-overview
 GET /api/guardians/search

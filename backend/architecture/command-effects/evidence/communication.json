@@ -73,14 +73,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.MarkSeen",
-      "binding_digest": "1a053b074f2451b2e02e8581fed21722",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.Capability.MarkSeen",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdminRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.PublishAnnouncement",
       "binding_digest": "1a053b074f2451b2e02e8581fed21722",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.Capability.PublishAnnouncement",

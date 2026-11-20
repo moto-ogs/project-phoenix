@@ -239,7 +239,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0073: the composition forwards the parent announcement
 	// retention to its service.
 	// Raised by ADR 0079: the facade observes the reachable-children read.
-	"modules/communication": 55,
+	"modules/communication": 54,
 	"modules/dataimport":    1,
 	"modules/delivery":      4,
 	"modules/devicefleet":   32, // #7104: UpdateRoomID no longer stamps updated_at (-1)
@@ -255,7 +255,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0077: the caterer flows. Lowered by #7081: one name for
 	// the operator's resend of a code. Lowered by #4496: revoking a caterer
 	// invitation also stops its unsent mail.
-	"modules/identityaccess": 205,
+	"modules/identityaccess": 204,
 	"modules/mealplan":       1,
 	// Raised by ADR 0112: the Träger logo read of the Träger-Portal.
 	// Raised by ADR 0172: the document contact read without an account (+1).
@@ -287,7 +287,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
 	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
-	"modules/studentpresence": 124,
+	"modules/studentpresence": 123,
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	"modules/timetable": 204,

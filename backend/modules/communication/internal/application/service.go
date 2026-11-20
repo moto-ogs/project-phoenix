@@ -210,12 +210,6 @@ func (s *Service) CountUnread(ctx context.Context, userID int64, roles []string,
 	return result, err
 }
 
-func (s *Service) MarkSeen(ctx context.Context, userID, announcementID int64) error {
-	return s.run(ctx, "mark_seen", func(txCtx context.Context) (domain.OperationStats, error) {
-		return s.store.MarkSeen(txCtx, userID, announcementID)
-	})
-}
-
 func (s *Service) MarkDismissed(ctx context.Context, userID, announcementID int64) error {
 	return s.run(ctx, "mark_dismissed", func(txCtx context.Context) (domain.OperationStats, error) {
 		return s.store.MarkDismissed(txCtx, userID, announcementID)

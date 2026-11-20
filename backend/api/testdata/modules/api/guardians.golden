@@ -5,7 +5,6 @@ DELETE /api/guardians/{id}/email-stop -> basis
 DELETE /api/guardians/{id}/phone-numbers/{phoneId} -> basis
 GET /api/guardians/ -> basis
 GET /api/guardians/invitable -> eltern_app
-GET /api/guardians/invitations/pending -> eltern_app
 GET /api/guardians/invitations/pending-approval -> eltern_app
 GET /api/guardians/payment-overview -> basis
 GET /api/guardians/search -> basis

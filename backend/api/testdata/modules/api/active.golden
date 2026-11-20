@@ -47,7 +47,6 @@ POST /api/active/visits/check-in-to-room -> basis
 POST /api/active/visits/move-to-group -> basis
 POST /api/active/visits/move-to-room -> basis
 POST /api/active/visits/move-to-transit -> basis
-POST /api/active/visits/student/{studentId}/checkout -> basis
 POST /api/active/visits/transit/assign -> basis
 POST /api/active/visits/{id}/end -> basis
 PUT /api/active/combined/{id} -> basis

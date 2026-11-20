@@ -62,7 +62,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	POST /api/active/visits/move-to-group
 	POST /api/active/visits/move-to-room
 	POST /api/active/visits/move-to-transit
-	POST /api/active/visits/student/{studentId}/checkout
 	POST /api/active/visits/transit/assign
 	POST /api/active/visits/{id}/end
 	PUT /api/active/visits/{id}

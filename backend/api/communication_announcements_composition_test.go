@@ -133,7 +133,7 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	require.NoError(t, err)
 	assert.Empty(t, otherUnread)
 
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
+	require.NoError(t, module.MarkDismissed(ctx, account.ID, announcement.ID))
 	count, err := module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
 	assert.Zero(t, count)
@@ -244,7 +244,7 @@ func TestAnnouncementViewWriteRollsBackWithOuterUnitOfWorkAndRetryIsIdempotent(t
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
 
 	err := tenant.WithinAdmin(ctx, func(txCtx context.Context) error {
-		require.NoError(t, module.MarkSeen(txCtx, account.ID, announcement.ID))
+		require.NoError(t, module.MarkDismissed(txCtx, account.ID, announcement.ID))
 		return errInjectedAudit
 	})
 	require.ErrorIs(t, err, errInjectedAudit)
@@ -252,8 +252,8 @@ func TestAnnouncementViewWriteRollsBackWithOuterUnitOfWorkAndRetryIsIdempotent(t
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcement_views").ColumnExpr("COUNT(*)").Where("user_id = ? AND announcement_id = ?", account.ID, announcement.ID).Scan(context.Background(), &count))
 	assert.Zero(t, count)
 
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
-	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
+	require.NoError(t, module.MarkDismissed(ctx, account.ID, announcement.ID))
+	require.NoError(t, module.MarkDismissed(ctx, account.ID, announcement.ID))
 	observationsMu.Lock()
 	defer observationsMu.Unlock()
 	var conflicts int

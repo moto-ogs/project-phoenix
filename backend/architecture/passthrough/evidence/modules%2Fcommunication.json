@@ -555,13 +555,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) MarkSeen(ctx context.Context, userID, announcementID int64) error {\n\treturn s.run(ctx, \"mark_seen\", func(txCtx context.Context) (domain.OperationStats, error) {\n\t\treturn s.store.MarkSeen(txCtx, userID, announcementID)\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/communication/internal/application/Service.MarkSeen",
-      "owner": "modules/communication"
-    },
-    {
-      "build": "production",
       "evidence": "func (a audit) Append(ctx context.Context, entry domain.AuditEntry) (domain.OperationStats, error) {\n\tstarted := time.Now()\n\terr := a.port.AppendAnnouncementAudit(ctx, recordports.AuditEntry{OperatorID: entry.OperatorID, Action: entry.Action, ResourceID: entry.ResourceID, RequestIP: entry.RequestIP, Changes: entry.Changes})\n\tstats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}\n\tif err == nil {\n\t\tstats.Rows = 1\n\t}\n\treturn stats, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/audit.Append",

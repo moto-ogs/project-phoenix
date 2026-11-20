@@ -828,13 +828,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p PresenceOperations) CheckOutStudent(ctx context.Context, studentID, staffID int64) (studentpresence.CheckoutOutcome, error) {\n\tresult, err := p.active.CheckOutStudent(ctx, studentID, staffID, true)\n\tif err != nil {\n\t\treturn studentpresence.CheckoutOutcome{}, err\n\t}\n\treturn studentpresence.CheckoutOutcome{Action: result.Action, AttendanceID: result.AttendanceID}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.CheckOutStudent",
-      "owner": "modules/studentpresence"
-    },
-    {
-      "build": "production",
       "evidence": "func (p PresenceOperations) ClaimSupervision(ctx context.Context, groupID, staffID int64, role string) (studentpresence.ClaimedSupervision, error) {\n\trow, err := p.active.ClaimActiveGroup(ctx, groupID, staffID, role)\n\tif err != nil {\n\t\treturn studentpresence.ClaimedSupervision{}, err\n\t}\n\treturn studentpresence.ClaimedSupervision{ID: row.ID, TenantID: row.TenantID, GroupID: row.GroupID, StaffID: row.StaffID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Role: row.Role, StartDate: row.StartDate.String()}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/application/presence/PresenceOperations.ClaimSupervision",

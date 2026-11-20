@@ -18,5 +18,25 @@
     "scenario": "api.traeger.key_date_counts",
     "route": "GET /traeger/schools/key-date-counts",
     "issue": 7301
+  },
+  {
+    "scenario": "api.students.presence25.arrival_times.n3",
+    "route": "POST /api/students/arrival-times/bulk",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.students.presence25.arrival_times.n8",
+    "route": "POST /api/students/arrival-times/bulk",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.students.presence25.pickup_times.n3",
+    "route": "POST /api/students/pickup-times/bulk",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.students.presence25.pickup_times.n8",
+    "route": "POST /api/students/pickup-times/bulk",
+    "issue": 2352
   }
 ]

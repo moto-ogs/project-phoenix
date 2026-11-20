@@ -99,7 +99,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			}
 			_, reader := testpkg.CreateTestPersonWithAccount(t, db, "Reader", fmt.Sprintf("%02d", created))
 			testpkg.EnsureAccountTenant(t, db, reader.ID, testpkg.Tenant(t))
-			require.NoError(t, module.MarkSeen(ctx, reader.ID, viewedID))
+			require.NoError(t, module.MarkDismissed(ctx, reader.ID, viewedID))
 			expectedReaderIDs = append(expectedReaderIDs, reader.ID)
 			// Targeted foreign-school announcements must not leak into unread DTOs.
 			foreign := &communication.Announcement{Title: fmt.Sprintf("Foreign-%02d", created), CreatedAt: createdAt.Add(time.Duration(created*2+1) * time.Second), Content: "Excluded", Type: communication.TypeAnnouncement, Severity: communication.SeverityInfo, Active: true, TargetTenantIDs: []int64{foreignTenant}}
@@ -153,7 +153,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 					require.Contains(t, expectedReaderIDs, row.UserID)
 					require.Contains(t, row.UserName, "Reader")
 					require.NotEmpty(t, row.SeenAt)
-					require.False(t, row.Dismissed)
+					require.True(t, row.Dismissed, "the readers closed it, as the app does")
 				}
 			}
 			switch entry.name {

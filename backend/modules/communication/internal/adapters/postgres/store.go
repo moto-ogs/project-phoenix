@@ -191,15 +191,8 @@ func (s *Store) Unpublish(ctx context.Context, id int64) (domain.OperationStats,
 		Set("published_at = NULL").Where(`"announcement".id = ?`, id), "unpublish announcement")
 }
 
-func (s *Store) MarkSeen(ctx context.Context, userID, announcementID int64) (domain.OperationStats, error) {
-	return s.mark(ctx, userID, announcementID, false)
-}
-
+// MarkDismissed records that the user saw and closed the announcement.
 func (s *Store) MarkDismissed(ctx context.Context, userID, announcementID int64) (domain.OperationStats, error) {
-	return s.mark(ctx, userID, announcementID, true)
-}
-
-func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismissed bool) (domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
@@ -207,13 +200,10 @@ func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismisse
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	var conflicted bool
-	row := viewRow{UserID: userID, AnnouncementID: announcementID, SeenAt: s.now(), Dismissed: dismissed}
-	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
-		On("CONFLICT (user_id, announcement_id) DO UPDATE").Set("seen_at = EXCLUDED.seen_at")
-	if dismissed {
-		query = query.Set("dismissed = TRUE")
-	}
-	err = query.Returning("(xmax <> 0) AS conflicted").Scan(ctx, &conflicted)
+	row := viewRow{UserID: userID, AnnouncementID: announcementID, SeenAt: s.now(), Dismissed: true}
+	err = db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
+		On("CONFLICT (user_id, announcement_id) DO UPDATE").Set("seen_at = EXCLUDED.seen_at").Set("dismissed = TRUE").
+		Returning("(xmax <> 0) AS conflicted").Scan(ctx, &conflicted)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, fmt.Errorf("communication postgres: mark announcement: %w", err)

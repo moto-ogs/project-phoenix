@@ -32,7 +32,6 @@ type stubPresenceOperations struct {
 	closeCombination           func(context.Context, int64) error
 	studentAttendanceStatus    func(context.Context, int64) (*studentpresence.AttendanceStatus, error)
 	studentsAttendanceStatuses func(context.Context, []int64) (map[int64]*studentpresence.AttendanceStatus, error)
-	checkOutStudent            func(context.Context, int64, int64) (studentpresence.CheckoutOutcome, error)
 	assignTransitStudents      func(context.Context, []int64, int64, studentpresence.StudentMoveAuthorization) (studentpresence.TransitAssignResult, error)
 	moveStudentsToSession      func(context.Context, []int64, int64, studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error)
 	checkInStudentsToSession   func(context.Context, []int64, int64, int64, studentpresence.StudentMoveAuthorization, bool) (*studentpresence.StudentMoveResult, error)
@@ -196,13 +195,6 @@ func (s *stubPresenceOperations) StudentsAttendanceStatuses(ctx context.Context,
 		return s.studentsAttendanceStatuses(ctx, studentIDs)
 	}
 	return nil, nil
-}
-
-func (s *stubPresenceOperations) CheckOutStudent(ctx context.Context, studentID, staffID int64) (studentpresence.CheckoutOutcome, error) {
-	if s.checkOutStudent != nil {
-		return s.checkOutStudent(ctx, studentID, staffID)
-	}
-	return studentpresence.CheckoutOutcome{}, nil
 }
 
 func (s *stubPresenceOperations) AssignTransitStudents(ctx context.Context, studentIDs []int64, activeGroupID int64, auth studentpresence.StudentMoveAuthorization) (studentpresence.TransitAssignResult, error) {

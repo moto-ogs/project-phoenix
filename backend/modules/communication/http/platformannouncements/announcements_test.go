@@ -69,7 +69,6 @@ const (
 type mockPlatformAnnouncementService struct {
 	getUnreadForUserFn func(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) ([]*platformModel.Announcement, error)
 	countUnreadFn      func(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) (int, error)
-	markSeenFn         func(ctx context.Context, userID, announcementID int64) error
 	markDismissedFn    func(ctx context.Context, userID, announcementID int64) error
 }
 
@@ -113,13 +112,6 @@ func (m *mockPlatformAnnouncementService) CountUnread(ctx context.Context, userI
 		return m.countUnreadFn(ctx, userID, userRoles, tenantID, orgID)
 	}
 	return 0, nil
-}
-
-func (m *mockPlatformAnnouncementService) MarkSeen(ctx context.Context, userID, announcementID int64) error {
-	if m.markSeenFn != nil {
-		return m.markSeenFn(ctx, userID, announcementID)
-	}
-	return nil
 }
 
 func (m *mockPlatformAnnouncementService) MarkDismissed(ctx context.Context, userID, announcementID int64) error {
@@ -326,8 +318,7 @@ func TestGetUnread_NilPublishedAtRendersEmpty(t *testing.T) {
 	assert.Equal(t, "", announcement["published_at"])
 }
 
-// --- GetUnreadCount and MarkSeen ---
-// These tests cover the 2 platform handler functions that were previously untested.
+// --- GetUnreadCount ---
 
 func TestGetUnreadCount_Success(t *testing.T) {
 	t.Parallel()
@@ -355,61 +346,6 @@ func TestGetUnreadCount_Success(t *testing.T) {
 	require.NoError(t, err)
 	data := response["data"].(map[string]any)
 	assert.Equal(t, float64(5), data["count"])
-}
-
-func TestMarkSeen_SuccessAndErrors(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		id         string
-		markSeenFn func(context.Context, int64, int64) error
-		wantStatus int
-		wantBody   string
-	}{
-		{
-			name:       "success",
-			id:         "1",
-			wantStatus: http.StatusOK,
-			wantBody:   "Announcement marked as seen",
-		},
-		{
-			name:       "invalid ID",
-			id:         "abc",
-			wantStatus: http.StatusBadRequest,
-		},
-		{
-			name: "service error",
-			id:   "1",
-			markSeenFn: func(_ context.Context, _, _ int64) error {
-				return errors.New("database error")
-			},
-			wantStatus: http.StatusInternalServerError,
-			wantBody:   "failed to mark announcement as seen",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockService := &mockPlatformAnnouncementService{markSeenFn: tt.markSeenFn}
-			resource := platformannouncements.NewAnnouncementsResource(mockService, testRuntime())
-
-			req := httptest.NewRequest(http.MethodPost, "/announcements/"+tt.id+"/seen", nil)
-			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add("id", tt.id)
-			claims := platformannouncements.Viewer{AccountID: 123}
-			ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
-			ctx = context.WithValue(ctx, viewerKey{}, claims)
-			req = req.WithContext(ctx)
-			rr := httptest.NewRecorder()
-
-			resource.MarkSeen(rr, req)
-
-			assert.Equal(t, tt.wantStatus, rr.Code)
-			if tt.wantBody != "" {
-				assert.Contains(t, rr.Body.String(), tt.wantBody)
-			}
-		})
-	}
 }
 
 func TestMarkDismissed_Success(t *testing.T) {

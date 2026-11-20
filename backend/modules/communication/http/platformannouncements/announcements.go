@@ -83,23 +83,6 @@ func (rs *AnnouncementsResource) GetUnreadCount(w http.ResponseWriter, r *http.R
 	rs.runtime.Success(w, r, http.StatusOK, map[string]int{"count": count}, "")
 }
 
-// MarkSeen handles marking an announcement as seen
-func (rs *AnnouncementsResource) MarkSeen(w http.ResponseWriter, r *http.Request) {
-	viewer := rs.runtime.Viewer(r)
-
-	announcementID, ok := rs.announcementID(w, r)
-	if !ok {
-		return
-	}
-
-	if err := rs.announcementService.MarkSeen(r.Context(), viewer.AccountID, announcementID); err != nil {
-		rs.internalError(w, r, "failed to mark announcement as seen", err)
-		return
-	}
-
-	rs.runtime.Success(w, r, http.StatusOK, nil, "Announcement marked as seen")
-}
-
 // MarkDismissed handles marking an announcement as dismissed
 func (rs *AnnouncementsResource) MarkDismissed(w http.ResponseWriter, r *http.Request) {
 	viewer := rs.runtime.Viewer(r)

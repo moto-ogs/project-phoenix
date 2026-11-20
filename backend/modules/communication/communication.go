@@ -161,7 +161,6 @@ type Command interface {
 	DeleteAnnouncement(context.Context, int64, int64, net.IP) error
 	PublishAnnouncement(context.Context, int64, int64, net.IP) error
 	UnpublishAnnouncement(context.Context, int64, int64, net.IP) error
-	MarkSeen(context.Context, int64, int64) error
 	MarkDismissed(context.Context, int64, int64) error
 }
 
