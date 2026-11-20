@@ -143,10 +143,20 @@ describe("session reads of every BFF route", () => {
     // Anker: the walk sees the tree, also the portals' own routes.
     expect(routes).toContain("auth/logout");
     expect(routes).toContain("traeger/auth/logout");
-    // The catalog proxy took over the checked school uploads and the Träger
-    // pass-through files (#2352). The floor only proves the walk reads the
-    // remaining tree; the migration keeps deleting route files.
-    expect(routes.length).toBeGreaterThan(150);
+    // The catalog proxy takes over route files wave by wave (#2352), so a
+    // file count says nothing; every portal's catch-all and nested login
+    // route prove that the walk reaches each portal's tree.
+    for (const portal of [
+      "",
+      "operator/",
+      "parent/",
+      "school/",
+      "caterer/",
+      "traeger/",
+    ]) {
+      expect(routes).toContain(`${portal}[...path]`);
+      expect(routes).toContain(`${portal}auth/login`);
+    }
   });
 
   it("reads every session inside the portal's response wrapper", async () => {

@@ -339,14 +339,26 @@ function exportedHandlers(file: string): Map<string, boolean> {
 describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
-  it("finds the route handlers", () => {
+  it("finds catalog and nested login handlers for every portal", () => {
     expect(files).toContain(path.join(API_ROOT, "auth/logout/route.ts"));
     expect(files).toContain(
       path.join(API_ROOT, "traeger/auth/logout/route.ts"),
     );
-    // Catalog migrations remove pass-through files; the floor only anchors
-    // discovery, while the policy check below still examines every handler.
-    expect(files.length).toBeGreaterThan(150);
+    for (const portal of [
+      "",
+      "operator",
+      "parent",
+      "school",
+      "caterer",
+      "traeger",
+    ]) {
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "[...path]", "route.ts"),
+      );
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "auth", "login", "route.ts"),
+      );
+    }
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {
