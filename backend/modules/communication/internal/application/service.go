@@ -201,18 +201,34 @@ func (s *Service) GetUnreadForUser(ctx context.Context, userID int64, roles []st
 	return pointers(result), err
 }
 
-func (s *Service) CountUnread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) (result int, err error) {
-	err = s.run(ctx, "count_unread", func(txCtx context.Context) (domain.OperationStats, error) {
-		var stats domain.OperationStats
-		result, stats, err = s.audience.CountUnread(txCtx, userID, roles, tenantID, orgID)
-		return stats, err
-	})
-	return result, err
+func (s *Service) MarkSeen(ctx context.Context, viewer communication.AnnouncementViewer, announcementID int64) error {
+	return s.markView(ctx, "mark_seen", viewer, announcementID, s.audience.CanSee, s.store.MarkSeen)
 }
 
-func (s *Service) MarkDismissed(ctx context.Context, userID, announcementID int64) error {
-	return s.run(ctx, "mark_dismissed", func(txCtx context.Context) (domain.OperationStats, error) {
-		return s.store.MarkDismissed(txCtx, userID, announcementID)
+func (s *Service) MarkDismissed(ctx context.Context, viewer communication.AnnouncementViewer, announcementID int64) error {
+	return s.markView(ctx, "mark_dismissed", viewer, announcementID, s.audience.CanDismiss, s.store.MarkDismissed)
+}
+
+func (s *Service) markView(
+	ctx context.Context,
+	operation string,
+	viewer communication.AnnouncementViewer,
+	announcementID int64,
+	canAccess func(context.Context, int64, []string, int64, int64, int64) (bool, domain.OperationStats, error),
+	mark func(context.Context, int64, int64) (domain.OperationStats, error),
+) error {
+	return s.run(ctx, operation, func(txCtx context.Context) (stats domain.OperationStats, err error) {
+		canSee, current, err := canAccess(txCtx, viewer.AccountID, viewer.Roles, viewer.TenantID, viewer.OrgID, announcementID)
+		stats.Add(current)
+		if err != nil {
+			return stats, err
+		}
+		if !canSee {
+			return stats, &communication.AnnouncementNotFoundError{AnnouncementID: announcementID}
+		}
+		current, err = mark(txCtx, viewer.AccountID, announcementID)
+		stats.Add(current)
+		return stats, err
 	})
 }
 

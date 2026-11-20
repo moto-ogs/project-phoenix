@@ -64,8 +64,6 @@ type SettingsResolver interface {
 	// flag is cleared; ClearModeNextCheckin is the value the check-in acts on.
 	SickClearMode(ctx context.Context) (string, error)
 	ExcusedClearMode(ctx context.Context) (string, error)
-	// SessionInactivityTimeoutMinutes is how long a kiosk session may idle.
-	SessionInactivityTimeoutMinutes(ctx context.Context) (int, error)
 	// AttendanceEditScope and OperationalOverviewScope gate who may edit
 	// attendance and who sees the tenant-wide overview.
 	AttendanceEditScope(ctx context.Context) (string, error)

@@ -80,7 +80,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,
 	"api/guardians_composition.go:NewGuardiansResource":           91,
 	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    80,
-	"api/iot/compose/compose.go:(*Resource).Router":               105,
+	"api/iot/compose/compose.go:(*Resource).Router":               104,
 	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
 	// ADR 0234: the school search mount takes the note search and the
 	// activity read; gofmt splits its root step (+2).

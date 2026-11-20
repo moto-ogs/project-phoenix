@@ -3,7 +3,6 @@ package presence_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -22,8 +21,8 @@ func TestVisitReadsRespectDisabledHistory(t *testing.T) {
 	group := testpkg.CreateTestActiveGroupForTenant(t, tc.db, testpkg.Tenant(t))
 	// Fixed historical data stays outside today's window without midnight races.
 	exit := calendar.NewDate(2026, 1, 12).BerlinMidnight().Add(12 * time.Hour)
-	visit := testpkg.CreateTestVisit(t, tc.db, student.ID, group.ID, exit.Add(-time.Hour), &exit)
-	paths := []string{"/active/visits?active=false", "/active/visits", fmt.Sprintf("/active/visits/group/%d", group.ID)}
+	testpkg.CreateTestVisit(t, tc.db, student.ID, group.ID, exit.Add(-time.Hour), &exit)
+	paths := []string{"/active/visits?active=false", "/active/visits"}
 	for _, enabled := range []bool{false, true} {
 		require.NoError(t, tc.settings.SetBool(testpkg.Ctx(t), "gdpr.attendance_log_enabled", enabled, nil, nil))
 		for _, path := range paths {
@@ -36,13 +35,6 @@ func TestVisitReadsRespectDisabledHistory(t *testing.T) {
 			} else {
 				assert.Empty(t, data, path)
 			}
-		}
-		req := testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/active/visits/%d", visit.ID), nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, testutil.AdminTestClaims(1), []string{permissions.GroupsRead})
-		if enabled {
-			assert.Equal(t, 200, rr.Code)
-		} else {
-			assert.Equal(t, 404, rr.Code)
 		}
 	}
 }

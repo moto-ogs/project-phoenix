@@ -46,7 +46,7 @@ func TestRouter(t *testing.T) {
 
 		for _, route := range []struct{ method, path string }{
 			{http.MethodGet, "/announcements/unread"},
-			{http.MethodGet, "/announcements/unread/count"},
+			{http.MethodPost, "/announcements/1/seen"},
 			{http.MethodPost, "/announcements/1/dismiss"},
 		} {
 			rr := httptest.NewRecorder()

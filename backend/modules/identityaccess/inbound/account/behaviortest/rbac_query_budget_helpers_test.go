@@ -191,7 +191,7 @@ func (f *rbacBudgetFixture) permission(t *testing.T, name, description, resource
 		return err
 	}))
 	testpkg.OwnTestPermission(t, f.db, created.ID)
-	stored, err := f.module.AccountAuthentication.GetPermission(testpkg.Ctx(t), created.ID)
+	stored, err := f.module.AccountAuthentication.GetPermissionByName(testpkg.Ctx(t), name)
 	require.NoError(t, err)
 	require.Equal(t, name, stored.Name)
 	require.Equal(t, description, stored.Description)

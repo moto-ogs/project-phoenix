@@ -17,13 +17,15 @@ type Store interface {
 	List(context.Context, bool) ([]communication.Announcement, domain.OperationStats, error)
 	Publish(context.Context, int64) (domain.OperationStats, error)
 	Unpublish(context.Context, int64) (domain.OperationStats, error)
+	MarkSeen(context.Context, int64, int64) (domain.OperationStats, error)
 	MarkDismissed(context.Context, int64, int64) (domain.OperationStats, error)
 	ViewStats(context.Context, int64) (communication.AnnouncementStats, domain.OperationStats, error)
 }
 
 type Audience interface {
 	Unread(context.Context, int64, []string, int64, int64) ([]communication.Announcement, domain.OperationStats, error)
-	CountUnread(context.Context, int64, []string, int64, int64) (int, domain.OperationStats, error)
+	CanSee(context.Context, int64, []string, int64, int64, int64) (bool, domain.OperationStats, error)
+	CanDismiss(context.Context, int64, []string, int64, int64, int64) (bool, domain.OperationStats, error)
 	TargetCount(context.Context, communication.Announcement) (int, domain.OperationStats, error)
 	ViewDetails(context.Context, int64) ([]communication.AnnouncementViewDetail, domain.OperationStats, error)
 }

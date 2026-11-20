@@ -41,9 +41,6 @@ func (f *fakeScanner) PickupInfo(context.Context, string) (*devicescan.PickupInf
 	return nil, f.scanErr
 }
 func (f *fakeScanner) Ping(context.Context) (*devicescan.DevicePing, error) { return nil, f.scanErr }
-func (f *fakeScanner) Status(context.Context) (*devicescan.DeviceStatus, error) {
-	return nil, f.scanErr
-}
 
 func scanWith(t *testing.T, scanner *fakeScanner) *httptest.ResponseRecorder {
 	t.Helper()

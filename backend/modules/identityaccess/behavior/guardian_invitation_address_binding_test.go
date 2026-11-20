@@ -134,32 +134,6 @@ func TestGuardianInvitationAccept_KeepsLinkWhenOnlyTheCaseChanges(t *testing.T) 
 	assert.Equal(t, strings.ToLower(*profile.Email), account.Email)
 }
 
-func TestGuardianInvitationResend_IssuesLinkForTheCorrectedAddress(t *testing.T) {
-	t.Parallel()
-	outbox := api.NewCapturingOutbox()
-	env := setupGuardianInvitationTest(t, func(_ *bun.DB, cfg *api.GuardianInvitationTestConfig) { cfg.Outbox = outbox })
-	profile := testpkg.CreateTestGuardianProfile(t, env.db, "address-binding-resend")
-	creatorID := env.inviterAccountID(t)
-	ctx := testpkg.Ctx(t)
-	invitation, err := env.service.CreateGuardianInvitation(ctx, identityaccess.GuardianInvitationRequest{
-		GuardianProfileID: profile.ID, CreatedBy: creatorID,
-	})
-	require.NoError(t, err)
-	oldEmail := *profile.Email
-	newEmail := fmt.Sprintf("corrected-resend-%d@example.test", time.Now().UnixNano())
-	env.changeGuardianEmail(t, profile.ID, newEmail)
-
-	require.NoError(t, env.service.ResendGuardianInvitation(ctx, invitation.ID, creatorID))
-	token := mailedToken(t, outbox, newEmail)
-	account, err := env.service.AcceptGuardianInvitation(context.Background(), token, identityaccess.GuardianRegistration{
-		Password: strongTestPassword, ConfirmPassword: strongTestPassword,
-	})
-	require.NoError(t, err, "the resent link belongs to the corrected address")
-	testpkg.OwnTestAccount(t, env.db, account.ID)
-	assert.Equal(t, newEmail, account.Email)
-	assert.Zero(t, accountCountByEmail(t, env.db, oldEmail))
-}
-
 func TestGuardianInvitationApproval_IssuesLinkForTheCorrectedAddress(t *testing.T) {
 	t.Parallel()
 	outbox := api.NewCapturingOutbox()

@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
-	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	activitiesAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -49,7 +48,7 @@ func TestStudentActivityCountsKeepNilSkippingAndGroupOrder(t *testing.T) {
 		scalar.ActivityService = scalarEnrollmentCountService{ordered}
 		original := chi.NewRouter()
 		original.Mount("/api/activities", scalar.Router(rootAPI.ProtectedTenantRoutes))
-		for _, suffix := range []string{"", "/available"} {
+		for _, suffix := range []string{""} {
 			path := fmt.Sprintf("/api/activities/students/%d%s", one.ID, suffix)
 			want, got := enrollmentCountRequest(t, original, path), enrollmentCountRequest(t, candidate, path)
 			require.Equal(t, http.StatusOK, got.Code, got.Body.String())
@@ -57,31 +56,6 @@ func TestStudentActivityCountsKeepNilSkippingAndGroupOrder(t *testing.T) {
 			require.Equal(t, want.Body.String(), got.Body.String())
 		}
 	}
-}
-
-func TestStudentActivityCountsOmitMissingDirectoryChildren(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
-	original, candidate, owner, _ := countComparisonRouters(t, db)
-	target := testpkg.CreateTestStudent(t, db, "Target", "Missing peer", "1a")
-	missing := testpkg.CreateTestStudent(t, db, "Hidden", "Peer", "1b")
-	group := testpkg.CreateTestActivityGroup(t, db, "Missing directory child")
-	_, err := db.NewUpdate().Model(group).Set("is_open = TRUE").WherePK().Exec(context.Background())
-	require.NoError(t, err)
-	_, err = owner.CreateStudentEnrollment(testpkg.Ctx(t), timetable.StudentEnrollmentInput{StudentID: missing.ID, ActivityGroupID: group.ID, ValidFrom: "2026-01-05"})
-	require.NoError(t, err)
-	var membershipID int64
-	require.NoError(t, db.NewRaw(`SELECT id FROM users.student_school_memberships WHERE student_profile_id = ? AND deleted_at IS NULL`, missing.ID).Scan(context.Background(), &membershipID))
-	testpkg.AssertMissingStudentProjectionStates(t, db, membershipID, func() {
-		path := fmt.Sprintf("/api/activities/students/%d/available", target.ID)
-		before := enrollmentCountState(t, db)
-		want, got := enrollmentCountRequest(t, original, path), enrollmentCountRequest(t, candidate, path)
-		require.Equal(t, http.StatusOK, got.Code, got.Body.String())
-		require.Equal(t, want.Header(), got.Header())
-		require.Equal(t, want.Body.String(), got.Body.String())
-		require.NotContains(t, got.Body.String(), `"enrollment_count"`, "the existing wire omits the zero count")
-		require.Equal(t, before, enrollmentCountState(t, db))
-	})
 }
 
 func TestStudentActivityCountsKeepTargetLifecycleResponses(t *testing.T) {
@@ -96,7 +70,7 @@ func TestStudentActivityCountsKeepTargetLifecycleResponses(t *testing.T) {
 		}
 		ended := calendar.NewDate(2025, 1, 1)
 		testpkg.SetStudentLifecycle(t, db, student.ID, status, nil, &ended)
-		for _, suffix := range []string{"", "/available"} {
+		for _, suffix := range []string{""} {
 			path := fmt.Sprintf("/api/activities/students/%d%s", student.ID, suffix)
 			want, got := enrollmentCountRequest(t, original, path), enrollmentCountRequest(t, candidate, path)
 			require.Equal(t, want.Code, got.Code)

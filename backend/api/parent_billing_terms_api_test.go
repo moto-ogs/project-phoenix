@@ -434,7 +434,6 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		{http.MethodPut, billingTermsPath + "/care", map[string]any{"payment_method": "transfer", "due_days": 1}},
 		{http.MethodGet, familyBillingPath, nil},
 		{http.MethodPut, familyBillingPath, map[string]any{"contract_id": contract, "recipient_kind": "applicant"}},
-		{http.MethodDelete, familyBillingPath + fmt.Sprintf("/%d", deviation.ID), nil},
 		{http.MethodPut, runDueDatesPathOf("care", run.ID), dueDates("2030-01-02", "2030-01-04")},
 		{http.MethodPut, runDueDatesPathOf("holiday", run.ID), dueDates("2030-01-02", "2030-01-04")},
 	}

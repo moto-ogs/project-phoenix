@@ -348,10 +348,8 @@ func TestGuardianInvitationQueuesOneWelcomePerGuardianAndSchool(t *testing.T) {
 			return run(txCtx)
 		}))
 	}
-	var invitation identityaccess.GuardianInvitation
 	inRequest(func(txCtx context.Context) error {
-		var err error
-		invitation, err = module.GuardianInvitation.CreateGuardianInvitation(txCtx, identityaccess.GuardianInvitationRequest{
+		_, err := module.GuardianInvitation.CreateGuardianInvitation(txCtx, identityaccess.GuardianInvitationRequest{
 			GuardianProfileID: profile.ID, CreatedBy: creator.ID,
 		})
 		return err
@@ -368,13 +366,6 @@ func TestGuardianInvitationQueuesOneWelcomePerGuardianAndSchool(t *testing.T) {
 	assert.Contains(t, payload["help_url"], "/help/eltern-konto-einrichten?role=parent&"+welcomeSettingsQuery)
 	assert.Contains(t, payload["parent_info_url"], "/downloads/moto-elterninfo.pdf")
 
-	inRequest(func(txCtx context.Context) error {
-		return module.GuardianInvitation.ResendGuardianInvitation(txCtx, invitation.ID, creator.ID)
-	})
-	rows = guardianOutbox(t, db, profile.ID)
-	assert.Equal(t, 2, countKind(rows, "guardian_invitation"), "the resend mails the link again")
-	assert.Equal(t, 1, countKind(rows, "guardian_welcome"), "a resend never welcomes again")
-
 	// A new invitation for the same guardian replaces the old link; the
 	// guardian was already welcomed to this school.
 	inRequest(func(txCtx context.Context) error {
@@ -384,7 +375,7 @@ func TestGuardianInvitationQueuesOneWelcomePerGuardianAndSchool(t *testing.T) {
 		return err
 	})
 	rows = guardianOutbox(t, db, profile.ID)
-	assert.Equal(t, 3, countKind(rows, "guardian_invitation"))
+	assert.Equal(t, 2, countKind(rows, "guardian_invitation"))
 	assert.Equal(t, 1, countKind(rows, "guardian_welcome"), "one welcome per guardian and school")
 }
 

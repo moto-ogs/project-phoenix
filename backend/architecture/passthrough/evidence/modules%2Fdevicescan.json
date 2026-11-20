@@ -51,13 +51,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) Status(ctx context.Context) (*devicescan.DeviceStatus, error) {\n\tdevice, err := s.device(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026devicescan.DeviceStatus{Device: publicDevice(device), IsOnline: s.fleet.IsDeviceOnline(ctx, devicefleet.Device{LastSeen: device.LastSeen}), AuthenticatedAt: s.now()}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicescan/internal/application/Service.Status",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
       "evidence": "func (e mappedScanError) Error() string {\n\treturn e.err.Error()\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/devicescan/internal/application/mappedScanError.Error",
@@ -72,37 +65,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *sessionLifecycle) CheckSessionConflict(ctx context.Context, activityID int64) (devicescan.ConflictInfoResponse, error) {\n\tdevice, err := s.device(ctx)\n\tif err != nil {\n\t\treturn devicescan.ConflictInfoResponse{}, err\n\t}\n\tinfo, err := s.store.Conflict(ctx, activityID, device.ID)\n\tif err != nil {\n\t\treturn info, classifyPresenceFailure(err)\n\t}\n\treturn info, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicescan/internal/application/sessionLifecycle.CheckSessionConflict",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *sessionLifecycle) SessionTimeoutInfo(ctx context.Context) (devicescan.SessionTimeoutInfoResponse, error) {\n\tdevice, err := s.device(ctx)\n\tif err != nil {\n\t\treturn devicescan.SessionTimeoutInfoResponse{}, err\n\t}\n\tinfo, err := s.store.TimeoutInfo(ctx, device.ID)\n\tif err != nil {\n\t\treturn info, classifyPresenceFailure(err)\n\t}\n\treturn info, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicescan/internal/application/sessionLifecycle.SessionTimeoutInfo",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *sessionLifecycle) SessionToEnd(ctx context.Context) (devicescan.SessionToEnd, error) {\n\tdevice, err := s.device(ctx)\n\tif err != nil {\n\t\treturn devicescan.SessionToEnd{}, err\n\t}\n\tgroup, err := s.store.Current(ctx, device.ID)\n\tif err != nil \u0026\u0026 !errors.Is(err, ports.ErrLifecycleSessionAbsent) {\n\t\treturn devicescan.SessionToEnd{}, classifyPresenceFailure(err)\n\t}\n\tif group == nil {\n\t\treturn devicescan.SessionToEnd{}, devicescan.InvalidRequestWithCode(\"no active session to end\", devicescan.CodeNoSessionToEnd)\n\t}\n\treturn devicescan.SessionToEnd{ID: group.ID, ActivityID: group.ActivityID, DeviceID: device.ID, StartTime: group.StartTime}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/devicescan/internal/application/sessionLifecycle.SessionToEnd",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *sessionLifecycle) TimeoutSession(ctx context.Context) (devicescan.SessionTimeoutResponse, error) {\n\tdevice, err := s.device(ctx)\n\tif err != nil {\n\t\treturn devicescan.SessionTimeoutResponse{}, err\n\t}\n\tresult, err := s.store.Timeout(ctx, device.ID)\n\tif err != nil {\n\t\treturn result, classifyPresenceFailure(err)\n\t}\n\tresult.Status = \"completed\"\n\tresult.Message = fmt.Sprintf(\"Session ended due to timeout. %d students checked out.\", result.StudentsCheckedOut)\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicescan/internal/application/sessionLifecycle.TimeoutSession",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *sessionLifecycle) ValidateTimeout(ctx context.Context, minutes int) error {\n\tdevice, err := s.device(ctx)\n\tif err != nil {\n\t\treturn err\n\t}\n\tif err := s.store.ValidateTimeout(ctx, device.ID, minutes); err != nil {\n\t\treturn classifyPresenceFailure(err)\n\t}\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicescan/internal/application/sessionLifecycle.ValidateTimeout",
       "owner": "modules/devicescan"
     },
     {
@@ -156,30 +121,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (s lifecycleStore) Timeout(ctx context.Context, deviceID int64) (devicescan.SessionTimeoutResponse, error) {\n\tresult, err := s.active.ProcessSessionTimeout(ctx, deviceID)\n\tif err != nil {\n\t\tclassified := classifyPresence(err)\n\t\tif errors.Is(err, studentpresence.ErrNoActiveSession) {\n\t\t\tclassified = mapError(classified, ports.ErrNoActiveSession)\n\t\t}\n\t\treturn devicescan.SessionTimeoutResponse{}, classified\n\t}\n\treturn devicescan.SessionTimeoutResponse{SessionID: result.SessionID, ActivityID: result.ActivityID, StudentsCheckedOut: result.StudentsCheckedOut, TimeoutAt: result.TimeoutAt}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/devicescanbinding/lifecycleStore.Timeout",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s lifecycleStore) TimeoutInfo(ctx context.Context, deviceID int64) (devicescan.SessionTimeoutInfoResponse, error) {\n\tinfo, err := s.active.GetSessionTimeoutInfo(ctx, deviceID)\n\tif err != nil {\n\t\treturn devicescan.SessionTimeoutInfoResponse{}, classifyPresence(err)\n\t}\n\treturn devicescan.SessionTimeoutInfoResponse{SessionID: info.SessionID, ActivityID: info.ActivityID, StartTime: info.StartTime, LastActivity: info.LastActivity, TimeoutMinutes: info.TimeoutMinutes, InactivitySeconds: int(info.InactivityDuration.Seconds()), TimeUntilTimeoutSeconds: int(info.TimeUntilTimeout.Seconds()), IsTimedOut: info.IsTimedOut, ActiveStudentCount: info.ActiveStudentCount}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/devicescanbinding/lifecycleStore.TimeoutInfo",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
       "evidence": "func (s lifecycleStore) Touch(ctx context.Context, sessionID int64) error {\n\treturn classifyPresence(s.active.UpdateSessionActivity(ctx, sessionID))\n}",
       "form": "unclassified-evidence",
       "id": "roots/devicescanbinding/lifecycleStore.Touch",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s lifecycleStore) ValidateTimeout(ctx context.Context, deviceID int64, minutes int) error {\n\treturn classifyPresence(s.active.ValidateSessionTimeout(ctx, deviceID, minutes))\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/devicescanbinding/lifecycleStore.ValidateTimeout",
       "owner": "modules/devicescan"
     },
     {

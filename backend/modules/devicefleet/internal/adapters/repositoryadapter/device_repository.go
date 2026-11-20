@@ -13,8 +13,8 @@ import (
 )
 
 // DeviceRepository delegates every operation to the owner capability. The
-// lookup and command halves are embedded, so UpdateRoomID and
-// CountDevicesByType, whose shapes already match, are promoted unchanged;
+// lookup and command halves are embedded, so UpdateRoomID, whose shape
+// already matches, is promoted unchanged;
 // the translating methods call devices, the same value.
 type DeviceRepository struct {
 	devicefleet.DeviceLookup

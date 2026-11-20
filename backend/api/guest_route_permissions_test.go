@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -31,9 +30,6 @@ func checkGuestRoutePermissions(t *testing.T, api *goldenRuntime) {
 
 	child := testpkg.CreateTestStudent(t, db, "Mila", "Kind", "2a")
 	testpkg.SetTestTenantSetting(t, db, tenantID, "operations.student_photos_enabled", "true")
-	// The current-visit read answers about a visit, so the child has one.
-	room := testpkg.CreateTestActiveGroupForTenant(t, db, tenantID)
-	testpkg.CreateTestVisit(t, db, child.ID, room.ID, time.Now().Add(-time.Hour), nil)
 	request := func(method, path string) (int, string) {
 		response := checkpointRequest(api, checkpointScenario{Method: method, Path: path, Authenticated: true, Body: "{}"}, token)
 		return response.Code, response.Body.String()
@@ -43,7 +39,6 @@ func checkGuestRoutePermissions(t *testing.T, api *goldenRuntime) {
 		for _, path := range []string{
 			"/api/students/",
 			fmt.Sprintf("/api/students/%d", child.ID),
-			fmt.Sprintf("/api/students/%d/current-visit", child.ID),
 			"/api/students/school-classes",
 			"/api/students/ogs-group-live",
 			"/api/groups/",

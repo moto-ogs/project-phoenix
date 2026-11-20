@@ -35,24 +35,6 @@ func (req *ProfileUpdateRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// currentUser is the account the /api/me route renders.
-type currentUser struct {
-	ID            int64      `json:"id"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-	Email         string     `json:"email"`
-	Username      *string    `json:"username,omitempty"`
-	Avatar        string     `json:"avatar,omitempty"`
-	Active        bool       `json:"active"`
-	IsPasswordOTP bool       `json:"is_password_otp"`
-	LastLogin     *time.Time `json:"last_login,omitempty"`
-}
-
-func currentUserResponse(account identityaccess.AccountMetadata) *currentUser {
-	user := currentUser(account)
-	return &user
-}
-
 // ProfileResponse is the profile the /api/me/profile routes render: the
 // account, then the person or the account fallback, then the non-empty
 // school-scoped fields.

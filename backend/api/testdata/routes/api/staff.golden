@@ -12,7 +12,6 @@ GET /api/staff/absences/mails
 GET /api/staff/absences/pending
 GET /api/staff/absences/plan-gaps
 GET /api/staff/absences/requests
-GET /api/staff/available
 GET /api/staff/by-role
 GET /api/staff/dashboard-summary
 GET /api/staff/documents-directory
