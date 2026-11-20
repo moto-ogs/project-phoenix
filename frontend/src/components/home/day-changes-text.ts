@@ -4,6 +4,7 @@
  * Eine neue Quelle ergänzt ihre Arten in `DAY_CHANGE_TEXTS`, ihren Namen in
  * `SOURCE_FAILURE_TEXTS` und ihre Link-Ziele in `dayChangeHref`.
  */
+import { formatTime } from "~/lib/date-helpers";
 import type { DayChange, DayChangePerson } from "~/lib/day-changes";
 
 function personWith(
@@ -86,9 +87,27 @@ function shortDay(iso: string): string {
   return `${Number(day)}.${Number(month)}.`;
 }
 
-/** „seit 3.11.“, „bis 21.11.“ oder beides, sonst null. */
+/**
+ * Die Uhrzeit in der Zeitzone der Schule: „08:00 bis 09:30 Uhr“ oder
+ * „ab 14:00 Uhr“, ohne Uhrzeit null.
+ */
+function timeOfDay(change: DayChange): string | null {
+  if (!change.startsAt) return null;
+  const start = formatTime(change.startsAt);
+  return change.endsAt
+    ? `${start} bis ${formatTime(change.endsAt)} Uhr`
+    : `ab ${start} Uhr`;
+}
+
+/**
+ * Wann: die Uhrzeit und „seit 3.11.“, „bis 21.11.“ oder beides, sonst null.
+ * „Seit“ und „bis“ kommen aus der Antwort des Backends, nie aus einer
+ * Rechnung hier (#7660).
+ */
 export function dayChangeSpan(change: DayChange): string | null {
   const parts: string[] = [];
+  const time = timeOfDay(change);
+  if (time) parts.push(time);
   if (change.since) parts.push(`seit ${shortDay(change.since)}`);
   if (change.until) parts.push(`bis ${shortDay(change.until)}`);
   return parts.length > 0 ? parts.join(" ") : null;

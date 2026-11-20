@@ -29,6 +29,12 @@ export interface DayChange {
   readonly since: string | null;
   /** Letzter Tag einer Änderung, die über heute hinausgeht („bis“). */
   readonly until: string | null;
+  /**
+   * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (#7660),
+   * sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
+   */
+  readonly startsAt: string | null;
+  readonly endsAt: string | null;
   readonly people: readonly DayChangePerson[];
   readonly groupName: string | null;
   readonly link: {
@@ -52,6 +58,8 @@ function mapEntry(entry: Entry): DayChange {
     halfDay: entry.half_day,
     since: entry.since,
     until: entry.until,
+    startsAt: entry.starts_at,
+    endsAt: entry.ends_at,
     people: (entry.people ?? []).map((person) => ({
       staffId: person.staff_id,
       name: person.name,

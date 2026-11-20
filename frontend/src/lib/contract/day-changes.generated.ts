@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  instant,
   int64String,
   nullable,
   object,
@@ -88,6 +89,8 @@ export interface Entry {
   half_day: boolean;
   since: string | null;
   until: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
   people: Person[] | null;
   group: Group | null;
   link: Link | null;
@@ -101,6 +104,8 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   half_day: bool,
   since: nullable(calendarDate),
   until: nullable(calendarDate),
+  starts_at: nullable(instant),
+  ends_at: nullable(instant),
   people: nullable(arr(PersonSchema)),
   group: nullable(GroupSchema),
   link: nullable(LinkSchema),

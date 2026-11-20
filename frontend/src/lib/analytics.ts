@@ -43,6 +43,7 @@ export type AnalyticsEvent =
   // Eintrags (day_change_kind, allowlisted), nie Inhalte oder IDs.
   | "day_changes_entry_clicked"
   | "day_changes_show_all"
+  | "day_changes_done_expanded"
   // Selbstöffnende Flächen des Einstiegs (#7541), nur über
   // trackOnboardingSurface mit einer festen Fläche.
   | "onboarding_surface_shown"

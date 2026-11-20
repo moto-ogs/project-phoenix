@@ -73,6 +73,11 @@ export function appOverviewTopic(): HelpTopic {
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Darstellung über den Tag (#7660).
+          "Neue Änderungen stehen oben. Danach kommen Termine nach Uhrzeit.",
+          "Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.` oder `bis 21.11.`.",
+          "Was heute schon vorbei ist, steht eingeklappt unten, zum Beispiel `3 erledigt`. Tippe darauf, um es zu sehen.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",

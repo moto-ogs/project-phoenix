@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import {
@@ -27,11 +28,13 @@ import {
   type DayChange,
   type DayChangesOverview,
 } from "~/lib/day-changes";
+import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import { cn } from "~/lib/utils";
 
 /** So viele Einträge von „Schule“ zeigt das Telefon, bevor es zählt. */
 const PHONE_SCHOOL_ROWS = 3;
@@ -42,6 +45,12 @@ const PHONE_SCHOOL_ROWS = 3;
  * führt zur Detailseite. Ein Ereignis, das eine Quelle ändert, lädt den
  * Baustein neu (`useGlobalSSE`). Ist eine Quelle ausgefallen, steht ein
  * Hinweis da und nie die Entwarnung.
+ *
+ * Innerhalb eines Abschnitts (#7660): neue ganztägige Änderungen, dann die
+ * mit Uhrzeit nach Beginn, dann kompakt die langen („seit 3.11.“); diese
+ * Reihenfolge liefert das Backend. Was schon vorbei ist, steht eingeklappt
+ * am Ende („3 erledigt“). Ein Bildschirmleser hört nur, was sich bei einem
+ * Neuladen geändert hat, nie die ganze Liste.
  *
  * Die Karte wächst mit ihrem Inhalt (`data-home-card-fit`): eine Übersicht,
  * die bei vielen Einträgen die Hälfte abschneidet, wäre keine.
@@ -74,6 +83,7 @@ export function DayChangesBlock() {
           return <DayChangesContent overview={data} />;
         })()}
       </div>
+      <DayChangesAnnouncer overview={data} />
     </HomeCard>
   );
 }
@@ -88,14 +98,68 @@ function DayChangesSkeleton() {
   );
 }
 
+/** Was die Übersicht zeigt: nur Arten, für die das Frontend einen Satz hat. */
+function shownEntries(overview: DayChangesOverview): DayChange[] {
+  return overview.entries.filter((entry) => dayChangeText(entry) !== null);
+}
+
+/** Eine Änderung mit Uhrzeit, deren Ende vorbei ist. */
+function isDone(entry: DayChange, now: number): boolean {
+  if (!entry.endsAt || now === 0) return false;
+  const end = Date.parse(entry.endsAt);
+  return !Number.isNaN(end) && end <= now;
+}
+
+/**
+ * Sagt einem Bildschirmleser an, was ein Neuladen geändert hat (#7660): beim
+ * ersten Laden nichts, danach „1 neue Änderung“ oder dass sich die Übersicht
+ * geändert hat. Ein Neuladen ohne Änderung bleibt still.
+ */
+function DayChangesAnnouncer({
+  overview,
+}: {
+  readonly overview: DayChangesOverview | undefined;
+}) {
+  const keys = overview ? shownEntries(overview).map(dayChangeKey) : null;
+  const signature = keys?.join("|") ?? null;
+  const [last, setLast] = useState<{
+    keys: readonly string[] | null;
+    signature: string | null;
+    message: string;
+  }>({ keys: null, signature: null, message: "" });
+  if (keys && signature !== last.signature) {
+    // Abgeleiteter Zustand während des Renderns statt eines Effekts.
+    setLast({
+      keys,
+      signature,
+      message: last.keys ? changeMessage(last.keys, keys) : "",
+    });
+  }
+  return (
+    <p className="sr-only" aria-live="polite">
+      {last.message}
+    </p>
+  );
+}
+
+function changeMessage(
+  before: readonly string[],
+  after: readonly string[],
+): string {
+  const previous = new Set(before);
+  const added = after.filter((key) => !previous.has(key)).length;
+  if (added === 1) return "„Heute anders“: 1 neue Änderung.";
+  if (added > 1) return `„Heute anders“: ${added} neue Änderungen.`;
+  return "„Heute anders“ hat sich geändert.";
+}
+
 function DayChangesContent({
   overview,
 }: {
   readonly overview: DayChangesOverview;
 }) {
-  const shown = overview.entries.filter(
-    (entry) => dayChangeText(entry) !== null,
-  );
+  const now = useCurrentTimestamp();
+  const shown = shownEntries(overview);
   const mine = shown.filter((entry) => entry.section === "you");
   const school = shown.filter((entry) => entry.section !== "you");
   const failures = overview.failedSources.map((source) => (
@@ -113,12 +177,6 @@ function DayChangesContent({
   return (
     <div className="space-y-4">
       {failures.length > 0 ? <div className="space-y-2">{failures}</div> : null}
-      {/* Ein Bildschirmleser hört, wenn sich die Zahl der Einträge ändert. */}
-      <p className="sr-only" aria-live="polite">
-        {shown.length === 1
-          ? "1 Änderung heute"
-          : `${shown.length} Änderungen heute`}
-      </p>
       <div
         className={
           mine.length > 0 && school.length > 0
@@ -127,10 +185,15 @@ function DayChangesContent({
         }
       >
         {mine.length > 0 ? (
-          <DayChangesSection title="Betrifft dich" entries={mine} />
+          <DayChangesSection title="Betrifft dich" entries={mine} now={now} />
         ) : null}
         {school.length > 0 ? (
-          <DayChangesSection title="Schule" entries={school} capOnPhone />
+          <DayChangesSection
+            title="Schule"
+            entries={school}
+            now={now}
+            capOnPhone
+          />
         ) : null}
       </div>
     </div>
@@ -140,10 +203,13 @@ function DayChangesContent({
 function DayChangesSection({
   title,
   entries,
+  now,
   capOnPhone = false,
 }: {
   readonly title: string;
   readonly entries: readonly DayChange[];
+  /** Die Uhr des Browsers in Minuten-Schritten; 0 vor dem ersten Rendern. */
+  readonly now: number;
   /** Auf dem Telefon nur die ersten Einträge, damit „Mein Tag“ sichtbar bleibt. */
   readonly capOnPhone?: boolean;
 }) {
@@ -151,20 +217,25 @@ function DayChangesSection({
   const [expanded, setExpanded] = useState(false);
   const headingId = useId();
   const listRef = useRef<HTMLUListElement>(null);
-  const capped = capOnPhone && isPhone && !expanded;
-  const visible = capped ? entries.slice(0, PHONE_SCHOOL_ROWS) : entries;
+  const open = entries.filter((entry) => !isDone(entry, now));
+  const done = entries.filter((entry) => isDone(entry, now));
+  const capped =
+    capOnPhone && isPhone && !expanded && open.length > PHONE_SCHOOL_ROWS;
+  const visible = capped ? open.slice(0, PHONE_SCHOOL_ROWS) : open;
 
   return (
     <section aria-labelledby={headingId} className="min-w-0">
       <SectionLabel id={headingId} as="h3" className="mb-2">
         {title}
       </SectionLabel>
-      <ul ref={listRef} className="space-y-2">
-        {visible.map((entry, index) => (
-          <DayChangeRow key={dayChangeKey(entry, index)} entry={entry} />
-        ))}
-      </ul>
-      {capped && entries.length > PHONE_SCHOOL_ROWS ? (
+      {visible.length > 0 ? (
+        <ul ref={listRef} className="space-y-2">
+          {visible.map((entry) => (
+            <DayChangeRow key={dayChangeKey(entry)} entry={entry} />
+          ))}
+        </ul>
+      ) : null}
+      {capped ? (
         <Button
           type="button"
           variant="link"
@@ -184,27 +255,95 @@ function DayChangesSection({
             });
           }}
         >
-          Alle anzeigen ({entries.length})
+          Alle anzeigen ({open.length})
         </Button>
       ) : null}
+      {done.length > 0 ? <DoneChanges entries={done} /> : null}
     </section>
   );
 }
 
-/** Stabil über ein Neuladen hinweg: Art, Personen und Gruppe. */
-function dayChangeKey(entry: DayChange, index: number): string {
-  const people = entry.people.map((person) => person.staffId).join(",");
-  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${people || entry.groupName ? "" : index}`;
+/** „3 erledigt“: was heute schon vorbei ist, eingeklappt am Ende. */
+function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  return (
+    <div className="mt-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="compact"
+        className="-ml-2"
+        aria-expanded={open}
+        aria-controls={listId}
+        tooltip={
+          open
+            ? "Blendet die Änderungen aus, die heute schon vorbei sind."
+            : "Zeigt die Änderungen, die heute schon vorbei sind."
+        }
+        onClick={() => {
+          if (!open) trackEvent("day_changes_done_expanded");
+          setOpen(!open);
+        }}
+      >
+        <ChevronRight
+          aria-hidden
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
+            open && "rotate-90",
+          )}
+        />
+        {entries.length} erledigt
+      </Button>
+      <ul id={listId} hidden={!open} className="mt-1 space-y-2">
+        {open
+          ? entries.map((entry) => (
+              <DayChangeRow key={dayChangeKey(entry)} entry={entry} muted />
+            ))
+          : null}
+      </ul>
+    </div>
+  );
 }
 
-function DayChangeRow({ entry }: { readonly entry: DayChange }) {
+/**
+ * Stabil über ein Neuladen hinweg: Art, Personen, Gruppe und Beginn. Eine
+ * Zusammenfassung trägt nur ihre Art, ihre Zahl ändert den Schlüssel nicht.
+ */
+function dayChangeKey(entry: DayChange): string {
+  const people = entry.people.map((person) => person.staffId).join(",");
+  return `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}`;
+}
+
+function DayChangeRow({
+  entry,
+  muted = false,
+}: {
+  readonly entry: DayChange;
+  /** Erledigt: grau, damit das Aktuelle vorne bleibt. */
+  readonly muted?: boolean;
+}) {
   const tenantPath = useTenantAwarePath();
   const text = dayChangeText(entry) ?? "";
   const span = dayChangeSpan(entry);
   const href = dayChangeHref(entry);
-  const body = (
+  // Eine lange Änderung, die vor heute begann, steht kompakt in einer Zeile
+  // („… · seit 3.11.“), damit sie nicht jeden Tag die neuen verdrängt.
+  const compact = entry.since !== null;
+  const textClass = muted || compact ? "text-gray-600" : "text-gray-900";
+  const body = compact ? (
+    <span className="min-w-0 flex-1 text-sm">
+      <span className={textClass}>{text}</span>
+      {span ? (
+        <span className="text-xs text-gray-500">
+          <span aria-hidden="true"> · </span>
+          <span>{span}</span>
+        </span>
+      ) : null}
+    </span>
+  ) : (
     <span className="min-w-0 flex-1">
-      <span className="block text-sm text-gray-900">{text}</span>
+      <span className={cn("block text-sm", textClass)}>{text}</span>
       {span ? (
         <span className="block text-xs text-gray-500">{span}</span>
       ) : null}

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DayChange, DayChangesOverview } from "~/lib/day-changes";
+import { setTestClock } from "~/test/clock";
 
 const useSWRAuth = vi.hoisted(() => vi.fn());
 const trackEvent = vi.hoisted(() => vi.fn());
@@ -29,6 +30,8 @@ function change(overrides: Partial<DayChange>): DayChange {
     halfDay: false,
     since: null,
     until: null,
+    startsAt: null,
+    endsAt: null,
     people: [],
     groupName: null,
     link: null,
@@ -49,13 +52,24 @@ const absent = (
     ...extra,
   });
 
+function overviewOf(overview: Partial<DayChangesOverview>) {
+  return { date: "2026-09-09", failedSources: [], entries: [], ...overview };
+}
+
 function serve(overview: Partial<DayChangesOverview>) {
   useSWRAuth.mockReturnValue({
-    data: { date: "2026-09-09", failedSources: [], entries: [], ...overview },
+    data: overviewOf(overview),
     error: undefined,
     isLoading: false,
     mutate: vi.fn(),
   });
+}
+
+/** Die Texte der Zeilen eines Abschnitts in ihrer Reihenfolge. */
+function rowTexts(region: HTMLElement): string[] {
+  return within(region)
+    .queryAllByRole("listitem")
+    .map((row) => row.textContent ?? "");
 }
 
 describe("DayChangesBlock", () => {
@@ -186,6 +200,130 @@ describe("DayChangesBlock", () => {
     expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
       day_change_kind: "staff_absent",
     });
+  });
+});
+
+describe("DayChangesBlock über den Tag (#7660)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+    // Ein fester Mittwochmittag: was um 9:00 endete, ist vorbei.
+    setTestClock("2026-09-09T12:00:00+02:00");
+  });
+
+  // Die Reihenfolge der Antwort: neu ganztägig, mit Uhrzeit nach Beginn,
+  // lange seit einem früheren Tag; dazu eine schon vorbei.
+  const dayEntries = () => [
+    absent("Neu", "school", { until: "2026-09-21" }),
+    absent("Mittag", "school", {
+      startsAt: "2026-09-09T11:30:00+02:00",
+      endsAt: "2026-09-09T14:00:00+02:00",
+    }),
+    absent("Lang", "school", { since: "2026-09-03" }),
+    absent("Morgens", "school", {
+      startsAt: "2026-09-09T08:00:00+02:00",
+      endsAt: "2026-09-09T09:00:00+02:00",
+    }),
+  ];
+
+  it("ordnet neu, Uhrzeit und lang und klappt Erledigtes ein", () => {
+    serve({ entries: dayEntries() });
+    render(<DayChangesBlock />);
+
+    const school = screen.getByRole("region", { name: "Schule" });
+    expect(rowTexts(school)).toEqual([
+      "Neu ist heute nicht da.bis 21.9.",
+      "Mittag ist heute nicht da.11:30 bis 14:00 Uhr",
+      "Lang ist heute nicht da. · seit 3.9.",
+    ]);
+    const toggle = within(school).getByRole("button", { name: "1 erledigt" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByText("Morgens ist heute nicht da."),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(rowTexts(school).at(-1)).toBe(
+      "Morgens ist heute nicht da.08:00 bis 09:00 Uhr",
+    );
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_done_expanded");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(trackEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("zeigt am Telefon „Betrifft dich“ ganz und von „Schule“ drei", () => {
+    phone.value = true;
+    serve({
+      entries: [
+        absent("Ich1", "you"),
+        absent("Ich2", "you"),
+        absent("Ich3", "you"),
+        absent("Ich4", "you"),
+        ...dayEntries(),
+        absent("Viert"),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    expect(
+      rowTexts(screen.getByRole("region", { name: "Betrifft dich" })),
+    ).toHaveLength(4);
+    const school = screen.getByRole("region", { name: "Schule" });
+    expect(rowTexts(school)).toHaveLength(3);
+    // Erledigtes bleibt eingeklappt erreichbar und zählt nicht mit.
+    expect(
+      within(school).getByRole("button", { name: "1 erledigt" }),
+    ).toBeInTheDocument();
+    const showAll = within(school).getByRole("button", {
+      name: "Alle anzeigen (4)",
+    });
+    expect(showAll).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(showAll);
+
+    expect(rowTexts(school)).toHaveLength(4);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_show_all");
+  });
+
+  it("zeigt am Desktop alles ohne „Alle anzeigen“", () => {
+    serve({ entries: [...dayEntries(), absent("Viert"), absent("Fünft")] });
+    render(<DayChangesBlock />);
+
+    expect(
+      rowTexts(screen.getByRole("region", { name: "Schule" })),
+    ).toHaveLength(5);
+    expect(
+      screen.queryByRole("button", { name: /Alle anzeigen/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("sagt nur an, was ein Neuladen geändert hat", () => {
+    serve({ entries: [absent("Ben", "you")] });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({ entries: [absent("Ben", "you")] });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("");
+
+    serve({
+      entries: [
+        absent("Ben", "you"),
+        absent("Clara", "school", {
+          people: [
+            { staffId: "8", name: "Clara", role: "absent", isSelf: false },
+          ],
+        }),
+      ],
+    });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("„Heute anders“: 1 neue Änderung.");
+    expect(live).not.toHaveTextContent("Ben");
   });
 });
 
