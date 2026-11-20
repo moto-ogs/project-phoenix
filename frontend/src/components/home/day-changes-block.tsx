@@ -336,8 +336,8 @@ function DayChangeRow({
       <span className={textClass}>{text}</span>
       {span ? (
         <span className="text-xs text-gray-500">
-          <span aria-hidden="true"> · </span>
-          <span>{span}</span>
+          {/* Die Leerzeichen bleiben im Namen des Links, der Punkt nicht. */}{" "}
+          <span aria-hidden="true">·</span> <span>{span}</span>
         </span>
       ) : null}
     </span>

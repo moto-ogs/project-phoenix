@@ -231,6 +231,12 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
     render(<DayChangesBlock />);
 
     const school = screen.getByRole("region", { name: "Schule" });
+    // Der Link nennt den Zeitraum mit Leerzeichen, ohne den Trennpunkt.
+    expect(
+      within(school).getByRole("link", {
+        name: "Lang ist heute nicht da. seit 3.9.",
+      }),
+    ).toBeInTheDocument();
     expect(rowTexts(school)).toEqual([
       "Neu ist heute nicht da.bis 21.9.",
       "Mittag ist heute nicht da.11:30 bis 14:00 Uhr",
