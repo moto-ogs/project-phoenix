@@ -123,7 +123,7 @@ function rankOf(name: string, second: string, needle: string): number | null {
  * The entries whose name or second line contains the text, best first;
  * without text all entries in their order.
  */
-export function matchTraegerSearch<T>(
+function matchTraegerSearch<T>(
   entries: readonly T[],
   query: string,
   name: (entry: T) => string,
