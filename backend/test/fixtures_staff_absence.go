@@ -72,3 +72,19 @@ func CreateTestStaffAbsenceToday(tb testing.TB, db *bun.DB, staffID int64, absen
 	require.NoError(tb, err, "Failed to create test staff absence")
 	return absence
 }
+
+// CreateTestStaffAbsenceSpan creates a reported sick absence of a staff
+// member from start to end in the tenant, with a note that must never leave
+// the reads that hide reasons ("Heute anders", #7659).
+func CreateTestStaffAbsenceSpan(tb testing.TB, db *bun.DB, tenantID, staffID int64, start, end calendar.Date, note string) int64 {
+	tb.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var id int64
+	err := db.NewRaw(`INSERT INTO active.staff_absences
+		(tenant_id, staff_id, absence_type, date_start, date_end, status, note, created_by)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+		tenantID, staffID, workforce.AbsenceTypeSick, start, end, workforce.AbsenceStatusReported, note, staffID).Scan(ctx, &id)
+	require.NoError(tb, err, "Failed to create test staff absence span")
+	return id
+}
