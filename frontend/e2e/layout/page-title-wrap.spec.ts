@@ -132,14 +132,32 @@ async function renderHead(page: Page, props: HeadProps): Promise<void> {
 /** Wörter des Titels, die über mehr als eine Zeile laufen. */
 async function brokenWords(page: Page): Promise<string[]> {
   return page.locator("h1").evaluate((h1) => {
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(h1, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode as Text);
+    }
+    const text = textNodes.map((node) => node.data).join("");
+    const pointAt = (offset: number) => {
+      let remaining = offset;
+      for (const node of textNodes) {
+        if (remaining <= node.length) return [node, remaining] as const;
+        remaining -= node.length;
+      }
+      throw new Error("title range is outside its text nodes");
+    };
     const broken: string[] = [];
-    for (const word of h1.querySelectorAll("span")) {
+    for (const match of text.matchAll(/\S+/g)) {
+      if (match.index === undefined) continue;
       const range = document.createRange();
-      range.selectNodeContents(word);
+      const [startNode, startOffset] = pointAt(match.index);
+      const [endNode, endOffset] = pointAt(match.index + match[0].length);
+      range.setStart(startNode, startOffset);
+      range.setEnd(endNode, endOffset);
       const tops = new Set(
         [...range.getClientRects()].map((rect) => Math.round(rect.top)),
       );
-      if (tops.size > 1) broken.push(word.textContent ?? "");
+      if (tops.size > 1) broken.push(match[0]);
     }
     return broken;
   });

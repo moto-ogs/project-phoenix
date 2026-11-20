@@ -564,31 +564,21 @@ function useEmptyActionGuard(
 }
 
 /**
- * Kurze Wörter sollen im mobilen Seitenkopf vollständig in die nächste Zeile
- * wandern. Lange Wörter dürfen nach Silben trennen und brauchen zusätzlich
- * eine sichere Notbremse für IDs und URLs ohne Trennstelle.
+ * Kurze Wörter bleiben zusammen. Lange Wörter dürfen nach Silben trennen;
+ * bei IDs und URLs ohne Trennstelle fügt `wbr` nach 13 Zeichen eine sichere
+ * Notbremse ein, ohne den Text in umschließende Elemente aufzuteilen.
  */
-function TenantPageTitle({ title }: Readonly<{ title: string }>) {
-  return title.split(/(\s+)/).map((part, index) =>
-    /\s/.test(part) ? (
-      part
-    ) : (
-      <span
-        // Der Index ist stabil, weil die Zeichenfolge des Titels selbst die
-        // Liste bestimmt und sich nur bei einem neuen Titel ändert.
-        key={index}
-        className={cn(
-          part.length < 14 && "whitespace-nowrap",
-          // Wie `hyphenate-limit-chars`: Kurze Wörter bleiben ganz. Bei
-          // langen IDs oder URLs ohne deutsche Trennstelle verhindert
-          // `wrap-anywhere` aber ein Überlaufen des Kopfes.
-          part.length >= 14 && "max-sm:wrap-anywhere",
-        )}
-      >
-        {part}
-      </span>
-    ),
-  );
+function tenantPageTitle(title: string) {
+  return title.split(/(\s+)/).flatMap((part, partIndex) => {
+    if (/\s/.test(part) || part.length < 14) return part;
+
+    const chunks = part.match(/.{1,13}/g) ?? [part];
+    return chunks.flatMap((chunk, chunkIndex) =>
+      chunkIndex === chunks.length - 1
+        ? [chunk]
+        : [chunk, <wbr key={`${partIndex}-${chunkIndex}`} />],
+    );
+  });
 }
 
 function TenantPageView({
@@ -730,7 +720,7 @@ function TenantPageView({
                     HEAD_TITLE_SIZE[prominent ? "prominent" : "standard"],
                   )}
                 >
-                  <TenantPageTitle title={title} />
+                  {tenantPageTitle(title)}
                 </h1>
                 {info != null && (
                   <TenantPageInfo title={title}>{info}</TenantPageInfo>
