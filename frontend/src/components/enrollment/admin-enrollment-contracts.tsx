@@ -50,9 +50,7 @@ function services(contract: ApplicationContractResponse): ContractService[] {
 }
 
 /** What the contract's state means for the school, in one line. */
-export function contractStateLine(
-  contract: ApplicationContractResponse,
-): string {
+function contractStateLine(contract: ApplicationContractResponse): string {
   const concluded = contract.concluded;
   if (concluded && METHODS.has(concluded.method)) {
     const line = `Abgeschlossen: ${formatConclusion({
