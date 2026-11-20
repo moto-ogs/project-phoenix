@@ -76,6 +76,8 @@ func newApplicationContractsFixture(t *testing.T, name string) applicationContra
 	require.NoError(t, err)
 	replaced := testpkg.CreateTestCareContract(t, db, organization, school, testpkg.UniqueTestTenantID(t), carecontract.StatusSent, august,
 		testpkg.CareContractService{Weekday: "fri", Module: "Ganztag", EndsAt: "16:00"})
+	_, err = db.ExecContext(t.Context(), `UPDATE care_contract.contract_versions SET status = ? WHERE contract_id = ?`, carecontract.VersionEffective, replaced)
+	require.NoError(t, err)
 	_, err = db.ExecContext(t.Context(), `UPDATE care_contract.contract_versions SET status = ? WHERE contract_id = ?`, carecontract.VersionReplaced, replaced)
 	require.NoError(t, err)
 	foreign := testpkg.CreateTestCareContract(t, db, organization, other, testpkg.UniqueTestTenantID(t), carecontract.StatusSent, august,
