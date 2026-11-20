@@ -33,9 +33,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.SubmitBatch",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.FeedbackHistory.RecordFeedbackHistory",
       "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.SubmitBatch",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.FeedbackHistory.RecordFeedbackHistory",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"

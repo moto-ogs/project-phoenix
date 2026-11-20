@@ -70,7 +70,6 @@ POST /api/timetable/pickup-extensions/{id}/resolve
 POST /api/timetable/planning-tracks/
 POST /api/timetable/planning-tracks/{id}/restore
 POST /api/timetable/school-vacation-hints/acknowledgements
-POST /api/timetable/school-vacations/seed
 POST /api/timetable/shift-coverage
 POST /api/timetable/substitutions/bulk
 POST /api/timetable/templates

@@ -99,25 +99,6 @@ func TestModuleCreateRollsBackWithOuterTransaction(t *testing.T) {
 	assert.Empty(t, entries)
 }
 
-func TestModuleBatchFailureRollsBackEveryEntry(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	student := testpkg.CreateTestStudent(t, db, "Feedback", "BatchRollback", "1a")
-	module := buildModule(t, db, settingsStub{enabled: true, retention: 90})
-
-	_, err := module.SubmitBatch(testpkg.Ctx(t), []feedback.CreateEntry{
-		createInput(student.ID, "2026-08-31", feedback.ValuePositive),
-		createInput(9_223_372_036_854_775_000, "2026-08-31", feedback.ValueNegative),
-	})
-	require.Error(t, err)
-	var batchErr *feedback.BatchOperationError
-	assert.NotErrorAs(t, err, &batchErr)
-
-	entries, listErr := module.FindEntries(testpkg.Ctx(t), feedback.Filter{StudentID: &student.ID})
-	require.NoError(t, listErr)
-	assert.Empty(t, entries)
-}
-
 func TestModuleKeepsSettingsAndPersistenceErrorsVisible(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -148,8 +129,6 @@ func TestModuleRefusesFeedbackWhenAvailabilityCannotBeResolved(t *testing.T) {
 	// Even a resolver returning true with an error must not permit access.
 	unavailable := buildModule(t, db, settingsStub{enabled: true, enabledErr: wantErr, retention: 90})
 	_, err = unavailable.Submit(ctx, input)
-	require.ErrorIs(t, err, wantErr)
-	_, err = unavailable.SubmitBatch(ctx, []feedback.CreateEntry{input, input})
 	require.ErrorIs(t, err, wantErr)
 	_, err = unavailable.FindEntries(ctx, feedback.Filter{})
 	require.ErrorIs(t, err, wantErr)

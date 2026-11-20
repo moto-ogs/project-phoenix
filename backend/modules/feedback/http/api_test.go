@@ -32,9 +32,6 @@ func (e engine) Available(context.Context) (bool, error) { return e.available, e
 func (e engine) Submit(_ context.Context, input feedbackModule.CreateEntry) (feedbackModule.Entry, error) {
 	return feedbackModule.Entry{ID: 7, Value: input.Value, Day: input.Day, Time: input.Time, StudentID: input.StudentID}, e.err
 }
-func (e engine) SubmitBatch(context.Context, []feedbackModule.CreateEntry) ([]feedbackModule.Entry, error) {
-	return e.entries, e.err
-}
 func (e engine) FindEntries(context.Context, feedbackModule.Filter) ([]feedbackModule.Entry, error) {
 	return e.entries, e.err
 }
@@ -64,7 +61,13 @@ func testResource(e engine) *feedbackHTTP.Resource {
 }
 
 func testResourceWithObserver(e engine, observe func(int, string)) *feedbackHTTP.Resource {
-	return feedbackHTTP.NewResource(e, feedbackHTTP.Runtime{
+	runtime := testResourceRuntime()
+	runtime.ObserveResponse = observe
+	return feedbackHTTP.NewResource(e, runtime)
+}
+
+func testResourceRuntime() feedbackHTTP.Runtime {
+	return feedbackHTTP.Runtime{
 		Protected: func(router chi.Router, register func(chi.Router, feedbackHTTP.Middleware)) {
 			register(router, func(next http.Handler) http.Handler { return next })
 		},
@@ -79,9 +82,53 @@ func testResourceWithObserver(e engine, observe func(int, string)) *feedbackHTTP
 			render.Status(r, failure.Status)
 			require.NoError(testingT(r.Context()), render.Render(w, r, &errorResponse{StatusCode: failure.Status, Status: failure.Status, Detail: failure.Err.Error(), Code: routetest.ClassCode(failure.Status)}))
 		},
-		ObserveResponse: observe,
+		ObserveResponse: func(int, string) {},
 		ParseIDParam:    testpkg.ParseHTTPIDParam,
-	})
+	}
+}
+
+// TestDemoFeedbackHistoryWireContract pins the demo-only route the public
+// demo's seeder writes the past ratings through (ADR 0298): the school of the
+// path, the batch body and the shared envelope for a refusal.
+func TestDemoFeedbackHistoryWireContract(t *testing.T) {
+	t.Parallel()
+	runtime := testResourceRuntime()
+	var recorded []feedbackModule.CreateEntry
+	var recordedSchool int64
+	recordErr := error(nil)
+	handler := feedbackHTTP.DemoFeedbackHistoryHandler(func(_ context.Context, schoolID int64, entries []feedbackModule.CreateEntry) (int, error) {
+		recordedSchool, recorded = schoolID, entries
+		return len(entries), recordErr
+	}, feedbackHTTP.DemoRuntime{Success: runtime.Success, Failure: runtime.Failure, ParseIDParam: runtime.ParseIDParam})
+	router := chi.NewRouter()
+	router.Post("/schools/{id}/demo-feedback-history", handler)
+	post := func(target string, body string) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodPost, target, bytes.NewBufferString(body)).WithContext(context.WithValue(context.Background(), testKey{}, t))
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, request)
+		return recorder
+	}
+	entry := `{"value":"positive","day":"2026-08-31","time":"12:34:56","student_id":42,"is_mensa_feedback":true}`
+
+	recorder := post("/schools/9/demo-feedback-history", `{"entries":[`+entry+`]}`)
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	assert.Equal(t, `{"status":"success","data":{"written":1},"message":"Feedbackverlauf gespeichert"}`+"\n", recorder.Body.String())
+	assert.EqualValues(t, 9, recordedSchool, "the school of the path")
+	assert.Equal(t, []feedbackModule.CreateEntry{{Value: "positive", Day: "2026-08-31", Time: "12:34:56", StudentID: 42, IsMensaFeedback: true}}, recorded)
+
+	for _, test := range []struct{ name, target, body, detail string }{
+		{"school", "/schools/0/demo-feedback-history", `{"entries":[` + entry + `]}`, "invalid school ID"},
+		{"empty", "/schools/9/demo-feedback-history", `{"entries":[]}`, "at least one feedback entry is required"},
+		{"unknown field", "/schools/9/demo-feedback-history", `{"entries":[` + entry + `],"extra":1}`, `invalid feedback history: json: unknown field \"extra\"`},
+	} {
+		recorder := post(test.target, test.body)
+		assert.Equal(t, http.StatusBadRequest, recorder.Code, test.name)
+		assert.Equal(t, `{"status":400,"detail":"`+test.detail+`","code":"general.input"}`+"\n", recorder.Body.String(), test.name)
+	}
+
+	recordErr = &feedbackModule.BatchOperationError{Errors: []error{&feedbackModule.InvalidEntryDataError{Err: errors.New("history day must be before today")}}}
+	recorder = post("/schools/9/demo-feedback-history", `{"entries":[`+entry+`]}`)
+	assert.Equal(t, http.StatusBadRequest, recorder.Code, "a day the writer refuses is the caller's error")
 }
 
 type testKey struct{}
@@ -110,8 +157,6 @@ func TestStaffWireContractsStayStable(t *testing.T) {
 		status                     int
 	}{
 		{"student", http.MethodGet, "/student/42", `{"status":"success","data":[` + entryJSON + `],"message":"Student feedback entries retrieved successfully"}` + "\n", nil, http.StatusOK},
-		{"date range", http.MethodGet, "/date-range?start_date=2026-08-01&end_date=2026-08-31", `{"status":"success","data":[` + entryJSON + `],"message":"Date range feedback entries retrieved successfully"}` + "\n", nil, http.StatusOK},
-		{"batch", http.MethodPost, "/batch", `{"status":"success","data":{"count":1},"message":"Feedback entries created successfully"}` + "\n", map[string]any{"entries": []map[string]any{{"value": "positive", "day": "2026-08-31", "time": "12:34:56", "student_id": 42}}}, http.StatusCreated},
 	}
 	resource := testResource(engine{available: true, entries: []feedbackModule.Entry{entry}})
 	for _, test := range tests {

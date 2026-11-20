@@ -54,8 +54,6 @@ func (rs *Resource) Router() chi.Router {
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	rs.runtime.Protected(router, func(protected chi.Router, withTx Middleware) {
 		protected.With(rs.runtime.Permission(permissions.FeedbackRead), withTx).Get("/student/{id}", rs.getStudentFeedback)
-		protected.With(rs.runtime.Permission(permissions.FeedbackRead), withTx).Get("/date-range", rs.getDateRangeFeedback)
-		protected.With(rs.runtime.Permission(permissions.FeedbackCreate), withTx).Post("/batch", rs.createBatchFeedback)
 	})
 	return router
 }
@@ -136,61 +134,6 @@ func (rs *Resource) getStudentFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rs.successEntries(w, r, entries, "Student feedback entries retrieved successfully")
-}
-
-func (rs *Resource) getDateRangeFeedback(w http.ResponseWriter, r *http.Request) {
-	start, err := feedbackModule.ParseDate(r.URL.Query().Get("start_date"))
-	if err != nil {
-		rs.invalid(w, r, errors.New("invalid start date format, expected YYYY-MM-DD"))
-		return
-	}
-	end, err := feedbackModule.ParseDate(r.URL.Query().Get("end_date"))
-	if err != nil {
-		rs.invalid(w, r, errors.New("invalid end date format, expected YYYY-MM-DD"))
-		return
-	}
-	filter := feedbackModule.Filter{DayFrom: &start, DayTo: &end}
-	if value := r.URL.Query().Get("student_id"); value != "" {
-		studentID, parseErr := strconv.ParseInt(value, 10, 64)
-		if parseErr != nil {
-			rs.invalid(w, r, errors.New("invalid student ID"))
-			return
-		}
-		filter.StudentID = &studentID
-	}
-	entries, err := rs.module.FindEntries(r.Context(), filter)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.successEntries(w, r, entries, "Date range feedback entries retrieved successfully")
-}
-
-func (rs *Resource) createBatchFeedback(w http.ResponseWriter, r *http.Request) {
-	request := &BatchFeedbackRequest{}
-	if err := render.Bind(r, request); err != nil {
-		rs.invalid(w, r, err)
-		return
-	}
-	inputs := make([]feedbackModule.CreateEntry, 0, len(request.Entries))
-	for index := range request.Entries {
-		inputs = append(inputs, request.Entries[index].toInput())
-	}
-	entries, err := rs.module.SubmitBatch(r.Context(), inputs)
-	if err != nil {
-		var batchErr *feedbackModule.BatchOperationError
-		if errors.As(err, &batchErr) {
-			messages := make([]string, 0, len(batchErr.Errors))
-			for _, failure := range batchErr.Errors {
-				messages = append(messages, failure.Error())
-			}
-			rs.successWithCode(w, r, http.StatusPartialContent, map[string]any{"errors": messages}, "Some feedback entries could not be created", "batch_partial")
-			return
-		}
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.success(w, r, http.StatusCreated, map[string]any{"count": len(entries)}, "Feedback entries created successfully")
 }
 
 func (request FeedbackRequest) toInput() feedbackModule.CreateEntry {

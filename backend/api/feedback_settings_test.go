@@ -35,15 +35,12 @@ func TestStaffFeedbackRoutesRespectSchoolSetting(t *testing.T) {
 	router.Mount("/feedback", newFeedbackResource(module.Feedback).Router())
 	_, account := testpkg.CreateTestStaffWithAccount(t, db, "Feedback", "Staff")
 	token := testutil.MintTestJWT(t, testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t)))
-	body := map[string]any{"value": "positive", "day": "2026-08-31", "time": "12:34:56", "student_id": student.ID}
 	routes := []struct {
 		method, path string
 		body         any
 		status       int
 	}{
-		{http.MethodPost, "/feedback/batch", map[string]any{"entries": []any{body}}, http.StatusCreated},
 		{http.MethodGet, fmt.Sprintf("/feedback/student/%d", student.ID), nil, http.StatusOK},
-		{http.MethodGet, "/feedback/date-range?start_date=2026-08-01&end_date=2026-08-31", nil, http.StatusOK},
 	}
 	states := []struct {
 		name   string
@@ -84,7 +81,7 @@ func TestStaffFeedbackRoutesRespectSchoolSetting(t *testing.T) {
 			setEnabled(true)
 			count, countErr := module.Feedback.CountForStudent(ctx, student.ID)
 			require.NoError(t, countErr)
-			assert.Equal(t, 1, count, "a refused batch submission must not persist")
+			assert.Equal(t, 1, count, "a refused request must not change stored feedback")
 		}
 	}
 }

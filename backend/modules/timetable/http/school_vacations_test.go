@@ -30,8 +30,6 @@ type schoolVacationStub struct {
 	hints           []timetableModule.SchoolVacationHint
 	hintCalls       int
 	acknowledgeCall int
-	seeded          []schoolcalendar.SchoolVacation
-	local           bool
 }
 
 func (s *schoolVacationStub) TenantSchoolVacations(_ context.Context, from, to string) (schoolcalendar.SchoolVacationList, error) {
@@ -45,11 +43,6 @@ func (s *schoolVacationStub) AcknowledgeSchoolVacation(_ context.Context, acknow
 	return s.acknowledgeErr
 }
 
-func (s *schoolVacationStub) SeedSchoolVacations(_ context.Context, vacations []schoolcalendar.SchoolVacation) (int, error) {
-	s.seeded = append(s.seeded, vacations...)
-	return len(vacations) * 16, nil
-}
-
 func (s *schoolVacationStub) SchoolVacationHints(context.Context) ([]timetableModule.SchoolVacationHint, error) {
 	s.hintCalls++
 	return s.hints, nil
@@ -59,8 +52,7 @@ func schoolVacationRouter(t *testing.T, stub *schoolVacationStub) chi.Router {
 	t.Helper()
 	_, _ = RootCompositions.Module(t)
 	router := chi.NewRouter()
-	isLocal := func(*http.Request) bool { return stub.local }
-	router.Mount("/timetable", newResourceForTest(Dependencies{SchoolVacations: stub, SchoolVacationHints: stub, IsLocalSeed: isLocal}).
+	router.Mount("/timetable", newResourceForTest(Dependencies{SchoolVacations: stub, SchoolVacationHints: stub}).
 		Router(scopeTestTenantRoutes(testpkg.TenantSessionGatesWithCaches(scopeTestSettingsCache))))
 	return router
 }
@@ -163,20 +155,4 @@ func TestSchoolVacationRoutes_ConfirmationOutcomes(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestSchoolVacationRoutes_SeedOnlyForTheLocalSeeder(t *testing.T) {
-	t.Parallel()
-	body := `{"vacations":[{"name":"Herbstferien","start_date":"2026-10-19","end_date":"2026-10-30"}]}`
-
-	remote := &schoolVacationStub{}
-	response := callSchoolVacations(t, schoolVacationRouter(t, remote), http.MethodPost, "/timetable/school-vacations/seed", body, []string{permissions.SchedulesManage})
-	assert.Equal(t, http.StatusNotFound, response.Code, "body=%s", response.Body.String())
-	assert.Empty(t, remote.seeded, "outside the local seeder nothing is stored")
-
-	local := &schoolVacationStub{local: true}
-	response = callSchoolVacations(t, schoolVacationRouter(t, local), http.MethodPost, "/timetable/school-vacations/seed", body, []string{permissions.SchedulesManage})
-	require.Equal(t, http.StatusCreated, response.Code, "body=%s", response.Body.String())
-	require.Len(t, local.seeded, 1)
-	assert.Equal(t, "Herbstferien", local.seeded[0].Name)
 }

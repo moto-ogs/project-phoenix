@@ -33154,17 +33154,6 @@
       "target_owner": "school-calendar"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.SchoolVacations.SeedSchoolVacations",
-      "reason": "Guarded target record command: the local-only timetable seed route stores fixed school vacations through School Calendar's public command in its own administrative transaction (#5345); only the local demo seeder reaches it, no source coordination. Target modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations. ",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations",
-      "target_owner": "school-calendar"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.TenantSchoolVacations",
       "classification": "query",
       "effect": "query",

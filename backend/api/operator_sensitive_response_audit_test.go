@@ -45,7 +45,7 @@ func TestOperatorAuditSensitiveResponseRoutesFailClosed(t *testing.T) {
 			Settings: module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch), OperatorID: operatorIDFromSession,
 		}),
 		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.TodayDate),
-	}, demoPresenceHistory)
+	}, demoOperatorRoutes{presenceHistory: demoPresenceHistory})
 	(operatorIdentityRoutes{account: identityAPI.NewResource(identity, provisioningAPI.ProvisioningErrorRenderer)}).mountAccountTenantAccessRoutes(router, resource)
 	// The mounted scan reader/writer must never be invoked if its audit fails.
 	scanCalls := 0

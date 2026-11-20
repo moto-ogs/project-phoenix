@@ -1,3 +1,1 @@
-GET /api/feedback/date-range
 GET /api/feedback/student/{id}
-POST /api/feedback/batch

@@ -161,6 +161,54 @@
       "target_owner": "meal-plan",
       "target_role": "compose",
       "target_package": "modules/mealplan/compose"
+    },
+    {
+      "id": "dev-tools.compose.feedback",
+      "description": "The dev CLI binds the past ratings of the demo seed through exactly Feedback's composition (ADR 0298).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "dev-tools",
+      "source_role": "compose",
+      "target_owner": "feedback",
+      "target_role": "compose",
+      "target_package": "modules/feedback/compose"
+    },
+    {
+      "id": "dev-tools.compose.school-calendar",
+      "description": "The dev CLI binds the seeded school vacations through exactly School Calendar's composition (ADR 0298).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "dev-tools",
+      "source_role": "compose",
+      "target_owner": "school-calendar",
+      "target_role": "compose",
+      "target_package": "modules/schoolcalendar/compose"
+    },
+    {
+      "id": "dev-tools.compose.school-membership",
+      "description": "The dev CLI binds the active-student count of the seeded billing snapshot through exactly School Membership's composition, as the server root does (ADR 0298).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "dev-tools",
+      "source_role": "compose",
+      "target_owner": "school-membership",
+      "target_role": "compose",
+      "target_package": "modules/schoolmembership/compose"
+    },
+    {
+      "id": "dev-tools.compose.device-fleet",
+      "description": "The dev CLI binds the active-terminal count of the seeded billing snapshot through exactly Device Fleet's composition, as the server root does (ADR 0298).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "dev-tools",
+      "source_role": "compose",
+      "target_owner": "device-fleet",
+      "target_role": "compose",
+      "target_package": "modules/devicefleet/compose"
     }
   ]
 }

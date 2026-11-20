@@ -308,5 +308,10 @@
     "scenario": "api.students.presence25.pickup_times.n8",
     "route": "POST /api/students/pickup-times/bulk",
     "issue": 2352
+  },
+  {
+    "scenario": "api.feedback.date_range.positive_growth",
+    "route": "GET /api/feedback/date-range",
+    "issue": 2352
   }
 ]

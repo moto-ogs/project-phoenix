@@ -51,7 +51,7 @@ func newOperatorProvisioningRoutes(t *testing.T) operatorProvisioningRoutes {
 	})
 	operator := chi.NewRouter()
 	mountOperatorProvisioningRoutes(operator, resource, nil)
-	mountOperatorSchoolRoutes(operator, resource, nil, nil, nil)
+	mountOperatorSchoolRoutes(operator, resource, nil, nil, demoOperatorRoutes{})
 	router := chi.NewRouter()
 	router.Mount("/operator", operator)
 	return operatorProvisioningRoutes{
