@@ -356,14 +356,21 @@ The key is the scope claim of the portal's session token
   `/operator/schools`) moves its callers to the backend's path first.
 - Next prefers an existing route file over the proxy. Keep a file only for
   what is specific to the browser: portal policy, session handling, a file
-  or upload with behavior of its own (own cache header, BFF checks, public
-  token link), login/MFA, the SSE pipe, or an aggregation without a Go view.
+  or upload with behavior of its own (own cache header, BFF checks), login/MFA, the SSE pipe, or an aggregation without a Go view.
 - A file answer registers `File: true`, a multipart upload `Multipart: true`
   with `MaxBodyBytes` and `TooLargeCode` (ADR 0270, addendum 2026-11-19).
   The proxy streams both unread: the file with the headers of
   `fileResponse`, every answer `private, no-store`; the upload once, without
   a retry after a renewal, and 413 with `TooLargeCode` above the limit. Such
   a route has no entry in `src/test/private-download-routes.ts`.
+- A file of the portal `public` (a token link) needs `PublicFile`, the reason
+  its link alone may open it; the generator refuses an unmarked public file,
+  a public upload, and a marker on any other route. The proxy fetches it
+  without session, bearer, body and `Idempotency-Key`, `sendBackend` adds the
+  client IP for the backend's limiter of the link, and every answer is
+  `private, no-store` (ADR 0270, addendum "Öffentliche Datei-Routen"). The
+  link's path prefix needs log redaction in `lib/log-redaction.ts` and
+  `backend/middleware/log_redaction.go`.
 - To move a pure proxy route: register its Go route for the portal,
   regenerate, delete the route file and its row in
   `src/test/proxy-routes/**`. A file is deleted only when every method it

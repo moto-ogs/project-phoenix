@@ -2292,6 +2292,13 @@ export const routes = {
     portals: ["public"],
     response: success(FormLabelsResponseSchema),
   },
+  "GET /api/enrollment/requests/{statusToken}/signature-proof": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/signature-proof",
+    portals: ["public"],
+    publicFile: "the status link of the mail is the parents' only credential for their own proof",
+    response: fileAnswer,
+  },
   "GET /api/enrollment/schema/": {
     method: "GET",
     pattern: "/api/enrollment/schema/",

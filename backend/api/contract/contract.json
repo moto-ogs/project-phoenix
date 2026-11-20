@@ -2560,6 +2560,15 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/requests/{statusToken}/signature-proof",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the status link of the mail is the parents' only credential for their own proof"
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/schema/",
       "portals": [
         "tenant"
@@ -8860,6 +8869,15 @@
     },
     {
       "method": "GET",
+      "pattern": "/public/care-contract-signing/{link}/document",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the one-time link of the contract mail is the parents' only credential for the contract it names"
+    },
+    {
+      "method": "GET",
       "pattern": "/public/care-contract-signing/{link}/family-children",
       "portals": [
         "public"
@@ -11250,6 +11268,15 @@
         "kind": "ref",
         "ref": "PublicHolidayRegistrationOfferResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-registrations/{token}/documents/{documentId}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the published link of a holiday period opens the form documents it lists"
     },
     {
       "method": "GET",
@@ -16724,6 +16751,15 @@
         "ref": "SigningView"
       },
       "max_body_bytes": 409600
+    },
+    {
+      "method": "POST",
+      "pattern": "/public/payroll-download/{link}",
+      "portals": [
+        "public"
+      ],
+      "file": true,
+      "public_file": "the one-time link of the payroll mail is the payroll office's only credential"
     },
     {
       "method": "POST",

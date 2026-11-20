@@ -193,6 +193,18 @@ describe("redactSensitiveLogData", () => {
     );
   });
 
+  it("redacts the payroll office's one-time download link (#4805, #2352)", () => {
+    // sanitizeEndpoint masks no segment with a dot, so the backend client's
+    // log line carries the whole "<school>.<token>" link.
+    expect(
+      redactSensitiveLogString(
+        "POST /api/public/payroll-download/7.payroll-secret backend=/public/payroll-download/7.payroll-secret?x=1 escaped=%2Fpublic%2Fpayroll-download%2F7.payroll-secret page=https://school.example/lohnbuero/7.payroll-secret",
+      ),
+    ).toBe(
+      "POST /api/public/payroll-download/[REDACTED] backend=/public/payroll-download/[REDACTED]?x=1 escaped=%2Fpublic%2Fpayroll-download%2F[REDACTED] page=https://school.example/lohnbuero/[REDACTED]",
+    );
+  });
+
   it("redacts complete quoted credential values with spaces and escapes", () => {
     expect(
       redactSensitiveLogString(
