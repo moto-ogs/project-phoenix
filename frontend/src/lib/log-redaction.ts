@@ -20,9 +20,14 @@ const SENSITIVE_LOG_KEYS = new Set([
   "x_staff_id",
 ]);
 
-// Public signing links are credentials, including in escaped referrers.
+// Public signing and payroll links are credentials, including in escaped referrers.
 export const SIGNING_TOKEN_PATH_PATTERN = new RegExp(
-  `(${["/public/care-contract-signing/", "/vertrag-unterschreiben/"]
+  `(${[
+    "/public/care-contract-signing/",
+    "/vertrag-unterschreiben/",
+    "/public/payroll-download/",
+    "/lohnbuero/",
+  ]
     .map((path) =>
       [...path]
         .map((char) => `(?:${char}|%${char.charCodeAt(0).toString(16)})`)
