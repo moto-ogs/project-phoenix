@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   nullable,
@@ -168,6 +169,13 @@ export interface GetTraegerReportsKeyDateQuery {
   template?: string;
 }
 
+/** Query of GET /traeger/reports/key-date/export */
+export interface GetTraegerReportsKeyDateExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  key_date?: string;
+  template?: string;
+}
+
 export const routes = {
   "GET /traeger/reports/key-date": {
     method: "GET",
@@ -175,5 +183,12 @@ export const routes = {
     portals: ["org"],
     query: ["key_date", "template"],
     response: success(KeyDateReportSchema),
+  },
+  "GET /traeger/reports/key-date/export": {
+    method: "GET",
+    pattern: "/traeger/reports/key-date/export",
+    portals: ["org"],
+    query: ["format", "key_date", "template"],
+    response: fileAnswer,
   },
 } as const;

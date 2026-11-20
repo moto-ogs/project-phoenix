@@ -48,10 +48,9 @@ func (req *AcceptGuardianInvitationRequest) Bind(_ *http.Request) error {
 
 // AcceptGuardianInvitationResponse mirrors AcceptInvitationResponse so the
 // frontend can reuse mapping helpers. The account's ID travels as a string
-// (ADR 0270), as the contract of the public route requires. Remove legacy-id
-// after a production release sends strings; the previous release sends numbers.
+// (ADR 0270), as the contract of the public route requires.
 type AcceptGuardianInvitationResponse struct {
-	AccountID  common.ID `json:"account_id" contract:"legacy-id"`
+	AccountID  common.ID `json:"account_id"`
 	Email      string    `json:"email"`
 	TenantSlug string    `json:"tenant_slug,omitempty"`
 }
@@ -160,14 +159,4 @@ func (rs *Resource) lookupTenantSlugForGuardianInvitation(ctx context.Context, t
 		return ""
 	}
 	return rs.GuardianInvitations.GuardianInvitationSchoolSlug(ctx, token)
-}
-
-func (rs *Resource) resendGuardianInvitation(w http.ResponseWriter, r *http.Request) {
-	if rs.GuardianInvitations == nil {
-		common.RenderError(w, r, common.ErrorInternalServer(errors.New(errGuardianInvitationServiceUnavailable)))
-		return
-	}
-	rs.resendInvitationHandler(w, r,
-		rs.GuardianInvitations.ResendGuardianInvitation,
-		"guardian invitation resend requested", "Guardian invitation resent", "Guardian invitation resent successfully")
 }

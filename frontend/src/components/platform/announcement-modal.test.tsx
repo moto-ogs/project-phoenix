@@ -40,6 +40,7 @@ vi.mock("~/components/ui/modal", () => ({
 
 // Hoist mock functions so they can be used in the mock return value
 const mockDismiss = vi.hoisted(() => vi.fn());
+const mockMarkSeen = vi.hoisted(() => vi.fn());
 const mockRefresh = vi.hoisted(() => vi.fn());
 
 // Mock useAnnouncements hook
@@ -60,6 +61,7 @@ vi.mock("~/lib/hooks/use-announcements", () => ({
   useAnnouncements: vi.fn(() => ({
     announcements: mockAnnouncementsState.announcements,
     dismiss: mockDismiss,
+    markSeen: mockMarkSeen,
     isLoading: mockAnnouncementsState.isLoading,
     refresh: mockRefresh,
   })),
@@ -71,6 +73,7 @@ describe("AnnouncementModal", () => {
     mockAnnouncementsState.announcements = [];
     mockAnnouncementsState.isLoading = false;
     mockDismiss.mockResolvedValue(undefined);
+    mockMarkSeen.mockResolvedValue(undefined);
     mockRefresh.mockResolvedValue(undefined);
   });
 

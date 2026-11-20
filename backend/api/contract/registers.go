@@ -68,6 +68,9 @@ type Registration struct {
 	File         bool
 	Multipart    bool
 	TooLargeCode string
+	// PublicFile is the marker of common.RouteContract that opens one
+	// file to the portal public.
+	PublicFile string
 }
 
 // VariantSpec is a response whose shape a query parameter selects.

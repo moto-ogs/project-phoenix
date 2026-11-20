@@ -1,0 +1,14 @@
+// Merge into the existing host Alloy configuration before the worker cutover.
+// Use its existing journal mounts and Loki destination. Do not add these
+// sources if the host already collects these tags as service="worker".
+loki.source.journal "phoenix_worker_production" {
+  matches = "CONTAINER_TAG=prod-worker"
+  labels = { env = "prod", service = "worker" }
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.source.journal "phoenix_worker_staging" {
+  matches = "CONTAINER_TAG=staging-worker"
+  labels = { env = "staging", service = "worker" }
+  forward_to = [loki.write.default.receiver]
+}

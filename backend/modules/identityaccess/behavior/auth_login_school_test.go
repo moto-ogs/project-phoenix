@@ -101,8 +101,8 @@ func createLehrkraftAccount(t *testing.T, db *bun.DB, service testAuthService, p
 // "account vanished between challenge and exchange" gates.
 const missingAccountID int64 = 999999999
 
-// switchIP / switchUserAgent stand in for the request metadata the handler
-// threads into SwitchSchool. They must be non-empty: generateAndLogTokens
+// switchIP / switchUserAgent stand in for the request metadata the login
+// handlers thread into the session writes. They must be non-empty: generateAndLogTokens
 // skips the audit write entirely when the IP is empty, so passing "" here
 // would make the audit assertions below vacuous.
 const (
@@ -314,47 +314,6 @@ func TestRefreshToken_SchoolScope_RoleRevoked_Rejected(t *testing.T) {
 	var authErr *identityaccess.AuthenticationError
 	require.ErrorAs(t, err, &authErr)
 	assert.ErrorIs(t, authErr.Err, identityaccess.ErrTenantAccessDenied)
-}
-
-func TestSwitchSchool_PortalRoleRequiredAtTarget(t *testing.T) {
-	t.Parallel()
-
-	// A Lehrkraft mapped to two schools can switch only where the portal
-	// role exists: mapping alone (school B without lehrkraft role) is not
-	// enough.
-	db := testpkg.SetupTestDB(t)
-	service := setupAuthService(t, db)
-
-	tenantA, _ := newSchoolTenant(t, db)
-	tenantB, slugB := newSchoolTenant(t, db)
-	_, accountID := createLehrkraftAccount(t, db, service, "school-switch", tenantA)
-
-	testpkg.MapAccountToTenant(t, db, accountID, tenantB)
-
-	t.Run("mapping without portal role at target is refused", func(t *testing.T) {
-		_, _, err := service.SwitchSchool(context.Background(), accountID, slugB, switchIP, switchUserAgent, "")
-		require.Error(t, err)
-		var authErr *identityaccess.AuthenticationError
-		require.ErrorAs(t, err, &authErr)
-		assert.ErrorIs(t, authErr.Err, identityaccess.ErrAccountNoSchoolPortalRole)
-	})
-
-	t.Run("portal role at target switches the pinned school", func(t *testing.T) {
-		testpkg.AssignLehrkraftSystemRole(t, db, accountID, tenantB)
-
-		accessToken, refreshToken, err := service.SwitchSchool(context.Background(), accountID, slugB, switchIP, switchUserAgent, "")
-		require.NoError(t, err)
-		require.NotEmpty(t, refreshToken)
-
-		scope, tokenTenantID := decodeTokenClaims(t, accessToken)
-		assert.Equal(t, schoolScope, scope)
-		assert.Equal(t, tenantB, tokenTenantID)
-
-		// The switch must leave a trace at the TARGET school. Without the
-		// request IP reaching generateAndLogTokens this event is silently
-		// never written — a school switch that nothing records.
-		requireAuthEventEventually(t, db, accountID, tenantB, authEventTenantSwitch)
-	})
 }
 
 func TestLoginSchool_MFARequiredEnrolled_StartsSchoolScopedChallenge(t *testing.T) {
@@ -640,46 +599,6 @@ func TestIssueSchoolTokens_AccountStateGates(t *testing.T) {
 	})
 }
 
-func TestSwitchSchool_AccountStateAndSlugGates(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	service := setupAuthService(t, db)
-
-	tenantID, slug := newSchoolTenant(t, db)
-	_, accountID := createLehrkraftAccount(t, db, service, "school-switch-gates", tenantID)
-
-	t.Run("unknown account", func(t *testing.T) {
-		_, _, err := service.SwitchSchool(context.Background(), missingAccountID, slug, switchIP, switchUserAgent, "")
-
-		require.Error(t, err)
-		var authErr *identityaccess.AuthenticationError
-		require.ErrorAs(t, err, &authErr)
-		assert.ErrorIs(t, authErr.Err, identityaccess.ErrAccountNotFound)
-	})
-
-	t.Run("deactivated account", func(t *testing.T) {
-		setAccountActive(t, db, accountID, false)
-		defer setAccountActive(t, db, accountID, true)
-
-		_, _, err := service.SwitchSchool(context.Background(), accountID, slug, switchIP, switchUserAgent, "")
-
-		require.Error(t, err)
-		var authErr *identityaccess.AuthenticationError
-		require.ErrorAs(t, err, &authErr)
-		assert.ErrorIs(t, authErr.Err, identityaccess.ErrAccountInactive)
-	})
-
-	t.Run("unknown slug", func(t *testing.T) {
-		_, _, err := service.SwitchSchool(context.Background(), accountID, "definitely-no-such-school", switchIP, switchUserAgent, "")
-
-		require.Error(t, err)
-		var authErr *identityaccess.AuthenticationError
-		require.ErrorAs(t, err, &authErr)
-		assert.ErrorIs(t, authErr.Err, identityaccess.ErrTenantNotFound)
-	})
-}
-
 func TestLoginSchool_MFAEnrollmentRequired_MintsSchoolScopedEnrollmentToken(t *testing.T) {
 	t.Parallel()
 
@@ -719,7 +638,7 @@ func TestSchoolTokenMints_RevokedMembership_Refused(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	service := setupAuthService(t, db)
 
-	tenantID, slug := newSchoolTenant(t, db)
+	tenantID, _ := newSchoolTenant(t, db)
 	email, accountID := createLehrkraftAccount(t, db, service, "school-revoked-mapping", tenantID)
 
 	login, err := service.LoginSchoolWithMFAGate(context.Background(), email, testPassword, "", "", "")
@@ -746,15 +665,6 @@ func TestSchoolTokenMints_RevokedMembership_Refused(t *testing.T) {
 		require.Error(t, issueErr)
 		var authErr *identityaccess.AuthenticationError
 		require.ErrorAs(t, issueErr, &authErr)
-		assert.ErrorIs(t, authErr.Err, identityaccess.ErrTenantAccessDenied)
-	})
-
-	t.Run("school switch", func(t *testing.T) {
-		_, _, switchErr := service.SwitchSchool(context.Background(), accountID, slug, switchIP, switchUserAgent, "")
-
-		require.Error(t, switchErr)
-		var authErr *identityaccess.AuthenticationError
-		require.ErrorAs(t, switchErr, &authErr)
 		assert.ErrorIs(t, authErr.Err, identityaccess.ErrTenantAccessDenied)
 	})
 

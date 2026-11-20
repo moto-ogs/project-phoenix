@@ -101,3 +101,10 @@ overrides:
 peerDependencyRules:
   allowedVersions:
     "next-auth>next": ">=14"
+
+# dependency-cruiser loads TypeScript itself, but does not declare it. Keep its
+# parser on the supported TypeScript 6 line while typecheck uses TypeScript 7.
+packageExtensions:
+  dependency-cruiser@18.7.2:
+    dependencies:
+      typescript: 6.0.3

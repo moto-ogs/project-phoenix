@@ -93,10 +93,3 @@ func NewGroupsTestModule(db transactionruntime.Database, unit tenant.UnitOfWork,
 
 	return GroupsTestModule{Education: groups}, ActivePresence{Active: presence}, ActivePeople{Users: persons, People: peopleCompose.NewGroupRoutePeople(persons)}, identity, nil
 }
-
-// NewAttendanceTeacherGroups supplies assignment IDs the way the active route
-// composer did before the presence cutover; the behaviour tests still drive
-// that seam.
-func NewAttendanceTeacherGroups(records education.TeacherGroupRecords) *education.TeacherGroupIDs {
-	return education.NewTeacherGroupIDs(records)
-}

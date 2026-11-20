@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { CoachMark } from "~/components/ui/coach-mark";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import {
   buildHelpGroupHref,
   buildHelpHref,
@@ -26,7 +27,7 @@ import {
 } from "~/lib/school-setup-api";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { staffWithoutTargetHref } from "~/lib/time-account-links";
-import { useNFCEnabled } from "~/lib/tenant-context";
+import { useNFCEnabled, useTenantSlugSafe } from "~/lib/tenant-context";
 import { SetupBeacon, SchoolSetupChecklist } from "./school-setup-checklist";
 import {
   applicableSteps,
@@ -57,9 +58,9 @@ type RunAction = (
 /** Knopf unten rechts oder offene Checkliste. */
 type View = "beacon" | "checklist";
 
-/** Einmal pro Anmeldung öffnet sich der Assistent von selbst. */
-function claimFirstOpen(accountID: string): boolean {
-  const key = `school-setup-opened:${accountID}`;
+/** Einmal pro Anmeldung und Schule öffnet sich der Assistent von selbst. */
+function claimFirstOpen(tenantSlug: string, accountID: string): boolean {
+  const key = `school-setup-opened:${tenantSlug}:${accountID}`;
   try {
     if (sessionStorage.getItem(key)) return false;
     sessionStorage.setItem(key, "1");
@@ -173,12 +174,51 @@ function SchoolSetupWizardForAdmin({
 
   const nextOpen = state ? firstOpenStep(state) : null;
 
-  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf.
+  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf. Das
+  // zählt als angezeigte Fläche des Einstiegs (#7554); klappt die Person sie
+  // danach zum ersten Mal ein oder blendet sie aus, hat sie die Fläche
+  // geschlossen. Abschließen, Überspringen und Ausblenden als Kernaktion
+  // zählt das Backend.
+  const openedByItself = useRef<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
+  const tenantSlug = useTenantSlugSafe();
   useEffect(() => {
-    if (visible && accountID && claimFirstOpen(accountID)) {
-      setView("checklist");
+    const opened = openedByItself.current;
+    if (
+      opened &&
+      (opened.accountID !== accountID || opened.tenantSlug !== tenantSlug)
+    ) {
+      openedByItself.current = null;
     }
-  }, [visible, accountID]);
+    if (
+      visible &&
+      tenantSlug &&
+      accountID &&
+      claimFirstOpen(tenantSlug, accountID)
+    ) {
+      setView("checklist");
+      if (trackOnboardingSurface("shown", "setup_checklist")) {
+        openedByItself.current = { accountID, tenantSlug };
+      }
+    }
+  }, [visible, tenantSlug, accountID]);
+  const closedByPerson = () => {
+    const opened = openedByItself.current;
+    if (
+      !opened ||
+      opened.accountID !== accountID ||
+      opened.tenantSlug !== tenantSlug
+    )
+      return;
+    openedByItself.current = null;
+    trackOnboardingSurface("dismissed", "setup_checklist");
+  };
+  const collapse = () => {
+    closedByPerson();
+    setView("beacon");
+  };
 
   // Aufgeklappt ist der nächste offene Schritt, solange die Person nicht
   // selbst einen anderen gewählt hat. Wird er erledigt, rückt der nächste nach.
@@ -290,7 +330,7 @@ function SchoolSetupWizardForAdmin({
           void run(() => setSchoolSetupStepSkipped(step, skipped))
         }
         onComplete={() => void run(completeSchoolSetup)}
-        onCollapse={() => setView("beacon")}
+        onCollapse={collapse}
         onDismiss={() => setConfirmDismiss(true)}
       />
       {/* Ausblenden ist endgültig: kein Weg zurück in den Einstellungen,
@@ -301,7 +341,10 @@ function SchoolSetupWizardForAdmin({
         onConfirm={() =>
           void run(
             () => setSchoolSetupDismissed(true),
-            () => setConfirmDismiss(false),
+            () => {
+              closedByPerson();
+              setConfirmDismiss(false);
+            },
             // Der Grund steht in der Checkliste; der Dialog davor würde ihn
             // verdecken.
             () => setConfirmDismiss(false),

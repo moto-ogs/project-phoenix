@@ -247,8 +247,8 @@ moves fields across owners that the current code reads from one place:
    `users.guardian_phone_numbers` do, and the backfill's
    `guardian_mismatch_count: 0` gate is what makes losing the columns safe. But
    the four are required fields on the student list and detail wire types
-   (`frontend/src/app/api/students/route.ts`,
-   `frontend/src/app/api/students/[id]/route.ts`), so removing them means either
+   (at the time in the student route files, removed in #2352), so removing
+   them means either
    re-sourcing from the guardian owners or changing the contract and the
    frontend. Split out as
    [#3387](https://github.com/moto-ogs/project-phoenix/issues/3387) so the

@@ -119,24 +119,6 @@ func (s *AccountAuthentication) deleteOrphanedPushBatch(adminCtx context.Context
 	return s.push.DeleteLinks(adminCtx, orphaned)
 }
 
-// ListActiveSessions returns the account's live refresh sessions in the
-// caller's tenant scope.
-func (s *AccountAuthentication) ListActiveSessions(ctx context.Context, accountID int64) ([]identityaccess.ActiveSession, error) {
-	return runFlow(ctx, s.flow(), func(ctx context.Context) ([]identityaccess.ActiveSession, error) {
-		sessions, err := s.sessions.ListAccountSessions(ctx, ports.AccountSessionFilter{AccountID: accountID, Liveness: ports.AccountSessionsLive})
-		if err != nil {
-			return nil, failed("get active tokens", err)
-		}
-		active := make([]identityaccess.ActiveSession, 0, len(sessions))
-		for _, session := range sessions {
-			active = append(active, identityaccess.ActiveSession{
-				ID: session.ID, Expiry: session.Expiry, Mobile: session.Mobile, Identifier: session.Identifier, CreatedAt: session.CreatedAt,
-			})
-		}
-		return active, nil
-	})
-}
-
 // ListSessionIDs returns the identifiers of every session of the account in
 // the caller's tenant scope, for revision fingerprints.
 func (s *AccountAuthentication) ListSessionIDs(ctx context.Context, accountID int64) ([]int64, error) {

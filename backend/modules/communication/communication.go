@@ -141,7 +141,18 @@ type AnnouncementViewDetail struct {
 	AccountEmail string
 	UserName     string
 	SeenAt       time.Time
+	ShownAt      *time.Time
+	DismissedAt  *time.Time
 	Dismissed    bool
+}
+
+// AnnouncementViewer is the authenticated school-session scope that may act
+// on a platform announcement.
+type AnnouncementViewer struct {
+	AccountID int64
+	Roles     []string
+	TenantID  int64
+	OrgID     int64
 }
 
 // Query exposes platform-announcement reads without write authority.
@@ -161,8 +172,8 @@ type Command interface {
 	DeleteAnnouncement(context.Context, int64, int64, net.IP) error
 	PublishAnnouncement(context.Context, int64, int64, net.IP) error
 	UnpublishAnnouncement(context.Context, int64, int64, net.IP) error
-	MarkSeen(context.Context, int64, int64) error
-	MarkDismissed(context.Context, int64, int64) error
+	MarkSeen(context.Context, AnnouncementViewer, int64) error
+	MarkDismissed(context.Context, AnnouncementViewer, int64) error
 }
 
 // Capability is the combined Communication platform-announcement facade.

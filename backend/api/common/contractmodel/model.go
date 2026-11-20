@@ -95,6 +95,9 @@ type Route struct {
 	Multipart bool `json:"multipart,omitempty"`
 	// TooLargeCode is the error code of a multipart body over MaxBodyBytes.
 	TooLargeCode string `json:"too_large_code,omitempty"`
+	// PublicFile says why a file of the portal public may leave without a
+	// session; the proxy serves no other public file.
+	PublicFile string `json:"public_file,omitempty"`
 }
 
 // Key is the route's line in the route catalog.

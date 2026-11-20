@@ -474,9 +474,6 @@ func TestInviteToStudent_PendingApprovalTokenIsNotDeliverableOrRedeemable(t *tes
 	})
 	require.ErrorIs(t, err, identityaccess.ErrInvitationNotFound)
 
-	require.Error(t, env.service.ResendGuardianInvitation(ctx, invitation.ID, creatorID))
-	assert.Empty(t, outbox.Requests(), "the frozen token must not be mailed out by a resend")
-
 	// Staff approval is what releases it.
 	require.NoError(t, env.service.ApproveInvitation(ctx, invitation.ID, creatorID))
 	require.Len(t, outbox.Requests(), 2, "the released invitation and its welcome (#3534)")

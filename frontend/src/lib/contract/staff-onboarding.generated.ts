@@ -28,9 +28,31 @@ export const StaffStatusSchema: z.ZodType<StaffStatus, unknown> = object<StaffSt
   skipped_steps: nullable(arr(str)),
 });
 
+/** Go: schoolsetup.StaffWriteStatus */
+export interface StaffWriteStatus {
+  dismissed: boolean;
+  school_ready: boolean;
+  done_steps: string[] | null;
+  skipped_steps: string[] | null;
+  changed: boolean;
+}
+
+export const StaffWriteStatusSchema: z.ZodType<StaffWriteStatus, unknown> = object<StaffWriteStatus>({
+  dismissed: bool,
+  school_ready: bool,
+  done_steps: nullable(arr(str)),
+  skipped_steps: nullable(arr(str)),
+  changed: bool,
+});
+
 /** Go: schoolsetuphttp.stepStateRequest */
 export interface stepStateRequest {
   state?: string;
+}
+
+/** Query of PUT /api/staff-onboarding/dismissal */
+export interface PutStaffOnboardingDismissalQuery {
+  outcome?: "completed";
 }
 
 export const routes = {
@@ -44,14 +66,15 @@ export const routes = {
     method: "PUT",
     pattern: "/api/staff-onboarding/dismissal",
     portals: ["tenant"],
+    query: ["outcome"],
     request: requestBody<dismissalRequest>(),
-    response: success(StaffStatusSchema),
+    response: success(StaffWriteStatusSchema),
   },
   "PUT /api/staff-onboarding/steps/{step}": {
     method: "PUT",
     pattern: "/api/staff-onboarding/steps/{step}",
     portals: ["tenant"],
     request: requestBody<stepStateRequest>(),
-    response: success(StaffStatusSchema),
+    response: success(StaffWriteStatusSchema),
   },
 } as const;

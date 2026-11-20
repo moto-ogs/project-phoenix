@@ -5,6 +5,7 @@ import {
   fileAnswer,
   instant,
   int64StringOrNumber,
+  multipart,
   noData,
   nullable,
   object,
@@ -54,6 +55,29 @@ export const SharedDocumentSchema: z.ZodType<SharedDocument, unknown> = object<S
   releases: nullable(arr(TraegerDocumentReleaseSchema)),
 });
 
+/** Go: organizationtenancy.TraegerDocument */
+export interface TraegerDocument {
+  id: string;
+  title: string;
+  file_name: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
+  releases: TraegerDocumentRelease[] | null;
+  reads: number;
+}
+
+export const TraegerDocumentSchema: z.ZodType<TraegerDocument, unknown> = object<TraegerDocument>({
+  id: int64StringOrNumber,
+  title: str,
+  file_name: str,
+  content_type: str,
+  size_bytes: safeInt,
+  created_at: instant,
+  releases: nullable(arr(TraegerDocumentReleaseSchema)),
+  reads: safeInt,
+});
+
 /** Go: organizationtenancy.TraegerDocumentGroup */
 export interface TraegerDocumentGroup {
   id: string;
@@ -85,6 +109,11 @@ export interface ReleaseRequest {
   group_id?: number | null;
 }
 
+/** Query of GET /traeger/documents/export */
+export interface GetTraegerDocumentsExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/documents/{id}": {
     method: "DELETE",
@@ -104,17 +133,39 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(SharedDocumentSchema)),
   },
+  "GET /traeger/documents/": {
+    method: "GET",
+    pattern: "/traeger/documents/",
+    portals: ["org"],
+    response: success(z.array(TraegerDocumentSchema)),
+  },
   "GET /traeger/documents/audiences": {
     method: "GET",
     pattern: "/traeger/documents/audiences",
     portals: ["org"],
     response: success(z.array(TraegerDocumentSchoolSchema)),
   },
+  "GET /traeger/documents/export": {
+    method: "GET",
+    pattern: "/traeger/documents/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
+  },
   "GET /traeger/documents/{id}/file": {
     method: "GET",
     pattern: "/traeger/documents/{id}/file",
     portals: ["org"],
     response: fileAnswer,
+  },
+  "POST /traeger/documents/": {
+    method: "POST",
+    pattern: "/traeger/documents/",
+    portals: ["org"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(TraegerDocumentSchema),
   },
   "POST /traeger/documents/{id}/releases": {
     method: "POST",

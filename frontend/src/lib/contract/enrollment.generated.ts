@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   json,
@@ -2285,6 +2286,13 @@ export const routes = {
     pattern: "/api/enrollment/requests/{statusToken}/form-labels",
     portals: ["public"],
     response: success(FormLabelsResponseSchema),
+  },
+  "GET /api/enrollment/requests/{statusToken}/signature-proof": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/signature-proof",
+    portals: ["public"],
+    publicFile: "the status link of the mail is the parents' only credential for their own proof",
+    response: fileAnswer,
   },
   "GET /api/enrollment/schema/": {
     method: "GET",

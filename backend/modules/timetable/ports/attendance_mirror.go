@@ -39,5 +39,4 @@ type MirrorParticipants struct {
 	UpdateAttendanceFromCheckinBatch  func(ctx context.Context, keys []timetable.InstanceStudentKey, at time.Time) error
 	UpdateAttendanceCheckout          func(ctx context.Context, instanceID, studentID int64, at time.Time) error
 	UpdateAttendanceCheckoutBatch     func(ctx context.Context, keys []timetable.InstanceStudentKey, at time.Time) error
-	ReconcileAttendanceInterval       func(ctx context.Context, instanceID, studentID int64, previousIn time.Time, previousOut *time.Time, updatedIn time.Time, updatedOut *time.Time) (bool, error)
 }

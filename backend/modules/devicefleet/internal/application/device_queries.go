@@ -122,17 +122,6 @@ func (s *Service) ListDevicesByID(ctx context.Context, ids []int64) ([]devicefle
 	return devices, err
 }
 
-func (s *Service) CountDevicesByType(ctx context.Context) (map[string]int, error) {
-	var counts map[string]int
-	err := s.runInTenant(ctx, "count_devices_by_type", func(ctx context.Context, stats *domain.OperationStats) error {
-		found, queryStats, err := s.deps.Devices.CountByType(ctx)
-		stats.Add(queryStats)
-		counts = found
-		return err
-	})
-	return counts, err
-}
-
 func (s *Service) IsDeviceOnline(ctx context.Context, device devicefleet.Device) bool {
 	return s.IsDeviceOnlineAt(ctx, device, s.deps.Now())
 }

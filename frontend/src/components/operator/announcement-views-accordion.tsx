@@ -100,36 +100,47 @@ export function AnnouncementViewsAccordion({
             {/* Confirmed users list */}
             {!isLoading && confirmedUsers.length > 0 && (
               <div className="space-y-0 divide-y divide-gray-100">
-                {confirmedUsers.map((detail) => (
-                  <div
-                    key={detail.userId}
-                    className="flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0"
-                  >
-                    <Avatar name={detail.userName} decorative />
+                {confirmedUsers.map((detail) => {
+                  const shownAt =
+                    detail.shownAt ??
+                    (detail.dismissedAt ? null : detail.seenAt);
+                  return (
+                    <div
+                      key={detail.userId}
+                      className="flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0"
+                    >
+                      <Avatar name={detail.userName} decorative />
 
-                    {/* Content */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-sm font-medium text-gray-900">
-                            {detail.userName}
-                          </span>
-                          <time
-                            dateTime={detail.seenAt}
-                            title={new Date(detail.seenAt).toLocaleString(
-                              "de-DE",
-                              { timeZone: "Europe/Berlin" },
+                      {/* Content */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-sm font-medium text-gray-900">
+                              {detail.userName}
+                            </span>
+                            {shownAt ? (
+                              <time
+                                dateTime={shownAt}
+                                title={new Date(shownAt).toLocaleString(
+                                  "de-DE",
+                                  { timeZone: "Europe/Berlin" },
+                                )}
+                                className="text-xs text-gray-500"
+                              >
+                                · {getRelativeTime(shownAt)}
+                              </time>
+                            ) : (
+                              <span className="text-xs text-gray-500">
+                                · Nicht angezeigt
+                              </span>
                             )}
-                            className="text-xs text-gray-500"
-                          >
-                            · {getRelativeTime(detail.seenAt)}
-                          </time>
+                          </div>
+                          <Check className="text-moto-green h-4 w-4" />
                         </div>
-                        <Check className="text-moto-green h-4 w-4" />
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

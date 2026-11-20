@@ -24,11 +24,10 @@ func heartbeatState(t *testing.T, ctx context.Context, db bun.IDB, id int64) (js
 	return row.State, row.LastSeen
 }
 
-func TestRecordDeviceHeartbeatMatchesExistingPingAndJoinsCaller(t *testing.T) {
+func TestRecordDeviceHeartbeatKeepsStateAndJoinsCaller(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	legacy := setupIoTService(t, db)
-	fleet := legacy.Fleet()
+	fleet := setupIoTService(t, db).Fleet()
 	device := testpkg.CreateTestDevice(t, db, "heartbeat-owned-unit")
 	var state json.RawMessage
 	var seen *time.Time
@@ -36,8 +35,8 @@ func TestRecordDeviceHeartbeatMatchesExistingPingAndJoinsCaller(t *testing.T) {
 	require.NoError(t, testpkg.WithTenantTx(t, counter.Context(testpkg.Ctx(t)), db, testpkg.Tenant(t), func(ctx context.Context, tx bun.Tx) error {
 		// Both writes share PostgreSQL's transaction timestamp, including the
 		// existing update_modified_column trigger. Compare every stored column
-		// except last_seen against the existing PingDevice, not a trigger-free row.
-		require.NoError(t, legacy.PingDevice(ctx, device.DeviceID))
+		// except last_seen against a first heartbeat, not a trigger-free row.
+		require.NoError(t, fleet.RecordDeviceHeartbeat(ctx, device.DeviceID))
 		state, seen = heartbeatState(t, ctx, tx, device.ID)
 		counter.Reset()
 		require.NoError(t, fleet.RecordDeviceHeartbeat(ctx, device.DeviceID))
@@ -45,7 +44,7 @@ func TestRecordDeviceHeartbeatMatchesExistingPingAndJoinsCaller(t *testing.T) {
 		return nil
 	}))
 	updated, lastSeen := heartbeatState(t, testpkg.Ctx(t), db, device.ID)
-	assert.JSONEq(t, string(state), string(updated), "new heartbeat must preserve the existing ping, including updated_at")
+	assert.JSONEq(t, string(state), string(updated), "a heartbeat must preserve every other column, including updated_at")
 	require.NotNil(t, lastSeen)
 	assert.NotEqual(t, seen, lastSeen)
 

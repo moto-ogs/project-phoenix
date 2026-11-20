@@ -30,7 +30,7 @@ test('DB pool utilization alert fires, resolves and flags missing pool gauges', 
   writeFileSync(join(dir, 'rules.json'), JSON.stringify({ groups: [{ name: 'pool', rules: [{
     alert: 'DBPoolUtilizationHigh', expr: `(${expression}) > ${threshold}`, for: pending,
   }] }] }));
-  const backend = env => `{job="phoenix-backend-${env}", instance="${env}-server-1:8080", env="${env}", service="server"}`;
+  const backend = (env, service = "server") => `{job="phoenix-${service}-${env}", instance="${env}-${service}-1:8080", env="${env}", service="${service}"}`;
   const frontend = env => `{job="phoenix-frontend-${env}", instance="${env}-frontend-1:3000", env="${env}", service="frontend"}`;
   const alert = (minute, ...labels) => ({ eval_time: `${minute}m`, alertname: 'DBPoolUtilizationHigh', exp_alerts: labels.map(exp_labels => ({ exp_labels })) });
   writeFileSync(join(dir, 'tests.json'), JSON.stringify({
@@ -62,9 +62,9 @@ test('DB pool utilization alert fires, resolves and flags missing pool gauges', 
           { series: `up${backend('prod')}`, values: '1x40' },
           { series: `phoenix_db_max_open_connections${backend('prod')}`, values: '40x40' },
           { series: `phoenix_db_in_use_connections${backend('prod')}`, values: '4x40' },
-          { series: `up${backend('staging')}`, values: '1x40' },
-          { series: `phoenix_db_max_open_connections${backend('staging')}`, values: '_x20 40x20' },
-          { series: `phoenix_db_in_use_connections${backend('staging')}`, values: '_x20 5x20' },
+          { series: `up${backend('staging', 'worker')}`, values: '1x40' },
+          { series: `phoenix_db_max_open_connections${backend('staging', 'worker')}`, values: '_x20 40x20' },
+          { series: `phoenix_db_in_use_connections${backend('staging', 'worker')}`, values: '_x20 5x20' },
         ],
         alert_rule_test: [
           alert(5),

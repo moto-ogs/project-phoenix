@@ -29,9 +29,7 @@ export interface Device {
 /**
  * Maps a device of the contract (`DeviceResponse`; at creation
  * `DeviceCreationResponse` with the one-time key) onto the frontend device.
- * Identifiers arrive as decimal strings through the catalog proxy; the
- * temporary route files of #7563 hand on an already mapped device, which
- * passes unchanged.
+ * Identifiers arrive as decimal strings through the catalog proxy.
  */
 export function mapDeviceResponse(
   data: DeviceResponse | DeviceCreationResponse,

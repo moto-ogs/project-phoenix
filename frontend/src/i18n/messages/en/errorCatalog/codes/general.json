@@ -3,6 +3,7 @@
   "input": "{object} could not be saved. Please check your entries.",
   "permission": "You cannot access {object}. Please contact the school.",
   "request_too_large": "{object} could not be processed. Please delete the cookies of this site in your browser. Then sign in again.",
+  "route_not_found": "{object} could not be processed. There is a new version of moto. Please reload the page.",
   "server": "{object} could not be processed. Please try again later.",
   "unavailable": "{object} is unavailable right now. Please try again."
 }

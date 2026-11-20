@@ -1,4 +1,5 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
+import type { PutStaffOnboardingDismissalQuery } from "./contract/staff-onboarding.generated";
 import { createLogger } from "./logger";
 import { sessionFetch } from "./session-cache";
 
@@ -123,11 +124,21 @@ export function setStaffOnboardingStepState(
   );
 }
 
+/**
+ * Blendet die Checkliste aus. `completed` heißt: die Person hat sie über
+ * „Abschließen“ beendet, nicht vorher über „Ausblenden“. Das liest nur die
+ * Nutzungsanalyse der Schule (#7553); gespeichert wird beides gleich.
+ */
 export function setStaffOnboardingDismissed(
   dismissed: boolean,
+  options: { completed?: boolean } = {},
 ): Promise<StaffOnboardingState> {
+  const query: PutStaffOnboardingDismissalQuery = options.completed
+    ? { outcome: "completed" }
+    : {};
+  const search = query.outcome ? `?outcome=${query.outcome}` : "";
   return put(
-    "/api/staff-onboarding/dismissal",
+    `/api/staff-onboarding/dismissal${search}`,
     { dismissed },
     "dismiss_staff_onboarding_failed",
   );
