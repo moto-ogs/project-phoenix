@@ -25971,6 +25971,13 @@
           }
         },
         {
+          "name": "shown_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
           "name": "dismissed",
           "schema": {
             "kind": "bool"

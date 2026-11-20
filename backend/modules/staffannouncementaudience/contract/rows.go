@@ -30,6 +30,7 @@ type ViewDetail struct {
 	AccountEmail string
 	UserName     string
 	SeenAt       time.Time
+	ShownAt      *time.Time
 	Dismissed    bool
 }
 type Stats struct {

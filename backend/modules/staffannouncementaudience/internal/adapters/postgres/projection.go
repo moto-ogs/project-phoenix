@@ -242,18 +242,19 @@ func (p *Projection) ViewDetails(ctx context.Context, announcementID int64) ([]c
 		return nil, contract.Stats{}, err
 	}
 	var rows []struct {
-		UserID       int64     `bun:"user_id"`
-		AccountEmail string    `bun:"account_email"`
-		UserName     string    `bun:"user_name"`
-		SeenAt       time.Time `bun:"seen_at"`
-		Dismissed    bool      `bun:"dismissed"`
+		UserID       int64      `bun:"user_id"`
+		AccountEmail string     `bun:"account_email"`
+		UserName     string     `bun:"user_name"`
+		SeenAt       time.Time  `bun:"seen_at"`
+		ShownAt      *time.Time `bun:"shown_at"`
+		Dismissed    bool       `bun:"dismissed"`
 	}
 	stats := contract.Stats{Queries: 1}
 	started := time.Now()
-	err = db.NewRaw(`SELECT user_id, account_email, user_name, seen_at, dismissed
+	err = db.NewRaw(`SELECT user_id, account_email, user_name, seen_at, shown_at, dismissed
 		FROM (
 			SELECT DISTINCT ON (v.user_id) v.user_id, acc.email AS account_email,
-				acc.email AS user_name, v.seen_at, v.dismissed
+				acc.email AS user_name, v.seen_at, v.shown_at, v.dismissed
 			FROM platform.announcement_views v
 			JOIN auth.accounts acc ON acc.id = v.user_id
 			WHERE v.announcement_id = ?
@@ -268,7 +269,7 @@ func (p *Projection) ViewDetails(ctx context.Context, announcementID int64) ([]c
 	for _, row := range rows {
 		result = append(result, contract.ViewDetail{
 			UserID: row.UserID, AccountEmail: row.AccountEmail, UserName: row.UserName,
-			SeenAt: row.SeenAt, Dismissed: row.Dismissed,
+			SeenAt: row.SeenAt, ShownAt: row.ShownAt, Dismissed: row.Dismissed,
 		})
 	}
 	return result, stats, nil

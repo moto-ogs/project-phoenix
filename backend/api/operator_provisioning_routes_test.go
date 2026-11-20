@@ -347,13 +347,15 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	assert.Equal(t, announcement.ID, stats.AnnouncementID)
 	assert.Equal(t, 1, stats.SeenCount)
 	var views []struct {
-		UserID   int64  `json:"user_id"`
-		UserName string `json:"user_name"`
+		UserID   int64   `json:"user_id"`
+		UserName string  `json:"user_name"`
+		ShownAt  *string `json:"shown_at"`
 	}
 	f.call(t, http.MethodGet, base+"/views", nil, &views)
 	require.Len(t, views, 1)
 	assert.Equal(t, viewer.ID, views[0].UserID)
 	assert.Equal(t, "Route Leserin", views[0].UserName)
+	assert.NotNil(t, views[0].ShownAt)
 }
 
 // The review of unregistered RFID scans lists a Träger's open scans and,

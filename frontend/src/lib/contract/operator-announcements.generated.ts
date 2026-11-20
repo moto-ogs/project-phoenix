@@ -73,6 +73,7 @@ export interface AnnouncementViewDetailResponse {
   user_id: string;
   user_name: string;
   seen_at: string;
+  shown_at: string | null;
   dismissed: boolean;
 }
 
@@ -80,6 +81,7 @@ export const AnnouncementViewDetailResponseSchema: z.ZodType<AnnouncementViewDet
   user_id: int64StringOrNumber,
   user_name: str,
   seen_at: str,
+  shown_at: nullable(str),
   dismissed: bool,
 });
 

@@ -243,7 +243,7 @@ func (s *Store) ViewStats(ctx context.Context, announcementID int64) (communicat
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewRaw(`SELECT
-		COALESCE(SUM(CASE WHEN seen_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS seen_count,
+		COALESCE(SUM(CASE WHEN shown_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS seen_count,
 		COALESCE(SUM(CASE WHEN dismissed = true THEN 1 ELSE 0 END), 0) AS dismissed_count
 		FROM platform.announcement_views WHERE announcement_id = ?`, announcementID).
 		Scan(ctx, &result.SeenCount, &result.DismissedCount)

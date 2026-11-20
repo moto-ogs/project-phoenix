@@ -141,6 +141,7 @@ type AnnouncementViewDetail struct {
 	AccountEmail string
 	UserName     string
 	SeenAt       time.Time
+	ShownAt      *time.Time
 	Dismissed    bool
 }
 

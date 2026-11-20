@@ -905,10 +905,11 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	t.Parallel()
 
 	now := operatorTestNow
+	shownAt := now
 	mock := &mockAnnouncementService{
 		getViewDetailsFn: func(_ context.Context, _ int64) ([]*platform.AnnouncementViewDetail, error) {
 			return []*platform.AnnouncementViewDetail{
-				{UserID: 10, UserName: "Max Mustermann", SeenAt: now, Dismissed: false},
+				{UserID: 10, UserName: "Max Mustermann", SeenAt: now, ShownAt: &shownAt, Dismissed: false},
 				{UserID: 20, UserName: "Erika Muster", SeenAt: now, Dismissed: true},
 			}, nil
 		},
@@ -926,9 +927,11 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	assert.Equal(t, float64(10), first["user_id"])
 	assert.Equal(t, "Max Mustermann", first["user_name"])
 	assert.NotEmpty(t, first["seen_at"])
+	assert.Equal(t, shownAt.Format(time.RFC3339), first["shown_at"])
 	assert.Equal(t, false, first["dismissed"])
 
 	second := data[1].(map[string]any)
+	assert.Nil(t, second["shown_at"])
 	assert.Equal(t, true, second["dismissed"])
 }
 
