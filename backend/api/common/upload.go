@@ -5,12 +5,14 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 	"path/filepath"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/api/common/imagemeta"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // AllowedImageTypes maps MIME types detected by http.DetectContentType to allowed image formats.
@@ -198,13 +200,6 @@ func SavePrivateNamedFile(file io.Reader, targetDir, filename string, uploads Up
 	return uploads.SaveNamed(file, targetDir, filename, true)
 }
 
-// ServeFile serves a file from baseDir, validating the path stays within baseDir.
-// If baseDir is relative (e.g. "public/uploads/..."), it is resolved via ResolvePublicDir.
-// cacheControl sets the Cache-Control header (e.g. "private, max-age=86400" or "public, max-age=86400").
-func ServeFile(w http.ResponseWriter, r *http.Request, baseDir, filename, cacheControl string, uploads UploadStorage) {
-	servePublicFile(w, r, baseDir, filename, cacheControl, uploads)
-}
-
 // ServeImage serves an image file from baseDir, validating the path stays within baseDir.
 // If baseDir is relative (e.g. "public/uploads/..."), it is resolved via ResolvePublicDir.
 // cacheControl sets the Cache-Control header (e.g. "private, max-age=86400" or "public, max-age=86400").
@@ -213,6 +208,14 @@ func ServeImage(w http.ResponseWriter, r *http.Request, baseDir, filename, cache
 }
 
 func servePublicFile(w http.ResponseWriter, r *http.Request, baseDir, filename, cacheControl string, uploads UploadStorage) {
+	serveStoredFile(w, r, baseDir, filename, uploads, func(header http.Header) {
+		header.Set("Cache-Control", cacheControl)
+	})
+}
+
+// serveStoredFile opens a stored file and, once it opened, lets headers
+// set its answer's headers. A name with a path or a missing file is 404.
+func serveStoredFile(w http.ResponseWriter, r *http.Request, baseDir, filename string, uploads UploadStorage, headers func(http.Header)) {
 	if err := ValidateFilename(filename); err != nil {
 		RenderStatus(w, r, http.StatusNotFound, "")
 		return
@@ -229,8 +232,53 @@ func servePublicFile(w http.ResponseWriter, r *http.Request, baseDir, filename, 
 		}
 	}()
 
-	w.Header().Set("Cache-Control", cacheControl)
+	headers(w.Header())
 	http.ServeContent(w, r, filename, modifiedAt, file)
+}
+
+// PublicAsset says what a public upload folder hands out (#2352): the MIME
+// types its files may have by their extension, and whether the answer names
+// the file for inline display. The frontend server checked both before the
+// files went through the catalog proxy.
+type PublicAsset struct {
+	Types  map[string]bool
+	Inline bool
+}
+
+var (
+	// PublicImageAsset is a school's login image: the formats an image
+	// upload stores, GIF for images stored before re-encoding. No SVG.
+	PublicImageAsset = PublicAsset{Types: map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true, "image/gif": true}}
+	// PublicPDFAsset is a school's legal text, shown inline.
+	PublicPDFAsset = PublicAsset{Types: AllowedPDFTypes, Inline: true}
+)
+
+// ServePublicAsset serves a file of a public upload folder with
+// FileCachePublicAsset, its type named by its extension. A file of another
+// type is 404, like a missing one: the folder holds nothing else.
+func ServePublicAsset(w http.ResponseWriter, r *http.Request, baseDir, filename string, asset PublicAsset, uploads UploadStorage) {
+	contentType := assetType(filename)
+	if !asset.Types[contentType] {
+		RenderStatus(w, r, http.StatusNotFound, "")
+		return
+	}
+	serveStoredFile(w, r, baseDir, filename, uploads, func(header http.Header) {
+		header.Set("Content-Type", contentType)
+		header.Set("X-Content-Type-Options", "nosniff")
+		if asset.Inline {
+			header.Set("Content-Disposition", textnorm.ContentDisposition("inline", filename))
+		}
+		header.Set("Cache-Control", FileCachePublicAsset)
+	})
+}
+
+// assetType is the media type a file's extension names, without parameters.
+func assetType(filename string) string {
+	mediaType, _, err := mime.ParseMediaType(mime.TypeByExtension(strings.ToLower(filepath.Ext(filename))))
+	if err != nil {
+		return ""
+	}
+	return mediaType
 }
 
 // ValidateFilename rejects filenames containing path traversal characters.

@@ -278,3 +278,52 @@ trägt die Version der Datei; ohne Cache lädt jede Liste jedes Bild neu.
 - Der Grenzfall „eigener Cache-Header für ein Logo“ ist damit keine eigene
   Datei mehr.
 
+
+## Nachtrag vom 2026-11-20: Cache je Datei-Route und Abo-Adressen
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Sechs
+Routendateien blieben, weil sie einen eigenen Cache-Header setzten: die
+Kalender- und Anfrage-Abos (`/api/calendar-feed/{token}`,
+`/api/request-feed/{token}`), Login-Bild und Rechtstexte der Anmeldung
+(`/api/public/…`) und das Kinderfoto mit 304. Die Grenzen der beiden
+vorigen Nachträge („eigener Cache-Header“, „Prüfung im BFF“) gelten für
+diese Fälle nicht mehr.
+
+### Entscheidung
+
+1. **Ein Cache ist ein Merkmal der Route.** `common.RouteContract.FileCache`
+   nennt den Cache-Control-Wert, den der Proxy auf einer ausgelieferten
+   Datei behält (2xx, auf einer `ConditionalGet`-Route auch 304). Die Werte
+   sind eine geschlossene Liste (`contractmodel.FileCacheValues`):
+   `public, max-age=86400` (öffentliche Datei ohne Personendaten),
+   `private, max-age=3600` (Abo-Feed), `private, max-age=86400, immutable`
+   (Foto hinter einer Upload-URL). Der Generator lehnt einen anderen Wert ab,
+   das Merkmal an einer Nicht-Datei oder einem Upload und einen
+   `public`-Wert ohne `PublicFile`. Der Proxy führt dieselbe Liste und
+   behält einen `public`-Wert nur auf einer markierten öffentlichen Datei.
+   Ablehnungen, Sitzungsfehler und Backend-Fehler bleiben `private,
+   no-store`. Der Handler sendet denselben Wert (`common.FileCache*`).
+2. **Ein bedingter GET ist ein Merkmal der Route.** `ConditionalGet` (nur
+   GET-Datei mit `FileCache`) reicht `If-None-Match` und
+   `If-Modified-Since` durch und gibt ein 304 mit `ETag`, `Last-Modified`
+   und dem Cache der Route zurück; auf 200 gehen beide Validatoren mit.
+   Andere Routen erhalten keinen bedingten Header.
+3. **Prüfungen des BFF liegen im Backend.** Die öffentlichen
+   Upload-Ordner liefern über `common.ServePublicAsset` nur ihre Art aus:
+   der Typ folgt der Endung, PDF für die Rechtstexte (inline mit Namen),
+   JPEG/PNG/WebP/GIF für das Login-Bild (kein SVG), mit `nosniff`; eine
+   andere Art ist 404 wie eine fehlende Datei, ein Name mit Pfad ebenso.
+4. **Eine Abo-Adresse bleibt, der Pfad ist der des Backends.** Kalender-
+   Apps und RSS-Leser behalten die Adresse vom Tag des Abos. Ein
+   `beforeFiles`-Rewrite in `next.config.js` führt
+   `/api/calendar-feed/:token` auf `/api/public/calendar/:token` und
+   `/api/request-feed/:token` auf `/api/public/request-feed/:token`; dort
+   antwortet der Katalog wie auf jede öffentliche Datei. `src/proxy.ts`
+   prüft den Host vorher an der alten Adresse; die Log-Redaction im BFF und
+   im Backend kannte beide Pfade schon.
+
+### Grenzen
+
+- Ein neuer Cache-Wert braucht einen Nachtrag und einen Eintrag in beiden
+  Listen.
+- Ein Upload ohne Sitzung bleibt Gegenstand eines eigenen Nachtrags.
