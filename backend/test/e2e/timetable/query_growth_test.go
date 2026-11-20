@@ -19,7 +19,7 @@ func TestPopulatedTimetableRequestGrowthQueryBudgets(t *testing.T) {
 			testpkg.OwnTenant(t)
 			testpkg.SetupIsolatedTestDB(t)
 			s := setupTimetableScenarioModule(t)
-			// Exception conflicts accept only today or later; the template runs on Mondays.
+			// The template runs on Mondays.
 			target := s.plannableWeekday(1, 7)
 			s.createActivePeriod(fmt.Sprintf("Growth %d", n), target)
 			room := testpkg.CreateTestRoom(t, s.db, "Growth room")
@@ -34,45 +34,6 @@ func TestPopulatedTimetableRequestGrowthQueryBudgets(t *testing.T) {
 			materialized := s.do(http.MethodPost, "/materialize", map[string]any{"from_date": target.String(), "to_date": target.String()}, s.primaryAdminClaims())
 			require.Equal(t, http.StatusOK, materialized.Code, materialized.Body.String())
 			counter := testpkg.CaptureQueries(t, s.db)
-			var exceptionID int64
-			for _, modified := range []bool{false, true} {
-				kind, scenario := "cancelled", "e2e.timetable.exception_conflicts.cancelled"
-				start := parseHHMM(t, "12:30")
-				exception := &testpkg.ActivityException{ActivityGroupID: template.group.ID, ExceptionDate: testpkg.ScheduleDate(target), ExceptionType: testpkg.ScheduleExceptionCancelled}
-				if modified {
-					kind = "modified"
-					scenario = "e2e.timetable.exception_conflicts.modified"
-					exception.ExceptionType = testpkg.ScheduleExceptionModified
-					exception.StartTime = &start
-				}
-				exception.TenantID = s.primaryTenant
-				if exceptionID != 0 {
-					_, err := s.db.NewDelete().Model((*testpkg.ActivityException)(nil)).ModelTableExpr("schedule.activity_exceptions").Where("id = ?", exceptionID).Where("tenant_id = ?", s.primaryTenant).Exec(s.tenantCtx())
-					require.NoError(t, err)
-				}
-				_, err := s.db.NewInsert().Model(exception).ModelTableExpr("schedule.activity_exceptions").Exec(s.tenantCtx())
-				require.NoError(t, err)
-				exceptionID = exception.ID
-				counter.Reset()
-				response := s.do(http.MethodGet, fmt.Sprintf("/exception-conflicts?date=%s&date_to=%s", target, target), nil, s.primaryAdminClaims())
-				require.Equal(t, http.StatusOK, response.Code, response.Body.String())
-				var body struct {
-					Conflicts []struct {
-						StudentID int64 `json:"student_id"`
-					}
-				}
-				decodeResponse(t, response, &body)
-				require.Len(t, body.Conflicts, n, kind)
-				require.Zero(t, counter.WriteRows(), "read request must not write")
-				queries := counter.Measurement(counter.Queries())
-				if n == 3 {
-					counts[scenario] = len(queries.Statements)
-				} else {
-					require.Equal(t, counts[scenario], len(queries.Statements), scenario)
-				}
-				t.Logf("%s N%d statements=%d", scenario, n, len(queries.Statements))
-				querybudgets.AssertQueryBudget(t, scenario, queries)
-			}
 			for i := 1; i < n; i++ {
 				instance := testpkg.CreateTestActivityInstance(t, s.db, target.AddDays(i), room.ID, testpkg.ActivityInstanceOpts{ActivityGroupID: &template.group.ID})
 				testpkg.CreateTestInstanceStudent(t, s.db, instance.ID, students[0], testpkg.ScheduleAttendanceStatusExpected)

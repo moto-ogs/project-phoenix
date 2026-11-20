@@ -17,7 +17,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/", Portals: portals, Request: TransitionRequest{}, Response: transition},
 		{Method: "GET", Pattern: "/classes", Portals: portals, Response: []string{}},
 		{Method: "GET", Pattern: "/suggest", Portals: portals, Response: []SuggestedMappingResponse{}},
-		{Method: "GET", Pattern: "/{id}/", Portals: portals, Response: transition},
+		{Method: "GET", Pattern: "/{id}/", Portals: portals, Response: transition, Deprecated: true},
 		{Method: "PUT", Pattern: "/{id}/", Portals: portals, Request: TransitionRequest{}, Response: transition},
 		{Method: "DELETE", Pattern: "/{id}/", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/{id}/preview", Portals: portals, Response: TransitionPreviewResponse{}},

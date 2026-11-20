@@ -272,11 +272,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromInstanceLifecycle.AcknowledgeUnderstaffed",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromInstanceLifecycle.AnnounceStaffingChanged",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1408,11 +1403,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/internal/application/Service.EnsureInstanceStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/internal/application/Service.FindTemplateStartTimes",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

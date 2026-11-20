@@ -36,8 +36,8 @@ func RouteContracts() []apiCommon.RouteContract {
 			{Name: "replacement_staff_id", Kind: apiCommon.QueryID},
 		}, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/students/{studentId}", Portals: portals, NoData: true},
-		{Method: "GET", Pattern: "/{id}/schedules", Portals: portals, Response: []ActivityScheduleResponse{}},
-		{Method: "GET", Pattern: routeScheduleByID, Portals: portals, Response: ActivityScheduleResponse{}},
+		{Method: "GET", Pattern: "/{id}/schedules", Portals: portals, Deprecated: true, Response: []ActivityScheduleResponse{}},
+		{Method: "GET", Pattern: routeScheduleByID, Portals: portals, Deprecated: true, Response: ActivityScheduleResponse{}},
 	}
 }
 

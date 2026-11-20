@@ -20,6 +20,26 @@
     "issue": 7301
   },
   {
+    "scenario": "api.activities.student_available.complete",
+    "route": "GET /api/activities/students/{studentId}/available",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.activities.timespans",
+    "route": "GET /api/activities/timespans",
+    "issue": 2352
+  },
+  {
+    "scenario": "e2e.timetable.exception_conflicts.cancelled",
+    "route": "GET /api/timetable/exception-conflicts",
+    "issue": 2352
+  },
+  {
+    "scenario": "e2e.timetable.exception_conflicts.modified",
+    "route": "GET /api/timetable/exception-conflicts",
+    "issue": 2352
+  },
+  {
     "scenario": "api.iot.devices.list.type",
     "route": "GET /api/iot/type/{type}",
     "issue": 2352

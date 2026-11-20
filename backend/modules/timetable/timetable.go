@@ -147,7 +147,6 @@ type CareExitEnrollmentRemoval struct {
 type ScheduleQuery interface {
 	FindSchedule(context.Context, int64) (Schedule, error)
 	ListSchedules(context.Context, ScheduleFilter) ([]Schedule, error)
-	FindTemplateStartTimes(context.Context, []int64) ([]TemplateStartTime, error)
 }
 
 type CourseGroupQuery interface {
