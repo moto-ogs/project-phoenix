@@ -42,12 +42,17 @@ type MessageAttachmentFiles interface {
 // building the routes opens no storage.
 type MessageAttachmentFileStorage func() (MessageAttachmentFiles, error)
 
+// MessageAttachmentBodyBytes bounds the multipart body of one attachment of
+// maxFileSize: the file and its multipart frame. The portal's proxy refuses a
+// larger body before the backend (#2352).
+func MessageAttachmentBodyBytes(maxFileSize int64) int64 { return maxFileSize + 4096 }
+
 // ParseMessageAttachment reads the multipart field "file" as one attachment:
 // PDF, PNG, JPEG, DOCX, XLSX or PPTX by content, the extension naming that
 // content. An image comes back without Exif, GPS and other metadata and with
 // its pixel size; the size is measured from the bytes that will be stored.
 func ParseMessageAttachment(w http.ResponseWriter, r *http.Request, maxFileSize int64) (*MessageAttachmentUpload, error) {
-	uploaded, err := ParseOfficeFileWithLimits(w, r, "file", maxFileSize, maxFileSize+4096)
+	uploaded, err := ParseOfficeFileWithLimits(w, r, "file", maxFileSize, MessageAttachmentBodyBytes(maxFileSize))
 	if err != nil {
 		return nil, err
 	}

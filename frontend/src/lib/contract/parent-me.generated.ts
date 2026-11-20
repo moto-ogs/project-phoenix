@@ -4,10 +4,12 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
   int64StringOrNumber,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -2348,6 +2350,25 @@ export interface PostMessageRequest {
   audience?: string;
 }
 
+/** Go: parent.messageAttachmentResponse */
+export interface messageAttachmentResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  width?: number;
+  height?: number;
+}
+
+export const messageAttachmentResponseSchema: z.ZodType<messageAttachmentResponse, unknown> = object<messageAttachmentResponse>({
+  id: int64String,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  width: optional(safeInt),
+  height: optional(safeInt),
+});
+
 /** Go: parentauth.ParentMFAChallengeResponse */
 export interface ParentMFAChallengeResponse {
   challenge_token: string;
@@ -2633,6 +2654,11 @@ export interface GetParentMeChildrenStudentIdSickNoteQuery {
 /** Query of GET /parent/me/messages/children/{studentId} */
 export interface GetParentMeMessagesChildrenStudentIdQuery {
   audience?: string;
+}
+
+/** Query of GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download */
+export interface GetParentMeMessagesChildrenStudentIdAttachmentsAttachmentIdDownloadQuery {
+  inline?: string;
 }
 
 /** Query of GET /parent/me/news/{announcementId}/declaration/proof */
@@ -2933,6 +2959,13 @@ export const routes = {
     query: ["audience"],
     response: success(ThreadViewResponseSchema),
   },
+  "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download": {
+    method: "GET",
+    pattern: "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+    portals: ["parent"],
+    query: ["inline"],
+    response: fileAnswer,
+  },
   "GET /parent/me/messages/children/{studentId}/threads": {
     method: "GET",
     pattern: "/parent/me/messages/children/{studentId}/threads",
@@ -3161,6 +3194,15 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<PostMessageRequest>(),
     response: success(ThreadViewResponseSchema),
+  },
+  "POST /parent/me/messages/children/{studentId}/attachments": {
+    method: "POST",
+    pattern: "/parent/me/messages/children/{studentId}/attachments",
+    portals: ["parent"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(messageAttachmentResponseSchema),
   },
   "POST /parent/me/mfa/disable": {
     method: "POST",

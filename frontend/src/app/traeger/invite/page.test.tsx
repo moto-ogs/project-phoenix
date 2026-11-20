@@ -201,6 +201,27 @@ describe("TraegerInvitePage", () => {
     expect(screen.queryByText(/Deine Schule/)).not.toBeInTheDocument();
   });
 
+  it("starts a new member without the dashboard right on the school list (#7646)", async () => {
+    mocks.fetchTraegerInvitation.mockResolvedValue(PREVIEW);
+    mocks.acceptTraegerInvitation.mockResolvedValue("neu@traeger.example");
+    mocks.traegerLogin.mockResolvedValue({ status: "authenticated" });
+    mocks.getSession.mockResolvedValue(sessionWith("traeger_billing:manage"));
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText("Neues Passwort"), {
+      target: { value: "Sicher1234%" },
+    });
+    fireEvent.change(screen.getByLabelText("Passwort wiederholen"), {
+      target: { value: "Sicher1234%" },
+    });
+    fireEvent.change(screen.getByLabelText(/Dein Name/), {
+      target: { value: "Eva Müller" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Einladung annehmen" }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/"));
+  });
+
   // Quorum #4937: the link is spent once accepted; a failed sign-in must not
   // offer to accept it again.
   it("sends the person to the login when the sign-in after acceptance fails", async () => {

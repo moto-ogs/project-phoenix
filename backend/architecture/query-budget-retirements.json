@@ -313,5 +313,10 @@
     "scenario": "api.feedback.date_range.positive_growth",
     "route": "GET /api/feedback/date-range",
     "issue": 2352
+  },
+  {
+    "scenario": "operator.lists.passkeys_slash",
+    "route": "GET /operator/auth/passkeys/",
+    "issue": 2352
   }
 ]

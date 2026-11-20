@@ -35,6 +35,7 @@ import {
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
+import { TraegerRequiredDetailsNotice } from "~/components/traeger/traeger-required-details-notice";
 import {
   traegerExportScope,
   useTraegerListExportItems,
@@ -542,6 +543,8 @@ export default function TraegerDashboardPage() {
           : undefined
       }
     >
+      {/* Fehlende Pflichtangaben stehen ganz oben (#7177, #7646). */}
+      <TraegerRequiredDetailsNotice />
       {refreshFailed && snapshot ? (
         // Bestätigte Zahlen bleiben stehen; der Hinweis sagt, wie alt sie sind.
         <Alert
