@@ -2,7 +2,9 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 )
 
@@ -56,13 +58,13 @@ func (s seedFamilyAppAccountsStep) Run(ctx context.Context, rt *Runtime) error {
 	// The approval's own link is stored as hash only (#4902) and reaches
 	// nobody but the parent's mailbox: the seeder accepts a fresh invitation
 	// of the same guardian, issued through the seed-only token exposure.
-	if err := forEachParallel(rt, invitations, func(worker *Runtime, _ int, invitation enrollmentInvitation) error {
-		token, err := step.inviteGuardian(worker, adminAuth, invitation.GuardianProfileID)
+	if err := forEachParallel(rt, invitations, func(worker *Runtime, _ int, guardianID int64) error {
+		token, err := step.inviteGuardian(worker, adminAuth, guardianID)
 		if err != nil {
-			return fmt.Errorf("invite guardian %d: %w", invitation.GuardianProfileID, err)
+			return fmt.Errorf("invite guardian %d: %w", guardianID, err)
 		}
 		if _, err := step.acceptGuardianInvitation(worker, token, password); err != nil {
-			return fmt.Errorf("accept guardian invitation %d: %w", invitation.GuardianProfileID, err)
+			return fmt.Errorf("accept guardian invitation %d: %w", guardianID, err)
 		}
 		return nil
 	}); err != nil {
@@ -158,49 +160,78 @@ func familyAppGuardianIndexes(guardianIDs map[string]int64, parents []ParentCred
 	return result, nil
 }
 
-type enrollmentInvitation struct {
-	ID                int64 `json:"id"`
-	GuardianProfileID int64 `json:"guardian_profile_id"`
+// enrollmentInvitationsToAccept returns the guardians with a redeemable
+// invitation who get an account, keeping two guardians' invitations open for
+// the demo overview. It reads them where the school sees them: the guardian
+// list of each child marks an open invitation as "pending".
+func enrollmentInvitationsToAccept(rt *Runtime, auth AuthRef) ([]int64, error) {
+	studentIDs, err := listSchoolStudentIDs(rt, auth)
+	if err != nil {
+		return nil, err
+	}
+	pending := map[int64]bool{}
+	for _, studentID := range studentIDs {
+		raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/guardians/students/%d/guardians", studentID))
+		if err != nil {
+			return nil, fmt.Errorf("list guardians of student %d: %w", studentID, err)
+		}
+		var resp struct {
+			Data []struct {
+				Guardian struct {
+					ID json.Number `json:"id"`
+				} `json:"guardian"`
+				AccountStatus string `json:"account_status"`
+			} `json:"data"`
+		}
+		if err := parseJSON(raw, &resp); err != nil {
+			return nil, fmt.Errorf("parse guardians of student %d: %w", studentID, err)
+		}
+		for _, row := range resp.Data {
+			if row.AccountStatus != "pending" {
+				continue
+			}
+			guardianID, err := row.Guardian.ID.Int64()
+			if err != nil {
+				return nil, fmt.Errorf("parse guardian of student %d: %w", studentID, err)
+			}
+			pending[guardianID] = true
+		}
+	}
+	guardianIDs := slices.Sorted(maps.Keys(pending))
+	if len(guardianIDs) <= openInvitationsKept {
+		return []int64{}, nil
+	}
+	return guardianIDs[openInvitationsKept:], nil
 }
 
-// enrollmentInvitationsToAccept returns the redeemable invitations whose
-// guardians get an account, keeping two guardians' invitations open for the
-// demo overview.
-func enrollmentInvitationsToAccept(rt *Runtime, auth AuthRef) ([]enrollmentInvitation, error) {
-	raw, err := rt.Client.GetWithAuth(auth, "/api/guardians/invitations/pending")
-	if err != nil {
-		return nil, fmt.Errorf("list open guardian invitations: %w", err)
-	}
-	var resp struct {
-		Data []enrollmentInvitation `json:"data"`
-	}
-	if err := parseJSON(raw, &resp); err != nil {
-		return nil, fmt.Errorf("parse open guardian invitations: %w", err)
-	}
-	slices.SortFunc(resp.Data, func(left, right enrollmentInvitation) int {
-		switch {
-		case left.GuardianProfileID < right.GuardianProfileID:
-			return -1
-		case left.GuardianProfileID > right.GuardianProfileID:
-			return 1
-		case left.ID < right.ID:
-			return -1
-		case left.ID > right.ID:
-			return 1
-		default:
-			return 0
+// listSchoolStudentIDs reads the IDs of every child of the school.
+func listSchoolStudentIDs(rt *Runtime, auth AuthRef) ([]int64, error) {
+	var ids []int64
+	for page := 1; ; page++ {
+		raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/students?page=%d&page_size=500", page))
+		if err != nil {
+			return nil, fmt.Errorf("list students: %w", err)
 		}
-	})
-	keptGuardians := make(map[int64]bool, openInvitationsKept)
-	result := make([]enrollmentInvitation, 0, len(resp.Data))
-	for _, invitation := range resp.Data {
-		if len(keptGuardians) < openInvitationsKept {
-			keptGuardians[invitation.GuardianProfileID] = true
+		var resp struct {
+			Data []struct {
+				ID json.Number `json:"id"`
+			} `json:"data"`
+			Pagination struct {
+				TotalPages int `json:"total_pages"`
+			} `json:"pagination"`
 		}
-		if keptGuardians[invitation.GuardianProfileID] {
-			continue
+		if err := parseJSON(raw, &resp); err != nil {
+			return nil, fmt.Errorf("parse students: %w", err)
 		}
-		result = append(result, invitation)
+		for _, row := range resp.Data {
+			id, err := row.ID.Int64()
+			if err != nil {
+				return nil, fmt.Errorf("parse student id %q: %w", row.ID, err)
+			}
+			ids = append(ids, id)
+		}
+		if len(resp.Data) == 0 || page >= resp.Pagination.TotalPages {
+			return ids, nil
+		}
 	}
-	return result, nil
 }

@@ -55,8 +55,10 @@ func (seedAnnouncementsStep) Run(ctx context.Context, rt *Runtime) error {
 	}
 	if firstAnnouncementID != 0 {
 		rt.Client.BindAuth(rt.TenantAuth)
-		if _, err := rt.Client.Post(fmt.Sprintf("/api/platform/announcements/%d/seen", firstAnnouncementID), nil); err != nil {
-			return fmt.Errorf("mark operator announcement seen: %w", err)
+		// The staff member closes the banner as the app does, which the
+		// operator's statistics count as seen and dismissed.
+		if _, err := rt.Client.Post(fmt.Sprintf("/api/platform/announcements/%d/dismiss", firstAnnouncementID), nil); err != nil {
+			return fmt.Errorf("dismiss operator announcement: %w", err)
 		}
 	}
 

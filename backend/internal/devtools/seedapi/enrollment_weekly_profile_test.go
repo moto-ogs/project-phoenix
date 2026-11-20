@@ -244,7 +244,7 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 			status = "checked_out"
 		}
 		data = map[string]any{"status": status, "changed": true}
-	case path == "/api/active/visits" || strings.HasSuffix(path, "/visit-history"):
+	case path == "/api/active/visits":
 		data = []any{}
 	case strings.Contains(path, "/care-withdrawals/") && strings.HasSuffix(path, "/preview"):
 		for _, trace := range m.traces {

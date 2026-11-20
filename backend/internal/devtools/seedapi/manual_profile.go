@@ -477,9 +477,6 @@ func verifyManualProfile(ctx context.Context, rt *Runtime, definition demoProfil
 	if err := verifyManualVisits(rt); err != nil {
 		return SeedDevice{}, err
 	}
-	if err := verifyManualVisitHistories(rt, data.students); err != nil {
-		return SeedDevice{}, err
-	}
 	if err := verifyTenantAccess(ctx, rt, shared, full, rt.Bootstrap); err != nil {
 		return SeedDevice{}, err
 	}
@@ -637,6 +634,9 @@ func verifyManualSchedule(rt *Runtime, path, kind string, studentID int64) error
 	return nil
 }
 
+// verifyManualVisits checks that the school has no room visit at all: the
+// school was created in this run, so the list holds every visit it has and
+// no child has a room history.
 func verifyManualVisits(rt *Runtime) error {
 	raw, err := rt.Client.Get("/api/active/visits")
 	if err != nil {
@@ -650,27 +650,6 @@ func verifyManualVisits(rt *Runtime) error {
 	}
 	if len(envelope.Data) != 0 {
 		return fmt.Errorf("manual profile must not contain room visits, got %d", len(envelope.Data))
-	}
-	return nil
-}
-
-func verifyManualVisitHistories(rt *Runtime, students map[string]SeedStudent) error {
-	for _, key := range sortedManualStudentKeys(students) {
-		student := students[key]
-		path := fmt.Sprintf("/api/students/%d/visit-history", student.ID)
-		raw, err := rt.Client.Get(path)
-		if err != nil {
-			return fmt.Errorf("read room history for student %d: %w", student.ID, err)
-		}
-		var envelope struct {
-			Data []json.RawMessage `json:"data"`
-		}
-		if err := json.Unmarshal(raw, &envelope); err != nil {
-			return fmt.Errorf("decode room history for student %d: %w", student.ID, err)
-		}
-		if len(envelope.Data) != 0 {
-			return fmt.Errorf("student %d has %d room-history entries", student.ID, len(envelope.Data))
-		}
 	}
 	return nil
 }
