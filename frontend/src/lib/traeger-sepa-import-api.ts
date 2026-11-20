@@ -151,12 +151,12 @@ interface BackendRow {
   iban_masked: string;
   bic: string;
   account_holder: string;
-  contract_id?: number;
+  contract_id?: string;
   payer_first_name: string;
   payer_last_name: string;
   sequence: MandateSequence | "";
   last_collected_on: string | null;
-  mandate_id?: number;
+  mandate_id?: string;
   problems: ImportProblem[] | null;
   hints: string[] | null;
   debtor_number?: string;
@@ -183,7 +183,7 @@ interface BackendResult {
 
 interface BackendLogEntry {
   file: string;
-  account_id: number | null;
+  account_id: string | null;
   imported_at: string;
   mandates: number;
 }

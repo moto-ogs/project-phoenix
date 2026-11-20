@@ -317,61 +317,6 @@ func (rs *Resource) getPermissionByID(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, toPermissionResponse(permission), "Permission retrieved successfully")
 }
 
-// updatePermission handles updating a permission
-func (rs *Resource) updatePermission(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParseIntIDWithError(w, r, "id", common.MsgInvalidPermissionID)
-	if !ok {
-		return
-	}
-
-	req := &UpdatePermissionRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	permission, err := rs.Sessions.GetPermission(r.Context(), int64(id))
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New("permission not found")))
-		return
-	}
-
-	permission.Name = req.Name
-	permission.Description = req.Description
-	permission.Resource = req.Resource
-	permission.Action = req.Action
-
-	if err := rs.withinAdmin(r.Context(), func(ctx context.Context) error {
-		return rs.Sessions.UpdatePermission(ctx, permission)
-	}); err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	common.RespondNoContent(w, r)
-}
-
-// deletePermission handles deleting a permission
-func (rs *Resource) deletePermission(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParseIntIDWithError(w, r, "id", common.MsgInvalidPermissionID)
-	if !ok {
-		return
-	}
-
-	if err := rs.withinAdmin(r.Context(), func(ctx context.Context) error {
-		return rs.Sessions.DeletePermission(ctx, int64(id))
-	}); err != nil {
-		if rs.ConstraintViolation(err) {
-			common.RenderError(w, r, common.ErrorConflictMessage("Berechtigung kann nicht gelöscht werden: Berechtigung ist aktuell Rollen oder Konten zugewiesen"))
-			return
-		}
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	common.RespondNoContent(w, r)
-}
-
 // listPermissions handles listing permissions
 func (rs *Resource) listPermissions(w http.ResponseWriter, r *http.Request) {
 	filter := identityaccess.PermissionFilter{

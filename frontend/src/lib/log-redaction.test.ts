@@ -193,6 +193,18 @@ describe("redactSensitiveLogData", () => {
     );
   });
 
+  it("redacts the payroll office's one-time download link (#4805, #2352)", () => {
+    // sanitizeEndpoint masks no segment with a dot, so the backend client's
+    // log line carries the whole "<school>.<token>" link.
+    expect(
+      redactSensitiveLogString(
+        "POST /api/public/payroll-download/7.payroll-secret backend=/public/payroll-download/7.payroll-secret?x=1 escaped=%2Fpublic%2Fpayroll-download%2F7.payroll-secret page=https://school.example/lohnbuero/7.payroll-secret",
+      ),
+    ).toBe(
+      "POST /api/public/payroll-download/[REDACTED] backend=/public/payroll-download/[REDACTED]?x=1 escaped=%2Fpublic%2Fpayroll-download%2F[REDACTED] page=https://school.example/lohnbuero/[REDACTED]",
+    );
+  });
+
   it("redacts complete quoted credential values with spaces and escapes", () => {
     expect(
       redactSensitiveLogString(
@@ -224,7 +236,7 @@ describe("redactSensitiveLogData", () => {
   });
 });
 
-describe("contract signing credentials", () => {
+describe("public link credentials", () => {
   it.each([
     "/api/public/care-contract-signing/42.signing-credential/sign",
     "/public/care-contract-signing/42.signing-credential/document",
@@ -232,8 +244,48 @@ describe("contract signing credentials", () => {
     "https://parents.example/vertrag-unterschreiben/42.signing-credential",
     "/public/care%2Dcontract-signing/42.signing-credential",
     "/%76ertrag-unterschreiben/42.signing-credential",
+    "/api/public/payroll-download/42.payroll-credential",
+    "/lohnbuero/42.payroll-credential",
+    "/api%2Fpublic%2Fpayroll%2Ddownload%2F42.payroll-credential",
+    "/%6cohnbuero%2F42.payroll-credential",
   ])("redacts %s", (path) => {
-    expect(redactSensitiveLogString(path)).not.toContain("signing-credential");
+    expect(redactSensitiveLogString(path)).not.toMatch(
+      /(?:signing|payroll)-credential/,
+    );
     expect(redactSensitiveLogString(path)).toContain("[REDACTED]");
+  });
+
+  it("keeps credential route names without a credential", () => {
+    expect(redactSensitiveLogString("/lohnbuero")).toBe("/lohnbuero");
+    expect(redactSensitiveLogString("/public/payroll-download")).toBe(
+      "/public/payroll-download",
+    );
+  });
+});
+
+describe("payroll download credentials", () => {
+  it.each([
+    "/api/public/payroll-download/",
+    "/public/payroll-download/",
+    "/lohnbuero/",
+    "/public/payroll%2Ddownload/",
+    "/%6cohnbuero/",
+    encodeURIComponent("/api/public/payroll-download/"),
+    encodeURIComponent("/lohnbuero/"),
+  ])("redacts links under %s from log paths and referrers", (prefix) => {
+    const path = `${prefix}7.payroll-link-credential`;
+    const redacted = `${prefix}${REDACTED_LOG_VALUE}`;
+
+    expect(
+      redactSensitiveLogData({
+        path,
+        details: { referer: `https://school.example${path}` },
+        message: `POST ${path} failed`,
+      }),
+    ).toEqual({
+      path: redacted,
+      details: { referer: `https://school.example${redacted}` },
+      message: `POST ${redacted} failed`,
+    });
   });
 });

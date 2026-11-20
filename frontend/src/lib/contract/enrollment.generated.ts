@@ -2191,6 +2191,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(CareOfferingResponseSchema),
   },
   "GET /api/enrollment/legal/{tenantSlug}": {
@@ -2292,6 +2293,13 @@ export const routes = {
     portals: ["public"],
     response: success(FormLabelsResponseSchema),
   },
+  "GET /api/enrollment/requests/{statusToken}/signature-proof": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/signature-proof",
+    portals: ["public"],
+    publicFile: "the status link of the mail is the parents' only credential for their own proof",
+    response: fileAnswer,
+  },
   "GET /api/enrollment/schema/": {
     method: "GET",
     pattern: "/api/enrollment/schema/",
@@ -2315,6 +2323,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/schema/{id}",
     portals: ["tenant"],
+    deprecated: true,
     response: success(FormSchemaResponseSchema),
   },
   "PATCH /api/enrollment/requests/{statusToken}": {

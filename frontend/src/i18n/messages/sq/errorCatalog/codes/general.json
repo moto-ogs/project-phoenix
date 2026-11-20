@@ -3,6 +3,7 @@
   "input": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "permission": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "request_too_large": "Nuk u përpunua: {object}. Fshini në shfletues cookies e kësaj faqeje. Pastaj hyni përsëri.",
+  "route_not_found": "Nuk u përpunua: {object}. Ka një version të ri të moto. Rifreskoni faqen.",
   "server": "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
   "unavailable": "{object} nuk është i disponueshëm tani. Provoni përsëri."
 }

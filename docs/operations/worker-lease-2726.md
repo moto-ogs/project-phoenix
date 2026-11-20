@@ -44,9 +44,16 @@ the tenant role has no grant on the table, and the table holds no tenant data.
 
 | Command | Runs |
 |---|---|
-| `./main serve` | HTTP API and the embedded Worker (unchanged default) |
-| `./main serve --embedded-worker=false` | HTTP API only |
-| `./main worker` | standalone Worker; same configuration as `serve` |
+| `./main serve` | HTTP API and the embedded Worker (local development, demo) |
+| `./main serve --embedded-worker=false` | HTTP API only (staging, production; #7226) |
+| `./main worker` | standalone Worker; same configuration as `serve` (staging, production) |
+
+Staging and production run the standalone Worker as the `worker` Compose
+service; their API replicas start without the embedded Worker
+([replicas runbook](replicas-7226.md)). The first release with that stack
+performs the cutover below in one step: the release stops the old server,
+whose embedded Worker releases the lease, and starts `server` and `worker`
+together.
 
 The standalone Worker listens on `PORT` and serves only:
 

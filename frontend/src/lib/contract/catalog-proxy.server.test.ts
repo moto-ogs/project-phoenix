@@ -334,6 +334,10 @@ describe("makeCatalogProxy", () => {
         method === "GET" ? undefined : {},
       );
       expect(response.status).toBe(404);
+      expect(await response.json()).toMatchObject({
+        status: 404,
+        code: "general.route_not_found",
+      });
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       expect(sessionReads).toBe(0);
       expect(api).not.toHaveBeenCalled();

@@ -4,6 +4,7 @@ export const codes = [
   "general.input",
   "general.permission",
   "general.request_too_large",
+  "general.route_not_found",
   "general.server",
   "general.unavailable",
 ] as const;
@@ -13,6 +14,7 @@ export const classes = {
   "general.input": "input",
   "general.permission": "permission",
   "general.request_too_large": "input",
+  "general.route_not_found": "business_rejection",
   "general.server": "server",
   "general.unavailable": "unavailable",
 } as const;
@@ -22,6 +24,7 @@ export const parameters = {
   "general.input": [],
   "general.permission": [],
   "general.request_too_large": [],
+  "general.route_not_found": [],
   "general.server": [],
   "general.unavailable": [],
 } as const;

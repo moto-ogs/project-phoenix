@@ -27,6 +27,13 @@ const (
 	ListFormatCSV  = "csv"
 )
 
+// ListFormatQuery is the `format` query parameter ParseListFormat reads, for
+// the route contract of a list export (#2352).
+var ListFormatQuery = QueryParam{
+	Name: "format", Kind: QueryString,
+	Values: []string{ListFormatCSV, ListFormatPDF, ListFormatXLSX},
+}
+
 // ListColumn is one column of an exported list. A SpreadsheetOnly column
 // repeats a value of the whole list on every row (the day, the window), so a
 // spreadsheet can filter and combine several files; the PDF names it once in

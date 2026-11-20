@@ -68,22 +68,6 @@ func (p *GuardianDirectory) ListGuardians(ctx context.Context, page, pageSize in
 	return toDirectoryGuardians(profiles), nil
 }
 
-func (p *GuardianDirectory) ListGuardiansWithoutAccount(ctx context.Context) ([]peopledirectory.Guardian, error) {
-	profiles, err := p.guardians.GuardianProfiles().FindWithoutAccount(ctx)
-	if err != nil {
-		return nil, mapGuardianError(err)
-	}
-	return toDirectoryGuardians(profiles), nil
-}
-
-func (p *GuardianDirectory) ListInvitableGuardians(ctx context.Context) ([]peopledirectory.Guardian, error) {
-	profiles, err := p.guardians.GuardianProfiles().FindInvitable(ctx)
-	if err != nil {
-		return nil, mapGuardianError(err)
-	}
-	return toDirectoryGuardians(profiles), nil
-}
-
 func (p *GuardianDirectory) SearchGuardians(ctx context.Context, text string, limit int) ([]peopledirectory.GuardianMatch, error) {
 	matches, err := p.guardians.SearchGuardiansForPicker(ctx, text, limit)
 	if err != nil {

@@ -109,7 +109,6 @@ type guardianHarness struct {
 	bulkInvites []usersHTTP.GuardianBulkInvite
 	bulkResult  usersHTTP.GuardianBulkInviteResult
 	bulkErr     error
-	pending     []usersHTTP.PendingGuardianInvitation
 	observed    []string
 	rendered    []string
 }
@@ -166,7 +165,6 @@ func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardia
 		SendInvitation: func(_ context.Context, guardianID, actorID int64) (usersHTTP.GuardianInvitation, error) {
 			return usersHTTP.GuardianInvitation{ID: 5, GuardianProfileID: guardianID, EmailSent: true, Token: "secret-token"}, nil
 		},
-		ListPendingInvitations: func(context.Context) ([]usersHTTP.PendingGuardianInvitation, error) { return h.pending, nil },
 		InviteGuardianToStudent: func(context.Context, usersHTTP.GuardianInvite) (usersHTTP.GuardianInviteResult, error) {
 			return usersHTTP.GuardianInviteResult{}, errors.New("managed contact")
 		},
@@ -351,20 +349,6 @@ func TestInvitationTokenIsOnlyExposedWhenTheRootAllowsIt(t *testing.T) {
 
 	h.actorID = 0
 	assert.Equal(t, http.StatusUnauthorized, h.do(t, http.MethodPost, "/guardians/7/invite", nil).Code)
-}
-
-// The link of a pending invitation is stored as hash only (#4902), so the
-// listing carries no token even where the root allows seed exposure.
-func TestPendingInvitationListCarriesNoToken(t *testing.T) {
-	t.Parallel()
-	h := newGuardianHarness(t, &fakeGuardianDirectory{})
-	h.permitted["users:read"] = true
-	h.exposeToken = true
-	h.pending = []usersHTTP.PendingGuardianInvitation{{ID: 7, GuardianProfileID: 9}}
-
-	recorder := h.do(t, http.MethodGet, "/guardians/invitations/pending", nil)
-	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
-	assert.NotContains(t, recorder.Body.String(), `"token"`)
 }
 
 func TestInviteFailuresUseTheRootClassification(t *testing.T) {

@@ -713,6 +713,8 @@ export const ERROR_CATALOG = {
         "Der Speicherplatz der Dateiablage ist voll. Bitte lösche Dateien, die du nicht mehr brauchst.",
       "general.request_too_large":
         "{object} konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",
+      "general.route_not_found":
+        "{object} konnte nicht bearbeitet werden. Es gibt eine neue Version von moto. Bitte lade die Seite neu.",
       "grade_transition.graduates_checked_in":
         "Es sind noch Kinder mit Abgang eingecheckt. Bitte buche diese Kinder zuerst nach Hause. Wende den Schuljahreswechsel danach erneut an.",
       "grade_transition.not_applied":
@@ -2618,6 +2620,8 @@ export const ERROR_CATALOG = {
         "This file name is not allowed. Please choose the file again.",
       "general.request_too_large":
         "{object} could not be processed. Please delete the cookies of this site in your browser. Then sign in again.",
+      "general.route_not_found":
+        "{object} could not be processed. There is a new version of moto. Please reload the page.",
       "identity.account_already_has_tenant_access":
         "This person already has access to this school. You can find them in the staff list.",
       "identity.account_inactive":
@@ -3331,6 +3335,8 @@ export const ERROR_CATALOG = {
         "Имя файла недопустимо. Выберите файл ещё раз.",
       "general.request_too_large":
         "Не удалось обработать: {object}. Удалите в браузере файлы cookie этого сайта. Затем войдите снова.",
+      "general.route_not_found":
+        "Не удалось обработать: {object}. Вышла новая версия moto. Обновите страницу.",
       "identity.account_already_has_tenant_access":
         "У этого человека уже есть доступ к этой школе. Он есть в списке сотрудников.",
       "identity.account_inactive":
@@ -3976,6 +3982,8 @@ export const ERROR_CATALOG = {
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
       "general.request_too_large":
         "Nuk u përpunua: {object}. Fshini në shfletues cookies e kësaj faqeje. Pastaj hyni përsëri.",
+      "general.route_not_found":
+        "Nuk u përpunua: {object}. Ka një version të ri të moto. Rifreskoni faqen.",
       "identity.account_already_has_tenant_access":
         "Ky person ka tashmë qasje në këtë shkollë. E gjeni në listën e personelit.",
       "identity.account_inactive":
@@ -4611,6 +4619,8 @@ export const ERROR_CATALOG = {
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
       "general.request_too_large":
         "Nie udało się przetworzyć: {object}. Usuń w przeglądarce pliki cookie tej strony. Następnie zaloguj się ponownie.",
+      "general.route_not_found":
+        "Nie udało się przetworzyć: {object}. Jest nowa wersja moto. Odśwież stronę.",
       "identity.account_already_has_tenant_access":
         "Ta osoba ma już dostęp do tej szkoły. Znajdziesz ją na liście personelu.",
       "identity.account_inactive":
@@ -5251,6 +5261,8 @@ export const ERROR_CATALOG = {
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
       "general.request_too_large":
         "{object} işlenemedi. Lütfen tarayıcınızda bu sitenin çerezlerini silin. Ardından yeniden giriş yapın.",
+      "general.route_not_found":
+        "{object} işlenemedi. moto'nun yeni bir sürümü var. Sayfayı yeniden yükleyin.",
       "identity.account_already_has_tenant_access":
         "Bu kişinin bu okula zaten erişimi var. Kişiyi personel listesinde bulabilirsiniz.",
       "identity.account_inactive":
@@ -5884,6 +5896,8 @@ export const ERROR_CATALOG = {
         "Назва файлу не дозволена. Виберіть файл ще раз.",
       "general.request_too_large":
         "Не вдалося обробити: {object}. Видаліть у браузері файли cookie цього сайту. Потім увійдіть знову.",
+      "general.route_not_found":
+        "Не вдалося обробити: {object}. Вийшла нова версія moto. Оновіть сторінку.",
       "identity.account_already_has_tenant_access":
         "Ця особа вже має доступ до цієї школи. Її можна знайти в списку персоналу.",
       "identity.account_inactive":

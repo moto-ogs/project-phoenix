@@ -146,17 +146,20 @@ export type SubstitutionAssignmentKind =
 /**
  * The result of an assignment. The backend names its shape in `type` and
  * carries the result under the member of that name (#2352). A body without
- * that member is taken as the bare result of the kind the caller asked for.
+ * that member is not an answer of the kind the caller asked for.
  */
 export function substitutionAssignmentResult<T>(
   data: unknown,
   kind: SubstitutionAssignmentKind,
 ): T {
-  if (typeof data === "object" && data !== null && kind in data) {
-    const member = (data as Record<string, unknown>)[kind];
-    if (member !== undefined && member !== null) return member as T;
+  const member =
+    typeof data === "object" && data !== null
+      ? (data as Record<string, unknown>)[kind]
+      : undefined;
+  if (member === undefined || member === null) {
+    throw new Error("Ungültige Antwort für Gruppenübergaben.");
   }
-  return data as T;
+  return member as T;
 }
 
 // Frontend types

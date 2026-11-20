@@ -76,8 +76,6 @@ func NativeMirrorParticipants(rows ports.ParticipantRows) *ports.MirrorParticipa
 		return checkOutParticipant(ctx, rows, instanceID, studentID, at)
 	}, UpdateAttendanceCheckoutBatch: func(ctx context.Context, keys []timetable.InstanceStudentKey, at time.Time) error {
 		return checkOutParticipants(ctx, rows, mirrorLegacyKeys(keys), at)
-	}, ReconcileAttendanceInterval: func(ctx context.Context, instanceID, studentID int64, previousCheckIn time.Time, previousCheckOut *time.Time, updatedCheckIn time.Time, updatedCheckOut *time.Time) (bool, error) {
-		return reconcileAttendanceInterval(ctx, rows, instanceID, studentID, previousCheckIn, previousCheckOut, updatedCheckIn, updatedCheckOut)
 	}}, Create: func(ctx context.Context, value *timetable.ScheduledParticipant) error {
 		row := mirrorParticipantRow(value)
 		err := createLegacyParticipant(ctx, rows, row)

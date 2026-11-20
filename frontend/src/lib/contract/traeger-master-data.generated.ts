@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   noData,
@@ -282,6 +283,11 @@ export interface WithdrawalContactRequest {
   email?: string;
 }
 
+/** Query of GET /traeger/master-data/document-templates/export */
+export interface GetTraegerMasterDataDocumentTemplatesExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+}
+
 export const routes = {
   "DELETE /traeger/master-data/bank-accounts/{id}": {
     method: "DELETE",
@@ -300,6 +306,13 @@ export const routes = {
     pattern: "/traeger/master-data/document-templates",
     portals: ["org"],
     response: success(z.array(TraegerDocumentTemplateSummarySchema)),
+  },
+  "GET /traeger/master-data/document-templates/export": {
+    method: "GET",
+    pattern: "/traeger/master-data/document-templates/export",
+    portals: ["org"],
+    query: ["format"],
+    response: fileAnswer,
   },
   "GET /traeger/master-data/document-templates/{kind}": {
     method: "GET",

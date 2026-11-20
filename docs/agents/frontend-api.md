@@ -139,8 +139,9 @@ success wrapper. Their **backend errors still use the shared error path**:
 
 ### Private download inventory (#5119)
 
-The complete route/method inventory lives in
-`frontend/src/test/private-download-routes.ts` (112 handlers). The download
+The route/method inventory for downloads with a route file lives in
+`frontend/src/test/private-download-routes.ts`. Catalog file routes instead
+use the portal proxy's private, uncached response. The download
 rule in `route-cache-policy.test.ts` requires the explicit wrapper on each
 entry; an ordinary JSON or portal wrapper does not satisfy it. It also scans
 file constructors, file factories and download paths for missing entries.
@@ -190,9 +191,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `demo/access/sessions` | Accepts a link or cookie token and stores a new httpOnly demo cookie on success. |
 | `demo/access/status` | Uses the shared demo-token forwarding helper for credential-scoped status. |
 | `emergency/snapshot/export` | Streams emergency-snapshot export bytes and filename. |
-| `enrollment/admin/data-correction` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
-| `enrollment/admin/decide` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
-| `enrollment/admin/offerings` | Temporary (#7563): moves the flattened request/child IDs of older bundles into the backend child route. |
 | `enrollment/admin/reports/care-usage/export` | Streams the care-usage export with backend filename. |
 | `enrollment/admin/reports/class-roster/export` | Streams the class-roster export with backend filename. |
 | `enrollment/admin/students/[studentId]/requests/export` | Streams one student’s enrollment requests export. |
@@ -200,7 +198,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `enrollment/legal-documents` | Multipart legal-document upload uses the shared file-upload validator. |
 | `enrollment/phases/[id]/export` | Streams a phase export in its backend-selected format. |
 | `files/folders/[folderId]/files` | Multipart folder-file upload uses the shared file-upload validator. |
-| `guardian-invitations/[token]/accept` | Maps invitation password fields and forwards the client headers. |
 | `guardians/payment-overview/export` | Streams payment-overview export bytes with backend disposition. |
 | `import/class-list-entries/template` | Returns the class-list CSV template and backend filename. |
 | `import/opening-balances/template` | Returns the opening-balance CSV template and backend filename. |
@@ -238,20 +235,18 @@ identity, one refreshed retry; the route wraps it in
 client identity, one refreshed retry). Under `students/` the day-log export
 is the one download left with a route file, beside the three uploads
 (documents, photo, accident-report paper copy); the other student downloads
-stream through the catalog proxy (#2352), `students/export` through a literal
-hand-off in front of `students/[id]`.
+stream through the catalog proxy (#2352). `students/export` keeps a literal
+catalog hand-off.
 
 The three SSE routes (`sse/events`, `parent/sse/events`, and
 `school/sse/events`) use `proxySSEStream` separately: each must keep its own
 portal credential and abortable event stream, which a JSON factory would buffer.
 
 Helper-backed custom handlers without a direct `fetch` have narrower reasons:
-`rooms/[id]/history` applies the documented empty/disabled BFF mapping;
 `statistics/report` whitelists audit-sensitive queries, retries refreshed
 tenant sessions, and keeps its established no-store success envelope
 (`students/day-log` and `students/[id]/attendance-history` forward only their
 audit-sensitive query keys through `proxyGet` with `forwardQuery`);
-`auth/password` validates and renames password fields before `apiPost`;
 `auth/token` renews the tenant session and answers 204 without a token;
 `auth/staff-preview/end` takes the running preview's token from the session
 cookie; `logs` and `parent/logs` ingest client
@@ -264,11 +259,9 @@ and headers. The remaining helper-backed routes use their portal's
 `create*Handler` or `proxy*` factories, including the operator and parent
 wrappers; they are not handwritten auth/fetch/error loops.
 
-Business adapters are not transparent proxies: room history maps the
-documented 404 and `feature_disabled` 403 to an empty/disabled view;
-student PUT marks a consent write that succeeded before a later student write
-failed. The student routes own the backend wire shape (`lib/student-wire.ts`);
-the browser client `lib/student-api.ts` receives mapped `Student` objects. Demo handoff produces a redirect after checking readiness. An exhausted
+The student wire shape lives in `lib/student-wire.ts`; the browser client
+`lib/student-api.ts` maps the catalog proxy's answers onto `Student` objects.
+Demo handoff produces a redirect after checking readiness. An exhausted
 auth refresh/retry answers 401 with `general.permission`. All other
 backend errors in those routes retain the shared error contract. Logout
 forwards backend errors unchanged even though the browser always clears its
@@ -276,7 +269,7 @@ local session.
 
 Read [the tenant route wrapper](../../frontend/src/lib/route-wrapper.server.ts)
 and the affected portal's wrapper before changing a handler. Existing consumers
-such as [the rooms route](../../frontend/src/app/api/rooms/route.ts) show the
+such as [the rooms export route](../../frontend/src/app/api/rooms/export/route.ts) show the
 request/response wiring; retain the affected endpoint's error contract.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
@@ -363,14 +356,21 @@ The key is the scope claim of the portal's session token
   `/operator/schools`) moves its callers to the backend's path first.
 - Next prefers an existing route file over the proxy. Keep a file only for
   what is specific to the browser: portal policy, session handling, a file
-  or upload with behavior of its own (own cache header, BFF checks, public
-  token link), login/MFA, the SSE pipe, or an aggregation without a Go view.
+  or upload with behavior of its own (own cache header, BFF checks), login/MFA, the SSE pipe, or an aggregation without a Go view.
 - A file answer registers `File: true`, a multipart upload `Multipart: true`
   with `MaxBodyBytes` and `TooLargeCode` (ADR 0270, addendum 2026-11-19).
   The proxy streams both unread: the file with the headers of
   `fileResponse`, every answer `private, no-store`; the upload once, without
   a retry after a renewal, and 413 with `TooLargeCode` above the limit. Such
   a route has no entry in `src/test/private-download-routes.ts`.
+- A file of the portal `public` (a token link) needs `PublicFile`, the reason
+  its link alone may open it; the generator refuses an unmarked public file,
+  a public upload, and a marker on any other route. The proxy fetches it
+  without session, bearer, body and `Idempotency-Key`, `sendBackend` adds the
+  client IP for the backend's limiter of the link, and every answer is
+  `private, no-store` (ADR 0270, addendum "Öffentliche Datei-Routen"). The
+  link's path prefix needs log redaction in `lib/log-redaction.ts` and
+  `backend/middleware/log_redaction.go`.
 - To move a pure proxy route: register its Go route for the portal,
   regenerate, delete the route file and its row in
   `src/test/proxy-routes/**`. A file is deleted only when every method it

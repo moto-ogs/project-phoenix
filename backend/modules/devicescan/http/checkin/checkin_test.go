@@ -186,21 +186,6 @@ func TestDevicePing_Unauthorized(t *testing.T) {
 	assert.JSONEq(t, `{"status":401,"detail":"device API key is required","code":"general.permission"}`, rr.Body.String())
 }
 
-func TestDeviceStatus(t *testing.T) {
-	t.Parallel()
-	k := setupCheckinRoute(t)
-
-	rr := k.call(t, "GET", "/status", nil, k.device(t, "status-test"))
-	testutil.AssertSuccessResponse(t, rr, 200)
-	data := responseData(t, rr.Body.Bytes())
-	device, ok := data["device"].(map[string]any)
-	require.True(t, ok)
-	assert.Equal(t, true, device["is_active"])
-	assert.Contains(t, data, "authenticated_at")
-
-	testutil.AssertUnauthorized(t, k.call(t, "GET", "/status", nil))
-}
-
 // ---------------------------------------------------------------------------
 // Request contract
 // ---------------------------------------------------------------------------
@@ -223,7 +208,7 @@ func TestRouter_EndpointsRequireDevice(t *testing.T) {
 	k := setupCheckinRoute(t)
 	router := k.resource.Router()
 	require.NotNil(t, router)
-	for _, route := range []struct{ method, path string }{{"POST", "/checkin"}, {"POST", "/ping"}, {"GET", "/status"}, {"POST", "/pickup-query"}} {
+	for _, route := range []struct{ method, path string }{{"POST", "/checkin"}, {"POST", "/ping"}, {"POST", "/pickup-query"}} {
 		rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, route.method, route.path, nil))
 		assert.Equal(t, 401, rr.Code, route.path)
 	}

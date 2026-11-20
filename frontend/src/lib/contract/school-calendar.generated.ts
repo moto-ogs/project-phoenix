@@ -196,6 +196,7 @@ export const routes = {
     method: "GET",
     pattern: "/school/calendar/parent-conferences/{conferenceId}",
     portals: ["school"],
+    deprecated: true,
     response: success(ParentConferenceViewSchema),
   },
   "POST /school/calendar/appointments": {

@@ -106,11 +106,11 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
     // Die View zeigt nur Mo–Fr und snappt Wochenendtage auf den nächsten
     // Montag — Testdaten also immer auf einen Werktag legen.
     const day = nextWorkdayISO(runToday());
+    // The catalog proxy answers the contract's lists in the envelope.
     const rooms = (await (
       await page.request.get(`${base}/api/rooms`)
-    ).json()) as
-      { data: Array<{ id: string | number }> } | Array<{ id: string | number }>;
-    const roomList = Array.isArray(rooms) ? rooms : rooms.data;
+    ).json()) as { data: Array<{ id: string }> };
+    const roomList = rooms.data;
     expect(
       roomList.length,
       "Tenant braucht mindestens einen Raum",
@@ -119,12 +119,8 @@ test.describe("Vertretung UI-Flow (#1886, Inkrement 2)", () => {
 
     const staffPayload = (await (
       await page.request.get(`${base}/api/staff`)
-    ).json()) as
-      | { data: Array<{ id: string | number; name?: string }> }
-      | Array<{ id: string | number; name?: string }>;
-    const staffList = Array.isArray(staffPayload)
-      ? staffPayload
-      : staffPayload.data;
+    ).json()) as { data: Array<{ id: string }> };
+    const staffList = staffPayload.data;
     // Nicht die angemeldete Person einplanen (wie dienstplan.spec.ts: feste
     // Admin-IDs passen nicht zum Seed); irgendeine
     // Betreuungskraft OHNE eigene Termine an `day`. Der Seed (seed_planning.go,

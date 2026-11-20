@@ -2,26 +2,12 @@ package presence
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 )
-
-// ProcessSessionTimeout handles device-triggered session timeout
-func (s *service) ProcessSessionTimeout(ctx context.Context, deviceID int64) (*TimeoutResult, error) {
-	// Validate device has active session
-	session, err := s.GetDeviceCurrentSession(ctx, deviceID)
-	if err != nil {
-		return nil, &ActiveError{Op: "ProcessSessionTimeout", Err: ErrNoActiveSession}
-	}
-
-	// Delegate to ProcessSessionTimeoutByID with the session ID
-	return s.ProcessSessionTimeoutByID(ctx, session.ID, nil)
-}
 
 // collectActiveVisitsForSSE gathers visit and student data needed for SSE broadcasts
 func (s *service) collectActiveVisitsForSSE(ctx context.Context, sessionID int64) ([]visitSSEData, error) {
@@ -73,8 +59,8 @@ type sessionTimeoutCheck func(context.Context, *ports.ActiveGroup) error
 
 // ProcessSessionTimeoutByID handles session timeout by session ID directly.
 // It verifies under the session lock that the session is still active before
-// ending it. The explicit device timeout passes no check; the abandoned-session
-// sweep passes one that re-judges inactivity under the same lock (#6502).
+// ending it. A nil check ends it unconditionally; the abandoned-session sweep
+// passes one that re-judges inactivity under the same lock (#6502).
 func (s *service) ProcessSessionTimeoutByID(ctx context.Context, sessionID int64, check sessionTimeoutCheck) (*TimeoutResult, error) {
 	// Collect visit data BEFORE transaction for SSE broadcasts
 	visitsToNotify, err := s.collectActiveVisitsForSSE(ctx, sessionID)
@@ -90,8 +76,7 @@ func (s *service) ProcessSessionTimeoutByID(ctx context.Context, sessionID int64
 	// session open beside it — a split that the next sweep cannot repair,
 	// because it only ever sees the still-active session and would re-bridge an
 	// instance that is already completed. RunInTx joins the caller's
-	// transaction when there is one (the kiosk timeout endpoint), so the
-	// request path is unchanged.
+	// transaction when there is one.
 	var result *TimeoutResult
 	var endData activityEndSSEData
 	if err := s.runInSessionTx(ctx, func(txCtx context.Context) error {
@@ -162,66 +147,4 @@ func (s *service) processSessionTimeoutTx(ctx context.Context, sessionID int64, 
 		StudentsCheckedOut: len(ended.ClosedVisits),
 		TimeoutAt:          ended.EndedAt,
 	}, endData, nil
-}
-
-// ValidateSessionTimeout validates if a timeout request is valid
-func (s *service) ValidateSessionTimeout(ctx context.Context, deviceID int64, timeoutMinutes int) error {
-	// Validate device has active session
-	session, err := s.GetDeviceCurrentSession(ctx, deviceID)
-	if err != nil {
-		return &ActiveError{Op: "ValidateSessionTimeout", Err: err}
-	}
-
-	// Validate timeout parameters
-	if timeoutMinutes <= 0 || timeoutMinutes > 480 { // Max 8 hours
-		return &ActiveError{Op: "ValidateSessionTimeout", Err: fmt.Errorf("invalid timeout minutes: %d", timeoutMinutes)}
-	}
-
-	// Check if session is actually timed out based on inactivity, on the
-	// service clock that stamped its last activity.
-	timeoutDuration := time.Duration(timeoutMinutes) * time.Minute
-	inactivityDuration := SessionInactivityDuration(session, s.now())
-
-	if inactivityDuration < timeoutDuration {
-		return &ActiveError{Op: "ValidateSessionTimeout", Err: fmt.Errorf("session not yet timed out: %v remaining", timeoutDuration-inactivityDuration)}
-	}
-
-	return nil
-}
-
-// GetSessionTimeoutInfo provides comprehensive timeout information for a device session
-func (s *service) GetSessionTimeoutInfo(ctx context.Context, deviceID int64) (*SessionTimeoutInfo, error) {
-	// Get current session
-	session, err := s.GetDeviceCurrentSession(ctx, deviceID)
-	if err != nil {
-		return nil, &ActiveError{Op: "GetSessionTimeoutInfo", Err: err}
-	}
-
-	// Count active students in the session
-	visits, err := s.SchoolPresence.ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{session.ID}})
-	if err != nil {
-		return nil, &ActiveError{Op: "GetSessionTimeoutInfo", Err: err}
-	}
-
-	activeStudentCount := 0
-	for _, visit := range visits {
-		if visit.ExitTime == nil {
-			activeStudentCount++
-		}
-	}
-
-	now := s.now()
-	info := &SessionTimeoutInfo{
-		SessionID:          session.ID,
-		ActivityID:         session.GroupID,
-		StartTime:          session.StartTime,
-		LastActivity:       session.LastActivity,
-		TimeoutMinutes:     session.TimeoutMinutes,
-		InactivityDuration: SessionInactivityDuration(session, now),
-		TimeUntilTimeout:   s.SessionTimeUntilTimeout(ctx, session, now),
-		IsTimedOut:         s.IsSessionTimedOut(ctx, session, now),
-		ActiveStudentCount: activeStudentCount,
-	}
-
-	return info, nil
 }

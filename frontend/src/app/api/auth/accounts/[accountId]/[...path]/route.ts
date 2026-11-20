@@ -8,9 +8,7 @@ import { catalogProxyUnder, isStringParam } from "~/lib/route-wrapper.server";
  * `/api` (`lib/contract/catalog-outside-mounts.ts`). Next would hand
  * `/api/auth/accounts/…` to Auth.js's `auth/[...nextauth]`, so this file
  * hands it to the staff portal's catalog proxy, which serves only the routes
- * the contract registers for the staff portal. It sits below
- * `[accountId]` because the second factor's state keeps its temporary file
- * there.
+ * the contract registers for the staff portal.
  */
 const head = (params: Record<string, string | string[] | undefined>) =>
   isStringParam(params.accountId)

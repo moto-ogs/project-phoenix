@@ -249,29 +249,6 @@ func deviates(family parentbilling.FamilyBilling) bool {
 		family.DebtorNumber != ""
 }
 
-// DeleteFamilyBilling removes a deviation; a missing one is
-// ErrFamilyBillingNotFound.
-func (t *BillingTerms) DeleteFamilyBilling(ctx context.Context, reviewer parentbilling.HolidayReviewer, id int64) error {
-	if err := validReviewer(reviewer); err != nil {
-		return err
-	}
-	if id <= 0 {
-		return parentbilling.ErrFamilyBillingNotFound
-	}
-	removed, err := t.store.DeleteFamilyBilling(ctx, reviewer.OrganizationID, id, "")
-	if err != nil {
-		return err
-	}
-	if removed == nil {
-		return parentbilling.ErrFamilyBillingNotFound
-	}
-	if err := t.store.InsertFamilyBillingEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingDelete,
-		[]parentbilling.FamilyBilling{*removed}); err != nil {
-		return fmt.Errorf("parent billing: record the family billing: %w", err)
-	}
-	return nil
-}
-
 var postalCodePattern = regexp.MustCompile(`^[0-9]{5}$`)
 
 // normalizeFamilyBilling trims the input and checks that a kind brings the

@@ -82,20 +82,6 @@ describe("guardian invitation API", () => {
     );
   });
 
-  it("maps a numeric account id of an older backend to a string", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ data: { account_id: 42, email: "mara@example.test" } }),
-    );
-    const credential = acceptedCredential();
-
-    await expect(
-      acceptGuardianInvitation("token", {
-        [passwordKey]: credential,
-        [confirmPasswordKey]: credential,
-      }),
-    ).resolves.toMatchObject({ accountId: "42" });
-  });
-
   it("throws API errors from JSON and text responses", async () => {
     vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(

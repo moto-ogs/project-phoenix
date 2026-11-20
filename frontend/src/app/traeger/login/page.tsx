@@ -46,7 +46,7 @@ import {
 import type { MFAStep, TraegerChoice } from "~/lib/sign-in-answer";
 import { traegerLogin } from "~/lib/traeger-api";
 import { TRAEGER_SIGN_IN_WITH_CODE_PARAM } from "~/lib/login-params";
-import { traegerPath } from "~/lib/traeger-url";
+import { fetchTraegerHomeHref, traegerHomeHref } from "~/lib/traeger-home";
 
 const logger = createLogger({ component: "TraegerLoginPage" });
 
@@ -105,7 +105,7 @@ function LoginForm() {
     );
   }, [searchParams]);
 
-  // An existing Träger session goes straight to the school list; a session
+  // An existing Träger session goes straight to its start (#7646); a session
   // the backend no longer refreshes is cleared so a new login is not
   // shadowed by it. A session a sign-in with code is to replace stays until
   // the person ends it with the button below: a page visit alone never
@@ -132,7 +132,7 @@ function LoginForm() {
       hasSessionAccess(session) &&
       session.user.scope === "org"
     ) {
-      window.location.href = traegerPath("/traeger");
+      window.location.href = traegerHomeHref(session);
     }
   }, [status, session, enrollmentStep]);
 
@@ -140,7 +140,11 @@ function LoginForm() {
     // The sign-in is complete: the next one may use the device again.
     clearTraegerSignInWithCode();
     setAwaitingRedirect(true);
-    window.location.href = traegerPath("/traeger");
+    // The provider does not know the new session yet: its rights decide
+    // between the dashboard and the school list (#7646).
+    void fetchTraegerHomeHref().then((href) => {
+      window.location.href = href;
+    });
   };
 
   const sendLogin = async (

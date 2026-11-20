@@ -336,7 +336,7 @@ groups:
               to: 0
             datasourceUid: prometheus
             model:
-              expr: '100 * max by (env) (avg_over_time(phoenix_db_in_use_connections[5m]) / phoenix_db_max_open_connections) or on (env) label_replace(100 * max by (env) (up{service="server"}), "reason", "pool_metric_missing", "", "")'
+              expr: '100 * max by (env) (avg_over_time(phoenix_db_in_use_connections[5m]) / phoenix_db_max_open_connections) or on (env) label_replace(100 * max by (env) (up{service=~"server|worker"}), "reason", "pool_metric_missing", "", "")'
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

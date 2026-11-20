@@ -353,8 +353,6 @@ type BillingTerms interface {
 	// SaveFamilyBilling sets the deviation of the family of a contract; an
 	// applicant without payment deviation removes it.
 	SaveFamilyBilling(ctx context.Context, reviewer HolidayReviewer, input FamilyBillingInput) (*FamilyBilling, error)
-	// DeleteFamilyBilling removes a deviation.
-	DeleteFamilyBilling(ctx context.Context, reviewer HolidayReviewer, id int64) error
 	// SetCareRunDueDates and SetHolidayRunDueDates replace the due dates of a
 	// calculated run; a released run is ErrBillingRunReleased.
 	SetCareRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates) (RunDueDates, error)

@@ -11,7 +11,6 @@ import type {
   PublicKeyCredentialRequestOptionsJSON,
   RegistrationResponseJSON,
 } from "@simplewebauthn/browser";
-import { dataOrBare } from "./envelope-or-bare";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession } from "./session-cache";
 
@@ -100,10 +99,19 @@ async function requestJson<T>(
     );
   }
 
-  // The management answers in the envelope through the catalog proxies,
-  // bare through the temporary route files (#2352); the sign-in answers
-  // bare.
-  return dataOrBare<T>(data);
+  return data as T;
+}
+
+/**
+ * The data of a management answer: the catalog proxies answer in the
+ * envelope (#2352); the sign-in answers bare and reads `requestJson`.
+ */
+async function requestData<T>(
+  url: string,
+  body?: unknown,
+  method: "GET" | "POST" | "DELETE" = "POST",
+): Promise<T> {
+  return (await requestJson<{ data: T }>(url, body, method)).data;
 }
 
 export function isPasskeyCeremonyIncompleteError(error: unknown): boolean {
@@ -148,7 +156,7 @@ export async function startPasskeyEnrollment(
   scope: PasskeyScope,
 ): Promise<EnrollmentChallengeResponse> {
   await requireSession();
-  return requestJson<EnrollmentChallengeResponse>(
+  return requestData<EnrollmentChallengeResponse>(
     `${basePath(scope)}/enrollment/challenge`,
     {},
   );
@@ -159,7 +167,7 @@ export async function registerPasskey(
   params: { code: string; name: string },
 ): Promise<PasskeyCredentialSummary> {
   await requireSession();
-  const start = await requestJson<
+  const start = await requestData<
     CeremonyResponse<PublicKeyCredentialCreationOptionsJSON>
   >(`${basePath(scope)}/register/options`, {
     code: params.code,
@@ -179,7 +187,7 @@ async function finishPasskeyRegistration(
   sessionID: string,
   params: { name: string; response: RegistrationResponseJSON },
 ): Promise<PasskeyCredentialSummary> {
-  return requestJson<PasskeyCredentialSummary>(
+  return requestData<PasskeyCredentialSummary>(
     `${basePath(scope)}/register/verify`,
     {
       session_id: sessionID,
@@ -193,10 +201,12 @@ export async function listPasskeys(
   scope: PasskeyScope,
 ): Promise<PasskeyCredentialSummary[]> {
   await requireSession();
-  return requestJson<PasskeyCredentialSummary[]>(
-    basePath(scope),
-    undefined,
-    "GET",
+  return (
+    (await requestData<PasskeyCredentialSummary[] | null>(
+      basePath(scope),
+      undefined,
+      "GET",
+    )) ?? []
   );
 }
 

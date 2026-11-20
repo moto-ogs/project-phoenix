@@ -77,9 +77,6 @@ type KioskSessions interface {
 	FindDeviceActiveGroupInRoom(ctx context.Context, roomID, deviceID int64) (*SessionDetail, error)
 	// UpdateActiveGroupSupervisors replaces the session's supervisors.
 	UpdateActiveGroupSupervisors(ctx context.Context, activeGroupID int64, supervisorIDs []int64) (*SessionDetail, error)
-	ProcessSessionTimeout(ctx context.Context, deviceID int64) (*TimeoutResult, error)
-	ValidateSessionTimeout(ctx context.Context, deviceID int64, timeoutMinutes int) error
-	GetSessionTimeoutInfo(ctx context.Context, deviceID int64) (*SessionTimeoutInfo, error)
 }
 
 // SessionCommands opens, touches and ends room sessions and records their

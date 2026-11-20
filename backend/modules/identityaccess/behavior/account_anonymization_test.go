@@ -37,19 +37,16 @@ func TestAccountAnonymizationPreservesTransactionAndOtherAccountState(t *testing
 		return rollback
 	})
 	require.ErrorIs(t, err, rollback)
-	unchanged, err := accounts.FindOwnAccount(ctx, account.ID)
-	require.NoError(t, err)
+	unchanged := readStoredAccount(t, ctx, db, account.ID)
 	require.Equal(t, account.Email, unchanged.Email)
 	require.Equal(t, originalUsername, unchanged.Username)
 
 	require.NoError(t, accounts.AnonymizeAccountForDeletion(ctx, account.ID, placeholder))
 	require.NoError(t, accounts.AnonymizeAccountForDeletion(ctx, account.ID, placeholder), "retries are idempotent")
-	anonymized, err := accounts.FindOwnAccount(ctx, account.ID)
-	require.NoError(t, err)
+	anonymized := readStoredAccount(t, ctx, db, account.ID)
 	require.Equal(t, placeholder, anonymized.Email)
 	require.Empty(t, anonymized.Username)
-	untouched, err := accounts.FindOwnAccount(ctx, other.ID)
-	require.NoError(t, err)
+	untouched := readStoredAccount(t, ctx, db, other.ID)
 	require.Equal(t, other.Email, untouched.Email)
 	require.NoError(t, accounts.AnonymizeAccountForDeletion(ctx, 0, placeholder), "an already absent account remains a no-op")
 
@@ -57,7 +54,6 @@ func TestAccountAnonymizationPreservesTransactionAndOtherAccountState(t *testing
 		return accounts.AnonymizeAccountForDeletion(txCtx, account.ID, other.Email)
 	})
 	require.Error(t, err, "a conflicting placeholder must fail the deletion transaction")
-	afterFailure, err := accounts.FindOwnAccount(ctx, account.ID)
-	require.NoError(t, err)
+	afterFailure := readStoredAccount(t, ctx, db, account.ID)
 	require.Equal(t, placeholder, afterFailure.Email)
 }

@@ -28,10 +28,6 @@ type AccountAdministrationStore interface {
 	// ListManageableAccountRecords lists the accounts within the caller's
 	// visibility that match the filter, ascending by account id.
 	ListManageableAccountRecords(ctx context.Context, filter domain.AccountListFilter, visibility domain.AccountVisibility) ([]domain.ManagedAccountRecord, domain.OperationStats, error)
-	// ListManageableAccountRecordsByRole lists the accounts within the
-	// caller's visibility that hold the named role at a school the caller
-	// may administer.
-	ListManageableAccountRecordsByRole(ctx context.Context, roleName string, visibility domain.AccountVisibility) ([]domain.ManagedAccountRecord, domain.OperationStats, error)
 	// UpdateManageableAccountIdentity writes the address and, when set, the
 	// name. found=false when the predicate matched no row.
 	UpdateManageableAccountIdentity(ctx context.Context, update domain.AccountIdentityUpdate, visibility domain.AccountVisibility) (bool, domain.OperationStats, error)

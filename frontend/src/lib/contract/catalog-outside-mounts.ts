@@ -63,6 +63,9 @@ export const CATALOG_OUTSIDE_MOUNTS = {
 export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
   tenant: [
     "/public/care-contract-signing",
+    // The one-time download link of the payroll office (#4805): a public
+    // file its contract marks, served like the signing link.
+    "/public/payroll-download",
     "/auth/password-reset",
     // The links of an invitation mail and of the holiday registration, and
     // the school list (#2352). Each names its exact path: `/auth/invitations`
