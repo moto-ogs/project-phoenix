@@ -110,7 +110,7 @@ function validateFile(file: File, options: FileUploadOptions): void {
 }
 
 /** Reads a multipart body, rejecting it once it outgrows the file limit. */
-export async function parseBoundedMultipartFormData(
+async function parseBoundedMultipartFormData(
   request: NextRequest,
   maxSizeInBytes: number,
 ): Promise<FormData> {
@@ -188,7 +188,7 @@ export function createFileUploadHandler<T>(
   });
 }
 
-export function fileValidationProblemResponse(
+function fileValidationProblemResponse(
   error: FileValidationError,
   request: Request,
 ) {

@@ -13878,6 +13878,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/enrollment/{tenantSlug}/uploads",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadReceipt"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "enrollment.upload_invalid",
+      "public_upload": "the public enrollment form takes proofs before any account exists; the backend limits attempts per IP and school"
+    },
+    {
+      "method": "POST",
       "pattern": "/api/files/folders",
       "portals": [
         "tenant"
@@ -17404,6 +17419,20 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/enrollments/{tenantSlug}/uploads",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadReceipt"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "enrollment.upload_invalid"
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/calendar/feed/rotate",
       "portals": [
         "parent"
@@ -19253,6 +19282,21 @@
         "ref": "HolidayRegistrationSubmitResponse"
       },
       "max_body_bytes": 2097152
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/holiday-registrations/{token}/uploads",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadReceipt"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "enrollment.upload_invalid",
+      "public_upload": "the published link of a holiday period takes proofs of benefits; the backend limits attempts per IP and Träger"
     },
     {
       "method": "POST",
@@ -99175,6 +99219,36 @@
               "kind": "ref",
               "ref": "CompanionEntry"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "UploadReceipt",
+      "go_type": "enrollmenthttp.UploadReceipt",
+      "fields": [
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
