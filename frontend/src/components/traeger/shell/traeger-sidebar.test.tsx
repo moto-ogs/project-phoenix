@@ -250,6 +250,17 @@ describe("TraegerSidebar", () => {
       mockPathname.mockReturnValue("/einstellungen");
       render(<TraegerSidebar />);
 
+      // The start is the dashboard with its right (#7646).
+      expect(
+        settingsNav().getByRole("link", { name: "Zurück zur App" }),
+      ).toHaveAttribute("href", "/uebersicht");
+    });
+
+    it("leads to the school list without the dashboard right (#7646)", () => {
+      sessionUser.permissions = ["traeger_access_log:read"];
+      mockPathname.mockReturnValue("/einstellungen/zugriffsprotokoll");
+      render(<TraegerSidebar />);
+
       expect(
         settingsNav().getByRole("link", { name: "Zurück zur App" }),
       ).toHaveAttribute("href", "/");
@@ -287,7 +298,7 @@ describe("TraegerSidebar", () => {
 
       expect(
         settingsNav().getByRole("link", { name: "Zurück zur App" }),
-      ).toHaveAttribute("href", "/");
+      ).toHaveAttribute("href", "/uebersicht");
     });
   });
 

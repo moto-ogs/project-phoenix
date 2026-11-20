@@ -277,14 +277,11 @@ func mountOperatorBillingRoutes(r chi.Router, billing *provisioningOperatorAPI.B
 // A protected subtree on /auth/passkeys shadows those public login routes in
 // chi and makes anonymous passkey login fail with 401.
 //
-// Register the list endpoint under BOTH the no-slash and trailing-slash forms:
-// chi treats "/auth/passkeys" and "/auth/passkeys/" as distinct patterns (no
-// RedirectSlashes on this router), and the old r.Route("/auth/passkeys").Get("/")
-// form answered both. The proxy sends the slash form, but direct authenticated
-// operator clients hit the no-slash form, so dropping it 404s them.
+// The list answers only the contract form GET /auth/passkeys without a
+// trailing slash; the catalog proxy builds backend paths without empty
+// segments, so since the catalog proxy (#2352) no client sends the slash form.
 func (rs operatorIdentityRoutes) mountPasskeyRoutes(r chi.Router) {
 	r.Get("/auth/passkeys", rs.passkeys.PasskeyList)
-	r.Get("/auth/passkeys/", rs.passkeys.PasskeyList)
 	r.Post("/auth/passkeys/enrollment/challenge", rs.passkeys.PasskeyEnrollmentChallenge)
 	r.Post("/auth/passkeys/register/options", rs.passkeys.PasskeyRegisterOptions)
 	r.Post("/auth/passkeys/register/verify", rs.passkeys.PasskeyRegisterVerify)

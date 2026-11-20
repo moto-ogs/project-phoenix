@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   nullable,
   object,
@@ -104,6 +105,11 @@ export interface FolderRequest {
   account_ids?: string[] | null;
 }
 
+/** Query of GET /api/files/folders/{folderId}/files/{fileId}/download */
+export interface GetFilesFoldersFolderIdFilesFileIdDownloadQuery {
+  inline?: string;
+}
+
 export const routes = {
   "DELETE /api/files/folders/{folderId}": {
     method: "DELETE",
@@ -128,6 +134,13 @@ export const routes = {
     pattern: "/api/files/folders",
     portals: ["tenant"],
     response: success(FolderListResponseSchema),
+  },
+  "GET /api/files/folders/{folderId}/files/{fileId}/download": {
+    method: "GET",
+    pattern: "/api/files/folders/{folderId}/files/{fileId}/download",
+    portals: ["tenant"],
+    query: ["inline"],
+    response: fileAnswer,
   },
   "POST /api/files/folders": {
     method: "POST",

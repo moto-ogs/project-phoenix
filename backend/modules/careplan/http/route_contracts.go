@@ -19,7 +19,8 @@ type DecisionResponses struct {
 
 // StudentRouteContracts registers the typed contract of Care Plan's student
 // routes besides the create and update (ADR 0270), with patterns relative to
-// /api/students. Uploads and downloads keep their own BFF routes.
+// /api/students. Downloads stream through the portal's proxy (#2352);
+// uploads validate in their own BFF routes.
 func StudentRouteContracts(decisions DecisionResponses) []common.RouteContract {
 	routes := reviewRouteContracts(decisions)
 	routes = append(routes, careExitRouteContracts()...)
@@ -35,6 +36,10 @@ func reviewRouteContracts(decisions DecisionResponses) []common.RouteContract {
 		{Method: "POST", Pattern: "/{id}/accident-reports/{documentId}/corrections", Portals: portals, Request: AccidentReportRequest{}, Response: StudentDocumentResponse{}},
 		{Method: "POST", Pattern: "/{id}/accident-reports/{documentId}/signature", Portals: portals, Request: AccidentSignatureRequest{}, Response: StudentDocumentResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/documents/{documentId}", Portals: portals, Response: studentDocumentDeletedResponse{}},
+		// Files stream through the portal's proxy (#2352).
+		{Method: "GET", Pattern: "/{id}/documents/{documentId}/download", Portals: portals, File: true},
+		{Method: "GET", Pattern: "/{id}/accident-reports/{documentId}/pdf", Portals: portals, File: true},
+		{Method: "GET", Pattern: "/care-schedule-change-requests/{requestId}/proof", Portals: portals, File: true},
 		{Method: "POST", Pattern: "/master-data-change-requests/{requestId}/decide", Portals: portals, Request: DecideMasterDataChangeRequestBody{}, Response: decisions.MasterDataDecision},
 		{Method: "POST", Pattern: "/care-schedule-change-requests/{requestId}/decide", Portals: portals, Request: DecideCareRequestBody{}, Response: decisions.CareDecision},
 		{Method: "GET", Pattern: "/care-schedule-change-requests/{requestId}", Portals: portals, Response: decisions.CareDetail},

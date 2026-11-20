@@ -1864,6 +1864,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/announcement-attachments/{announcementId}/{attachmentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/birthdays/",
       "portals": [
         "tenant"
@@ -2287,6 +2301,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/admin/students/{studentId}/requests/",
       "portals": [
         "tenant"
@@ -2666,6 +2688,20 @@
         "kind": "ref",
         "ref": "FolderListResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/files/folders/{folderId}/files/{fileId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -3262,6 +3298,20 @@
           "ref": "ParentChatInboxThreadResponse"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/attachments/{attachmentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -3891,6 +3941,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff-messages/attachments/{attachmentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff-messages/recipients",
       "portals": [
         "tenant"
@@ -4367,6 +4431,36 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/time-tracking/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string"
+        },
+        {
+          "name": "granularity",
+          "kind": "string"
+        },
+        {
+          "name": "month",
+          "kind": "int"
+        },
+        {
+          "name": "time_format",
+          "kind": "string"
+        },
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/time-tracking/export/datev-report",
       "portals": [
         "tenant"
@@ -4574,6 +4668,14 @@
           "ref": "StaffAbsenceResponse"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/{id}/documents/{documentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -5116,6 +5218,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/care-schedule-change-requests/{requestId}/proof",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/care-withdrawals",
       "portals": [
         "tenant"
@@ -5552,6 +5662,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/{id}/accident-reports/{documentId}/pdf",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/{id}/arrival-schedules",
       "portals": [
         "tenant"
@@ -5591,6 +5709,33 @@
         "kind": "ref",
         "ref": "attendanceHistoryResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/{id}/attendance-history/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "docx",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -5651,6 +5796,14 @@
         "kind": "ref",
         "ref": "studentDeleteImpactResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/{id}/documents/{documentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -6881,6 +7034,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/traeger-documents/{id}/file",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/users/{id}",
       "portals": [
         "tenant"
@@ -7453,6 +7614,20 @@
           "ref": "billingKeyDateCountResponse"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/billing/key-date-counts/export",
+      "portals": [
+        "platform"
+      ],
+      "query": [
+        {
+          "name": "month",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -8501,6 +8676,20 @@
         "kind": "ref",
         "ref": "ThreadViewResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -13089,6 +13278,20 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/messages/attachments",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
+    },
+    {
+      "method": "POST",
       "pattern": "/api/messages/group-threads",
       "portals": [
         "tenant"
@@ -13401,6 +13604,20 @@
           "ref": "ShiftTypeResponse"
         }
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-messages/attachments",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
@@ -14080,6 +14297,19 @@
         "kind": "ref",
         "ref": "StaffExcusedRequestResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/students/export",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "studentExportRequest"
+      },
+      "max_body_bytes": 1048576,
+      "file": true
     },
     {
       "method": "POST",
@@ -16385,6 +16615,20 @@
         "kind": "ref",
         "ref": "ThreadViewResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/me/messages/children/{studentId}/attachments",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "messageAttachmentResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
@@ -95999,6 +96243,50 @@
       ]
     },
     {
+      "name": "UploadResponse",
+      "go_type": "messageattachments.UploadResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "Utilization",
       "go_type": "traegerview.Utilization",
       "fields": [
@@ -106246,6 +106534,50 @@
       ]
     },
     {
+      "name": "messageAttachmentResponse",
+      "go_type": "parent.messageAttachmentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "monthCloseRequest",
       "go_type": "timetracking.monthCloseRequest",
       "request": true,
@@ -112429,6 +112761,201 @@
           "name": "student_id",
           "schema": {
             "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentExportFilters",
+      "go_type": "presenceprojectionhttp.studentExportFilters",
+      "request": true,
+      "fields": [
+        {
+          "name": "search",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "year",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bus",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_consent",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "day_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sort",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_by_class",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "months",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "include_without_health_info",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "enrollment_answer",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentExportRequest",
+      "go_type": "presenceprojectionhttp.studentExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "preset",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filters",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "studentExportFilters"
+          }
+        },
+        {
+          "name": "columns",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
