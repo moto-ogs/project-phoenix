@@ -262,3 +262,30 @@ describe("public link credentials", () => {
     );
   });
 });
+
+describe("payroll download credentials", () => {
+  it.each([
+    "/api/public/payroll-download/",
+    "/public/payroll-download/",
+    "/lohnbuero/",
+    "/public/payroll%2Ddownload/",
+    "/%6cohnbuero/",
+    encodeURIComponent("/api/public/payroll-download/"),
+    encodeURIComponent("/lohnbuero/"),
+  ])("redacts links under %s from log paths and referrers", (prefix) => {
+    const path = `${prefix}7.payroll-link-credential`;
+    const redacted = `${prefix}${REDACTED_LOG_VALUE}`;
+
+    expect(
+      redactSensitiveLogData({
+        path,
+        details: { referer: `https://school.example${path}` },
+        message: `POST ${path} failed`,
+      }),
+    ).toEqual({
+      path: redacted,
+      details: { referer: `https://school.example${redacted}` },
+      message: `POST ${redacted} failed`,
+    });
+  });
+});

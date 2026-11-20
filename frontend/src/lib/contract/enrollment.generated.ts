@@ -2161,6 +2161,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(RequestMailOutcomeSchema)),
   },
+  "GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /api/enrollment/admin/students/{studentId}/requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/students/{studentId}/requests/",

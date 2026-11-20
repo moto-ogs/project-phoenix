@@ -35,6 +35,7 @@ import (
 	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
+	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
@@ -184,6 +185,7 @@ func contractMounts() []contractMount {
 		{"/api/parent-announcements", announcementAPI.RouteContracts(common.PortalTenant)},
 		{"/school/parent-letters", announcementAPI.RouteContracts(common.PortalSchool)},
 		{"/api/staff-messages", staffMessagingAPI.RouteContracts(common.PortalTenant)},
+		{"/api/staff-messages", messageAttachmentsHTTP.RouteContracts(common.PortalTenant)},
 		{"/api/time-tracking", timeTrackingRouteContracts()},
 		{"/api/work-time-models", worktimemodelsHTTP.RouteContracts()},
 		{"/api/staff", timeTrackingHTTP.StaffAdminRouteContracts()},
@@ -634,6 +636,7 @@ func staffPortalCalendarContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/calendar", calendarAPI.StaffRouteContracts()},
 		{"/api/messages", parentMessagingAPI.InboxRouteContracts()},
+		{"/api/messages", messageAttachmentsHTTP.RouteContracts(common.PortalTenant)},
 		{"/api/iot", devices},
 		{"/api/display", displays},
 	}
