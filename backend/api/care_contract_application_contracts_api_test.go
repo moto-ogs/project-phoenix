@@ -38,9 +38,9 @@ type applicationContractsFixture struct {
 	router http.Handler
 	school int64
 	other  int64
-	// sent, draft, concluded and withdrawn are request children at the school;
-	// foreign is one at the other school of the same Träger.
-	sent, draft, concluded, withdrawn, foreign int64
+	// sent, draft, concluded, withdrawn and replaced are request children at
+	// the school; foreign is one at the other school of the same Träger.
+	sent, draft, concluded, withdrawn, replaced, foreign int64
 }
 
 func newApplicationContractsFixture(t *testing.T, name string) applicationContractsFixture {
@@ -74,6 +74,10 @@ func newApplicationContractsFixture(t *testing.T, name string) applicationContra
 	_, err = db.ExecContext(t.Context(), `UPDATE care_contract.contracts SET status = ?, concluded_at = ?, conclusion_method = ?
 		WHERE id = ?`, carecontract.StatusWithdrawn, time.Date(2099, 7, 2, 9, 30, 0, 0, time.UTC), carecontract.MethodWithApplication, withdrawn)
 	require.NoError(t, err)
+	replaced := testpkg.CreateTestCareContract(t, db, organization, school, testpkg.UniqueTestTenantID(t), carecontract.StatusSent, august,
+		testpkg.CareContractService{Weekday: "fri", Module: "Ganztag", EndsAt: "16:00"})
+	_, err = db.ExecContext(t.Context(), `UPDATE care_contract.contract_versions SET status = ? WHERE contract_id = ?`, carecontract.VersionReplaced, replaced)
+	require.NoError(t, err)
 	foreign := testpkg.CreateTestCareContract(t, db, organization, other, testpkg.UniqueTestTenantID(t), carecontract.StatusSent, august,
 		testpkg.CareContractService{Weekday: "thu", Module: "Ganztag", EndsAt: "16:00"})
 
@@ -90,7 +94,7 @@ func newApplicationContractsFixture(t *testing.T, name string) applicationContra
 	})
 	router.Mount("/api/care-contracts", resource.Router(ProtectedTenantRoutes))
 	return applicationContractsFixture{db: db, router: testpkg.SessionVerifier(router), school: school, other: other,
-		sent: requestChild(sent), draft: requestChild(draft), concluded: requestChild(concluded), withdrawn: requestChild(withdrawn), foreign: requestChild(foreign)}
+		sent: requestChild(sent), draft: requestChild(draft), concluded: requestChild(concluded), withdrawn: requestChild(withdrawn), replaced: requestChild(replaced), foreign: requestChild(foreign)}
 }
 
 func (f applicationContractsFixture) staffOf(t *testing.T, schoolID int64, perms ...string) string {
@@ -214,6 +218,18 @@ func TestApplicationContractsShowWithdrawnContractWithoutBookedServices(t *testi
 	require.Len(t, contracts, 1)
 	assert.Equal(t, carecontract.StatusWithdrawn, contracts[0].Status)
 	assert.Empty(t, contracts[0].Services, "a withdrawal undoes every booked service")
+}
+
+func TestApplicationContractsExcludeReplacedVersionFromTheSummary(t *testing.T) {
+	t.Parallel()
+	f := newApplicationContractsFixture(t, "Träger Anmeldevertrag Ersatz")
+
+	rec := f.get(t, f.staffOf(t, f.school, permissions.ConfigManage), f.path(f.replaced))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	contracts := decodeApplicationContracts(t, rec.Body.Bytes())
+	require.Len(t, contracts, 1)
+	assert.Nil(t, contracts[0].EffectiveFrom, "a replaced version holds on no day")
+	assert.Empty(t, contracts[0].Services, "a replaced version books no service")
 }
 
 func TestApplicationContractsAuditTheSuccessfulSchoolRead(t *testing.T) {

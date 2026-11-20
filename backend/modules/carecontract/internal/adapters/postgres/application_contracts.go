@@ -31,7 +31,7 @@ type applicationContractRow struct {
 }
 
 // applicationContractsSQL reads each contract with its newest version that
-// was not rejected, in one statement for all children.
+// holds on a day, in one statement for all children.
 const applicationContractsSQL = `SELECT c.id AS contract_id, c.request_child_id, c.status, c.sent_at,
 		c.concluded_at, c.conclusion_method, c.ends_on, v.effective_from,
 		CASE WHEN v.id IS NULL OR c.status = ? THEN '[]' ELSE ` + servicesSQL + ` END AS services
@@ -39,7 +39,7 @@ const applicationContractsSQL = `SELECT c.id AS contract_id, c.request_child_id,
 	LEFT JOIN LATERAL (
 		SELECT cv.id, cv.organization_id, cv.effective_from
 		FROM care_contract.contract_versions AS cv
-		WHERE cv.contract_id = c.id AND cv.organization_id = c.organization_id AND cv.status <> ?
+		WHERE cv.contract_id = c.id AND cv.organization_id = c.organization_id AND cv.status NOT IN (?, ?)
 		ORDER BY cv.version_number DESC
 		LIMIT 1) AS v ON true
 	WHERE c.school_id = ? AND c.request_child_id = ANY(?) AND c.status <> ?
@@ -56,7 +56,7 @@ func (BookedCare) ApplicationContracts(ctx context.Context, requestChildIDs []in
 		return nil, err
 	}
 	var rows []applicationContractRow
-	if err := db.NewRaw(applicationContractsSQL, carecontract.StatusWithdrawn, carecontract.VersionRejected, school,
+	if err := db.NewRaw(applicationContractsSQL, carecontract.StatusWithdrawn, carecontract.VersionRejected, carecontract.VersionReplaced, school,
 		pgdialect.Array(requestChildIDs), carecontract.StatusDraft).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read application contracts: %w", err)
 	}
