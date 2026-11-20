@@ -66,6 +66,18 @@ function groupSubstitutionCountText(change: DayChange): string {
     : `In ${count} weiteren Gruppen vertritt heute jemand.`;
 }
 
+/**
+ * Schließtag der OGS oder des Trägers (#7664), mit dem Namen, den die Schule
+ * oder der Träger ihm gegeben hat.
+ */
+function closingDayText(change: DayChange): string {
+  const name = change.closing?.name.trim().replace(/[.!]+$/, "") ?? "";
+  const closed = change.closing?.traeger
+    ? "Der Träger hat die OGS heute geschlossen"
+    : "Die OGS ist heute geschlossen";
+  return name ? `${closed}: ${name}.` : `${closed}.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -74,6 +86,7 @@ const DAY_CHANGE_TEXTS: Readonly<
   staff_absent_count: staffAbsentCountText,
   group_substitution: groupSubstitutionText,
   group_substitution_count: groupSubstitutionCountText,
+  closing_day: closingDayText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -97,6 +110,7 @@ export function dayChangeSpan(change: DayChange): string | null {
 /** Der Hinweis, wenn eine Quelle gerade nicht geladen werden konnte. */
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+  closing_days: "Schließtage konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -121,6 +135,8 @@ export function dayChangeHref(change: DayChange): string | null {
       return "/staff";
     case "group_handovers":
       return "/substitutions";
+    case "calendar_periods":
+      return "/calendar-periods";
     default:
       return null;
   }

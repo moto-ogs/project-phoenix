@@ -36,6 +36,11 @@ export interface DayChange {
     readonly staffId: string | null;
   } | null;
   readonly count: number | null;
+  /** Der Schließtag (#7664): sein Name und ob der Träger ihn plant. */
+  readonly closing: {
+    readonly name: string;
+    readonly traeger: boolean;
+  } | null;
 }
 
 export interface DayChangesOverview {
@@ -63,6 +68,9 @@ function mapEntry(entry: Entry): DayChange {
       ? { target: entry.link.target, staffId: entry.link.staff_id ?? null }
       : null,
     count: entry.count,
+    closing: entry.closing
+      ? { name: entry.closing.name, traeger: entry.closing.traeger }
+      : null,
   };
 }
 

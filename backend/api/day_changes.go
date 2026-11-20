@@ -29,10 +29,12 @@ import (
 )
 
 // dayChangesCaller is the Identity & Access read of the caller's staff
-// record and groups (own groups and the ones the caller covers today).
+// record and own groups. The groups the caller covers today come from the
+// day's Gruppenübergaben the source reads anyway (#7664: one read less than
+// the caller's substitutions).
 type dayChangesCaller interface {
 	CurrentStaffID(ctx context.Context) (int64, bool, error)
-	MyGroupIDs(ctx context.Context) ([]int64, error)
+	MyTeacherGroupIDs(ctx context.Context) ([]int64, error)
 }
 
 // dayChangesWorkforce is the Workforce read of absences and substitutions.
@@ -58,8 +60,10 @@ type DayChangesSources struct {
 	Teachers  owners.GroupTeacherStaff
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
-	Today     func() calendar.Date
-	Logger    *slog.Logger
+	// ClosingDays is School Calendar's read of the closing days (#7664).
+	ClosingDays dayChangesClosingDayReads
+	Today       func() calendar.Date
+	Logger      *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -67,10 +71,14 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
+	if sources.ClosingDays == nil {
+		return nil, fmt.Errorf("%w: closing day source", daychangesview.ErrDependencies)
+	}
 	return daychangesview.New(daychangesview.Dependencies{
 		Today:     sources.Today,
 		Isolation: dayChangesSavepoints{},
 		Staff:     dayChangesStaff{sources: sources},
+		Closing:   dayChangesClosingDays{reads: sources.ClosingDays},
 		Logger:    sources.Logger,
 	})
 }
@@ -133,6 +141,9 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 	if err != nil {
 		return nil, err
 	}
+	if err := s.addTeam(ctx, &viewer, viewer.coveredGroups(handovers)); err != nil {
+		return nil, err
+	}
 	viewer.addSubstitutes(handovers)
 	absences, err := s.sources.Workforce.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		Statuses:    []string{workforce.AbsenceStatusReported, workforce.AbsenceStatusApproved},
@@ -182,14 +193,14 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		return viewer, nil
 	}
 	viewer.selfID = staffID
-	groupIDs, err := s.sources.Caller.MyGroupIDs(ctx)
+	groupIDs, err := s.sources.Caller.MyTeacherGroupIDs(ctx)
 	if err != nil {
 		return staffViewer{}, fmt.Errorf("resolve caller groups: %w", err)
 	}
-	if len(groupIDs) == 0 {
-		return viewer, nil
+	for _, id := range groupIDs {
+		viewer.groups[id] = true
 	}
-	return viewer, s.addTeam(ctx, &viewer, groupIDs)
+	return viewer, nil
 }
 
 func hasStaffRecordAccess(granted []string) bool {
@@ -213,11 +224,25 @@ func containsRole(roles []string, role string) bool {
 	return false
 }
 
-// addTeam names the teachers of the caller's groups. Today's substitutes are
-// added after their source query succeeds.
+// coveredGroups adds the groups the caller covers today by a Gruppenübergabe
+// to its own and returns all of them. Only Gruppenübergaben make somebody
+// part of a group team, as in the team notice of #7138.
+func (viewer *staffViewer) coveredGroups(handovers []workforce.GroupSubstitution) []int64 {
+	if viewer.selfID != 0 {
+		for _, cover := range handovers {
+			if cover.SubstituteStaffID == viewer.selfID {
+				viewer.groups[cover.GroupID] = true
+			}
+		}
+	}
+	return sortedIDs(viewer.groups)
+}
+
+// addTeam names the teachers of the caller's groups in one read. Today's
+// substitutes are added after their source query succeeds.
 func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, groupIDs []int64) error {
-	for _, id := range groupIDs {
-		viewer.groups[id] = true
+	if len(groupIDs) == 0 {
+		return nil
 	}
 	teachers, err := s.sources.Teachers.GroupTeacherStaffIDs(ctx, groupIDs)
 	if err != nil {

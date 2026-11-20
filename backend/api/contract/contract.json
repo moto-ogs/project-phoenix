@@ -22675,6 +22675,7 @@
     {
       "name": "Kind",
       "values": [
+        "closing_day",
         "group_substitution",
         "group_substitution_count",
         "staff_absent",
@@ -22684,6 +22685,7 @@
     {
       "name": "LinkTarget",
       "values": [
+        "calendar_periods",
         "group_handovers",
         "own_absences",
         "staff_absences",
@@ -22745,6 +22747,7 @@
     {
       "name": "Source",
       "values": [
+        "closing_days",
         "staff"
       ]
     },
@@ -45843,6 +45846,24 @@
       ]
     },
     {
+      "name": "DayClosing",
+      "go_type": "daychangesview.DayClosing",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayHandover",
       "go_type": "classday.DayHandover",
       "fields": [
@@ -48568,6 +48589,14 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        },
+        {
+          "name": "closing",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayClosing"
           }
         }
       ]

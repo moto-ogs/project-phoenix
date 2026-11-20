@@ -21,7 +21,7 @@ func (invisibleDayChangesCaller) CurrentStaffID(context.Context) (int64, bool, e
 	return 0, false, nil
 }
 
-func (invisibleDayChangesCaller) MyGroupIDs(context.Context) ([]int64, error) {
+func (invisibleDayChangesCaller) MyTeacherGroupIDs(context.Context) ([]int64, error) {
 	return nil, errors.New("must not resolve groups for a non-staff account")
 }
 
@@ -58,12 +58,16 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 			Caller:    invisibleDayChangesCaller{},
 			Workforce: workforceSource,
 		}},
+		Closing: dayChangesClosingDays{},
 	})
 	require.NoError(t, err)
 
 	overview, err := view.Today(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []daychangesview.SourceStatus{{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded}}, overview.Sources)
+	assert.Equal(t, []daychangesview.SourceStatus{
+		{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceClosingDays, Status: daychangesview.SourceLoaded},
+	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)
 	assert.False(t, workforceSource.absencesRead)

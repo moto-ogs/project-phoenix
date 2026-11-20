@@ -30,7 +30,8 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	view, err := NewDayChanges(DayChangesSources{
 		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
 		Names: NewTimetablePeople(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
-		Today: func() calendar.Date { return today }, Logger: slog.Default(),
+		ClosingDays: owners.NewSchoolClosingDayReads(),
+		Today:       func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {
 		return nil, err

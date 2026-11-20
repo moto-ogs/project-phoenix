@@ -27,6 +27,9 @@ type Source string
 const (
 	// SourceStaff is Personal: full-day absences and group substitutions.
 	SourceStaff Source = "staff"
+	// SourceClosingDays is Schule: the closing days of the school and of its
+	// current Träger (#7664).
+	SourceClosingDays Source = "closing_days"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -52,6 +55,9 @@ const (
 	KindGroupSubstitution Kind = "group_substitution"
 	// KindGroupSubstitutionCount: how many further groups are covered today.
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
+	// KindClosingDay: the school is closed today, by its own closing day or
+	// one of its Träger (#7664).
+	KindClosingDay Kind = "closing_day"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -77,6 +83,9 @@ const (
 	LinkStaffList LinkTarget = "staff_list"
 	// LinkGroupHandovers is the page of the group substitutions.
 	LinkGroupHandovers LinkTarget = "group_handovers"
+	// LinkCalendarPeriods is the page of the school year with the closing
+	// days.
+	LinkCalendarPeriods LinkTarget = "calendar_periods"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -100,6 +109,14 @@ type Link struct {
 	StaffID *int64     `json:"staff_id,string,omitempty"`
 }
 
+// DayClosing is a closing day of the day. Name is the school's or the
+// Träger's own name for it ("Pädagogischer Tag"); Traeger marks one the
+// Träger planned.
+type DayClosing struct {
+	Name    string `json:"name"`
+	Traeger bool   `json:"traeger"`
+}
+
 // SourceEntry is what a source port returns: an entry without its section,
 // and whether the caller is involved. The source has applied its own
 // permission rule already; the projection never filters.
@@ -118,6 +135,8 @@ type SourceEntry struct {
 	Link   *Link
 	// Count is set on the summary kinds only.
 	Count *int
+	// Closing is set on KindClosingDay only.
+	Closing *DayClosing
 }
 
 // Entry is one change to regular operation of the day.
@@ -134,6 +153,7 @@ type Entry struct {
 	Group   *Group         `json:"group"`
 	Link    *Link          `json:"link"`
 	Count   *int           `json:"count"`
+	Closing *DayClosing    `json:"closing"`
 }
 
 // SourceStatus reports one source.
@@ -157,9 +177,17 @@ type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
-// Isolation runs one source read so that its failure leaves the request's
+// ClosingDays is the Schule port for the closing days: those of the school
+// and of its current Träger that cover the day, as the caller may see them.
+type ClosingDays interface {
+	ClosingDays(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
+// Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
+// Consecutive sources share one isolation, so a source must only read: a
+// later source's failure rolls back everything since the isolation began.
 type Isolation interface {
 	Run(ctx context.Context, read func(context.Context) error) error
 	// IsFatal reports an error of the isolation itself: the state of the
@@ -174,6 +202,7 @@ type Dependencies struct {
 	Today     func() calendar.Date
 	Isolation Isolation
 	Staff     StaffChanges
+	Closing   ClosingDays
 	Logger    *slog.Logger
 }
 
@@ -199,7 +228,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Closing == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -213,6 +242,7 @@ func New(deps Dependencies) (Query, error) {
 		// The order is the order of the statuses in the answer.
 		sources: []sourceRead{
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
+			{source: SourceClosingDays, read: deps.Closing.ClosingDays},
 		},
 	}, nil
 }
@@ -220,35 +250,65 @@ func New(deps Dependencies) (Query, error) {
 // Today reads every source separately. A failed source leaves its entries
 // out and is marked failed; only a failure of the isolation itself fails the
 // request.
+//
+// The sources only read, so consecutive sources share one isolation while
+// they succeed: rolling a failed source back also rolls back the reads before
+// it, which changes nothing, and their entries are already held. After a
+// failure the remaining sources get a fresh isolation. Every source still
+// runs isolated from a failed statement of another (ADR 0299 point 7,
+// addendum of #7667), at two statements per request instead of two per
+// source.
 func (v *view) Today(ctx context.Context) (Overview, error) {
 	day := v.today()
+	results := make([][]SourceEntry, len(v.sources))
+	failed := make([]bool, len(v.sources))
+	for start := 0; start < len(v.sources); {
+		failedAt, err := v.readFrom(ctx, day, start, results)
+		if err == nil {
+			break
+		}
+		if v.isolation.IsFatal(err) || failedAt < 0 {
+			return Overview{}, fmt.Errorf("day changes sources: %w", err)
+		}
+		// The source and the error; source reads name no person in their errors.
+		v.logger.ErrorContext(ctx, "day changes source failed",
+			"source", string(v.sources[failedAt].source),
+			"error", err.Error(),
+		)
+		failed[failedAt] = true
+		start = failedAt + 1
+	}
 	overview := Overview{Date: day, Sources: make([]SourceStatus, 0, len(v.sources)), Entries: []Entry{}}
-	for _, source := range v.sources {
-		var entries []SourceEntry
-		err := v.isolation.Run(ctx, func(ctx context.Context) error {
-			var readErr error
-			entries, readErr = source.read(ctx, day)
-			return readErr
-		})
-		if err != nil {
-			if v.isolation.IsFatal(err) {
-				return Overview{}, fmt.Errorf("day changes source %s: %w", source.source, err)
-			}
-			// The source and the error; source reads name no person in their errors.
-			v.logger.ErrorContext(ctx, "day changes source failed",
-				"source", string(source.source),
-				"error", err.Error(),
-			)
+	for i, source := range v.sources {
+		if failed[i] {
 			overview.Sources = append(overview.Sources, SourceStatus{Source: source.source, Status: SourceFailed})
 			continue
 		}
 		overview.Sources = append(overview.Sources, SourceStatus{Source: source.source, Status: SourceLoaded})
-		for _, entry := range entries {
+		for _, entry := range results[i] {
 			overview.Entries = append(overview.Entries, toEntry(entry))
 		}
 	}
 	sortEntries(overview.Entries)
 	return overview, nil
+}
+
+// readFrom reads the sources from start on inside one isolation until one
+// fails. It returns the index of the failed source, or -1.
+func (v *view) readFrom(ctx context.Context, day calendar.Date, start int, results [][]SourceEntry) (int, error) {
+	failedAt := -1
+	err := v.isolation.Run(ctx, func(ctx context.Context) error {
+		for i := start; i < len(v.sources); i++ {
+			entries, err := v.sources[i].read(ctx, day)
+			if err != nil {
+				failedAt = i
+				return err
+			}
+			results[i] = entries
+		}
+		return nil
+	})
+	return failedAt, err
 }
 
 func toEntry(entry SourceEntry) Entry {
@@ -263,7 +323,7 @@ func toEntry(entry SourceEntry) Entry {
 	return Entry{
 		Kind: entry.Kind, Section: section, AllDay: true, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, People: people, Group: entry.Group,
-		Link: entry.Link, Count: entry.Count,
+		Link: entry.Link, Count: entry.Count, Closing: entry.Closing,
 	}
 }
 
@@ -292,6 +352,9 @@ func sortEntries(entries []Entry) {
 
 func rank(entry Entry) int {
 	switch {
+	// The school is closed: that stands above every other change (#7664).
+	case entry.Kind == KindClosingDay:
+		return -2
 	case entry.Count != nil:
 		return 2
 	case entry.Since != nil:

@@ -68,11 +68,13 @@ export function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt, wer vertritt und ob die OGS heute geschlossen ist.",
         ordered: false,
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Schließtage (#7664): oben unter „Schule“, auch die des Trägers.
+          "Ist die OGS heute geschlossen, steht das ganz oben unter `Schule`. Das gilt auch, wenn der Träger den Tag geschlossen hat.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",

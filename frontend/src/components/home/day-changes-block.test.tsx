@@ -33,6 +33,7 @@ function change(overrides: Partial<DayChange>): DayChange {
     groupName: null,
     link: null,
     count: null,
+    closing: null,
     ...overrides,
   };
 }
@@ -186,6 +187,57 @@ describe("DayChangesBlock", () => {
     expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
       day_change_kind: "staff_absent",
     });
+  });
+});
+
+describe("Schließtage (#7664)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+  });
+
+  it("zeigt Schließtage der OGS und des Trägers unter „Schule“ mit Link zum Kalender", () => {
+    serve({
+      entries: [
+        change({
+          kind: "closing_day",
+          closing: { name: "Brückentag", traeger: true },
+          since: "2026-09-08",
+        }),
+        change({
+          kind: "closing_day",
+          closing: { name: "Pädagogische Tage.", traeger: false },
+          until: "2026-09-11",
+          link: { target: "calendar_periods", staffId: null },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(
+      school.getByText("Der Träger hat die OGS heute geschlossen: Brückentag."),
+    ).toBeInTheDocument();
+    expect(school.getByText("seit 8.9.")).toBeInTheDocument();
+    expect(
+      school.getByRole("link", {
+        name: /Die OGS ist heute geschlossen: Pädagogische Tage\.\s*bis 11\.9\./,
+      }),
+    ).toHaveAttribute("href", "/schule/calendar-periods");
+    expect(
+      screen.queryByRole("region", { name: "Betrifft dich" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("nennt eine ausgefallene Lesung der Schließtage und gibt keine Entwarnung", () => {
+    serve({ failedSources: ["closing_days"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText("Schließtage konnten gerade nicht geladen werden."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
   });
 });
 
