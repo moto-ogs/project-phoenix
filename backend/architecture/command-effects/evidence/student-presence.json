@@ -16329,14 +16329,6 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes",
-      "binding_digest": "ffba5c40a47b2d2c7d30f6dbdb6fc7ca",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SettingsResolver.SessionInactivityTimeoutMinutes",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes",
-      "target_owner": "settings-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SickClearMode",
       "binding_digest": "5293280fb85e1ae7ab9946cb96eaaa18",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SettingsResolver.SickClearMode",

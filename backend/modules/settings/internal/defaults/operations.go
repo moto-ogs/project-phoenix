@@ -287,20 +287,6 @@ var operations_init_sitzungsbereinigung_4Definitions = []config.Definition{
 		DependsOn:       config.DependsOnEq(config.KeySessionCleanupEnabled, true),
 		AccessPolicy:    config.AccessOperatorOnly,
 	},
-	{
-		Key:             config.KeySessionInactivityTimeoutMin,
-		Label:           "Standard-Sitzungstimeout (Minuten)",
-		Description:     "Zeitlimit ohne Aktivität für Sitzungen ohne eigenes Zeitlimit. Nur ein Hinweis für das Gerät: Die Sitzung endet dadurch nicht.",
-		Type:            config.FieldNumber,
-		Default:         30,
-		ReadPermission:  "config:read",
-		WritePermission: "config:update",
-		Tab:             "system",
-		Category:        "sitzungsbereinigung",
-		SortOrder:       13,
-		Validation:      config.Range(1, 480),
-		AccessPolicy:    config.AccessOperatorOnly,
-	},
 }
 
 var operations_init_sehen_und_bearbeiten_5Definitions = []config.Definition{

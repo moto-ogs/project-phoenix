@@ -242,11 +242,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/settings/internal/application/PresenceSettings.SessionInactivityTimeoutMinutes",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/settings/internal/application/PresenceSettings.SickClearMode",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

@@ -181,7 +181,6 @@ const (
 	KeySessionCleanupEnabled             = "operations.session_cleanup_enabled"
 	KeySessionCleanupIntervalMinutes     = "operations.session_cleanup_interval_minutes"
 	KeySessionAbandonedThresholdMin      = "operations.session_abandoned_threshold_minutes"
-	KeySessionInactivityTimeoutMin       = "operations.session_inactivity_timeout_minutes"
 	KeyOperationalOverviewScope          = "operations.operational_overview_scope"
 	// KeyWeekendFollowsFriday makes Saturday and Sunday care days that run
 	// on Friday's weekly plan (#3921). Operator-only; the public demo
