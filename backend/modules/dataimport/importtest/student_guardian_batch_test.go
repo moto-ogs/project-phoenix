@@ -156,7 +156,12 @@ func TestStudentGuardianBatchKeepsOtherRowsInPlace(t *testing.T) {
 // cancelled, nothing replays.
 func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 	t.Parallel()
-	const readTimeout, hold, limit = 2 * time.Second, 700 * time.Millisecond, 1500 * time.Millisecond
+	const (
+		readTimeout = 2 * time.Second
+		hold        = 700 * time.Millisecond
+		limit       = 1500 * time.Millisecond
+		postRelease = 500 * time.Millisecond
+	)
 	db := testpkg.SetupIsolatedTestDB(t)
 	pool, name := namedImportPool(t, testpkg.IsolatedTestDSN(t), readTimeout)
 	for _, bounded := range []bool{true, false} {
@@ -179,10 +184,12 @@ func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 			waitBlockedBy(t, db, name, pid)
 			// The hold time is the subject of the test.
 			time.Sleep(hold)
+			released := time.Now()
 			require.NoError(t, holder.Rollback())
 
 			upload := awaitStudents(t, done)
 			require.NoError(t, upload.err)
+			require.Less(t, time.Since(released), postRelease, "the upload waits only for the held school row")
 			require.Equal(t, studentChunkRows, upload.result.CreatedCount)
 			observation := (*module.Observations)[0]
 			require.Zero(t, observation.BatchFallbacks, "the bound cancelled nothing")
