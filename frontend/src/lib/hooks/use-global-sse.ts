@@ -988,11 +988,15 @@ export function useGlobalSSE(): SSEHookState {
 
     // Hinweise der Leitung (#7667): „Heute anders“ reloads above; the
     // Tagesinformationen page, the start page block and the count in the
-    // navigation read the day's notices of the account under this key.
+    // navigation read the day's notices of the account under this key. The
+    // administration list includes acknowledgement counts, so it must reload
+    // as well when another account confirms a notice.
     if (hasPendingStaffNoticesEvent.current) {
       mutate(
         (key) =>
-          typeof key === "string" && key.includes(staffNoticeKeys.today("")),
+          typeof key === "string" &&
+          (key.includes(staffNoticeKeys.today("")) ||
+            key.includes(staffNoticeKeys.all(""))),
       ).catch((err) => {
         // Fire-and-forget: the views keep their data until the next event or load.
         logger.debug("swr_revalidation_failed", {

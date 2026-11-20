@@ -233,6 +233,11 @@ describe("DayChangesBlock", () => {
     await waitFor(() => expect(refreshed).toHaveBeenCalled());
     expect(acknowledgeStaffNotice).toHaveBeenCalledWith("5");
     expect(invalidate).toHaveBeenCalled();
+    const matcher = invalidate.mock.calls.at(-1)?.[0];
+    expect(matcher).toEqual(expect.any(Function));
+    expect(matcher("staff-notices-today:account-a")).toBe(true);
+    expect(matcher("staff-notices:account-a")).toBe(true);
+    expect(matcher("staff-notice-acknowledgements-5")).toBe(true);
     expect(trackEvent).not.toHaveBeenCalled();
 
     rerender(<DayChangesBlock />);

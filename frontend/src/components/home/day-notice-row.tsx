@@ -74,11 +74,15 @@ export function DayNoticeRow({
       void afterAcknowledge.refresh();
       return;
     }
-    // Die Seite Tagesinformationen, der Zähler in der Navigation und die
-    // Bestätigungsliste der Leitung lesen dieselbe Kenntnisnahme.
+    // Die Seite Tagesinformationen, der Zähler in der Navigation, die
+    // Leitungsübersicht mit ihren Zählern und die Bestätigungsliste lesen
+    // dieselbe Kenntnisnahme.
     const today = staffNoticeKeys.today(accountId);
+    const all = staffNoticeKeys.all(accountId);
     const acknowledgements = staffNoticeKeys.acknowledgements(notice.id);
-    void invalidate((key) => key === today || key === acknowledgements);
+    void invalidate(
+      (key) => key === today || key === all || key === acknowledgements,
+    );
     window.dispatchEvent(new Event(STAFF_NOTICES_REFRESH_EVENT));
     await afterAcknowledge.refresh();
     setPending(false);
