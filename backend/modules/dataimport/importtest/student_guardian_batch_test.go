@@ -152,9 +152,9 @@ func TestStudentGuardianBatchKeepsOtherRowsInPlace(t *testing.T) {
 // delays the upload once, at the first statement that references the school,
 // as on the row path. The bundled guardian statements reference only the
 // school row the transaction already holds and rows of their own transaction,
-// so they wait for nothing. An unrelated locked guardian proves that through
-// pg_blocking_pids. Bounded and unbounded end with 200, nothing is cancelled,
-// nothing replays.
+// so they wait for nothing. An unrelated locked guardian and the upload's
+// lock status prove that through pg_blocking_pids and pg_stat_activity.
+// Bounded and unbounded end with 200, nothing is cancelled, nothing replays.
 func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 	t.Parallel()
 	const (
@@ -198,15 +198,15 @@ func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 			var upload studentUpload
 			finished := false
 			deadline := time.Now().Add(20 * time.Second)
-			for !finished && !uploadWaitsForAny(t, db, name, []int{unrelatedPID}) {
-				require.True(t, time.Now().Before(deadline), "the upload neither ended nor waited for the unrelated guardian")
+			for !finished && !uploadWaitsForAny(t, db, name, []int{unrelatedPID}) && !uploadWaitsForLock(t, db, name) {
+				require.True(t, time.Now().Before(deadline), "the upload neither ended nor waited for a lock")
 				select {
 				case upload = <-done:
 					finished = true
 				case <-time.After(5 * time.Millisecond):
 				}
 			}
-			require.True(t, finished, "the upload waited for the unrelated guardian")
+			require.True(t, finished, "the upload waited for a lock after the school row was released")
 			require.NoError(t, unrelatedHolder.Rollback())
 			require.NoError(t, upload.err)
 			require.Equal(t, studentChunkRows, upload.result.CreatedCount)
@@ -302,6 +302,17 @@ func uploadWaitsForAny(t *testing.T, db *bun.DB, upload string, holders []int) b
 	t.Helper()
 	var blocked int
 	err := db.NewRaw(`SELECT count(*) FROM pg_stat_activity WHERE application_name = ? AND pg_blocking_pids(pid) && ?::int[]`, upload, pgdialect.Array(holders)).
+		Scan(context.Background(), &blocked)
+	require.NoError(t, err)
+	return blocked > 0
+}
+
+// uploadWaitsForLock reports whether a session of the upload's own pool is
+// waiting for any PostgreSQL lock.
+func uploadWaitsForLock(t *testing.T, db *bun.DB, upload string) bool {
+	t.Helper()
+	var blocked int
+	err := db.NewRaw(`SELECT count(*) FROM pg_stat_activity WHERE application_name = ? AND wait_event_type = 'Lock'`, upload).
 		Scan(context.Background(), &blocked)
 	require.NoError(t, err)
 	return blocked > 0
