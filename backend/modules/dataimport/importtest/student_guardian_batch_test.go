@@ -152,15 +152,15 @@ func TestStudentGuardianBatchKeepsOtherRowsInPlace(t *testing.T) {
 // delays the upload once, at the first statement that references the school,
 // as on the row path. The bundled guardian statements reference only the
 // school row the transaction already holds and rows of their own transaction,
-// so they wait for nothing. Bounded and unbounded end with 200, nothing is
-// cancelled, nothing replays.
+// so they wait for nothing. An unrelated locked guardian proves that through
+// pg_blocking_pids. Bounded and unbounded end with 200, nothing is cancelled,
+// nothing replays.
 func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 	t.Parallel()
 	const (
 		readTimeout = 2 * time.Second
 		hold        = 700 * time.Millisecond
 		limit       = 1500 * time.Millisecond
-		postRelease = 500 * time.Millisecond
 	)
 	db := testpkg.SetupIsolatedTestDB(t)
 	pool, name := namedImportPool(t, testpkg.IsolatedTestDSN(t), readTimeout)
@@ -174,6 +174,15 @@ func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 			actor := newImporter(t, db)
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
+			unrelated := testpkg.CreateTestGuardianProfileWithExactEmail(t, db, testpkg.Tenant(t), testpkg.GuardianProfileWithEmail{
+				FirstName: "Eltern", LastName: "Unbeteiligt", Email: fmt.Sprintf("unbeteiligt.%d@example.test", testpkg.Tenant(t)),
+			})
+			unrelatedHolder, err := db.BeginTx(ctx, nil)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = unrelatedHolder.Rollback() })
+			unrelatedPID := sessionPID(t, ctx, unrelatedHolder)
+			var unrelatedID int64
+			require.NoError(t, unrelatedHolder.NewRaw(`SELECT id FROM users.guardian_profiles WHERE id = ? FOR UPDATE`, unrelated.ID).Scan(ctx, &unrelatedID))
 			holder, err := db.BeginTx(ctx, nil)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = holder.Rollback() })
@@ -184,12 +193,22 @@ func TestStudentGuardianBatchAddsNoWait(t *testing.T) {
 			waitBlockedBy(t, db, name, pid)
 			// The hold time is the subject of the test.
 			time.Sleep(hold)
-			released := time.Now()
 			require.NoError(t, holder.Rollback())
 
-			upload := awaitStudents(t, done)
+			var upload studentUpload
+			finished := false
+			deadline := time.Now().Add(20 * time.Second)
+			for !finished && !uploadWaitsForAny(t, db, name, []int{unrelatedPID}) {
+				require.True(t, time.Now().Before(deadline), "the upload neither ended nor waited for the unrelated guardian")
+				select {
+				case upload = <-done:
+					finished = true
+				case <-time.After(5 * time.Millisecond):
+				}
+			}
+			require.True(t, finished, "the upload waited for the unrelated guardian")
+			require.NoError(t, unrelatedHolder.Rollback())
 			require.NoError(t, upload.err)
-			require.Less(t, time.Since(released), postRelease, "the upload waits only for the held school row")
 			require.Equal(t, studentChunkRows, upload.result.CreatedCount)
 			observation := (*module.Observations)[0]
 			require.Zero(t, observation.BatchFallbacks, "the bound cancelled nothing")
