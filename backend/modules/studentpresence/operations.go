@@ -230,12 +230,6 @@ func (s *AttendanceStatus) PickupTime() *time.Time {
 	return s.CheckOutTime
 }
 
-// CheckoutOutcome is the outcome of an explicit school checkout.
-type CheckoutOutcome struct {
-	Action       string
-	AttendanceID int64
-}
-
 // StudentMoveAuthorization carries the caller facts a bulk move revalidates
 // against the locked move state inside the command.
 type StudentMoveAuthorization struct {

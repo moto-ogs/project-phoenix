@@ -255,7 +255,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0077: the caterer flows. Lowered by #7081: one name for
 	// the operator's resend of a code. Lowered by #4496: revoking a caterer
 	// invitation also stops its unsent mail.
-	"modules/identityaccess": 202, // #2352: dead caller session reads removed (-3)
+	"modules/identityaccess": 201, // #2352: dead caller session and invitation reads removed (-4)
 	"modules/mealplan":       1,
 	// Raised by ADR 0112: the Träger logo read of the Träger-Portal.
 	// Raised by ADR 0172: the document contact read without an account (+1).
@@ -287,7 +287,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
 	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
-	"modules/studentpresence": 98,
+	"modules/studentpresence": 97,
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	"modules/timetable": 203,

@@ -164,9 +164,6 @@ func TestExportedHandlers_NotNil(t *testing.T) {
 
 	// Unclaimed Group Handlers
 	assert.NotNil(t, rs.claimGroup)
-
-	// Checkout Handler
-	assert.NotNil(t, rs.checkoutStudent)
 }
 
 // =============================================================================

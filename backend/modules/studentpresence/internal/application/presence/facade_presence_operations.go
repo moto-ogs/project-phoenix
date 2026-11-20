@@ -73,14 +73,6 @@ func (p PresenceOperations) StudentAttendanceStatus(ctx context.Context, student
 	return attendanceStatus(status), nil
 }
 
-func (p PresenceOperations) CheckOutStudent(ctx context.Context, studentID, staffID int64) (studentpresence.CheckoutOutcome, error) {
-	result, err := p.active.CheckOutStudent(ctx, studentID, staffID, true)
-	if err != nil {
-		return studentpresence.CheckoutOutcome{}, err
-	}
-	return studentpresence.CheckoutOutcome{Action: result.Action, AttendanceID: result.AttendanceID}, nil
-}
-
 func studentMoveResult(result *StudentMoveResult) studentpresence.StudentMoveResult {
 	skipped := make([]studentpresence.StudentMoveSkipped, 0, len(result.Skipped))
 	for _, item := range result.Skipped {

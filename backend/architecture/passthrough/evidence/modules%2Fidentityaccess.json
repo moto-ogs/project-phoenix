@@ -982,13 +982,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx)\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListRedeemableGuardianInvitations",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
       "evidence": "func (p InvitationGrantPolicy) CanGrantRole(role domain.RoleFacts, actorPermissions, rolePermissions []string) bool {\n\treturn p.Source.CanGrantRole(identityaccess.RoleFacts(role), actorPermissions, rolePermissions)\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/InvitationGrantPolicy.CanGrantRole",

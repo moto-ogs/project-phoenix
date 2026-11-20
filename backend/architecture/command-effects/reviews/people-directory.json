@@ -18281,26 +18281,6 @@
       "target_owner": "identity-access"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationReads.ListRedeemable",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianInvitations.ListRedeemable",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.GuardianInvitationReads.ListRedeemableGuardianInvitations; modules/identityaccess/guardian_invitation.go:128. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianInvitationReads.ListRedeemableGuardianInvitations",
-      "target_owner": "identity-access"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationReads.ListRedeemable",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianInvitations.ListRedeemable",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.Owner.ListRedeemableGuardianInvitations; modules/identityaccess.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListRedeemableGuardianInvitations",
-      "target_owner": "identity-access"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.nativeGuardianProfileRepository.ActiveGuardianPortalProfiles",
       "classification": "query",
       "effect": "query",

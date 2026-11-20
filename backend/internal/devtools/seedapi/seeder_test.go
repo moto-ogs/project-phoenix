@@ -1485,10 +1485,6 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
-		if manualAuth && r.Method == seedHTTPMethodGet && strings.HasSuffix(r.URL.Path, "/visit-history") {
-			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
-			return
-		}
 		if manualAuth && r.Method == seedHTTPMethodGet && r.URL.Path == "/api/staff/" {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success", "data": []map[string]any{{"id": 1}, {"id": 2}},
@@ -2115,17 +2111,6 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				"status": "success",
 				"data": map[string]any{
 					"id": fmt.Sprintf("%d", idCounter),
-				},
-			})
-
-		case "/api/guardians/invitations/pending":
-			// Three approvals left an open invitation; two stay open.
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "success",
-				"data": []map[string]any{
-					{"id": 1, "guardian_profile_id": 703},
-					{"id": 2, "guardian_profile_id": 701},
-					{"id": 3, "guardian_profile_id": 702},
 				},
 			})
 

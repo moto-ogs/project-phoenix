@@ -45,18 +45,6 @@ type GuardianInvitation struct {
 	Token             string
 }
 
-// PendingGuardianInvitation is one open invitation of the tenant. Token is
-// exposed only to the locally authorized seeder.
-type PendingGuardianInvitation struct {
-	ID                int64
-	GuardianProfileID int64
-	CreatedAt         time.Time
-	ExpiresAt         time.Time
-	EmailSentAt       *time.Time
-	EmailError        *string
-	EmailRetryCount   int
-}
-
 // GuardianInvite invites a further guardian to a child by e-mail.
 type GuardianInvite struct {
 	StudentID          int64
@@ -153,8 +141,7 @@ type GuardianRuntime struct {
 	ExposeInvitationToken func(*http.Request) bool
 	MarkRollback          func(context.Context)
 
-	SendInvitation         func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitation, error)
-	ListPendingInvitations func(context.Context) ([]PendingGuardianInvitation, error)
+	SendInvitation func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitation, error)
 
 	InviteGuardianToStudent func(context.Context, GuardianInvite) (GuardianInviteResult, error)
 	BulkInviteGuardians     func(context.Context, GuardianBulkInvite) (GuardianBulkInviteResult, error)
@@ -197,7 +184,7 @@ func NewGuardianResource(directory peopledirectory.Capability, runtime GuardianR
 		runtime.Success == nil || runtime.SuccessPaginated == nil || runtime.Failure == nil || runtime.ObserveResponse == nil ||
 		runtime.ActorID == nil || runtime.ActorRole == nil || runtime.HasPermission == nil || runtime.IsAdmin == nil ||
 		runtime.IsVerifiedStaff == nil || runtime.ExposeInvitationToken == nil || runtime.MarkRollback == nil ||
-		runtime.SendInvitation == nil || runtime.ListPendingInvitations == nil ||
+		runtime.SendInvitation == nil ||
 		runtime.InviteGuardianToStudent == nil || runtime.BulkInviteGuardians == nil || runtime.InviteFailureKind == nil || runtime.ListPendingApprovals == nil ||
 		runtime.PendingInvitationStudentID == nil || runtime.ApproveInvitation == nil || runtime.RejectInvitation == nil ||
 		runtime.RenderPaymentExport == nil || runtime.Log == nil || runtime.ParseIDParam == nil {
@@ -231,7 +218,6 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.With(usersDelete, withTx).Delete("/{id}", rs.deleteGuardian)
 
 		r.With(usersCreate, withTx).Post("/{id}/invite", rs.sendInvitation)
-		r.With(usersRead, withTx).Get("/invitations/pending", rs.listPendingInvitations)
 
 		// Student-guardian relationships: anyone with users:read may view them
 		// (emergency cases); writes add the per-student check in the handler.

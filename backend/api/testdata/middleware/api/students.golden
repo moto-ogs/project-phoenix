@@ -83,11 +83,9 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/students/{id}/pickup-schedules
 	GET /api/students/{id}/privacy-consent
 	GET /api/students/{id}/status-days
-	GET /api/students/{id}/visit-history
 	POST /api/students/
 	POST /api/students/arrival-schedules/bulk
 	POST /api/students/arrival-schedules/status
-	POST /api/students/arrival-times/bulk
 	POST /api/students/care-end
 	POST /api/students/care-end/cancel
 	POST /api/students/care-end/preview
@@ -104,7 +102,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	POST /api/students/offering-change-requests/{requestId}/decide
 	POST /api/students/offering-change-requests/{requestId}/preview
 	POST /api/students/pickup-schedules/bulk
-	POST /api/students/pickup-times/bulk
 	POST /api/students/status-days/bulk
 	POST /api/students/{id}/arrival-exceptions
 	POST /api/students/{id}/arrival-notes

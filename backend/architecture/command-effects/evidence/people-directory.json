@@ -12921,22 +12921,6 @@
       "target_owner": "identity-access"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationReads.ListRedeemable",
-      "binding_digest": "dcee36f65e7e76da72ff4bc28c6a9e9a",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianInvitations.ListRedeemable",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianInvitationReads.ListRedeemableGuardianInvitations",
-      "target_owner": "identity-access"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationReads.ListRedeemable",
-      "binding_digest": "c6d88b6ca4a79009444a84626e4802b4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianInvitations.ListRedeemable",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListRedeemableGuardianInvitations",
-      "target_owner": "identity-access"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.nativeGuardianProfileRepository.ActiveGuardianPortalProfiles",
       "binding_digest": "f251fc26eb1fc4ff811a850df8628f9e",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianProfileRepository.ActiveGuardianPortalProfiles",

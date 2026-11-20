@@ -19,7 +19,6 @@ type PresenceOperations interface {
 
 	// Attendance
 	StudentAttendanceStatus(context.Context, int64) (*studentpresence.AttendanceStatus, error)
-	CheckOutStudent(context.Context, int64, int64) (studentpresence.CheckoutOutcome, error)
 
 	// Moves
 	AssignTransitStudents(context.Context, []int64, int64, studentpresence.StudentMoveAuthorization) (studentpresence.TransitAssignResult, error)

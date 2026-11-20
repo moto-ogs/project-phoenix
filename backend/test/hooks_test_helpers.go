@@ -4,7 +4,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -62,25 +61,4 @@ func MintLiveSessionJWT(t testing.TB, db *bun.DB, claims sessiontoken.AppClaims)
 	}
 	claims.FamilyID = CreateTestSessionFamily(t, db, int64(claims.ID), school, claims.Scope)
 	return MintTestJWT(t, claims)
-}
-
-// CreateTestJWT creates a valid JWT access token for the given account ID.
-// This token can be used in the Authorization header for authenticated API requests.
-func CreateTestJWT(tb testing.TB, accountID int64, permissions []string) string {
-	tb.Helper()
-
-	tokenAuth := GetTestTokenAuth(tb)
-
-	claims := sessiontoken.AppClaims{
-		ID:          int(accountID),
-		Sub:         fmt.Sprintf("%d", accountID), // Required claim - subject identifier
-		Roles:       []string{"user"},
-		Permissions: permissions,
-		TenantID:    fixtureTenantID(tb),
-	}
-
-	token, err := tokentest.CreateJWT(tokenAuth, claims)
-	require.NoError(tb, err, "Failed to create test JWT")
-
-	return token
 }

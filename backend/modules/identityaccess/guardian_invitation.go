@@ -160,9 +160,6 @@ type GuardianInvitationReads interface {
 	// that ended without a recorded recipient (Email ""), which nobody can
 	// redeem: the guardian list shows them as dead links (#6294).
 	ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64) ([]GuardianInvitation, error)
-	// ListRedeemableGuardianInvitations returns the invitations of the school
-	// in context whose link can still be spent.
-	ListRedeemableGuardianInvitations(ctx context.Context) ([]GuardianInvitation, error)
 }
 
 // GuardianInvitationInvalidation ends a school's open links in the caller's transaction.

@@ -107,8 +107,6 @@ func (rs *Resource) registerVisitRoutes(r chi.Router, withTx common.Middleware) 
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/", rs.listVisits)
 
 		// Write operations
-		// Immediate checkout for students
-		r.With(common.RequireVisitUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/student/{studentId}/checkout", rs.checkoutStudent)
 
 		// Bulk assign checked-in students without a room visit to an active room session.
 		r.With(common.RequireVisitUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/transit/assign", rs.assignTransitStudents)
