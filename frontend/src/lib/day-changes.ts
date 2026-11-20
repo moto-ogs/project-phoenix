@@ -14,10 +14,6 @@ import type {
   Source,
 } from "~/lib/contract/day-changes.generated";
 
-export type DayChangeKind = Kind;
-export type DayChangeSection = Section;
-export type DayChangeSource = Source;
-
 export interface DayChangePerson {
   readonly staffId: string;
   readonly name: string;
@@ -70,7 +66,7 @@ function mapEntry(entry: Entry): DayChange {
   };
 }
 
-export function mapDayChanges(overview: Overview): DayChangesOverview {
+function mapDayChanges(overview: Overview): DayChangesOverview {
   return {
     date: overview.date ?? "",
     failedSources: (overview.sources ?? [])
