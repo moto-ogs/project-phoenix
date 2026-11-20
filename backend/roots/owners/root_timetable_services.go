@@ -158,7 +158,7 @@ func BuildTimetableDay(
 	if err != nil {
 		return TimetableLifecycle{}, fmt.Errorf("compose timetable operations: %w", err)
 	}
-	dayChanges, err := arrivalTimetable.BlockDayChanges(operations)
+	dayChanges, err := timetable.BlockDayChangesOf(operations)
 	if err != nil {
 		return TimetableLifecycle{}, fmt.Errorf("compose timetable day changes: %w", err)
 	}

@@ -151,12 +151,12 @@ func TestDayChangesActivitySource(t *testing.T) {
 
 	router := newRouter(t, db, day)
 	room2, room3 := "@Turnhalle", "@Aula"
-	everyBlock := func(section string) []string {
+	everyBlock := func(names string) []string {
 		return []string{
-			section + " activity_lead_changed Chor 13:00-14:00 " + room3 + " Anna Betreuung/substitute Ben Krank/absent ->day_plan",
-			section + " activity_room_changed Fussball 14:00-15:00 " + room2 + " <-Werkraum ->day_plan",
-			section + " activity_cancelled Basteln 15:00-16:00 " + room3 + " ->day_plan",
-			section + " activity_reinstated Theater 16:00-17:00 " + room3 + " ->day_plan",
+			"school activity_lead_changed Chor 13:00-14:00 " + room3 + names + " ->day_plan",
+			"school activity_room_changed Fussball 14:00-15:00 " + room2 + " <-Werkraum ->day_plan",
+			"school activity_cancelled Basteln 15:00-16:00 " + room3 + " ->day_plan",
+			"school activity_reinstated Theater 16:00-17:00 " + room3 + " ->day_plan",
 		}
 	}
 	trim := func(lines []string) []string {
@@ -184,7 +184,7 @@ func TestDayChangesActivitySource(t *testing.T) {
 
 	t.Run("the lead sees every block under school", func(t *testing.T) {
 		_, body := read(t, router, leadAccount.ID, tenantID, "admin:*")
-		assert.Equal(t, everyBlock("school"), trim(activityLines(t, body)))
+		assert.Equal(t, everyBlock(" Anna Betreuung/substitute Ben Krank/absent"), trim(activityLines(t, body)))
 	})
 
 	t.Run("an account without the day plan gets no entries and no failure", func(t *testing.T) {
@@ -200,7 +200,9 @@ func TestDayChangesActivitySource(t *testing.T) {
 
 	t.Run("with the overview for the own blocks only, a bystander sees nothing", func(t *testing.T) {
 		_, body := read(t, router, bystanderAccount.ID, tenantID, "schedules:read")
-		assert.Equal(t, everyBlock("school"), trim(activityLines(t, body)), "the school's default shows every block")
+		assert.Equal(t, everyBlock(""), trim(activityLines(t, body)), "the school's default shows every block, names only to the lead")
+		assert.NotContains(t, body, "Krank", "who misses a block of others stays unnamed")
+		assert.NotContains(t, body, "Betreuung", "who covers a block of others stays unnamed")
 
 		testpkg.SetTestTenantSetting(t, db, tenantID, "operations.operational_overview_scope", `"own"`)
 		_, body = read(t, router, bystanderAccount.ID, tenantID, "schedules:read")

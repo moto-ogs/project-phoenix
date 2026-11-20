@@ -33,6 +33,9 @@ function change(overrides: Partial<DayChange>): DayChange {
     groupName: null,
     link: null,
     count: null,
+    activity: null,
+    roomName: null,
+    previousRoomName: null,
     ...overrides,
   };
 }
@@ -215,5 +218,112 @@ describe("Texte der Gruppen-Vertretung", () => {
         { staffId: "2", name: "Anna", role: "replaced", isSelf: true },
       ]),
     ).toBe("Daria Nowak vertritt dich heute in der Gruppe Igel.");
+  });
+});
+
+describe("Termine aus dem Stundenplan (#7662)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+  });
+
+  const block = (
+    kind: string,
+    title: string,
+    extra: Partial<DayChange> = {},
+  ): DayChange =>
+    change({
+      kind,
+      activity: { id: title, title, startTime: "13:00", endTime: "14:00" },
+      roomName: "Aula",
+      link: { target: "day_plan", staffId: null },
+      ...extra,
+    });
+
+  it("zeigt Absage, Rücknahme, Raum und Leitung mit Uhrzeit, Raum und Link zum Tagesplan", () => {
+    serve({
+      entries: [
+        block("activity_lead_changed", "Chor", {
+          section: "you",
+          people: [
+            { staffId: "1", name: "Anna", role: "substitute", isSelf: true },
+            { staffId: "2", name: "Ben Krank", role: "absent", isSelf: false },
+          ],
+        }),
+        block("activity_room_changed", "Fußball", {
+          section: "you",
+          roomName: "Turnhalle",
+          previousRoomName: "Werkraum",
+        }),
+        block("activity_cancelled", "Basteln"),
+        block("activity_reinstated", "Theater"),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", {
+        name: /Du übernimmst heute „Chor“ für Ben Krank\.\s*13:00–14:00 · Aula/,
+      }),
+    ).toHaveAttribute("href", "/schule/tagesplan");
+    expect(
+      mine.getByText("„Fußball“ ist heute in einem anderen Raum."),
+    ).toBeInTheDocument();
+    expect(
+      mine.getByText("13:00–14:00 · Turnhalle statt Werkraum"),
+    ).toBeInTheDocument();
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(school.getByText("„Basteln“ fällt heute aus.")).toBeInTheDocument();
+    expect(
+      school.getByText("„Theater“ findet doch statt."),
+    ).toBeInTheDocument();
+  });
+
+  it("nennt Vertretung und Ausfall aus Sicht der Person", async () => {
+    const { dayChangeText } = await import("./day-changes-text");
+    const lead = (people: DayChange["people"], title = "Chor") =>
+      dayChangeText(block("activity_lead_changed", title, { people }));
+    const sub = {
+      staffId: "1",
+      name: "Sara",
+      role: "substitute",
+      isSelf: false,
+    };
+    const gone = { staffId: "2", name: "Ben", role: "absent", isSelf: false };
+    expect(lead([sub, { ...gone, isSelf: true }])).toBe(
+      "Sara übernimmt heute „Chor“ für dich.",
+    );
+    expect(lead([sub, gone])).toBe("Sara übernimmt heute „Chor“ für Ben.");
+    expect(lead([gone])).toBe("Bei „Chor“ ist Ben heute nicht da.");
+    expect(lead([{ ...gone, isSelf: true }])).toBe(
+      "Bei „Chor“ bist du heute nicht da.",
+    );
+    expect(lead([sub], " ")).toBe("Sara übernimmt heute einen Termin.");
+    expect(lead([])).toBe("Bei „Chor“ ändert sich heute, wer betreut.");
+  });
+
+  it("zeigt bei einem Ausfall des Stundenplans einen Hinweis und nie die Entwarnung", () => {
+    serve({ failedSources: ["activities"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Änderungen an Angeboten und AGs konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("erfasst beim Klick auf einen Termin nur seine Art", () => {
+    serve({ entries: [block("activity_cancelled", "Basteln")] });
+    render(<DayChangesBlock />);
+
+    fireEvent.click(screen.getByRole("link", { name: /Basteln/ }));
+
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "activity_cancelled",
+    });
   });
 });

@@ -36,6 +36,18 @@ export interface DayChange {
     readonly staffId: string | null;
   } | null;
   readonly count: number | null;
+  /** Der Termin eines Eintrags der Quelle Stundenplan (#7662), sonst null. */
+  readonly activity: {
+    readonly id: string;
+    readonly title: string;
+    /** „HH:MM“ */
+    readonly startTime: string;
+    readonly endTime: string;
+  } | null;
+  /** Wo der Termin heute ist. */
+  readonly roomName: string | null;
+  /** Wo der Termin sonst ist, wenn er heute in einem anderen Raum liegt. */
+  readonly previousRoomName: string | null;
 }
 
 export interface DayChangesOverview {
@@ -63,6 +75,16 @@ function mapEntry(entry: Entry): DayChange {
       ? { target: entry.link.target, staffId: entry.link.staff_id ?? null }
       : null,
     count: entry.count,
+    activity: entry.activity
+      ? {
+          id: entry.activity.id,
+          title: entry.activity.title,
+          startTime: entry.activity.start_time,
+          endTime: entry.activity.end_time,
+        }
+      : null,
+    roomName: entry.room?.name ?? null,
+    previousRoomName: entry.previous_room?.name ?? null,
   };
 }
 

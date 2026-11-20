@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
-	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -30,7 +30,7 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	}
 	// The operational day of the active graph; its read takes the day.
 	day, _ := NewActiveTestTimetable(db, unit)
-	blocks, err := timetableCompose.BlockDayChanges(day.TimetableOperations)
+	blocks, err := timetable.BlockDayChangesOf(day.TimetableOperations)
 	if err != nil {
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import {
   dayChangeHref,
   dayChangeSpan,
   dayChangeText,
+  dayChangeWhenWhere,
   sourceFailureText,
 } from "~/components/home/day-changes-text";
 import { Alert } from "~/components/ui/alert";
@@ -27,6 +28,7 @@ import {
   type DayChange,
   type DayChangesOverview,
 } from "~/lib/day-changes";
+import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -191,20 +193,34 @@ function DayChangesSection({
   );
 }
 
-/** Stabil über ein Neuladen hinweg: Art, Personen und Gruppe. */
+/** Stabil über ein Neuladen hinweg: Art, Personen, Gruppe und Termin. */
 function dayChangeKey(entry: DayChange, index: number): string {
   const people = entry.people.map((person) => person.staffId).join(",");
-  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${people || entry.groupName ? "" : index}`;
+  const activity = entry.activity?.id ?? "";
+  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${activity}:${people || entry.groupName || activity ? "" : index}`;
 }
 
 function DayChangeRow({ entry }: { readonly entry: DayChange }) {
   const tenantPath = useTenantAwarePath();
+  const dayPlanHref = useDayPlanHref();
   const text = dayChangeText(entry) ?? "";
   const span = dayChangeSpan(entry);
-  const href = dayChangeHref(entry);
+  const whenWhere = dayChangeWhenWhere(entry);
+  const path = dayChangeHref(entry);
+  // Der Tagesplan heißt je Rolle anders (#7662): die Leitung ohne Gruppe
+  // plant im Betreuungsplan.
+  const href =
+    path === null
+      ? null
+      : entry.link?.target === "day_plan"
+        ? dayPlanHref
+        : tenantPath(path);
   const body = (
     <span className="min-w-0 flex-1">
       <span className="block text-sm text-gray-900">{text}</span>
+      {whenWhere ? (
+        <span className="block text-xs text-gray-500">{whenWhere}</span>
+      ) : null}
       {span ? (
         <span className="block text-xs text-gray-500">{span}</span>
       ) : null}
@@ -224,7 +240,7 @@ function DayChangeRow({ entry }: { readonly entry: DayChange }) {
       }
     >
       {href ? (
-        <ListRow href={tenantPath(href)} density="compact">
+        <ListRow href={href} density="compact">
           {body}
         </ListRow>
       ) : (

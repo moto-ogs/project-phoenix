@@ -20,37 +20,13 @@ import (
 // day's blocks, their staff, their series, the room names and the day's
 // protocol, one statement each.
 func (s *operations) BlockDayChanges(ctx context.Context, accountID int64, isAdmin bool, date calendar.Date) ([]timetable.BlockDayChange, error) {
-	staffID, hasStaff, err := s.resolveStaffID(ctx, accountID)
-	if err != nil {
-		if errors.Is(err, timetable.ErrTimetableOperationForbidden) {
-			return nil, nil
-		}
+	viewer, err := s.blockDayViewer(ctx, accountID, isAdmin)
+	if err != nil || !viewer.sees {
 		return nil, err
 	}
-	overview, err := s.operationalOverview(ctx, isAdmin, hasStaff)
-	if err != nil {
+	visible, staffByInstance, err := s.visibleBlocks(ctx, viewer, date)
+	if err != nil || len(visible) == 0 {
 		return nil, err
-	}
-	if !hasStaff && !overview {
-		return nil, nil
-	}
-	instances, err := instancesOn(ctx, s.deps.Instances, date)
-	if err != nil {
-		return nil, err
-	}
-	staffRows, err := staffOfInstances(ctx, s.deps.InstanceStaff, retainedInstanceIDs(instances))
-	if err != nil {
-		return nil, err
-	}
-	staffByInstance := IndexInstanceStaffRows(staffRows)
-	visible := make([]*scheduleModels.ActivityInstance, 0, len(instances))
-	for _, inst := range instances {
-		if overview || (hasStaff && staffPlanned(staffByInstance[inst.ID], staffID)) {
-			visible = append(visible, inst)
-		}
-	}
-	if len(visible) == 0 {
-		return nil, nil
 	}
 	reinstated, err := s.reinstatedOn(ctx, date)
 	if err != nil {
@@ -66,13 +42,63 @@ func (s *operations) BlockDayChanges(ctx context.Context, accountID int64, isAdm
 		if !ok {
 			continue
 		}
-		change.Involved = hasStaff && staffPlanned(staffByInstance[inst.ID], staffID)
+		change.Involved = viewer.planned(staffByInstance[inst.ID])
 		changes = append(changes, change)
 	}
 	if len(changes) == 0 {
 		return changes, nil
 	}
 	return changes, s.nameRooms(ctx, changes)
+}
+
+// blockDayViewer is what the day plan's rule needs to know of the caller.
+type blockDayViewer struct {
+	staffID  int64
+	hasStaff bool
+	overview bool
+	// sees is false for a caller without a staff record and without the
+	// overview: the day plan shows such a caller nothing.
+	sees bool
+}
+
+func (v blockDayViewer) planned(rows []*scheduleModels.InstanceStaff) bool {
+	return v.hasStaff && staffPlanned(rows, v.staffID)
+}
+
+func (s *operations) blockDayViewer(ctx context.Context, accountID int64, isAdmin bool) (blockDayViewer, error) {
+	staffID, hasStaff, err := s.resolveStaffID(ctx, accountID)
+	if errors.Is(err, timetable.ErrTimetableOperationForbidden) {
+		return blockDayViewer{}, nil
+	}
+	if err != nil {
+		return blockDayViewer{}, err
+	}
+	overview, err := s.operationalOverview(ctx, isAdmin, hasStaff)
+	if err != nil {
+		return blockDayViewer{}, err
+	}
+	return blockDayViewer{staffID: staffID, hasStaff: hasStaff, overview: overview, sees: hasStaff || overview}, nil
+}
+
+// visibleBlocks reads the day's blocks with their staff and keeps those the
+// caller sees on the day plan.
+func (s *operations) visibleBlocks(ctx context.Context, viewer blockDayViewer, date calendar.Date) ([]*scheduleModels.ActivityInstance, map[int64][]*scheduleModels.InstanceStaff, error) {
+	instances, err := instancesOn(ctx, s.deps.Instances, date)
+	if err != nil {
+		return nil, nil, err
+	}
+	staffRows, err := staffOfInstances(ctx, s.deps.InstanceStaff, retainedInstanceIDs(instances))
+	if err != nil {
+		return nil, nil, err
+	}
+	staffByInstance := IndexInstanceStaffRows(staffRows)
+	visible := make([]*scheduleModels.ActivityInstance, 0, len(instances))
+	for _, inst := range instances {
+		if viewer.overview || viewer.planned(staffByInstance[inst.ID]) {
+			visible = append(visible, inst)
+		}
+	}
+	return visible, staffByInstance, nil
 }
 
 // staffPlanned reports any staff row of the caller on the block: planned,

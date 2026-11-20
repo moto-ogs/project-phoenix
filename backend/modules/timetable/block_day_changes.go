@@ -2,6 +2,7 @@ package timetable
 
 import (
 	"context"
+	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -50,4 +51,17 @@ func (c BlockDayChange) LeadChanged() bool {
 // the blocks the caller is planned for (#7662, "Heute anders").
 type BlockDayChangeQuery interface {
 	BlockDayChanges(ctx context.Context, accountID int64, isAdmin bool, date calendar.Date) ([]BlockDayChange, error)
+}
+
+// ErrNoBlockDayChanges reports an operational day without the read.
+var ErrNoBlockDayChanges = errors.New("timetable operations: the operational day reads no changed blocks")
+
+// BlockDayChangesOf is the read of the changed blocks of an operational day
+// the owner composed; the operational day reads its own blocks.
+func BlockDayChangesOf(day OperationCapability) (BlockDayChangeQuery, error) {
+	changes, ok := day.(BlockDayChangeQuery)
+	if !ok {
+		return nil, ErrNoBlockDayChanges
+	}
+	return changes, nil
 }

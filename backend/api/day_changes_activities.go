@@ -5,7 +5,9 @@ package api
 // under the operational overview, otherwise the blocks the caller is planned
 // for. The route of the day plan needs schedules:read; without it the source
 // answers without entries. The binding names the people and builds one entry
-// per change; it carries no reason for a cancellation or an absence.
+// per change; it carries no reason for a cancellation or an absence. Who
+// covers or misses a block the caller is not planned for is named only for
+// the lead, as in the Personal source (ADR 0299 point 4).
 
 import (
 	"context"
@@ -50,21 +52,34 @@ func (s dayChangesActivities) ActivityChanges(ctx context.Context, day calendar.
 	if err != nil {
 		return nil, fmt.Errorf("resolve caller staff: %w", err)
 	}
-	names, err := s.staffNames(ctx, changes)
+	lead := dayChangesLead(sessiontoken.PermissionsFromCtx(ctx))
+	named := func(change timetable.BlockDayChange) bool { return lead || change.Involved }
+	names, err := s.staffNames(ctx, changes, named)
 	if err != nil {
 		return nil, err
 	}
 	entries := make([]daychangesview.SourceEntry, 0, len(changes))
 	for _, change := range changes {
-		entries = append(entries, activityEntries(change, names, selfID)...)
+		entries = append(entries, activityEntries(change, names, selfID, named(change))...)
 	}
 	return entries, nil
 }
 
+// dayChangesLead is the lead of the Personal source: the rights of the
+// absence detail page, or admin. It sees every name.
+func dayChangesLead(granted []string) bool {
+	return securityruntime.HasAdminWildcard(granted) ||
+		securityruntime.HasPermission(permissions.VacationApprove, granted) ||
+		securityruntime.HasPermission(permissions.TimeTrackingManage, granted)
+}
+
 // staffNames names the substitutes and absent supervisors in one read.
-func (s dayChangesActivities) staffNames(ctx context.Context, changes []timetable.BlockDayChange) (map[int64]string, error) {
+func (s dayChangesActivities) staffNames(ctx context.Context, changes []timetable.BlockDayChange, named func(timetable.BlockDayChange) bool) (map[int64]string, error) {
 	ids := map[int64]bool{}
 	for _, change := range changes {
+		if !named(change) {
+			continue
+		}
 		for _, id := range change.SubstituteStaffIDs {
 			ids[id] = true
 		}
@@ -84,8 +99,9 @@ func (s dayChangesActivities) staffNames(ctx context.Context, changes []timetabl
 
 // activityEntries builds one entry per change of a block. A cancelled block
 // is only its cancellation; a block that takes place may at once be
-// reinstated, moved and covered.
-func activityEntries(change timetable.BlockDayChange, names map[int64]string, selfID int64) []daychangesview.SourceEntry {
+// reinstated, moved and covered. Without named, a covered block says only
+// that somebody else takes it over.
+func activityEntries(change timetable.BlockDayChange, names map[int64]string, selfID int64, named bool) []daychangesview.SourceEntry {
 	entry := func(kind daychangesview.Kind) daychangesview.SourceEntry {
 		result := daychangesview.SourceEntry{
 			Kind: kind, Involved: change.Involved,
@@ -113,6 +129,9 @@ func activityEntries(change timetable.BlockDayChange, names map[int64]string, se
 	}
 	if change.LeadChanged() {
 		covered := entry(daychangesview.KindActivityLeadChanged)
+		if !named {
+			return append(entries, covered)
+		}
 		for _, id := range change.SubstituteStaffIDs {
 			covered.People = append(covered.People, daychangesview.Person{StaffID: id, Name: names[id], Role: daychangesview.RoleSubstitute, IsSelf: id == selfID})
 		}
