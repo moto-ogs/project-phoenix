@@ -28,13 +28,23 @@ import {
   UNKNOWN_ANALYTICS_PATH,
   type AnalyticsRouteSurface,
 } from "~/lib/analytics-routes";
+import type { Kind as DayChangeKind } from "~/lib/contract/day-changes.generated";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
-import { KIND_VALUES as DAY_CHANGE_KINDS } from "~/lib/contract/day-changes.generated";
 
 /** Reiterarten auf „Alle Kinder“ (#5046); ein Aufsichtsreiter nennt keinen Raum. */
 const CHILD_SCOPE_ANALYTICS_VALUES = ["all", "groups", "room"] as const;
 export type ChildScopeAnalyticsValue =
   (typeof CHILD_SCOPE_ANALYTICS_VALUES)[number];
+
+// This module is part of the global analytics client bundle. Keep the
+// generated contract import type-only: importing its runtime enum would also
+// pull Zod and every route schema into every portal.
+const DAY_CHANGE_KINDS = [
+  "group_substitution",
+  "group_substitution_count",
+  "staff_absent",
+  "staff_absent_count",
+] as const satisfies readonly DayChangeKind[];
 
 /**
  * Selbstöffnende Flächen des Einstiegs (#7541). Ein Wert je Fläche; eine
