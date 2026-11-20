@@ -110,13 +110,6 @@ func (m PresenceAttendanceMirror) MirrorCheckOutForVisit(ctx context.Context, vi
 	return presenceSnapshotOf(snapshot), err
 }
 
-func (m PresenceAttendanceMirror) MirrorVisitRevision(ctx context.Context, previous, updated *studentpresence.Visit) error {
-	if previous == nil || updated == nil {
-		return nil
-	}
-	return m.Mirror.MirrorVisitRevision(ctx, attendanceVisitOf(previous), attendanceVisitOf(updated))
-}
-
 func (m PresenceAttendanceMirror) MirrorCheckOutAt(ctx context.Context, studentID int64, at time.Time) error {
 	return m.Mirror.MirrorCheckOutAt(ctx, studentID, at)
 }

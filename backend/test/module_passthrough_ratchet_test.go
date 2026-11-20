@@ -279,7 +279,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/schoolcalendar":   13,
 	"modules/schoolmembership": 15,
 	"modules/schoolsetup":      1,
-	"modules/schoolstructure":  43,
+	"modules/schoolstructure":  42,
 	"modules/settings":         17,
 	// Raised by ADR 0131: the kiosk count revision read (+1).
 	// Raised by ADR 0133: the kiosk room count revision read (+1).
@@ -287,7 +287,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// the window and takes the later of its cutoff and the retention mark
 	// (+1).
 	// Raised by ADR 0283: the mark transfer of the class-list conversion (+1).
-	"modules/studentpresence": 124,
+	"modules/studentpresence": 98,
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	"modules/timetable": 204,

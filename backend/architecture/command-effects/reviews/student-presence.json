@@ -6250,50 +6250,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.PresenceAttendanceMirror.MirrorVisitRevision",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.AttendanceSyncer.MirrorVisitRevision",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/timetable.AttendanceMirror.MirrorVisitRevision; modules/timetable/attendance_mirror.go:50. ",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.AttendanceMirror.MirrorVisitRevision",
-      "target_owner": "timetable-activities"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.AddGroupToCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.AddGroupToCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.AddGroupToCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.AddGroupToCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.AddGroupToCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ApplyActivePartialAbsencesForInstance",
       "classification": "platform",
@@ -7131,39 +7087,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.DeleteCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.DeleteCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteExpiredVisits",
       "classification": "platform",
       "effect": "scope",
@@ -7230,72 +7153,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteGroupMapping",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.DeleteGroupMapping. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteGroupMapping",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.DeleteGroupMapping. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteGroupMapping",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteVisit",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.DeleteVisit. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.DeleteVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DeleteVisit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DiscardActivitySession",
       "classification": "platform",
       "effect": "scope",
@@ -7322,39 +7179,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.DiscardActivitySession",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.EndCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.EndCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.EndCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.EndCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.EndCombination",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -7703,39 +7527,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.GetCombinedGroup",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.GetCombinedGroup. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.GetCombinedGroup",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.GetCombinedGroup. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.GetCombinedGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.HasAttendance",
       "classification": "platform",
       "effect": "scope",
@@ -7934,39 +7725,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListCombinedGroups",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ListCombinedGroups. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListCombinedGroups",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ListCombinedGroups. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListCombinedGroups",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListExpiredVisitMonths",
       "classification": "platform",
       "effect": "scope",
@@ -7993,39 +7751,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListExpiredVisitMonths",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListGroupMappings",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ListGroupMappings. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListGroupMappings",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ListGroupMappings. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListGroupMappings",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -9254,39 +8979,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.RecordCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.RecordCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroup",
       "classification": "platform",
       "effect": "scope",
@@ -9346,39 +9038,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupActivity",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupMapping",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.RecordGroupMapping. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupMapping",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.RecordGroupMapping. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RecordGroupMapping",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -9540,39 +9199,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RemoveGroupFromCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.RemoveGroupFromCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RemoveGroupFromCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.RemoveGroupFromCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RemoveGroupFromCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveSupervision",
       "classification": "platform",
       "effect": "scope",
@@ -9727,72 +9353,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseAttendance",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ReviseAttendance. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseAttendance",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ReviseAttendance. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ReviseCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ReviseCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseGroup",
       "classification": "platform",
       "effect": "scope",
@@ -9874,39 +9434,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseSupervision",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseVisit",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ReviseVisit. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ReviseVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ReviseVisit",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -10294,39 +9821,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.AddGroupToCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.AddGroupToCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.AddGroupToCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.AddGroupToCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.AddGroupToCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -11264,39 +10758,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.DeleteCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.DeleteCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteExpiredAttendance",
       "classification": "query",
       "effect": "query",
@@ -11408,72 +10869,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteGroupMapping",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.DeleteGroupMapping. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.DeleteGroupMapping. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteGroupMapping",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteVisit",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.DeleteVisit. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.DeleteVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DeleteVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.DiscardActivitySession",
       "classification": "platform",
       "effect": "scope",
@@ -11500,39 +10895,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DiscardActivitySession",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.EndCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.EndCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.EndCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.EndCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.EndCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -11881,39 +11243,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.GetCombinedGroup",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.GetCombinedGroup. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.GetCombinedGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.GetCombinedGroup. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.GetCombinedGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.HasAttendance",
       "classification": "platform",
       "effect": "scope",
@@ -12145,39 +11474,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListCombinedGroups",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.ListCombinedGroups. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListCombinedGroups",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.ListCombinedGroups. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListCombinedGroups",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListExpiredVisitMonths",
       "classification": "platform",
       "effect": "scope",
@@ -12204,39 +11500,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListExpiredVisitMonths",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListGroupMappings",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.ListGroupMappings. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListGroupMappings",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.ListGroupMappings. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListGroupMappings",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -13531,39 +12794,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.RecordCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.RecordCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroup",
       "classification": "platform",
       "effect": "scope",
@@ -13623,39 +12853,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupActivity",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroupMapping",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.RecordGroupMapping. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.RecordGroupMapping. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RecordGroupMapping",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -13850,39 +13047,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RemoveGroupFromCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.RemoveGroupFromCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RemoveGroupFromCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.RemoveGroupFromCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RemoveGroupFromCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RemoveSupervision",
       "classification": "platform",
       "effect": "scope",
@@ -14047,72 +13211,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseAttendance",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.ReviseAttendance. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseAttendance",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.ReviseAttendance. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseAttendance",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.ReviseCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.ReviseCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseGroup",
       "classification": "platform",
       "effect": "scope",
@@ -14194,39 +13292,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseSupervision",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseVisit",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.ReviseVisit. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.ReviseVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ReviseVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -18578,202 +17643,6 @@
       "target_owner": "school-membership"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.StudentRows; modules/peopledirectory/ports/person_directory_port.go:19. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StudentRows",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByID; modules/peopledirectory/internal/application/student_records_boundary.go:23. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByPersonID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByPersonID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.StudentRows; modules/peopledirectory/ports/person_directory_port.go:19. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StudentRows",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStudentByPersonID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStudentByPersonID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByPersonID; modules/peopledirectory/ports/repository_contracts.go:99. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByPersonID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Teacher.SetTenantID; modules/peopledirectory/record_metadata.go:16. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Teacher.SetTenantID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.TeacherRows; modules/peopledirectory/internal/application/staff_directory.go:58. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.TeacherRows",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.TeacherRepository.FindByStaffID; modules/peopledirectory/ports/repository_contracts.go:311. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.TeacherRepository.FindByStaffID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindTeacherByStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindTeacherByStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetTeacherByStaffID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetTeacherByStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindTeacherByStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindTeacherByStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AdmitVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AdmitVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches modules/devicefleet/deviceauth.AttendanceContext (device-fleet) through modules/studentpresence/internal/application/presence.PresenceOperations.AdmitVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AdmitVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AdmitVisit",
-      "reason": "Retrieves the caller's existing tenant transaction for the owner-private ReadVisitAdmission query after the session lock. The resolver opens no unit, acquires no lock, changes no role or scope and performs no write. The SQL reads only Student Presence's tenant-filtered active.visits. This classifies the runtime lookup, not the enclosing admission command (ADR 0067).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendSupervision",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendSupervision",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendSupervision",
-      "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches modules/devicefleet/deviceauth.AttendanceContext (device-fleet) through modules/studentpresence/internal/application/presence.PresenceOperations.AmendVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "reason": "Read-only target already reviewed as query: student-presence reaches modules/devicefleet/deviceauth.AttendanceContext (device-fleet) through modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignTransitStudents",
       "classification": "platform",
@@ -18914,39 +17783,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.DeleteGroupSupervisor",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.DeleteGroupSupervisor",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.DeleteGroupSupervisor",
-      "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.EndSupervision",
       "classification": "platform",
       "effect": "scope",
@@ -19017,181 +17853,6 @@
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.MoveStudentsToSession",
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.MoveStudentsToSession; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.ReviseSession",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.ReviseSession",
-      "reason": "Read-only target already reviewed as query: student-presence reaches modules/devicefleet/deviceauth.AttendanceContext (device-fleet) through modules/studentpresence/internal/application/presence.PresenceOperations.ReviseSession. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.AddGroupToCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.AddGroupToCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.AddGroupToCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.AddGroupToCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AddGroupToCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.AddGroupToCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.FindVisit",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.FindVisit",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.FindVisit. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.FindVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.FindVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.FindVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.FindVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.FindVisit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.GetCombinedGroup",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.GetCombinedGroup. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.GetCombinedGroup",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.GetCombinedGroup. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.GetCombinedGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListCombinedGroups",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ListCombinedGroups. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListCombinedGroups",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ListCombinedGroups. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListCombinedGroups",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListGroupMappings",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ListGroupMappings. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListGroupMappings",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ListGroupMappings. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.ListGroupMappings",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
@@ -19329,39 +17990,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.RemoveGroupFromCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.RemoveGroupFromCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.RemoveGroupFromCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.RemoveGroupFromCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RemoveGroupFromCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceQueries.RemoveGroupFromCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.HasTenantOverride",
       "classification": "query",
       "effect": "query",
@@ -19440,16 +18068,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff",
       "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.visitAccessQuery.TeacherGroupIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.VisitAccessQuery.TeacherGroupIDs",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/schoolstructure/contract.GroupManagement.GetTeacherGroups (school-structure) through modules/studentpresence/inbound/presence.visitAccessQuery.TeacherGroupIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.GroupManagement.GetTeacherGroups",
-      "target_owner": "school-structure"
     },
     {
       "adr": "0098",
@@ -21539,39 +20157,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.DeleteGroupSupervisor",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.DeleteGroupSupervisor",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.DeleteGroupSupervisor",
-      "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.service.DeleteGroupSupervisor; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.EndDailySessions",
       "classification": "platform",
       "effect": "scope",
@@ -21832,16 +20417,6 @@
       "target_owner": "device-fleet"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateActiveGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateActiveGroup",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/devicefleet/deviceauth.AttendanceContext (device-fleet) through modules/studentpresence/internal/application/presence.service.UpdateActiveGroup. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateActiveGroupSupervisors",
       "classification": "platform",
@@ -21883,49 +20458,6 @@
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
       "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateGroupSupervisor",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateGroupSupervisor",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateGroupSupervisor",
-      "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateVisit",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/devicefleet/deviceauth.AttendanceContext (device-fleet) through modules/studentpresence/internal/application/presence.service.UpdateVisit. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
-      "target_owner": "device-fleet"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.sessionDevices.ManualAttendanceDeviceID",
@@ -22344,138 +20876,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.DeleteCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.DeleteCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteGroupMapping",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.DeleteGroupMapping. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteGroupMapping",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.DeleteGroupMapping. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteGroupMapping",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteGroupMapping",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteVisit",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.DeleteVisit. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.DeleteVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.DeleteVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.DeleteVisit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.EndCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.EndCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.EndCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.EndCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.EndCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.EndGroup",
       "classification": "platform",
       "effect": "scope",
@@ -22652,39 +21052,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.GetCombinedGroup",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.GetCombinedGroup. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.GetCombinedGroup",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.GetCombinedGroup. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.GetCombinedGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.GetCombinedGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.HasAttendance",
       "classification": "platform",
       "effect": "scope",
@@ -22744,72 +21111,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListCombinedGroups",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ListCombinedGroups. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListCombinedGroups",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ListCombinedGroups. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListCombinedGroups",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListCombinedGroups",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListGroupMappings",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ListGroupMappings. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListGroupMappings",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ListGroupMappings. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListGroupMappings",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ListGroupMappings",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -23114,72 +21415,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.RecordCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.RecordCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordGroupMapping",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.RecordGroupMapping. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordGroupMapping",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.RecordGroupMapping. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordGroupMapping",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordGroupMapping",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordVisit",
       "classification": "platform",
       "effect": "scope",
@@ -23206,105 +21441,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.RecordVisit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseAttendance",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ReviseAttendance. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseAttendance",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ReviseAttendance. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseAttendance",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseCombination",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ReviseCombination. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseCombination",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ReviseCombination. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseCombination",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseCombination",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseVisit",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.Owner.ReviseVisit. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseVisit",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence.Owner.ReviseVisit. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ReviseVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentPresence.ReviseVisit",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -26887,16 +25023,6 @@
       "target_owner": "care-plan"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.AddGroupToCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.AddGroupToCombination",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.AddGroupToCombination. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ApplyPartialAbsences",
       "classification": "query",
       "effect": "query",
@@ -27157,16 +25283,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteCombination",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.DeleteCombination. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteExpiredVisits",
       "classification": "query",
       "effect": "query",
@@ -27187,16 +25303,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteGroupMapping",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.DeleteGroupMapping. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteMorningAttendanceBefore",
       "classification": "query",
       "effect": "query",
@@ -27207,31 +25313,11 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteVisit",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.DeleteVisit. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DiscardActivitySession",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DiscardActivitySession",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.DiscardActivitySession. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.EndCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.EndCombination",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.EndCombination. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -27357,16 +25443,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.GetCombinedGroup",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.GetCombinedGroup",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.GetCombinedGroup. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.HasAttendance",
       "classification": "query",
       "effect": "query",
@@ -27437,31 +25513,11 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListCombinedGroups",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListCombinedGroups",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ListCombinedGroups. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListExpiredVisitMonths",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListExpiredVisitMonths",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ListExpiredVisitMonths. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListGroupMappings",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListGroupMappings",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ListGroupMappings. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -27867,16 +25923,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RecordCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RecordCombination",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.RecordCombination. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RecordGroup",
       "classification": "query",
       "effect": "query",
@@ -27892,16 +25938,6 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RecordGroupActivity",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.RecordGroupActivity. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RecordGroupMapping",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RecordGroupMapping",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.RecordGroupMapping. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -27987,16 +26023,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RemoveGroupFromCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.RemoveGroupFromCombination",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.RemoveGroupFromCombination. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.RemoveSupervision",
       "classification": "query",
       "effect": "query",
@@ -28067,26 +26093,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseAttendance",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseAttendance",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ReviseAttendance. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseCombination",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseCombination",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ReviseCombination. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseGroup",
       "classification": "query",
       "effect": "query",
@@ -28112,16 +26118,6 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseSupervision",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ReviseSupervision. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ReviseVisit",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ReviseVisit",
-      "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ReviseVisit. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

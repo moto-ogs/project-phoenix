@@ -118,10 +118,6 @@ func (f nativeFixtureParticipants) UpdateAttendanceCheckout(ctx context.Context,
 	return checkOutParticipant(ctx, f.rows, instanceID, studentID, checkedOutAt)
 }
 
-func (f nativeFixtureParticipants) ReconcileAttendanceInterval(ctx context.Context, instanceID, studentID int64, previousCheckIn time.Time, previousCheckOut *time.Time, updatedCheckIn time.Time, updatedCheckOut *time.Time) (bool, error) {
-	return reconcileAttendanceInterval(ctx, f.rows, instanceID, studentID, previousCheckIn, previousCheckOut, updatedCheckIn, updatedCheckOut)
-}
-
 func (f nativeFixtureParticipants) FindCurrentCandidates(ctx context.Context, studentID int64, date calendar.Date, at time.Time) ([]*scheduleModels.InstanceStudent, error) {
 	return currentCandidates(ctx, f.rows.Reads, studentID, date, at)
 }
