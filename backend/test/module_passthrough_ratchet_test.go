@@ -280,7 +280,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/schoolmembership": 15,
 	"modules/schoolsetup":      1,
 	"modules/schoolstructure":  42,
-	"modules/settings":         17,
+	"modules/settings":         16,
 	// Raised by ADR 0131: the kiosk count revision read (+1).
 	// Raised by ADR 0133: the kiosk room count revision read (+1).
 	// Raised by ADR 0168: the first complete attendance day, which checks

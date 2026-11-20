@@ -20451,16 +20451,6 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SettingsResolver.SessionInactivityTimeoutMinutes",
-      "reason": "Read-only newly exposed target: student-presence reaches modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes (settings-platform) through modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SessionInactivityTimeoutMinutes",
-      "target_owner": "settings-platform"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.SickClearMode",
       "classification": "query",
       "effect": "query",
