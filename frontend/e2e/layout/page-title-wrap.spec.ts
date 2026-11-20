@@ -118,9 +118,9 @@ function cases(): readonly { name: string; props: HeadProps }[] {
     {
       // `stats` ist ein beliebiger ReactNode. Auch ein Knoten, der selbst
       // nicht umbrechen darf, darf die Breite des Titelblocks nicht setzen.
-      name: "untrennbarer Status",
+      name: "kurzer breiter Titel und untrennbarer Status",
       props: {
-        title: "Anmeldung",
+        title: "WWWWWWWWWWWWW",
         info: "Erklärung",
         stats: createElement(
           "span",
@@ -255,26 +255,28 @@ test("a long title next to the info button keeps short words whole on a phone", 
 test("the page head does not overflow in a narrow CSS viewport", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 200, height: 844 });
-  for (const testCase of cases().filter(({ name }) =>
-    [
-      "Träger-Ferienanmeldung",
-      "untrennbarer Importtitel",
-      "untrennbarer Status",
-    ].includes(name),
-  )) {
-    await renderHead(page, testCase.props);
-    const label = `${testCase.name}, 200 px`;
-    const overflow = await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth -
-        document.documentElement.clientWidth,
-    );
-    expect.soft(overflow, label).toBeLessThanOrEqual(0);
-    const headerOverflow = await page
-      .locator("header")
-      .evaluate((header) => header.scrollWidth - header.clientWidth);
-    expect.soft(headerOverflow, label).toBeLessThanOrEqual(0);
+  for (const width of [200, 240, 288]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const testCase of cases().filter(({ name }) =>
+      [
+        "Träger-Ferienanmeldung",
+        "untrennbarer Importtitel",
+        "kurzer breiter Titel und untrennbarer Status",
+      ].includes(name),
+    )) {
+      await renderHead(page, testCase.props);
+      const label = `${testCase.name}, ${width} px`;
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      );
+      expect.soft(overflow, label).toBeLessThanOrEqual(0);
+      const headerOverflow = await page
+        .locator("header")
+        .evaluate((header) => header.scrollWidth - header.clientWidth);
+      expect.soft(headerOverflow, label).toBeLessThanOrEqual(0);
+    }
   }
 });
 

@@ -563,6 +563,16 @@ function useEmptyActionGuard(
   });
 }
 
+const titleGraphemeSegmenter = new Intl.Segmenter("de", {
+  granularity: "grapheme",
+});
+
+function hasLongTitleWord(title: string) {
+  return title
+    .split(/\s+/u)
+    .some((word) => [...titleGraphemeSegmenter.segment(word)].length >= 14);
+}
+
 function TenantPageView({
   title,
   stats,
@@ -597,6 +607,7 @@ function TenantPageView({
 }: TenantPageProps) {
   usePageTitleSection(addressedTabLabel(tabs));
   const hasOverflowMenu = (overflowMenu?.length ?? 0) > 0;
+  const titleHasLongWord = hasLongTitleWord(title);
   const searchRowHasControls =
     search !== undefined ||
     (filters?.length ?? 0) > 0 ||
@@ -668,17 +679,30 @@ function TenantPageView({
               einzelne Kebab-Menü in eine eigene, linksbündige Zeile -- und
               die Kopfkarte wuchs um genau den toten Streifen, den sie auf
               dem Desktop nicht mehr hat.
-              `max-sm:min-w-[min(100%,calc(14ch+6rem))]`: Auf dem Telefon
-              ist der Titelblock gewöhnlich breit genug für ein kurzes Wort,
-              Info-Knopf und Symbolkachel. In einem noch schmaleren Kopf
-              wird diese Mindestbreite selbst auf den verfügbaren Platz
-              begrenzt. Hilfe, Status und Kebab rücken dann in die nächste
-              Zeile, statt den Titel auf die frühere 6-rem-Breite zu drücken
-              („Anmel|dung“, #7649). Nicht trennbare lange Titel bleiben mit
-              `wrap-anywhere` trotzdem innerhalb des Kopfes. */}
-          <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-[min(100%,calc(14ch+6rem))]">
+              Titel mit ausschließlich kurzen Wörtern nutzen unter `sm` ihre
+              tatsächliche Mindestbreite: Auch ungewöhnlich breite Wörter
+              bleiben so ganz. Ein langer Titel darf mit `wrap-anywhere`
+              schrumpfen; das betrifft nur Wörter ab 14 Graphem-Clustern.
+              Unter 320 CSS-Pixeln wird jede Mindestbreite begrenzt, damit
+              der Kopf auch bei starkem Zoom nicht seitlich überläuft. Hilfe,
+              Status und Kebab rücken dann in die nächste Zeile, statt den
+              Titel auf die frühere 6-rem-Breite zu drücken („Anmel|dung“,
+              #7649). */}
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 basis-0 items-center gap-3",
+              titleHasLongWord
+                ? "max-sm:min-w-[min(100%,calc(14ch+6rem))]"
+                : "max-[319px]:min-w-[min(100%,calc(14ch+6rem))] max-sm:min-w-min",
+            )}
+          >
             {leading}
-            <div className="min-w-0">
+            <div
+              className={cn(
+                "min-w-0",
+                !titleHasLongWord && "max-[319px]:min-w-0 max-sm:min-w-min",
+              )}
+            >
               <div className="flex items-center gap-1">
                 <h1
                   // Ein Tageszeit-Gruß kann zwischen Server-Render und
@@ -687,7 +711,10 @@ function TenantPageView({
                   // verwerfen (greeting.ts).
                   suppressHydrationWarning
                   className={cn(
-                    "min-w-0 font-semibold tracking-tight text-balance break-words text-gray-900 max-sm:wrap-anywhere",
+                    "font-semibold tracking-tight text-balance break-words text-gray-900",
+                    titleHasLongWord
+                      ? "min-w-0 max-sm:wrap-anywhere"
+                      : "min-w-0 max-[319px]:min-w-0 max-[319px]:wrap-anywhere max-sm:min-w-min",
                     // Neben Info, Status und Kebab bleibt dem Titel auf dem
                     // Telefon oft weniger als ein langes Wort. Dann trennt er
                     // nach Silben („Ferienbe-treuung“) statt mitten im Wort;
