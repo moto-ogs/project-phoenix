@@ -25,9 +25,9 @@ das Schulportal, `group-live-view` den Live-Stand einer Gruppe. Beide haben
 eine andere Zielgruppe und einen anderen Ausschnitt. Ein Fachmodul als Heimat
 würde dieses Modul für die Fakten und Rechte-Regeln aller anderen Quellen
 verantwortlich machen und ihm Kanten zu fast allen Fachmodulen geben. Das
-widerspricht der Schichtung von
-[ADR 0071](0071-principle-owner-dependencies-point-one-way.md) Punkt 3 und 4
-(zwei Fachmodule haben je Paar nur eine Richtung).
+widerspricht [ADR 0071](0071-principle-owner-dependencies-point-one-way.md)
+Punkt 2 und 3: Zwei Fachmodule haben je Paar nur eine Richtung, und viele
+Quellen lesen ihrerseits schon andere Fachmodule.
 
 Jede Quelle hat eine eigene Rechte-Regel. Beim Personal sieht die Betreuung
 Namen nur für ihre eigenen Gruppen und Termine, sonst nur eine Zahl, und nie
@@ -59,15 +59,29 @@ Träger ([ADR 0194](0194-schliessstage-lesen-die-aktuelle-schulzugehoerigkeit.md
    Auswahlkriterium für eine neue SQL-Projektion aus
    [ADR 0081](0081-owner-granularity-follows-invariants-not-source-size.md#selection-criteria-accepted)
    trifft nicht zu: Keine Lesung braucht eine Anweisung über mehrere
-   Schreib-Owner. Der Unterschied zu einem Port im Verbraucher (ebenda): Der
-   Verbraucher ist die Startseite des Frontends, kein Backend-Owner. Die
-   Lesung hat einen festen Zweck, eine eigene Route und eine eigene
-   Zusammenstellung (Abschnitte, Teilausfall). Weitere Portale (#7128,
-   außerhalb von v1) nutzen dieselbe Lesung.
+   Schreib-Owner.
+
+   Nach ADR 0066 Punkt 6 braucht eine Lesung über Ports im Verbraucher
+   keinen eigenen Owner. Einen neuen Lese-Owner, der nur über Ports liest,
+   erlaubt ADR 0081 nur mit einem eigenen ADR. Es zeigt Zweck und Nutzen und
+   warum der Verbraucher nicht die Heimat ist. Hier gilt diese Ausnahme:
+   - **Zweck:** die Änderungen am Regelbetrieb eines Tages, mit fester Route
+     und fester Antwortform.
+   - **Verbraucher:** die Startseite des Frontends, kein Backend-Owner. Im
+     Frontend müsste sie jede Quelle über deren eigenen Endpunkt abfragen.
+   - **Nutzen der Zusammenstellung:** Die Sichtregel „meine Gruppe heute“
+     (Punkt 4) gilt nur für diese Lesung, nicht für die Detailseiten. Die
+     Zuordnung zu den Abschnitten braucht die eigenen Gruppen und Dienste der
+     Sitzung aus mehreren Quellen. Tag, Status pro Quelle und Teilausfall
+     (Punkt 6 und 7) entstehen an einer Stelle im Backend statt in jedem
+     Client.
 4. **Jede Quelle wendet ihre eigene Rechte-Regel an.** Die Fähigkeit des
    besitzenden Moduls bekommt das Konto der Sitzung und liefert nur, was
-   dieses Konto sehen darf, und ob es selbst beteiligt ist. Die Projektion
-   filtert nicht nach Rechten. Sie ordnet die Einträge den Abschnitten
+   dieses Konto sehen darf, und ob es selbst beteiligt ist. Auch die
+   Ausnahme „meine Gruppe heute“ gehört in die Quelle: Beim Personal liefert
+   sie Namen für die eigenen Gruppen und Termine der Betreuung und für die
+   übrige Schule nur die Zahl; die Leitung (Recht auf die Detailseite)
+   bekommt alle Namen. Die Projektion filtert nicht nach Rechten. Sie ordnet die Einträge den Abschnitten
    „Betrifft dich“ und „Schule“ zu und sortiert sie. Was ein Konto mangels
    Recht nicht sehen darf, fehlt. Das ist kein Fehler und kein Teilausfall.
    Beim Personal hat die Antwort kein Feld für einen Grund, schon im Port
@@ -88,13 +102,14 @@ Träger ([ADR 0194](0194-schliessstage-lesen-die-aktuelle-schulzugehoerigkeit.md
    einem eigenen Savepoint der Anfrage-Transaktion (`tenant.WithSavepoint`).
    Ohne Savepoint würde ein fehlgeschlagenes Statement die ganze Transaktion
    abbrechen, und alle folgenden Quellen fielen mit aus. Schlägt eine Quelle
-   fehl, enthält die Antwort die übrigen Einträge und für diese Quelle den
-   Status „fehlgeschlagen“. Der Fehler wird mit slog geloggt, ohne
+   fehl, enthält die Antwort die übrigen Einträge. Jede Quelle hat einen
+   Status, „geladen“ oder „fehlgeschlagen“. Der Fehler wird mit slog geloggt, ohne
    personenbezogene Daten. Ein Fehler am Savepoint selbst bricht die Anfrage
    ab, weil der Zustand der Transaktion dann unbekannt ist.
 8. **Strukturierte Antwort.** Die Antwort enthält keine fertigen deutschen
-   Texte, sondern Art, Abschnitt, Zeit, beteiligte Personen, Gruppe oder
-   Klasse, Raum, Link-Ziel und Zahlen. Die Texte baut das Frontend. Die
+   Texte, sondern Art, Abschnitt, ganztägig oder Beginn und Ende, „seit“ und
+   „bis“, beteiligte Personen, Gruppe oder Klasse, Raum, Link-Ziel und bei
+   Zusammenfassungen die Zahlen mit den aufklappbaren Einzelzeilen. Die Texte baut das Frontend. Die
    Projektion löst kein SSE-Event aus. Das Frontend lädt bei den bestehenden
    Events der Quellen neu; fehlt einer Quelle ein Event, kommt es ohne Inhalt
    in deren Ticket dazu ([SSE-Vertrag](../agents/realtime.md)).
@@ -109,6 +124,15 @@ Projektion nutzt „change“.
 
 ## Folgen
 
+- Die Tests folgen
+  [ADR 0069](0069-principle-a-test-reaches-its-owner-the-typed-roots-and-the-shared-kernel.md):
+  Router-Tests über die Route gegen die Test-Datenbank, für den Teilausfall
+  ein Test der Komposition mit Fake-Ports.
+- Jede Policy-Regel des Owners beschreibt nur das Ziel
+  ([ADR 0070](0070-principle-only-the-target-is-a-rule-and-debt-leaves-with-evidence.md)).
+  Eine Regel, die eine Kante von einem Fachmodul zur Projektion oder einen
+  Zyklus öffnen würde, ist nicht zulässig.
+
 - Das Paket `modules/daychangesview` enthält mit dieser Entscheidung nur
   seine Paketdoku. Die Prüfung der Policy nimmt einen neuen Projektions-Owner
   nur zusammen mit einem neu angelegten Paket an
@@ -116,7 +140,9 @@ Projektion nutzt „change“.
   `backend/internal/architecture/policy_compare.go`). Ports, Komposition,
   Route und Regeln kommen mit dem ersten Ticket (#7659) dazu, je Quelle
   erweitert durch die Folgetickets.
-- Jede Quelle kostet zwei Statements für den Savepoint. Das Query-Budget des
-  Endpunkts nennt sie.
+- Jede Quelle kostet zwei Statements für den Savepoint (`SAVEPOINT`,
+  `RELEASE`), eine fehlgeschlagene drei (dazu `ROLLBACK TO`). Das
+  Query-Budget des Endpunkts zählt sie mit.
+- ADR 0066 Punkt 6 bekommt einen Hinweis auf diese Ausnahme.
 - Eine spätere SQL-Projektion für eine Quelle braucht eine eigene
   Entscheidung nach ADR 0081.

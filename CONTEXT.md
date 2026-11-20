@@ -744,10 +744,11 @@ gehören dem jeweiligen Fachmodul.
 _Vermeiden_: Abweichung (belegt durch die Änderung an einer Kopie (Träger) und
 die Schul-Abweichung einer Einstellung), Ausnahme.
 
-**Heute anders** ist der Baustein der Staff-Startseite, der die Änderungen am
-Regelbetrieb des heutigen Tages der angemeldeten Schule zeigt, getrennt in
-„Betrifft dich“ und „Schule“. Jede Person sieht darin nur, was sie für ihre
-Aufgabe braucht. Er liest nur und speichert nichts
+## Heute anders
+
+**Heute anders** ist der Baustein der Staff-Startseite mit den Änderungen am
+Regelbetrieb des heutigen Tages der angemeldeten Schule, getrennt in „Betrifft
+dich“ und „Schule“
 ([ADR 0299](docs/adr/0299-heute-anders-liest-die-quellen-ueber-ports-in-einer-eigenen-leseprojektion.md)).
 _Vermeiden_: Abweichungen heute, Tagesinformationen (die Seite mit den
 Hinweisen der Leitung).
