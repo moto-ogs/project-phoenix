@@ -7265,22 +7265,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroup",
-      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroup",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroup",
-      "binding_digest": "72588c72a13f12f76057f35e332960ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroup",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DataTemplates.FindGroup",
       "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroup",
@@ -7322,22 +7306,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.FindGroupByName",
-      "binding_digest": "72588c72a13f12f76057f35e332960ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroupByName",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroupByName",
-      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroupByName",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.FindGroupByName",
       "binding_digest": "72588c72a13f12f76057f35e332960ee",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.FindGroupByName",
       "source_owner": "timetable-activities",
@@ -7393,22 +7361,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroupTargets",
-      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroupTargets",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroupTargets",
-      "binding_digest": "72588c72a13f12f76057f35e332960ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroupTargets",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DataTemplates.ListGroupTargets",
       "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroupTargets",
@@ -7457,22 +7409,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroups",
-      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroups",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroups",
-      "binding_digest": "72588c72a13f12f76057f35e332960ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroups",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DataTemplates.ListGroups",
       "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListGroups",
@@ -7514,22 +7450,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ListTargetStudentIDs",
-      "binding_digest": "72588c72a13f12f76057f35e332960ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListTargetStudentIDs",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListTargetStudentIDs",
-      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListTargetStudentIDs",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListTargetStudentIDs",
       "binding_digest": "72588c72a13f12f76057f35e332960ee",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.ActivityGroupQuery.ListTargetStudentIDs",
       "source_owner": "timetable-activities",

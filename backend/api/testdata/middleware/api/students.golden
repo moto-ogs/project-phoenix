@@ -74,7 +74,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/students/{id}/attendance-history/export
 	GET /api/students/{id}/change-history
 	GET /api/students/{id}/companions
-	GET /api/students/{id}/current-visit
 	GET /api/students/{id}/delete-impact
 	GET /api/students/{id}/documents
 	GET /api/students/{id}/enrollment-extra-fields

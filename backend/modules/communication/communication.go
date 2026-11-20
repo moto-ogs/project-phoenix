@@ -160,7 +160,6 @@ type Query interface {
 	GetAnnouncement(context.Context, int64) (*Announcement, error)
 	ListAnnouncements(context.Context, bool) ([]*Announcement, error)
 	GetUnreadForUser(context.Context, int64, []string, int64, int64) ([]*Announcement, error)
-	CountUnread(context.Context, int64, []string, int64, int64) (int, error)
 	GetStats(context.Context, int64) (*AnnouncementStats, error)
 	GetViewDetails(context.Context, int64) ([]*AnnouncementViewDetail, error)
 }

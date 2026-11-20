@@ -89,10 +89,6 @@ func (m *mockAnnouncementService) GetUnreadForUser(ctx context.Context, userID i
 	return nil, nil
 }
 
-func (m *mockAnnouncementService) CountUnread(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) (int, error) {
-	return 0, nil
-}
-
 func (m *mockAnnouncementService) MarkSeen(ctx context.Context, viewer platform.AnnouncementViewer, announcementID int64) error {
 	return nil
 }

@@ -372,11 +372,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/communication/internal/application/Service.CountUnread",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/communication/internal/application/Service.GetAnnouncement",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

@@ -203,5 +203,85 @@
     "scenario": "operator.lists.account_tenants_slash",
     "route": "GET /operator/accounts/{accountId}/tenants/",
     "issue": 2352
+  },
+  {
+    "scenario": "api.feedback.date.positive_growth",
+    "route": "GET /api/feedback/date/{date}",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.feedback.list.positive_growth",
+    "route": "GET /api/feedback/",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.feedback.mensa.positive_growth",
+    "route": "GET /api/feedback/mensa",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.guardians.invitable.http_positive_growth",
+    "route": "GET /api/guardians/invitable",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.guardians.without_account.http_positive_growth",
+    "route": "GET /api/guardians/without-account",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.active.n3",
+    "route": "GET /api/me/groups/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.active.n8",
+    "route": "GET /api/me/groups/active",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.activity.n3",
+    "route": "GET /api/me/groups/activity",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.activity.n8",
+    "route": "GET /api/me/groups/activity",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.students.n3",
+    "route": "GET /api/me/groups/{groupID}/students",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.me.presence20.students.n8",
+    "route": "GET /api/me/groups/{groupID}/students",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.rooms.available",
+    "route": "GET /api/rooms/available",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.rooms.buildings",
+    "route": "GET /api/rooms/buildings",
+    "issue": 2352
+  },
+  {
+    "scenario": "api.rooms.categories",
+    "route": "GET /api/rooms/categories",
+    "issue": 2352
+  },
+  {
+    "scenario": "workforce.staff_growth.directory_available",
+    "route": "GET /api/staff/available",
+    "issue": 2352
+  },
+  {
+    "scenario": "workforce.workforce20.own_presence_map",
+    "route": "GET /api/time-tracking/presence-map",
+    "issue": 2352
   }
 ]

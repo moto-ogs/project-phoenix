@@ -520,13 +520,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) CountUnread(ctx context.Context, userID int64, roles []string, tenantID, orgID int64) (result int, err error) {\n\terr = s.run(ctx, \"count_unread\", func(txCtx context.Context) (domain.OperationStats, error) {\n\t\tvar stats domain.OperationStats\n\t\tresult, stats, err = s.audience.CountUnread(txCtx, userID, roles, tenantID, orgID)\n\t\treturn stats, err\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/communication/internal/application/Service.CountUnread",
-      "owner": "modules/communication"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) GetAnnouncement(ctx context.Context, id int64) (*communication.Announcement, error) {\n\tvar result communication.Announcement\n\terr := s.run(ctx, \"read\", func(txCtx context.Context) (stats domain.OperationStats, err error) {\n\t\tresult, stats, err = s.store.Get(txCtx, id)\n\t\treturn stats, err\n\t})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/Service.GetAnnouncement",

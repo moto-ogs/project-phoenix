@@ -146,9 +146,9 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 
 	viewer := announcementViewer(account.ID, tenantID, organizationID)
 	require.NoError(t, module.MarkSeen(ctx, viewer, announcement.ID))
-	count, err := module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
+	unread, err = module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
-	assert.Equal(t, 1, count, "seeing an announcement does not close it")
+	assert.Len(t, unread, 1, "seeing an announcement does not close it")
 
 	details, err := module.GetViewDetails(ctx, announcement.ID)
 	require.NoError(t, err)
@@ -225,9 +225,9 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	assert.NotZero(t, dismissedOnlyDetails[0].SeenAt)
 	assert.Nil(t, dismissedOnlyDetails[0].ShownAt)
 	assert.NotNil(t, dismissedOnlyDetails[0].DismissedAt)
-	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
+	unread, err = module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
-	assert.Zero(t, count, "dismissing an announcement closes it")
+	assert.Empty(t, unread, "dismissing an announcement closes it")
 }
 
 func TestMarkSeenDoesNotReopenHistoricalAnnouncement(t *testing.T) {
