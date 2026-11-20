@@ -90,7 +90,7 @@ export function AdminEnrollmentContracts({
 }: Readonly<{ requestId: string; childList: readonly AdminRequestChild[] }>) {
   const ids = useMemo(() => childList.map((child) => child.id), [childList]);
   const { data, error, mutate } = useSWRAuth(
-    ids.length > 0 ? enrollmentKeys.applicationContracts(requestId) : null,
+    ids.length > 0 ? enrollmentKeys.applicationContracts(requestId, ids) : null,
     () => getApplicationContracts(ids),
   );
   const notBooked = notBookedModuleOf(error) !== null;

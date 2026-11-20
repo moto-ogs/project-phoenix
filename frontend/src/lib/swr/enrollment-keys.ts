@@ -24,8 +24,8 @@ export const enrollmentKeys = {
   requestMails: (requestId: string) =>
     `enrollment-request-mails-${encodeURIComponent(requestId)}`,
   /** The care contracts of a request's children (`getApplicationContracts`). */
-  applicationContracts: (requestId: string) =>
-    `enrollment-request-contracts-${encodeURIComponent(requestId)}`,
+  applicationContracts: (requestId: string, childIds: readonly string[]) =>
+    `enrollment-request-contracts-${encodeURIComponent(requestId)}-${childIds.map(encodeURIComponent).join(",")}`,
   /** One enrollment request with its children (`getAdminRequest`). */
   adminRequest: (requestId: string) =>
     `enrollment-request-detail-${encodeURIComponent(requestId)}`,

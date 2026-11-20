@@ -1,6 +1,7 @@
 package carecontracthttp
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -21,16 +22,23 @@ import (
 // application, behind the right of the enrollment detail.
 type ApplicationContractResource struct {
 	contracts carecontract.ApplicationContracts
+	audit     ApplicationContractAccessLog
 	require   common.Middleware
+}
+
+// ApplicationContractAccessLog records a successful school-side contract
+// read in the audit tenant transaction.
+type ApplicationContractAccessLog interface {
+	RecordApplicationContractAccess(context.Context, []carecontract.ApplicationContract) error
 }
 
 // NewApplicationContractResource builds the resource; require is the right
 // check of the enrollment detail.
-func NewApplicationContractResource(contracts carecontract.ApplicationContracts, require common.Middleware) *ApplicationContractResource {
-	if contracts == nil || require == nil {
-		panic("care contract http: the application contracts and the right check are required")
+func NewApplicationContractResource(contracts carecontract.ApplicationContracts, audit ApplicationContractAccessLog, require common.Middleware) *ApplicationContractResource {
+	if contracts == nil || audit == nil || require == nil {
+		panic("care contract http: the application contracts, access log and right check are required")
 	}
-	return &ApplicationContractResource{contracts: contracts, require: require}
+	return &ApplicationContractResource{contracts: contracts, audit: audit, require: require}
 }
 
 // Router returns the routes mounted at /care-contracts.
@@ -83,6 +91,10 @@ func (rs *ApplicationContractResource) list(w http.ResponseWriter, r *http.Reque
 	}
 	contracts, err := rs.contracts.ApplicationContracts(r.Context(), ids)
 	if err != nil {
+		common.RenderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
+	if err := rs.audit.RecordApplicationContractAccess(r.Context(), contracts); err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}

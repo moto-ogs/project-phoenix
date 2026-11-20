@@ -21,6 +21,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
+	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
@@ -70,7 +72,9 @@ func newApplicationContractsFixture(t *testing.T, name string) applicationContra
 	foreign := testpkg.CreateTestCareContract(t, db, organization, other, testpkg.UniqueTestTenantID(t), carecontract.StatusSent, august,
 		testpkg.CareContractService{Weekday: "thu", Module: "Ganztag", EndsAt: "16:00"})
 
-	resource := careContractHTTP.NewApplicationContractResource(careContractCompose.NewApplicationContracts(),
+	audits, err := auditCompose.NewTenantPersistence(db, time.Now)
+	require.NoError(t, err)
+	resource := careContractHTTP.NewApplicationContractResource(careContractCompose.NewApplicationContracts(), applicationContractAccessLog{log: audits.DataAccessLog},
 		common.RequiresPermission(permissions.ConfigManage))
 	unit := testpkg.TenantRuntime(t, db)
 	router := chi.NewRouter()
@@ -108,6 +112,14 @@ func (f applicationContractsFixture) get(t *testing.T, token, path string) *http
 	rec := httptest.NewRecorder()
 	f.router.ServeHTTP(rec, req)
 	return rec
+}
+
+func (f applicationContractsFixture) contractID(t *testing.T, requestChildID int64) int64 {
+	t.Helper()
+	var id int64
+	require.NoError(t, f.db.NewRaw(`SELECT id FROM care_contract.contracts WHERE request_child_id = ?`, requestChildID).
+		Scan(t.Context(), &id))
+	return id
 }
 
 type applicationContractBody struct {
@@ -185,6 +197,29 @@ func TestApplicationContractsNeedTheRightOfTheEnrollmentDetail(t *testing.T) {
 	f := newApplicationContractsFixture(t, "Träger Anmeldevertrag Recht")
 	rec := f.get(t, f.staffOf(t, f.school, permissions.ConfigRead), f.path(f.sent))
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+}
+
+func TestApplicationContractsAuditTheSuccessfulSchoolRead(t *testing.T) {
+	t.Parallel()
+	f := newApplicationContractsFixture(t, "Träger Anmeldevertrag Protokoll")
+	token := f.staffOf(t, f.school, permissions.ConfigManage)
+
+	rec := f.get(t, token, f.path(f.sent, f.concluded))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var rows []struct {
+		ResourceType string         `bun:"resource_type"`
+		Metadata     map[string]any `bun:"metadata,type:jsonb"`
+	}
+	require.NoError(t, f.db.NewSelect().TableExpr("audit.data_access_log").
+		Column("resource_type", "metadata").
+		Where("tenant_id = ?", f.school).Scan(t.Context(), &rows))
+	require.Len(t, rows, 1)
+	assert.Equal(t, auditModels.ResourceTypeCareContracts, rows[0].ResourceType)
+	assert.Equal(t, "school_portal", rows[0].Metadata["channel"])
+	assert.Equal(t, "application_contracts", rows[0].Metadata["view"])
+	assert.EqualValues(t, 2, rows[0].Metadata["rows"])
+	assert.ElementsMatch(t, []any{float64(f.contractID(t, f.sent)), float64(f.contractID(t, f.concluded))}, rows[0].Metadata["contract_ids"])
 }
 
 func TestApplicationContractsRefuseAMissingOrMalformedChildList(t *testing.T) {

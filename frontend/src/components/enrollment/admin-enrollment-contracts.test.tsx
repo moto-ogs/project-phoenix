@@ -93,7 +93,7 @@ describe("AdminEnrollmentContracts", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(useSWRAuth.mock.calls[0]?.[0]).toBe(
-      "enrollment-request-contracts-5",
+      "enrollment-request-contracts-5-11,12,13",
     );
   });
 
@@ -103,6 +103,24 @@ describe("AdminEnrollmentContracts", () => {
       <AdminEnrollmentContracts requestId="5" childList={children} />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("uses a fresh cache entry when the enrollment's children change", () => {
+    useSWRAuth.mockReturnValue({ data: [], error: undefined, mutate: vi.fn() });
+    const { rerender } = render(
+      <AdminEnrollmentContracts requestId="5" childList={[children[0]!]} />,
+    );
+    rerender(
+      <AdminEnrollmentContracts
+        requestId="5"
+        childList={[children[0]!, children[1]!]}
+      />,
+    );
+
+    expect(useSWRAuth.mock.calls.map(([key]) => key)).toEqual([
+      "enrollment-request-contracts-5-11",
+      "enrollment-request-contracts-5-11,12",
+    ]);
   });
 
   it("stays away where the school did not book the module of the read", () => {

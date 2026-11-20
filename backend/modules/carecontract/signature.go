@@ -13,8 +13,8 @@ import (
 // either in the parents portal or through the one-time link of its mail
 // (a simple electronic signature, no QES, #3740). The Träger-Büro records a
 // contract the parents signed on paper by uploading its PDF. Either way the
-// contract is concluded: it becomes aktiv, or unterschrieben until its
-// effective date, and its version becomes wirksam. The Audit Platform keeps
+// contract is concluded: it becomes aktiv and its version becomes wirksam.
+// The Audit Platform keeps
 // the drawn or typed signature (#4785); the contract keeps the checksums of
 // the version and of the PDF and how the signer was identified.
 
