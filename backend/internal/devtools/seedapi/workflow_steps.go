@@ -411,6 +411,9 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		// Nach den Live-Stempeln: deren sofortiges Ausstempeln wiche sonst vom
 		// geplanten Dienst ab und bräuchte eine Begründung.
 		seedTodaysShiftsStep{},
+		// Nach den Diensten der Woche: sagt einen davon für heute ab und
+		// lässt ihn teilweise vertreten („Heute anders“, #7661).
+		seedTodaysShiftChangesStep{},
 	}
 	// Die Produkt-Screenshots simulieren den ganzen Tag, der die Statistik
 	// füllt. Die Statistik-Sitzung stünde dort als Hausaufgaben-Block von

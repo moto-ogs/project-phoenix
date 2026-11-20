@@ -22677,6 +22677,9 @@
       "values": [
         "group_substitution",
         "group_substitution_count",
+        "shift_cancelled",
+        "shift_changed",
+        "shift_replacement",
         "staff_absent",
         "staff_absent_count"
       ]
@@ -22686,6 +22689,8 @@
       "values": [
         "group_handovers",
         "own_absences",
+        "own_shift_plan",
+        "shift_plan",
         "staff_absences",
         "staff_list",
         "staff_member"
@@ -22709,6 +22714,7 @@
       "name": "PersonRole",
       "values": [
         "absent",
+        "on_duty",
         "replaced",
         "substitute"
       ]
@@ -48533,6 +48539,20 @@
           "name": "until",
           "schema": {
             "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "starts_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "instant",
             "nullable": true
           }
         },

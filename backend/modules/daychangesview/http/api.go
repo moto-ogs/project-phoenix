@@ -37,13 +37,16 @@ func RouteContracts() []common.RouteContract {
 			{Type: daychangesview.Kind(""), Values: []string{
 				string(daychangesview.KindStaffAbsent), string(daychangesview.KindStaffAbsentCount),
 				string(daychangesview.KindGroupSubstitution), string(daychangesview.KindGroupSubstitutionCount),
+				string(daychangesview.KindShiftChanged), string(daychangesview.KindShiftCancelled), string(daychangesview.KindShiftReplacement),
 			}},
 			{Type: daychangesview.PersonRole(""), Values: []string{
 				string(daychangesview.RoleAbsent), string(daychangesview.RoleSubstitute), string(daychangesview.RoleReplaced),
+				string(daychangesview.RoleOnDuty),
 			}},
 			{Type: daychangesview.LinkTarget(""), Values: []string{
 				string(daychangesview.LinkStaffAbsences), string(daychangesview.LinkStaffMember), string(daychangesview.LinkOwnAbsences),
 				string(daychangesview.LinkStaffList), string(daychangesview.LinkGroupHandovers),
+				string(daychangesview.LinkOwnShiftPlan), string(daychangesview.LinkShiftPlan),
 			}},
 		},
 	}}

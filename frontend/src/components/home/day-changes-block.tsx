@@ -194,7 +194,7 @@ function DayChangesSection({
 /** Stabil über ein Neuladen hinweg: Art, Personen und Gruppe. */
 function dayChangeKey(entry: DayChange, index: number): string {
   const people = entry.people.map((person) => person.staffId).join(",");
-  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${people || entry.groupName ? "" : index}`;
+  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}:${people || entry.groupName ? "" : index}`;
 }
 
 function DayChangeRow({ entry }: { readonly entry: DayChange }) {

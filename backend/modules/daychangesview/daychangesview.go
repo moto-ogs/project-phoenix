@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -25,7 +26,8 @@ const (
 type Source string
 
 const (
-	// SourceStaff is Personal: full-day absences and group substitutions.
+	// SourceStaff is Personal: full-day absences, group substitutions and
+	// the changed or cancelled shifts of the Dienstplan (#7661).
 	SourceStaff Source = "staff"
 )
 
@@ -52,6 +54,14 @@ const (
 	KindGroupSubstitution Kind = "group_substitution"
 	// KindGroupSubstitutionCount: how many further groups are covered today.
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
+	// KindShiftChanged: a shift of a series runs differently today (other
+	// time or day). Never a reason.
+	KindShiftChanged Kind = "shift_changed"
+	// KindShiftCancelled: a shift does not take place today. A shift the
+	// plan cancelled for an absence is not one: the absence is the entry.
+	KindShiftCancelled Kind = "shift_cancelled"
+	// KindShiftReplacement: somebody covers (part of) a cancelled shift.
+	KindShiftReplacement Kind = "shift_replacement"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -61,6 +71,8 @@ const (
 	RoleAbsent     PersonRole = "absent"
 	RoleSubstitute PersonRole = "substitute"
 	RoleReplaced   PersonRole = "replaced"
+	// RoleOnDuty is the staff member whose shift changed or is cancelled.
+	RoleOnDuty PersonRole = "on_duty"
 )
 
 // LinkTarget names the page an entry leads to; the frontend builds the path.
@@ -77,6 +89,10 @@ const (
 	LinkStaffList LinkTarget = "staff_list"
 	// LinkGroupHandovers is the page of the group substitutions.
 	LinkGroupHandovers LinkTarget = "group_handovers"
+	// LinkOwnShiftPlan is the caller's own Dienstplan.
+	LinkOwnShiftPlan LinkTarget = "own_shift_plan"
+	// LinkShiftPlan is a staff member's week in the Dienstplan.
+	LinkShiftPlan LinkTarget = "shift_plan"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -111,11 +127,16 @@ type SourceEntry struct {
 	HalfDay bool
 	// Since is the first day of a change that began before the day; Until
 	// the last day of one that lasts beyond it. Nil otherwise.
-	Since  *calendar.Date
-	Until  *calendar.Date
-	People []Person
-	Group  *Group
-	Link   *Link
+	Since *calendar.Date
+	Until *calendar.Date
+	// StartsAt and EndsAt are the instants of a change with a time of day;
+	// both nil for a full-day change. A source sets EndsAt only together
+	// with StartsAt.
+	StartsAt *time.Time
+	EndsAt   *time.Time
+	People   []Person
+	Group    *Group
+	Link     *Link
 	// Count is set on the summary kinds only.
 	Count *int
 }
@@ -124,16 +145,19 @@ type SourceEntry struct {
 type Entry struct {
 	Kind    Kind    `json:"kind"`
 	Section Section `json:"section"`
-	// AllDay is true for changes without a time of day; every staff entry of
-	// v1 is one.
+	// AllDay is true for changes without a time of day (StartsAt nil).
 	AllDay  bool           `json:"all_day"`
 	HalfDay bool           `json:"half_day"`
 	Since   *calendar.Date `json:"since"`
 	Until   *calendar.Date `json:"until"`
-	People  []Person       `json:"people"`
-	Group   *Group         `json:"group"`
-	Link    *Link          `json:"link"`
-	Count   *int           `json:"count"`
+	// StartsAt and EndsAt are instants; the frontend shows the school's wall
+	// clock (a shift's time, #7661).
+	StartsAt *time.Time `json:"starts_at"`
+	EndsAt   *time.Time `json:"ends_at"`
+	People   []Person   `json:"people"`
+	Group    *Group     `json:"group"`
+	Link     *Link      `json:"link"`
+	Count    *int       `json:"count"`
 }
 
 // SourceStatus reports one source.
@@ -150,8 +174,8 @@ type Overview struct {
 	Entries []Entry        `json:"entries"`
 }
 
-// StaffChanges is the Personal port: full-day absences and group
-// substitutions of the day as the caller may see them. It never carries a
+// StaffChanges is the Personal port: full-day absences, group substitutions
+// and changed or cancelled shifts of the day as the caller may see them. It never carries a
 // reason for an absence; the port has no field for one.
 type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
@@ -261,9 +285,9 @@ func toEntry(entry SourceEntry) Entry {
 		people = []Person{}
 	}
 	return Entry{
-		Kind: entry.Kind, Section: section, AllDay: true, HalfDay: entry.HalfDay,
-		Since: entry.Since, Until: entry.Until, People: people, Group: entry.Group,
-		Link: entry.Link, Count: entry.Count,
+		Kind: entry.Kind, Section: section, AllDay: entry.StartsAt == nil, HalfDay: entry.HalfDay,
+		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
+		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count,
 	}
 }
 

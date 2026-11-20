@@ -5,7 +5,9 @@ package api
 // School Membership's group teachers, the People Directory's staff names and
 // the group names, and applies the visibility rule of this one read: the
 // care staff sees names for its own groups and itself, a number for the rest
-// of the school; the lead sees every name. The projection names none of
+// of the school; the lead sees every name. The changed and cancelled shifts
+// of Workforce's Dienstplan (#7661) are part of the same source: the care
+// staff sees only its own, the lead of the Dienstplan every one. The projection names none of
 // these owners; the translation is cross-owner glue and lives here.
 
 import (
@@ -29,16 +31,20 @@ import (
 )
 
 // dayChangesCaller is the Identity & Access read of the caller's staff
-// record and groups (own groups and the ones the caller covers today).
+// record and own groups. The groups the caller covers on the day come from
+// the day's Gruppenübergaben the source reads anyway (#7661): one read less,
+// and the same day as the overview.
 type dayChangesCaller interface {
 	CurrentStaffID(ctx context.Context) (int64, bool, error)
-	MyGroupIDs(ctx context.Context) ([]int64, error)
+	MyTeacherGroupIDs(ctx context.Context) ([]int64, error)
 }
 
-// dayChangesWorkforce is the Workforce read of absences and substitutions.
+// dayChangesWorkforce is the Workforce read of absences, substitutions and
+// planned shifts.
 type dayChangesWorkforce interface {
 	ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error)
 	ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error)
+	ListStaffShifts(context.Context, workforce.StaffShiftFilter) ([]workforce.StaffShift, error)
 }
 
 // dayChangesStaffNames maps staff ids to display names in one read.
@@ -114,6 +120,10 @@ type staffViewer struct {
 	staffRecords bool
 	// groupHandovers may open the group substitutions overview.
 	groupHandovers bool
+	// shiftPlan may open the Dienstplan of the school (admin or
+	// time_tracking:manage). It sees every changed shift with its name; the
+	// others see only their own.
+	shiftPlan bool
 	// groups are the caller's own groups and those it covers today; team
 	// are the staff of these groups (teachers and today's substitutes).
 	groups map[int64]bool
@@ -133,6 +143,9 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 	if err != nil {
 		return nil, err
 	}
+	if err := s.addTeam(ctx, &viewer, handovers); err != nil {
+		return nil, err
+	}
 	viewer.addSubstitutes(handovers)
 	absences, err := s.sources.Workforce.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		Statuses:    []string{workforce.AbsenceStatusReported, workforce.AbsenceStatusApproved},
@@ -147,6 +160,9 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 	}
 	for _, handover := range handovers {
 		builder.handover(handover)
+	}
+	if err := s.addShifts(ctx, builder, day); err != nil {
+		return nil, err
 	}
 	return builder.finish(ctx, s.sources.Names, s.sources.Groups)
 }
@@ -171,6 +187,7 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		ownAbsences:    securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
 		staffRecords:   admin || hasStaffRecordAccess(granted),
 		groupHandovers: admin || hasGroupHandoverAccess(roles, granted),
+		shiftPlan:      admin || securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
 		groups:         map[int64]bool{}, team: map[int64]bool{},
 	}
 	viewer.counts = viewer.lead || securityruntime.HasPermission(permissions.UsersRead, granted)
@@ -182,14 +199,14 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		return viewer, nil
 	}
 	viewer.selfID = staffID
-	groupIDs, err := s.sources.Caller.MyGroupIDs(ctx)
+	groupIDs, err := s.sources.Caller.MyTeacherGroupIDs(ctx)
 	if err != nil {
 		return staffViewer{}, fmt.Errorf("resolve caller groups: %w", err)
 	}
-	if len(groupIDs) == 0 {
-		return viewer, nil
+	for _, id := range groupIDs {
+		viewer.groups[id] = true
 	}
-	return viewer, s.addTeam(ctx, &viewer, groupIDs)
+	return viewer, nil
 }
 
 func hasStaffRecordAccess(granted []string) bool {
@@ -213,13 +230,18 @@ func containsRole(roles []string, role string) bool {
 	return false
 }
 
-// addTeam names the teachers of the caller's groups. Today's substitutes are
-// added after their source query succeeds.
-func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, groupIDs []int64) error {
-	for _, id := range groupIDs {
-		viewer.groups[id] = true
+// addTeam completes the caller's groups with those it covers on the day and
+// names the teachers of all of them. Today's substitutes are added after.
+func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, handovers []workforce.GroupSubstitution) error {
+	for _, cover := range handovers {
+		if viewer.selfID != 0 && cover.SubstituteStaffID == viewer.selfID {
+			viewer.groups[cover.GroupID] = true
+		}
 	}
-	teachers, err := s.sources.Teachers.GroupTeacherStaffIDs(ctx, groupIDs)
+	if len(viewer.groups) == 0 {
+		return nil
+	}
+	teachers, err := s.sources.Teachers.GroupTeacherStaffIDs(ctx, sortedIDs(viewer.groups))
 	if err != nil {
 		return fmt.Errorf("resolve group teachers: %w", err)
 	}

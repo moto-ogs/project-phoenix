@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  instant,
   int64String,
   nullable,
   object,
@@ -14,13 +15,13 @@ import {
   type OpenEnum,
 } from "./runtime";
 
-export const KIND_VALUES = ["group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count"] as const;
+export const KIND_VALUES = ["group_substitution", "group_substitution_count", "shift_cancelled", "shift_changed", "shift_replacement", "staff_absent", "staff_absent_count"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
-export const LINK_TARGET_VALUES = ["group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member"] as const;
+export const LINK_TARGET_VALUES = ["group_handovers", "own_absences", "own_shift_plan", "shift_plan", "staff_absences", "staff_list", "staff_member"] as const;
 export type LinkTarget = (typeof LINK_TARGET_VALUES)[number];
 
-export const PERSON_ROLE_VALUES = ["absent", "replaced", "substitute"] as const;
+export const PERSON_ROLE_VALUES = ["absent", "on_duty", "replaced", "substitute"] as const;
 export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
 
 export const SECTION_VALUES = ["school", "you"] as const;
@@ -88,6 +89,8 @@ export interface Entry {
   half_day: boolean;
   since: string | null;
   until: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
   people: Person[] | null;
   group: Group | null;
   link: Link | null;
@@ -101,6 +104,8 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   half_day: bool,
   since: nullable(calendarDate),
   until: nullable(calendarDate),
+  starts_at: nullable(instant),
+  ends_at: nullable(instant),
   people: nullable(arr(PersonSchema)),
   group: nullable(GroupSchema),
   link: nullable(LinkSchema),

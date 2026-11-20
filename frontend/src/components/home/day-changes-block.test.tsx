@@ -29,6 +29,8 @@ function change(overrides: Partial<DayChange>): DayChange {
     halfDay: false,
     since: null,
     until: null,
+    startsAt: null,
+    endsAt: null,
     people: [],
     groupName: null,
     link: null,
@@ -129,6 +131,75 @@ describe("DayChangesBlock", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("zeigt geänderte, abgesagte und vertretene Dienste mit Uhrzeit und ohne Grund", () => {
+    serve({
+      entries: [
+        change({
+          kind: "shift_changed",
+          section: "you",
+          startsAt: "2026-09-09T08:00:00Z",
+          endsAt: "2026-09-09T12:00:00Z",
+          people: [
+            { staffId: "1", name: "Anna", role: "on_duty", isSelf: true },
+          ],
+          link: { target: "own_shift_plan", staffId: null },
+        }),
+        change({
+          kind: "shift_cancelled",
+          startsAt: "2026-09-09T10:00:00Z",
+          endsAt: "2026-09-09T14:00:00Z",
+          people: [
+            {
+              staffId: "2",
+              name: "Ben Kollege",
+              role: "on_duty",
+              isSelf: false,
+            },
+          ],
+          link: { target: "shift_plan", staffId: "2" },
+        }),
+        change({
+          kind: "shift_replacement",
+          startsAt: "2026-09-09T10:00:00Z",
+          endsAt: "2026-09-09T13:00:00Z",
+          people: [
+            {
+              staffId: "3",
+              name: "Tom Hilfe",
+              role: "substitute",
+              isSelf: false,
+            },
+            {
+              staffId: "2",
+              name: "Ben Kollege",
+              role: "replaced",
+              isSelf: false,
+            },
+          ],
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", {
+        name: "Dein Dienst ist heute anders: 10:00 bis 14:00 Uhr.",
+      }),
+    ).toHaveAttribute("href", "/schule/mein-dienstplan");
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(
+      school.getByRole("link", {
+        name: "Der Dienst von Ben Kollege von 12:00 bis 16:00 Uhr fällt heute aus.",
+      }),
+    ).toHaveAttribute("href", "/schule/dienstplan?view=person&staff=2");
+    expect(
+      school.getByText(
+        "Tom Hilfe vertritt heute Ben Kollege von 12:00 bis 15:00 Uhr.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("sagt ohne Einträge, dass alles wie geplant läuft", () => {
     serve({});
     render(<DayChangesBlock />);
@@ -142,7 +213,7 @@ describe("DayChangesBlock", () => {
     render(<DayChangesBlock />);
     expect(
       screen.getByText(
-        "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+        "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
       ),
     ).toBeInTheDocument();
     expect(

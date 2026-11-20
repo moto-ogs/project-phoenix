@@ -42,6 +42,9 @@ export type ChildScopeAnalyticsValue =
 const DAY_CHANGE_KINDS = [
   "group_substitution",
   "group_substitution_count",
+  "shift_cancelled",
+  "shift_changed",
+  "shift_replacement",
   "staff_absent",
   "staff_absent_count",
 ] as const satisfies readonly DayChangeKind[];

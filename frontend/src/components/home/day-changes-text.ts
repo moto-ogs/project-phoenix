@@ -4,6 +4,7 @@
  * Eine neue Quelle ergänzt ihre Arten in `DAY_CHANGE_TEXTS`, ihren Namen in
  * `SOURCE_FAILURE_TEXTS` und ihre Link-Ziele in `dayChangeHref`.
  */
+import { formatTime } from "~/lib/date-helpers";
 import type { DayChange, DayChangePerson } from "~/lib/day-changes";
 
 function personWith(
@@ -66,6 +67,51 @@ function groupSubstitutionCountText(change: DayChange): string {
     : `In ${count} weiteren Gruppen vertritt heute jemand.`;
 }
 
+/** „12:00 bis 16:00 Uhr“ für einen Dienst mit Uhrzeit, sonst null. */
+function shiftClock(change: DayChange): string | null {
+  if (!change.startsAt || !change.endsAt) return null;
+  return `${formatTime(change.startsAt)} bis ${formatTime(change.endsAt)} Uhr`;
+}
+
+/** „ von 12:00 bis 16:00 Uhr“ für einen Satz, sonst leer. */
+function shiftTime(change: DayChange): string {
+  const clock = shiftClock(change);
+  return clock ? ` von ${clock}` : "";
+}
+
+function shiftChangedText(change: DayChange): string {
+  const person = personWith(change, "on_duty");
+  const clock = shiftClock(change);
+  const sentence = person?.isSelf
+    ? "Dein Dienst ist heute anders"
+    : `${nameOf(person)} hat heute einen anderen Dienst`;
+  return clock ? `${sentence}: ${clock}.` : `${sentence}.`;
+}
+
+function shiftCancelledText(change: DayChange): string {
+  const person = personWith(change, "on_duty");
+  const time = shiftTime(change);
+  if (person?.isSelf) return `Dein Dienst${time} fällt heute aus.`;
+  return `Der Dienst von ${nameOf(person)}${time} fällt heute aus.`;
+}
+
+function shiftReplacementText(change: DayChange): string {
+  const substitute = personWith(change, "substitute");
+  const replaced = personWith(change, "replaced");
+  const time = shiftTime(change);
+  if (substitute?.isSelf) {
+    return replaced
+      ? `Du vertrittst heute ${nameOf(replaced)}${time}.`
+      : `Du hast heute einen Dienst als Vertretung${time}.`;
+  }
+  if (replaced?.isSelf) {
+    return `${nameOf(substitute)} vertritt dich heute${time}.`;
+  }
+  return replaced
+    ? `${nameOf(substitute)} vertritt heute ${nameOf(replaced)}${time}.`
+    : `${nameOf(substitute)} hat heute einen Dienst als Vertretung${time}.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -74,6 +120,9 @@ const DAY_CHANGE_TEXTS: Readonly<
   staff_absent_count: staffAbsentCountText,
   group_substitution: groupSubstitutionText,
   group_substitution_count: groupSubstitutionCountText,
+  shift_changed: shiftChangedText,
+  shift_cancelled: shiftCancelledText,
+  shift_replacement: shiftReplacementText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -96,7 +145,8 @@ export function dayChangeSpan(change: DayChange): string | null {
 
 /** Der Hinweis, wenn eine Quelle gerade nicht geladen werden konnte. */
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
-  staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+  staff:
+    "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -121,6 +171,12 @@ export function dayChangeHref(change: DayChange): string | null {
       return "/staff";
     case "group_handovers":
       return "/substitutions";
+    case "own_shift_plan":
+      return "/mein-dienstplan";
+    case "shift_plan":
+      return link.staffId
+        ? `/dienstplan?view=person&staff=${link.staffId}`
+        : "/dienstplan";
     default:
       return null;
   }
