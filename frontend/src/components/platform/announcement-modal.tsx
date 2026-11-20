@@ -62,7 +62,7 @@ export function AnnouncementModal() {
     UnreadAnnouncement[]
   >([]);
   const dismissedIdsRef = useRef<Set<string>>(new Set());
-  // Track IDs the user has seen (closed without dismissing) to avoid re-opening
+  // Track IDs closed in this session to avoid re-opening the modal.
   const closedIdsRef = useRef<Set<string>>(new Set());
   // Einstieg (#7555): a view report is attempted at most once per modal
   // instance. A transport failure can mean the backend committed it, so a
@@ -102,8 +102,15 @@ export function AnnouncementModal() {
           logger.error("announcement_seen_failed", {
             error: error instanceof Error ? error.message : String(error),
           });
+          throw error;
         });
       seenRequestsRef.current.set(key, request);
+      void request.then(
+        () => {
+          seenRequestsRef.current.delete(key);
+        },
+        () => undefined,
+      );
       return request;
     },
     [markSeen],
@@ -111,13 +118,15 @@ export function AnnouncementModal() {
 
   const dismissAfterSeen = useCallback(
     (id: number | string) => {
-      void reportSeen(id)
-        .then(() => dismiss(id))
-        .catch((error: unknown) => {
-          logger.error("announcement_dismiss_failed", {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
+      void reportSeen(id).then(
+        () =>
+          dismiss(id).catch((error: unknown) => {
+            logger.error("announcement_dismiss_failed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }),
+        () => undefined,
+      );
     },
     [dismiss, reportSeen],
   );
@@ -137,7 +146,7 @@ export function AnnouncementModal() {
       trackOnboardingSurface("shown", "announcement");
     }
     if (currentId === undefined) return;
-    void reportSeen(currentId);
+    void reportSeen(currentId).catch(() => undefined);
   }, [isVisible, currentId, reportSeen]);
 
   // Dismiss current and advance to next announcement ("Weiter" / "Verstanden")

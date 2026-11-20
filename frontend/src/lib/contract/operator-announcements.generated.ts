@@ -72,7 +72,7 @@ export const AnnouncementStatsSchema: z.ZodType<AnnouncementStats, unknown> = ob
 export interface AnnouncementViewDetailResponse {
   user_id: string;
   user_name: string;
-  seen_at: string;
+  seen_at: string | null;
   shown_at: string | null;
   dismissed: boolean;
 }
@@ -80,7 +80,7 @@ export interface AnnouncementViewDetailResponse {
 export const AnnouncementViewDetailResponseSchema: z.ZodType<AnnouncementViewDetailResponse, unknown> = object<AnnouncementViewDetailResponse>({
   user_id: int64StringOrNumber,
   user_name: str,
-  seen_at: str,
+  seen_at: nullable(str),
   shown_at: nullable(str),
   dismissed: bool,
 });

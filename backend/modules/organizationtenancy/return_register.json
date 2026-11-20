@@ -26657,7 +26657,7 @@
           "name": "seen_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "dismissed",

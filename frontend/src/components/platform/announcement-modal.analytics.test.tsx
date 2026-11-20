@@ -178,6 +178,22 @@ describe("AnnouncementModal analytics", () => {
     expect(mocks.markSeen).toHaveBeenCalledTimes(1);
   });
 
+  it("does not dismiss when reporting the visible announcement failed", async () => {
+    mocks.announcements = [announcement(1, "Erste")];
+    mocks.markSeen.mockRejectedValueOnce(new Error("nicht erreichbar"));
+    const { AnnouncementModal } = await setup(true);
+    render(<AnnouncementModal />);
+
+    await screen.findByText("Erste");
+    await waitFor(() => expect(mocks.markSeen).toHaveBeenCalledWith(1));
+    fireEvent.click(screen.getByRole("button", { name: "Verstanden" }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mocks.dismiss).not.toHaveBeenCalled();
+  });
+
   it("records the visible announcement before dismissing it", async () => {
     let resolveSeen: (() => void) | undefined;
     mocks.announcements = [announcement(1, "Erste")];

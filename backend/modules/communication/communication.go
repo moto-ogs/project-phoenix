@@ -140,7 +140,7 @@ type AnnouncementViewDetail struct {
 	UserID       int64
 	AccountEmail string
 	UserName     string
-	SeenAt       time.Time
+	SeenAt       *time.Time
 	ShownAt      *time.Time
 	Dismissed    bool
 }

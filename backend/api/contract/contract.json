@@ -25967,7 +25967,8 @@
         {
           "name": "seen_at",
           "schema": {
-            "kind": "string"
+            "kind": "string",
+            "nullable": true
           }
         },
         {

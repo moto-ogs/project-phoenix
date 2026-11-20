@@ -193,6 +193,12 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	// A different tab can close the same displayed announcement before this
 	// tab's initial seen request reaches the server.
 	require.NoError(t, module.MarkDismissed(ctx, viewer, dismissedFirst.ID))
+	var dismissedFirstBeforeSeen struct {
+		SeenAt *time.Time `bun:"seen_at"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT seen_at FROM platform.announcement_views
+		WHERE user_id = ? AND announcement_id = ?`, account.ID, dismissedFirst.ID).Scan(ctx, &dismissedFirstBeforeSeen))
+	assert.Nil(t, dismissedFirstBeforeSeen.SeenAt)
 	require.NoError(t, module.MarkSeen(ctx, viewer, dismissedFirst.ID))
 	var dismissedFirstView struct {
 		ShownAt   *time.Time `bun:"shown_at"`
@@ -214,6 +220,7 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	dismissedOnlyDetails, err := module.GetViewDetails(ctx, dismissedOnly.ID)
 	require.NoError(t, err)
 	require.Len(t, dismissedOnlyDetails, 1)
+	assert.Nil(t, dismissedOnlyDetails[0].SeenAt)
 	assert.Nil(t, dismissedOnlyDetails[0].ShownAt)
 	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
@@ -234,8 +241,8 @@ func TestMarkSeenDoesNotReopenHistoricalAnnouncement(t *testing.T) {
 
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
 	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
-	_, err := db.ExecContext(ctx, `INSERT INTO platform.announcement_views (user_id, announcement_id)
-		VALUES (?, ?)`, account.ID, announcement.ID)
+	_, err := db.ExecContext(ctx, `INSERT INTO platform.announcement_views (user_id, announcement_id, dismissed)
+		VALUES (?, ?, TRUE)`, account.ID, announcement.ID)
 	require.NoError(t, err)
 
 	err = module.MarkSeen(ctx, announcementViewer(account.ID, tenantID, organizationID), announcement.ID)
@@ -248,7 +255,7 @@ func TestMarkSeenDoesNotReopenHistoricalAnnouncement(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT shown_at, dismissed FROM platform.announcement_views
 		WHERE user_id = ? AND announcement_id = ?`, account.ID, announcement.ID).Scan(ctx, &view))
 	assert.Nil(t, view.ShownAt)
-	assert.False(t, view.Dismissed)
+	assert.True(t, view.Dismissed)
 
 	unread, err := module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)

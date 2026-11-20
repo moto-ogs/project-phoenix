@@ -45,7 +45,7 @@ type viewRow struct {
 	bun.BaseModel  `bun:"table:platform.announcement_views,alias:view"`
 	UserID         int64      `bun:"user_id,pk"`
 	AnnouncementID int64      `bun:"announcement_id,pk"`
-	SeenAt         time.Time  `bun:"seen_at,notnull"`
+	SeenAt         *time.Time `bun:"seen_at"`
 	ShownAt        *time.Time `bun:"shown_at"`
 	Dismissed      bool       `bun:"dismissed,notnull"`
 }
@@ -208,13 +208,19 @@ func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismisse
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	var conflicted bool
-	seenAt := s.now()
-	row := viewRow{UserID: userID, AnnouncementID: announcementID, SeenAt: seenAt, Dismissed: dismissed}
+	row := viewRow{UserID: userID, AnnouncementID: announcementID, Dismissed: dismissed}
 	if shown {
+		seenAt := s.now()
+		row.SeenAt = &seenAt
 		row.ShownAt = &seenAt
 	}
 	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
 		On("CONFLICT (user_id, announcement_id) DO UPDATE")
+	if !shown {
+		// Bun omits a nil model field, which would apply the legacy DEFAULT
+		// NOW(). A dismissal-only row must instead retain an empty seen_at.
+		query = query.Value("seen_at", "NULL")
+	}
 	if shown {
 		query = query.Set("seen_at = EXCLUDED.seen_at").
 			Set("shown_at = COALESCE(platform.announcement_views.shown_at, EXCLUDED.shown_at)")
@@ -243,7 +249,7 @@ func (s *Store) ViewStats(ctx context.Context, announcementID int64) (communicat
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewRaw(`SELECT
-		COALESCE(SUM(CASE WHEN shown_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS seen_count,
+		COALESCE(SUM(CASE WHEN seen_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS seen_count,
 		COALESCE(SUM(CASE WHEN dismissed = true THEN 1 ELSE 0 END), 0) AS dismissed_count
 		FROM platform.announcement_views WHERE announcement_id = ?`, announcementID).
 		Scan(ctx, &result.SeenCount, &result.DismissedCount)

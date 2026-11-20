@@ -279,7 +279,7 @@ func (rs *AnnouncementsResource) GetStats(w http.ResponseWriter, r *http.Request
 type AnnouncementViewDetailResponse struct {
 	UserID    int64   `json:"user_id"`
 	UserName  string  `json:"user_name"`
-	SeenAt    string  `json:"seen_at"`
+	SeenAt    *string `json:"seen_at"`
 	ShownAt   *string `json:"shown_at"`
 	Dismissed bool    `json:"dismissed"`
 }
@@ -302,8 +302,11 @@ func (rs *AnnouncementsResource) GetViewDetails(w http.ResponseWriter, r *http.R
 		response := AnnouncementViewDetailResponse{
 			UserID:    detail.UserID,
 			UserName:  detail.UserName,
-			SeenAt:    detail.SeenAt.Format(time.RFC3339),
 			Dismissed: detail.Dismissed,
+		}
+		if detail.SeenAt != nil {
+			seenAt := detail.SeenAt.Format(time.RFC3339)
+			response.SeenAt = &seenAt
 		}
 		if detail.ShownAt != nil {
 			shownAt := detail.ShownAt.Format(time.RFC3339)

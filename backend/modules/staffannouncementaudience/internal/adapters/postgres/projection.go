@@ -96,11 +96,12 @@ const unreadWhere = audienceWhere + `
 		AND COALESCE(v.dismissed, FALSE) = FALSE
 		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL)`
 
-// shown or dismissed views remain reportable after dismissal so a delayed
-// /seen request records the modal that was actually displayed. Historical
-// views stay closed: they have seen_at but no shown_at and were not dismissed.
+// A dismissal without seen_at is a post-#7555 queued announcement closed by
+// the bulk action. It remains reportable so a delayed /seen request records
+// the modal that was actually displayed. Historical views have seen_at but no
+// shown_at, so they remain closed even when their old row was dismissed.
 const seeableWhere = audienceWhere + `
-		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL OR v.dismissed = TRUE)`
+		AND (v.seen_at IS NULL OR v.shown_at IS NOT NULL)`
 
 // dismissed views remain dismissible so a client can safely repeat an
 // acknowledgement after losing its successful response. Historical views stay
@@ -245,7 +246,7 @@ func (p *Projection) ViewDetails(ctx context.Context, announcementID int64) ([]c
 		UserID       int64      `bun:"user_id"`
 		AccountEmail string     `bun:"account_email"`
 		UserName     string     `bun:"user_name"`
-		SeenAt       time.Time  `bun:"seen_at"`
+		SeenAt       *time.Time `bun:"seen_at"`
 		ShownAt      *time.Time `bun:"shown_at"`
 		Dismissed    bool       `bun:"dismissed"`
 	}
@@ -259,7 +260,7 @@ func (p *Projection) ViewDetails(ctx context.Context, announcementID int64) ([]c
 			JOIN auth.accounts acc ON acc.id = v.user_id
 			WHERE v.announcement_id = ?
 			ORDER BY v.user_id, v.seen_at DESC
-		) AS latest_view ORDER BY seen_at DESC`, announcementID).Scan(ctx, &rows)
+		) AS latest_view ORDER BY seen_at DESC NULLS LAST`, announcementID).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return nil, stats, fmt.Errorf("announcement audience projection: get view details: %w", err)
