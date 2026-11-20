@@ -204,11 +204,12 @@ func enrollmentInvitationsToAccept(rt *Runtime, auth AuthRef) ([]int64, error) {
 	return guardianIDs[openInvitationsKept:], nil
 }
 
-// listSchoolStudentIDs reads the IDs of every child of the school.
+// listSchoolStudentIDs reads the school's administrative child list, including
+// children whose care has not started yet.
 func listSchoolStudentIDs(rt *Runtime, auth AuthRef) ([]int64, error) {
 	var ids []int64
 	for page := 1; ; page++ {
-		raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/students?page=%d&page_size=500", page))
+		raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/students?page=%d&page_size=500&include_pending_withdrawals=true", page))
 		if err != nil {
 			return nil, fmt.Errorf("list students: %w", err)
 		}
