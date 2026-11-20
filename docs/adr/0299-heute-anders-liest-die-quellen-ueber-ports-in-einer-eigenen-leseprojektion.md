@@ -169,3 +169,25 @@ Projektion nutzt „change“.
   bekommt ein Konto mit `users:read`.
 - Terminbezogene Abwesenheit und Vertretung einzelner Termine
   (`schedule.instance_staff`) kommen als eigenes Folge-Ticket hinzu.
+
+## Nachtrag 2026-11-20: Dienste in der Quelle Personal (#7661)
+
+- Geänderte, abgesagte und vertretene Dienste des Dienstplans gehören zur
+  Quelle Personal, nicht zu einer eigenen Quelle. Sie teilen Savepoint und
+  Namensauflösung; ein eigener Status kostete fünf Statements mehr. Die
+  Root-Bindung liest die Dienste über `ListStaffShifts` von Workforce in
+  einem Read über die Woche um den Tag.
+- Sichtregel: Die Betreuung sieht nur ihre eigenen Dienste und die
+  Vertretung eines eigenen abgesagten Dienstes, auch keine Zahl für die
+  übrige Schule. Die Leitung des Dienstplans ist Admin oder ein Konto mit
+  `time_tracking:manage` (Recht der Seite `/dienstplan`) und sieht alle
+  Dienste mit Namen.
+- Eine Änderung ist ein abgesagter Dienst, ein Vertretungsdienst, eine auf
+  heute oder von heute weg verschobene Serien-Ausprägung und eine Ausprägung
+  mit anderen Zeiten als die Serie. Ein Dienst, den eine Abwesenheit
+  abgesagt hat, ist keine: Die Abwesenheit ist der Eintrag. Ein Einzeldienst
+  ist der Plan selbst.
+- Die eigenen Gruppen liest die Quelle über `MyTeacherGroupIDs` von
+  Identity & Access; die heute vertretenen Gruppen leitet sie aus den
+  Gruppenübergaben des Tages ab, die sie ohnehin liest. Das ist die
+  Team-Definition von #7138 und hält das Query-Budget des Endpunkts.

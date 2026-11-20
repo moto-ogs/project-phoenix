@@ -1,9 +1,10 @@
 package api
 
-// The Dienstplan part of the Personal source of "Heute anders" (#7661):
-// the shifts of the day that run differently, do not take place or cover a
-// cancelled one. Workforce owns the shifts; the rule of this read lives here
-// with the rest of the Personal rule (ADR 0299, addendum #7659).
+// The Dienstplan part of the Personal source of "Heute anders" (#7661): the
+// shifts of the day that run at another time, do not take place, moved away
+// or cover a cancelled one. Workforce owns the shifts; the rule of this read
+// lives here with the rest of the Personal rule (ADR 0299, addenda #7659 and
+// #7661).
 
 import (
 	"context"
@@ -15,93 +16,137 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// addShifts reads the day's shifts the caller may see in one read: every
-// shift for the lead of the Dienstplan, the caller's own otherwise. An
-// account without a staff record and without the Dienstplan reads nothing.
+// shiftWindowDays is how far around the day the shifts are read in the same
+// statement: far enough to find a regular occurrence of every weekly series
+// and an occurrence moved away from the day within its week.
+const shiftWindowDays = 7
+
+// dayShifts are the shifts of the window, indexed for the rule.
+type dayShifts struct {
+	day     calendar.Date
+	byID    map[int64]workforce.StaffShift
+	regular map[int64]workforce.StaffShift
+}
+
+// addShifts reads the shifts of the school around the day in one read and
+// adds those that change the day. The care staff sees its own shifts and the
+// cover of a cancelled own shift; the lead of the Dienstplan sees every one.
+// An account without a staff record and without the Dienstplan reads nothing.
 func (s dayChangesStaff) addShifts(ctx context.Context, builder *staffEntryBuilder, day calendar.Date) error {
-	filter := workforce.StaffShiftFilter{From: day.String(), To: day.String()}
-	switch {
-	case builder.viewer.shiftPlan:
-	case builder.viewer.selfID != 0:
-		filter.StaffID = builder.viewer.selfID
-	default:
+	if !builder.viewer.shiftPlan && builder.viewer.selfID == 0 {
 		return nil
 	}
-	shifts, err := s.sources.Workforce.ListStaffShifts(ctx, filter)
+	shifts, err := s.sources.Workforce.ListStaffShifts(ctx, workforce.StaffShiftFilter{
+		From: day.AddDays(-shiftWindowDays).String(), To: day.AddDays(shiftWindowDays).String(),
+	})
 	if err != nil {
 		return fmt.Errorf("list staff shifts: %w", err)
 	}
-	origins := make(map[int64]workforce.StaffShift, len(shifts))
+	window := indexShifts(day, shifts)
 	for _, shift := range shifts {
-		origins[shift.ID] = shift
-	}
-	for _, shift := range shifts {
-		builder.shift(shift, origins)
+		builder.shift(shift, window)
 	}
 	return nil
 }
 
-// shift adds one shift that is a change to regular operation. It never
-// carries the change reason; the reason only tells a cancellation the
-// absence cascade wrote, which the absence entry already names.
-func (b *staffEntryBuilder) shift(shift workforce.StaffShift, origins map[int64]workforce.StaffShift) {
-	kind, ok := shiftChangeKind(shift)
+func indexShifts(day calendar.Date, shifts []workforce.StaffShift) dayShifts {
+	window := dayShifts{day: day, byID: map[int64]workforce.StaffShift{}, regular: map[int64]workforce.StaffShift{}}
+	for _, shift := range shifts {
+		window.byID[shift.ID] = shift
+		// An untouched occurrence carries the series' times.
+		if shift.SeriesID != nil && !shift.Detached && !shift.SeriesOverride && !shift.Cancelled &&
+			shift.OriginShiftID == nil && !movedShift(shift) {
+			window.regular[*shift.SeriesID] = shift
+		}
+	}
+	return window
+}
+
+// shift adds one shift that is a change of the day. It never carries the
+// change reason.
+func (b *staffEntryBuilder) shift(shift workforce.StaffShift, window dayShifts) {
+	kind, timed, ok := window.changeKind(shift)
 	if !ok {
 		return
 	}
-	self := shift.StaffID == b.viewer.selfID
-	if !self && !b.viewer.shiftPlan {
-		return
-	}
-	people := []daychangesview.Person{{StaffID: shift.StaffID, Role: daychangesview.RoleOnDuty, IsSelf: self}}
+	people := []daychangesview.Person{{StaffID: shift.StaffID, Role: daychangesview.RoleOnDuty}}
 	if kind == daychangesview.KindShiftReplacement {
 		people[0].Role = daychangesview.RoleSubstitute
-		// The covered shift is in the read only for the lead: the care staff
-		// sees its own shifts, not whom it covers.
-		if origin, found := origins[*shift.OriginShiftID]; found {
-			people = append(people, daychangesview.Person{StaffID: origin.StaffID, Role: daychangesview.RoleReplaced, IsSelf: origin.StaffID == b.viewer.selfID})
+		if origin, found := window.byID[*shift.OriginShiftID]; found {
+			people = append(people, daychangesview.Person{StaffID: origin.StaffID, Role: daychangesview.RoleReplaced})
 		}
 	}
 	involved := false
+	for i := range people {
+		people[i].IsSelf = b.viewer.selfID != 0 && people[i].StaffID == b.viewer.selfID
+		involved = involved || people[i].IsSelf
+	}
+	if !involved && !b.viewer.shiftPlan {
+		return
+	}
 	for _, person := range people {
 		b.staffIDs[person.StaffID] = true
-		involved = involved || person.IsSelf
 	}
-	startsAt, endsAt := shiftInstants(shift)
-	b.entries = append(b.entries, daychangesview.SourceEntry{
-		Kind: kind, Involved: involved,
-		StartsAt: startsAt, EndsAt: endsAt, People: people,
-		Link: b.shiftLink(shift.StaffID, self),
-	})
+	entry := daychangesview.SourceEntry{
+		Kind: kind, Involved: involved, People: people,
+		Link: b.shiftLink(shift.StaffID, shift.StaffID == b.viewer.selfID),
+	}
+	if timed {
+		entry.StartsAt, entry.EndsAt = shiftInstants(shift)
+	}
+	b.entries = append(b.entries, entry)
 }
 
-// shiftChangeKind decides whether a shift is a change of the day. A shift
-// the plan cancelled for an absence is not: the absence is the entry. A
-// standalone shift is the plan itself; only a series occurrence edited for
-// this day or moved to it runs differently than usual.
-func shiftChangeKind(shift workforce.StaffShift) (daychangesview.Kind, bool) {
+// changeKind decides whether a shift changes the day and whether its time
+// belongs to the entry:
+//   - cancelled today; not when an absence cancelled it, the absence is the
+//     entry then (the cascade stamps the absence on the shift);
+//   - a series occurrence of today moved to another day: cancelled today,
+//     without a time;
+//   - a replacement covering a cancelled shift;
+//   - a series occurrence moved to today, or edited to other times than the
+//     series. An edit of the note or a withdrawn sick report detaches the
+//     occurrence too, but leaves its times; that is no change.
+//
+// A standalone shift is the plan itself.
+func (w dayShifts) changeKind(shift workforce.StaffShift) (daychangesview.Kind, bool, bool) {
+	day := w.day.String()
+	if shift.Date != day {
+		if shift.SeriesOccurrenceDate == day && !shift.Cancelled {
+			return daychangesview.KindShiftCancelled, false, true
+		}
+		return "", false, false
+	}
 	switch {
 	case shift.Cancelled:
-		if shift.SickAbsenceID != nil || (shift.ChangeReason != nil && workforce.IsAbsenceShiftChangeReason(*shift.ChangeReason)) {
-			return "", false
-		}
-		return daychangesview.KindShiftCancelled, true
+		return daychangesview.KindShiftCancelled, true, shift.SickAbsenceID == nil
 	case shift.OriginShiftID != nil:
-		return daychangesview.KindShiftReplacement, true
-	case shift.SeriesID != nil && (shift.Detached || shift.SeriesOverride ||
-		(shift.SeriesOccurrenceDate != "" && shift.SeriesOccurrenceDate != shift.Date)):
-		return daychangesview.KindShiftChanged, true
+		return daychangesview.KindShiftReplacement, true, true
+	case shift.SeriesID == nil:
+		return "", false, false
+	case movedShift(shift):
+		return daychangesview.KindShiftChanged, true, true
+	case shift.Detached || shift.SeriesOverride:
+		regular, found := w.regular[*shift.SeriesID]
+		changed := !found || regular.StartTime != shift.StartTime || regular.EndTime != shift.EndTime
+		return daychangesview.KindShiftChanged, true, changed
 	default:
-		return "", false
+		return "", false, false
 	}
+}
+
+// movedShift reports a series occurrence that lies on another day than its
+// recurrence slot.
+func movedShift(shift workforce.StaffShift) bool {
+	return shift.SeriesOccurrenceDate != "" && shift.SeriesOccurrenceDate != shift.Date
 }
 
 func (b *staffEntryBuilder) shiftLink(staffID int64, self bool) *daychangesview.Link {
 	switch {
 	case self && b.viewer.ownAbsences:
-		// time_tracking:own opens the own Dienstplan as well.
+		// time_tracking:own opens the own time tracking and the own Dienstplan.
 		return &daychangesview.Link{Target: daychangesview.LinkOwnShiftPlan}
-	case self:
+	case self || !b.viewer.shiftPlan:
 		return nil
 	default:
 		return &daychangesview.Link{Target: daychangesview.LinkShiftPlan, StaffID: &staffID}
@@ -112,8 +157,9 @@ func (b *staffEntryBuilder) shiftLink(staffID int64, self bool) *daychangesview.
 // school's time zone. A clock that does not parse leaves the entry without
 // a time rather than failing the source.
 func shiftInstants(shift workforce.StaffShift) (startsAt, endsAt *time.Time) {
-	start, startErr := time.ParseInLocation(workforce.DateLayout+" "+workforce.ClockLayout, shift.Date+" "+shift.StartTime, calendar.Berlin)
-	end, endErr := time.ParseInLocation(workforce.DateLayout+" "+workforce.ClockLayout, shift.Date+" "+shift.EndTime, calendar.Berlin)
+	layout := workforce.DateLayout + " " + workforce.ClockLayout
+	start, startErr := time.ParseInLocation(layout, shift.Date+" "+shift.StartTime, calendar.Berlin)
+	end, endErr := time.ParseInLocation(layout, shift.Date+" "+shift.EndTime, calendar.Berlin)
 	if startErr != nil || endErr != nil {
 		return nil, nil
 	}

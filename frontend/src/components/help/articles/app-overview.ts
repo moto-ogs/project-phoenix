@@ -71,7 +71,8 @@ export function appOverviewTopic(): HelpTopic {
           "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt, wer vertritt und welche Dienste sich geändert haben.",
         ordered: false,
         steps: [
-          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen, ob du selbst heute fehlst und ob dein Dienst heute anders ist oder ausfällt.",
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du heute fehlst.",
+          "Dort steht auch, ob dein Dienst heute anders ist oder ausfällt.",
           "Unter `Schule` steht der Rest der Schule.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",

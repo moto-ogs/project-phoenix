@@ -14,6 +14,7 @@ import (
 const (
 	cancelledShiftTodayStaff = "Natalia Schulz"
 	coverShiftTodayStaff     = "Ana Silva"
+	coverShiftTodayEnd       = "12:00"
 )
 
 // seedTodaysShiftChangesStep makes "Heute anders" show a changed Dienstplan:
@@ -55,7 +56,9 @@ func seedTodaysShiftChanges(rt *Runtime, today seedDate) error {
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return fmt.Errorf("parse today's shift: %w", err)
 	}
-	if len(envelope.Data) == 0 || envelope.Data[0].Cancelled {
+	// The cover takes the morning until noon; a Dienst that starts later
+	// has no morning to cover.
+	if len(envelope.Data) == 0 || envelope.Data[0].Cancelled || envelope.Data[0].StartTime >= coverShiftTodayEnd {
 		fmt.Println("  no Dienst today to change")
 		return nil
 	}
@@ -64,7 +67,7 @@ func seedTodaysShiftChanges(rt *Runtime, today seedDate) error {
 		"cancelled": true, "change_reason": "Fortbildung",
 		"replacements": []map[string]any{{
 			"staff_id": coverID, "start_time": shift.StartTime,
-			"end_time": "12:00", "break_minutes": 0,
+			"end_time": coverShiftTodayEnd, "break_minutes": 0,
 		}},
 	}); err != nil {
 		return fmt.Errorf("cancel today's shift: %w", err)
