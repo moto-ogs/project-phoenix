@@ -39,6 +39,7 @@ import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
 import { routes as holidayGuests } from "./holiday-guests.generated";
 import { routes as holidayWeeks } from "./holiday-weeks.generated";
+import { routes as importRoutes } from "./import.generated";
 import { routes as iot } from "./iot.generated";
 import { routes as me } from "./me.generated";
 import { routes as mealBillingMonths } from "./meal-billing-months.generated";
@@ -1139,6 +1140,14 @@ export const portalRoutes = {
     holidayWeeks["GET /api/holiday-weeks/{weekId}/own-children"],
     holidayWeeks["GET /api/holiday-weeks/{weekId}/participants"],
     holidayWeeks["PUT /api/holiday-weeks/{weekId}/guest-group"],
+    importRoutes["POST /api/import/class-list-entries/import"],
+    importRoutes["POST /api/import/class-list-entries/preview"],
+    importRoutes["POST /api/import/opening-balances/import"],
+    importRoutes["POST /api/import/opening-balances/preview"],
+    importRoutes["POST /api/import/students/import"],
+    importRoutes["POST /api/import/students/preview"],
+    importRoutes["POST /api/import/teachers/import"],
+    importRoutes["POST /api/import/teachers/preview"],
     iot["DELETE /api/iot/{id}"],
     iot["GET /api/iot/"],
     iot["GET /api/iot/device-slots"],

@@ -39,6 +39,7 @@ import (
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
+	importAPI "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 	tagScanOperatorAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/inbound/operator"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -461,6 +462,7 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/pwa", []common.RouteContract{{Method: "POST", Pattern: "/usage", Portals: []common.PortalScope{common.PortalTenant}, NoData: true}}},
 		{"/api/announcement-attachments", filestoreAPI.AnnouncementAttachmentRouteContracts()},
 		{"/api/students/change-requests/rss-feed", requestFeedRouteContracts()},
+		{"/api/import", importRouteContracts()},
 		{"/api/substitutions", substitutionRouteContracts()},
 		// The Datenverwaltung hub's counts (#4013), served by the root.
 		{"/api/database", []common.RouteContract{{Method: "GET", Pattern: "/stats", Portals: []common.PortalScope{common.PortalTenant}, Response: statsContract.StatsResponse{}}}},
@@ -594,6 +596,29 @@ func requestFeedRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/", Portals: portals, Response: requestFeedHTTP.FeedStatus{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Response: requestFeedHTTP.FeedLink{}},
 		{Method: "POST", Pattern: "/rotate", Portals: portals, Response: requestFeedHTTP.FeedLink{}},
+	}
+}
+
+// importRouteContracts registers the file imports' preview and import
+// uploads (#2352). Data Import's http role may not import the contract
+// types, so the root names them, each import with its own result type.
+func importRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	upload := func(pattern string, response any) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: portals, Multipart: true, Response: response,
+			MaxBodyBytes: importAPI.MaxUploadBytes, TooLargeCode: importAPI.CodeImportFileTooLarge,
+		}
+	}
+	return []common.RouteContract{
+		upload("/students/preview", importAPI.StudentPreviewResponse{}),
+		upload("/students/import", importModels.StudentImportResult{}),
+		upload("/teachers/preview", importModels.StaffImportResult{}),
+		upload("/teachers/import", importModels.StaffImportResult{}),
+		upload("/class-list-entries/preview", importModels.ClassListImportResult{}),
+		upload("/class-list-entries/import", importModels.ClassListImportResult{}),
+		upload("/opening-balances/preview", importModels.OpeningBalanceImportResult{}),
+		upload("/opening-balances/import", importModels.OpeningBalanceImportResult{}),
 	}
 }
 

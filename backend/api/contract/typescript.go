@@ -133,7 +133,25 @@ func resourceAlias(resource string) string {
 	for i := 1; i < len(parts); i++ {
 		parts[i] = upperFirst(parts[i])
 	}
-	return strings.Join(parts, "")
+	alias := strings.Join(parts, "")
+	// A resource named like a JavaScript keyword (`/api/import`) cannot be a
+	// binding of the import table.
+	if reservedWords[alias] {
+		return alias + "Routes"
+	}
+	return alias
+}
+
+// reservedWords are JavaScript's reserved words, strict mode included.
+var reservedWords = map[string]bool{
+	"await": true, "break": true, "case": true, "catch": true, "class": true, "const": true,
+	"continue": true, "debugger": true, "default": true, "delete": true, "do": true, "else": true,
+	"enum": true, "export": true, "extends": true, "false": true, "finally": true, "for": true,
+	"function": true, "if": true, "implements": true, "import": true, "in": true, "instanceof": true,
+	"interface": true, "let": true, "new": true, "null": true, "package": true, "private": true,
+	"protected": true, "public": true, "return": true, "static": true, "super": true, "switch": true,
+	"this": true, "throw": true, "true": true, "try": true, "typeof": true, "var": true, "void": true,
+	"while": true, "with": true, "yield": true,
 }
 
 func routeSchemas(r Route) []Schema {

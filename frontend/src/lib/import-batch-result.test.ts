@@ -8,16 +8,16 @@ import {
 } from "./import-batch-result";
 
 const abortingWrite = {
-  RowNumber: 152,
-  Errors: [{ code: "creation_failed" }],
+  row_number: 152,
+  errors: [{ code: "creation_failed" }],
 };
 
 const committed = {
-  TotalRows: 205,
-  CreatedCount: 100,
-  UpdatedCount: 0,
-  ErrorCount: 1,
-  Errors: [abortingWrite],
+  total_rows: 205,
+  created_count: 100,
+  updated_count: 0,
+  error_count: 1,
+  errors: [abortingWrite],
 };
 
 function envelope(result: Record<string, unknown>) {
@@ -38,19 +38,19 @@ describe("readImportBatchFailure", () => {
     expect(
       readImportBatchFailure(
         envelope({
-          TotalRows: 205,
-          CreatedCount: 100,
-          UpdatedCount: 0,
-          ErrorCount: 0,
-          Errors: null,
+          total_rows: 205,
+          created_count: 100,
+          updated_count: 0,
+          error_count: 0,
+          errors: null,
         }),
       ),
     ).toEqual({
-      TotalRows: 205,
-      CreatedCount: 100,
-      UpdatedCount: 0,
-      ErrorCount: 0,
-      Errors: [],
+      total_rows: 205,
+      created_count: 100,
+      updated_count: 0,
+      error_count: 0,
+      errors: [],
     });
   });
 
@@ -71,14 +71,14 @@ describe("readImportBatchFailure", () => {
 describe("importBatchFailureMessage", () => {
   it("names saved rows and the aborting write, not an earlier skip", () => {
     const mixed = {
-      TotalRows: 205,
-      CreatedCount: 100,
-      UpdatedCount: 0,
-      ErrorCount: 2,
-      Errors: [
+      total_rows: 205,
+      created_count: 100,
+      updated_count: 0,
+      error_count: 2,
+      errors: [
         {
-          RowNumber: 2,
-          Errors: [{ code: "duplicate_check_failed" }],
+          row_number: 2,
+          errors: [{ code: "duplicate_check_failed" }],
         },
         abortingWrite,
       ],
@@ -89,9 +89,9 @@ describe("importBatchFailureMessage", () => {
     expect(
       importBatchFailureMessage({
         ...mixed,
-        Errors: [
-          mixed.Errors[0]!,
-          { RowNumber: 152, Errors: [{ code: "update_failed" }] },
+        errors: [
+          mixed.errors[0]!,
+          { row_number: 152, errors: [{ code: "update_failed" }] },
         ],
       }),
     ).toContain("Zeile 152 hat den Rest angehalten");
@@ -100,11 +100,11 @@ describe("importBatchFailureMessage", () => {
   it("does not name a row when the later batch failed without a write error", () => {
     expect(
       importBatchFailureMessage({
-        TotalRows: 205,
-        CreatedCount: 100,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 205,
+        created_count: 100,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       }),
     ).toBe(
       "100 Zeilen sind gespeichert. Der Rest hat nicht geklappt. Lade die Datei danach erneut hoch. Die gespeicherten Zeilen bleiben.",
@@ -113,11 +113,11 @@ describe("importBatchFailureMessage", () => {
 
   it("does not claim progress when the first batch rolled back", () => {
     const firstBatch = {
-      TotalRows: 40,
-      CreatedCount: 0,
-      UpdatedCount: 0,
-      ErrorCount: 1,
-      Errors: [{ RowNumber: 5, Errors: [{ code: "creation_failed" }] }],
+      total_rows: 40,
+      created_count: 0,
+      updated_count: 0,
+      error_count: 1,
+      errors: [{ row_number: 5, errors: [{ code: "creation_failed" }] }],
     };
     expect(importBatchFailureMessage(firstBatch)).toBe(
       "Zeile 5 hat nicht geklappt. Bitte korrigiere diese Zeile. Lade die Datei danach erneut hoch.",
@@ -129,10 +129,10 @@ describe("countAlreadyExistsRows", () => {
   it("counts already_exists rows and ignores other codes", () => {
     expect(
       countAlreadyExistsRows([
-        { Errors: [{ code: "already_exists" }] },
-        { Errors: [{ code: "already_exists" }, { code: "will_update" }] },
-        { Errors: [{ code: "creation_failed" }] },
-        { Errors: [] },
+        { errors: [{ code: "already_exists" }] },
+        { errors: [{ code: "already_exists" }, { code: "will_update" }] },
+        { errors: [{ code: "creation_failed" }] },
+        { errors: [] },
       ]),
     ).toBe(2);
     expect(countAlreadyExistsRows(null)).toBe(0);
@@ -166,11 +166,11 @@ describe("importBatchFailureMessage with a refusal", () => {
     expect(
       importBatchFailureMessage(
         {
-          TotalRows: 160,
-          CreatedCount: 100,
-          UpdatedCount: 0,
-          ErrorCount: 0,
-          Errors: [],
+          total_rows: 160,
+          created_count: 100,
+          updated_count: 0,
+          error_count: 0,
+          errors: [],
         },
         "Das Kinderkontingent Ihrer Schule ist voll.",
       ),
@@ -183,11 +183,11 @@ describe("importBatchFailureMessage with a refusal", () => {
     expect(
       importBatchFailureMessage(
         {
-          TotalRows: 3,
-          CreatedCount: 0,
-          UpdatedCount: 0,
-          ErrorCount: 0,
-          Errors: [],
+          total_rows: 3,
+          created_count: 0,
+          updated_count: 0,
+          error_count: 0,
+          errors: [],
         },
         "Das Kinderkontingent Ihrer Schule ist voll.",
       ),

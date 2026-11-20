@@ -13015,6 +13015,118 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/import/class-list-entries/import",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ClassListImportResult"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/import/class-list-entries/preview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ClassListImportResult"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/import/opening-balances/import",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningBalanceImportResult"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/import/opening-balances/preview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningBalanceImportResult"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/import/students/import",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentImportResult"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/import/students/preview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentPreviewResponse"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/import/teachers/import",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffImportResult"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/import/teachers/preview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StaffImportResult"
+      },
+      "max_body_bytes": 10485760,
+      "multipart": true,
+      "too_large_code": "import.file_too_large"
+    },
+    {
+      "method": "POST",
       "pattern": "/api/iot/",
       "portals": [
         "tenant"
@@ -26871,6 +26983,31 @@
       ]
     },
     {
+      "name": "ArrivalScheduleImportData",
+      "go_type": "dataimport.ArrivalScheduleImportData",
+      "fields": [
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "expected_arrival",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ArrivalScheduleInput",
       "go_type": "careplan.ArrivalScheduleInput",
       "request": true,
@@ -27617,6 +27754,30 @@
         },
         {
           "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AutoFix",
+      "go_type": "dataimport.AutoFix",
+      "fields": [
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "replacement",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
           "schema": {
             "kind": "string"
           }
@@ -30384,6 +30545,58 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BulkAction",
+      "go_type": "dataimport.BulkAction",
+      "fields": [
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "affected_rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "old_value",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_value",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -38389,6 +38602,42 @@
       ]
     },
     {
+      "name": "ChildQuotaPreview",
+      "go_type": "importapi.ChildQuotaPreview",
+      "fields": [
+        {
+          "name": "booked_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occupied_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "requested_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "free_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "fits",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildResponse",
       "go_type": "parent.ChildResponse",
       "fields": [
@@ -38711,6 +38960,30 @@
       ]
     },
     {
+      "name": "ClassListEntryImportRow",
+      "go_type": "dataimport.ClassListEntryImportRow",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ClassListEntryRequest",
       "go_type": "classlistentries.ClassListEntryRequest",
       "request": true,
@@ -38779,6 +39052,124 @@
             "nullable": true,
             "elem": {
               "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassListImportError",
+      "go_type": "dataimport.ClassListImportError",
+      "fields": [
+        {
+          "name": "row_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "data",
+          "schema": {
+            "kind": "ref",
+            "ref": "ClassListEntryImportRow"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ValidationError"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassListImportResult",
+      "go_type": "dataimport.ClassListImportResult",
+      "fields": [
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "completed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "total_rows",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "updated_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "error_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "warning_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "bulk_actions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkAction"
+            }
+          }
+        },
+        {
+          "name": "dry_run",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassListImportError"
             }
           }
         }
@@ -50432,6 +50823,139 @@
         },
         {
           "name": "warning",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianImportData",
+      "go_type": "dataimport.GuardianImportData",
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mobile_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_emergency_contact",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_pickup",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "guardian_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "emergency_priority",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "phone_numbers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "PhoneImportData"
+            }
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "language_preference",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -63178,6 +63702,207 @@
       ]
     },
     {
+      "name": "OpeningBalanceImportError",
+      "go_type": "dataimport.OpeningBalanceImportError",
+      "fields": [
+        {
+          "name": "row_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "data",
+          "schema": {
+            "kind": "ref",
+            "ref": "OpeningBalanceImportRow"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ValidationError"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpeningBalanceImportResult",
+      "go_type": "dataimport.OpeningBalanceImportResult",
+      "fields": [
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "completed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "total_rows",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "updated_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "error_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "warning_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "bulk_actions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkAction"
+            }
+          }
+        },
+        {
+          "name": "dry_run",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OpeningBalanceImportError"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpeningBalanceImportRow",
+      "go_type": "dataimport.OpeningBalanceImportRow",
+      "fields": [
+        {
+          "name": "personnel_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "hours_balance",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "vacation_entitled",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "vacation_carryover",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "vacation_remaining",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "hours_balance_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "vacation_entitled_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "vacation_carryover_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "vacation_remaining_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperationHomeworkFeedback",
       "go_type": "timetable.OperationHomeworkFeedback",
       "fields": [
@@ -68955,6 +69680,36 @@
       ]
     },
     {
+      "name": "PhoneImportData",
+      "go_type": "dataimport.PhoneImportData",
+      "fields": [
+        {
+          "name": "phone_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "PhoneNumberCreateRequest",
       "go_type": "users.PhoneNumberCreateRequest",
       "request": true,
@@ -69468,6 +70223,31 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupScheduleImportData",
+      "go_type": "dataimport.PickupScheduleImportData",
+      "fields": [
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -78863,6 +79643,163 @@
       ]
     },
     {
+      "name": "SchoolStaffImportRow",
+      "go_type": "dataimport.SchoolStaffImportRow",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "position",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "gender",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "personnel_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employment_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entry_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "probation_end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekly_hours",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contact_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "emergency_contact_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "emergency_contact_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "qualifications",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolSummary",
       "go_type": "organizationtenancy.SchoolSummary",
       "fields": [
@@ -83695,6 +84632,42 @@
       ]
     },
     {
+      "name": "StaffImportError",
+      "go_type": "dataimport.StaffImportError",
+      "fields": [
+        {
+          "name": "row_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "data",
+          "schema": {
+            "kind": "ref",
+            "ref": "SchoolStaffImportRow"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ValidationError"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffImportMapping",
       "go_type": "workforce.StaffImportMapping",
       "fields": [
@@ -83721,6 +84694,88 @@
           "name": "code",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffImportResult",
+      "go_type": "dataimport.StaffImportResult",
+      "fields": [
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "completed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "total_rows",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "updated_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "error_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "warning_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "bulk_actions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkAction"
+            }
+          }
+        },
+        {
+          "name": "dry_run",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StaffImportError"
+            }
           }
         }
       ]
@@ -87277,6 +88332,338 @@
       ]
     },
     {
+      "name": "StudentImportError",
+      "go_type": "dataimport.StudentImportError",
+      "fields": [
+        {
+          "name": "row_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "data",
+          "schema": {
+            "kind": "ref",
+            "ref": "StudentImportRow"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ValidationError"
+            }
+          }
+        },
+        {
+          "name": "timestamp",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentImportResult",
+      "go_type": "dataimport.StudentImportResult",
+      "fields": [
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "completed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "total_rows",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "updated_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "error_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "warning_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "bulk_actions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkAction"
+            }
+          }
+        },
+        {
+          "name": "dry_run",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentImportError"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentImportRow",
+      "go_type": "dataimport.StudentImportRow",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "extra_info",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "supervisor_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_info",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bus_permission",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "bus_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "departure_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "departure_companion_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrolled_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrolled_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "agb_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "data_processing_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email_contact_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_consent_given_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "GuardianImportData"
+            }
+          }
+        },
+        {
+          "name": "pickup_schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupScheduleImportData"
+            }
+          }
+        },
+        {
+          "name": "arrival_schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ArrivalScheduleImportData"
+            }
+          }
+        },
+        {
+          "name": "privacy_accepted",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "data_retention_days",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentMoveResult",
       "go_type": "studentpresence.StudentMoveResult",
       "fields": [
@@ -87398,6 +88785,96 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentPreviewResponse",
+      "go_type": "importapi.StudentPreviewResponse",
+      "fields": [
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "completed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "total_rows",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "created_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "updated_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "error_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "warning_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "bulk_actions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "BulkAction"
+            }
+          }
+        },
+        {
+          "name": "dry_run",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "errors",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentImportError"
+            }
+          }
+        },
+        {
+          "name": "child_quota",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildQuotaPreview"
           }
         }
       ]
@@ -96095,6 +97572,61 @@
           "schema": {
             "kind": "ref",
             "ref": "StaffVacationOpening"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ValidationError",
+      "go_type": "dataimport.ValidationError",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "message",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "severity",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "suggestions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "auto_fix",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "AutoFix"
+          }
+        },
+        {
+          "name": "actual_value",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

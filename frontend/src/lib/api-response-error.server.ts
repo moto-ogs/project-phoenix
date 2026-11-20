@@ -178,9 +178,12 @@ function publicProblemExtensions(
   // A 5xx can contain backend diagnostics in every extension, not only in
   // `detail`. Its code is the only backend value the browser may use; the
   // instance remains safe for correlating the response with server logs.
+  const code =
+    extra?.code && registeredErrorCodes.has(extra.code) ? extra.code : null;
   return {
-    ...(extra?.code && registeredErrorCodes.has(extra.code)
-      ? { code: extra.code }
+    ...(code ? { code } : {}),
+    ...(code && CLIENT_DETAILS_SERVER_ERROR_CODES.has(code) && extra?.details
+      ? { details: extra.details }
       : {}),
     ...(instance ? { instance } : {}),
   };
@@ -322,14 +325,35 @@ function isProblemEnvelope(
 /**
  * Keeps only a validated error identity when replacing a backend 5xx body.
  * Other extensions can contain diagnostics just like `detail`, so a generic
- * proxy cannot decide that they are safe to send to the browser.
+ * proxy cannot decide that they are safe to send to the browser; the codes
+ * of CLIENT_DETAILS_SERVER_ERROR_CODES keep their `details`.
  */
 export function safeProblemExtensions(
   value: unknown,
   status: number,
 ): Omit<Partial<ProblemBody>, "status" | "detail"> {
-  return isProblemEnvelope(value, status) ? { code: value.code } : {};
+  if (!isProblemEnvelope(value, status)) return {};
+  const details = value.details;
+  if (
+    CLIENT_DETAILS_SERVER_ERROR_CODES.has(value.code) &&
+    details !== null &&
+    typeof details === "object" &&
+    !Array.isArray(details)
+  ) {
+    return { code: value.code, details };
+  }
+  return { code: value.code };
 }
+
+/**
+ * Server-error codes whose `details` the backend writes for the person who
+ * acted, not as diagnostics: an import whose later batch failed names the
+ * rows it already saved (#3184), and the page shows them. Every other 5xx
+ * keeps only its code.
+ */
+const CLIENT_DETAILS_SERVER_ERROR_CODES: ReadonlySet<string> = new Set([
+  "import.import_batch_failed",
+]);
 
 function hasNonEmptyString(
   body: Record<string, unknown>,

@@ -69,6 +69,37 @@ describe("forwardBackendResponse", () => {
     expect(body).not.toContain("refused the connection");
   });
 
+  // The saved part of an import whose later batch failed is written for the
+  // person who imported (#3184); its detail text stays on the server.
+  it("keeps the details of a failed import batch, not its diagnostics", async () => {
+    const result = { total_rows: 3, created_count: 2, errors: [] };
+    const response = forwardBackendResponse(
+      new Response(
+        JSON.stringify({
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          detail: "batch 2 failed at db.internal",
+          code: "import.import_batch_failed",
+          details: { result },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+    );
+
+    const body = await response.text();
+    expect(JSON.parse(body)).toMatchObject({
+      status: 500,
+      detail: "Internal Server Error",
+      code: "import.import_batch_failed",
+      details: { result },
+    });
+    expect(body).not.toContain("db.internal");
+  });
+
   it("adds the request ID to a sanitized backend error", async () => {
     const response = forwardBackendResponse(
       new Response("upstream diagnostics", { status: 502 }),

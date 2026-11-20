@@ -433,6 +433,14 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 		assert.Contains(t, table, line)
 	}
 
+	// A resource named like a keyword gets a binding that is no keyword.
+	doc, err = Build([]Registration{get("/api/import/rows", inner{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err = TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["portals.generated.ts"], `import { routes as importRoutes } from "./import.generated";`)
+	assert.Contains(t, files["portals.generated.ts"], `    importRoutes["GET /api/import/rows"],`)
+
 	for _, pattern := range []string{"/api/portals/", "/api/shared/"} {
 		doc, err = Build([]Registration{get(pattern, inner{})}, Options{Identifiers: identifiers})
 		require.NoError(t, err)
