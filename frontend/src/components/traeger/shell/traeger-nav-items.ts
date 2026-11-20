@@ -455,3 +455,55 @@ function visibleFor(
     (item) => item.right === null || hasPermission(session, item.right),
   );
 }
+
+/** Eine Seite, die die Suche des Träger-Portals findet (#7648). */
+export interface TraegerSearchPage {
+  readonly key: string;
+  /** Pfad mit /traeger-Präfix wie in der Leiste; die Hilfe ist schon fertig. */
+  readonly href: string;
+  readonly label: string;
+  /** Der Bereich, in dem die Seite in der Seitenleiste steht. */
+  readonly area: string;
+  readonly concept: MotoConcept;
+  /** Die Hilfe öffnet in einem neuen Tab, wie in der Leiste. */
+  readonly newTab?: true;
+}
+
+/**
+ * Alle Seiten der Seitenleiste und der Einstellungen, die die Sitzung sehen
+ * darf, für die Suche (#7648). Dieselbe Rechte-Filterung wie die Leisten:
+ * was dort fehlt, findet auch die Suche nicht.
+ */
+export function traegerSearchPagesFor(
+  session: Session | null,
+  federalStates?: readonly string[],
+): readonly TraegerSearchPage[] {
+  const main = traegerNavGroupsFor(session, federalStates).flatMap((group) =>
+    group.items.map((item) => ({
+      key: item.key,
+      href: item.href,
+      label: item.label,
+      area: group.label,
+      concept: item.concept,
+    })),
+  );
+  const settings = traegerSettingsNavItemsFor(session).map((item) => ({
+    key: item.key,
+    href: item.href,
+    label: item.label,
+    area: TRAEGER_SETTINGS_NAV.label,
+    concept: item.concept,
+  }));
+  return [
+    ...main,
+    ...settings,
+    {
+      key: TRAEGER_HELP_NAV.key,
+      href: TRAEGER_HELP_NAV.href,
+      label: TRAEGER_HELP_NAV.label,
+      area: "Hilfe und Einstellungen",
+      concept: TRAEGER_HELP_NAV.concept,
+      newTab: true,
+    },
+  ];
+}

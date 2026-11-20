@@ -23,6 +23,7 @@ import {
   type TraegerNavItem,
 } from "./traeger-nav-items";
 import { useTraegerReturnHref } from "./traeger-return-path";
+import { TRAEGER_SEARCH_LABEL, useOpenTraegerSearch } from "./traeger-search";
 
 type BottomNavItem = Omit<TraegerNavItem, "right"> & {
   readonly help?: true;
@@ -52,6 +53,7 @@ export function TraegerBottomNav({
   const pathname = usePathname() ?? "";
   const { data: session } = useSession();
   const returnHref = useTraegerReturnHref();
+  const openSearch = useOpenTraegerSearch();
 
   const settingsItems = traegerSettingsNavItemsFor(session ?? null);
   const settingsEntry = settingsItems[0];
@@ -91,6 +93,13 @@ export function TraegerBottomNav({
       moreConcept={moreConcept}
       navItemAttribute="data-traeger-nav-item"
       activeInMore
+      // Die Lupe öffnet die Suche nach Seiten und Schulen (#7648); in den
+      // Einstellungen bleibt die Leiste wie bisher.
+      search={
+        openSearch && !inSettings
+          ? { label: TRAEGER_SEARCH_LABEL, onOpen: openSearch }
+          : undefined
+      }
       // Wie im OGS-Portal: die Hauptleiste zeigt die drei Striche des
       // Menüs; die Einstellungsleiste behält die Punkte wie dort.
       moreIcon={
