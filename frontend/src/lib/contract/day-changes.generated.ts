@@ -14,10 +14,13 @@ import {
   type OpenEnum,
 } from "./runtime";
 
-export const KIND_VALUES = ["group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count"] as const;
+export const CHILD_STATUS_VALUES = ["excused", "sick"] as const;
+export type ChildStatus = (typeof CHILD_STATUS_VALUES)[number];
+
+export const KIND_VALUES = ["child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_summary", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
-export const LINK_TARGET_VALUES = ["group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member"] as const;
+export const LINK_TARGET_VALUES = ["group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member", "student"] as const;
 export type LinkTarget = (typeof LINK_TARGET_VALUES)[number];
 
 export const PERSON_ROLE_VALUES = ["absent", "replaced", "substitute"] as const;
@@ -26,7 +29,7 @@ export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
 export const SECTION_VALUES = ["school", "you"] as const;
 export type Section = (typeof SECTION_VALUES)[number];
 
-export const SOURCE_VALUES = ["staff"] as const;
+export const SOURCE_VALUES = ["children", "staff"] as const;
 export type Source = (typeof SOURCE_VALUES)[number];
 
 export const SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
@@ -73,11 +76,75 @@ export const GroupSchema: z.ZodType<Group, unknown> = object<Group>({
 export interface Link {
   target: OpenEnum<LinkTarget>;
   staff_id?: string;
+  student_id?: string;
 }
 
 export const LinkSchema: z.ZodType<Link, unknown> = object<Link>({
   target: str,
   staff_id: optional(int64String),
+  student_id: optional(int64String),
+});
+
+/** Go: daychangesview.Child */
+export interface Child {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: OpenEnum<ChildStatus> | null;
+  pickup_time: string | null;
+  note: string | null;
+}
+
+export const ChildSchema: z.ZodType<Child, unknown> = object<Child>({
+  student_id: int64String,
+  first_name: str,
+  last_name: str,
+  status: nullable(str),
+  pickup_time: nullable(str),
+  note: nullable(str),
+});
+
+/** Go: daychangesview.ChildCounts */
+export interface ChildCounts {
+  sick: number;
+  excused: number;
+  pickup_changed: number;
+  goes_alone: number;
+  pickup_note: number;
+}
+
+export const ChildCountsSchema: z.ZodType<ChildCounts, unknown> = object<ChildCounts>({
+  sick: safeInt,
+  excused: safeInt,
+  pickup_changed: safeInt,
+  goes_alone: safeInt,
+  pickup_note: safeInt,
+});
+
+/** Go: daychangesview.ChildItem */
+export interface ChildItem {
+  kind: OpenEnum<Kind>;
+  child: Child;
+  link: Link | null;
+}
+
+export const ChildItemSchema: z.ZodType<ChildItem, unknown> = object<ChildItem>({
+  kind: str,
+  child: ChildSchema,
+  link: nullable(LinkSchema),
+});
+
+/** Go: daychangesview.ChildSummary */
+export interface ChildSummary {
+  school_class: string;
+  counts: ChildCounts;
+  items: ChildItem[] | null;
+}
+
+export const ChildSummarySchema: z.ZodType<ChildSummary, unknown> = object<ChildSummary>({
+  school_class: str,
+  counts: ChildCountsSchema,
+  items: nullable(arr(ChildItemSchema)),
 });
 
 /** Go: daychangesview.Entry */
@@ -92,6 +159,8 @@ export interface Entry {
   group: Group | null;
   link: Link | null;
   count: number | null;
+  child: Child | null;
+  child_summary: ChildSummary | null;
 }
 
 export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
@@ -105,6 +174,8 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   group: nullable(GroupSchema),
   link: nullable(LinkSchema),
   count: nullable(safeInt),
+  child: nullable(ChildSchema),
+  child_summary: nullable(ChildSummarySchema),
 });
 
 /** Go: daychangesview.Overview */

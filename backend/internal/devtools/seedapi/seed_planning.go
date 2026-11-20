@@ -221,7 +221,8 @@ func seedCarePlanDeviations(rt *Runtime, studentIDs []int64) error {
 // seedTodayHomeChanges gives two children a one-day change of their way home,
 // so the strip on the Kinderkarte shows on every dev machine (#3946): index 5
 // is picked up at 13:30 instead of its Gehzeit, index 4, who goes home alone
-// every weekday, is picked up today. Index 0 above shows its day Abholart
+// every weekday, is picked up today, index 3 goes home alone today and index
+// 5 carries a pickup note for today. Index 0 above shows its day Abholart
 // too. On a weekend the changes land on Monday, which has a plan to deviate
 // from.
 func seedTodayHomeChanges(rt *Runtime, studentIDs []int64) error {
@@ -240,6 +241,18 @@ func seedTodayHomeChanges(rt *Runtime, studentIDs []int64) error {
 		"departure_mode": "pickup", "reason": "Die Oma holt heute ab.",
 	}); err != nil {
 		return fmt.Errorf("seed today departure change: %w", err)
+	}
+	// „Heute anders“ (#7665) shows every child kind of the day: index 3 goes
+	// home alone today, index 5 carries a pickup note for today.
+	if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/departure-exceptions/%s", studentIDs[3], day.String()), map[string]any{
+		"departure_mode": "alone", "reason": "Die Eltern haben es heute erlaubt.",
+	}); err != nil {
+		return fmt.Errorf("seed today departure alone: %w", err)
+	}
+	if _, err := rt.Client.Post(fmt.Sprintf("/api/students/%d/pickup-notes", studentIDs[5]), map[string]any{
+		"note_date": day.String(), "content": "Heute holt die Oma ab.",
+	}); err != nil {
+		return fmt.Errorf("seed today pickup note: %w", err)
 	}
 	return nil
 }

@@ -9,7 +9,11 @@ import {
   HomeCardIcon,
 } from "~/components/home/home-card";
 import {
+  childChangeText,
+  childSummaryCounts,
+  childSummaryTitle,
   dayChangeHref,
+  dayChangeLinkHref,
   dayChangeSpan,
   dayChangeText,
   sourceFailureText,
@@ -17,6 +21,7 @@ import {
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { ListGroupHeader } from "~/components/ui/list-group-header";
 import { ListRow } from "~/components/ui/list-row";
 import { SectionLabel } from "~/components/ui/section-label";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -191,13 +196,91 @@ function DayChangesSection({
   );
 }
 
-/** Stabil über ein Neuladen hinweg: Art, Personen und Gruppe. */
+/** Stabil über ein Neuladen hinweg: Art, Personen, Kind und Gruppe. */
 function dayChangeKey(entry: DayChange, index: number): string {
-  const people = entry.people.map((person) => person.staffId).join(",");
-  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${people || entry.groupName ? "" : index}`;
+  const people =
+    entry.people.map((person) => person.staffId).join(",") ||
+    (entry.child?.studentId ?? "");
+  const where = entry.groupName ?? entry.childSummary?.schoolClass ?? "";
+  return `${entry.kind}:${people}:${where}:${people || where ? "" : index}`;
 }
 
 function DayChangeRow({ entry }: { readonly entry: DayChange }) {
+  if (entry.childSummary) {
+    return <ChildSummaryRow entry={entry} summary={entry.childSummary} />;
+  }
+  return <DayChangeLinkRow entry={entry} />;
+}
+
+/** Klick auf einen Eintrag: nur die Art, nie Namen oder IDs. */
+function trackEntryClick(kind: string) {
+  trackEvent("day_changes_entry_clicked", { day_change_kind: kind });
+}
+
+/**
+ * Die Kinder einer Gruppe oder Klasse außerhalb der eigenen Gruppen (#7665):
+ * eine Zeile mit den Zahlen, die die Kinder einzeln aufklappt. So erschlägt
+ * ein Grippetag nicht mit dreißig Zeilen.
+ */
+function ChildSummaryRow({
+  entry,
+  summary,
+}: {
+  readonly entry: DayChange;
+  readonly summary: NonNullable<DayChange["childSummary"]>;
+}) {
+  const tenantPath = useTenantAwarePath();
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <li className="overflow-hidden rounded-xl">
+      <ListGroupHeader
+        as="h4"
+        title={childSummaryTitle(entry)}
+        addon={
+          <span className="text-xs text-gray-600">
+            {childSummaryCounts(summary)}
+          </span>
+        }
+        collapsible={{
+          expanded,
+          onToggle: () => setExpanded((open) => !open),
+        }}
+      />
+      {expanded ? (
+        <ul className="mt-1 space-y-1">
+          {summary.items.map((item) => {
+            const text = childChangeText(item.kind, item.child);
+            if (!text) return null;
+            const href = dayChangeLinkHref(item.link);
+            const body = (
+              <span className="block min-w-0 flex-1 text-sm text-gray-900">
+                {text}
+              </span>
+            );
+            return (
+              <li
+                key={`${item.kind}:${item.child.studentId}`}
+                onClickCapture={
+                  href ? () => trackEntryClick(item.kind) : undefined
+                }
+              >
+                {href ? (
+                  <ListRow href={tenantPath(href)} density="compact">
+                    {body}
+                  </ListRow>
+                ) : (
+                  <ListRow density="compact">{body}</ListRow>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+function DayChangeLinkRow({ entry }: { readonly entry: DayChange }) {
   const tenantPath = useTenantAwarePath();
   const text = dayChangeText(entry) ?? "";
   const span = dayChangeSpan(entry);
@@ -214,14 +297,7 @@ function DayChangeRow({ entry }: { readonly entry: DayChange }) {
     <li
       // Der Klick auf den Link der Zeile, mit Maus oder Tastatur (Enter löst
       // ihn ebenfalls aus). Nur die Art des Eintrags, nie Namen oder IDs.
-      onClickCapture={
-        href
-          ? () =>
-              trackEvent("day_changes_entry_clicked", {
-                day_change_kind: entry.kind,
-              })
-          : undefined
-      }
+      onClickCapture={href ? () => trackEntryClick(entry.kind) : undefined}
     >
       {href ? (
         <ListRow href={tenantPath(href)} density="compact">

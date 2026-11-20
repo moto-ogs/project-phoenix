@@ -963,11 +963,15 @@ export function useGlobalSSE(): SSEHookState {
     // flag), a Gruppenübergabe (group_access_changed) or an absence or shift
     // (staff_time_tracking_changed) rewrites it. A source of a later ticket
     // adds its flag here. The burst debounce makes several events one reload;
-    // the reconnect reconcile sets every flag.
+    // the reconnect reconcile sets every flag. The children (#7665): a status
+    // day, a parent's pickup change and a day departure announce
+    // student_updated; a staff Gehzeit or pickup note pickup_schedule_changed.
     if (
       hasPendingTimetableEvent.current ||
       hasPendingGroupAccessEvent.current ||
-      hasPendingStaffTimeTrackingEvent.current
+      hasPendingStaffTimeTrackingEvent.current ||
+      hasPendingStudentUpdateEvent.current ||
+      hasPendingPickupScheduleEvent.current
     ) {
       mutate(
         (key) =>

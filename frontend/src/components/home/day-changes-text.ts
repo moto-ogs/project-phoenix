@@ -4,7 +4,14 @@
  * Eine neue Quelle ergänzt ihre Arten in `DAY_CHANGE_TEXTS`, ihren Namen in
  * `SOURCE_FAILURE_TEXTS` und ihre Link-Ziele in `dayChangeHref`.
  */
-import type { DayChange, DayChangePerson } from "~/lib/day-changes";
+import type {
+  DayChange,
+  DayChangeChild,
+  DayChangeChildSummary,
+  DayChangeLink,
+  DayChangePerson,
+} from "~/lib/day-changes";
+import { schoolClassLabel } from "~/lib/school-class-label";
 
 function personWith(
   change: DayChange,
@@ -66,6 +73,73 @@ function groupSubstitutionCountText(change: DayChange): string {
     : `In ${count} weiteren Gruppen vertritt heute jemand.`;
 }
 
+function childName(child: DayChangeChild): string {
+  return child.name || "Ein Kind";
+}
+
+/** Der Satz zu einem Kind (#7665); der Grund steht nie dabei. */
+const CHILD_TEXTS: Readonly<Record<string, (child: DayChangeChild) => string>> =
+  {
+    child_absent: (child) =>
+      child.status === "sick"
+        ? `${childName(child)} ist heute krank gemeldet.`
+        : `${childName(child)} ist heute entschuldigt.`,
+    child_pickup_changed: (child) =>
+      child.pickupTime
+        ? `${childName(child)} geht heute um ${child.pickupTime} Uhr.`
+        : `${childName(child)} kommt heute nicht.`,
+    child_goes_alone: (child) =>
+      `${childName(child)} geht heute allein nach Hause.`,
+    child_pickup_note: (child) =>
+      `Hinweis zum Abholen von ${childName(child)}: ${child.note ?? ""}`,
+  };
+
+export function childChangeText(
+  kind: string,
+  child: DayChangeChild,
+): string | null {
+  return CHILD_TEXTS[kind]?.(child) ?? null;
+}
+
+function childText(change: DayChange): string {
+  return change.child ? (childChangeText(change.kind, change.child) ?? "") : "";
+}
+
+/** „Gruppe Igel“, „Sternengruppe“, „Klasse 4c“ oder „Ohne Gruppe“. */
+export function childSummaryTitle(change: DayChange): string {
+  const name = change.groupName;
+  if (name) return /gruppe/i.test(name) ? name : `Gruppe ${name}`;
+  return (
+    schoolClassLabel(change.childSummary?.schoolClass ?? "") || "Ohne Gruppe"
+  );
+}
+
+/** „4 krank, 1 geht allein“: nur die Zahlen, die es gibt. */
+export function childSummaryCounts(summary: DayChangeChildSummary): string {
+  const { sick, excused, pickupChanged, goesAlone, pickupNote } =
+    summary.counts;
+  const parts: string[] = [];
+  if (sick > 0) parts.push(`${sick} krank`);
+  if (excused > 0) parts.push(`${excused} entschuldigt`);
+  if (pickupChanged > 0) {
+    parts.push(`${pickupChanged} mit anderer Abholzeit`);
+  }
+  if (goesAlone > 0) {
+    parts.push(`${goesAlone} ${goesAlone === 1 ? "geht" : "gehen"} allein`);
+  }
+  if (pickupNote > 0) {
+    parts.push(
+      `${pickupNote} ${pickupNote === 1 ? "Hinweis" : "Hinweise"} zum Abholen`,
+    );
+  }
+  return parts.join(", ");
+}
+
+function childSummaryText(change: DayChange): string {
+  if (!change.childSummary) return "";
+  return `${childSummaryTitle(change)}: ${childSummaryCounts(change.childSummary)}`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -74,10 +148,17 @@ const DAY_CHANGE_TEXTS: Readonly<
   staff_absent_count: staffAbsentCountText,
   group_substitution: groupSubstitutionText,
   group_substitution_count: groupSubstitutionCountText,
+  child_absent: childText,
+  child_pickup_changed: childText,
+  child_goes_alone: childText,
+  child_pickup_note: childText,
+  child_summary: childSummaryText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
-  return DAY_CHANGE_TEXTS[change.kind]?.(change) ?? null;
+  const text = DAY_CHANGE_TEXTS[change.kind]?.(change);
+  // Ein Eintrag ohne Satz (etwa ein Kind ohne Daten) erscheint nicht.
+  return text ? text : null;
 }
 
 /** „3.11.“ aus „2026-11-03“. */
@@ -97,6 +178,8 @@ export function dayChangeSpan(change: DayChange): string | null {
 /** Der Hinweis, wenn eine Quelle gerade nicht geladen werden konnte. */
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+  children:
+    "Krankmeldungen und Abholzeiten der Kinder konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -108,7 +191,11 @@ export function sourceFailureText(source: string): string {
 
 /** Der Weg zur Detailseite eines Eintrags, ohne Schulpräfix. */
 export function dayChangeHref(change: DayChange): string | null {
-  const link = change.link;
+  return dayChangeLinkHref(change.link);
+}
+
+/** Der Weg zu einem Link-Ziel, auch für die Zeilen einer Zusammenfassung. */
+export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
   if (!link) return null;
   switch (link.target) {
     case "staff_absences":
@@ -121,6 +208,8 @@ export function dayChangeHref(change: DayChange): string | null {
       return "/staff";
     case "group_handovers":
       return "/substitutions";
+    case "student":
+      return link.studentId ? `/students/${link.studentId}` : null;
     default:
       return null;
   }

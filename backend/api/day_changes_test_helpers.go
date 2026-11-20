@@ -4,6 +4,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -27,9 +28,16 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	// The Kinder reads take the day as a filter; Care Plan's clock stamps
+	// writes only. A shared clock adds no closure to its effect bindings.
+	carePlan, err := NewClockedCarePlanForTests(db, time.Now)
+	if err != nil {
+		return nil, err
+	}
 	view, err := NewDayChanges(DayChangesSources{
 		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
 		Names: NewTimetablePeople(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
+		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db),
 		Today: func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {

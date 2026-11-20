@@ -27,6 +27,9 @@ type Source string
 const (
 	// SourceStaff is Personal: full-day absences and group substitutions.
 	SourceStaff Source = "staff"
+	// SourceChildren is Kinder: sick or excused children, changed pickup
+	// times, children who go home alone and dated pickup notes (#7665).
+	SourceChildren Source = "children"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -52,6 +55,27 @@ const (
 	KindGroupSubstitution Kind = "group_substitution"
 	// KindGroupSubstitutionCount: how many further groups are covered today.
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
+	// KindChildAbsent: a child is reported sick or excused today; Child
+	// carries the status, never a reason.
+	KindChildAbsent Kind = "child_absent"
+	// KindChildPickupChanged: a child leaves at another time today, or does
+	// not come (no pickup time).
+	KindChildPickupChanged Kind = "child_pickup_changed"
+	// KindChildGoesAlone: a child goes home alone today.
+	KindChildGoesAlone Kind = "child_goes_alone"
+	// KindChildPickupNote: a pickup note for today ("Oma holt ab").
+	KindChildPickupNote Kind = "child_pickup_note"
+	// KindChildSummary: the children of one group or class outside the
+	// caller's groups, with the numbers and the rows to unfold.
+	KindChildSummary Kind = "child_summary"
+)
+
+// ChildStatus is the status of an absent child, as on the detail page.
+type ChildStatus string
+
+const (
+	ChildSick    ChildStatus = "sick"
+	ChildExcused ChildStatus = "excused"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -77,6 +101,8 @@ const (
 	LinkStaffList LinkTarget = "staff_list"
 	// LinkGroupHandovers is the page of the group substitutions.
 	LinkGroupHandovers LinkTarget = "group_handovers"
+	// LinkStudent is a child's detail page.
+	LinkStudent LinkTarget = "student"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -94,10 +120,48 @@ type Group struct {
 	Name string `json:"name"`
 }
 
-// Link is the target of an entry; StaffID is set for the staff pages.
+// Link is the target of an entry; StaffID is set for the staff pages,
+// StudentID for a child's page.
 type Link struct {
-	Target  LinkTarget `json:"target"`
-	StaffID *int64     `json:"staff_id,string,omitempty"`
+	Target    LinkTarget `json:"target"`
+	StaffID   *int64     `json:"staff_id,string,omitempty"`
+	StudentID *int64     `json:"student_id,string,omitempty"`
+}
+
+// Child is the child an entry concerns, with what is different today:
+// Status for child_absent, PickupTime ("15:04"; nil: the child does not
+// come) for child_pickup_changed, Note for child_pickup_note.
+type Child struct {
+	StudentID  int64        `json:"student_id,string"`
+	FirstName  string       `json:"first_name"`
+	LastName   string       `json:"last_name"`
+	Status     *ChildStatus `json:"status"`
+	PickupTime *string      `json:"pickup_time"`
+	Note       *string      `json:"note"`
+}
+
+// ChildItem is one row of a child summary.
+type ChildItem struct {
+	Kind  Kind  `json:"kind"`
+	Child Child `json:"child"`
+	Link  *Link `json:"link"`
+}
+
+// ChildCounts are the numbers of a child summary, one per kind.
+type ChildCounts struct {
+	Sick          int `json:"sick"`
+	Excused       int `json:"excused"`
+	PickupChanged int `json:"pickup_changed"`
+	GoesAlone     int `json:"goes_alone"`
+	PickupNote    int `json:"pickup_note"`
+}
+
+// ChildSummary sums up the children of one group (Entry.Group) or, for
+// children without a group, of one school class.
+type ChildSummary struct {
+	SchoolClass string      `json:"school_class"`
+	Counts      ChildCounts `json:"counts"`
+	Items       []ChildItem `json:"items"`
 }
 
 // SourceEntry is what a source port returns: an entry without its section,
@@ -118,6 +182,9 @@ type SourceEntry struct {
 	Link   *Link
 	// Count is set on the summary kinds only.
 	Count *int
+	// Child is set on the child kinds, ChildSummary on child_summary.
+	Child        *Child
+	ChildSummary *ChildSummary
 }
 
 // Entry is one change to regular operation of the day.
@@ -134,6 +201,9 @@ type Entry struct {
 	Group   *Group         `json:"group"`
 	Link    *Link          `json:"link"`
 	Count   *int           `json:"count"`
+	// Child is set on the child kinds, ChildSummary on child_summary.
+	Child        *Child        `json:"child"`
+	ChildSummary *ChildSummary `json:"child_summary"`
 }
 
 // SourceStatus reports one source.
@@ -157,6 +227,15 @@ type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// ChildChanges is the Kinder port: the children with something different
+// today as the caller may see them. ChildrenVisible reports, without a
+// statement, whether the caller may see the source at all; an invisible
+// source is not read and stays loaded.
+type ChildChanges interface {
+	ChildrenVisible(ctx context.Context) bool
+	ChildChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // Isolation runs one source read so that its failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
@@ -174,6 +253,7 @@ type Dependencies struct {
 	Today     func() calendar.Date
 	Isolation Isolation
 	Staff     StaffChanges
+	Children  ChildChanges
 	Logger    *slog.Logger
 }
 
@@ -188,6 +268,8 @@ var ErrDependencies = errors.New("day changes view: missing dependency")
 type sourceRead struct {
 	source Source
 	read   func(context.Context, calendar.Date) ([]SourceEntry, error)
+	// visible is optional; false skips the read and its savepoint.
+	visible func(context.Context) bool
 }
 
 type view struct {
@@ -199,7 +281,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -213,6 +295,7 @@ func New(deps Dependencies) (Query, error) {
 		// The order is the order of the statuses in the answer.
 		sources: []sourceRead{
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
+			{source: SourceChildren, read: deps.Children.ChildChanges, visible: deps.Children.ChildrenVisible},
 		},
 	}, nil
 }
@@ -224,6 +307,10 @@ func (v *view) Today(ctx context.Context) (Overview, error) {
 	day := v.today()
 	overview := Overview{Date: day, Sources: make([]SourceStatus, 0, len(v.sources)), Entries: []Entry{}}
 	for _, source := range v.sources {
+		if source.visible != nil && !source.visible(ctx) {
+			overview.Sources = append(overview.Sources, SourceStatus{Source: source.source, Status: SourceLoaded})
+			continue
+		}
 		var entries []SourceEntry
 		err := v.isolation.Run(ctx, func(ctx context.Context) error {
 			var readErr error
@@ -264,6 +351,7 @@ func toEntry(entry SourceEntry) Entry {
 		Kind: entry.Kind, Section: section, AllDay: true, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, People: people, Group: entry.Group,
 		Link: entry.Link, Count: entry.Count,
+		Child: entry.Child, ChildSummary: entry.ChildSummary,
 	}
 }
 
@@ -292,7 +380,7 @@ func sortEntries(entries []Entry) {
 
 func rank(entry Entry) int {
 	switch {
-	case entry.Count != nil:
+	case entry.Count != nil || entry.ChildSummary != nil:
 		return 2
 	case entry.Since != nil:
 		return 1
@@ -302,6 +390,9 @@ func rank(entry Entry) int {
 }
 
 func firstName(entry Entry) string {
+	if entry.Child != nil {
+		return entry.Child.FirstName + " " + entry.Child.LastName
+	}
 	if len(entry.People) == 0 {
 		return ""
 	}
@@ -309,6 +400,9 @@ func firstName(entry Entry) string {
 }
 
 func groupName(entry Entry) string {
+	if entry.Group == nil && entry.ChildSummary != nil {
+		return entry.ChildSummary.SchoolClass
+	}
 	if entry.Group == nil {
 		return ""
 	}

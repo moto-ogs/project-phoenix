@@ -217,3 +217,128 @@ describe("Texte der Gruppen-Vertretung", () => {
     ).toBe("Daria Nowak vertritt dich heute in der Gruppe Igel.");
   });
 });
+
+describe("DayChangesBlock — Kinder (#7665)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+  });
+
+  const child = (studentId: string, name: string) => ({
+    studentId,
+    name,
+    status: null,
+    pickupTime: null,
+    note: null,
+  });
+
+  it("zeigt Kinder der eigenen Gruppe einzeln und klappt die Zusammenfassung auf", () => {
+    serve({
+      entries: [
+        change({
+          kind: "child_absent",
+          section: "you",
+          groupName: "Igel",
+          child: { ...child("11", "Mia Kind"), status: "sick" },
+          link: { target: "student", staffId: null, studentId: "11" },
+        }),
+        change({
+          kind: "child_pickup_changed",
+          section: "you",
+          groupName: "Igel",
+          child: { ...child("12", "Leo Kind"), pickupTime: "14:30" },
+          link: { target: "student", staffId: null, studentId: "12" },
+        }),
+        change({
+          kind: "child_summary",
+          groupName: "Fuchs",
+          childSummary: {
+            schoolClass: "",
+            counts: {
+              sick: 4,
+              excused: 0,
+              pickupChanged: 0,
+              goesAlone: 1,
+              pickupNote: 0,
+            },
+            items: [
+              {
+                kind: "child_goes_alone",
+                child: child("21", "Lou Kind"),
+                link: { target: "student", staffId: null, studentId: "21" },
+              },
+              {
+                kind: "child_absent",
+                child: { ...child("22", "Pia Kind"), status: "sick" },
+                link: { target: "student", staffId: null, studentId: "22" },
+              },
+            ],
+          },
+        }),
+        change({
+          kind: "child_summary",
+          childSummary: {
+            schoolClass: "4c",
+            counts: {
+              sick: 0,
+              excused: 1,
+              pickupChanged: 0,
+              goesAlone: 0,
+              pickupNote: 0,
+            },
+            items: [],
+          },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", { name: "Mia Kind ist heute krank gemeldet." }),
+    ).toHaveAttribute("href", "/schule/students/11");
+    expect(
+      mine.getByRole("link", { name: "Leo Kind geht heute um 14:30 Uhr." }),
+    ).toHaveAttribute("href", "/schule/students/12");
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(school.getByText("4 krank, 1 geht allein")).toBeInTheDocument();
+    expect(school.getByText("1 entschuldigt")).toBeInTheDocument();
+    expect(school.getByRole("button", { name: /Klasse 4c/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    const toggle = school.getByRole("button", { name: /Gruppe Fuchs/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(school.queryByText(/Lou Kind/)).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(
+      school.getByRole("link", {
+        name: "Lou Kind geht heute allein nach Hause.",
+      }),
+    ).toHaveAttribute("href", "/schule/students/21");
+    const sick = school.getByRole("link", {
+      name: "Pia Kind ist heute krank gemeldet.",
+    });
+    fireEvent.click(sick);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "child_absent",
+    });
+  });
+
+  it("nennt den Ausfall der Kinder-Quelle und gibt keine Entwarnung", () => {
+    serve({ failedSources: ["children"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Krankmeldungen und Abholzeiten der Kinder konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+});
