@@ -134,10 +134,19 @@ func ErrorCode(err error) string {
 	}
 }
 
+// FeedbackHistory records the past ratings of a demo school (ADR 0298). It is
+// no part of Capability: only the dev tools seed and the public demo's
+// operator route compose it, and no school can reach it.
+type FeedbackHistory interface {
+	// RecordFeedbackHistory writes ratings of days before today as one batch
+	// in one transaction of the tenant in context and returns how many it
+	// wrote. An invalid rating rejects the whole batch before persistence.
+	RecordFeedbackHistory(context.Context, []CreateEntry) (int, error)
+}
+
 type Capability interface {
 	Available(context.Context) (bool, error)
 	Submit(context.Context, CreateEntry) (Entry, error)
-	SubmitBatch(context.Context, []CreateEntry) ([]Entry, error)
 	LookupEntry(context.Context, int64) (Entry, error)
 	EraseEntry(context.Context, int64) error
 	FindEntries(context.Context, Filter) ([]Entry, error)

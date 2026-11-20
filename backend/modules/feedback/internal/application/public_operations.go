@@ -34,41 +34,6 @@ func (s *Service) Submit(ctx context.Context, input feedback.CreateEntry) (feedb
 	return toPublicEntry(entry), nil
 }
 
-func (s *Service) SubmitBatch(ctx context.Context, inputs []feedback.CreateEntry) ([]feedback.Entry, error) {
-	if len(inputs) == 0 {
-		return nil, nil
-	}
-	normalized := make([]feedback.CreateEntry, 0, len(inputs))
-	var failures []error
-	for _, input := range inputs {
-		entry, err := validateEntry(input)
-		if err != nil {
-			failures = append(failures, err)
-			continue
-		}
-		normalized = append(normalized, entry)
-	}
-	if len(failures) > 0 {
-		err := &feedback.BatchOperationError{Errors: failures}
-		s.ObserveRejection("submit_batch", 0, err)
-		return nil, err
-	}
-	values := make([]domain.Entry, 0, len(normalized))
-	for _, input := range normalized {
-		values = append(values, toDomainInput(input))
-	}
-	var entries []domain.Entry
-
-	err := s.runWhenEnabled(ctx, "submit_batch", func(txCtx context.Context) (stats domain.OperationStats, batchErr error) {
-		entries, stats, batchErr = s.store.CreateBatch(txCtx, values)
-		return stats, batchErr
-	})
-	if err != nil {
-		return nil, err
-	}
-	return toPublicEntries(entries), nil
-}
-
 func (s *Service) LookupEntry(ctx context.Context, id int64) (feedback.Entry, error) {
 	if id <= 0 {
 		err := &feedback.InvalidEntryDataError{Err: feedback.ErrInvalidParameters}

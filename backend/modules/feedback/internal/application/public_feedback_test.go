@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/feedback"
+	"github.com/moto-ogs/project-phoenix/modules/feedback/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,19 +79,23 @@ func TestModuleRejectsInvalidDateRangesAtPublicSeam(t *testing.T) {
 	assert.Equal(t, feedback.Date("2026-09-02"), rangeErr.StartDate)
 }
 
-func TestModuleRejectsWholeBatchBeforePersistence(t *testing.T) {
+func TestFeedbackHistoryRejectsWholeBatchBeforePersistence(t *testing.T) {
 	t.Parallel()
-	module := newTestModule(&recordingEngine{})
+	engine := &recordingEngine{}
+	history := NewFeedbackHistory(seamStore{e: engine}, seamTransaction{}, func() domain.Date { return domain.Date("2026-09-01") })
 
-	_, err := module.SubmitBatch(context.Background(), []feedback.CreateEntry{
+	written, err := history.RecordFeedbackHistory(context.Background(), []feedback.CreateEntry{
 		{Value: feedback.ValuePositive, Day: "2026-08-31", Time: "09:07:05", StudentID: 42},
 		{Value: "invalid", Day: "2026-08-31", Time: "09:07:05", StudentID: 42},
+		{Value: feedback.ValuePositive, Day: "2026-09-01", Time: "09:07:05", StudentID: 42},
 	})
 
 	require.ErrorIs(t, err, feedback.ErrInvalidEntryData)
 	var batchErr *feedback.BatchOperationError
 	require.ErrorAs(t, err, &batchErr)
-	assert.Len(t, batchErr.Errors, 1)
+	assert.Len(t, batchErr.Errors, 2, "the invalid value and the day that is not past")
+	assert.Zero(t, written)
+	assert.Empty(t, engine.created, "a refused batch writes nothing")
 }
 
 func TestErrorCodeIsStable(t *testing.T) {

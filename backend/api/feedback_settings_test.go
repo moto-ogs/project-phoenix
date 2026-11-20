@@ -42,13 +42,11 @@ func TestStaffFeedbackRoutesRespectSchoolSetting(t *testing.T) {
 		status       int
 	}{
 		{http.MethodPost, "/feedback/", body, http.StatusCreated},
-		{http.MethodPost, "/feedback/batch", map[string]any{"entries": []any{body}}, http.StatusCreated},
 		{http.MethodGet, "/feedback/", nil, http.StatusOK},
 		{http.MethodGet, fmt.Sprintf("/feedback/%d", entry.ID), nil, http.StatusOK},
 		{http.MethodGet, fmt.Sprintf("/feedback/student/%d", student.ID), nil, http.StatusOK},
 		{http.MethodGet, "/feedback/date/2026-08-31", nil, http.StatusOK},
 		{http.MethodGet, "/feedback/mensa", nil, http.StatusOK},
-		{http.MethodGet, "/feedback/date-range?start_date=2026-08-01&end_date=2026-08-31", nil, http.StatusOK},
 	}
 	states := []struct {
 		name   string
