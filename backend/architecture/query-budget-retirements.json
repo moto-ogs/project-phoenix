@@ -283,5 +283,10 @@
     "scenario": "workforce.workforce20.own_presence_map",
     "route": "GET /api/time-tracking/presence-map",
     "issue": 2352
+  },
+  {
+    "scenario": "parent.enrollments.growth.mine",
+    "route": "GET /parent/me/enrollments",
+    "issue": 2352
   }
 ]

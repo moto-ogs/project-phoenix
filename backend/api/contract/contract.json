@@ -3724,6 +3724,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "paginated": true,
       "query": [
         {
