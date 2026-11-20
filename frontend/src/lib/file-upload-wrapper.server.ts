@@ -188,7 +188,7 @@ export function createFileUploadHandler<T>(
   });
 }
 
-export function fileValidationProblemResponse(
+function fileValidationProblemResponse(
   error: FileValidationError,
   request: Request,
 ) {
