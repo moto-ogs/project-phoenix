@@ -1364,6 +1364,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/master-data/logo",
+      "portals": [
+        "org"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/report-templates/{id}",
       "portals": [
         "org"
@@ -3239,6 +3247,15 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/me/profile/avatar/{filename}",
+      "portals": [
+        "tenant"
+      ],
+      "file": true,
+      "private_cache": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/me/staff",
       "portals": [
         "tenant"
@@ -4901,6 +4918,21 @@
           "ref": "StaffAbsenceResponse"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/{id}/avatar",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "v",
+          "kind": "string"
+        }
+      ],
+      "file": true,
+      "private_cache": true
     },
     {
       "method": "GET",
@@ -11904,6 +11936,21 @@
         "kind": "ref",
         "ref": "TraegerDocumentTemplateDetail"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/master-data/logo",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "v",
+          "kind": "string"
+        }
+      ],
+      "file": true,
+      "private_cache": true
     },
     {
       "method": "GET",
@@ -21853,6 +21900,20 @@
         "kind": "ref",
         "ref": "TraegerContact"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/master-data/logo",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerLogo"
+      },
+      "max_body_bytes": 1114112,
+      "multipart": true,
+      "too_large_code": "traeger.logo_too_large"
     },
     {
       "method": "PUT",

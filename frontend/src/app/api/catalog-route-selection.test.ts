@@ -294,6 +294,10 @@ describe("path freed from its own route file", () => {
     ["/api/activities/quick-create", "/api/[...path]"],
     ["/api/iot/device-slots", "/api/[...path]"],
     ["/api/search", "/api/[...path]"],
+    // Images the browser may keep (#2352).
+    ["/api/me/profile/avatar/a.png", "/api/[...path]"],
+    ["/api/staff/1/avatar", "/api/[...path]"],
+    ["/api/traeger/master-data/logo", "/api/traeger/[...path]"],
     // Documents and proofs of the contract (#2352), beside dynamic
     // neighbours that keep their route files.
     ["/api/enrollment/admin/requests/1/signature-proof", "/api/[...path]"],

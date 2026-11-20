@@ -15,6 +15,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -514,6 +515,15 @@ func TestUploadAvatar_Success(t *testing.T) {
 	require.Equal(t, http.StatusOK, imageResponse.Code)
 	assert.Equal(t, pngContent, imageResponse.Body.String())
 	assert.Equal(t, "private, max-age=86400", imageResponse.Header().Get("Cache-Control"))
+	assert.Equal(t, "image/png", imageResponse.Header().Get("Content-Type"), "the handler names the type; the proxy adds none (#2352)")
+
+	// Only the caller's own stored file name opens: a traversal or a name
+	// with a backslash is refused by the handler, not by the frontend proxy.
+	for _, name := range []string{"..%5C..%5Cetc%5Cpasswd", "other.png", url.PathEscape(filepath.Base(avatar) + "\\x")} {
+		otherReq := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/profile/avatar/"+name, nil,
+			testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)))
+		assert.Equal(t, http.StatusForbidden, testutil.ExecuteRequest(tc.router, otherReq).Code, name)
+	}
 }
 
 // =============================================================================

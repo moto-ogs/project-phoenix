@@ -175,15 +175,3 @@ export function requirePathSegmentParam(
 ): string {
   return encodePathSegment(requireStringParam(params, key));
 }
-
-/** A required numeric route param (a database ID); anything else is 400. */
-export function requireNumericParam(
-  params: Record<string, unknown>,
-  key = "id",
-): string {
-  const value = params[key];
-  if (!isStringParam(value) || !/^\d+$/.test(value)) {
-    throw bffError(400, `invalid ${key}`);
-  }
-  return value;
-}

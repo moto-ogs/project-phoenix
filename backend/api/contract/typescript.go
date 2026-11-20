@@ -357,6 +357,9 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.PublicFile != "" {
 		fmt.Fprintf(out, "    publicFile: %q,\n", route.PublicFile)
 	}
+	if route.PrivateCache {
+		out.WriteString("    privateCache: true,\n")
+	}
 	if len(route.Query) > 0 {
 		names := make([]string, len(route.Query))
 		for i, param := range route.Query {

@@ -10,11 +10,22 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // MasterDataRouteContracts registers the typed contract of the Träger's
 // master data (ADR 0270), with patterns relative to /traeger/master-data.
-// The export of the templates answers a file (#2352); the logo keeps its
-// route file.
+// The export of the templates and the logo answer files (#2352).
 func MasterDataRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: organizationtenancy.TraegerProfile{}},
+		// The logo: ?v=<updated_at> lets the current version stay in the
+		// browser's private cache; the handler checks type, size and content
+		// of an upload (#4653, #2352).
+		{
+			Method: "GET", Pattern: "/logo", Portals: traegerPortal, File: true, PrivateCache: true,
+			Query: []common.QueryParam{{Name: "v", Kind: common.QueryString}},
+		},
+		{
+			Method: "PUT", Pattern: "/logo", Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: maxLogoBody, TooLargeCode: common.CodeTraegerLogoTooLarge, Response: organizationtenancy.TraegerLogo{},
+		},
+		{Method: "DELETE", Pattern: "/logo", Portals: traegerPortal, NoData: true},
 		{Method: "PUT", Pattern: "/contact", Portals: traegerPortal, Request: ContactRequest{}, Response: organizationtenancy.TraegerContact{}},
 		{Method: "PUT", Pattern: "/withdrawal-contact", Portals: traegerPortal, Request: WithdrawalContactRequest{}, Response: organizationtenancy.TraegerWithdrawalContact{}},
 		{Method: "POST", Pattern: "/bank-accounts", Portals: traegerPortal, Request: BankAccountRequest{}, Response: organizationtenancy.TraegerBankAccount{}},
