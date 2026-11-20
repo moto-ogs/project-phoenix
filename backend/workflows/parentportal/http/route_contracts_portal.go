@@ -113,6 +113,16 @@ func communicationRouteContracts() []common.RouteContract {
 			Response: ThreadViewResponse{},
 		},
 		{Method: "POST", Pattern: child, Portals: portals, Request: PostMessageRequest{}, Response: ThreadViewResponse{}},
+		// The attachments stream through the portal's proxy (#2352).
+		{
+			Method: "POST", Pattern: child + "/attachments", Portals: portals, Multipart: true,
+			MaxBodyBytes: int(common.MessageAttachmentBodyBytes(maxMessageAttachmentBytes)),
+			TooLargeCode: common.CodeFilesFileTooLarge, Response: messageAttachmentResponse{},
+		},
+		{
+			Method: "GET", Pattern: child + "/attachments/{attachmentId}/download", Portals: portals,
+			Query: []common.QueryParam{{Name: "inline", Kind: common.QueryString}}, File: true,
+		},
 		{Method: "GET", Pattern: "/me/messages/group-threads", Portals: portals, Response: []GroupThreadSummaryResponse{}},
 		{Method: "GET", Pattern: "/me/messages/group-threads/{groupThreadId}", Portals: portals, Response: GroupThreadViewResponse{}},
 		{Method: "GET", Pattern: "/me/news", Portals: portals, Response: []AnnouncementResponse{}},

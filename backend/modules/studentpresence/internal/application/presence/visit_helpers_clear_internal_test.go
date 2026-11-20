@@ -141,10 +141,6 @@ func (f *fakeSettingsResolver) OperationalOverviewScope(context.Context) (string
 	return f.resolved, f.resolveErr
 }
 
-func (f *fakeSettingsResolver) SessionInactivityTimeoutMinutes(context.Context) (int, error) {
-	return 0, nil
-}
-
 func (f *fakeSettingsResolver) WebParticipantLimitEnforced(context.Context) (bool, error) {
 	return false, nil
 }

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -414,16 +414,14 @@ describe("private download cache policy (#5119)", () => {
       const route = path.relative(API_ROOT, path.dirname(file));
       const text = readFileSync(file, "utf8");
       const fileFactory =
-        /\b(?:createFileExportRoute|createFileDownloadRoute|fileResponse|downloadFile|proxyFile)\s*[(<]/.test(
-          text,
-        );
+        /\b(?:fileResponse|downloadFile|proxyFile)\s*[(<]/.test(text);
       const binaryResponse =
         /new (?:Next)?Response\(/.test(text) &&
         /content-disposition|application\/octet-stream|text\/calendar|text\/event-stream|image\//i.test(
           text,
         );
       const downloadPath =
-        /(?:^|\/)(?:export(?:\/\[format\])?|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
+        /(?:^|\/)(?:export|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
           route,
         );
       return (
@@ -454,9 +452,20 @@ describe("private download cache policy (#5119)", () => {
         .replace(/^\/(?:api\/)?/, "")
         .replace(/\{[^}]+\}|\[[^\]]+\]/g, "[]")
         .replace(/\/$/, "");
+    // A literal hand-off in front of a dynamic neighbour (`students/export`
+    // before `students/[id]`) keeps its file, its wrapper and its entry.
+    const handOff = (route: string) => {
+      const file = path.join(API_ROOT, folder(route), "route.ts");
+      return (
+        !folder(route).includes("[]") &&
+        existsSync(file) &&
+        readFileSync(file, "utf8").includes("catalogProxy(")
+      );
+    };
     const contractFiles = Object.values(portalRoutes)
       .flat()
       .filter((route) => route.response === fileAnswer)
+      .filter((route) => !handOff(route.pattern))
       .map((route) => `${folder(route.pattern)}:${route.method}`);
     expect(contractFiles.length).toBeGreaterThan(0);
     const listed = new Set(

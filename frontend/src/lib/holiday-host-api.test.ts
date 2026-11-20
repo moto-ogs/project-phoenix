@@ -263,7 +263,7 @@ describe("holiday host api", () => {
     await downloadHolidayParticipants("51", "csv");
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "/api/holiday-weeks/51/participants/export/csv",
+      "/api/holiday-weeks/51/participants/export?format=csv",
     );
     expect(downloadBlobMock).toHaveBeenCalledWith(
       expect.any(Blob),

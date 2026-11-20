@@ -37,7 +37,7 @@ func checkFormerLateBoundMounts(t *testing.T, graph *goldenRuntime) {
 		}
 	})
 	t.Run("feedback settings", func(t *testing.T) {
-		code, body := request(http.MethodGet, "/api/feedback/", "")
+		code, body := request(http.MethodGet, "/api/feedback/student/1", "")
 		assert.Equal(t, http.StatusForbidden, code, body)
 		assert.Contains(t, body, `"code":"feedback.disabled"`, "the registry default must refuse feedback")
 	})

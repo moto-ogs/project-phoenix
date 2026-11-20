@@ -16,20 +16,6 @@ type TimeoutResult struct {
 	TimeoutAt          time.Time `json:"timeout_at"`
 }
 
-// SessionTimeoutInfo provides information about a session's timeout status.
-// ActivityID follows the same *int64 contract as TimeoutResult.
-type SessionTimeoutInfo struct {
-	SessionID          int64         `json:"session_id"`
-	ActivityID         *int64        `json:"activity_id"`
-	StartTime          time.Time     `json:"start_time"`
-	LastActivity       time.Time     `json:"last_activity"`
-	TimeoutMinutes     int           `json:"timeout_minutes"`
-	InactivityDuration time.Duration `json:"inactivity_duration"`
-	TimeUntilTimeout   time.Duration `json:"time_until_timeout"`
-	IsTimedOut         bool          `json:"is_timed_out"`
-	ActiveStudentCount int           `json:"active_student_count"`
-}
-
 // CleanupResult represents the result of a cleanup operation
 type CleanupResult struct {
 	StartedAt         time.Time

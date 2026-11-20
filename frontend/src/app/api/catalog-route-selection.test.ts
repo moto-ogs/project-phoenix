@@ -52,6 +52,7 @@ const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/register/[[...path]]": "tenant",
   "/api/auth/staff-preview/[...path]": "tenant",
   "/api/auth/password-reset/[[...path]]": "tenant",
+  "/api/students/export": "tenant",
   "/api/auth/password/[[...path]]": "tenant",
   "/api/caterer/auth/mfa/trusted-devices/[[...path]]": "caterer",
   "/api/caterer/auth/passkeys/[[...path]]": "caterer",
@@ -308,6 +309,14 @@ describe("path freed from its own route file", () => {
       "/api/parent/[...path]",
     ],
     ["/api/school/class-day/absence-list/export", "/api/school/[...path]"],
+    // Exports, templates and files of the contract (#2352), beside
+    // dynamic neighbours that keep their route files.
+    ["/api/staff/1/time-tracking/export", "/api/[...path]"],
+    ["/api/holiday-weeks/1/participants/export", "/api/[...path]"],
+    ["/api/calendar/appointments/1/ics", "/api/[...path]"],
+    ["/api/week-protocols/1/pdf", "/api/[...path]"],
+    ["/api/import/students/template", "/api/[...path]"],
+    ["/api/caterer/orders/export", "/api/caterer/[...path]"],
     // A list on the bare path reaches the portal's proxy, not Auth.js.
     ["/api/auth/passkeys", "/api/auth/passkeys/[[...path]]"],
     ["/api/auth/passkeys/register/options", "/api/auth/passkeys/[[...path]]"],

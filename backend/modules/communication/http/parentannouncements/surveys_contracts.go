@@ -4,7 +4,7 @@ import "github.com/moto-ogs/project-phoenix/api/common"
 
 // SurveyRouteContracts registers the typed contract of the staff surveys
 // (ADR 0270), with patterns relative to /api/surveys. The PDF export answers
-// a file and keeps its route file.
+// a file.
 func SurveyRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
@@ -21,6 +21,7 @@ func SurveyRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/{surveyId}/remind", Portals: portals, Response: surveyRemindedResponse{}},
 		{Method: "GET", Pattern: "/{surveyId}/results", Portals: portals, Response: surveyResultsResponse{}},
 		{Method: "GET", Pattern: "/{surveyId}/respondents", Portals: portals, Response: []surveyRespondentResponse{}},
+		{Method: "GET", Pattern: "/{surveyId}/results/export", Portals: portals, File: true},
 	}
 }
 

@@ -56,55 +56,35 @@ func dailyCheckout(tag, destination string) map[string]any {
 	return map[string]any{"rfid": tag, "action": "confirm_daily_checkout", "destination": destination}
 }
 
-func TestGetAttendanceStatus(t *testing.T) {
+// The toggle answers the child with its education group and today's row on
+// the clock's Berlin day; a pinned Wednesday keeps the expected date stable
+// across midnight (Rule 14).
+func TestToggleAttendance_AnswersStudentWithGroup(t *testing.T) {
 	t.Parallel()
-	t.Run("requires a device", func(t *testing.T) {
-		t.Parallel()
-		k := setupAttendanceRoute(t)
-		rr := k.call(t, "GET", "/status/A1B2C3D4", nil)
-		assert.Equal(t, 401, rr.Code)
-	})
-	t.Run("unknown card", func(t *testing.T) {
-		t.Parallel()
-		k := setupAttendanceRoute(t)
-		rr := k.call(t, "GET", "/status/NONEXISTENT123", nil, k.device(t, "attendance-2"))
-		testutil.AssertNotFound(t, rr)
-		assert.Contains(t, rr.Body.String(), "RFID tag not found")
-		assert.Contains(t, rr.Body.String(), `"code":"iot.rfid_tag_not_found"`, "the attendance routes carry the scan's code (#3939)")
-	})
-	t.Run("answers the student with the group", func(t *testing.T) {
-		t.Parallel()
-		// The route reports the clock's Berlin day; a pinned Wednesday keeps
-		// the expected date stable across midnight (Rule 14).
-		day := calendar.NewDate(2026, time.March, 18)
-		k := setupAttendanceRoute(t, func() time.Time { return day.BerlinMidnight().Add(10 * time.Hour) })
-		group := testpkg.CreateTestEducationGroup(t, k.db, "Test Class 1a")
-		tag, studentID, _ := k.studentCard(t, "GroupTest", "Student", "1a")
-		testpkg.SetStudentGroup(t, k.db, studentID, &group.ID)
+	day := calendar.NewDate(2026, time.March, 18)
+	k := setupAttendanceRoute(t, func() time.Time { return day.BerlinMidnight().Add(10 * time.Hour) })
+	group := testpkg.CreateTestEducationGroup(t, k.db, "Test Class 1a")
+	tag, studentID, _ := k.studentCard(t, "GroupTest", "Student", "1a")
+	testpkg.SetStudentGroup(t, k.db, studentID, &group.ID)
+	device, deviceID := k.deviceRow(t, "attendance-group")
+	_, supervisorID, _ := k.staff(t, "Group", "Supervisor")
+	_, _, sessionID := k.roomWithSession(t, "Group answer")
+	testpkg.LinkDeviceToActiveGroup(t, k.db, sessionID, deviceID)
+	testpkg.CreateTestGroupSupervisorOn(t, k.db, supervisorID, sessionID, "supervisor", day)
 
-		rr := k.call(t, "GET", "/status/"+tag, nil, k.device(t, "attendance-4"))
+	rr := k.call(t, "POST", "/toggle", toggle(tag, "confirm"), device, testutil.WithIoTDeviceRequest())
 
-		testutil.AssertSuccessResponse(t, rr, 200)
-		data := responseData(t, rr.Body.Bytes())
-		student, ok := data["student"].(map[string]any)
-		require.True(t, ok)
-		groupInfo, ok := student["group"].(map[string]any)
-		require.True(t, ok, "response should contain group info")
-		assert.Contains(t, groupInfo["name"], "Test Class 1a")
-		attendance, ok := data["attendance"].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, "not_checked_in", attendance["status"])
-		assert.Equal(t, day.String(), attendance["date"])
-	})
-	t.Run("a staff card is not a student", func(t *testing.T) {
-		t.Parallel()
-		k := setupAttendanceRoute(t)
-		_, _, personID := k.staff(t, "NotStudent", "Person")
-		tag := k.card(t, "NOTSTUDENT", personID)
-		rr := k.call(t, "GET", "/status/"+tag, nil, k.device(t, "not-student"))
-		testutil.AssertNotFound(t, rr)
-		assert.Contains(t, rr.Body.String(), "person is not a student")
-	})
+	testutil.AssertSuccessResponse(t, rr, 200)
+	data := responseData(t, rr.Body.Bytes())
+	student, ok := data["student"].(map[string]any)
+	require.True(t, ok)
+	groupInfo, ok := student["group"].(map[string]any)
+	require.True(t, ok, "response should contain group info")
+	assert.Contains(t, groupInfo["name"], "Test Class 1a")
+	attendance, ok := data["attendance"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "checked_in", attendance["status"])
+	assert.Equal(t, day.String(), attendance["date"])
 }
 
 func TestToggleAttendance_RequestContract(t *testing.T) {

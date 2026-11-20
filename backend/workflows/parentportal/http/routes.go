@@ -46,13 +46,6 @@ func (rs *Resource) mountAccountRoutes(r chi.Router, authRateLimiter func(http.H
 	// "Neue Anmeldung" school picker in the parents app.
 	r.Get("/me/enrollable-schools", rs.listEnrollableSchools)
 
-	// Cross-tenant enrollment-request list — every
-	// enrollment.requests row owned by this parent (matched by
-	// guardian_account_id), joined to phase/school/children.
-	// Powers the "Anmeldungen in Bearbeitung" section on the
-	// dashboard.
-	r.Get("/me/enrollments", rs.listMyEnrollments)
-
 	rs.mountDocumentRoutes(r, authRateLimiter)
 }
 

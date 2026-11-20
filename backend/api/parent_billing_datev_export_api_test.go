@@ -1,7 +1,8 @@
-// Router-level tests of the check of the DATEV settings (#4694): the right
-// "Abrechnung" reads it, it names the keys of missing or invalid settings of
-// the session's Träger and never their values, and another Träger's
-// settings do not count.
+// Router-level tests of the check of the DATEV settings (#4694), read with
+// the export settings of the finance exports: the right "Finanz-Export" reads
+// it, it names the keys of missing or invalid settings of the session's
+// Träger and never their values, and another Träger's settings do not count.
+// The former route GET /traeger/datev-export/readiness had no client (#2352).
 package api
 
 import (
@@ -17,7 +18,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-const datevReadinessPath = "/traeger/datev-export/readiness"
+const datevReadinessPath = financeExportsPath + "/settings"
 
 type datevReadinessBody struct {
 	Ready           bool     `json:"ready"`
@@ -41,7 +42,9 @@ func datevReadiness(t *testing.T, router http.Handler, token string) datevReadin
 	rec := traegerJSON(t, router, token, http.MethodGet, datevReadinessPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), "29098", "the answer names keys, never values")
-	return decodeSchoolPortalData[datevReadinessBody](t, rec.Body.Bytes())
+	return decodeSchoolPortalData[struct {
+		Datev datevReadinessBody `json:"datev"`
+	}](t, rec.Body.Bytes()).Datev
 }
 
 func TestDatevReadinessNamesTheSettingsOfTheSessionsTraeger(t *testing.T) {
@@ -89,5 +92,5 @@ func TestDatevReadinessNamesTheSettingsOfTheSessionsTraeger(t *testing.T) {
 	assert.Len(t, foreign.MissingSettings, 4)
 
 	rec = traegerJSON(t, router, own.token, http.MethodGet, datevReadinessPath, nil)
-	assert.Equal(t, http.StatusForbidden, rec.Code, "the check needs the right Abrechnung: %s", rec.Body.String())
+	assert.Equal(t, http.StatusForbidden, rec.Code, "the check needs the right Finanz-Export: %s", rec.Body.String())
 }

@@ -143,10 +143,9 @@ func TestLinkRuntimeEvidence(t *testing.T) {
 		if replayErr := identityModule.ResetPassword(publicCtx, resetToken, "R3set!Again"); replayErr != nil {
 			replays["password_reset_replay_refused"]++
 		}
-		// --- guardian invitation: issue, preview, redeem once, resend.
+		// --- guardian invitation: issue, preview, redeem once.
 		profile := testpkg.CreateTestGuardianProfile(t, db, fmt.Sprintf("link-evidence-guardian-%d", iteration))
 		var guardianToken string
-		var guardianInvitationID int64
 		measure("guardian_invitation_create", iteration, func() error {
 			created, createErr := identityModule.CreateGuardianInvitation(ctx, identityaccess.GuardianInvitationRequest{
 				GuardianProfileID: profile.ID, CreatedBy: inviter.ID,
@@ -154,15 +153,12 @@ func TestLinkRuntimeEvidence(t *testing.T) {
 			if createErr != nil {
 				return createErr
 			}
-			guardianToken, guardianInvitationID = created.Token, created.ID
+			guardianToken = created.Token
 			return nil
 		})
 		measure("guardian_invitation_validate", iteration, func() error {
 			_, validateErr := identityModule.ValidateGuardianInvitation(publicCtx, guardianToken)
 			return validateErr
-		})
-		measure("guardian_invitation_resend", iteration, func() error {
-			return identityModule.ResendGuardianInvitation(ctx, guardianInvitationID, inviter.ID)
 		})
 		measure("guardian_invitation_accept", iteration, func() error {
 			account, acceptErr := identityModule.AcceptGuardianInvitation(publicCtx, guardianToken, identityaccess.GuardianRegistration{

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   nullable,
   num,
   object,
@@ -393,6 +394,26 @@ export interface GetStatisticsCareTimeOverrunsQuery {
   to?: string;
 }
 
+/** Query of GET /api/statistics/care-time-overruns/export */
+export interface GetStatisticsCareTimeOverrunsExportQuery {
+  format?: "pdf" | "xlsx";
+  from?: string;
+  group_id?: string[];
+  school_class?: string[];
+  section?: string[];
+  to?: string;
+}
+
+/** Query of GET /api/statistics/export */
+export interface GetStatisticsExportQuery {
+  format?: "docx" | "pdf" | "xlsx";
+  from?: string;
+  group_id?: string[];
+  school_class?: string[];
+  section?: string[];
+  to?: string;
+}
+
 /** Query of GET /api/statistics/report */
 export interface GetStatisticsReportQuery {
   from?: string;
@@ -418,6 +439,20 @@ export const routes = {
     portals: ["tenant"],
     query: ["from", "group_id", "school_class", "section", "to"],
     response: success(careTimeOverrunsResponseSchema),
+  },
+  "GET /api/statistics/care-time-overruns/export": {
+    method: "GET",
+    pattern: "/api/statistics/care-time-overruns/export",
+    portals: ["tenant"],
+    query: ["format", "from", "group_id", "school_class", "section", "to"],
+    response: fileAnswer,
+  },
+  "GET /api/statistics/export": {
+    method: "GET",
+    pattern: "/api/statistics/export",
+    portals: ["tenant"],
+    query: ["format", "from", "group_id", "school_class", "section", "to"],
+    response: fileAnswer,
   },
   "GET /api/statistics/report": {
     method: "GET",

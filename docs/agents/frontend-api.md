@@ -128,18 +128,15 @@ success wrapper. Their **backend errors still use the shared error path**:
 | Route(s)                                                                                                                                                                                                                                                   | Success-path reason                                                                                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `api/sse/events`, `api/parent/sse/events`, `api/school/sse/events`                                                                                                                                                                                         | `proxySSEStream` preserves a live event stream and abort propagation; a buffered JSON wrapper would prevent streaming.      |
-| `api/meal-plan/participants/export`, `api/students/export`, `api/statistics/export`, `api/students/day-log/export`, `api/students/[id]/attendance-history/export`                                                                                          | CSV/PDF export bytes and download headers must remain intact.                                                               |
-| `api/staff/time-tracking/export`, `api/staff/[id]/time-tracking/export`, `api/birthdays/staff-export`, `api/emergency/snapshot/export`, `api/guardians/payment-overview/export`, `api/operator/billing/key-date-counts/export` | CSV/PDF export bytes and download headers must remain intact; portal auth stays distinct.                                   |
-| `api/enrollment/phases/[id]/export`, `api/enrollment/admin/reports/care-usage/export`, `api/enrollment/admin/reports/class-roster/export`, `api/enrollment/admin/students/[studentId]/requests/export`                                                     | Enrollment export formats and filenames come from backend headers.                                                          |
-| `api/import/{students,teachers,class-list-entries,opening-balances}/template`                                                                                                                                                                              | Template file bytes and backend filenames cannot be JSON-wrapped.                                                           |
-| `api/announcement-attachments/[announcementId]/[attachmentId]/download`, `api/files/folders/[folderId]/files/[fileId]/download`, `api/staff/[id]/documents/[documentId]/download`, `api/students/[id]/documents/[documentId]/download`                     | Attachment bytes, MIME types, and dispositions are passed through.                                                          |
+| `api/students/export`, `api/students/day-log/export` | CSV/PDF export bytes and download headers must remain intact. |
 | `api/public/enrollment-form-legal-documents/[filename]`, `api/public/enrollment-legal-documents/[filename]`, `api/public/login-image/[filename]`, `api/me/profile/avatar/[filename]`, `api/staff/[id]/avatar`, `api/students/[id]/photo/[filename]`        | Public or user image/PDF responses retain content-type and caching behavior.                                                |
 | `api/calendar-feed/[token]`, `api/request-feed/[token]`                                                                                                                                                                                                    | iCalendar/RSS subscriptions retain their wire format and cache policy; the path token is the subscription credential.       |
 
 ### Private download inventory (#5119)
 
-The complete route/method inventory lives in
-`frontend/src/test/private-download-routes.ts` (57 handlers). The download
+The route/method inventory for downloads with a route file lives in
+`frontend/src/test/private-download-routes.ts`. Catalog file routes instead
+use the portal proxy's private, uncached response. The download
 rule in `route-cache-policy.test.ts` requires the explicit wrapper on each
 entry; an ordinary JSON or portal wrapper does not satisfy it. It also scans
 file constructors, file factories and download paths for missing entries.
@@ -179,34 +176,19 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | --- | --- |
 | `activities/[id]/supervisors/[supervisorId]` | Refreshes the session before forwarding; an exhausted refresh answers 401 with `general.permission`. |
 | `announcement-attachments/[announcementId]` | Multipart attachment upload uses the shared file-upload validator. |
-| `announcement-attachments/[announcementId]/[attachmentId]/download` | Streams attachment bytes and disposition for a browser download. |
 | `auth/login` | Relays login response cookies as well as the backend body. |
 | `auth/logout` | Uses the tenant refresh token for revocation; the browser still clears its local session. |
-| `birthdays/staff-export` | Streams the staff-birthday export file. |
 | `calendar-feed/[token]` | Returns iCalendar text; the path token is the subscription credential. |
 | `demo/access/handoff` | Checks readiness and returns a portal redirect, not backend JSON. |
 | `demo/access/reset` | Validates a demo credential and maps a reset result to the entry URL. |
 | `demo/access/sessions` | Accepts a link or cookie token and stores a new httpOnly demo cookie on success. |
 | `demo/access/status` | Uses the shared demo-token forwarding helper for credential-scoped status. |
-| `emergency/snapshot/export` | Streams emergency-snapshot export bytes and filename. |
-| `enrollment/admin/reports/care-usage/export` | Streams the care-usage export with backend filename. |
-| `enrollment/admin/reports/class-roster/export` | Streams the class-roster export with backend filename. |
-| `enrollment/admin/students/[studentId]/requests/export` | Streams one student’s enrollment requests export. |
 | `enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]` | Combines public form metadata with optional session-backed profile prefetch. |
 | `enrollment/legal-documents` | Multipart legal-document upload uses the shared file-upload validator. |
-| `enrollment/phases/[id]/export` | Streams a phase export in its backend-selected format. |
 | `files/folders/[folderId]/files` | Multipart folder-file upload uses the shared file-upload validator. |
-| `files/folders/[folderId]/files/[fileId]/download` | Streams folder-file bytes and disposition. |
-| `guardians/payment-overview/export` | Streams payment-overview export bytes with backend disposition. |
-| `import/class-list-entries/template` | Returns the class-list CSV template and backend filename. |
-| `import/opening-balances/template` | Returns the opening-balance CSV template and backend filename. |
-| `import/students/template` | Returns the student CSV template and backend filename. |
-| `import/teachers/template` | Returns the teacher CSV template and backend filename. |
 | `invitations/accept` | Maps signup fields and chooses the signed invitation-owner session when an existing account accepts. |
 | `me/profile/avatar` | Validates image magic bytes and MIME before upload through the shared upload wrapper. |
 | `me/profile/avatar/[filename]` | Serves avatar image bytes with MIME and cache headers. |
-| `meal-plan/participants/export` | Streams meal-plan CSV bytes with the backend filename. |
-| `operator/billing/key-date-counts/export` | Streams operator billing export bytes with no-store caching and operator refresh. |
 | `public/enrollment-form-legal-documents/[filename]` | Serves a public form PDF as a body stream. |
 | `public/enrollment-legal-documents/[filename]` | Serves a public legal PDF with MIME validation and cache policy. |
 | `public/login-image/[filename]` | Serves a public login image with MIME validation and cache policy. |
@@ -216,10 +198,6 @@ A direct fetch outside this inventory needs a reason and a shared proxy path.
 | `settings/login-image` | Uploads validated tenant image data and invalidates the tenant cache. |
 | `staff/[id]/avatar` | Returns image bytes, MIME type, and cache headers. |
 | `staff/[id]/documents` | Multipart staff-document upload uses the shared file-upload validator. |
-| `staff/[id]/documents/[documentId]/download` | Streams one staff document with its MIME type and disposition. |
-| `staff/[id]/time-tracking/export` | Streams one staff member’s time-tracking export. |
-| `staff/time-tracking/export` | Streams staff time-tracking export bytes. |
-| `statistics/export` | Streams statistics export bytes with no-store caching. |
 | `students/[id]/photo/[filename]` | Serves student photo bytes with MIME, cache headers and the 304 revalidation path. |
 | `traeger/auth/logout` | Uses the Träger refresh token, not the access token, to revoke the `org` session. |
 
@@ -231,10 +209,11 @@ the factory instead of a direct fetch: downloads `proxyFile` (client
 identity, one refreshed retry; the route wraps it in
 `withPrivateDownloadNoStore`), uploads `proxyFileUpload`
 (`lib/file-upload-wrapper.server.ts`: file validation, listed form fields,
-client identity, one refreshed retry). Under `students/` these are the six
-downloads (accident-report PDF, attendance-history and day-log exports,
-document download, care-request proof, student export) and the three uploads
-(documents, photo, accident-report paper copy).
+client identity, one refreshed retry). Under `students/` the day-log export
+is the one download left with a route file, beside the three uploads
+(documents, photo, accident-report paper copy); the other student downloads
+stream through the catalog proxy (#2352). `students/export` keeps a literal
+catalog hand-off.
 
 The three SSE routes (`sse/events`, `parent/sse/events`, and
 `school/sse/events`) use `proxySSEStream` separately: each must keep its own
@@ -249,10 +228,7 @@ audit-sensitive query keys through `proxyGet` with `forwardQuery`);
 `auth/staff-preview/end` takes the running preview's token from the session
 cookie; `logs` and `parent/logs` ingest client
 telemetry. `enrollment/legal-documents/[filename]` retries deletion with a
-refreshed tenant token. `timetable/betreuungsplan/export`,
-`timetable/lists/export`, `rooms/export`, `staff-shifts/export`,
-and `calendar/appointments/[appointmentId]/ics` retain downloadable bytes
-and headers. The remaining helper-backed routes use their portal's
+refreshed tenant token. The remaining helper-backed routes use their portal's
 `create*Handler` or `proxy*` factories, including the operator and parent
 wrappers; they are not handwritten auth/fetch/error loops.
 
@@ -265,9 +241,8 @@ forwards backend errors unchanged even though the browser always clears its
 local session.
 
 Read [the tenant route wrapper](../../frontend/src/lib/route-wrapper.server.ts)
-and the affected portal's wrapper before changing a handler. Existing consumers
-such as [the rooms export route](../../frontend/src/app/api/rooms/export/route.ts) show the
-request/response wiring; retain the affected endpoint's error contract.
+and the affected portal's wrapper before changing a handler; retain the
+affected endpoint's error contract.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
 
@@ -359,7 +334,10 @@ The key is the scope claim of the portal's session token
   The proxy streams both unread: the file with the headers of
   `fileResponse`, every answer `private, no-store`; the upload once, without
   a retry after a renewal, and 413 with `TooLargeCode` above the limit. Such
-  a route has no entry in `src/test/private-download-routes.ts`.
+  a route has no entry in `src/test/private-download-routes.ts`. The backend
+  names the file's `Content-Type` and `Content-Disposition` itself; the proxy
+  adds no fallback. A BFF-side ID, query or format check moves to the Go
+  handler, and the client sends the backend's parameters and body as they are.
 - A file of the portal `public` (a token link) needs `PublicFile`, the reason
   its link alone may open it; the generator refuses an unmarked public file,
   a public upload, and a marker on any other route. The proxy fetches it

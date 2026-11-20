@@ -20,24 +20,14 @@ import (
 // reach as IDs through the public capability and loads the rows those IDs
 // name. It owns no identity decision; every "who is the caller" and "what do
 // they reach" answer comes from the caller context. The rows it loads come
-// through ports the root declares: the groups, staff, teachers and students
-// of the identity chain, the planned activity groups Timetable serves and
-// the room sessions of Student Presence.
+// through ports the root declares: the groups and staff of the identity
+// chain and the room sessions of Student Presence.
 type CallerRows struct {
-	caller     identityaccess.CallerContext
-	groups     groupRows
-	staff      staffRows
-	teachers   teacherRows
-	students   studentRows
-	activities callerActivityRows
-	sessions   callerSessionRows
-	logger     *slog.Logger
-}
-
-// callerActivityRows are the planned activity groups the /api/me routes
-// render.
-type callerActivityRows interface {
-	ActivityGroupRows(ctx context.Context, ids []int64) (any, error)
+	caller   identityaccess.CallerContext
+	groups   groupRows
+	staff    staffRows
+	sessions callerSessionRows
+	logger   *slog.Logger
 }
 
 // callerSessionRows are the room sessions the caller supervises: the
@@ -49,17 +39,11 @@ type callerSessionRows interface {
 }
 
 // NewCallerRows serves caller over the rows the retained consumers read.
-func NewCallerRows(caller identityaccess.CallerContext, groups groupRows, staff staffRows, teachers teacherRows, students studentRows,
-	activities callerActivityRows, sessions callerSessionRows, logger *slog.Logger,
-) (*CallerRows, error) {
-	if caller.CallerIdentities == nil || groups == nil || staff == nil || teachers == nil || students == nil ||
-		activities == nil || sessions == nil || logger == nil {
-		return nil, errors.New("caller rows: the caller context, the group, staff, teacher, student, activity and session rows and a logger are required")
+func NewCallerRows(caller identityaccess.CallerContext, groups groupRows, staff staffRows, sessions callerSessionRows, logger *slog.Logger) (*CallerRows, error) {
+	if caller.CallerIdentities == nil || groups == nil || staff == nil || sessions == nil || logger == nil {
+		return nil, errors.New("caller rows: the caller context, the group, staff and session rows and a logger are required")
 	}
-	return &CallerRows{
-		caller: caller, groups: groups, staff: staff, teachers: teachers, students: students,
-		activities: activities, sessions: sessions, logger: logger,
-	}, nil
+	return &CallerRows{caller: caller, groups: groups, staff: staff, sessions: sessions, logger: logger}, nil
 }
 
 // Caller returns the caller context the rows are resolved through.
@@ -224,11 +208,6 @@ func (r *CallerRows) StaffRow(ctx context.Context, staffID int64) (any, error) {
 	return r.staff.FindByID(ctx, staffID)
 }
 
-// TeacherRow returns the teacher row the /api/me/teacher route renders.
-func (r *CallerRows) TeacherRow(ctx context.Context, teacherID int64) (any, error) {
-	return r.teachers.FindByID(ctx, teacherID)
-}
-
 // CallerGroupRow is an educational group with the caller's access path, as
 // the /api/me/groups route renders it.
 type CallerGroupRow struct {
@@ -260,35 +239,10 @@ func (r *CallerRows) educationalGroupRows(ctx context.Context, groups []identity
 	return result, nil
 }
 
-// ActivityGroupRows returns the planned activity groups the
-// /api/me/groups/activity route renders, in the order of ids.
-func (r *CallerRows) ActivityGroupRows(ctx context.Context, ids []int64) (any, error) {
-	return r.activities.ActivityGroupRows(ctx, ids)
-}
-
-// SessionRows returns the room sessions the /api/me/groups/active and
-// /api/me/groups/supervised routes render.
+// SessionRows returns the room sessions the /api/me/groups/supervised route
+// renders.
 func (r *CallerRows) SessionRows(ctx context.Context, ids []int64) (any, error) {
 	return r.sessions.SessionRows(ctx, ids)
-}
-
-// StudentRows returns the students the /api/me/groups/{id}/students route
-// renders.
-func (r *CallerRows) StudentRows(ctx context.Context, ids []int64) (any, error) {
-	result := make([]*peopleValues.StudentState, 0, len(ids))
-	if len(ids) == 0 {
-		return result, nil
-	}
-	byID, err := r.students.FindByIDs(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	for _, id := range ids {
-		if student := byID[id]; student != nil {
-			result = append(result, student)
-		}
-	}
-	return result, nil
 }
 
 // CallerNavigationRow is the /api/me/navigation wire shape (#7563): the

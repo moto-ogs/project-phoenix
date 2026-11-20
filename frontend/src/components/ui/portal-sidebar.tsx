@@ -7,10 +7,14 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
+import { Button } from "~/components/ui/button";
 import { MotoNavIcon } from "~/components/ui/moto-nav-icon";
 import type { NavigationLinkProps } from "~/components/ui/navigation-link";
+import { SECTION_LABEL_CLASS } from "~/components/ui/section-label";
+import { SidebarGroupCollapse } from "~/components/ui/sidebar-group";
 import {
   type PortalSidebarTopOffset,
+  SIDEBAR_GROUP_HEADING_CLASSES,
   SIDEBAR_ICON_CLASSES,
   SIDEBAR_NAV_GAP,
   SIDEBAR_NAV_PADDING,
@@ -20,6 +24,7 @@ import {
 } from "~/components/ui/sidebar-geometry";
 import {
   SidebarRowButton,
+  SidebarRowContent,
   SidebarRowLink,
   SidebarSectionHeading,
   type SidebarRowBadge,
@@ -185,22 +190,58 @@ export function PortalSidebar({
 /**
  * Eine benannte Gruppe von Einträgen in der `PortalSidebar`, mit derselben
  * Überschrift wie die Bereiche der Tenant-Leiste (#5975).
+ *
+ * Mit `isOpen` und `onToggle` klappt die Gruppe (Träger-Portal, #7647): Die
+ * Überschrift wird ein Knopf mit Chevron und `aria-expanded`, der Inhalt
+ * klappt wie in der Seitenleiste der OGS-App (`SidebarGroupCollapse`). Den
+ * Zustand hält das Portal, etwa mit `useStoredOpenGroups`.
  */
 export function PortalSidebarGroup({
   label,
+  isOpen,
+  onToggle,
   children,
 }: {
   readonly label: string;
   /** Die Einträge der Gruppe (`PortalSidebarLink`). */
   readonly children: ReactNode;
-}) {
+} & (
+  | { readonly isOpen?: undefined; readonly onToggle?: undefined }
+  | { readonly isOpen: boolean; readonly onToggle: () => void }
+)) {
   const labelId = useId();
+  const list = (
+    <ul aria-labelledby={labelId} className={SIDEBAR_NAV_GAP}>
+      {children}
+    </ul>
+  );
+  if (isOpen === undefined) {
+    return (
+      <li className="pt-4 first:pt-0">
+        <SidebarSectionHeading id={labelId}>{label}</SidebarSectionHeading>
+        {list}
+      </li>
+    );
+  }
   return (
     <li className="pt-4 first:pt-0">
-      <SidebarSectionHeading id={labelId}>{label}</SidebarSectionHeading>
-      <ul aria-labelledby={labelId} className={SIDEBAR_NAV_GAP}>
-        {children}
-      </ul>
+      <Button
+        type="button"
+        variant="ghost"
+        size="md"
+        id={labelId}
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className={`${SIDEBAR_GROUP_HEADING_CLASSES} mb-1.5 cursor-pointer`}
+        noTooltip="Der Chevron zeigt, dass die Gruppe auf- und zuklappt; sonst passiert nichts."
+      >
+        <SidebarRowContent
+          label={label}
+          labelClassName={SECTION_LABEL_CLASS}
+          chevronOpen={isOpen}
+        />
+      </Button>
+      <SidebarGroupCollapse isOpen={isOpen}>{list}</SidebarGroupCollapse>
     </li>
   );
 }

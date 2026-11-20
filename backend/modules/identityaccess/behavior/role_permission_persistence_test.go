@@ -49,9 +49,10 @@ func TestRolePermissionPersistence(t *testing.T) {
 	assertPermissions(second.ID, shared.ID)
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, first.ID, shared.ID))
 
-	// Deleting a permission removes every mapping without removing the
-	// roles or their other permissions.
-	require.NoError(t, rbac.DeletePermission(ctx, shared.ID))
+	// Removing a permission from both roles keeps the roles and their other
+	// permissions.
+	require.NoError(t, rbac.RemovePermissionFromRole(ctx, first.ID, shared.ID))
+	require.NoError(t, rbac.RemovePermissionFromRole(ctx, second.ID, shared.ID))
 	assertPermissions(first.ID, kept.ID)
 	assertPermissions(second.ID)
 	_, err := rbac.GetRole(ctx, second.ID)
@@ -67,7 +68,7 @@ func TestRolePermissionPersistence(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, mappings)
 	assertPermissions(second.ID, kept.ID)
-	_, err = rbac.GetPermission(ctx, kept.ID)
+	_, err = rbac.GetPermissionByName(ctx, kept.Name)
 	require.NoError(t, err)
 	require.NoError(t, rbac.RemovePermissionFromRole(ctx, second.ID, kept.ID))
 	assertPermissions(second.ID)

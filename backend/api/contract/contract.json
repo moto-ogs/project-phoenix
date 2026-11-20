@@ -1740,6 +1740,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -1754,6 +1755,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ActivityScheduleResponse"
@@ -1829,6 +1831,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "TransitionResponse"
@@ -1858,6 +1861,20 @@
         "kind": "ref",
         "ref": "TransitionPreviewResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/announcement-attachments/{announcementId}/{attachmentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -1897,6 +1914,14 @@
         "kind": "ref",
         "ref": "AppointmentDetail"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/calendar/appointments/{appointmentId}/ics",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -2272,6 +2297,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/admin/students/{studentId}/requests/",
       "portals": [
         "tenant"
@@ -2330,6 +2363,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "CareOfferingResponse"
@@ -2609,6 +2643,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -2649,6 +2684,20 @@
         "kind": "ref",
         "ref": "FolderListResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/files/folders/{folderId}/files/{fileId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -2962,6 +3011,96 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/holiday-weeks/{weekId}/participants/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/class-list-entries/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/opening-balances/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/students/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/import/teachers/template",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/iot/",
       "portals": [
         "tenant"
@@ -3128,6 +3267,33 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-caterer/orders/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-plan/",
       "portals": [
         "tenant"
@@ -3169,6 +3335,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-plan/orders/month/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "month",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-plan/participants",
       "portals": [
         "tenant"
@@ -3190,6 +3378,32 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-plan/participants/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "include",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-plan/participants/week",
       "portals": [
         "tenant"
@@ -3204,6 +3418,28 @@
         "kind": "ref",
         "ref": "WeeklyListResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/participants/week/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "week_start",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -3245,6 +3481,20 @@
           "ref": "ParentChatInboxThreadResponse"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/messages/attachments/{attachmentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -3690,6 +3940,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "query": [
         {
           "name": "category",
@@ -3756,6 +4007,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "paginated": true,
       "query": [
         {
@@ -3899,6 +4151,20 @@
           "ref": "InboxThreadResponse"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff-messages/attachments/{attachmentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -4378,6 +4644,36 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/time-tracking/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string"
+        },
+        {
+          "name": "granularity",
+          "kind": "string"
+        },
+        {
+          "name": "month",
+          "kind": "int"
+        },
+        {
+          "name": "time_format",
+          "kind": "string"
+        },
+        {
+          "name": "year",
+          "kind": "int"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/time-tracking/export/datev-report",
       "portals": [
         "tenant"
@@ -4588,6 +4884,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/staff/{id}/documents/{documentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/staff/{id}/payroll-number",
       "portals": [
         "tenant"
@@ -4718,6 +5022,33 @@
         "kind": "ref",
         "ref": "CompTimeBalancePreview"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/staff/{id}/time-tracking/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -4865,6 +5196,89 @@
         "kind": "ref",
         "ref": "careTimeOverrunsResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/statistics/care-time-overruns/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "group_id",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "school_class",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "section",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/statistics/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "docx",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "group_id",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "school_class",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "section",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -5124,6 +5538,14 @@
         "kind": "ref",
         "ref": "CareRequestDetailResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/care-schedule-change-requests/{requestId}/proof",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -5563,6 +5985,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/{id}/accident-reports/{documentId}/pdf",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/{id}/arrival-schedules",
       "portals": [
         "tenant"
@@ -5602,6 +6032,33 @@
         "kind": "ref",
         "ref": "attendanceHistoryResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/{id}/attendance-history/export",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "docx",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -5662,6 +6119,14 @@
         "kind": "ref",
         "ref": "studentDeleteImpactResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/{id}/documents/{documentId}/download",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -5906,6 +6371,14 @@
         "kind": "ref",
         "ref": "surveyResultsResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/surveys/{surveyId}/results/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -6892,6 +7365,14 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/traeger-documents/{id}/file",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/users/{id}",
       "portals": [
         "tenant"
@@ -6931,6 +7412,14 @@
         "kind": "ref",
         "ref": "weekProtocolResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/week-protocols/{protocolId}/pdf",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -7121,6 +7610,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "PermissionResponse"
@@ -7280,6 +7770,33 @@
         "kind": "ref",
         "ref": "feedCountResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/caterer/orders/export",
+      "portals": [
+        "caterer"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -7463,6 +7980,20 @@
           "ref": "billingKeyDateCountResponse"
         }
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/operator/billing/key-date-counts/export",
+      "portals": [
+        "platform"
+      ],
+      "query": [
+        {
+          "name": "month",
+          "kind": "string"
+        }
+      ],
+      "file": true
     },
     {
       "method": "GET",
@@ -8572,6 +9103,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/messages/children/{studentId}/threads",
       "portals": [
         "parent"
@@ -8810,6 +9355,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/school-staff-messages/attachments/{attachmentId}/download",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "inline",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/school/auth/mfa/trusted-devices",
       "portals": [
         "school"
@@ -8871,6 +9430,7 @@
       "portals": [
         "school"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "ParentConferenceView"
@@ -12628,6 +13188,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/birthdays/staff-export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/calendar/appointments",
       "portals": [
         "tenant"
@@ -12744,6 +13312,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/emergency/snapshot/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/enrollment/admin/change-requests/{id}/approve",
       "portals": [
         "tenant"
@@ -12786,6 +13362,22 @@
         "kind": "ref",
         "ref": "ChangeRequestResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/reports/care-usage/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/admin/reports/class-roster/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -12838,6 +13430,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/enrollment/admin/students/{studentId}/requests/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/enrollment/care-offerings/",
       "portals": [
         "tenant"
@@ -12880,6 +13480,14 @@
         "kind": "ref",
         "ref": "PhaseResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/enrollment/phases/{id}/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -13083,6 +13691,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/guardians/payment-overview/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/guardians/students/{studentId}/guardians",
       "portals": [
         "tenant"
@@ -13227,6 +13843,20 @@
         "kind": "ref",
         "ref": "InvitationResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/messages/attachments",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
@@ -13459,6 +14089,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/platform/announcements/{id}/seen",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/pwa/usage",
       "portals": [
         "tenant"
@@ -13479,6 +14117,14 @@
         "kind": "ref",
         "ref": "RoomResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/rooms/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -13534,6 +14180,20 @@
           "ref": "ShiftTypeResponse"
         }
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-messages/attachments",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
@@ -13651,6 +14311,14 @@
         "kind": "ref",
         "ref": "ShiftResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/staff-shifts/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
     },
     {
       "method": "POST",
@@ -14213,6 +14881,19 @@
         "kind": "ref",
         "ref": "StaffExcusedRequestResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/students/export",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "studentExportRequest"
+      },
+      "max_body_bytes": 1048576,
+      "file": true
     },
     {
       "method": "POST",
@@ -14785,6 +15466,14 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/timetable/betreuungsplan/export",
+      "portals": [
+        "tenant"
+      ],
+      "file": true
+    },
+    {
+      "method": "POST",
       "pattern": "/api/timetable/closing-days/",
       "portals": [
         "tenant"
@@ -14961,6 +15650,18 @@
         "kind": "ref",
         "ref": "AttendanceResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/timetable/lists/export",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "slotListRequest"
+      },
+      "file": true
     },
     {
       "method": "POST",
@@ -16521,6 +17222,20 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/messages/children/{studentId}/attachments",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "messageAttachmentResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/mfa/disable",
       "portals": [
         "parent"
@@ -16686,6 +17401,20 @@
       ],
       "file": true,
       "public_file": "the one-time link of the payroll mail is the payroll office's only credential"
+    },
+    {
+      "method": "POST",
+      "pattern": "/school-staff-messages/attachments",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadResponse"
+      },
+      "max_body_bytes": 10489856,
+      "multipart": true,
+      "too_large_code": "files.file_too_large"
     },
     {
       "method": "POST",
@@ -26166,6 +26895,20 @@
           "name": "seen_at",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "shown_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "dismissed_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         },
         {
@@ -95985,6 +96728,50 @@
       ]
     },
     {
+      "name": "UploadResponse",
+      "go_type": "messageattachments.UploadResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "Utilization",
       "go_type": "traegerview.Utilization",
       "fields": [
@@ -106232,6 +107019,50 @@
       ]
     },
     {
+      "name": "messageAttachmentResponse",
+      "go_type": "parent.messageAttachmentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "width",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "monthCloseRequest",
       "go_type": "timetracking.monthCloseRequest",
       "request": true,
@@ -112415,6 +113246,201 @@
           "name": "student_id",
           "schema": {
             "kind": "legacy_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentExportFilters",
+      "go_type": "presenceprojectionhttp.studentExportFilters",
+      "request": true,
+      "fields": [
+        {
+          "name": "search",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "year",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bus",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_consent",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "day_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sort",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_by_class",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "months",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "include_without_health_info",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "enrollment_answer",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "studentExportRequest",
+      "go_type": "presenceprojectionhttp.studentExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "preset",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filters",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "studentExportFilters"
+          }
+        },
+        {
+          "name": "columns",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]

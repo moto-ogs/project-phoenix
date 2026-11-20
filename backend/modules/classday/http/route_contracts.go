@@ -51,5 +51,6 @@ func SlotListRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "POST", Pattern: "/lists/options", Portals: portals, Request: slotListOptionsRequest{}, Response: classday.OptionsResult{}},
 		{Method: "POST", Pattern: "/lists/preview", Portals: portals, Request: slotListRequest{}, Response: classday.ClassdayResult{}},
+		{Method: "POST", Pattern: "/lists/export", Portals: portals, Request: slotListRequest{}, File: true},
 	}
 }

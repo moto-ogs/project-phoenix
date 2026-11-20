@@ -97,6 +97,23 @@ describe("TraegerShell", () => {
     _resetTraegerHostCache();
   });
 
+  it("leads the logo to the start: dashboard with its right, else the school list (#7646)", () => {
+    sessionUser.permissions = ["traeger_overview:read"];
+    const first = renderPortal({ organizationName: "Träger Nord" });
+    expect(screen.getByRole("link", { name: /Träger Nord/ })).toHaveAttribute(
+      "href",
+      "/uebersicht",
+    );
+    first.unmount();
+
+    sessionUser.permissions = [];
+    renderPortal({ organizationName: "Träger Nord" });
+    expect(screen.getByRole("link", { name: /Träger Nord/ })).toHaveAttribute(
+      "href",
+      "/",
+    );
+  });
+
   // NextAuth resolves a callbackUrl against NEXTAUTH_URL, the tenant origin,
   // which sent the Träger to the school chooser after logout.
   it("revokes the session and returns to the Träger login on the Träger host", async () => {

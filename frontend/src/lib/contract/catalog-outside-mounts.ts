@@ -37,7 +37,7 @@ export const CATALOG_OUTSIDE_MOUNTS = {
     "/analytics-policy",
     "/parent-news-attachments",
   ],
-  school: ["/analytics-consent", "/analytics-policy"],
+  school: ["/analytics-consent", "/analytics-policy", "/school-staff-messages"],
   org: [],
   caterer: [],
   platform: [],

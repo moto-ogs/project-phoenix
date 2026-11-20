@@ -12,7 +12,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 // Die Ablaeufe sind noch nicht Schritt fuer Schritt gegen die App geprueft,
 // deshalb bleiben es Entwuerfe.
 /**
- * `/traeger/login` (#4649): eigene Adresse, danach die Liste der Schulen.
+ * `/traeger/login` (#4649): eigene Adresse, danach das Dashboard; ohne
+ * dessen Recht die Liste der Schulen (#7646).
  * Der Code per E-Mail ist Pflicht, beim ersten Mal mit Einrichtung (#4651).
  * „Passwort vergessen?“ schickt den Link auf den Träger-Host (#5149).
  */
@@ -22,7 +23,7 @@ export function traegerLoginTopic(): HelpTopic {
     title: "Im Träger-Portal anmelden",
     question: "Wie melde ich mich im Träger-Portal an?",
     summary:
-      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers.",
+      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers auf einen Blick.",
     group: "einstieg",
     audience: "traeger",
     icon: "Building2",
@@ -42,13 +43,15 @@ export function traegerLoginTopic(): HelpTopic {
       "Ist es dein eigenes Gerät? Wähle `Ja, merken und anmelden`. Dort fragt moto dann 90 Tage lang keinen Code ab.",
       "Nutzen mehrere Personen das Gerät? Wähle `Nein, nur anmelden`.",
     ],
-    result: "moto öffnet die Seite `Schulen` mit allen Schulen deines Trägers.",
+    result:
+      "moto öffnet das `Dashboard`. Dort siehst du die Zahlen von jetzt und was Aufmerksamkeit braucht.",
     notes: [
       "Lege dir die Adresse als Lesezeichen an.",
-      "Die Liste der Schulen lädst du über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+      "Die Liste der Schulen findest du in der Navigation unter `Schulen`. Du lädst sie über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
       "Ein neues Passwort gilt auch für dein Konto in der OGS.",
     ],
     differences: [
+      "Darfst du das Dashboard nicht sehen? Dann öffnet moto die Seite `Schulen` mit allen Schulen deines Trägers.",
       "Oben steht `Willkommen im Träger-Portal`. So erkennst du, dass du richtig bist.",
       "Hast du auch ein Konto in einer OGS? Dann nutzt du dasselbe Konto. Ein zweites Passwort brauchst du nicht.",
       "Meldest du dich zum ersten Mal an? Dann richtest du den Code zuerst ein. Wähle `Code an meine E-Mail senden`. Gib danach den Code ein. Wähle `Weiter zum Dashboard`.",
@@ -56,7 +59,9 @@ export function traegerLoginTopic(): HelpTopic {
       "Ein gemerktes Gerät gilt nur für das Träger-Portal und nur für diesen Träger. In einer OGS merkst du das Gerät dort noch einmal.",
       "Gemerkte Geräte stehen unter `Konto` bei `Meine vertrauten Geräte`. Dort entfernst du ein Gerät wieder.",
       "Am Computer stehen die Bereiche links in der Navigation. Auf dem Handy stehen sie unten. Was dort keinen Platz hat, findest du unter `Mehr`.",
+      "Am Computer stehen die Bereiche in Gruppen wie `Übersicht` oder `Finanzen`. Wähle den Namen einer Gruppe. Dann klappt sie zu oder auf. moto merkt sich das auf diesem Gerät. Öffnest du eine Seite, ist ihre Gruppe offen.",
       "`Einstellungen` steht unten in der Navigation. Ein Klick darauf zeigt dort die Einstellungen. `Zurück zur App` führt zurück.",
+      "Ein Klick auf das Logo oben links führt zurück zum `Dashboard`. Ohne das Dashboard führt er zu `Schulen`.",
     ],
     troubleshootingDetails: [
       "Keine E-Mail mit Code? Schau im Spam-Ordner nach. Wähle sonst `Neuen Code anfordern`.",

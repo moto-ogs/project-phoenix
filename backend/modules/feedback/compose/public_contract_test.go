@@ -20,8 +20,11 @@ func TestPublicFeedbackContractPreservesNormalizedEntry(t *testing.T) {
 	require.NoError(t, err)
 	entry, err := module.Submit(testpkg.Ctx(t), feedback.CreateEntry{Value: " positive ", Day: "2026-08-31", Time: "12:34:56", StudentID: student.ID})
 	require.NoError(t, err)
-	found, err := module.LookupEntry(testpkg.Ctx(t), entry.ID)
+	entries, err := module.FindEntries(testpkg.Ctx(t), feedback.Filter{StudentID: &student.ID})
 	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	found := entries[0]
+	require.Equal(t, entry.ID, found.ID)
 	require.Equal(t, feedback.ValuePositive, found.Value)
 	require.Equal(t, feedback.Date("2026-08-31"), found.Day)
 	require.Equal(t, "12:34:56", found.Time)

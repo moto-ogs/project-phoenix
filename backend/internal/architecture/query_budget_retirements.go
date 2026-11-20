@@ -47,7 +47,15 @@ func retiredQueryBudgets(root, project, sha string, base, candidate map[string]q
 	if err != nil {
 		return nil, nil, fmt.Errorf("read route golden at base %s: %w", sha, err)
 	}
-	candidateRoutes, err := candidateRouteGolden(project, baseRoutes.files)
+	candidateRoutes, err := candidateRouteGolden(project)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read candidate route golden: %w", err)
+	}
+	goldenRetirements, err := addedRouteGoldenRetirements(root, project, sha)
+	if err != nil {
+		return nil, nil, err
+	}
+	violations, err := retiredRouteGoldens(goldenRetirements, baseRoutes, candidateRoutes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read candidate route golden: %w", err)
 	}
@@ -56,7 +64,6 @@ func retiredQueryBudgets(root, project, sha string, base, candidate map[string]q
 		return nil, nil, err
 	}
 	retired := map[string]bool{}
-	var violations []string
 	for _, record := range added {
 		if reason := retirementViolation(record, base, candidate, baseRoutes.routes, candidateRoutes.routes); reason != "" {
 			violations = append(violations, fmt.Sprintf("%s retirement (%s) %s", record.Scenario, record.Route, reason))
@@ -213,20 +220,21 @@ func baseProjectFile(root, project, sha, name string) ([]byte, bool, error) {
 }
 
 // routeGolden is the route table golden of TestFullProductionRouterGolden:
-// its routes and the files that list them, relative to routeGoldenDirectory.
+// its routes and the files that list them, relative to routeGoldenDirectory,
+// each with its own canonical routes.
 type routeGolden struct {
 	routes map[string]bool
-	files  map[string]bool
+	files  map[string]map[string]bool
 }
 
 func newRouteGolden() routeGolden {
-	return routeGolden{routes: map[string]bool{}, files: map[string]bool{}}
+	return routeGolden{routes: map[string]bool{}, files: map[string]map[string]bool{}}
 }
 
 // add reads one golden file. An empty file or a line that is no route fails
 // closed: a route the checker cannot read must not count as removed.
 func (g routeGolden) add(name, source string) error {
-	count := 0
+	own := map[string]bool{}
 	scanner := bufio.NewScanner(strings.NewReader(source))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -236,16 +244,17 @@ func (g routeGolden) add(name, source string) error {
 		if !routeGoldenLine.MatchString(line) {
 			return fmt.Errorf("%s: unreadable route golden line %q", name, line)
 		}
-		g.routes[querybudget.CanonicalRoute(line)] = true
-		count++
+		route := querybudget.CanonicalRoute(line)
+		g.routes[route] = true
+		own[route] = true
 	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	if count == 0 {
+	if len(own) == 0 {
 		return fmt.Errorf("%s: empty route golden", name)
 	}
-	g.files[name] = true
+	g.files[name] = own
 	return nil
 }
 
@@ -282,9 +291,10 @@ func baseRouteGolden(root, project, sha string) (routeGolden, error) {
 	return golden, golden.complete()
 }
 
-// candidateRouteGolden reads the candidate golden. Every file the base lists
-// must still exist: a deleted golden file is no proof that its routes left.
-func candidateRouteGolden(project string, baseFiles map[string]bool) (routeGolden, error) {
+// candidateRouteGolden reads the candidate golden. Whether every file the
+// base lists still exists is retiredRouteGoldens' check: a deleted golden file
+// is no proof that its routes left unless a new retirement record says so.
+func candidateRouteGolden(project string) (routeGolden, error) {
 	golden := newRouteGolden()
 	directory := filepath.Join(project, routeGoldenDirectory)
 	err := filepath.WalkDir(directory, func(name string, entry fs.DirEntry, err error) error {
@@ -303,11 +313,6 @@ func candidateRouteGolden(project string, baseFiles map[string]bool) (routeGolde
 	})
 	if err != nil {
 		return golden, err
-	}
-	for name := range baseFiles {
-		if !golden.files[name] {
-			return golden, fmt.Errorf("route golden %s is missing", name)
-		}
 	}
 	return golden, golden.complete()
 }

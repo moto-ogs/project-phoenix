@@ -265,7 +265,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 	steps = append(append(steps, seedStaffPersonMergeStep{}, seedDemoNeighbourSchoolsStep{seeder: seeder}), traegerSteps(seeder)...)
 	if !seeder.options.DeferHistory {
 		// Erst jetzt sind alle Kinder der Schule angelegt (#5031).
-		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{})
+		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{seeder: seeder})
 	}
 	if seeder.options.SeedWeekProtocols {
 		steps = append(steps, seedWeekProtocolStep{})
@@ -362,7 +362,7 @@ func deferredDemoSteps(seeder *Seeder) []Step {
 		seedPresenceHistoryStep{seeder: seeder},
 		// The feedback the children gave on those days (#5029).
 		seedFeedbackHistoryStep{seeder: seeder},
-		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{})
+		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{seeder: seeder})
 }
 
 // fullDemoSetupSteps prepares the school before its history and parent flows.
@@ -383,7 +383,7 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedShiftSeriesStep{},
 		// After the shift series: its autumn holiday period is the seeded
 		// autumn vacation (#5345).
-		seedSchoolVacationsStep{},
+		seedSchoolVacationsStep{seeder: seeder},
 		seedVisitorDayStep{},
 		seedHomeLayoutStep{},
 		seedStaffMasterDataStep{},
