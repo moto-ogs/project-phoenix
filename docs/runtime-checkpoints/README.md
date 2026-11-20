@@ -126,7 +126,7 @@ numbers stay comparable with #3019 and #3020; the bridge run proves it. Then
 | Surface | Scenarios |
 |---|---|
 | Identity & Access | `POST /auth/login` (200, wrong password 401), `POST /auth/refresh` with the latest rotated refresh token (200, malformed token 401), `POST /auth/mfa/verify` (200, wrong code 401), `POST /auth/passkeys/login/options` (200, foreign origin 401) |
-| Device scan (kiosk) | `POST /api/iot/checkin` (200, unknown device key 401), `POST /api/iot/pickup-query` (200, missing PIN 401), `GET /api/iot/config` (200, wrong PIN 401), `GET /api/iot/rfid/{tagId}` (200, key without `Bearer` 401), `POST /api/iot/staff-clock` alternating check-in and check-out (200, wrong PIN 401) |
+| Device scan (kiosk) | `POST /api/iot/checkin` (200, unknown device key 401), `POST /api/iot/pickup-query` (200, missing PIN 401), `GET /api/iot/config` (200, device key only), `GET /api/iot/rfid/{tagId}` (200, wrong PIN 401, key without `Bearer` 401), `POST /api/iot/staff-clock` alternating check-in and check-out (200, wrong PIN 401) |
 | `/api/students` | the list (200, unknown `view` 400), the aggregated change-request queue (200, unknown `view` 400), a care-schedule decision (200, unknown request 404), the withdrawal queue (200, unknown `state` 400), the withdrawal deletion impact (200, unknown task 404) |
 | Cross-module writes | care end: preview (200, day in the past 400), confirmation (200), re-plan of an already planned end (200), stale token (409); student deletion through `deleteConfirmed` with one companion (200, stale fingerprint 409) |
 
