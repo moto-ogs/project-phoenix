@@ -668,14 +668,15 @@ function TenantPageView({
               einzelne Kebab-Menü in eine eigene, linksbündige Zeile -- und
               die Kopfkarte wuchs um genau den toten Streifen, den sie auf
               dem Desktop nicht mehr hat.
-              `max-sm:min-w-[calc(14ch+6rem)]`: Auf dem Telefon ist der
-              Titelblock breit genug für ein kurzes Wort samt Info-Knopf und
-              Symbolkachel. Passen Hilfe, Status und Kebab daneben nicht
-              mehr, rücken sie in die nächste Zeile, statt den Titel auf die
-              frühere 6-rem-Breite zu drücken („Anmel|dung“, #7649). Nicht
-              trennbare lange Titel bleiben mit `wrap-anywhere` trotzdem
-              innerhalb des Kopfes. */}
-          <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-[calc(14ch+6rem)]">
+              `max-sm:min-w-[min(100%,calc(14ch+6rem))]`: Auf dem Telefon
+              ist der Titelblock gewöhnlich breit genug für ein kurzes Wort,
+              Info-Knopf und Symbolkachel. In einem noch schmaleren Kopf
+              wird diese Mindestbreite selbst auf den verfügbaren Platz
+              begrenzt. Hilfe, Status und Kebab rücken dann in die nächste
+              Zeile, statt den Titel auf die frühere 6-rem-Breite zu drücken
+              („Anmel|dung“, #7649). Nicht trennbare lange Titel bleiben mit
+              `wrap-anywhere` trotzdem innerhalb des Kopfes. */}
+          <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-[min(100%,calc(14ch+6rem))]">
             {leading}
             <div className="min-w-0">
               <div className="flex items-center gap-1">

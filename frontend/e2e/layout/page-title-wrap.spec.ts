@@ -252,6 +252,32 @@ test("a long title next to the info button keeps short words whole on a phone", 
   }
 });
 
+test("the page head does not overflow in a narrow CSS viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 200, height: 844 });
+  for (const testCase of cases().filter(({ name }) =>
+    [
+      "Träger-Ferienanmeldung",
+      "untrennbarer Importtitel",
+      "untrennbarer Status",
+    ].includes(name),
+  )) {
+    await renderHead(page, testCase.props);
+    const label = `${testCase.name}, 200 px`;
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect.soft(overflow, label).toBeLessThanOrEqual(0);
+    const headerOverflow = await page
+      .locator("header")
+      .evaluate((header) => header.scrollWidth - header.clientWidth);
+    expect.soft(headerOverflow, label).toBeLessThanOrEqual(0);
+  }
+});
+
 test("the desktop head keeps the title, status and menu in one row", async ({
   page,
 }) => {
