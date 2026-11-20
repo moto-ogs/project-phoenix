@@ -3,7 +3,9 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
+  multipart,
   nullable,
   object,
   requestBody,
@@ -96,12 +98,51 @@ export const FolderListResponseSchema: z.ZodType<FolderListResponse, unknown> = 
   max_bytes: safeInt,
 });
 
+/** Go: files.FileResponse */
+export interface FileResponse {
+  id: string;
+  folder_id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+  uploaded_by: string;
+  can_delete: boolean;
+}
+
+export const FileResponseSchema: z.ZodType<FileResponse, unknown> = object<FileResponse>({
+  id: str,
+  folder_id: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  uploaded_at: instant,
+  uploaded_by: str,
+  can_delete: bool,
+});
+
+/** Go: files.FileListResponse */
+export interface FileListResponse {
+  folder: FolderResponse;
+  files: FileResponse[] | null;
+}
+
+export const FileListResponseSchema: z.ZodType<FileListResponse, unknown> = object<FileListResponse>({
+  folder: FolderResponseSchema,
+  files: nullable(arr(FileResponseSchema)),
+});
+
 /** Go: files.FolderRequest */
 export interface FolderRequest {
   name?: string;
   visibility?: string;
   role_ids?: string[] | null;
   account_ids?: string[] | null;
+}
+
+/** Query of GET /api/files/folders/{folderId}/files/{fileId}/download */
+export interface GetFilesFoldersFolderIdFilesFileIdDownloadQuery {
+  inline?: string;
 }
 
 export const routes = {
@@ -129,12 +170,34 @@ export const routes = {
     portals: ["tenant"],
     response: success(FolderListResponseSchema),
   },
+  "GET /api/files/folders/{folderId}/files": {
+    method: "GET",
+    pattern: "/api/files/folders/{folderId}/files",
+    portals: ["tenant"],
+    response: success(FileListResponseSchema),
+  },
+  "GET /api/files/folders/{folderId}/files/{fileId}/download": {
+    method: "GET",
+    pattern: "/api/files/folders/{folderId}/files/{fileId}/download",
+    portals: ["tenant"],
+    query: ["inline"],
+    response: fileAnswer,
+  },
   "POST /api/files/folders": {
     method: "POST",
     pattern: "/api/files/folders",
     portals: ["tenant"],
     request: requestBody<FolderRequest>(),
     response: success(FolderResponseSchema),
+  },
+  "POST /api/files/folders/{folderId}/files": {
+    method: "POST",
+    pattern: "/api/files/folders/{folderId}/files",
+    portals: ["tenant"],
+    maxBodyBytes: 26218496,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(FileResponseSchema),
   },
   "PUT /api/files/folders/{folderId}": {
     method: "PUT",

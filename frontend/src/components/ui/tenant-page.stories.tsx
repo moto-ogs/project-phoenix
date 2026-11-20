@@ -14,6 +14,7 @@ import type { ActiveFilter, FilterConfig } from "./page-header/types";
 import { PagePathProvider } from "./page-path";
 import { SectionCard } from "./section-card";
 import { SegmentedControl } from "./segmented-control";
+import { StatusBadge } from "./status-badge";
 import { TenantPage, TenantPageListSearch } from "./tenant-page";
 
 const meta = {
@@ -135,6 +136,28 @@ export const SearchWithFiltersAndBadge: Story = {
     filters: [statusFilter],
     onClearAllFilters: fn(),
     badge: { icon: <Users className="h-5 w-5" />, count: 9, label: "Kinder" },
+    children: pageContent,
+  },
+};
+
+/**
+ * Langer Titel mit Info-Knopf, Status und Kebab: Auf dem Telefon bleibt der
+ * Titelblock so breit wie sein längstes Wort; Status und Kebab rücken in die
+ * nächste Zeile, statt „Anmeldung“ mitten im Wort zu brechen (#7649).
+ */
+export const LongTitleWithInfo: Story = {
+  args: {
+    title: "Anmeldung von Lena Frühauf",
+    info: "Hier siehst du alle Angaben zu dieser Anmeldung.",
+    stats: "Eingegangen am 03.11.2026",
+    actions: <StatusBadge tone="blue" label="Eingegangen" />,
+    overflowMenu: [
+      {
+        label: "Herunterladen",
+        description: "Lädt die Anmeldung als PDF herunter.",
+        onClick: fn(),
+      },
+    ],
     children: pageContent,
   },
 };

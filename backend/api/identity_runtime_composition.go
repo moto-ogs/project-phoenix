@@ -30,7 +30,6 @@ func SchoolPortalAuth(sessions identityaccess.SchoolAccountLogin) schoolPortal.A
 		IssueTokens: func(ctx context.Context, proof schoolPortal.VerifiedChallenge, ipAddress, userAgent string) (string, string, error) {
 			return sessions.IssueSchoolTokensForVerifiedMFA(ctx, identityaccess.VerifiedMFAChallenge{AccountID: proof.AccountID, TenantID: proof.TenantID, Scope: identityaccess.MFAChallengeScopeSchool, MFAResetGeneration: proof.MFAResetGeneration}, ipAddress, userAgent)
 		},
-		SwitchSchool: sessions.SwitchSchool,
 	}
 }
 

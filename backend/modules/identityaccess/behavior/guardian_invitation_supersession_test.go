@@ -1,12 +1,9 @@
 package behavior_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
-	"time"
 
-	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -49,37 +46,6 @@ func TestGuardianInvitationIssuancePreservesUnrelatedApproval(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, approvals, 1)
 			assert.Equal(t, *pending.InvitationID, approvals[0].InvitationID)
-		})
-	}
-}
-
-func TestResendGuardianInvitation_LosesToConcurrentInvalidation(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
-	outbox := api.NewCapturingOutbox()
-	service, err := api.NewGuardianInvitationServiceForTests(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), api.GuardianInvitationTestConfig{Outbox: outbox})
-	require.NoError(t, err)
-	creator := testpkg.CreateTestAccount(t, db, "resend-invalidation")
-	for _, status := range []string{identityaccess.GuardianInvitationApprovalNotRequired, identityaccess.GuardianInvitationApprovalApproved} {
-		t.Run(status, func(t *testing.T) {
-			profile := testpkg.CreateTestGuardianProfile(t, db, "resend-invalidation-"+status)
-			invitation, err := service.CreateGuardianInvitation(testpkg.Ctx(t), identityaccess.GuardianInvitationRequest{
-				GuardianProfileID: profile.ID, CreatedBy: creator.ID,
-			})
-			require.NoError(t, err)
-			_, err = db.ExecContext(t.Context(), `UPDATE auth.guardian_invitations SET approval_status = ? WHERE id = ?`, status, invitation.ID)
-			require.NoError(t, err)
-			before := testpkg.GuardianInvitationByID(t, db, invitation.ID)
-			mailCount := len(outbox.Requests())
-			err = raceHeldTransition(t, db, func(context.Context) error {
-				return service.ResendGuardianInvitation(testpkg.Ctx(t), invitation.ID, creator.ID)
-			}, `UPDATE auth.guardian_invitations SET expires_at = ?, email = NULL WHERE id = ?`, time.Now().Add(-time.Minute), invitation.ID)
-			require.Error(t, err, "a resend cannot restore the expiry from its stale snapshot")
-			after := testpkg.GuardianInvitationByID(t, db, invitation.ID)
-			assert.Equal(t, before.Token, after.Token, "no new token replaces the invalidated link")
-			assert.True(t, after.ExpiresAt.Before(time.Now()))
-			assert.Empty(t, after.Email)
-			assert.Len(t, outbox.Requests(), mailCount, "a refused resend queues no mail")
 		})
 	}
 }

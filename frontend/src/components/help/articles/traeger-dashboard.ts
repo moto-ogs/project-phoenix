@@ -13,7 +13,7 @@ export function traegerDashboardTopic(): HelpTopic {
     audience: "traeger",
     icon: "BarChart3",
     steps: [
-      "Wähle in der Navigation `Dashboard`.",
+      "Nach der Anmeldung öffnet moto das Dashboard. Sonst wähle in der Navigation `Dashboard`.",
       "Lies oben die Summe für alle Schulen.",
       "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
       "Wähle dort `Zur Schule`, um die Schule anzusehen.",
@@ -24,6 +24,7 @@ export function traegerDashboardTopic(): HelpTopic {
     result:
       "Du siehst für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
     notes: [
+      "Ohne die Pflichtangaben erstellt moto nicht alle Verträge, Rechnungen und Bescheide. Der Hinweis verschwindet, sobald alles eingetragen ist.",
       "Die Zahlen aktualisieren sich jede Minute von selbst.",
       "Du siehst nur Zahlen, keine Namen.",
       "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
@@ -36,6 +37,8 @@ export function traegerDashboardTopic(): HelpTopic {
       "`Offene Anmeldungen` zählt die Kinder aus der Online-Anmeldung, über die die Schule noch nicht entschieden hat.",
     ],
     differences: [
+      "Steht oben `Es fehlen noch Pflichtangaben`? Trage die genannten Angaben nach. Die Knöpfe im Hinweis führen zur passenden Seite.",
+      "Eine Angabe darfst du nicht eintragen? Dann nennt der Hinweis die Rolle, die das tut.",
       "`Betreuungskräfte` zählt nur, wer sich in der Zeiterfassung angemeldet hat. Homeoffice zählt nicht. Nutzt eine Schule die Zeiterfassung nicht, steht dort 0 und beim Schlüssel `–`.",
       "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
       "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",

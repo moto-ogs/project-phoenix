@@ -50,7 +50,7 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 			return &settingsHTTP.UploadedFile{File: file.File, ContentType: file.ContentType}, nil
 		},
 		PDFUpload: func(w http.ResponseWriter, r *http.Request, field string, maxFile, maxBody int64) (*settingsHTTP.UploadedFile, error) {
-			file, err := apiCommon.ParsePDFWithLimits(w, r, field, maxFile, maxBody)
+			file, err := apiCommon.Declared(apiCommon.ParsePDFWithLimits, apiCommon.DeclaredPDFTypes)(w, r, field, maxFile, maxBody)
 			if err != nil {
 				return nil, err
 			}
@@ -94,6 +94,10 @@ func renderSettingsError(w http.ResponseWriter, r *http.Request, status int, err
 // so the person reads which value is allowed. A device PIN that is easy to
 // guess gets its own code, so the person reads why (#7175).
 func settingsInputError(err error) render.Renderer {
+	// A refused AGB document or login image keeps the upload's code (#2352).
+	if refused, ok := apiCommon.UploadRefusalRenderer(err); ok {
+		return refused
+	}
 	if _, ok := errors.AsType[*settingsModule.DevicePINTooSimpleError](err); ok {
 		return apiCommon.ErrorInvalidRequestWithCode(err, apiCommon.CodeSettingsDevicePinTooSimple)
 	}

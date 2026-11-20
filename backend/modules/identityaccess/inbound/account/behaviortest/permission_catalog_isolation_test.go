@@ -56,35 +56,6 @@ func TestTenantAndOrganizationAdminsCannotMutateGlobalPermissionCatalog(t *testi
 				Count(testpkg.Ctx(t))
 			require.NoError(t, err)
 			assert.Zero(t, createCount)
-
-			updateTarget := testpkg.CreateTestPermission(t, tc.db, "F18Update", "f18-update", "read")
-			updateReq := testutil.NewJSONRequest(t, http.MethodPut, fmt.Sprintf("/auth/permissions/%d", updateTarget.ID), map[string]string{
-				"name":        updateTarget.Name,
-				"description": "F18 scoped update attempt",
-				"resource":    updateTarget.Resource,
-				"action":      "write",
-			})
-			updateResp := testutil.ExecuteWithAuthPermissions(t, router, updateReq, claims, permissions)
-			assert.Equal(t, http.StatusForbidden, updateResp.Code, "Body: %s", updateResp.Body.String())
-			var action string
-			err = tc.db.NewSelect().
-				TableExpr("auth.permissions").
-				Column("action").
-				Where("id = ?", updateTarget.ID).
-				Scan(testpkg.Ctx(t), &action)
-			require.NoError(t, err)
-			assert.Equal(t, "read", action)
-
-			deleteTarget := testpkg.CreateTestPermission(t, tc.db, "F18Delete", "f18-delete", "read")
-			deleteReq := testutil.NewJSONRequest(t, http.MethodDelete, fmt.Sprintf("/auth/permissions/%d", deleteTarget.ID), nil)
-			deleteResp := testutil.ExecuteWithAuthPermissions(t, router, deleteReq, claims, permissions)
-			assert.Equal(t, http.StatusForbidden, deleteResp.Code, "Body: %s", deleteResp.Body.String())
-			deleteCount, err := tc.db.NewSelect().
-				TableExpr("auth.permissions").
-				Where("id = ?", deleteTarget.ID).
-				Count(testpkg.Ctx(t))
-			require.NoError(t, err)
-			assert.Equal(t, 1, int(deleteCount))
 		})
 	}
 }
@@ -113,19 +84,7 @@ func TestPlatformScopeCanMutateGlobalPermissionCatalog(t *testing.T) {
 	data := testutil.ParseJSONResponse(t, createResp.Body.Bytes())["data"].(map[string]interface{})
 	permissionID, err := strconv.ParseInt(data["id"].(string), 10, 64)
 	require.NoError(t, err)
-
-	updateReq := testutil.NewJSONRequest(t, http.MethodPut, fmt.Sprintf("/auth/permissions/%d", permissionID), map[string]string{
-		"name":        resource + ":write",
-		"description": "F18 platform update",
-		"resource":    resource,
-		"action":      "write",
-	})
-	updateResp := testutil.ExecuteWithAuthPermissions(t, router, updateReq, claims, permissions)
-	assert.Equal(t, http.StatusNoContent, updateResp.Code, "Body: %s", updateResp.Body.String())
-
-	deleteReq := testutil.NewJSONRequest(t, http.MethodDelete, fmt.Sprintf("/auth/permissions/%d", permissionID), nil)
-	deleteResp := testutil.ExecuteWithAuthPermissions(t, router, deleteReq, claims, permissions)
-	assert.Equal(t, http.StatusNoContent, deleteResp.Code, "Body: %s", deleteResp.Body.String())
+	testpkg.OwnTestPermission(t, fixtureDB, permissionID)
 
 }
 

@@ -151,7 +151,7 @@ func (c *OpeningBalanceImportConfig) validateOpeningBalancePreflight(ctx context
 	if err := c.BalanceAdjustService.ValidateOpeningBalance(ctx, row.StaffID, c.DecidedByStaffID, c.EffectiveDate.String(), *row.HoursBalanceMinutes, c.Note); err != nil {
 		return []importModels.ValidationError{{
 			Field:    "hours_balance",
-			Message:  fmt.Sprintf("Stundenkonto-Eröffnungssaldo kann nicht gebucht werden: %s", translateOpeningBookingError(err)),
+			Message:  fmt.Sprintf("Stundenkonto-Eröffnungssaldo kann nicht gebucht werden: %s", openingBookingPreviewMessage(err)),
 			Code:     "opening_preflight_failed",
 			Severity: importModels.ErrorSeverityError,
 		}}
@@ -203,7 +203,7 @@ func (c *OpeningBalanceImportConfig) validateDerivedVacationOpening(ctx context.
 	if err := c.StaffAbsenceService.ValidateVacationOpeningAbsencesBefore(ctx, row.StaffID, c.EffectiveDate.String()); err != nil {
 		return []importModels.ValidationError{{
 			Field:    "vacation_remaining",
-			Message:  fmt.Sprintf("Urlaubs-Übernahme kann nicht gebucht werden: %s", translateOpeningBookingError(err)),
+			Message:  fmt.Sprintf("Urlaubs-Übernahme kann nicht gebucht werden: %s", openingBookingPreviewMessage(err)),
 			Code:     "vacation_opening_preflight_failed",
 			Severity: importModels.ErrorSeverityError,
 		}}
@@ -496,23 +496,36 @@ func (c *OpeningBalanceImportConfig) applyVacationQuota(ctx context.Context, row
 	return nil
 }
 
-// translateOpeningBookingError maps the booking sentinels to German messages
-// — the generic import service embeds the error text verbatim in the
-// per-row "Fehler beim Erstellen" message.
+// translateOpeningBookingError preserves unexpected causes for transaction handling.
 func translateOpeningBookingError(err error) error {
+	if message := openingBookingRefusal(err); message != "" {
+		return errors.New(message)
+	}
+	return err
+}
+
+func openingBookingPreviewMessage(err error) string {
+	if message := openingBookingRefusal(err); message != "" {
+		return message
+	}
+	return "Die Übernahme konnte nicht geprüft werden. Bitte versuche es erneut."
+}
+
+// openingBookingRefusal only names known domain refusals, never diagnostics.
+func openingBookingRefusal(err error) string {
 	switch {
 	case errors.Is(err, ports.ErrOpeningAlreadyExists):
-		return errors.New("für diese Person existiert bereits ein Stundenkonto-Eröffnungssaldo")
+		return "für diese Person existiert bereits ein Stundenkonto-Eröffnungssaldo"
 	case errors.Is(err, ports.ErrVacationOpeningExists):
-		return errors.New("für diese Person existiert bereits eine Urlaubs-Übernahme in diesem Jahr")
+		return "für diese Person existiert bereits eine Urlaubs-Übernahme in diesem Jahr"
 	case errors.Is(err, ports.ErrVacationOpeningAbsencesBeforeCutoff):
-		return errors.New("es existieren bereits Urlaubs-Abwesenheiten vor dem Stichtag — Übernahme würde doppelt zählen")
+		return "es existieren bereits Urlaubs-Abwesenheiten vor dem Stichtag — Übernahme würde doppelt zählen"
 	case errors.Is(err, ports.ErrAdjustmentInClosedMonth):
-		return errors.New("der Monat des Stichtags ist bereits abgeschlossen")
+		return "der Monat des Stichtags ist bereits abgeschlossen"
 	case errors.Is(err, ports.ErrAdjustmentHasDependentReset):
-		return errors.New("es existieren bereits spätere Stundenkonto-Buchungen (Reset), die vom Stichtag abhängen")
+		return "es existieren bereits spätere Stundenkonto-Buchungen (Reset), die vom Stichtag abhängen"
 	default:
-		return err
+		return ""
 	}
 }
 

@@ -177,13 +177,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r nativeGuardianProfileRepository) FindWithoutAccount(ctx context.Context) ([]*directory.GuardianProfileSnapshot, error) {\n\tout0, out1 := r.rawGuardianProfileRepository.FindWithoutAccount(ctx)\n\treturn mapRecordSlice(out0, func(value *models.GuardianProfile) *directory.GuardianProfileSnapshot {\n\t\treturn NativeGuardianProfile(value)\n\t}), out1\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/adapters/peoplepostgres/nativeGuardianProfileRepository.FindWithoutAccount",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (r nativeGuardianProfileRepository) ListWithOptions(ctx context.Context, options *ports.QueryOptions) ([]*directory.GuardianProfileSnapshot, error) {\n\tout0, out1 := r.rawGuardianProfileRepository.ListWithOptions(ctx, options)\n\treturn mapRecordSlice(out0, func(value *models.GuardianProfile) *directory.GuardianProfileSnapshot {\n\t\treturn NativeGuardianProfile(value)\n\t}), out1\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/adapters/peoplepostgres/nativeGuardianProfileRepository.ListWithOptions",
@@ -859,20 +852,6 @@
       "evidence": "func (p *GuardianDirectory) ListGuardians(ctx context.Context, page, pageSize int) ([]peopledirectory.Guardian, error) {\n\tprofiles, err := p.guardians.ListGuardians(ctx, peoplePorts.NewQueryOptions().WithPagination(page, pageSize))\n\tif err != nil {\n\t\treturn nil, mapGuardianError(err)\n\t}\n\treturn toDirectoryGuardians(profiles), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListGuardians",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) ListGuardiansWithoutAccount(ctx context.Context) ([]peopledirectory.Guardian, error) {\n\tprofiles, err := p.guardians.GuardianProfiles().FindWithoutAccount(ctx)\n\tif err != nil {\n\t\treturn nil, mapGuardianError(err)\n\t}\n\treturn toDirectoryGuardians(profiles), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListGuardiansWithoutAccount",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) ListInvitableGuardians(ctx context.Context) ([]peopledirectory.Guardian, error) {\n\tprofiles, err := p.guardians.GuardianProfiles().FindInvitable(ctx)\n\tif err != nil {\n\t\treturn nil, mapGuardianError(err)\n\t}\n\treturn toDirectoryGuardians(profiles), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListInvitableGuardians",
       "owner": "modules/peopledirectory"
     },
     {

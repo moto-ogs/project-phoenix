@@ -195,6 +195,77 @@ describe("handleApiError", () => {
     expect(body).not.toContain("db.internal");
   });
 
+  it.each(["backend", "local"])(
+    "sanitizes nested import diagnostics through the %s error path",
+    async (source) => {
+      const result = {
+        total_rows: 3,
+        created_count: 1,
+        updated_count: 1,
+        error_count: 1,
+        errors: [
+          {
+            row_number: 4,
+            data: { first_name: "Ada" },
+            errors: [
+              {
+                field: "creation",
+                code: "creation_failed",
+                severity: "error",
+                message: "database db.internal: constraint failed",
+              },
+              {
+                field: "last_name",
+                code: "required",
+                severity: "error",
+                message: "Bitte gib den Nachnamen ein.",
+              },
+            ],
+          },
+        ],
+      };
+      const details = {
+        result,
+        rejection: {
+          code: "students.child_quota_exceeded",
+          details: { limit: 5 },
+        },
+      };
+      const code = "import.import_batch_failed";
+      const response =
+        source === "backend"
+          ? handleApiError(backendError(500, { code, details }))
+          : problemResponse(500, "write failed", { code, details });
+      const body = await response.text();
+      expect(JSON.parse(body)).toMatchObject({
+        code,
+        details: {
+          ...details,
+          result: {
+            ...result,
+            errors: [
+              {
+                ...result.errors[0],
+                errors: [
+                  {
+                    ...result.errors[0]!.errors[0],
+                    message:
+                      "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.",
+                  },
+                  result.errors[0]!.errors[1],
+                ],
+              },
+            ],
+          },
+        },
+      });
+      expect(body).not.toContain("db.internal");
+      expect(details.result.errors[0]!.errors[0]!.message).toContain(
+        "db.internal",
+      );
+    },
+  );
+
   it("replaces an incomplete JSON backend error with a class envelope", async () => {
     const response = handleApiError(
       new ServerApiResponseError(

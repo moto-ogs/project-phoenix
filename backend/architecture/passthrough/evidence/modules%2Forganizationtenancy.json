@@ -121,13 +121,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {\n\tif rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {\n\t\tcommon.RenderError(w, r, common.OperatorForbidden(\"Die Demo-Erfassung ist nur lokal verfügbar.\"))\n\t\treturn\n\t}\n\twritten, err := rs.service.SeedBillingKeyDateCounts(r.Context(), rs.now())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, rs.billingError(r, err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusCreated, map[string]int{\"written\": written}, \"Demo-Stichtagszahlen erfasst\")\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/organizationtenancy/inbound/operator/BillingResource.SeedKeyDateCounts",
-      "owner": "modules/organizationtenancy"
-    },
-    {
-      "build": "production",
       "evidence": "func (rs *ProvisioningResource) DeleteDevice(w http.ResponseWriter, r *http.Request) {\n\tdeviceID, ok := common.ParseInt64IDWithError(w, r, \"id\", invalidDeviceIDMessage)\n\tif !ok {\n\t\treturn\n\t}\n\toperatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)\n\terr := rs.service.DeleteDevice(r.Context(), deviceID, operatorID, common.ParseClientIP(r))\n\tif err != nil {\n\t\tcommon.RenderError(w, r, ProvisioningErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, nil, \"Device deleted successfully\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.DeleteDevice",

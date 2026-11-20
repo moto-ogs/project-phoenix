@@ -288,7 +288,7 @@ func (rs *Resource) uploadAccidentPaperCopy(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	upload, ok := rs.openStudentDocumentUpload(w, r)
+	upload, ok := rs.openStudentDocumentUpload(w, r, parseAccidentScan)
 	if !ok {
 		return
 	}

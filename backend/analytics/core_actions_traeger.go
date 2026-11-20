@@ -174,7 +174,6 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/family-billing/"}:                      notCaptured,
 	{http.MethodPut, "/traeger/billing-families/debtor-number"}:       notCaptured,
 	{http.MethodPut, "/traeger/billing-families/child-debtor-number"}: notCaptured,
-	{http.MethodDelete, "/traeger/family-billing/{id}"}:               notCaptured,
 	{http.MethodPut, "/traeger/billing-run-due-dates/care/{id}"}:      notCaptured,
 	{http.MethodPut, "/traeger/billing-run-due-dates/holiday/{id}"}:   notCaptured,
 	// The SEPA creditor and the mandates of the families (#4695) belong to

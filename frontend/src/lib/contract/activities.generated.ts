@@ -252,12 +252,14 @@ export const routes = {
     method: "GET",
     pattern: "/api/activities/{id}/schedules",
     portals: ["tenant"],
+    deprecated: true,
     response: success(z.array(ActivityScheduleResponseSchema)),
   },
   "GET /api/activities/{id}/schedules/{scheduleId}": {
     method: "GET",
     pattern: "/api/activities/{id}/schedules/{scheduleId}",
     portals: ["tenant"],
+    deprecated: true,
     response: success(ActivityScheduleResponseSchema),
   },
   "POST /api/activities/": {

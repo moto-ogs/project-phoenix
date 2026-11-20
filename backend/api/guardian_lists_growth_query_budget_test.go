@@ -59,8 +59,8 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 			c.requirePayerSet(t, sid, &gid)
 		}
-		for _, name := range []string{"search", "without-account", "invitable", "detail", "delete-preview", "phones", "students", "payment_overview", "payment_export", "bulk_invite"} {
-			path := map[string]string{"search": "/search?q=BudgetGuardian", "without-account": "/without-account", "invitable": "/invitable", "detail": fmt.Sprintf("/%d", guardianIDs[0]), "delete-preview": fmt.Sprintf("/%d/delete-preview", guardianIDs[0]), "phones": fmt.Sprintf("/%d/phone-numbers/", guardianIDs[0]), "students": fmt.Sprintf("/%d/students", guardianIDs[0])}[name]
+		for _, name := range []string{"search", "detail", "delete-preview", "phones", "students", "payment_overview", "payment_export", "bulk_invite"} {
+			path := map[string]string{"search": "/search?q=BudgetGuardian", "detail": fmt.Sprintf("/%d", guardianIDs[0]), "delete-preview": fmt.Sprintf("/%d/delete-preview", guardianIDs[0]), "phones": fmt.Sprintf("/%d/phone-numbers/", guardianIDs[0]), "students": fmt.Sprintf("/%d/students", guardianIDs[0])}[name]
 			method := http.MethodGet
 			var body any
 			switch name {
@@ -161,7 +161,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.True(t, row.Dry)
 				require.Equal(t, n, row.Invited)
 				require.Empty(t, row.Problems)
-			case "search", "without-account", "invitable":
+			case "search":
 				var rows []struct {
 					ID                  int64
 					FirstName           string `json:"first_name"`
@@ -272,10 +272,6 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			switch name {
 			case "search":
 				querybudgets.AssertQueryBudget(t, "api.guardians.search.http_positive_growth", counter.Measurement(counter.Queries()))
-			case "without-account":
-				querybudgets.AssertQueryBudget(t, "api.guardians.without_account.http_positive_growth", counter.Measurement(counter.Queries()))
-			case "invitable":
-				querybudgets.AssertQueryBudget(t, "api.guardians.invitable.http_positive_growth", counter.Measurement(counter.Queries()))
 			case "detail":
 				querybudgets.AssertQueryBudget(t, "api.guardians.detail.http_positive_growth", counter.Measurement(counter.Queries()))
 			case "delete-preview":

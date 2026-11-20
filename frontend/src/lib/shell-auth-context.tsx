@@ -12,6 +12,7 @@ import { operatorAbsoluteUrl, operatorPath } from "~/lib/operator-url";
 import { parentPath } from "~/lib/parent-url";
 import { schoolPath } from "~/lib/school-url";
 import { catererPath } from "~/lib/caterer-url";
+import { traegerHomeHref } from "~/lib/traeger-home";
 import { traegerPath } from "~/lib/traeger-url";
 import { clearSessionCache, DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
 import { markLogoutNotRevoked } from "~/lib/login-session-notice";
@@ -594,7 +595,9 @@ export function TraegerShellProvider({
       ? {
           ...(session.user.id ? { id: session.user.id } : {}),
           name:
-            memberName?.trim() || getSessionPersonName(session) || "Träger-Büro",
+            memberName?.trim() ||
+            getSessionPersonName(session) ||
+            "Träger-Büro",
           email: session.user.email ?? "",
           roles: session.user.roles ?? [],
         }
@@ -614,7 +617,8 @@ export function TraegerShellProvider({
       isSessionExpired: session?.error === "RefreshTokenExpired",
       logout: reportingLogout(endTraegerSession, showLogoutError),
       mode: "traeger" as const,
-      homeUrl: traegerPath("/traeger"),
+      // Dashboard with its right, else the school list (#7646).
+      homeUrl: traegerHomeHref(session ?? null),
       // Die Konto-Seite mit dem eigenen Namen (#4693). Passwort und Code
       // gehören zum moto-Konto und haben dort keine Karte.
       profileUrl: traegerPath("/traeger/konto"),

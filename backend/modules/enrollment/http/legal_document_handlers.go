@@ -29,7 +29,11 @@ type legalDocumentReferenceRepository interface {
 }
 
 func (rs *Resource) uploadLegalDocument(w http.ResponseWriter, r *http.Request) {
-	uploaded, err := common.ParsePDFWithLimits(w, r, "document", maxEnrollmentLegalDocumentSize, maxEnrollmentLegalDocumentBody)
+	uploaded, err := common.Declared(common.ParsePDFWithLimits, common.DeclaredPDFTypes)(w, r, "document", maxEnrollmentLegalDocumentSize, maxEnrollmentLegalDocumentBody)
+	if common.UploadRefusalCode(err) == common.CodeFilesFileNameInvalid {
+		common.RenderError(w, r, common.ErrorUpload(err, maxEnrollmentLegalDocumentSize))
+		return
+	}
 	if err != nil {
 		// Size, missing file and wrong type share one code; the text names
 		// the allowed format and limit (#2515).

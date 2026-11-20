@@ -19,6 +19,9 @@ func RouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/", Portals: portals, Query: []common.QueryParam{class, date}, Response: classday.DayReport{}},
 		{Method: "GET", Pattern: "/school-day", Portals: portals, Query: []common.QueryParam{date}, Response: classday.SchoolDayReport{}},
 		{Method: "GET", Pattern: "/absence-list", Portals: portals, Query: []common.QueryParam{class, from, to}, Response: classday.AbsenceListReport{}},
+		{Method: "GET", Pattern: "/absence-list/export", Portals: portals, File: true, Query: []common.QueryParam{
+			class, from, to, {Name: "format", Kind: common.QueryString, Values: []string{string(classday.FormatPDF), string(classday.FormatXLSX)}},
+		}},
 		{Method: "GET", Pattern: "/shared-notes/{schoolClass}/students/{studentId}", Portals: portals, Response: classday.StudentSharedNotes{}},
 		{Method: "GET", Pattern: "/arrival-exceptions", Portals: portals, Query: []common.QueryParam{class, from, to}, Response: ArrivalExceptionListResponse{}},
 		{Method: "GET", Pattern: "/arrival-exceptions/block-start", Portals: portals, Query: []common.QueryParam{class, date}, Response: ArrivalExceptionBlockStartResponse{}},
@@ -48,5 +51,6 @@ func SlotListRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "POST", Pattern: "/lists/options", Portals: portals, Request: slotListOptionsRequest{}, Response: classday.OptionsResult{}},
 		{Method: "POST", Pattern: "/lists/preview", Portals: portals, Request: slotListRequest{}, Response: classday.ClassdayResult{}},
+		{Method: "POST", Pattern: "/lists/export", Portals: portals, Request: slotListRequest{}, File: true},
 	}
 }

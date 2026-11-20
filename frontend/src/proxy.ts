@@ -247,7 +247,7 @@ const SANDBOXED_FILE_ROUTES: readonly RegExp[] = [
   // Managed files and announcement attachments, staff and parents.
   /^\/api\/files\/folders\/[^/]+\/files\/[^/]+\/download$/,
   /^\/api\/announcement-attachments\/[^/]+\/[^/]+\/download$/,
-  /^\/api\/parent\/me\/news\/[^/]+\/attachments\/[^/]+\/download$/,
+  /^\/api\/parent\/parent-news-attachments\/[^/]+\/[^/]+\/download$/,
   // Documents staff attach to a child (#777) or a staff member (#1424).
   /^\/api\/(?:students|staff)\/[^/]+\/documents\/[^/]+\/download$/,
   // The proof of a care schedule request a parent signed (#4780).
@@ -261,7 +261,7 @@ const SANDBOXED_FILE_ROUTES: readonly RegExp[] = [
   // Träger documents, in the Träger portal and shared with a school (#4692).
   /^\/api\/(?:traeger-documents|traeger\/documents)\/[^/]+\/file$/,
   // Photos and files of chat messages (#6685): a PDF opens inline in a tab.
-  /^\/api\/(?:messages|staff-messages|school\/staff-messages)\/attachments\/[^/]+\/download$/,
+  /^\/api\/(?:messages|staff-messages|school\/school-staff-messages)\/attachments\/[^/]+\/download$/,
   /^\/api\/parent\/me\/messages\/children\/[^/]+\/attachments\/[^/]+\/download$/,
 ];
 
@@ -342,9 +342,9 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       STAFF_INVITATION_LINK,
       "/api/invitations/accept",
       "/api/auth/guardian-invitations/",
-      "/api/holiday-registrations/",
-      // The holiday link and its summary through the Träger proxy's public
-      // routes (#2352); every other /api/traeger/ path stays off this host.
+      // The holiday link, its summary, documents and proof upload through
+      // the Träger proxy's public routes (#2352); every other /api/traeger/
+      // path stays off this host.
       "/api/traeger/holiday-registrations/",
       "/api/traeger/holiday-quotes/",
       "/api/auth/holiday-parent-setups/",

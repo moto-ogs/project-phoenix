@@ -138,29 +138,47 @@ func TestOperatorPasskeyLoginRoutesArePublic(t *testing.T) {
 	assert.JSONEq(t, `{"session_id":"operator-login","options":{"challenge":"login"}}`, w.Body.String())
 }
 
-// TestOperatorPasskeyListRouteAcceptsBothSlashForms pins the compatibility
-// fix: GET /auth/passkeys (no slash) and GET /auth/passkeys/ (slash) must both
-// be routed to PasskeyList. chi has no RedirectSlashes on this router, so the
-// two are distinct patterns; an UNregistered path 404s before any middleware
-// runs, while a registered protected path reaches the auth middleware and 401s
-// without a token. Asserting 401 (not 404) for both forms proves both are
-// registered. Regression guard for the route dropped in PR #1690.
-func TestOperatorPasskeyListRouteAcceptsBothSlashForms(t *testing.T) {
+// TestOperatorPasskeyListRouteServesOnlyContractForm: the list answers the
+// contract path GET /auth/passkeys (mounted under /operator), which the catalog
+// proxy calls, for a signed-in operator. The trailing-slash form is no route:
+// it 404s before any middleware, so no second spelling of the list exists (#2352).
+func TestOperatorPasskeyListRouteServesOnlyContractForm(t *testing.T) {
 	t.Parallel()
 
-	router := testOperatorRouter(operatorIdentity{
-		passkeys: &operatorPasskeyServiceStub{},
-		sessions: identityoperator.NewSessions(routetest.TestTokenAuth(t), nil),
-	}, nil)
-
-	for _, path := range []string{"/auth/passkeys", "/auth/passkeys/"} {
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
-		require.NotEqual(t, http.StatusNotFound, w.Code,
-			"GET %s must be a registered route, not 404", path)
-		assert.Equal(t, http.StatusUnauthorized, w.Code,
-			"GET %s is protected, so an unauthenticated request must 401", path)
+	authService := &mockOperatorAuthService{
+		getOperatorFn: func(_ context.Context, id int64) (*identityaccess.Operator, error) {
+			op := &identityaccess.Operator{Active: true}
+			op.ID = id
+			return op, nil
+		},
 	}
+	svc := &operatorPasskeyServiceStub{}
+	router := testOperatorRouter(operatorIdentity{
+		access:   authService,
+		passkeys: svc,
+		sessions: operatorTestSessions(t, authService),
+	}, nil)
+	token := operatorRouteAccessToken(t, 21)
+
+	get := func(path, bearer string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		if bearer != "" {
+			req.Header.Set("Authorization", "Bearer "+bearer)
+		}
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
+
+	w := get("/auth/passkeys", token)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.EqualValues(t, 21, svc.listOperatorID)
+	assert.Contains(t, w.Body.String(), `"name":"Phone"`)
+
+	assert.Equal(t, http.StatusUnauthorized, get("/auth/passkeys", "").Code,
+		"the list is protected")
+	assert.Equal(t, http.StatusNotFound, get("/auth/passkeys/", token).Code,
+		"the trailing-slash form is not registered")
 }
 
 func TestOperatorPasskeyAuthenticatedHandlers(t *testing.T) {

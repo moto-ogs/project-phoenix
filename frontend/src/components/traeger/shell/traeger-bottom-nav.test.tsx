@@ -17,7 +17,13 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: sessionUser }, status: "authenticated" }),
 }));
 
+// The search reads the school list from the shared cache (#7648).
+vi.mock("../use-traeger-schools", () => ({
+  useTraegerSchools: () => ({ schools: [], error: null }),
+}));
+
 import { TraegerBottomNav } from "./traeger-bottom-nav";
+import { TraegerSearchProvider } from "./traeger-search";
 
 const ALL_RIGHTS = [
   "traeger_overview:read",
@@ -165,5 +171,43 @@ describe("TraegerBottomNav", () => {
       "aria-current",
       "page",
     );
+  });
+
+  it("carries the magnifier that opens the search, before Mehr (#7648)", async () => {
+    sessionUser.permissions = ALL_RIGHTS;
+    render(
+      <TraegerSearchProvider>
+        <TraegerBottomNav />
+      </TraegerSearchProvider>,
+    );
+
+    // The magnifier takes one of the five fields: three targets, the
+    // magnifier, Mehr.
+    expect(
+      bar()
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Dashboard", "Schulen", "Belegung"]);
+    const fields = bar().getAllByRole("listitem");
+    expect(fields).toHaveLength(5);
+    const search = bar().getByRole("button", { name: "Suchen" });
+    expect(fields[3]).toContainElement(search);
+
+    fireEvent.click(search);
+    expect(
+      await screen.findByRole("combobox", { name: "Suchen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the settings bar without the magnifier (#7648)", () => {
+    sessionUser.permissions = ALL_RIGHTS;
+    mockPathname.mockReturnValue("/einstellungen");
+    render(
+      <TraegerSearchProvider>
+        <TraegerBottomNav />
+      </TraegerSearchProvider>,
+    );
+    expect(bar().queryByRole("button", { name: "Suchen" })).toBeNull();
+    expect(bar().getByRole("button", { name: "Mehr" })).toBeInTheDocument();
   });
 });

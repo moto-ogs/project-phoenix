@@ -132,30 +132,6 @@ func (s *Store) ListManageableAccountRecords(ctx context.Context, filter domain.
 	return scanAdministeredAccounts(ctx, query.OrderExpr(`"account".id`), "list manageable account records")
 }
 
-// ListManageableAccountRecordsByRole joins the role assignment and keeps it
-// inside the caller's visibility as well: an organisation administrator sees
-// the role only where it was granted at one of their schools, a school
-// administrator only where it was granted at theirs.
-func (s *Store) ListManageableAccountRecordsByRole(ctx context.Context, roleName string, visibility domain.AccountVisibility) ([]domain.ManagedAccountRecord, domain.OperationStats, error) {
-	query, err := s.accountSelect(ctx)
-	if err != nil {
-		return nil, domain.OperationStats{}, err
-	}
-	query = scopeAccounts(query, visibility).
-		Join(`JOIN auth.account_roles AS "account_role" ON "account_role".account_id = "account".id`).
-		Join(`JOIN auth.roles AS "role" ON "account_role".role_id = "role".id`).
-		Where(`LOWER("role".name) = LOWER(?)`, roleName).
-		Distinct()
-	switch visibility.Kind {
-	case domain.AccountVisibilityTenant:
-		query = query.Where(`"account_role".tenant_id = ?`, visibility.TenantID)
-	case domain.AccountVisibilityDenied:
-		query = query.Where(accountVisibilityDeniedSQL)
-	case domain.AccountVisibilityGlobal:
-	}
-	return scanAdministeredAccounts(ctx, query.OrderExpr(`"account".id`), "list manageable account records by role")
-}
-
 func scanAdministeredAccounts(ctx context.Context, query *bun.SelectQuery, operation string) ([]domain.ManagedAccountRecord, domain.OperationStats, error) {
 	var rows []administeredAccountRow
 	started := time.Now()

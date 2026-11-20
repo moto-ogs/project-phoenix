@@ -248,6 +248,28 @@ describe("makeCatalogProxy", () => {
     expect(api.mock.calls[0]?.[1]).toBe("/parent/rows/mine");
   });
 
+  it.each([
+    ["students/123/documents", "attest", { student_id: "123" }],
+    ["staff/123/documents", "arbeitsvertrag", { staff_id: "123" }],
+  ])(
+    "forwards the category filter for %s through the full tenant catalog",
+    async (path, category, owner) => {
+      const list = { ...owner, documents: [], visible_categories: [] };
+      api.mockResolvedValueOnce({ status: "success", data: list });
+      const response = await callTenant(path, `?category=${category}&debug=1`);
+
+      expect(response.status).toBe(200);
+      expect(await data(response)).toEqual(list);
+      expect(api).toHaveBeenCalledExactlyOnceWith(
+        "GET",
+        `/api/${path}?category=${category}`,
+        "token",
+        undefined,
+        { request: expect.any(NextRequest) },
+      );
+    },
+  );
+
   it.each(["open", "history"])(
     "loads the %s enrollment review list through the full tenant catalog",
     async (view) => {

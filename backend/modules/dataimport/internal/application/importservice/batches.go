@@ -452,7 +452,7 @@ func (s *ImportService[T]) applyBatchRow(ctx context.Context, request importMode
 		// Match errors are per-row, not write failures. Preview and the
 		// retained importer skip the row; returning here would roll back the
 		// whole unit of work and block resume of an identical upload.
-		recordDuplicateCheckError(s, result, rowNum, row, err)
+		recordDuplicateCheckError(s, result, rowNum, row)
 		return nil
 	}
 	action, skip := s.determineImportAction(request, result, row, rowNum, id)
@@ -463,14 +463,14 @@ func (s *ImportService[T]) applyBatchRow(ctx context.Context, request importMode
 	write := importModels.WithBatchRowWrite(ctx)
 	if action == "create" {
 		if _, err := s.config.Create(write, *row); err != nil {
-			recordCreationError(s, result, rowNum, row, err)
+			recordCreationError(s, result, rowNum, row)
 			return s.writeFailure(err)
 		}
 		result.CreatedCount++
 		return nil
 	}
 	if err := s.config.Update(write, *id, *row); err != nil {
-		recordUpdateError(s, result, rowNum, row, err)
+		recordUpdateError(s, result, rowNum, row)
 		return s.writeFailure(err)
 	}
 	result.UpdatedCount++

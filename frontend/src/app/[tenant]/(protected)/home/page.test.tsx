@@ -125,6 +125,9 @@ vi.mock("~/components/home/booking-leftover-todos", () => ({
 vi.mock("~/components/home/staff-notices-block", () => ({
   StaffNoticesBlock: () => <div data-testid="staff-notices-block" />,
 }));
+vi.mock("~/components/home/day-changes-block", () => ({
+  DayChangesBlock: () => <div data-testid="day-changes-block" />,
+}));
 vi.mock("~/components/home/day-flow-block", () => ({
   DayFlowBlock: () => <div data-testid="day-flow-block" />,
 }));
@@ -428,9 +431,10 @@ describe("Startseite", () => {
 
     render(<HomePage />);
 
-    // Anker: die Standardansicht der Betreuungskraft ist geladen.
+    // Anker: die Standardansicht der Betreuungskraft ist geladen. „Heute
+    // anders“ hängt an keinem Recht und steht in jeder Ansicht (#7659).
     expect(
-      await screen.findByText("Deine Startseite ist leer"),
+      await screen.findByTestId("home-block-section.day_changes"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Kein Zugriff")).not.toBeInTheDocument();
     // Ohne Rechte auf die Betriebszahlen bleiben die Kennzahlen weg; die
@@ -562,6 +566,7 @@ const HIDDEN_DEFAULTS: HomeLayoutOverrides = {
   "section.birthdays": false,
   "section.staff_today": false,
   "section.messages": false,
+  "section.day_changes": false,
 };
 describe("Startseite anpassen", () => {
   beforeEach(() => {

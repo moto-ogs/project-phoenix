@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   noData,
   nullable,
@@ -231,14 +232,33 @@ export interface GetMealPlanOrdersQuery {
   to?: string;
 }
 
+/** Query of GET /api/meal-plan/orders/month/export */
+export interface GetMealPlanOrdersMonthExportQuery {
+  format?: "pdf" | "xlsx";
+  month?: string;
+}
+
 /** Query of GET /api/meal-plan/participants */
 export interface GetMealPlanParticipantsQuery {
   date?: string;
   include?: string;
 }
 
+/** Query of GET /api/meal-plan/participants/export */
+export interface GetMealPlanParticipantsExportQuery {
+  date?: string;
+  format?: "pdf" | "xlsx";
+  include?: string;
+}
+
 /** Query of GET /api/meal-plan/participants/week */
 export interface GetMealPlanParticipantsWeekQuery {
+  week_start?: string;
+}
+
+/** Query of GET /api/meal-plan/participants/week/export */
+export interface GetMealPlanParticipantsWeekExportQuery {
+  format?: "pdf" | "xlsx";
   week_start?: string;
 }
 
@@ -275,6 +295,13 @@ export const routes = {
     query: ["from", "to"],
     response: success(OrdersResponseSchema),
   },
+  "GET /api/meal-plan/orders/month/export": {
+    method: "GET",
+    pattern: "/api/meal-plan/orders/month/export",
+    portals: ["tenant"],
+    query: ["format", "month"],
+    response: fileAnswer,
+  },
   "GET /api/meal-plan/participants": {
     method: "GET",
     pattern: "/api/meal-plan/participants",
@@ -282,12 +309,26 @@ export const routes = {
     query: ["date", "include"],
     response: success(DailyListResponseSchema),
   },
+  "GET /api/meal-plan/participants/export": {
+    method: "GET",
+    pattern: "/api/meal-plan/participants/export",
+    portals: ["tenant"],
+    query: ["date", "format", "include"],
+    response: fileAnswer,
+  },
   "GET /api/meal-plan/participants/week": {
     method: "GET",
     pattern: "/api/meal-plan/participants/week",
     portals: ["tenant"],
     query: ["week_start"],
     response: success(WeeklyListResponseSchema),
+  },
+  "GET /api/meal-plan/participants/week/export": {
+    method: "GET",
+    pattern: "/api/meal-plan/participants/week/export",
+    portals: ["tenant"],
+    query: ["format", "week_start"],
+    response: fileAnswer,
   },
   "GET /api/meal-plan/participation/{studentId}": {
     method: "GET",

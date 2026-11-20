@@ -1,8 +1,10 @@
+import type { Session } from "next-auth";
 import { catererPath } from "~/lib/caterer-url";
 import { operatorPath } from "~/lib/operator-url";
 import { parentPath } from "~/lib/parent-url";
 import type { HostedPortalKey } from "~/lib/portal-paths";
 import { schoolPath } from "~/lib/school-url";
+import { traegerHomeHref } from "~/lib/traeger-home";
 import { traegerPath } from "~/lib/traeger-url";
 
 interface PortalFrame {
@@ -10,8 +12,12 @@ interface PortalFrame {
   readonly scope: string;
   /** A portal path as the browser reaches it on this host. */
   readonly path: (path: string) => string;
-  /** Where a page lands that still showed another account (#5000). */
-  readonly homeHref: () => string;
+  /**
+   * Where a page lands that still showed another account (#5000). The
+   * session decides it in the Träger portal (#7646); null when this tab
+   * does not know the other account's session.
+   */
+  readonly homeHref: (session: Session | null) => string;
 }
 
 // The url helpers are called, not stored: a test may mock one module
@@ -40,6 +46,6 @@ export const PORTAL_FRAME: Record<HostedPortalKey, PortalFrame> = {
   traeger: {
     scope: "org",
     path: (path) => traegerPath(path),
-    homeHref: () => traegerPath("/traeger"),
+    homeHref: (session) => traegerHomeHref(session),
   },
 };

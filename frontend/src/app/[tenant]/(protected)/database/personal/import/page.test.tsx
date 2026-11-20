@@ -177,10 +177,10 @@ function previewRow(
   errors: { code: string; severity: string; message: string; field: string }[],
 ) {
   return {
-    RowNumber: 1,
-    Data: data,
-    Errors: errors,
-    Timestamp: new Date().toISOString(),
+    row_number: 1,
+    data: data,
+    errors: errors,
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -300,11 +300,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -352,11 +352,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 1,
-              CreatedCount: 1,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 1,
+              created_count: 1,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       });
@@ -385,11 +385,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 5,
-            CreatedCount: 5,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 5,
+            created_count: 5,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -410,11 +410,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 4,
-            CreatedCount: 4,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 4,
+            created_count: 4,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -433,12 +433,12 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [
               previewRow(
                 {
                   first_name: "Anna",
@@ -476,11 +476,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 0,
-            UpdatedCount: 0,
-            ErrorCount: 1,
-            Errors: [
+            total_rows: 1,
+            created_count: 0,
+            updated_count: 0,
+            error_count: 1,
+            errors: [
               previewRow(
                 {
                   first_name: "Bernd",
@@ -517,11 +517,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 3,
-            CreatedCount: 3,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 3,
+            created_count: 3,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -547,11 +547,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 3,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 3,
+              created_count: 3,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -560,11 +560,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 3,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 3,
+              created_count: 3,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       });
@@ -596,11 +596,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 3,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 3,
+              created_count: 3,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -609,11 +609,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 2,
-              UpdatedCount: 0,
-              ErrorCount: 1,
-              Errors: [
+              total_rows: 3,
+              created_count: 2,
+              updated_count: 0,
+              error_count: 1,
+              errors: [
                 previewRow(
                   {
                     first_name: "Max",
@@ -659,11 +659,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 2,
-              CreatedCount: 2,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 2,
+              created_count: 2,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -697,11 +697,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -714,20 +714,20 @@ describe("StaffImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       email: "",
                       role_name: "Betreuung",
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -777,11 +777,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -794,20 +794,20 @@ describe("StaffImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       email: "",
                       role_name: "Betreuung",
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -826,19 +826,19 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 105,
-              UpdatedCount: 0,
-              ErrorCount: 100,
-              Errors: Array.from({ length: 100 }, (_, index) => ({
-                RowNumber: index + 2,
-                Data: {
+              total_rows: 205,
+              created_count: 105,
+              updated_count: 0,
+              error_count: 100,
+              errors: Array.from({ length: 100 }, (_, index) => ({
+                row_number: index + 2,
+                data: {
                   first_name: `Person${index}`,
                   last_name: "Batch",
                   email: "",
                   role_name: "Betreuung",
                 },
-                Errors: [
+                errors: [
                   {
                     code: "already_exists",
                     severity: "error",
@@ -879,11 +879,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -977,11 +977,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -1022,11 +1022,11 @@ describe("StaffImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 3,
-            CreatedCount: 1,
-            UpdatedCount: 2,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 3,
+            created_count: 1,
+            updated_count: 2,
+            error_count: 0,
+            errors: [],
           },
         }),
     });

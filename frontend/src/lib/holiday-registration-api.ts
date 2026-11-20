@@ -323,14 +323,14 @@ function offerFromBackend(offer: BackendOffer): HolidayRegistrationOffer {
   };
 }
 
-// The link and its summary run through the Träger proxy's public routes
-// (#2352); the proof upload and the form documents keep their own files.
+// The link, its summary and the proof upload run through the Träger
+// proxy's public routes (#2352).
 function registrationPath(token: string): string {
   return `/api/traeger/holiday-registrations/${encodeURIComponent(token)}`;
 }
 
 function uploadPath(token: string): string {
-  return `/api/holiday-registrations/${encodeURIComponent(token)}/uploads`;
+  return `${registrationPath(token)}/uploads`;
 }
 
 async function request(input: string, init?: RequestInit): Promise<Response> {

@@ -4,9 +4,11 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   lazy,
+  multipart,
   nullable,
   object,
   optional,
@@ -15,6 +17,37 @@ import {
   str,
   success,
 } from "./runtime";
+
+/** Go: me.ProfileResponse */
+export interface ProfileResponse {
+  email: string;
+  username: string | null;
+  last_login: string | null;
+  avatar?: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+  updated_at: string;
+  rfid_card?: string;
+  bio?: string;
+  settings?: string;
+}
+
+export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object<ProfileResponse>({
+  email: str,
+  username: nullable(str),
+  last_login: nullable(instant),
+  avatar: optional(str),
+  id: int64StringOrNumber,
+  first_name: str,
+  last_name: str,
+  created_at: instant,
+  updated_at: instant,
+  rfid_card: optional(str),
+  bio: optional(str),
+  settings: optional(str),
+});
 
 /** Go: domain.GroupRoom */
 export interface GroupRoom {
@@ -462,37 +495,6 @@ export const NavigationResponseSchema: z.ZodType<NavigationResponse, unknown> = 
   unavailable_sections: nullable(arr(str)),
 });
 
-/** Go: me.ProfileResponse */
-export interface ProfileResponse {
-  email: string;
-  username: string | null;
-  last_login: string | null;
-  avatar?: string;
-  id: string;
-  first_name: string;
-  last_name: string;
-  created_at: string;
-  updated_at: string;
-  rfid_card?: string;
-  bio?: string;
-  settings?: string;
-}
-
-export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object<ProfileResponse>({
-  email: str,
-  username: nullable(str),
-  last_login: nullable(instant),
-  avatar: optional(str),
-  id: int64StringOrNumber,
-  first_name: str,
-  last_name: str,
-  created_at: instant,
-  updated_at: instant,
-  rfid_card: optional(str),
-  bio: optional(str),
-  settings: optional(str),
-});
-
 /** Go: me.ProfileUpdateRequest */
 export interface ProfileUpdateRequest {
   first_name?: string | null;
@@ -502,6 +504,12 @@ export interface ProfileUpdateRequest {
 }
 
 export const routes = {
+  "DELETE /api/me/profile/avatar": {
+    method: "DELETE",
+    pattern: "/api/me/profile/avatar",
+    portals: ["tenant"],
+    response: success(ProfileResponseSchema),
+  },
   "GET /api/me/groups/": {
     method: "GET",
     pattern: "/api/me/groups/",
@@ -526,11 +534,27 @@ export const routes = {
     portals: ["tenant"],
     response: success(ProfileResponseSchema),
   },
+  "GET /api/me/profile/avatar/{filename}": {
+    method: "GET",
+    pattern: "/api/me/profile/avatar/{filename}",
+    portals: ["tenant"],
+    privateCache: true,
+    response: fileAnswer,
+  },
   "GET /api/me/staff": {
     method: "GET",
     pattern: "/api/me/staff",
     portals: ["tenant"],
     response: success(StaffSchema.nullable()),
+  },
+  "POST /api/me/profile/avatar": {
+    method: "POST",
+    pattern: "/api/me/profile/avatar",
+    portals: ["tenant"],
+    maxBodyBytes: 5246976,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(ProfileResponseSchema),
   },
   "PUT /api/me/profile": {
     method: "PUT",

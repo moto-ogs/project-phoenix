@@ -12,9 +12,15 @@ func RouteContracts(staff, groups, sessions, navigation any) []common.RouteContr
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/profile", Portals: portals, Response: ProfileResponse{}},
 		{Method: "PUT", Pattern: "/profile", Portals: portals, Request: ProfileUpdateRequest{}, Response: ProfileResponse{}},
+		{Method: "POST", Pattern: "/profile/avatar", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxUploadBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: ProfileResponse{}},
+		{Method: "DELETE", Pattern: "/profile/avatar", Portals: portals, Response: ProfileResponse{}},
 		{Method: "GET", Pattern: "/staff", Portals: portals, Response: staff},
 		{Method: "GET", Pattern: "/groups/", Portals: portals, Response: groups},
 		{Method: "GET", Pattern: "/groups/supervised", Portals: portals, Response: sessions},
 		{Method: "GET", Pattern: "/navigation", Portals: portals, Response: navigation},
+		// The caller's own avatar; the handler keeps it a day in the
+		// browser's private cache (#2352).
+		{Method: "GET", Pattern: "/profile/avatar/{filename}", Portals: portals, File: true, PrivateCache: true},
 	}
 }

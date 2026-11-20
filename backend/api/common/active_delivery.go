@@ -2,42 +2,17 @@ package common
 
 import (
 	"context"
-	"slices"
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 )
 
 func RequireActiveGroupRead() Middleware   { return RequiresPermission(permissions.GroupsRead) }
-func RequireActiveGroupCreate() Middleware { return RequiresPermission(permissions.GroupsCreate) }
 func RequireActiveGroupUpdate() Middleware { return RequiresPermission(permissions.GroupsUpdate) }
-func RequireActiveGroupDelete() Middleware { return RequiresPermission(permissions.GroupsDelete) }
-func RequireActiveGroupAssign() Middleware { return RequiresPermission(permissions.GroupsAssign) }
 func RequireVisitUpdate() Middleware       { return RequiresPermission(permissions.VisitsUpdate) }
 
 // RequireSchoolCheckin guards the app's check-in into a room or activity
 // (#6953), which also needs RequireVisitUpdate for the placement.
 func RequireSchoolCheckin() Middleware { return RequiresPermission(permissions.UsersCheckin) }
-
-// CanReadStudentAbsence reports users:read. Sick and excused status need it
-// like in the child list and group view (ADR 0091); a guest reads the active
-// groups with groups:read only.
-func CanReadStudentAbsence(ctx context.Context) bool {
-	principal, err := CurrentPrincipal(ctx)
-	return err == nil && HasPermission(permissions.UsersRead, principal.Permissions())
-}
-
-// VisitReadAccess projects the authenticated caller's legacy broad visit grant.
-// A resource wildcard alone is not a broad grant for this relationship policy.
-func VisitReadAccess(ctx context.Context) (accountID int64, readAll bool, err error) {
-	principal, err := CurrentPrincipal(ctx)
-	if err != nil {
-		return 0, false, err
-	}
-	granted := principal.Permissions()
-	readAll = slices.Contains(principal.Roles(), "admin") || principal.HasAdminScope() ||
-		slices.Contains(granted, permissions.VisitsRead) || slices.Contains(granted, permissions.VisitsManage)
-	return principal.AccountID(), readAll, nil
-}
 
 // CanUseSchoolWideAttendance checks the request identity only; the attendance
 // service still evaluates tenant settings and resource-level access.

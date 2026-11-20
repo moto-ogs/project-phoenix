@@ -65,6 +65,26 @@ export function appOverviewTopic(): HelpTopic {
         ],
       },
       {
+        // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
+        title: "Was heute anders ist",
+        description:
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt.",
+        ordered: false,
+        steps: [
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
+          "Unter `Schule` steht der Rest der Schule.",
+          // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
+          // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
+          // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
+          "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
+          "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
+          "Die Karte zeigt nie, warum jemand fehlt.",
+          "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
+        ],
+      },
+      {
         // Labels aus home/page.tsx (Knopf „Anpassen", „Fertig") und
         // home-board.tsx („Bausteine", „Standardansicht wiederherstellen").
         title: "Die Startseite anpassen",
@@ -92,12 +112,16 @@ export function appOverviewTopic(): HelpTopic {
       "Welche Bereiche du siehst, hängt von deiner Rolle und den Einstellungen deiner OGS ab.",
       "Du siehst keine Überschriften wie `Tagesbetrieb` oder `Team`? Dann hat deine OGS die einfache Seitenleiste eingeschaltet. Alle Seiten zeigt `Alle Seiten anzeigen` ganz unten.",
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
+      // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
+      // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
       "Steht am Computer oben links unter dem Namen deiner Schule `Träger:` und ein Name? Das ist der Träger deiner Schule. Die Zeile gibt es nur, wenn dein Träger mehrere Schulen hat.",
     ],
     troubleshootingDetails: [
       "Das Anpassen der Startseite lädt nicht? Deine Karten bleiben lesbar. Wähle bei der Fehlermeldung `Wiederholen`.",
+      "In `Heute anders` steht, dass etwas gerade nicht geladen werden konnte? Dann fehlt dieser Teil gerade. Lade die Seite später neu.",
     ],
     notes: [
       "Die Karte `Kinder` zählt die Kinder nach `Anwesend`, `Schule`, `Im Unterricht`, `Zuhause`, `Krank` und `Entschuldigt`. Ein Klick auf eine Zahl öffnet `Alle Kinder` mit diesem Filter. `Entschuldigt` zeigt auch Kinder auf Klassenfahrt. `Zuhause` zeigt auch Kinder, die heute nicht kommen. Ein Kind, das da ist, zählt immer bei `Anwesend`, auch mit Krankmeldung. Ein Kind, das zum Unterricht abgemeldet ist, zählt bei `Im Unterricht`, auch mit Krankmeldung.",

@@ -65,37 +65,6 @@ func (s *Store) ListSchedules(ctx context.Context, filter timetable.ScheduleFilt
 	return result, stats, nil
 }
 
-func (s *Store) FindTemplateStartTimes(ctx context.Context, groupIDs []int64) ([]timetable.TemplateStartTime, domain.OperationStats, error) {
-	if len(groupIDs) == 0 {
-		return []timetable.TemplateStartTime{}, domain.OperationStats{}, nil
-	}
-	db, tenantID, err := s.database(ctx)
-	if err != nil {
-		return nil, domain.OperationStats{}, err
-	}
-	rows := []struct {
-		ActivityGroupID int64     `bun:"activity_group_id"`
-		Weekday         int       `bun:"weekday"`
-		StartTime       time.Time `bun:"start_time"`
-	}{}
-	query := db.NewSelect().Model(&rows).TableExpr(`activities.schedules AS "schedule"`).
-		ColumnExpr(`"schedule".activity_group_id, "schedule".weekday, "timeframe".start_time`).
-		Join(`INNER JOIN schedule.timeframes AS "timeframe" ON "timeframe".id = "schedule".timeframe_id`).
-		Where(`"schedule".tenant_id = ?`, tenantID).Where(`"timeframe".tenant_id = ?`, tenantID).
-		Where(`"schedule".activity_group_id IN (?)`, bun.List(groupIDs)).
-		OrderExpr(`"schedule".activity_group_id ASC, "schedule".weekday ASC, "timeframe".start_time ASC`)
-	stats, err := scanAll(ctx, query, "find template start times")
-	if err != nil {
-		return nil, stats, err
-	}
-	result := make([]timetable.TemplateStartTime, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, timetable.TemplateStartTime(row))
-	}
-	stats.Rows = int64(len(result))
-	return result, stats, nil
-}
-
 func (s *Store) CreateSchedule(ctx context.Context, fields timetable.ScheduleInput) (timetable.Schedule, domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {

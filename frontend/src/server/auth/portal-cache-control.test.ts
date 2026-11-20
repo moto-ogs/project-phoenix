@@ -47,12 +47,12 @@ const PRIVATE_NO_STORE = "private, no-store";
 
 type Route = (
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> },
+  context: { params: Promise<Record<string, string | string[]>> },
 ) => Promise<Response>;
 
 // On the subdomain of the session's own school (7), so the tenant wrapper's
 // school check (#5130) lets the request through to the cache policy.
-function call(route: Route, params: Record<string, string> = {}) {
+function call(route: Route, params: Record<string, string | string[]> = {}) {
   return route(
     new NextRequest("http://schule-a.localhost:3000/api/example", {
       headers: { host: "schule-a.localhost:3000" },
@@ -296,15 +296,24 @@ describe("tenant routes on a school subdomain (#5130)", () => {
 });
 
 describe("file and stream routes keep their own headers", () => {
-  it("serves a staff avatar with its image cache policy", async () => {
+  it("serves a staff avatar with the backend's private image cache policy", async () => {
     mockFetch.mockResolvedValue(
       new Response(new Uint8Array([1, 2, 3]), {
-        headers: { "Content-Type": "image/png" },
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "private, max-age=300",
+        },
       }),
     );
-    const { GET } = await import("~/app/api/staff/[id]/avatar/route");
+    // The catalog proxy serves it; the contract marks it `privateCache`.
+    const { GET } = await import("~/app/api/[...path]/route");
 
-    const response = await call(GET as Route, { id: "5" });
+    const response = await call(
+      GET as Route,
+      {
+        path: ["staff", "5", "avatar"],
+      } as unknown as Record<string, string>,
+    );
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
     expect(response.headers.get("Cache-Control")).toBe("private, max-age=300");
@@ -319,10 +328,12 @@ describe("file and stream routes keep their own headers", () => {
         },
       }),
     );
-    const { GET } =
-      await import("~/app/api/students/[id]/documents/[documentId]/download/route");
+    // The download streams through the portal's catalog proxy (#2352).
+    const { GET } = await import("~/app/api/[...path]/route");
 
-    const response = await call(GET as Route, { id: "5", documentId: "9" });
+    const response = await call(GET as Route, {
+      path: ["students", "5", "documents", "9", "download"],
+    });
 
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("Content-Disposition")).toBe(

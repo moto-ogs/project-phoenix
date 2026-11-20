@@ -52,6 +52,7 @@ const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/register/[[...path]]": "tenant",
   "/api/auth/staff-preview/[...path]": "tenant",
   "/api/auth/password-reset/[[...path]]": "tenant",
+  "/api/students/export": "tenant",
   "/api/auth/password/[[...path]]": "tenant",
   "/api/caterer/auth/mfa/trusted-devices/[[...path]]": "caterer",
   "/api/caterer/auth/passkeys/[[...path]]": "caterer",
@@ -283,7 +284,7 @@ describe("path freed from its own route file", () => {
     ["/api/students/change-requests", "/api/[...path]"],
     ["/api/students/day-log", "/api/[...path]"],
     ["/api/students/ogs-group-live", "/api/[...path]"],
-    ["/api/students/1/documents", "/api/students/[id]/documents"],
+    ["/api/students/1/documents", "/api/[...path]"],
     ["/api/staff/1", "/api/[...path]"],
     ["/api/staff/by-role", "/api/[...path]"],
     ["/api/staff/qualification-types", "/api/[...path]"],
@@ -293,6 +294,33 @@ describe("path freed from its own route file", () => {
     ["/api/activities/quick-create", "/api/[...path]"],
     ["/api/iot/device-slots", "/api/[...path]"],
     ["/api/search", "/api/[...path]"],
+    // Images the browser may keep (#2352).
+    ["/api/me/profile/avatar/a.png", "/api/[...path]"],
+    ["/api/staff/1/avatar", "/api/[...path]"],
+    ["/api/traeger/master-data/logo", "/api/traeger/[...path]"],
+    // Documents and proofs of the contract (#2352), beside dynamic
+    // neighbours that keep their route files.
+    ["/api/enrollment/admin/requests/1/signature-proof", "/api/[...path]"],
+    ["/api/parent-announcements/1/letters-pdf", "/api/[...path]"],
+    ["/api/parent/me/documents/1/2/pdf", "/api/parent/[...path]"],
+    ["/api/parent/me/news/1/declaration/proof/pdf", "/api/parent/[...path]"],
+    [
+      "/api/parent/me/children/1/pickup-requests/2/proof/pdf",
+      "/api/parent/[...path]",
+    ],
+    [
+      "/api/parent/parent-news-attachments/1/2/download",
+      "/api/parent/[...path]",
+    ],
+    ["/api/school/class-day/absence-list/export", "/api/school/[...path]"],
+    // Exports, templates and files of the contract (#2352), beside
+    // dynamic neighbours that keep their route files.
+    ["/api/staff/1/time-tracking/export", "/api/[...path]"],
+    ["/api/holiday-weeks/1/participants/export", "/api/[...path]"],
+    ["/api/calendar/appointments/1/ics", "/api/[...path]"],
+    ["/api/week-protocols/1/pdf", "/api/[...path]"],
+    ["/api/import/students/template", "/api/[...path]"],
+    ["/api/caterer/orders/export", "/api/caterer/[...path]"],
     // A list on the bare path reaches the portal's proxy, not Auth.js.
     ["/api/auth/passkeys", "/api/auth/passkeys/[[...path]]"],
     ["/api/auth/passkeys/register/options", "/api/auth/passkeys/[[...path]]"],
@@ -326,6 +354,15 @@ describe("path freed from its own route file", () => {
       "/api/traeger/holiday-periods/1/registrations/2/proofs",
       "/api/traeger/[...path]",
     ],
+    // Uploads the backend checks like the frontend server did (#2352).
+    ["/api/announcement-attachments/1", "/api/[...path]"],
+    ["/api/enrollment/legal-documents", "/api/[...path]"],
+    ["/api/files/folders/1/files", "/api/[...path]"],
+    ["/api/me/profile/avatar", "/api/[...path]"],
+    ["/api/settings/enrollment/legal-agb-document", "/api/[...path]"],
+    ["/api/staff/1/documents", "/api/[...path]"],
+    ["/api/students/1/accident-reports/2/paper-copy", "/api/[...path]"],
+    ["/api/students/1/photo", "/api/[...path]"],
   ])("%s goes to %s", (sample, expected) => {
     expect(routeFiles.find(({ match }) => match(sample))?.route).toBe(expected);
   });

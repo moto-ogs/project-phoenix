@@ -39,6 +39,11 @@ export type AnalyticsEvent =
   // Reiterwechsel auf „Alle Kinder“ (#5046): child_scope = all, groups oder
   // room, ohne Raum oder Gruppe.
   | "child_scope_tab_selected"
+  // „Heute anders“ auf der Startseite (#7659): beim Klick nur die Art des
+  // Eintrags (day_change_kind, allowlisted), nie Inhalte oder IDs.
+  | "day_changes_entry_clicked"
+  | "day_changes_show_all"
+  | "day_changes_done_expanded"
   // Selbstöffnende Flächen des Einstiegs (#7541), nur über
   // trackOnboardingSurface mit einer festen Fläche.
   | "onboarding_surface_shown"

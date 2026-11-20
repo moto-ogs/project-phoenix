@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  multipart,
   nullable,
   object,
   optional,
@@ -14,6 +15,7 @@ import {
 import {
   PublicEnrollmentFormBootstrapResponseSchema,
   SubmitEnrollmentResponseSchema,
+  UploadReceiptSchema,
   type SubmitEnrollmentRequest,
 } from "./shared.generated";
 
@@ -95,5 +97,14 @@ export const routes = {
     query: ["late_invite"],
     request: requestBody<SubmitEnrollmentRequest>(),
     response: success(SubmitEnrollmentResponseSchema),
+  },
+  "POST /parent/enrollments/{tenantSlug}/uploads": {
+    method: "POST",
+    pattern: "/parent/enrollments/{tenantSlug}/uploads",
+    portals: ["parent"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "enrollment.upload_invalid",
+    request: multipart,
+    response: success(UploadReceiptSchema),
   },
 } as const;

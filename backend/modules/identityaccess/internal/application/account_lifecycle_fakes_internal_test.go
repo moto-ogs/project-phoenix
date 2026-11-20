@@ -811,15 +811,6 @@ func (s *lifecycleInvitations) ListOpenGuardianInvitations(_ context.Context, pr
 	}), nil
 }
 
-func (s *lifecycleInvitations) ListRedeemableGuardianInvitations(_ context.Context) ([]domain.GuardianInvitation, error) {
-	if s.listErr != nil {
-		return nil, s.listErr
-	}
-	return s.sorted(func(invitation domain.GuardianInvitation) bool {
-		return guardianInvitationNonFinal(invitation) && !invitation.IsPendingApproval()
-	}), nil
-}
-
 func (s *lifecycleInvitations) AcceptGuardianInvitation(_ context.Context, id int64, token string) (bool, error) {
 	if s.updateErr != nil {
 		return false, s.updateErr

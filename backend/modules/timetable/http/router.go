@@ -83,11 +83,6 @@ func (rs *Resource) mountCalendarRoutes(r chi.Router, withTx common.Middleware) 
 	r.With(common.RequiresAnyPermission(permissions.SchedulesRead, permissions.CalendarOwn), withTx).Get("/school-vacations", rs.listSchoolVacations)
 	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).Get("/school-vacation-hints", rs.listSchoolVacationHints)
 	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).Post("/school-vacation-hints/acknowledgements", rs.acknowledgeSchoolVacation)
-	if rs.IsLocalSeed != nil {
-		// No tenant transaction: the seed writes the vacations of every
-		// state in its own administrative transaction.
-		r.With(common.RequiresPermission(permissions.SchedulesManage)).Post("/school-vacations/seed", rs.seedSchoolVacations)
-	}
 }
 
 // mountInstancePlanningRoutes registers the planner's reads and writes of
@@ -140,11 +135,6 @@ func (rs *Resource) mountInstancePlanningRoutes(r chi.Router, withTx common.Midd
 // mountInstanceStaffingRoutes registers the Vertretungsplan and staff pool
 // routes of single instances.
 func (rs *Resource) mountInstanceStaffingRoutes(r chi.Router, withTx common.Middleware) {
-	// #1840 Vertretungsplan: mark a block as deliberately left
-	// unstaffed so it drops out of the gap list. SchedulesManage
-	// like the other instance mutations.
-	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).
-		Post("/{id}/acknowledge-understaffed", rs.acknowledgeUnderstaffed)
 	// #1840 Vertretungsplan: apply an entire slide-over save
 	// (absences, substitute, ack, cancel) atomically in one tenant
 	// tx so a mid-save failure never commits partial state.
@@ -213,12 +203,8 @@ func (rs *Resource) mountPlanningReadRoutes(r chi.Router, withTx common.Middlewa
 	// POST /substitute wurde konsolidiert (#1886): der einzige Caller
 	// (Betreuungsplan-Gap-Fill) nutzt jetzt POST /instances/{id}/deviations.
 
-	// WP-B13: exception-conflict warnings (planning-only, read-only).
-	r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
-		Get("/exception-conflicts", rs.getExceptionConflicts)
-
 	// Planning-time conflict probe for a hypothetical slot (read-only,
-	// advisory). Same permission + tx middleware as /exception-conflicts.
+	// advisory).
 	r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
 		Get("/conflicts", rs.getPlannedConflicts)
 }
@@ -274,14 +260,10 @@ func (rs *Resource) mountExportRoutes(r chi.Router, withTx common.Middleware) {
 // mountOperationRoutes registers the operational day of the supervisors.
 func (rs *Resource) mountOperationRoutes(r chi.Router, withTx common.Middleware) {
 	r.Route("/operations", func(r chi.Router) {
-		r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
-			Get("/capabilities", rs.operationsCapabilities)
 		// Roster endpoints stay available to operational supervisors; their
 		// pickup-time fields are redacted without users:read.
 		r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
 			Get("/planned-now", rs.operationsPlannedNow)
-		r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
-			Get("/active-sessions", rs.operationsActiveSessions)
 		r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
 			Get("/instances/{id}/roster", rs.operationsRoster)
 		r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).

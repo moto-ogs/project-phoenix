@@ -34,6 +34,7 @@ import type { ModuleKey } from "~/lib/modules";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { announcementsConcept } from "~/lib/concepts/announcements";
+import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
@@ -186,6 +187,7 @@ export type HomeBlockKey =
   | "section.recent_activity"
   | "section.current_activities"
   | "section.active_groups"
+  | "section.day_changes"
   | "section.my_day"
   | "section.my_group"
   | "section.students"
@@ -319,6 +321,21 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     "Belegte Plätze in den Räumen in Prozent.",
     roomSurfaces,
   ),
+
+  // ---- Was heute anders ist ----------------------------------------------
+  {
+    key: "section.day_changes",
+    kind: "section",
+    label: "Heute anders",
+    description:
+      "Was heute anders läuft als geplant: wer fehlt und wer vertritt. Zuerst, was dich betrifft.",
+    concept: dayChangesConcept,
+    spans: SECTION_SPANS,
+    // GET /api/day-changes/today hängt an keinem einzelnen Recht: jede Quelle
+    // liefert nur, was die Person sehen darf (#7659).
+    permitted: always,
+    available: always,
+  },
 
   // ---- Der eigene Tag -----------------------------------------------------
   {
@@ -588,47 +605,53 @@ export const DEFAULT_LAYOUTS: Record<
   // Der Tag zuerst und über die volle Breite: das ist die Seite, von der aus
   // eine Betreuungskraft arbeitet. Darunter die Gruppe und was ansteht.
   care: [
-    { key: "section.my_day", span: 4, col: 0, row: 0 },
-    { key: "section.my_group", span: 2, col: 0, row: 3 },
-    { key: "section.reminders", span: 2, col: 2, row: 3 },
+    // „Heute anders“ ganz oben und über die volle Breite (#7659).
+    { key: "section.day_changes", span: 4, col: 0, row: 0 },
+    { key: "section.my_day", span: 4, col: 0, row: 2 },
+    { key: "section.my_group", span: 2, col: 0, row: 5 },
+    { key: "section.reminders", span: 2, col: 2, row: 5 },
     // Steht allein in ihrer Reihe und wird deshalb breit gezogen
     // (`widenIntoFreeCells`); fehlen die Erinnerungen, rückt sie nach oben.
-    { key: "section.staff_notices", span: 2, col: 0, row: 5 },
+    { key: "section.staff_notices", span: 2, col: 0, row: 7 },
     // Volle Breite wie bei der Leitung: drei Zeilen hoch neben einer Liste
     // aus zwei Zeilen ließe darunter ein Loch (#3893).
-    { key: "section.birthdays", span: 4, col: 0, row: 7 },
+    { key: "section.birthdays", span: 4, col: 0, row: 9 },
   ],
   lead: [
+    // „Heute anders“ ganz oben und über die volle Breite (#7659).
+    { key: "section.day_changes", span: 4, col: 0, row: 0 },
     // Eine Reihe mit vier Zahlen (#3260): wer da ist, wer noch im Unterricht
     // sitzt, wer zu Hause ist, wer krank ist. „Entschuldigt" steht im
     // Hinzufügen-Menü; eine fünfte Kachel bräche das Raster.
-    { key: "tile.students_present", span: 1, col: 0, row: 0 },
-    { key: "tile.students_at_school", span: 1, col: 1, row: 0 },
-    { key: "tile.students_home", span: 1, col: 2, row: 0 },
-    { key: "tile.students_sick", span: 1, col: 3, row: 0 },
-    { key: "section.open_requests", span: 2, col: 0, row: 1 },
-    { key: "section.staff_today", span: 2, col: 2, row: 1 },
-    { key: "section.staff_notices", span: 2, col: 0, row: 3 },
-    { key: "section.day_flow", span: 2, col: 2, row: 3 },
-    { key: "section.messages", span: 2, col: 0, row: 5 },
-    { key: "section.active_groups", span: 2, col: 2, row: 5 },
-    { key: "section.birthdays", span: 4, col: 0, row: 7 },
+    { key: "tile.students_present", span: 1, col: 0, row: 2 },
+    { key: "tile.students_at_school", span: 1, col: 1, row: 2 },
+    { key: "tile.students_home", span: 1, col: 2, row: 2 },
+    { key: "tile.students_sick", span: 1, col: 3, row: 2 },
+    { key: "section.open_requests", span: 2, col: 0, row: 3 },
+    { key: "section.staff_today", span: 2, col: 2, row: 3 },
+    { key: "section.staff_notices", span: 2, col: 0, row: 5 },
+    { key: "section.day_flow", span: 2, col: 2, row: 5 },
+    { key: "section.messages", span: 2, col: 0, row: 7 },
+    { key: "section.active_groups", span: 2, col: 2, row: 7 },
+    { key: "section.birthdays", span: 4, col: 0, row: 9 },
   ],
   // Die Vereinigung: erst der eigene Tag und die eigene Gruppe, dann die
   // Lage der Schule. Die Erinnerungen fehlen hier, weil die Jetzt-Zone und
   // der Ablauf des Tages den Moment schon tragen; sie stehen im Menü.
   lead_care: [
-    { key: "section.my_day", span: 4, col: 0, row: 0 },
-    { key: "section.my_group", span: 2, col: 0, row: 3 },
-    { key: "section.open_requests", span: 2, col: 2, row: 3 },
-    { key: "tile.students_present", span: 1, col: 0, row: 5 },
-    { key: "tile.students_at_school", span: 1, col: 1, row: 5 },
-    { key: "tile.students_home", span: 1, col: 2, row: 5 },
-    { key: "tile.students_sick", span: 1, col: 3, row: 5 },
-    { key: "section.staff_today", span: 2, col: 0, row: 6 },
-    { key: "section.staff_notices", span: 2, col: 2, row: 6 },
-    { key: "section.day_flow", span: 2, col: 0, row: 8 },
-    { key: "section.birthdays", span: 4, col: 0, row: 10 },
+    // „Heute anders“ ganz oben und über die volle Breite (#7659).
+    { key: "section.day_changes", span: 4, col: 0, row: 0 },
+    { key: "section.my_day", span: 4, col: 0, row: 2 },
+    { key: "section.my_group", span: 2, col: 0, row: 5 },
+    { key: "section.open_requests", span: 2, col: 2, row: 5 },
+    { key: "tile.students_present", span: 1, col: 0, row: 7 },
+    { key: "tile.students_at_school", span: 1, col: 1, row: 7 },
+    { key: "tile.students_home", span: 1, col: 2, row: 7 },
+    { key: "tile.students_sick", span: 1, col: 3, row: 7 },
+    { key: "section.staff_today", span: 2, col: 0, row: 8 },
+    { key: "section.staff_notices", span: 2, col: 2, row: 8 },
+    { key: "section.day_flow", span: 2, col: 0, row: 10 },
+    { key: "section.birthdays", span: 4, col: 0, row: 12 },
   ],
 };
 

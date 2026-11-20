@@ -154,12 +154,11 @@ func supervisorWriteCases(t *testing.T, ctx *testContext, activityID int64) []ac
 	target := testpkg.CreateTestStaff(t, ctx.db, "TargetSecret", "Supervisor")
 	firstSupervisor, err := ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, first.ID, true)
 	require.NoError(t, err)
-	secondSupervisor, err := ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, second.ID, false)
+	_, err = ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, second.ID, false)
 	require.NoError(t, err)
 
 	return []activityWriteCase{
 		{name: "assign supervisor", method: http.MethodPost, path: fmt.Sprintf("/activities/%d/supervisors", activityID), body: map[string]any{"staff_id": target.ID}},
-		{name: "change supervisor role", method: http.MethodPut, path: fmt.Sprintf("/activities/%d/supervisors/%d", activityID, secondSupervisor.ID), body: map[string]any{"is_primary": true}},
 		{name: "remove supervisor", method: http.MethodDelete, path: fmt.Sprintf("/activities/%d/supervisors/%d", activityID, firstSupervisor.ID)},
 	}
 }

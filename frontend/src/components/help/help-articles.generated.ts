@@ -1018,6 +1018,26 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         ],
       },
       {
+        // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
+        title: "Was heute anders ist",
+        description:
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt.",
+        ordered: false,
+        steps: [
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
+          "Unter `Schule` steht der Rest der Schule.",
+          // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
+          // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
+          // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
+          "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
+          "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
+          "Die Karte zeigt nie, warum jemand fehlt.",
+          "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
+        ],
+      },
+      {
         // Labels aus home/page.tsx (Knopf „Anpassen", „Fertig") und
         // home-board.tsx („Bausteine", „Standardansicht wiederherstellen").
         title: "Die Startseite anpassen",
@@ -1045,12 +1065,16 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Welche Bereiche du siehst, hängt von deiner Rolle und den Einstellungen deiner OGS ab.",
       "Du siehst keine Überschriften wie `Tagesbetrieb` oder `Team`? Dann hat deine OGS die einfache Seitenleiste eingeschaltet. Alle Seiten zeigt `Alle Seiten anzeigen` ganz unten.",
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
+      // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
+      // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
       "Steht am Computer oben links unter dem Namen deiner Schule `Träger:` und ein Name? Das ist der Träger deiner Schule. Die Zeile gibt es nur, wenn dein Träger mehrere Schulen hat.",
     ],
     troubleshootingDetails: [
       "Das Anpassen der Startseite lädt nicht? Deine Karten bleiben lesbar. Wähle bei der Fehlermeldung `Wiederholen`.",
+      "In `Heute anders` steht, dass etwas gerade nicht geladen werden konnte? Dann fehlt dieser Teil gerade. Lade die Seite später neu.",
     ],
     notes: [
       "Die Karte `Kinder` zählt die Kinder nach `Anwesend`, `Schule`, `Im Unterricht`, `Zuhause`, `Krank` und `Entschuldigt`. Ein Klick auf eine Zahl öffnet `Alle Kinder` mit diesem Filter. `Entschuldigt` zeigt auch Kinder auf Klassenfahrt. `Zuhause` zeigt auch Kinder, die heute nicht kommen. Ein Kind, das da ist, zählt immer bei `Anwesend`, auch mit Krankmeldung. Ein Kind, das zum Unterricht abgemeldet ist, zählt bei `Im Unterricht`, auch mit Krankmeldung.",
@@ -2916,6 +2940,8 @@ export const enrollmentReviewTopic =
         "Auf der Seite der Phase steht unter `Freie Plätze je Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
         "Hochgeladene Nachweise stehen bei `Zusatzfragen (Eltern)`. Mit `Öffnen` siehst du die Datei in einem neuen Tab.",
         "Hat die Vorlage `Unterschrift erforderlich`, steht die Unterschrift der Eltern im Abschnitt `Unterschrift`. Mit `Nachweis als PDF` lädst du den Anmeldenachweis mit der Unterschrift herunter.",
+        // #4788: Vertragsstand je Kind, nur lesend.
+        "Hat der Träger aus der Anmeldung einen Betreuungsvertrag gemacht, steht er unter `Betreuungsverträge`. Dort siehst du je Kind den Stand und die gebuchten Tage mit Uhrzeit. Ändern kann den Vertrag nur der Träger.",
         "Unter `Rechtstexte und Antworten` findest du die Texte und Antworten jeder Einreichung. Öffne einen Text, um den Wortlaut zu lesen.",
         "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
         // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
@@ -12915,7 +12941,7 @@ export const traegerDashboardTopic =
       audience: "traeger",
       icon: "BarChart3",
       steps: [
-        "Wähle in der Navigation `Dashboard`.",
+        "Nach der Anmeldung öffnet moto das Dashboard. Sonst wähle in der Navigation `Dashboard`.",
         "Lies oben die Summe für alle Schulen.",
         "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
         "Wähle dort `Zur Schule`, um die Schule anzusehen.",
@@ -12926,6 +12952,7 @@ export const traegerDashboardTopic =
       result:
         "Du siehst für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
       notes: [
+        "Ohne die Pflichtangaben erstellt moto nicht alle Verträge, Rechnungen und Bescheide. Der Hinweis verschwindet, sobald alles eingetragen ist.",
         "Die Zahlen aktualisieren sich jede Minute von selbst.",
         "Du siehst nur Zahlen, keine Namen.",
         "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
@@ -12938,6 +12965,8 @@ export const traegerDashboardTopic =
         "`Offene Anmeldungen` zählt die Kinder aus der Online-Anmeldung, über die die Schule noch nicht entschieden hat.",
       ],
       differences: [
+        "Steht oben `Es fehlen noch Pflichtangaben`? Trage die genannten Angaben nach. Die Knöpfe im Hinweis führen zur passenden Seite.",
+        "Eine Angabe darfst du nicht eintragen? Dann nennt der Hinweis die Rolle, die das tut.",
         "`Betreuungskräfte` zählt nur, wer sich in der Zeiterfassung angemeldet hat. Homeoffice zählt nicht. Nutzt eine Schule die Zeiterfassung nicht, steht dort 0 und beim Schlüssel `–`.",
         "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
         "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
@@ -14245,7 +14274,7 @@ export const traegerInvitationTopic =
         "Wähle `Weiter zum Dashboard`.",
       ],
       result:
-        "moto öffnet die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
+        "moto öffnet das `Dashboard`. Darfst du es nicht sehen, öffnet moto die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
       notes: [
         "Mit derselben E-Mail-Adresse und demselben Passwort meldest du dich später an.",
         "Ein Konto in einer Schule brauchst du dafür nicht.",
@@ -14270,9 +14299,11 @@ export const traegerInvitationTopic =
 // Die Ablaeufe sind noch nicht Schritt fuer Schritt gegen die App geprueft,
 // deshalb bleiben es Entwuerfe.
 /**
- * `/traeger/login` (#4649): eigene Adresse, danach die Liste der Schulen.
+ * `/traeger/login` (#4649): eigene Adresse, danach das Dashboard; ohne
+ * dessen Recht die Liste der Schulen (#7646).
  * Der Code per E-Mail ist Pflicht, beim ersten Mal mit Einrichtung (#4651).
  * „Passwort vergessen?“ schickt den Link auf den Träger-Host (#5149).
+ * Die Suche nach Seiten und Schulen mit Strg+K (#7648).
  */
 export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
   return {
@@ -14280,7 +14311,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     title: "Im Träger-Portal anmelden",
     question: "Wie melde ich mich im Träger-Portal an?",
     summary:
-      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers.",
+      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers auf einen Blick.",
     group: "einstieg",
     audience: "traeger",
     icon: "Building2",
@@ -14300,13 +14331,15 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Ist es dein eigenes Gerät? Wähle `Ja, merken und anmelden`. Dort fragt moto dann 90 Tage lang keinen Code ab.",
       "Nutzen mehrere Personen das Gerät? Wähle `Nein, nur anmelden`.",
     ],
-    result: "moto öffnet die Seite `Schulen` mit allen Schulen deines Trägers.",
+    result:
+      "moto öffnet das `Dashboard`. Dort siehst du die Zahlen von jetzt und was Aufmerksamkeit braucht.",
     notes: [
       "Lege dir die Adresse als Lesezeichen an.",
-      "Die Liste der Schulen lädst du über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+      "Die Liste der Schulen findest du in der Navigation unter `Schulen`. Du lädst sie über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
       "Ein neues Passwort gilt auch für dein Konto in der OGS.",
     ],
     differences: [
+      "Darfst du das Dashboard nicht sehen? Dann öffnet moto die Seite `Schulen` mit allen Schulen deines Trägers.",
       "Oben steht `Willkommen im Träger-Portal`. So erkennst du, dass du richtig bist.",
       "Hast du auch ein Konto in einer OGS? Dann nutzt du dasselbe Konto. Ein zweites Passwort brauchst du nicht.",
       "Meldest du dich zum ersten Mal an? Dann richtest du den Code zuerst ein. Wähle `Code an meine E-Mail senden`. Gib danach den Code ein. Wähle `Weiter zum Dashboard`.",
@@ -14314,7 +14347,11 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Ein gemerktes Gerät gilt nur für das Träger-Portal und nur für diesen Träger. In einer OGS merkst du das Gerät dort noch einmal.",
       "Gemerkte Geräte stehen unter `Konto` bei `Meine vertrauten Geräte`. Dort entfernst du ein Gerät wieder.",
       "Am Computer stehen die Bereiche links in der Navigation. Auf dem Handy stehen sie unten. Was dort keinen Platz hat, findest du unter `Mehr`.",
+      "Am Computer stehen die Bereiche in Gruppen wie `Übersicht` oder `Finanzen`. Wähle den Namen einer Gruppe. Dann klappt sie zu oder auf. moto merkt sich das auf diesem Gerät. Öffnest du eine Seite, ist ihre Gruppe offen.",
+      "Suchst du eine Seite oder eine Schule? Drücke Strg und K. Am Mac drücke ⌘ und K. Oder wähle oben in der Navigation `Suchen`. Auf dem Handy wählst du unten die Lupe.",
+      "Gib den Namen einer Seite oder Schule ein. Auch der Ort einer Schule passt. Wähle einen Treffer, oder wähle ihn mit den Pfeiltasten und drücke Enter. Du findest nur Seiten, die du öffnen darfst.",
       "`Einstellungen` steht unten in der Navigation. Ein Klick darauf zeigt dort die Einstellungen. `Zurück zur App` führt zurück.",
+      "Ein Klick auf das Logo oben links führt zurück zum `Dashboard`. Ohne das Dashboard führt er zu `Schulen`.",
     ],
     troubleshootingDetails: [
       "Keine E-Mail mit Code? Schau im Spam-Ordner nach. Wähle sonst `Neuen Code anfordern`.",
@@ -15643,7 +15680,7 @@ export const traegerTestSystemTopic =
         "Melde dich im Träger-Portal an.",
         "Gehörst du auch zum echten Träger? Wähle den Test-Träger aus.",
         "Oben steht der Hinweis `Testsystem`. So erkennst du das Testsystem.",
-        "Die Seite `Schulen` zeigt die Test-Schulen. Probiere alles aus.",
+        "Unter `Schulen` in der Navigation stehen die Test-Schulen. Probiere alles aus.",
       ],
       result:
         "Wenn du fertig bist, löscht das moto-Team das Testsystem mit allen Test-Schulen.",

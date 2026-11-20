@@ -72,7 +72,7 @@ func TestOperatorRoutesUpdateAndRemoveOrganizationsSchoolsAndPersons(t *testing.
 	inner := chi.NewRouter()
 	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: f.service, RequiredDetails: f.service.RequiredDetails})
 	mountOperatorProvisioningRoutes(inner, resource, nil)
-	mountOperatorSchoolRoutes(inner, resource, nil, nil, nil)
+	mountOperatorSchoolRoutes(inner, resource, nil, nil, demoOperatorRoutes{})
 	mountOperatorPersonRoutes(inner, resource)
 	f.router = chi.NewRouter()
 	f.router.Mount("/operator", inner)
@@ -103,7 +103,7 @@ func TestOperatorRoutesSwitchTheCaregiverCapabilityOfASchoolAccount(t *testing.T
 	config, err := newProvisioningConfig(provisioning, caregiverCapabilityViews(testpkg.NewDatabase(t, db), services.CaregiverCapability))
 	require.NoError(t, err)
 	resource := provisioningAPI.NewProvisioningResource(config)
-	f := operatorPortalRoutes(t, db, provisioning, func(r chi.Router) { mountOperatorSchoolRoutes(r, resource, nil, nil, nil) })
+	f := operatorPortalRoutes(t, db, provisioning, func(r chi.Router) { mountOperatorSchoolRoutes(r, resource, nil, nil, demoOperatorRoutes{}) })
 	_, schoolID := provisionTestSchool(t, f.db, f.service, f.operatorID, "route-caregiver")
 	password := testpkg.NewTestPassword()
 	var account struct {

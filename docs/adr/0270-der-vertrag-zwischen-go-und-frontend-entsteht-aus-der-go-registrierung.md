@@ -167,7 +167,8 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
   Upload ab.
 - Eine Datei, die mehr tut als durchzureichen (eigener Cache-Header für ein
   Logo, Umformung, Prüfung im BFF, mehrere Backend-Aufrufe), bleibt eine
-  eigene Datei.
+  eigene Datei. Siehe dazu den Nachtrag „Prüfungen und Umformungen gehören
+  ins Backend“.
 - Die Upload-Antwort ist JSON und läuft durch den Decoder der Route; sie hat
   danach die Hülle des Katalogs (`success`, `message`, `data`) statt der des
   Backends. Ein Client, der mehr als `data` liest, zieht beim Umzug mit.
@@ -237,3 +238,137 @@ aus. Dieser Nachtrag ersetzt ihn für markierte Einzelrouten.
   Freigabe in `HOST_RULES` von `src/proxy.ts` für jeden Portal-Host, der sie
   öffnet, und die Log-Redaction ihres Pfads im BFF und im Backend.
 - Befristete oder signierte Datei-URLs sind nicht Teil dieser Entscheidung.
+
+## Nachtrag vom 2026-11-20: Öffentliche Uploads
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Drei
+Routendateien bauten das Multipart eines Uploads neu und gaben nur gelistete
+Felder weiter: die Nachweise der Online-Anmeldung
+(`/api/enrollment/{tenantSlug}/uploads`, ohne Sitzung), die Nachweise des
+Ferienlinks (ohne Sitzung) und die Nachweise der Anmeldung im Elternportal.
+Der erste Punkt der Grenzen des Nachtrags „Öffentliche Datei-Routen“ ließ die
+beiden öffentlichen als Dateien stehen. Dieser Nachtrag ersetzt ihn.
+
+### Entscheidung
+
+1. **Ein öffentlicher Upload öffnet nur ein Merkmal seiner Route.**
+   `common.RouteContract.PublicUpload` nennt den Grund, warum ein Formular
+   oder Link ohne Sitzung eine Datei senden darf. Der Generator lehnt ab:
+   einen öffentlichen Upload ohne Merkmal und das Merkmal an einer Route,
+   die kein Multipart-Upload oder nicht nur im Portal `public` ist. Grenze
+   und Code (`MaxBodyBytes`, `TooLargeCode`) bleiben Pflicht. Im Modell
+   `public_upload`, im erzeugten Code `publicUpload`; der Proxy nimmt einen
+   öffentlichen Upload ohne diesen Wert nicht an.
+2. **Der Weg trägt keine Berechtigung des Geräts.** Kein Sitzungs-Lesen,
+   `sendBackend(…, null, …)`: kein Bearer, keine Cookies, kein
+   `Idempotency-Key`. `X-Forwarded-For` geht mit.
+3. **Größe vor dem Lesen, Zählung vor dem Body.** Der Proxy prüft
+   `Content-Length` vor dem Aufruf (fehlt: 411, zu groß: 413 mit dem Code
+   der Route) und zählt beim Streamen. Das Backend zählt den Versuch je
+   Client-IP und Schule bzw. Träger, bevor es den Body liest
+   (`CountUploadAttempt`, `CountHolidayProofUpload`), dazu die Limiter der
+   Anmeldung und des Ferienlinks; der BFF hatte kein eigenes Limit.
+4. **Die Felder prüft das Backend.** Jeder der drei Handler nimmt genau eine
+   Datei `file` und je einmal seine Textfelder an (`onlyFormParts`) und
+   lehnt jeden anderen Teil mit 400 ab, bevor er speichert. Größe, Inhalt
+   und Endung prüfte das Backend schon.
+5. **Antwort.** JSON durch den Decoder der Route in der Hülle des Katalogs,
+   `private, no-store`, Status des Backends (201).
+
+### Grenzen
+
+- Ein gestreamter Upload hält während des Sendens eine Verbindung zum
+  Backend; vorher puffert der BFF ihn vollständig. Die Zählung je IP
+  geschieht trotzdem vor dem ersten gelesenen Byte.
+- Eine neue öffentliche Upload-Route braucht das Merkmal, eine IP-Zählung
+  im Handler vor dem Lesen, die Freigabe ihres Pfads in `HOST_RULES` und
+  die Log-Redaction eines Tokens im Pfad.
+
+## Nachtrag vom 2026-11-19: Prüfungen und Umformungen gehören ins Backend
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Viele
+Datei-Routen hatten nur deshalb eine eigene Datei, weil der BFF etwas prüfte
+oder umformte, was der Go-Handler ohnehin tut. Entscheidung: Solche Routen
+ziehen auf den Katalog; es gibt keine Ausnahmen und keine befristeten Dateien.
+
+- **Dateityp und -name nennt das Backend.** Jeder Datei-Handler setzt
+  `Content-Type` und `Content-Disposition` selbst; der Proxy ergänzt nichts.
+  Ein Ersatztyp im BFF (`fallbackType`, `ICS_FILE`) entfällt.
+- **Prüfungen liegen im Handler.** Eine Zahl-Prüfung von IDs, eine
+  Format-Prüfung oder eine Query-Auswahl im BFF entfällt; der Handler lehnt
+  ungültige Werte mit 4xx ab, und der Vertrag nennt nur die Parameter, die er
+  liest.
+- **Der Client spricht das Backend-Format.** Er ruft den Backend-Pfad mit
+  dessen Parametern und sendet den Body so, wie der Handler ihn bindet. Ein
+  Pfad-Parameter, der im BFF zur Query wurde, ist im Client wieder Query.
+- **Der Proxy puffert nicht.** Eine Datei, die das Backend ohne
+  `Content-Length` streamt, geht ohne diesen Header durch.
+
+## Nachtrag vom 2026-11-20: Bilder, die der Browser behalten darf
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Drei
+Datei-Routen hatten eine eigene Datei nur wegen ihres Cache-Headers: der eigene
+Avatar, der Avatar einer Mitarbeiterin und das Logo des Trägers. Ihre Adresse
+trägt die Version der Datei; ohne Cache lädt jede Liste jedes Bild neu.
+
+- **Das Backend setzt den Cache-Header.** Der Handler entscheidet, wie lange
+  der Browser die Datei behalten darf, auch abhängig von `?v`. Er setzt nur
+  `private`-Werte.
+- **Der Vertrag erlaubt das Durchreichen je Route.** `PrivateCache: true`
+  (nur zusammen mit `File`) lässt den Proxy das `Cache-Control` des Backends
+  durchreichen, wenn es `private` enthält und nicht `public`. Jeder andere
+  Wert, ein fehlender Header und jede Ablehnung oder fehlende Sitzung bleiben
+  `private, no-store`. Ohne das Merkmal bleiben Datei-Antworten
+  `private, no-store`.
+- Der Grenzfall „eigener Cache-Header für ein Logo“ ist damit keine eigene
+  Datei mehr.
+
+
+## Nachtrag vom 2026-11-20: Cache je Datei-Route und Abo-Adressen
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Sechs
+Routendateien blieben, weil sie einen eigenen Cache-Header setzten: die
+Kalender- und Anfrage-Abos (`/api/calendar-feed/{token}`,
+`/api/request-feed/{token}`), Login-Bild und Rechtstexte der Anmeldung
+(`/api/public/…`) und das Kinderfoto mit 304. Die Grenzen der beiden
+vorigen Nachträge („eigener Cache-Header“, „Prüfung im BFF“) gelten für
+diese Fälle nicht mehr.
+
+### Entscheidung
+
+1. **Ein Cache ist ein Merkmal der Route.** `common.RouteContract.FileCache`
+   nennt den Cache-Control-Wert, den der Proxy auf einer ausgelieferten
+   Datei behält (2xx, auf einer `ConditionalGet`-Route auch 304). Die Werte
+   sind eine geschlossene Liste (`contractmodel.FileCacheValues`):
+   `public, max-age=86400` (öffentliche Datei ohne Personendaten),
+   `private, max-age=3600` (Abo-Feed), `private, max-age=86400, immutable`
+   (Foto hinter einer Upload-URL). Der Generator lehnt einen anderen Wert ab,
+   das Merkmal an einer Nicht-Datei oder einem Upload und einen
+   `public`-Wert ohne `PublicFile`. Der Proxy führt dieselbe Liste und
+   behält einen `public`-Wert nur auf einer markierten öffentlichen Datei.
+   Ablehnungen, Sitzungsfehler und Backend-Fehler bleiben `private,
+   no-store`. Der Handler sendet denselben Wert (`common.FileCache*`).
+2. **Ein bedingter GET ist ein Merkmal der Route.** `ConditionalGet` (nur
+   GET-Datei mit `FileCache`) reicht `If-None-Match` und
+   `If-Modified-Since` durch und gibt ein 304 mit `ETag`, `Last-Modified`
+   und dem Cache der Route zurück; auf 200 gehen beide Validatoren mit.
+   Andere Routen erhalten keinen bedingten Header.
+3. **Prüfungen des BFF liegen im Backend.** Die öffentlichen
+   Upload-Ordner liefern über `common.ServePublicAsset` nur ihre Art aus:
+   der Typ folgt der Endung, PDF für die Rechtstexte (inline mit Namen),
+   JPEG/PNG/WebP/GIF für das Login-Bild (kein SVG), mit `nosniff`; eine
+   andere Art ist 404 wie eine fehlende Datei, ein Name mit Pfad ebenso.
+4. **Eine Abo-Adresse bleibt, der Pfad ist der des Backends.** Kalender-
+   Apps und RSS-Leser behalten die Adresse vom Tag des Abos. Ein
+   `beforeFiles`-Rewrite in `next.config.js` führt
+   `/api/calendar-feed/:token` auf `/api/public/calendar/:token` und
+   `/api/request-feed/:token` auf `/api/public/request-feed/:token`; dort
+   antwortet der Katalog wie auf jede öffentliche Datei. `src/proxy.ts`
+   prüft den Host vorher an der alten Adresse; die Log-Redaction im BFF und
+   im Backend kannte beide Pfade schon.
+
+### Grenzen
+
+- Ein neuer Cache-Wert braucht einen Nachtrag und einen Eintrag in beiden
+  Listen.
+- Uploads ohne Sitzung folgen dem Nachtrag „Öffentliche Uploads“.

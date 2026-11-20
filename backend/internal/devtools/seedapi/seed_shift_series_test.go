@@ -156,12 +156,14 @@ func TestCurrentWeekShiftsFillTheWeekUpToToday(t *testing.T) {
 	monday := seedDate{Time: time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)}
 	assert.Len(t, currentWeekShifts(monday, []int64{31}, series, types), 2, "on Monday only today")
 
-	// The colleague on vacation today keeps the days before but not today.
-	staffIDs := []int64{31, 32, 33, 34, 35, 36, 37}
+	// Colleagues on vacation or training today keep the days before, but not
+	// today: the full-day simulation must not count either as absent.
+	staffIDs := []int64{31, 32, 33, 34, 35, 36, 37, 38}
 	onVacation := append(series, map[string]any{"staff_id": int64(37), "start_time": regularDutyStart, "end_time": regularDutyEnd})
+	onLeave := append(onVacation, map[string]any{"staff_id": int64(38), "start_time": regularDutyStart, "end_time": regularDutyEnd})
 	planned := map[string]bool{}
-	for _, shift := range currentWeekShifts(thursday, staffIDs, onVacation, types) {
-		if shift["staff_id"] == int64(37) {
+	for _, shift := range currentWeekShifts(thursday, staffIDs, onLeave, types) {
+		if shift["staff_id"] == int64(37) || shift["staff_id"] == int64(38) {
 			planned[shift["date"].(string)] = true
 		}
 	}

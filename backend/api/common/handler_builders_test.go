@@ -36,57 +36,6 @@ func route(t *testing.T, method, pattern, path string, h http.HandlerFunc, body 
 	return rec
 }
 
-func TestIDAction(t *testing.T) {
-	t.Parallel()
-
-	t.Run("success responds 204 and passes the parsed id", func(t *testing.T) {
-		var got int64
-		h := common.IDAction("id", "invalid id", func(_ context.Context, id int64) error {
-			got = id
-			return nil
-		}, common.ErrorInternalServer)
-
-		rec := route(t, http.MethodPost, "/things/{id}", "/things/42", h, "")
-		assert.Equal(t, http.StatusNoContent, rec.Code)
-		assert.Equal(t, int64(42), got)
-	})
-
-	t.Run("int-typed service functions work unchanged", func(t *testing.T) {
-		var got int
-		h := common.IDAction("id", "invalid id", func(_ context.Context, id int) error {
-			got = id
-			return nil
-		}, common.ErrorInternalServer)
-
-		rec := route(t, http.MethodPost, "/things/{id}", "/things/7", h, "")
-		assert.Equal(t, http.StatusNoContent, rec.Code)
-		assert.Equal(t, 7, got)
-	})
-
-	t.Run("non-numeric id renders 400 with the invalid message", func(t *testing.T) {
-		called := false
-		h := common.IDAction("id", "invalid thing ID", func(_ context.Context, _ int64) error {
-			called = true
-			return nil
-		}, common.ErrorInternalServer)
-
-		rec := route(t, http.MethodPost, "/things/{id}", "/things/abc", h, "")
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
-		assert.Contains(t, rec.Body.String(), "invalid thing ID")
-		assert.False(t, called)
-	})
-
-	t.Run("service error renders through renderErr", func(t *testing.T) {
-		h := common.IDAction("id", "invalid id", func(_ context.Context, _ int64) error {
-			return errors.New("boom")
-		}, common.ErrorConflict)
-
-		rec := route(t, http.MethodPost, "/things/{id}", "/things/1", h, "")
-		assert.Equal(t, http.StatusConflict, rec.Code)
-		assert.Contains(t, rec.Body.String(), "boom")
-	})
-}
-
 func TestIDFetch(t *testing.T) {
 	t.Parallel()
 

@@ -162,7 +162,7 @@ func (c *StaffImportConfig) Validate(ctx context.Context, row *importModels.Staf
 	if mode := importModeFromContext(ctx); mode == importModels.ImportModeUpdate || mode == importModels.ImportModeUpsert {
 		existing, findErr := c.FindExisting(ctx, *row)
 		if findErr != nil {
-			return []importModels.ValidationError{{Field: "staff", Message: fmt.Sprintf("Mitarbeiter konnte nicht geprüft werden: %s", findErr.Error()), Code: "existing_lookup_failed", Severity: importModels.ErrorSeverityError}}
+			return []importModels.ValidationError{{Field: "staff", Message: "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.", Code: "existing_lookup_failed", Severity: importModels.ErrorSeverityError}}
 		}
 		requiresCreateFields = existing == nil
 	}
@@ -373,7 +373,7 @@ func (c *StaffImportConfig) validateRole(ctx context.Context, row *importModels.
 	if err != nil && !errors.Is(err, importModels.ErrRoleNotFound) {
 		return []importModels.ValidationError{{
 			Field:    "role",
-			Message:  fmt.Sprintf("Rolle konnte nicht geprüft werden: %s", err.Error()),
+			Message:  "Die Rolle konnte nicht geprüft werden. Bitte versuche es erneut.",
 			Code:     "role_lookup_failed",
 			Severity: importModels.ErrorSeverityError,
 		}}
@@ -621,7 +621,7 @@ func (c *StaffImportConfig) validateResolvedStaffRole(ctx context.Context, row *
 		if err != nil {
 			return []importModels.ValidationError{{
 				Field:    "role",
-				Message:  fmt.Sprintf("Rolle konnte nicht geprüft werden: %s", err.Error()),
+				Message:  "Die Rolle konnte nicht geprüft werden. Bitte versuche es erneut.",
 				Code:     "role_lookup_failed",
 				Severity: importModels.ErrorSeverityError,
 			}}
@@ -674,7 +674,7 @@ func (c *StaffImportConfig) skipStaffRoleGrantCheck(ctx context.Context, row *im
 	if importModeFromContext(ctx) == importModels.ImportModeUpsert {
 		existing, findErr := c.FindExisting(ctx, *row)
 		if findErr != nil {
-			return false, []importModels.ValidationError{{Field: "role", Message: fmt.Sprintf("Bestehende Person konnte nicht geprüft werden: %s", findErr.Error()), Code: "existing_lookup_failed", Severity: importModels.ErrorSeverityError}}
+			return false, []importModels.ValidationError{{Field: "role", Message: "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.", Code: "existing_lookup_failed", Severity: importModels.ErrorSeverityError}}
 		}
 		skipGrantCheck = existing != nil
 	}

@@ -236,6 +236,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/admin/grade-transitions/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(TransitionResponseSchema),
   },
   "GET /api/admin/grade-transitions/{id}/history": {

@@ -29,9 +29,10 @@ Im eingecheckten Stand geprüft:
   `private, max-age=86400`.
 - `backend/api/common/upload.go`: `ServeImage` öffnet die Datei im Backend und
   liefert sie über `http.ServeContent`, ohne zusätzliche Bildskalierungsdateien.
-  Die Frontend-Proxys unter `frontend/src/app/api/students/[id]/photo/[filename]`,
-  `api/me/profile/avatar/[filename]` und `api/staff/[id]/avatar` rufen das Backend
-  authentifiziert auf und lesen nicht selbst vom Upload-Volume.
+  Der Frontend-Proxy unter `frontend/src/app/api/students/[id]/photo/[filename]`
+  und der Katalog-Proxy für die Avatare (`/api/me/profile/avatar/{filename}`,
+  `/api/staff/{id}/avatar`) rufen das Backend authentifiziert auf und lesen
+  nicht selbst vom Upload-Volume.
 - `backend/api/serve_mounts_public.go` enthält öffentliche Einzelrouten für
   Login-Bilder und rechtliche Dokumente, keinen generischen Upload-Static-Mount
   und keine öffentliche Route für Kinderfotos oder Avatare. `frontend/next.config.js`

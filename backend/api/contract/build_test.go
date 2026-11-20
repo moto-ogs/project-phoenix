@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common/contractmodel"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -212,6 +213,20 @@ func TestBuildRejects(t *testing.T) {
 	publicFileWithBody.MaxBodyBytes = 1024
 	publicUpload := upload()
 	publicUpload.Portals = []string{PublicPortal}
+	markedSessionUpload := upload()
+	markedSessionUpload.PublicUpload = "the form is public"
+	markedPublicJSONWrite := get("/api/links/{token}", inner{})
+	markedPublicJSONWrite.Portals = []string{PublicPortal}
+	markedPublicJSONWrite.PublicUpload = "the form is public"
+
+	cachedJSON := get("/api/rows/{id}", inner{})
+	cachedJSON.FileCache = contractmodel.FileCachePrivateHour
+	unknownCache := fileRoute("/api/rows/{id}/file")
+	unknownCache.FileCache = "public, max-age=31536000"
+	publicCacheOnSession := fileRoute("/api/rows/{id}/file")
+	publicCacheOnSession.FileCache = contractmodel.FileCachePublicAsset
+	conditionalWithoutCache := fileRoute("/api/rows/{id}/file")
+	conditionalWithoutCache.ConditionalGet = true
 	uploadWithoutLimit := upload()
 	uploadWithoutLimit.MaxBodyBytes = 0
 	uploadWithoutCode := upload()
@@ -227,6 +242,12 @@ func TestBuildRejects(t *testing.T) {
 	uploadRetry.NoRetryAfterRenewal = "stores the file twice"
 	strayCode := post(body{})
 	strayCode.TooLargeCode = "files.file_too_large"
+	jsonCache := get("/api/rows/", inner{})
+	jsonCache.PrivateCache = true
+	publicCache := fileRoute("/api/links/{token}/file")
+	publicCache.Portals = []string{PublicPortal}
+	publicCache.PublicFile = "the link is the credential"
+	publicCache.PrivateCache = true
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -238,39 +259,47 @@ func TestBuildRejects(t *testing.T) {
 		"an anonymous struct": {[]Registration{get("/api/rows/", struct {
 			S stamp `json:"s"`
 		}{})}, Options{Identifiers: identifiers}, "anonymous struct"},
-		"an unknown marshaler in a named type":      {[]Registration{get("/api/rows/", []stamp{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
-		"a response on a route without data":        {[]Registration{bothAnswers}, Options{Identifiers: identifiers}, "registers a response and no data"},
-		"a route without a portal":                  {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
-		"a route registered twice":                  {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
-		"a numeric id entry nothing uses":           {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
-		"a variant entry nothing uses":              {[]Registration{get("/api/rows/", inner{})}, Options{QueryVariants: []string{"GET /api/gone/"}, Identifiers: identifiers}, "query variant GET /api/gone/"},
-		"a format tag on a field that is no string": {[]Registration{get("/api/rows/", misformatted{})}, Options{Identifiers: identifiers}, `contract:"clock" needs a string field`},
-		"an unknown format tag":                     {[]Registration{get("/api/rows/", unknownFormat{})}, Options{Identifiers: identifiers}, `contract:"week" needs a string field`},
-		"a request type that reads itself":          {[]Registration{post(ownReader{})}, Options{Identifiers: identifiers}, "has its own UnmarshalJSON"},
-		"a reader entry nothing uses":               {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Readers: map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsFields}}, "reader contract.ownReader"},
-		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
-		"a day type entry nothing uses":             {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}}, "day type contract.ownDay"},
-		"an instant type entry nothing uses":        {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Instants: []reflect.Type{reflect.TypeFor[stamp]()}}, "instant type contract.stamp"},
-		"an owner's day type without an entry":      {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
-		"a body limit on a route without a body":    {[]Registration{limitWithoutBody}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
-		"a negative body limit":                     {[]Registration{negativeLimit}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
-		"a public write without a body limit":       {[]Registration{publicWrite}, Options{Identifiers: identifiers}, "a public write needs MaxBodyBytes"},
-		"a public route that names a retry":         {[]Registration{publicRetry}, Options{Identifiers: identifiers}, "has no session to renew"},
-		"a public route beside a session portal":    {[]Registration{publicBeside}, Options{Identifiers: identifiers}, "names no session portal"},
-		"a public pattern a session pattern takes":  {[]Registration{publicLink, get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers}, "overlaps the session route GET /api/rows/{id}"},
-		"a file with a JSON response":               {[]Registration{fileAndJSON}, Options{Identifiers: identifiers}, "registers a file and a JSON response"},
-		"a public file":                             {[]Registration{publicFile}, Options{Identifiers: identifiers}, "answers JSON only"},
-		"a public file marker on a session file":    {[]Registration{markedSessionFile}, Options{Identifiers: identifiers}, "PublicFile marks a file of the portal"},
-		"a public file marker on a JSON route":      {[]Registration{markedPublicJSON}, Options{Identifiers: identifiers}, "PublicFile marks a file of the portal"},
-		"a public file that reads a body":           {[]Registration{publicFileWithBody}, Options{Identifiers: identifiers}, "a public file reads no request body"},
-		"a public upload":                           {[]Registration{publicUpload}, Options{Identifiers: identifiers}, "takes no upload"},
-		"an upload without a body limit":            {[]Registration{uploadWithoutLimit}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
-		"an upload without its too large code":      {[]Registration{uploadWithoutCode}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
-		"an upload beside a JSON body":              {[]Registration{uploadAndBody}, Options{Identifiers: identifiers}, "a multipart upload and a JSON request body"},
-		"an upload with a file response":            {[]Registration{uploadAndFile}, Options{Identifiers: identifiers}, "a multipart upload cannot answer a file"},
-		"an upload on a GET":                        {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
-		"an upload that names a retry":              {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
-		"a too large code without an upload":        {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
+		"an unknown marshaler in a named type":       {[]Registration{get("/api/rows/", []stamp{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a response on a route without data":         {[]Registration{bothAnswers}, Options{Identifiers: identifiers}, "registers a response and no data"},
+		"a route without a portal":                   {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
+		"a route registered twice":                   {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
+		"a numeric id entry nothing uses":            {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
+		"a variant entry nothing uses":               {[]Registration{get("/api/rows/", inner{})}, Options{QueryVariants: []string{"GET /api/gone/"}, Identifiers: identifiers}, "query variant GET /api/gone/"},
+		"a format tag on a field that is no string":  {[]Registration{get("/api/rows/", misformatted{})}, Options{Identifiers: identifiers}, `contract:"clock" needs a string field`},
+		"an unknown format tag":                      {[]Registration{get("/api/rows/", unknownFormat{})}, Options{Identifiers: identifiers}, `contract:"week" needs a string field`},
+		"a request type that reads itself":           {[]Registration{post(ownReader{})}, Options{Identifiers: identifiers}, "has its own UnmarshalJSON"},
+		"a reader entry nothing uses":                {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Readers: map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsFields}}, "reader contract.ownReader"},
+		"an enum field nothing uses":                 {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
+		"a day type entry nothing uses":              {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Dates: []reflect.Type{reflect.TypeFor[ownDay]()}}, "day type contract.ownDay"},
+		"an instant type entry nothing uses":         {[]Registration{get("/api/rows/", inner{})}, Options{Identifiers: identifiers, Instants: []reflect.Type{reflect.TypeFor[stamp]()}}, "instant type contract.stamp"},
+		"an owner's day type without an entry":       {[]Registration{get("/api/rows/", dayRow{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a body limit on a route without a body":     {[]Registration{limitWithoutBody}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a negative body limit":                      {[]Registration{negativeLimit}, Options{Identifiers: identifiers}, "a body limit needs a positive size and a request body"},
+		"a public write without a body limit":        {[]Registration{publicWrite}, Options{Identifiers: identifiers}, "a public write needs MaxBodyBytes"},
+		"a public route that names a retry":          {[]Registration{publicRetry}, Options{Identifiers: identifiers}, "has no session to renew"},
+		"a public route beside a session portal":     {[]Registration{publicBeside}, Options{Identifiers: identifiers}, "names no session portal"},
+		"a public pattern a session pattern takes":   {[]Registration{publicLink, get("/api/rows/{id}", inner{})}, Options{Identifiers: identifiers}, "overlaps the session route GET /api/rows/{id}"},
+		"a file with a JSON response":                {[]Registration{fileAndJSON}, Options{Identifiers: identifiers}, "registers a file and a JSON response"},
+		"a public file":                              {[]Registration{publicFile}, Options{Identifiers: identifiers}, "answers JSON only"},
+		"a public file marker on a session file":     {[]Registration{markedSessionFile}, Options{Identifiers: identifiers}, "PublicFile marks a file of the portal"},
+		"a public file marker on a JSON route":       {[]Registration{markedPublicJSON}, Options{Identifiers: identifiers}, "PublicFile marks a file of the portal"},
+		"a public file that reads a body":            {[]Registration{publicFileWithBody}, Options{Identifiers: identifiers}, "a public file reads no request body"},
+		"a public upload":                            {[]Registration{publicUpload}, Options{Identifiers: identifiers}, "takes no upload"},
+		"a public upload marker on a session upload": {[]Registration{markedSessionUpload}, Options{Identifiers: identifiers}, "PublicUpload marks a multipart upload"},
+		"a public upload marker on a JSON route":     {[]Registration{markedPublicJSONWrite}, Options{Identifiers: identifiers}, "PublicUpload marks a multipart upload"},
+		"a cache trait on a JSON route":              {[]Registration{cachedJSON}, Options{Identifiers: identifiers}, "FileCache belongs to a file route"},
+		"a cache value nobody reviewed":              {[]Registration{unknownCache}, Options{Identifiers: identifiers}, "none of the reviewed values"},
+		"a public cache on a session file":           {[]Registration{publicCacheOnSession}, Options{Identifiers: identifiers}, "a public FileCache needs PublicFile"},
+		"a conditional GET without a cache":          {[]Registration{conditionalWithoutCache}, Options{Identifiers: identifiers}, "ConditionalGet belongs to a GET file route with FileCache"},
+		"an upload without a body limit":             {[]Registration{uploadWithoutLimit}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
+		"an upload without its too large code":       {[]Registration{uploadWithoutCode}, Options{Identifiers: identifiers}, "needs MaxBodyBytes and TooLargeCode"},
+		"an upload beside a JSON body":               {[]Registration{uploadAndBody}, Options{Identifiers: identifiers}, "a multipart upload and a JSON request body"},
+		"an upload with a file response":             {[]Registration{uploadAndFile}, Options{Identifiers: identifiers}, "a multipart upload cannot answer a file"},
+		"an upload on a GET":                         {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
+		"an upload that names a retry":               {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
+		"a too large code without an upload":         {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
+		"a private cache trait on a JSON route":      {[]Registration{jsonCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
+		"a cache trait on a public file":             {[]Registration{publicCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -433,6 +462,14 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 		assert.Contains(t, table, line)
 	}
 
+	// A resource named like a keyword gets a binding that is no keyword.
+	doc, err = Build([]Registration{get("/api/import/rows", inner{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err = TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["portals.generated.ts"], `import { routes as importRoutes } from "./import.generated";`)
+	assert.Contains(t, files["portals.generated.ts"], `    importRoutes["GET /api/import/rows"],`)
+
 	for _, pattern := range []string{"/api/portals/", "/api/shared/"} {
 		doc, err = Build([]Registration{get(pattern, inner{})}, Options{Identifiers: identifiers})
 		require.NoError(t, err)
@@ -509,6 +546,13 @@ func TestTypeScriptWritesAFileAndAnUpload(t *testing.T) {
 	require.NoError(t, err)
 
 	source := files["rows.generated.ts"]
+	cached := fileRoute("/api/rows/{id}/avatar")
+	cached.PrivateCache = true
+	cachedDoc, err := Build([]Registration{cached}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	cachedFiles, err := TypeScript(cachedDoc)
+	require.NoError(t, err)
+	assert.Contains(t, cachedFiles["rows.generated.ts"], "    privateCache: true,\n    response: fileAnswer,\n")
 	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: [\"format\"],\n    response: fileAnswer,\n  },\n")
 	assert.Contains(t, source, "    maxBodyBytes: 1048576,\n    tooLargeCode: \"files.file_too_large\",\n    request: multipart,\n    response: success(innerSchema),\n")
 	assert.Contains(t, source, "  fileAnswer,\n")
@@ -673,6 +717,41 @@ func TestAMarkedPublicFileIsBuiltWithItsReason(t *testing.T) {
 	assert.Contains(t, files["links.generated.ts"], "    portals: [\"public\"],\n    publicFile: \"the link of the mail is the credential\",\n")
 }
 
+// A public upload opens only with its own marker, which travels to the
+// proxy beside the upload's bound and code (ADR 0270, #2352).
+func TestAMarkedPublicUploadIsBuiltWithItsReason(t *testing.T) {
+	t.Parallel()
+	proof := upload()
+	proof.Pattern = "/api/links/{token}/uploads"
+	proof.Portals = []string{PublicPortal}
+	proof.PublicUpload = "the link is the parents' only credential"
+	doc, err := Build([]Registration{proof}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["links.generated.ts"], "    publicUpload: \"the link is the parents' only credential\",\n")
+	assert.Contains(t, files["links.generated.ts"], "    request: multipart,\n")
+}
+
+// A file route's cache traits travel to the proxy, which keeps no other
+// Cache-Control on a file than the one its contract names (#2352).
+func TestAFileRouteCarriesItsCacheTraits(t *testing.T) {
+	t.Parallel()
+	photo := fileRoute("/api/rows/{id}/photo/{filename}")
+	photo.FileCache = contractmodel.FileCachePrivateImmutableDay
+	photo.ConditionalGet = true
+	asset := fileRoute("/public/assets/{filename}")
+	asset.Portals = []string{PublicPortal}
+	asset.PublicFile = "a school's public asset"
+	asset.FileCache = contractmodel.FileCachePublicAsset
+	doc, err := Build([]Registration{photo, asset}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["rows.generated.ts"], "    fileCache: \"private, max-age=86400, immutable\",\n    conditionalGet: true,\n")
+	assert.Contains(t, files["public-assets.generated.ts"], "    publicFile: \"a school's public asset\",\n    fileCache: \"public, max-age=86400\",\n")
+}
+
 func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {
 	t.Parallel()
 	link := get("/api/rows/public/{token}", inner{})
@@ -681,4 +760,17 @@ func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {
 	// and in the proxy, so the pair is ordered.
 	_, err := Build([]Registration{link, get("/api/rows/{id}/history", inner{})}, Options{Identifiers: identifiers})
 	assert.NoError(t, err)
+}
+
+func TestResourceAliasAvoidsReservedWords(t *testing.T) {
+	t.Parallel()
+	for resource, want := range map[string]string{
+		"import":         "importRoutes",
+		"meal-plan":      "mealPlan",
+		"week-protocols": "weekProtocols",
+	} {
+		if got := resourceAlias(resource); got != want {
+			t.Errorf("resourceAlias(%q) = %q, want %q", resource, got, want)
+		}
+	}
 }

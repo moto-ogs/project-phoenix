@@ -28,12 +28,23 @@ import {
   UNKNOWN_ANALYTICS_PATH,
   type AnalyticsRouteSurface,
 } from "~/lib/analytics-routes";
+import type { Kind as DayChangeKind } from "~/lib/contract/day-changes.generated";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
 
 /** Reiterarten auf „Alle Kinder“ (#5046); ein Aufsichtsreiter nennt keinen Raum. */
 const CHILD_SCOPE_ANALYTICS_VALUES = ["all", "groups", "room"] as const;
 export type ChildScopeAnalyticsValue =
   (typeof CHILD_SCOPE_ANALYTICS_VALUES)[number];
+
+// This module is part of the global analytics client bundle. Keep the
+// generated contract import type-only: importing its runtime enum would also
+// pull Zod and every route schema into every portal.
+const DAY_CHANGE_KINDS = [
+  "group_substitution",
+  "group_substitution_count",
+  "staff_absent",
+  "staff_absent_count",
+] as const satisfies readonly DayChangeKind[];
 
 /**
  * Selbstöffnende Flächen des Einstiegs (#7541). Ein Wert je Fläche; eine
@@ -529,6 +540,12 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "notification_feed_all_read",
   // Reiter auf „Alle Kinder“ (#5046): nur die Art des Reiters, nie ein Raum.
   "child_scope_tab_selected",
+  // „Heute anders“ (#7659): Klick auf einen Eintrag nur mit seiner Art,
+  // „Alle anzeigen“ und das Aufklappen von „erledigt“ (#7660) ohne
+  // Eigenschaft.
+  "day_changes_entry_clicked",
+  "day_changes_show_all",
+  "day_changes_done_expanded",
   // Selbstöffnende Flächen des Einstiegs (#7541): nur die Fläche
   // (onboarding_surface); das Portal steht in `surface`.
   "onboarding_surface_shown",
@@ -551,6 +568,7 @@ const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   $dead_swipe_direction: new Set(["up", "down", "left", "right"]),
   notification_type: new Set(NOTIFICATION_FEED_ANALYTICS_TYPES),
   child_scope: new Set(CHILD_SCOPE_ANALYTICS_VALUES),
+  day_change_kind: new Set(DAY_CHANGE_KINDS),
   onboarding_surface: new Set(ONBOARDING_SURFACES),
   checklist: new Set(ONBOARDING_CHECKLISTS),
   checklist_step: new Set(ONBOARDING_CHECKLIST_STEPS),

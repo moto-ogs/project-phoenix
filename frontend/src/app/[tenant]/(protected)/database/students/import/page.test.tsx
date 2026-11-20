@@ -244,11 +244,11 @@ describe("StudentImportPage", () => {
   it("handles file upload and preview", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 5,
-        CreatedCount: 3,
-        UpdatedCount: 2,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 5,
+        created_count: 3,
+        updated_count: 2,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -304,11 +304,11 @@ describe("StudentImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 1,
-              CreatedCount: 1,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 1,
+              created_count: 1,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       });
@@ -341,14 +341,14 @@ describe("StudentImportPage", () => {
   it("shows preview section after successful file upload", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 2,
-        UpdatedCount: 1,
-        ErrorCount: 0,
-        Errors: [
+        total_rows: 3,
+        created_count: 2,
+        updated_count: 1,
+        error_count: 0,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "Max",
               last_name: "Mustermann",
               school_class: "1a",
@@ -356,7 +356,7 @@ describe("StudentImportPage", () => {
               birthday: "2015-01-01",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "already_exists",
                 severity: "error",
@@ -364,7 +364,7 @@ describe("StudentImportPage", () => {
                 field: "",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
@@ -389,14 +389,14 @@ describe("StudentImportPage", () => {
   it("resets form when cancel button is clicked", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 2,
-        UpdatedCount: 1,
-        ErrorCount: 0,
-        Errors: [
+        total_rows: 3,
+        created_count: 2,
+        updated_count: 1,
+        error_count: 0,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "Test",
               last_name: "Student",
               school_class: "2b",
@@ -404,7 +404,7 @@ describe("StudentImportPage", () => {
               birthday: "2014-05-01",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "already_exists",
                 severity: "error",
@@ -412,7 +412,7 @@ describe("StudentImportPage", () => {
                 field: "",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
@@ -443,15 +443,15 @@ describe("StudentImportPage", () => {
   it("handles import with preview data containing warnings", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 2,
-        CreatedCount: 1,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        WarningCount: 1,
-        Errors: [
+        total_rows: 2,
+        created_count: 1,
+        updated_count: 0,
+        error_count: 0,
+        warning_count: 1,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "Anna",
               last_name: "Schmidt",
               school_class: "3c",
@@ -468,7 +468,7 @@ describe("StudentImportPage", () => {
                 },
               ],
             },
-            Errors: [
+            errors: [
               {
                 code: "phone_format",
                 severity: "warning",
@@ -476,7 +476,7 @@ describe("StudentImportPage", () => {
                 field: "phone",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
@@ -501,14 +501,14 @@ describe("StudentImportPage", () => {
   it("handles import with real errors", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 1,
-        CreatedCount: 0,
-        UpdatedCount: 0,
-        ErrorCount: 1,
-        Errors: [
+        total_rows: 1,
+        created_count: 0,
+        updated_count: 0,
+        error_count: 1,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "",
               last_name: "Müller",
               school_class: "1a",
@@ -516,7 +516,7 @@ describe("StudentImportPage", () => {
               birthday: "",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "required",
                 severity: "error",
@@ -524,7 +524,7 @@ describe("StudentImportPage", () => {
                 field: "first_name",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
@@ -548,11 +548,11 @@ describe("StudentImportPage", () => {
   it("shows summary row when no errors in preview", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 5,
-        CreatedCount: 5,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 5,
+        created_count: 5,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -593,11 +593,11 @@ describe("StudentImportPage", () => {
   it("displays correct import button text with stats", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 10,
-        CreatedCount: 7,
-        UpdatedCount: 3,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 10,
+        created_count: 7,
+        updated_count: 3,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -620,22 +620,22 @@ describe("StudentImportPage", () => {
     // First mock for preview
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 3,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 3,
+        created_count: 3,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
     // Second mock for actual import
     const mockImportResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 3,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 3,
+        created_count: 3,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -674,11 +674,11 @@ describe("StudentImportPage", () => {
     // Preview shows all rows as valid (0 errors - button will be enabled)
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 3,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 3,
+        created_count: 3,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -686,14 +686,14 @@ describe("StudentImportPage", () => {
     // (e.g., race condition, database constraint violation during insert)
     const mockImportResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 2,
-        UpdatedCount: 0,
-        ErrorCount: 1,
-        Errors: [
+        total_rows: 3,
+        created_count: 2,
+        updated_count: 0,
+        error_count: 1,
+        errors: [
           {
-            RowNumber: 3,
-            Data: {
+            row_number: 3,
+            data: {
               first_name: "Max",
               last_name: "Müller",
               school_class: "1a",
@@ -701,7 +701,7 @@ describe("StudentImportPage", () => {
               birthday: "2015-01-01",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "duplicate",
                 severity: "error",
@@ -709,7 +709,7 @@ describe("StudentImportPage", () => {
                 field: "",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
@@ -758,11 +758,11 @@ describe("StudentImportPage", () => {
     // First mock for preview
     const mockPreviewResponse = {
       data: {
-        TotalRows: 2,
-        CreatedCount: 2,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 2,
+        created_count: 2,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -802,11 +802,11 @@ describe("StudentImportPage", () => {
   it("shows saved rows and the blocking row on import_batch_failed", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 205,
-        CreatedCount: 205,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 205,
+        created_count: 205,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -824,14 +824,14 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       school_class: "1a",
@@ -839,7 +839,7 @@ describe("StudentImportPage", () => {
                       birthday: "",
                       guardians: [],
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -886,11 +886,11 @@ describe("StudentImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -903,11 +903,11 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 0,
-                Errors: null,
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 0,
+                errors: null,
               },
             },
           }),
@@ -940,11 +940,11 @@ describe("StudentImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -957,14 +957,14 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       school_class: "1a",
@@ -972,7 +972,7 @@ describe("StudentImportPage", () => {
                       birthday: "",
                       guardians: [],
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -991,13 +991,13 @@ describe("StudentImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 105,
-              UpdatedCount: 0,
-              ErrorCount: 100,
-              Errors: Array.from({ length: 100 }, (_, index) => ({
-                RowNumber: index + 2,
-                Data: {
+              total_rows: 205,
+              created_count: 105,
+              updated_count: 0,
+              error_count: 100,
+              errors: Array.from({ length: 100 }, (_, index) => ({
+                row_number: index + 2,
+                data: {
                   first_name: `Kind${index}`,
                   last_name: "Batch",
                   school_class: "1a",
@@ -1005,7 +1005,7 @@ describe("StudentImportPage", () => {
                   birthday: "",
                   guardians: [],
                 },
-                Errors: [
+                errors: [
                   {
                     code: "already_exists",
                     severity: "error",
@@ -1043,14 +1043,14 @@ describe("StudentImportPage", () => {
   it("disables import button when there are errors", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 1,
-        CreatedCount: 0,
-        UpdatedCount: 0,
-        ErrorCount: 1,
-        Errors: [
+        total_rows: 1,
+        created_count: 0,
+        updated_count: 0,
+        error_count: 1,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "",
               last_name: "",
               school_class: "",
@@ -1058,7 +1058,7 @@ describe("StudentImportPage", () => {
               birthday: "",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "required",
                 severity: "error",
@@ -1066,7 +1066,7 @@ describe("StudentImportPage", () => {
                 field: "first_name",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
@@ -1158,15 +1158,15 @@ describe("StudentImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [],
-            BulkActions: [],
-            DryRun: true,
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [],
+            bulk_actions: [],
+            dry_run: true,
           },
         }),
     });
@@ -1199,15 +1199,15 @@ describe("StudentImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [],
-            BulkActions: [],
-            DryRun: true,
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [],
+            bulk_actions: [],
+            dry_run: true,
           },
         }),
     });
@@ -1266,15 +1266,15 @@ describe("StudentImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [],
-            BulkActions: [],
-            DryRun: true,
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [],
+            bulk_actions: [],
+            dry_run: true,
           },
         }),
     });
@@ -1295,16 +1295,16 @@ describe("StudentImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 1,
-            WarningCount: 0,
-            Errors: [
+            total_rows: 2,
+            created_count: 1,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 1,
+            warning_count: 0,
+            errors: [
               {
-                RowNumber: 2,
-                Data: {
+                row_number: 2,
+                data: {
                   first_name: "Max",
                   last_name: "Mustermann",
                   school_class: "1a",
@@ -1321,7 +1321,7 @@ describe("StudentImportPage", () => {
                   ],
                   health_info: "",
                 },
-                Errors: [
+                errors: [
                   {
                     field: "last_name",
                     message: "Duplicate entry",
@@ -1329,11 +1329,11 @@ describe("StudentImportPage", () => {
                     severity: "error",
                   },
                 ],
-                Timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString(),
               },
             ],
-            BulkActions: [],
-            DryRun: false,
+            bulk_actions: [],
+            dry_run: false,
           },
         }),
     });
@@ -1354,11 +1354,11 @@ describe("StudentImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 2,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 2,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -1394,11 +1394,11 @@ describe("StudentImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 80,
-            CreatedCount: 80,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 80,
+            created_count: 80,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
             child_quota: quota,
           },
         }),
@@ -1539,11 +1539,11 @@ describe("StudentImportPage", () => {
               code: "import.import_batch_failed",
               details: {
                 result: {
-                  TotalRows: 80,
-                  CreatedCount: 50,
-                  UpdatedCount: 0,
-                  ErrorCount: 0,
-                  Errors: null,
+                  total_rows: 80,
+                  created_count: 50,
+                  updated_count: 0,
+                  error_count: 0,
+                  errors: null,
                 },
                 rejection: {
                   code: "students.child_quota_reached",

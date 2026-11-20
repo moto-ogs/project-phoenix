@@ -45,9 +45,6 @@ func TestGuardianInvitationReads_ListThroughTheStore(t *testing.T) {
 	open, err := reads.ListOpenGuardianInvitations(ctx, []int64{profileID})
 	require.NoError(t, err)
 	require.Equal(t, all, open)
-	redeemable, err := reads.ListRedeemableGuardianInvitations(ctx)
-	require.NoError(t, err)
-	require.Equal(t, all, redeemable)
 
 	failure := errors.New("invitation store down")
 	store.listErr = failure
@@ -57,9 +54,6 @@ func TestGuardianInvitationReads_ListThroughTheStore(t *testing.T) {
 		},
 		"open": func() ([]identityaccess.GuardianInvitation, error) {
 			return reads.ListOpenGuardianInvitations(ctx, []int64{profileID})
-		},
-		"redeemable": func() ([]identityaccess.GuardianInvitation, error) {
-			return reads.ListRedeemableGuardianInvitations(ctx)
 		},
 	}
 	for name, list := range lists {

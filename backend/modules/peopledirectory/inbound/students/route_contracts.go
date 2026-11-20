@@ -24,5 +24,14 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/{id}/team-notices/read", Portals: portals, Request: studentNoteTeamReadRequest{}, Response: []studentNoteTeamNoticeResponse{}},
 		{Method: "GET", Pattern: "/{id}/family-protection", Portals: portals, Response: familyProtectionResponse{}},
 		{Method: "PUT", Pattern: "/{id}/family-protection", Portals: portals, Request: setFamilyProtectionBody{}, Response: familyProtectionResponse{}},
+		// The photo behind one upload URL never changes (serveStudentPhoto):
+		// the viewer's browser keeps it and revalidates with a 304.
+		{
+			Method: "GET", Pattern: "/{id}/photo/{filename}", Portals: portals, File: true,
+			FileCache: studentPhotoCacheControl, ConditionalGet: true,
+		},
+		{Method: "POST", Pattern: "/{id}/photo", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxStudentPhotoBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: studentPhotoUploadedResponse{}},
+		{Method: "DELETE", Pattern: "/{id}/photo", Portals: portals, NoData: true},
 	}
 }

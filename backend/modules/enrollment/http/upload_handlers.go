@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,11 @@ const (
 	maxEnrollmentUploadSize = int64(capability.MaxFileFieldSizeMB) * 1024 * 1024
 	maxEnrollmentUploadBody = maxEnrollmentUploadSize + 64*1024
 )
+
+// MaxUploadBodyBytes is the whole multipart body of an enrollment or
+// holiday proof upload: the file and room for the frame and its fields. The
+// catalog proxy refuses a longer body before the backend reads it (#2352).
+const MaxUploadBodyBytes = int(maxEnrollmentUploadBody)
 
 // UploadService is the intake's upload and the staff open of an upload; the
 // root opens the tenant unit of each call.
@@ -57,7 +63,7 @@ type UploadFileStorage func(kind string) (UploadFileStore, error)
 type UploadReceipt struct {
 	Token       string `json:"token"`
 	Filename    string `json:"filename"`
-	SizeBytes   int64  `json:"size_bytes"`
+	SizeBytes   int64  `json:"size_bytes" contract:"number"`
 	ContentType string `json:"content_type"`
 }
 
@@ -138,6 +144,10 @@ func parseEnrollmentUpload(w http.ResponseWriter, r *http.Request) (*common.Uplo
 	if err != nil {
 		return nil, capability.UploadInput{}, err
 	}
+	if err := onlyFormParts(r, enrollmentUploadFields...); err != nil {
+		common.CloseFile(uploaded.File)
+		return nil, capability.UploadInput{}, err
+	}
 	extension := common.DocumentFileExtension(uploaded.ContentType)
 	size, sizeErr := uploaded.File.Seek(0, io.SeekEnd)
 	if _, rewindErr := uploaded.File.Seek(0, io.SeekStart); sizeErr != nil || rewindErr != nil {
@@ -159,6 +169,39 @@ func parseEnrollmentUpload(w http.ResponseWriter, r *http.Request) (*common.Uplo
 		SizeBytes: size, RemoteIP: remoteIPFromRequest(r),
 		LateInviteToken: r.FormValue("late_invite_token"), StatusToken: r.FormValue("status_token"),
 	}, nil
+}
+
+// enrollmentUploadFields are the text parts an enrollment upload reads
+// beside its one file. The parents' session route ignores status_token: the
+// session decides access there, never a status link.
+var enrollmentUploadFields = []string{"phase_id", "field_key", "late_invite_token", "status_token"}
+
+// unexpectedFormPart is a multipart part the route does not read.
+type unexpectedFormPart struct{ name string }
+
+func (e *unexpectedFormPart) Error() string {
+	return "unexpected multipart part " + strconv.Quote(e.name)
+}
+
+// onlyFormParts refuses a body with any part beside one file part "file" and
+// one value of each named text part (#2352). The frontend server forwarded
+// only these parts before the uploads went through the catalog proxy; the
+// backend now holds the same line itself.
+func onlyFormParts(r *http.Request, values ...string) error {
+	if r.MultipartForm == nil {
+		return nil
+	}
+	for name, files := range r.MultipartForm.File {
+		if name != "file" || len(files) != 1 {
+			return &unexpectedFormPart{name: name}
+		}
+	}
+	for name, given := range r.MultipartForm.Value {
+		if !slices.Contains(values, name) || len(given) != 1 {
+			return &unexpectedFormPart{name: name}
+		}
+	}
+	return nil
 }
 
 // extensionMatchesContent reports whether the upload is one the online
@@ -198,6 +241,11 @@ func enrollmentUploadContentError(filename string) error {
 // renderUploadRefusal answers a file the transport refused with the field's
 // upload code and the general size limit.
 func renderUploadRefusal(w http.ResponseWriter, r *http.Request, err error) {
+	var unexpected *unexpectedFormPart
+	if errors.As(err, &unexpected) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 	if common.IsUploadTypeNotAllowed(err) && r.MultipartForm != nil {
 		if headers := r.MultipartForm.File["file"]; len(headers) > 0 {
 			err = enrollmentUploadContentError(headers[0].Filename)
