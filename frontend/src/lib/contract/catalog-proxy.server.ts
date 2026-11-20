@@ -50,6 +50,12 @@ export interface CatalogRoute {
    * served.
    */
   readonly publicFile?: string;
+  /**
+   * Why an upload of the portal `public` may arrive without a session: the
+   * contract's marker of that one route. A public upload without it is
+   * never taken.
+   */
+  readonly publicUpload?: string;
 }
 
 export type CatalogMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -129,6 +135,16 @@ const isPublicFile = (route: CatalogRoute) =>
   !isUpload(route) &&
   typeof route.publicFile === "string" &&
   route.publicFile.length > 0;
+
+/**
+ * An upload the contract opens to the portal `public`, route by route
+ * (#2352). It is bounded and streamed like a session upload.
+ */
+const isPublicUpload = (route: CatalogRoute) =>
+  isUpload(route) &&
+  !isFile(route) &&
+  typeof route.publicUpload === "string" &&
+  route.publicUpload.length > 0;
 
 const PRIVATE_NO_STORE = "private, no-store";
 
@@ -236,7 +252,13 @@ export function makeCatalogProxy(
       .filter(isServable)
       // The session-free path answers JSON, and a file only where the
       // contract marks it; Go refuses an unmarked public file.
-      .filter((route) => !isPublic || !isStreamed(route) || isPublicFile(route))
+      .filter(
+        (route) =>
+          !isPublic ||
+          !isStreamed(route) ||
+          isPublicFile(route) ||
+          isPublicUpload(route),
+      )
       .map((route) => ({ route, pattern: segmentsOf(route.pattern), isPublic }))
       .filter(({ pattern }) =>
         under.some((head) => underOutsideHead(pattern, head)),
@@ -367,6 +389,17 @@ export function makeCatalogProxy(
     route: CatalogRoute,
     request: NextRequest,
     endpoint: string,
+    send: (
+      body: ReadableStream<Uint8Array> | undefined,
+      contentType: string,
+    ) => Promise<Response> = (body, contentType) =>
+      portal.backendFetch(request, endpoint, {
+        method,
+        body,
+        contentType,
+        idempotencyKey: request.headers.get("Idempotency-Key"),
+        retry: { off: "the upload's body streams once" },
+      }),
   ): Promise<Response> {
     const contentType = request.headers.get("content-type") ?? "";
     if (!/^multipart\/form-data\s*;/i.test(contentType)) {
@@ -387,13 +420,7 @@ export function makeCatalogProxy(
     const counted = boundedStream(request.body, limit);
     let response: Response;
     try {
-      response = await portal.backendFetch(request, endpoint, {
-        method,
-        body: counted.body,
-        contentType,
-        idempotencyKey: request.headers.get("Idempotency-Key"),
-        retry: { off: "the upload's body streams once" },
-      });
+      response = await send(counted.body, contentType);
     } catch (error) {
       if (counted.exceeded()) throw tooLarge();
       throw error;
@@ -492,6 +519,24 @@ export function makeCatalogProxy(
   }
 
   /**
+   * A public upload (#2352): the form or the link in the path is all the
+   * request carries. No session, no bearer, no cookie and no idempotency
+   * key; `sendBackend` adds the client IP the backend counts the attempt
+   * by, before it reads the body. The bound is the session upload's: the
+   * Content-Length before the call and the bytes while they stream.
+   */
+  async function servePublicUpload(
+    request: NextRequest,
+    route: CatalogRoute,
+    context: RouteContext,
+  ): Promise<Response> {
+    const { endpoint } = target(request, (await context.params)?.path);
+    return upload(route, request, endpoint, (body, contentType) =>
+      sendBackend(endpoint, null, { method, body, contentType, request }),
+    );
+  }
+
+  /**
    * A public route: no session read, no bearer, no renewal. The body is
    * read within the route's limit; a write without one reads nothing.
    */
@@ -531,7 +576,9 @@ export function makeCatalogProxy(
     try {
       response = file
         ? await servePublicFile(request, context)
-        : await servePublic(request, found.route as ServedRoute, context);
+        : isPublicUpload(found.route)
+          ? await servePublicUpload(request, found.route, context)
+          : await servePublic(request, found.route as ServedRoute, context);
     } catch (error) {
       response = handleApiError(error, request);
     }

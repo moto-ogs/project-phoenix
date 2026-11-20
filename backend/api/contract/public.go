@@ -22,6 +22,9 @@ func publicRoutesStandApart(routes []Route) error {
 		if err := publicFileMarker(route, public); err != nil {
 			return err
 		}
+		if err := publicUploadMarker(route, public); err != nil {
+			return err
+		}
 		if !public {
 			continue
 		}
@@ -33,8 +36,8 @@ func publicRoutesStandApart(routes []Route) error {
 			return fmt.Errorf("%s: a public write needs MaxBodyBytes", where)
 		case route.NoRetryAfterRenewal != "":
 			return fmt.Errorf("%s: a public route has no session to renew; drop NoRetryAfterRenewal", where)
-		case route.Multipart:
-			return fmt.Errorf("%s: the session-free proxy path takes no upload; a public upload keeps its route file", where)
+		case route.Multipart && route.PublicUpload == "":
+			return fmt.Errorf("%s: the session-free proxy path takes no upload; a public upload needs PublicUpload, the reason it may arrive without a session", where)
 		case route.File && route.PublicFile == "":
 			return fmt.Errorf("%s: the session-free proxy path answers JSON only; a public file needs PublicFile, the reason its link alone may open it", where)
 		}
@@ -60,6 +63,14 @@ func publicFileMarker(route Route, public bool) error {
 		return fmt.Errorf("%s: PublicFile marks a file of the portal %q only", where, PublicPortal)
 	case route.Request != nil || route.MaxBodyBytes != 0:
 		return fmt.Errorf("%s: a public file reads no request body", where)
+	}
+	return nil
+}
+
+// publicUploadMarker keeps PublicUpload on one upload of the portal public.
+func publicUploadMarker(route Route, public bool) error {
+	if route.PublicUpload != "" && (!public || !route.Multipart) {
+		return fmt.Errorf("%s: PublicUpload marks a multipart upload of the portal %q only", route.Key(), PublicPortal)
 	}
 	return nil
 }

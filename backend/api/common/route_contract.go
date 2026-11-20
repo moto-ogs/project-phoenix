@@ -85,6 +85,13 @@ type RouteContract struct {
 	// File route of the portal public names it; a public file without it is
 	// refused, as is a public upload.
 	PublicFile string
+	// PublicUpload opens a multipart upload to the portal public, route by
+	// route (#2352, ADR 0270): it says why a link or a public form may send
+	// a file without a session. The proxy checks the body's length before
+	// the backend call, streams it without cookie, bearer or idempotency
+	// key, and the backend counts the attempt by client IP before it reads
+	// the body. Only a Multipart route of the portal public names it.
+	PublicUpload string
 }
 
 // QueryKind is the value form of a query parameter.

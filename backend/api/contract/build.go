@@ -145,7 +145,7 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 	route := Route{
 		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
 		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
-		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile,
+		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {

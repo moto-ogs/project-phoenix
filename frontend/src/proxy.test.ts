@@ -271,7 +271,6 @@ const SANDBOX_CSP =
 /** The host a BFF route is served on in production. */
 function hostFor(route: string): string {
   if (route.startsWith("/api/parent/")) return PARENTS_HOSTNAME;
-  if (route.startsWith("/api/holiday-registrations/")) return PARENTS_HOSTNAME;
   if (route.startsWith("/api/traeger/")) return TRAEGER_HOSTNAME;
   if (route.startsWith("/api/school/")) return SCHOOL_HOSTNAME;
   return "school-a.localhost:3000";
@@ -1974,7 +1973,7 @@ describe("proxy", () => {
         "/api/auth/tenants",
         "/api/auth/guardian-invitations/tok/accept",
         "/api/auth/holiday-parent-setups/tok",
-        "/api/holiday-registrations/tok/uploads",
+        "/api/traeger/holiday-registrations/tok/uploads",
         "/api/enrollment/requests/tok/edit-bootstrap",
         "/api/enrollment/school-a/uploads",
         "/api/demo/access/handoff",

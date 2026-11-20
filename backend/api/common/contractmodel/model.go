@@ -98,6 +98,9 @@ type Route struct {
 	// PublicFile says why a file of the portal public may leave without a
 	// session; the proxy serves no other public file.
 	PublicFile string `json:"public_file,omitempty"`
+	// PublicUpload says why an upload of the portal public may arrive
+	// without a session; the proxy takes no other public upload.
+	PublicUpload string `json:"public_upload,omitempty"`
 }
 
 // Key is the route's line in the route catalog.

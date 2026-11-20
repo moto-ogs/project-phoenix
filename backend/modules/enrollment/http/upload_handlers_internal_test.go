@@ -1,14 +1,19 @@
 package enrollmenthttp
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/common"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
@@ -66,4 +71,65 @@ func TestOpenAdminRequestUpload_StorageFactoryFailureIsServerError(t *testing.T)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Contains(t, w.Body.String(), `"code":"general.server"`)
+}
+
+// The uploads read their one file and named text parts only; a body with
+// any other part is refused before the file is stored (#2352), as the
+// frontend server forwarded no other part before.
+func TestUploadsReadOnlyTheirOwnParts(t *testing.T) {
+	t.Parallel()
+	pdf := []byte("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n")
+	type part struct{ name, filename string }
+	body := func(parts ...part) *http.Request {
+		var buf bytes.Buffer
+		writer := multipart.NewWriter(&buf)
+		for _, p := range parts {
+			if p.filename != "" {
+				fw, err := writer.CreateFormFile(p.name, p.filename)
+				require.NoError(t, err)
+				_, err = fw.Write(pdf)
+				require.NoError(t, err)
+				continue
+			}
+			require.NoError(t, writer.WriteField(p.name, "7"))
+		}
+		require.NoError(t, writer.Close())
+		req := httptest.NewRequest(http.MethodPost, "/uploads", &buf)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		return req
+	}
+	file := part{"file", "nachweis.pdf"}
+
+	t.Run("enrollment", func(t *testing.T) {
+		t.Parallel()
+		accepted, input, err := parseEnrollmentUpload(httptest.NewRecorder(),
+			body(file, part{"phase_id", ""}, part{"field_key", ""}, part{"late_invite_token", ""}, part{"status_token", ""}))
+		require.NoError(t, err)
+		common.CloseFile(accepted.File)
+		assert.Equal(t, int64(7), input.PhaseID)
+
+		for name, parts := range map[string][]part{
+			"an unknown text part":  {file, part{"phase_id", ""}, part{"tenant_id", ""}},
+			"a second file":         {file, part{"phase_id", ""}, part{"file", "zweite.pdf"}},
+			"a file in a text part": {file, part{"phase_id", ""}, part{"field_key", "feld.pdf"}},
+			"a repeated text part":  {file, part{"phase_id", ""}, part{"phase_id", ""}},
+		} {
+			_, _, err := parseEnrollmentUpload(httptest.NewRecorder(), body(parts...))
+			var unexpected *unexpectedFormPart
+			assert.ErrorAs(t, err, &unexpected, name)
+			rec := httptest.NewRecorder()
+			renderUploadRefusal(rec, httptest.NewRequest(http.MethodPost, "/uploads", nil), err)
+			assert.Equal(t, http.StatusBadRequest, rec.Code, name)
+			assert.NotContains(t, rec.Body.String(), "enrollment.upload_invalid", name)
+		}
+	})
+
+	t.Run("holiday proof", func(t *testing.T) {
+		t.Parallel()
+		_, err := parseHolidayProof(httptest.NewRecorder(), body(file))
+		require.NoError(t, err)
+		_, err = parseHolidayProof(httptest.NewRecorder(), body(file, part{"phase_id", ""}))
+		var unexpected *unexpectedFormPart
+		assert.ErrorAs(t, err, &unexpected)
+	})
 }

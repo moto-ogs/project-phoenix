@@ -44,6 +44,11 @@ type PushPublicKeyResponse struct {
 // to sign. The root names them, as it binds the renderers (ADR 0270).
 type ForeignContractTypes struct {
 	EnrollmentBootstrap, EnrollmentSubmitRequest, EnrollmentSubmit, ContractSigning any
+	// EnrollmentUpload is Enrollment's receipt of a proof the form uploads,
+	// with the body bound and the code of a too large file.
+	EnrollmentUpload             any
+	EnrollmentUploadMaxBodyBytes int
+	EnrollmentUploadTooLargeCode string
 }
 
 // PortalRouteContracts registers the typed contract of the guardian's routes
@@ -204,6 +209,8 @@ func formRouteContracts(foreign ForeignContractTypes) []common.RouteContract {
 		{Method: "GET", Pattern: "/enrollments/{tenantSlug}/profile", Portals: portals, Response: common.GuardianProfileResponse{}},
 		{Method: "GET", Pattern: "/enrollments/{tenantSlug}/bootstrap/{phaseId}", Portals: portals, Query: lateInvite, Response: foreign.EnrollmentBootstrap},
 		{Method: "POST", Pattern: "/enrollments/{tenantSlug}/submit", Portals: portals, Query: lateInvite, Request: foreign.EnrollmentSubmitRequest, Response: foreign.EnrollmentSubmit},
+		{Method: "POST", Pattern: "/enrollments/{tenantSlug}/uploads", Portals: portals, Multipart: true, Response: foreign.EnrollmentUpload,
+			MaxBodyBytes: foreign.EnrollmentUploadMaxBodyBytes, TooLargeCode: foreign.EnrollmentUploadTooLargeCode},
 		{Method: "GET", Pattern: "/holiday-registrations/{token}/family", Portals: portals, Response: HolidayRegistrationFamilyResponse{}},
 	}
 }

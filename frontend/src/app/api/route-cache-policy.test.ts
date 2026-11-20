@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { globSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -342,8 +342,21 @@ function exportedHandlers(file: string): Map<string, boolean> {
 describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
-  it("finds the route handlers", () => {
-    expect(files.length).toBeGreaterThan(200);
+  // The walk must reach every route file, however few remain once the
+  // catalog proxy serves a route (#2352): it equals an independent glob.
+  it("finds every route handler", () => {
+    const walked = files.map((file) => path.relative(API_ROOT, file)).sort();
+    expect(walked).toEqual(
+      globSync("**/route.{ts,tsx}", { cwd: API_ROOT }).sort(),
+    );
+    // A catch-all and a nested Auth.js folder: dynamic segments are walked.
+    expect(walked).toEqual(
+      expect.arrayContaining([
+        "[...path]/route.ts",
+        "auth/[...nextauth]/route.ts",
+        "sse/events/route.ts",
+      ]),
+    );
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {

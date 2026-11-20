@@ -361,7 +361,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		Request: route.Request, Response: route.Response, Paginated: route.Paginated, NoData: route.NoData,
 		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields,
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes,
-		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile,
+		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 	}
 	for _, portal := range route.Portals {
 		registration.Portals = append(registration.Portals, string(portal))
@@ -423,10 +423,13 @@ func traegerContractMounts() []contractMount {
 // (NewParentContractDocuments), so their types are named here.
 func parentPortalRouteContracts() []common.RouteContract {
 	return parentAPI.PortalRouteContracts(parentAPI.ForeignContractTypes{
-		EnrollmentBootstrap:     enrollmentHTTP.PublicEnrollmentFormBootstrapResponse{},
-		EnrollmentSubmitRequest: enrollmentHTTP.SubmitEnrollmentRequest{},
-		EnrollmentSubmit:        enrollmentHTTP.SubmitEnrollmentResponse{},
-		ContractSigning:         carecontract.SigningView{},
+		EnrollmentBootstrap:          enrollmentHTTP.PublicEnrollmentFormBootstrapResponse{},
+		EnrollmentSubmitRequest:      enrollmentHTTP.SubmitEnrollmentRequest{},
+		EnrollmentSubmit:             enrollmentHTTP.SubmitEnrollmentResponse{},
+		ContractSigning:              carecontract.SigningView{},
+		EnrollmentUpload:             enrollmentHTTP.UploadReceipt{},
+		EnrollmentUploadMaxBodyBytes: enrollmentHTTP.MaxUploadBodyBytes,
+		EnrollmentUploadTooLargeCode: common.CodeEnrollmentUploadInvalid,
 	})
 }
 

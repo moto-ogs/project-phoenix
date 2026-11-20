@@ -1010,6 +1010,21 @@ export const SubmitEnrollmentResponseSchema: z.ZodType<SubmitEnrollmentResponse,
   warnings: optional(arr(SubmissionWarningSchema)),
 });
 
+/** Go: enrollmenthttp.UploadReceipt */
+export interface UploadReceipt {
+  token: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+}
+
+export const UploadReceiptSchema: z.ZodType<UploadReceipt, unknown> = object<UploadReceipt>({
+  token: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+});
+
 /** Go: peopledirectory.NewGuardianPhone */
 export interface NewGuardianPhone {
   phone_number?: string;
