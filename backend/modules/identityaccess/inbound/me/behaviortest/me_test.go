@@ -15,6 +15,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,7 +29,6 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -71,37 +71,6 @@ func setupUserContextRoute(t *testing.T) *testContext {
 		resource: resource,
 		router:   resource.Router(),
 	}
-}
-
-// =============================================================================
-// GET CURRENT USER TESTS
-// =============================================================================
-
-func TestGetCurrentUser_Success(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	account := testpkg.CreateTestAccount(t, tc.db, "usercontext-test@example.com")
-
-	claims := testutil.TeacherTestClaims(int(account.ID))
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/", nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetCurrentUser_Unauthenticated(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/", nil)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for unauthenticated request")
 }
 
 // =============================================================================
@@ -248,53 +217,6 @@ func TestGetCurrentStaff_Unauthenticated(t *testing.T) {
 }
 
 // =============================================================================
-// GET CURRENT TEACHER TESTS
-// =============================================================================
-
-func TestGetCurrentTeacher_Success(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Teacher", "Test")
-
-	claims := testutil.TeacherTestClaims(int(account.ID))
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/teacher", nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetCurrentTeacher_NotTeacher(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	account := testpkg.CreateTestAccount(t, tc.db, "not-teacher@example.com")
-
-	claims := testutil.TeacherTestClaims(int(account.ID))
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/teacher", nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Contains(t, []int{http.StatusNotFound, http.StatusForbidden, http.StatusInternalServerError}, rr.Code)
-}
-
-func TestGetCurrentTeacher_Unauthenticated(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/teacher", nil)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for unauthenticated request")
-}
-
-// =============================================================================
 // GET MY GROUPS TESTS
 // =============================================================================
 
@@ -319,68 +241,6 @@ func TestGetMyGroups_Unauthenticated(t *testing.T) {
 	tc := setupUserContextRoute(t)
 
 	req := testutil.NewAuthenticatedRequest(t, "GET", "/groups", nil)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for unauthenticated request")
-}
-
-// =============================================================================
-// GET MY ACTIVITY GROUPS TESTS
-// =============================================================================
-
-func TestGetMyActivityGroups_Success(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Activity", "Groups")
-
-	claims := testutil.TeacherTestClaims(int(account.ID))
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/groups/activity", nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetMyActivityGroups_Unauthenticated(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/groups/activity", nil)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for unauthenticated request")
-}
-
-// =============================================================================
-// GET MY ACTIVE GROUPS TESTS
-// =============================================================================
-
-func TestGetMyActiveGroups_Success(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Active", "Groups")
-
-	claims := testutil.TeacherTestClaims(int(account.ID))
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/groups/active", nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetMyActiveGroups_Unauthenticated(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/groups/active", nil)
 
 	rr := testutil.ExecuteRequest(tc.router, req)
 
@@ -416,99 +276,6 @@ func TestGetMySupervisedGroups_Unauthenticated(t *testing.T) {
 	rr := testutil.ExecuteRequest(tc.router, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for unauthenticated request")
-}
-
-// =============================================================================
-// GET GROUP STUDENTS TESTS
-// =============================================================================
-
-func TestGetGroupStudents_InvalidGroupID(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	claims := testutil.DefaultTestClaims()
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/groups/invalid/students", nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	testutil.AssertBadRequest(t, rr)
-}
-
-func TestGetGroupStudents_Unauthenticated(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	activityGroup := testpkg.CreateTestActivityGroup(t, tc.db, "GroupStudentsUnauth")
-	room := testpkg.CreateTestRoom(t, tc.db, "GroupStudentsUnauthRoom")
-	activeGroup := testpkg.CreateTestActiveGroup(t, tc.db, activityGroup.ID, room.ID)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/groups/%d/students", activeGroup.ID), nil)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for unauthenticated request")
-}
-
-// =============================================================================
-// GET GROUP VISITS TESTS
-// =============================================================================
-
-func TestGetGroupVisits_InvalidGroupID(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	claims := testutil.DefaultTestClaims()
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/groups/invalid/visits", nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	testutil.AssertBadRequest(t, rr)
-}
-
-func TestGetGroupVisits_Unauthenticated(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	activityGroup := testpkg.CreateTestActivityGroup(t, tc.db, "GroupVisitsUnauth")
-	room := testpkg.CreateTestRoom(t, tc.db, "GroupVisitsUnauthRoom")
-	activeGroup := testpkg.CreateTestActiveGroup(t, tc.db, activityGroup.ID, room.ID)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/groups/%d/visits", activeGroup.ID), nil)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for unauthenticated request")
-}
-
-// A room session that does not exist (any more) is an expected refusal
-// (#4599): both session routes answer 404 with the class code, not 500.
-func TestGroupSessionRoutes_UnknownSessionAnswersNotFound(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "UnknownSession", "Test")
-	var missingSessionID int64
-	require.NoError(t, tc.db.NewSelect().
-		ColumnExpr("nextval(pg_get_serial_sequence('active.groups', 'id'))").
-		Scan(testpkg.Ctx(t), &missingSessionID))
-	token := testutil.MintTestJWT(t, testutil.TeacherTestClaims(int(account.ID)))
-
-	for _, route := range []string{"students", "visits"} {
-		t.Run(route, func(t *testing.T) {
-			req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/groups/%d/%s", missingSessionID, route), nil,
-				testutil.WithJWTBearer(token),
-			)
-
-			rr := testutil.ExecuteRequest(tc.router, req)
-
-			require.Equal(t, http.StatusNotFound, rr.Code, rr.Body.String())
-			assert.Equal(t, routetest.ClassCode(http.StatusNotFound), testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"])
-		})
-	}
 }
 
 // =============================================================================
@@ -634,54 +401,6 @@ func TestUpdateCurrentProfile_WithUsernameAndBio(t *testing.T) {
 }
 
 // =============================================================================
-// GROUP STUDENTS WITH TEACHER ACCESS TESTS
-// =============================================================================
-
-func TestGetGroupStudents_WithTeacherAccess(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "GroupStudents", "Teacher")
-
-	activityGroup := testpkg.CreateTestActivityGroup(t, tc.db, "StudentAccessGroup")
-	room := testpkg.CreateTestRoom(t, tc.db, "StudentAccessRoom")
-	activeGroup := testpkg.CreateTestActiveGroup(t, tc.db, activityGroup.ID, room.ID)
-
-	claims := testutil.TeacherTestClaims(int(account.ID))
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/groups/%d/students", activeGroup.ID), nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Contains(t, []int{http.StatusOK, http.StatusForbidden, http.StatusInternalServerError}, rr.Code)
-}
-
-// =============================================================================
-// GROUP VISITS WITH TEACHER ACCESS TESTS
-// =============================================================================
-
-func TestGetGroupVisits_WithTeacherAccess(t *testing.T) {
-	t.Parallel()
-	tc := setupUserContextRoute(t)
-
-	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "GroupVisits", "Teacher")
-
-	activityGroup := testpkg.CreateTestActivityGroup(t, tc.db, "VisitsAccessGroup")
-	room := testpkg.CreateTestRoom(t, tc.db, "VisitsAccessRoom")
-	activeGroup := testpkg.CreateTestActiveGroup(t, tc.db, activityGroup.ID, room.ID)
-
-	claims := testutil.TeacherTestClaims(int(account.ID))
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/groups/%d/visits", activeGroup.ID), nil,
-		testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)),
-	)
-
-	rr := testutil.ExecuteRequest(tc.router, req)
-
-	assert.Contains(t, []int{http.StatusOK, http.StatusForbidden, http.StatusInternalServerError}, rr.Code)
-}
-
-// =============================================================================
 // SERVE AVATAR INVALID PATH TESTS
 // =============================================================================
 
@@ -796,6 +515,15 @@ func TestUploadAvatar_Success(t *testing.T) {
 	require.Equal(t, http.StatusOK, imageResponse.Code)
 	assert.Equal(t, pngContent, imageResponse.Body.String())
 	assert.Equal(t, "private, max-age=86400", imageResponse.Header().Get("Cache-Control"))
+	assert.Equal(t, "image/png", imageResponse.Header().Get("Content-Type"), "the handler names the type; the proxy adds none (#2352)")
+
+	// Only the caller's own stored file name opens: a traversal or a name
+	// with a backslash is refused by the handler, not by the frontend proxy.
+	for _, name := range []string{"..%5C..%5Cetc%5Cpasswd", "other.png", url.PathEscape(filepath.Base(avatar) + "\\x")} {
+		otherReq := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/profile/avatar/"+name, nil,
+			testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)))
+		assert.Equal(t, http.StatusForbidden, testutil.ExecuteRequest(tc.router, otherReq).Code, name)
+	}
 }
 
 // =============================================================================

@@ -25,7 +25,7 @@ func TestSeedImportAuditUpdatesAnExistingChild(t *testing.T) {
 		contents, err := io.ReadAll(file)
 		require.NoError(t, err)
 		assert.Equal(t, fmt.Sprintf("Vorname,Nachname,Klasse\n%s,%s,%s\n", student.FirstName, student.LastName, student.Class), string(contents))
-		_, _ = fmt.Fprint(w, `{"status":"success","data":{"CreatedCount":0,"UpdatedCount":1,"ErrorCount":0}}`)
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{"created_count":0,"updated_count":1,"error_count":0}}`)
 	})
 	defer srv.Close()
 
@@ -37,7 +37,7 @@ func TestSeedImportAuditRejectsACreatedChild(t *testing.T) {
 	t.Parallel()
 
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, _ *seedHTTPRequest) {
-		_, _ = fmt.Fprint(w, `{"status":"success","data":{"CreatedCount":1,"UpdatedCount":0,"ErrorCount":0}}`)
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{"created_count":1,"updated_count":0,"error_count":0}}`)
 	})
 	defer srv.Close()
 

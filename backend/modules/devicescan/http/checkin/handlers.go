@@ -29,29 +29,6 @@ func (rs *Resource) devicePing(w http.ResponseWriter, r *http.Request) {
 	rs.runtime.Success(w, r, http.StatusOK, response, "Device ping successful")
 }
 
-// deviceStatus handles status requests from RFID devices.
-func (rs *Resource) deviceStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := rs.scans.Status(r.Context())
-	if err != nil {
-		rs.failDevice(w, r, err)
-		return
-	}
-	response := map[string]any{
-		"device": map[string]any{
-			"id":          status.Device.ID,
-			"device_id":   status.Device.DeviceID,
-			"device_type": status.Device.DeviceType,
-			"name":        status.Device.Name,
-			"status":      status.Device.Status,
-			"last_seen":   status.Device.LastSeen,
-			"is_online":   status.IsOnline,
-			"is_active":   status.Device.Active,
-		},
-		"authenticated_at": status.AuthenticatedAt,
-	}
-	rs.runtime.Success(w, r, http.StatusOK, response, "Device status retrieved")
-}
-
 // failDevice renders a failure of a device-only endpoint, logging the
 // missing credential the way the device middleware does.
 func (rs *Resource) failDevice(w http.ResponseWriter, r *http.Request, err error) {

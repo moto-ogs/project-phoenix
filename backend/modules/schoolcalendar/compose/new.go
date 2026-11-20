@@ -102,6 +102,9 @@ func writeTransaction(ctx context.Context, fn func(context.Context) error) error
 	return postgres.WriteTransactionBinding(ctx, fn, tenant.WithinCurrentTenant)
 }
 
+// SchoolVacation is one vacation window the demo seed stores (ADR 0298).
+type SchoolVacation = schoolcalendar.SchoolVacation
+
 // NewSchoolVacations composes the school vacations (#5345) over the ambient transaction and the OpenHolidays API at
 // sourceURL ("" is the public API). Without federalState it serves only the sync; nil today is the Berlin day.
 func NewSchoolVacations(federalState func(context.Context) (string, error), sourceURL string, today func() string) (schoolcalendar.SchoolVacationOwner, error) {

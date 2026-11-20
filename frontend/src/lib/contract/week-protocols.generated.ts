@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   nullable,
   object,
   optional,
@@ -155,6 +156,12 @@ export const routes = {
     pattern: "/api/week-protocols/{protocolId}",
     portals: ["tenant"],
     response: success(weekProtocolResponseSchema),
+  },
+  "GET /api/week-protocols/{protocolId}/pdf": {
+    method: "GET",
+    pattern: "/api/week-protocols/{protocolId}/pdf",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "POST /api/week-protocols/{protocolId}/close": {
     method: "POST",

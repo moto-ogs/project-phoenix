@@ -733,6 +733,26 @@ Er ersetzt dort den Träger-Wert oder den Standardwert. Setzt die OGS ihn
 zurück, gilt wieder der Träger-Wert, ohne Träger-Wert der Standardwert.
 _Vermeiden_: Override (nur im Code), Ausnahme.
 
+## Änderung am Regelbetrieb
+
+Eine **Änderung am Regelbetrieb** ist alles, was an einem Kalendertag einer
+Schule anders läuft als geplant: eine Abwesenheit oder Vertretung im Team, ein
+geänderter Dienst, ein abgesagter oder verlegter Termin, ein Schließtag, ein
+Klassenausflug, ein krankes Kind, eine geänderte Abholung, ein geänderter
+Speiseplan oder ein Hinweis der Leitung für diesen Tag. Die Daten dazu
+gehören dem jeweiligen Fachmodul.
+_Vermeiden_: Abweichung (belegt durch die Änderung an einer Kopie (Träger) und
+die Schul-Abweichung einer Einstellung), Ausnahme.
+
+## Heute anders
+
+**Heute anders** ist der Baustein der Staff-Startseite mit den Änderungen am
+Regelbetrieb des heutigen Tages der angemeldeten Schule, getrennt in „Betrifft
+dich“ und „Schule“
+([ADR 0299](docs/adr/0299-heute-anders-liest-die-quellen-ueber-ports-in-einer-eigenen-leseprojektion.md)).
+_Vermeiden_: Abweichungen heute, Tagesinformationen (die Seite mit den
+Hinweisen der Leitung).
+
 ## Ausrichtende OGS
 
 Die **ausrichtende OGS** betreut in einer Ferienwoche die Kinder, die für diese

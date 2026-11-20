@@ -8,15 +8,21 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// feedbackHistoryEntry is one rating of a child, written through the regular
-// feedback batch endpoint like the kiosk's.
-type feedbackHistoryEntry struct {
+// PastFeedback is one past rating of a child (#5029), as the kiosk records
+// one when the child leaves or after lunch.
+type PastFeedback struct {
 	Value           string `json:"value"`
 	Day             string `json:"day"`
 	Time            string `json:"time"`
 	StudentID       int64  `json:"student_id"`
 	IsMensaFeedback bool   `json:"is_mensa_feedback"`
 }
+
+// FeedbackHistoryWriter records the past ratings of one school. No regular
+// API backdates a rating, so the dev tools bind it to Feedback's history
+// writer directly, or, in the public demo, to the operator route only its
+// server mounts (ADR 0298); nil leaves the past without feedback.
+type FeedbackHistoryWriter func(ctx context.Context, schoolID int64, entries []PastFeedback) (int, error)
 
 // seedFeedbackHistoryStep fills the Feedbackhistorie of the children
 // (#5029): on some of the days a child came, it rated its day when it went
@@ -26,9 +32,14 @@ type seedFeedbackHistoryStep struct{ seeder *Seeder }
 
 func (seedFeedbackHistoryStep) Name() string { return "Feedbackverlauf wird angelegt" }
 
-func (s seedFeedbackHistoryStep) Run(_ context.Context, rt *Runtime) error {
+func (s seedFeedbackHistoryStep) Run(ctx context.Context, rt *Runtime) error {
 	if string(s.seeder.definition.Settings[profileSettingFeedbackEnabled].Value) != "true" {
 		fmt.Println("  Feedback ist für diese Schule aus, der Feedbackverlauf wird übersprungen")
+		return nil
+	}
+	write := feedbackHistoryWriterFor(s.seeder.options, rt)
+	if write == nil {
+		fmt.Println("  Ohne Datenbank bleibt der Feedbackverlauf leer")
 		return nil
 	}
 	today, err := rt.historyToday()
@@ -39,19 +50,6 @@ func (s seedFeedbackHistoryStep) Run(_ context.Context, rt *Runtime) error {
 	if !from.Before(today) {
 		return nil
 	}
-	var existing struct {
-		Data []struct {
-			ID int64 `json:"id"`
-		} `json:"data"`
-	}
-	if err := getSeedJSON(rt, fmt.Sprintf("/api/feedback/date-range?start_date=%s&end_date=%s", from, until), &existing); err != nil {
-		return fmt.Errorf("read past feedback: %w", err)
-	}
-	if len(existing.Data) > 0 {
-		// The batch commits as a whole, so a present history is complete.
-		fmt.Printf("  %d vergangene Feedbacks sind schon angelegt\n", len(existing.Data))
-		return nil
-	}
 	days, err := s.presenceDays(rt, from, today)
 	if err != nil {
 		return err
@@ -60,20 +58,22 @@ func (s seedFeedbackHistoryStep) Run(_ context.Context, rt *Runtime) error {
 	if len(entries) == 0 {
 		return nil
 	}
-	raw, err := rt.Client.Post("/api/feedback/batch", map[string]any{"entries": entries})
+	existing, err := pastFeedbackOf(rt, entries[0].StudentID, from, until)
+	if err != nil {
+		return err
+	}
+	if existing > 0 {
+		// The batch commits as a whole, so one present rating means the
+		// whole history is there.
+		fmt.Println("  Der Feedbackverlauf ist schon angelegt")
+		return nil
+	}
+	written, err := write(ctx, rt.Bootstrap.SchoolID, entries)
 	if err != nil {
 		return fmt.Errorf("seed past feedback: %w", err)
 	}
-	var created struct {
-		Data struct {
-			Count int `json:"count"`
-		} `json:"data"`
-	}
-	if err := parseJSON(raw, &created); err != nil {
-		return fmt.Errorf("read created past feedback: %w", err)
-	}
-	if created.Data.Count != len(entries) {
-		return fmt.Errorf("seed past feedback: created %d of %d entries", created.Data.Count, len(entries))
+	if written != len(entries) {
+		return fmt.Errorf("seed past feedback: created %d of %d entries", written, len(entries))
 	}
 	mensa := 0
 	for _, entry := range entries {
@@ -83,6 +83,59 @@ func (s seedFeedbackHistoryStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	fmt.Printf("  %d vergangene Feedbacks, davon %d zum Mittagessen\n", len(entries), mensa)
 	return nil
+}
+
+// pastFeedbackOf counts the ratings of one child between from and until in
+// its Feedbackhistorie, as the child's page reads them.
+func pastFeedbackOf(rt *Runtime, studentID int64, from, until calendar.Date) (int, error) {
+	var history struct {
+		Data []struct {
+			Day string `json:"day"`
+		} `json:"data"`
+	}
+	if err := getSeedJSON(rt, fmt.Sprintf("/api/feedback/student/%d", studentID), &history); err != nil {
+		return 0, fmt.Errorf("read past feedback: %w", err)
+	}
+	count := 0
+	for _, entry := range history.Data {
+		if entry.Day >= from.String() && entry.Day <= until.String() {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// feedbackHistoryWriterFor picks the bound writer, else the demo's operator
+// route when the options ask for it; nil seeds the past without feedback.
+func feedbackHistoryWriterFor(options SeedOptions, rt *Runtime) FeedbackHistoryWriter {
+	if options.FeedbackHistory != nil {
+		return options.FeedbackHistory
+	}
+	if options.PresenceHistoryRoute {
+		return operatorFeedbackHistoryWriter(rt)
+	}
+	return nil
+}
+
+// operatorFeedbackHistoryWriter records the past ratings through the
+// operator route the server mounts in the public demo only (ADR 0298).
+func operatorFeedbackHistoryWriter(rt *Runtime) FeedbackHistoryWriter {
+	return func(_ context.Context, schoolID int64, entries []PastFeedback) (int, error) {
+		path := fmt.Sprintf("/operator/schools/%d/demo-feedback-history", schoolID)
+		raw, err := rt.Client.PostWithAuth(rt.OperatorAuth, path, map[string]any{"entries": entries})
+		if err != nil {
+			return 0, err
+		}
+		var response struct {
+			Data struct {
+				Written int `json:"written"`
+			} `json:"data"`
+		}
+		if err := parseJSON(raw, &response); err != nil {
+			return 0, fmt.Errorf("read recorded feedback history: %w", err)
+		}
+		return response.Data.Written, nil
+	}
 }
 
 func (s seedFeedbackHistoryStep) presenceDays(rt *Runtime, from, today calendar.Date) ([]PastPresenceDay, error) {
@@ -112,8 +165,8 @@ func feedbackHistoryRange(today calendar.Date) (calendar.Date, calendar.Date) {
 // About two in five days a child rates its day at check-out; about one in
 // four it rates lunch half an hour to an hour after it arrived. Most ratings
 // are good, some neutral, few bad.
-func planFeedbackHistory(days []PastPresenceDay, from calendar.Date) []feedbackHistoryEntry {
-	var entries []feedbackHistoryEntry
+func planFeedbackHistory(days []PastPresenceDay, from calendar.Date) []PastFeedback {
+	var entries []PastFeedback
 	for _, day := range days {
 		if day.Date.Before(from) {
 			continue
@@ -121,17 +174,17 @@ func planFeedbackHistory(days []PastPresenceDay, from calendar.Date) []feedbackH
 		roll := func(decision string) uint32 { return feedbackRoll(day.StudentID, day.Date, decision) }
 		if roll("mensa")%100 < 25 {
 			at := day.CheckIn.Add(time.Duration(30+roll("mensa-time")%31) * time.Minute)
-			entries = append(entries, feedbackHistoryEntryAt(day, at, roll("mensa-value"), true))
+			entries = append(entries, PastFeedbackAt(day, at, roll("mensa-value"), true))
 		}
 		if roll("day")%100 < 40 {
-			entries = append(entries, feedbackHistoryEntryAt(day, day.CheckOut, roll("day-value"), false))
+			entries = append(entries, PastFeedbackAt(day, day.CheckOut, roll("day-value"), false))
 		}
 	}
 	return entries
 }
 
-func feedbackHistoryEntryAt(day PastPresenceDay, at time.Time, valueRoll uint32, mensa bool) feedbackHistoryEntry {
-	return feedbackHistoryEntry{
+func PastFeedbackAt(day PastPresenceDay, at time.Time, valueRoll uint32, mensa bool) PastFeedback {
+	return PastFeedback{
 		Value:           feedbackHistoryValue(valueRoll % 100),
 		Day:             day.Date.String(),
 		Time:            at.In(seedBerlinLocation()).Format("15:04:05"),

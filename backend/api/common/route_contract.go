@@ -74,6 +74,12 @@ type RouteContract struct {
 	// multipart frame, so a file a little too large still reaches the
 	// backend's own check.
 	Multipart bool
+	// PrivateCache lets a file stay in the browser's own cache: the proxy
+	// passes the handler's Cache-Control on when it is private, for an image
+	// whose address carries its version. Any other value, a public one
+	// included, and every refusal leave as private, no-store. Only a File
+	// route may set it.
+	PrivateCache bool
 	// TooLargeCode is the registered error code the proxy answers a multipart
 	// body over MaxBodyBytes with: the code the backend answers a too large
 	// file with, so the client shows the same text.

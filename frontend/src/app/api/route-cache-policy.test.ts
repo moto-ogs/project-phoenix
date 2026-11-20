@@ -1,4 +1,10 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  existsSync,
+  globSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -143,16 +149,11 @@ const DOWNLOAD_POLICY_FACTORIES: Record<string, string[]> = {
 // Non-JSON resources deliberately outside the private-download rule. Image,
 // legal-document and subscription caching is not changed by #5119.
 const NON_DOWNLOAD_RESOURCES: Record<string, string> = {
-  "traeger/master-data/logo":
-    "Authenticated brand image, existing no-store policy",
   "public/enrollment-form-legal-documents/[filename]":
     "Public form PDF, public cache policy",
   "public/enrollment-legal-documents/[filename]":
     "Public legal PDF, public cache policy",
   "public/login-image/[filename]": "Public login image, public cache policy",
-  "me/profile/avatar/[filename]":
-    "Session avatar, existing private image cache",
-  "staff/[id]/avatar": "Staff avatar, existing private image cache",
   "students/[id]/photo/[filename]":
     "Photo with existing backend revalidation policy",
   "calendar-feed/[token]": "Subscription feed, private max-age=3600",
@@ -339,7 +340,21 @@ function exportedHandlers(file: string): Map<string, boolean> {
 describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
-  it("finds catalog and nested login handlers for every portal", () => {
+  // The walk must reach every route file, however few remain once the
+  // catalog proxy serves a route (#2352): it equals an independent glob.
+  it("finds every route handler", () => {
+    const walked = files.map((file) => path.relative(API_ROOT, file)).sort();
+    expect(walked).toEqual(
+      globSync("**/route.{ts,tsx}", { cwd: API_ROOT }).sort(),
+    );
+    // A catch-all and a nested Auth.js folder: dynamic segments are walked.
+    expect(walked).toEqual(
+      expect.arrayContaining([
+        "[...path]/route.ts",
+        "auth/[...nextauth]/route.ts",
+        "sse/events/route.ts",
+      ]),
+    );
     expect(files).toContain(path.join(API_ROOT, "auth/logout/route.ts"));
     expect(files).toContain(
       path.join(API_ROOT, "traeger/auth/logout/route.ts"),
@@ -415,16 +430,14 @@ describe("private download cache policy (#5119)", () => {
       const route = path.relative(API_ROOT, path.dirname(file));
       const text = readFileSync(file, "utf8");
       const fileFactory =
-        /\b(?:createFileExportRoute|createFileDownloadRoute|fileResponse|downloadFile|proxyFile)\s*[(<]/.test(
-          text,
-        );
+        /\b(?:fileResponse|downloadFile|proxyFile)\s*[(<]/.test(text);
       const binaryResponse =
         /new (?:Next)?Response\(/.test(text) &&
         /content-disposition|application\/octet-stream|text\/calendar|text\/event-stream|image\//i.test(
           text,
         );
       const downloadPath =
-        /(?:^|\/)(?:export(?:\/\[format\])?|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
+        /(?:^|\/)(?:export|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
           route,
         );
       return (
@@ -455,9 +468,20 @@ describe("private download cache policy (#5119)", () => {
         .replace(/^\/(?:api\/)?/, "")
         .replace(/\{[^}]+\}|\[[^\]]+\]/g, "[]")
         .replace(/\/$/, "");
+    // A literal hand-off in front of a dynamic neighbour (`students/export`
+    // before `students/[id]`) keeps its file, its wrapper and its entry.
+    const handOff = (route: string) => {
+      const file = path.join(API_ROOT, folder(route), "route.ts");
+      return (
+        !folder(route).includes("[]") &&
+        existsSync(file) &&
+        readFileSync(file, "utf8").includes("catalogProxy(")
+      );
+    };
     const contractFiles = Object.values(portalRoutes)
       .flat()
       .filter((route) => route.response === fileAnswer)
+      .filter((route) => !handOff(route.pattern))
       .map((route) => `${folder(route.pattern)}:${route.method}`);
     expect(contractFiles.length).toBeGreaterThan(0);
     const listed = new Set(

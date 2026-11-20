@@ -29,7 +29,6 @@ var staffRouteSurface = []string{
 	"GET /absences/pending",
 	"GET /absences/plan-gaps",
 	"GET /absences/requests",
-	"GET /available",
 	"GET /by-role",
 	"GET /dashboard-summary",
 	"GET /documents-directory",

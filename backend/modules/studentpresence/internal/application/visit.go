@@ -88,28 +88,6 @@ func (s *Service) RecordVisit(ctx context.Context, value studentpresence.Visit) 
 	return value, err
 }
 
-func (s *Service) ReviseVisit(ctx context.Context, value studentpresence.Visit) (studentpresence.Visit, error) {
-	err := s.runWrite(ctx, "revise_visit", func(txCtx context.Context) (ports.Stats, error) {
-		if value.ID <= 0 {
-			return ports.Stats{}, errors.New("student presence: invalid visit ID")
-		}
-		if err := validateVisit(&value); err != nil {
-			return ports.Stats{}, err
-		}
-		return s.store.ReviseVisit(txCtx, &value)
-	})
-	return value, err
-}
-
-func (s *Service) DeleteVisit(ctx context.Context, id int64) error {
-	return s.runWrite(ctx, "delete_visit", func(txCtx context.Context) (ports.Stats, error) {
-		if id <= 0 {
-			return ports.Stats{}, errors.New("student presence: invalid visit ID")
-		}
-		return s.store.DeleteVisit(txCtx, id)
-	})
-}
-
 func (s *Service) CloseVisits(ctx context.Context, ids []int64, at time.Time) ([]studentpresence.Visit, error) {
 	var rows []*studentpresence.Visit
 	err := s.runWrite(ctx, "close_visits", func(txCtx context.Context) (ports.Stats, error) {

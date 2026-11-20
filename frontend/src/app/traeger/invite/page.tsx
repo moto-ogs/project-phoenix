@@ -45,6 +45,7 @@ import {
   type TraegerInvitationPreview,
 } from "~/lib/traeger-api";
 import { TRAEGER_ROLE_LABELS } from "~/lib/traeger-roles";
+import { fetchTraegerHomeHref } from "~/lib/traeger-home";
 import { traegerPath } from "~/lib/traeger-url";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -65,7 +66,7 @@ async function signInAfterAcceptance(email: string, password: string) {
   try {
     const result = await traegerLogin({ email, password });
     if (result.status === "authenticated") {
-      window.location.assign(traegerPath("/traeger"));
+      window.location.assign(await fetchTraegerHomeHref());
       return;
     }
   } catch (err) {

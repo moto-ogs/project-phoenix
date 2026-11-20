@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
+  fileAnswer,
   nullable,
   object,
   optional,
@@ -214,6 +215,12 @@ export const routes = {
     pattern: "/api/calendar/appointments/{appointmentId}",
     portals: ["tenant"],
     response: success(AppointmentDetailSchema),
+  },
+  "GET /api/calendar/appointments/{appointmentId}/ics": {
+    method: "GET",
+    pattern: "/api/calendar/appointments/{appointmentId}/ics",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/calendar/appointments/{appointmentId}/mails": {
     method: "GET",

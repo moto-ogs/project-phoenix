@@ -227,6 +227,12 @@ func TestBuildRejects(t *testing.T) {
 	uploadRetry.NoRetryAfterRenewal = "stores the file twice"
 	strayCode := post(body{})
 	strayCode.TooLargeCode = "files.file_too_large"
+	jsonCache := get("/api/rows/", inner{})
+	jsonCache.PrivateCache = true
+	publicCache := fileRoute("/api/links/{token}/file")
+	publicCache.Portals = []string{PublicPortal}
+	publicCache.PublicFile = "the link is the credential"
+	publicCache.PrivateCache = true
 
 	cases := map[string]struct {
 		routes  []Registration
@@ -271,6 +277,8 @@ func TestBuildRejects(t *testing.T) {
 		"an upload on a GET":                        {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
 		"an upload that names a retry":              {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
 		"a too large code without an upload":        {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
+		"a cache trait on a JSON route":             {[]Registration{jsonCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
+		"a cache trait on a public file":            {[]Registration{publicCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -433,6 +441,14 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 		assert.Contains(t, table, line)
 	}
 
+	// A resource named like a keyword gets a binding that is no keyword.
+	doc, err = Build([]Registration{get("/api/import/rows", inner{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err = TypeScript(doc)
+	require.NoError(t, err)
+	assert.Contains(t, files["portals.generated.ts"], `import { routes as importRoutes } from "./import.generated";`)
+	assert.Contains(t, files["portals.generated.ts"], `    importRoutes["GET /api/import/rows"],`)
+
 	for _, pattern := range []string{"/api/portals/", "/api/shared/"} {
 		doc, err = Build([]Registration{get(pattern, inner{})}, Options{Identifiers: identifiers})
 		require.NoError(t, err)
@@ -509,6 +525,13 @@ func TestTypeScriptWritesAFileAndAnUpload(t *testing.T) {
 	require.NoError(t, err)
 
 	source := files["rows.generated.ts"]
+	cached := fileRoute("/api/rows/{id}/avatar")
+	cached.PrivateCache = true
+	cachedDoc, err := Build([]Registration{cached}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	cachedFiles, err := TypeScript(cachedDoc)
+	require.NoError(t, err)
+	assert.Contains(t, cachedFiles["rows.generated.ts"], "    privateCache: true,\n    response: fileAnswer,\n")
 	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: [\"format\"],\n    response: fileAnswer,\n  },\n")
 	assert.Contains(t, source, "    maxBodyBytes: 1048576,\n    tooLargeCode: \"files.file_too_large\",\n    request: multipart,\n    response: success(innerSchema),\n")
 	assert.Contains(t, source, "  fileAnswer,\n")
@@ -681,4 +704,17 @@ func TestAPublicRouteMayStandBesideAnOrderedSessionRoute(t *testing.T) {
 	// and in the proxy, so the pair is ordered.
 	_, err := Build([]Registration{link, get("/api/rows/{id}/history", inner{})}, Options{Identifiers: identifiers})
 	assert.NoError(t, err)
+}
+
+func TestResourceAliasAvoidsReservedWords(t *testing.T) {
+	t.Parallel()
+	for resource, want := range map[string]string{
+		"import":         "importRoutes",
+		"meal-plan":      "mealPlan",
+		"week-protocols": "weekProtocols",
+	} {
+		if got := resourceAlias(resource); got != want {
+			t.Errorf("resourceAlias(%q) = %q, want %q", resource, got, want)
+		}
+	}
 }

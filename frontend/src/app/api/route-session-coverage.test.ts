@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { globSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -143,9 +143,15 @@ describe("session reads of every BFF route", () => {
     // Anker: the walk sees the tree, also the portals' own routes.
     expect(routes).toContain("auth/logout");
     expect(routes).toContain("traeger/auth/logout");
-    // The catalog proxy takes over route files wave by wave (#2352), so a
-    // file count says nothing; every portal's catch-all and nested login
-    // route prove that the walk reaches each portal's tree.
+    // The catalog proxy took over the pass-through files (#2352), so a count
+    // says nothing: the walk equals an independent glob of the tree.
+    expect(routes).toEqual(
+      globSync("**/route.ts", { cwd: apiDir })
+        .filter((file) => !file.includes("[...nextauth]"))
+        .map((file) => path.dirname(file).split(path.sep).join("/"))
+        .sort(),
+    );
+    // Catch-all and nested login anchors cover each portal's tree.
     for (const portal of [
       "",
       "operator/",

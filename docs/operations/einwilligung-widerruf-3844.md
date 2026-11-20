@@ -55,7 +55,7 @@ auf das Backend unter `/api`, nicht auf eine Freigabe für direkte Requests.
 |---|---|
 | Kinderfotos | Externer Nachweis; Personal-UI bzw. `PUT /students/{id}` mit `photo_consent_given`; `POST /students/{id}/photo` kann mit `consent_acknowledged=true` zugleich erteilen. Elternportal: `GET /parent/me/children/{studentId}/consents`, `PUT`/`DELETE /parent/me/children/{studentId}/consents/photo`. Hinzu kommen Anmeldeübernahme/-abgleich und Kinderimport (Abschnitt 2.5). |
 | Raumhistorie/Aufbewahrung | Externe Erklärung; Personal-UI und `GET`/`PUT /students/{id}/privacy-consent`; Kinderimport kann die Aufbewahrungseinwilligung initial anlegen, schreibt eine bestehende dabei nicht um. Das ist `users.privacy_consents`, nicht der Schlüssel `data_processing` des Einwilligungsprotokolls. Raumbesuche entstehen über Personal-/Web-Anmeldung und Raumwechsel, Geräte-Anmeldung/-Raumwechsel und Stundenplanabläufe. Kein entsprechender Elternportal-Einwilligungs- oder Widerrufsweg in den geprüften Routen. |
-| Stimmungsabfrage/Feedback | Externe Erklärung; Geräteeingabe `POST /iot/feedback`; Personal-API `POST /feedback/` und `/feedback/batch`, Löschen `DELETE /feedback/{id}`. Keine kindbezogene Einwilligungs-API und kein entsprechender Elternportal-Weg in den geprüften Routen. |
+| Stimmungsabfrage/Feedback | Externe Erklärung; Geräteeingabe `POST /iot/feedback`; Personal-API `POST /feedback/` (die Batch-Route `/feedback/batch` entfiel mit #2352), Löschen `DELETE /feedback/{id}`. Keine kindbezogene Einwilligungs-API und kein entsprechender Elternportal-Weg in den geprüften Routen. |
 | Gesundheitsangaben | Externe Erklärung, soweit diese Grundlage gilt; Personal-UI und Kinderanlage/-änderung (`POST /students/`, `PUT /students/{id}`, Feld `health_info`); direkte Elternbearbeitung `PATCH /parent/me/children/{studentId}/master-data/student/health_info`; Anmeldeübernahme und Kinderimport. Krankmeldungen (`POST /parent/me/children/{studentId}/sick-note`), Personal-Statusänderungen und Gesundheitsdokumente sind gesonderte Bestände, kein Widerruf dieses Feldes. Keine eigene Gesundheits-Einwilligungs-API. |
 | AGB, Datenschutzkenntnisnahme, E-Mail-Kontakt | Anmeldeformular: öffentliche oder angemeldete Einreichung, danach Übernahme/Abgleich; Kinderimport mit Einwilligungsdaten. Eltern-/Personalansicht zeigt die gespeicherten Zustände. `GET /parent/me/children/{studentId}/consents` ist nur lesend; keine `PUT`/`DELETE`-Wege für diese drei Schlüssel. Der reguläre Kinder-Änderungsrequest bietet dafür ebenfalls keine Felder (Abschnitt 2.5). |
 
@@ -222,7 +222,7 @@ Schulweit: **Einstellungen → Datenschutz → Feedback der Kinder zum Tag und z
 (`feedback.enabled`). Berechtigung: `config:manage`.
 
 Erfassung erfolgt über Geräte-API `POST /iot/feedback` (Geräteauthentisierung)
-und Personal-API `POST /feedback/` bzw. `/feedback/batch` (`feedback:create`).
+und Personal-API `POST /feedback/` (`feedback:create`).
 Beide nutzen die Feedback-Funktion mit schulweiter Sperre. Der Schalter deckt
 auch Essensbewertungen (`feedback.entries.is_mensa_feedback`) ab. Die
 Geräte-API speichert immer `is_mensa_feedback = false`; eine Essensbewertung

@@ -75,7 +75,6 @@ type rawGuardianProfileRepository interface {
 	LockByIDForUpdate(ctx context.Context, id int64) error
 	FindByEmail(ctx context.Context, email string) (*models.GuardianProfile, error)
 	FindByAccountID(ctx context.Context, accountID int64) (*models.GuardianProfile, error)
-	FindWithoutAccount(ctx context.Context) ([]*models.GuardianProfile, error)
 	FindInvitable(ctx context.Context) ([]*models.GuardianProfile, error)
 	ListWithOptions(ctx context.Context, options *ports.QueryOptions) ([]*models.GuardianProfile, error)
 	FindByEmails(ctx context.Context, emails []string) ([]*models.GuardianProfile, error)

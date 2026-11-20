@@ -106,6 +106,7 @@ var legacyNumericIDsAToO = []string{
 	"classdayhttp.MorningAttendanceMarkRequest.StudentID",
 	"common.TrustedDeviceDTO.ID",
 	"communication.AnnouncementStats.AnnouncementID",
+	"dataimport.OpeningBalanceImportRow.StaffID",
 	"dataimport.SampleSchoolResult.SchoolID",
 	"devices.DeviceRequest.RegisteredByID",
 	"devices.DeviceResponse.ID",

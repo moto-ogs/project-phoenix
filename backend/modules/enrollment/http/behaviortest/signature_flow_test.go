@@ -262,7 +262,7 @@ func TestEnrollmentSignature_StatusLinkAndStaffShowTheSignatureAndItsProof(t *te
 	require.NotNil(t, detail.Data.Signature)
 	assert.NotEmpty(t, detail.Data.Signature.ImagePNG, "the staff detail shows the image")
 	assert.Equal(t, status.Data.Signature.DocumentSHA, detail.Data.Signature.DocumentSHA)
-	requirePDF(t, env.do(t, http.MethodGet, idPath(signed.Request.ID, "/?format=pdf"), staff, ""))
+	requirePDF(t, env.do(t, http.MethodGet, idPath(signed.Request.ID, "/signature-proof"), staff, ""))
 }
 
 func TestEnrollmentSignature_ParentEditSignsAgain(t *testing.T) {
@@ -337,7 +337,7 @@ func TestEnrollmentSignature_ProofIsBoundToTheTokensSchoolAndRequest(t *testing.
 
 	// The staff of school B cannot open school A's request or its proof.
 	staffB := schoolB.staff(t, schoolB.tenantID)
-	assert.Equal(t, http.StatusNotFound, schoolB.do(t, http.MethodGet, idPath(signedA.Request.ID, "/?format=pdf"), staffB, "").Code)
+	assert.Equal(t, http.StatusNotFound, schoolB.do(t, http.MethodGet, idPath(signedA.Request.ID, "/signature-proof"), staffB, "").Code)
 	assert.Equal(t, http.StatusNotFound, schoolB.do(t, http.MethodGet, idPath(signedA.Request.ID, "/"), staffB, "").Code)
 	err := testpkg.WithinTenantContext(t, context.Background(), schoolB.db, schoolB.tenantID, func(ctx context.Context) error {
 		_, err := schoolB.requests.SignatureProof(ctx, signedA.Request.ID, "")

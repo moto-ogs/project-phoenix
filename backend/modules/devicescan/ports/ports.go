@@ -109,7 +109,8 @@ var (
 	// ErrNoRoomAvailable narrows ErrInvalid: a session start without a room
 	// for an activity that has none planned.
 	ErrNoRoomAvailable = errors.New("presence no room available")
-	// ErrNoActiveSession narrows ErrNotFound for the timeout refusal.
+	// ErrNoActiveSession narrows ErrNotFound for the attendance refusal of a
+	// kiosk without a session.
 	ErrNoActiveSession = errors.New("presence no active session")
 )
 

@@ -1132,6 +1132,25 @@ export const HolidayHostHealthSchema: z.ZodType<HolidayHostHealth, unknown> = ob
   answers: nullable(arr(HolidayHostAnswerSchema)),
 });
 
+/** Go: messageattachments.UploadResponse */
+export interface UploadResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  width?: number;
+  height?: number;
+}
+
+export const UploadResponseSchema: z.ZodType<UploadResponse, unknown> = object<UploadResponse>({
+  id: int64String,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  width: optional(safeInt),
+  height: optional(safeInt),
+});
+
 /** Go: notifications.feedEntryResponse */
 export interface feedEntryResponse {
   id: string;

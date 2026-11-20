@@ -183,6 +183,8 @@ func TestStudentParentRecordsListLettersAndDeclarationsOfOneChild(t *testing.T) 
 	outsider := testpkg.CreateTestStudentForTenant(t, db, foreignTenant, "Fremdes", "Kind", "1a")
 	require.Equal(t, http.StatusNotFound, send(http.MethodGet, fmt.Sprintf("%s&student_id=%d", proof, outsider.ID), admin, nil).Code)
 	require.Equal(t, http.StatusBadRequest, send(http.MethodGet, proof+"&student_id=abc", admin, nil).Code)
+	// The handler, not the frontend proxy, refuses an unknown format (#2352).
+	require.Equal(t, http.StatusBadRequest, send(http.MethodGet, "/api/parent-announcements/"+consent+"/declaration-export?format=xml", admin, nil).Code)
 	require.Equal(t, http.StatusNotFound, send(http.MethodGet, proof, foreignAdmin, nil).Code)
 	require.Equal(t, http.StatusForbidden, send(http.MethodGet, proof, reader, nil).Code)
 	rec = send(http.MethodGet, proof, admin, nil)

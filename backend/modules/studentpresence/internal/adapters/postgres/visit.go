@@ -136,50 +136,6 @@ func (s *Store) RecordVisit(ctx context.Context, row *studentpresence.Visit) (po
 	return stats, err
 }
 
-func (s *Store) ReviseVisit(ctx context.Context, row *studentpresence.Visit) (ports.Stats, error) {
-	db, tenantID, err := s.database(ctx)
-	if err != nil {
-		return ports.Stats{}, err
-	}
-	if row.TenantID != 0 && row.TenantID != tenantID {
-		return ports.Stats{}, errors.New("student presence: visit belongs to another tenant")
-	}
-	row.TenantID = tenantID
-	started := time.Now()
-	result, err := db.NewUpdate().Model(visitRowFromRecord(row)).ModelTableExpr(`active.visits AS "visit"`).
-		WherePK().Where("visit.tenant_id = ?", tenantID).Exec(ctx)
-	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
-	if isUniqueViolationOn(err, openVisitPerStudentIndex) {
-		return stats, fmt.Errorf("revise visit: %w", errors.Join(ports.ErrOpenVisitExists, err))
-	}
-	if err != nil {
-		return stats, fmt.Errorf("revise visit: %w", err)
-	}
-	stats.Rows, err = result.RowsAffected()
-	if err != nil {
-		return stats, err
-	}
-	if stats.Rows != 1 {
-		return stats, fmt.Errorf("expected 1 rows affected, got %d", stats.Rows)
-	}
-	return stats, nil
-}
-
-func (s *Store) DeleteVisit(ctx context.Context, id int64) (ports.Stats, error) {
-	db, tenantID, err := s.database(ctx)
-	if err != nil {
-		return ports.Stats{}, err
-	}
-	started := time.Now()
-	result, err := db.NewDelete().Table("active.visits").Where("tenant_id = ?", tenantID).Where("id = ?", id).Exec(ctx)
-	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
-	if err != nil {
-		return stats, fmt.Errorf("delete visit: %w", err)
-	}
-	stats.Rows, err = result.RowsAffected()
-	return stats, err
-}
-
 // CloseVisits absorbs concurrent retries without reopening completed intervals.
 func (s *Store) CloseVisits(ctx context.Context, ids []int64, at time.Time) ([]*studentpresence.Visit, ports.Stats, error) {
 	db, tenantID, err := s.database(ctx)

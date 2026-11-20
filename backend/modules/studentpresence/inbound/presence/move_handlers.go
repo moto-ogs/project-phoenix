@@ -22,10 +22,6 @@ type checkInStudentsToSessionRequest struct {
 	KeepPresent         bool    `json:"keep_present"`
 }
 
-type moveStudentsToTransitRequest struct {
-	StudentIDs []int64 `json:"student_ids"`
-}
-
 func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Request) {
 	var req moveStudentsToActiveGroupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -50,32 +46,6 @@ func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Req
 	}
 
 	common.Respond(w, r, http.StatusOK, result, "Students moved successfully")
-}
-
-func (rs *Resource) moveStudentsToTransit(w http.ResponseWriter, r *http.Request) {
-	var req moveStudentsToTransitRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
-		return
-	}
-	if len(req.StudentIDs) == 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("student_ids are required")))
-		return
-	}
-
-	auth, ok := rs.BulkStudentMoveAuthorization(w, r)
-	if !ok {
-		return
-	}
-
-	result, err := rs.Operations.MoveStudentsToTransit(r.Context(), req.StudentIDs, *auth)
-	if err != nil {
-		rs.runtime.MarkRollback(r.Context())
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, result, "Students moved to transit successfully")
 }
 
 // checkInStudentsToSession checks children in to the school and places them

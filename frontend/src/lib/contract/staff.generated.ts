@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
   int64StringOrNumber,
@@ -1544,6 +1545,15 @@ export interface GetStaffTimeTrackingAuditLogQuery {
   to?: string;
 }
 
+/** Query of GET /api/staff/time-tracking/export */
+export interface GetStaffTimeTrackingExportQuery {
+  format?: string;
+  granularity?: string;
+  month?: number;
+  time_format?: string;
+  year?: number;
+}
+
 /** Query of GET /api/staff/time-tracking/export/datev-report */
 export interface GetStaffTimeTrackingExportDatevReportQuery {
   format?: string;
@@ -1588,6 +1598,11 @@ export interface GetStaffIdAbsencesQuery {
   to?: string;
 }
 
+/** Query of GET /api/staff/{id}/avatar */
+export interface GetStaffIdAvatarQuery {
+  v?: string;
+}
+
 /** Query of GET /api/staff/{id}/documents */
 export interface GetStaffIdDocumentsQuery {
   category?: string;
@@ -1604,6 +1619,13 @@ export interface GetStaffIdTimeTrackingCompTimePreviewQuery {
   date_end?: string;
   date_start?: string;
   half_day?: boolean;
+}
+
+/** Query of GET /api/staff/{id}/time-tracking/export */
+export interface GetStaffIdTimeTrackingExportQuery {
+  format?: "csv" | "pdf" | "xlsx";
+  from?: string;
+  to?: string;
 }
 
 /** Query of GET /api/staff/{id}/time-tracking/history */
@@ -1782,6 +1804,13 @@ export const routes = {
     query: ["actor_id", "cursor", "from", "limit", "sources", "staff_id", "to"],
     response: success(AuditLogPageSchema),
   },
+  "GET /api/staff/time-tracking/export": {
+    method: "GET",
+    pattern: "/api/staff/time-tracking/export",
+    portals: ["tenant"],
+    query: ["format", "granularity", "month", "time_format", "year"],
+    response: fileAnswer,
+  },
   "GET /api/staff/time-tracking/export/datev-report": {
     method: "GET",
     pattern: "/api/staff/time-tracking/export/datev-report",
@@ -1848,12 +1877,26 @@ export const routes = {
     query: ["from", "to"],
     response: success(z.array(StaffAbsenceResponseSchema).nullable()),
   },
+  "GET /api/staff/{id}/avatar": {
+    method: "GET",
+    pattern: "/api/staff/{id}/avatar",
+    portals: ["tenant"],
+    privateCache: true,
+    query: ["v"],
+    response: fileAnswer,
+  },
   "GET /api/staff/{id}/documents": {
     method: "GET",
     pattern: "/api/staff/{id}/documents",
     portals: ["tenant"],
     query: ["category"],
     response: success(StaffDocumentListResponseSchema),
+  },
+  "GET /api/staff/{id}/documents/{documentId}/download": {
+    method: "GET",
+    pattern: "/api/staff/{id}/documents/{documentId}/download",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/staff/{id}/payroll-number": {
     method: "GET",
@@ -1910,6 +1953,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["date_end", "date_start", "half_day"],
     response: success(CompTimeBalancePreviewSchema),
+  },
+  "GET /api/staff/{id}/time-tracking/export": {
+    method: "GET",
+    pattern: "/api/staff/{id}/time-tracking/export",
+    portals: ["tenant"],
+    query: ["format", "from", "to"],
+    response: fileAnswer,
   },
   "GET /api/staff/{id}/time-tracking/history": {
     method: "GET",

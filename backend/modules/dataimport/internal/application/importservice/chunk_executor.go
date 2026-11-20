@@ -222,7 +222,7 @@ func (a *batchImportAttempt[T]) applySegment(ctx context.Context, writer ports.C
 		row := &request.Rows[index]
 		id, err := resolved.FindExisting(ctx, *row)
 		if err != nil {
-			recordDuplicateCheckError(service, batch, index+2, row, err)
+			recordDuplicateCheckError(service, batch, index+2, row)
 			continue
 		}
 		action, skip := service.determineImportAction(request, batch, row, index+2, id)

@@ -19,7 +19,7 @@ import (
 
 func TestStaffDirectoryPositiveGrowthQueryBudget(t *testing.T) {
 	t.Parallel()
-	for _, route := range []string{"available", "by-role?role=lehrkraft", "documents-directory"} {
+	for _, route := range []string{"by-role?role=lehrkraft", "documents-directory"} {
 		t.Run(route, func(t *testing.T) {
 			testpkg.OwnTenant(t)
 			testpkg.SetupIsolatedTestDB(t)
@@ -85,8 +85,6 @@ func TestStaffDirectoryPositiveGrowthQueryBudget(t *testing.T) {
 				counts = append(counts, len(queries.Statements))
 				t.Logf("route=/staff/%s N=%d statements=%d scope=full-resource-request", route, n, len(queries.Statements))
 				switch route {
-				case "available":
-					querybudgets.AssertQueryBudget(t, "workforce.staff_growth.directory_available", queries)
 				case "documents-directory":
 					querybudgets.AssertQueryBudget(t, "workforce.staff_growth.directory_documents", queries)
 				default:

@@ -6,14 +6,11 @@ import (
 	"testing"
 	"time"
 
-	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
-
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	arrivalTimetable "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
-	api "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -102,47 +99,7 @@ func (p pickupBaselineProjection) RegularPickup(studentID int64, date calendar.D
 	return row.PickupTime, true
 }
 
-// exceptionConflictsWithArrivalBaseline composes the Timetable owner's
-// conflict detection over the same retained rows and the arrival projection
-// in booking mode (#2414, #3550). Only the readers the exception-conflict read
-// touches are real; the rest only have to exist.
-func exceptionConflictsWithArrivalBaseline(
-	t *testing.T,
-	env *decisionTestEnv,
-	authoritative bool,
-) timetable.ConflictDetectionCapability {
-	t.Helper()
-	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: env.db, Observe: func(presenceCompose.Observation) {}})
-	require.NoError(t, err)
-	detection, err := arrivalTimetable.NewConflictDetection(timetablePorts.ConflictDetectionDependencies{
-		Instances:         env.timetable.ActivityInstance.Reads,
-		InstanceStaff:     env.timetable.InstanceStaff,
-		InstanceStudents:  env.timetable.InstanceStudent,
-		Exceptions:        env.timetable.ActivityException,
-		Schedules:         env.timetable.ActivitySchedule,
-		Shifts:            unusedConflictShifts{},
-		Staff:             api.NewTimetableStaff(env.reposPeople.Staff),
-		CalendarPeriods:   env.reposSchedules.CalendarPeriod,
-		ArrivalExceptions: env.reposSchedules.StudentArrivalException,
-		ArrivalBaselines:  arrivalBaselineProjector{reader: bookingModeArrivalBaseline(t, env, authoritative)},
-		Presence:          presence,
-		Sessions:          env.reposPresence.ActiveGroup,
-		// Exception conflicts carry no fingerprint; the digest is never used.
-		ContentHash: func([]byte) string { return "" },
-		Logger:      slog.Default(),
-		Now:         func() time.Time { return decisionTestToday.BerlinMidnight().Add(10 * time.Hour) },
-	})
-	require.NoError(t, err)
-	return detection
-}
-
-// unusedConflictShifts stands in for the Dienstplan rows the exception read
-// never touches.
-type unusedConflictShifts struct {
-	timetablePorts.ConflictShifts
-}
-
-// arrivalBaselineProjector serves the conflict detection's arrival port from
+// arrivalBaselineProjector serves the timetable read's arrival port from
 // Care Plan's baseline projection, the way the composition root does.
 type arrivalBaselineProjector struct {
 	reader careplan.ArrivalBaselineReader
@@ -250,102 +207,4 @@ func TestTimetableRead_StudentWeekCareDayWithoutClassTime(t *testing.T) {
 	arrival := week.ArrivalByDate[monday.String()]
 	require.True(t, arrival.HasSchedule, "the booked day must remain visible without a class time")
 	assert.True(t, arrival.Time.IsZero(), "the visible care day has no arrival time to show")
-
-	room := testpkg.CreateTestRoom(t, env.db, "Ohne-Zeit-Raum")
-	activity := testpkg.CreateTestActivityGroup(t, env.db, "Ohne-Zeit-AG")
-	instance := testpkg.CreateTestActivityInstance(t, env.db, monday, room.ID, testpkg.ActivityInstanceOpts{
-		ActivityGroupID: &activity.ID,
-	})
-	testpkg.CreateTestInstanceStudent(t, env.db, instance.ID, studentID, studentpresence.SessionAttendanceExpected)
-	reason := "Fällt aus"
-	exception := &timetable.ActivityException{
-		ActivityGroupID: activity.ID,
-		ExceptionDate:   string(careplan.Date(monday)),
-		ExceptionType:   timetable.ActivityExceptionCancelled,
-		Reason:          &reason,
-	}
-	exception.TenantID = testpkg.Tenant(t)
-	require.NoError(t, exception.Validate())
-	require.NoError(t, arrivalTimetable.NativeExceptionRecords(env.timetable.ActivityException).Create(ctx, exception))
-
-	conflicts, err := exceptionConflictsWithArrivalBaseline(t, env, true).DetectExceptionConflicts(ctx, monday, monday)
-	require.NoError(t, err)
-	require.Len(t, conflicts, 1)
-	assert.Equal(t, timetable.SlotSourceSchedule, conflicts[0].ArrivalSource,
-		"a timeless care day remains scheduled even without an arrival time")
-	assert.Empty(t, conflicts[0].ExpectedArrival,
-		"a timeless care day must not render as 00:00 in a cancellation warning")
-}
-
-// TestTimetableRead_ExceptionConflictsApplyTheBookingMode covers the second
-// read surface: the planner warns when a moved activity now starts before a
-// child arrives. On a weekday the booking no longer covers, that warning is
-// about a child who is not coming at all.
-func TestTimetableRead_ExceptionConflictsApplyTheBookingMode(t *testing.T) {
-	t.Parallel()
-
-	env := setupDecisionTest(t)
-	setSourcePhaseServiceStartDate(t, env, decisionTestToday.AddDays(-30))
-	ctx := testpkg.Ctx(t)
-
-	offering := createArrivalOffering(t, env, "konflikt", []string{"mon"})
-	studentID, _ := submitAndApproveOfferingChild(
-		t, env, offering.ID, "konflikt@example.com", "Konrad", 2,
-	)
-	setStudentClass(t, env, studentID, "3b")
-	setArrivalClassTimes(t, env, "3b", map[string]string{"mon": "11:45", "thu": "11:45"})
-
-	// The Thursday row survived the Abmeldung; the booking covers Monday only.
-	staff := testpkg.CreateTestStaff(t, env.db, "Betreuung", "Konflikt")
-	testpkg.CreateTestArrivalSchedule(t, env.db, studentID, timetable.WeekdayThursday, staff.ID, "11:45")
-
-	monday := nextWeekday(decisionTestToday, time.Monday)
-	thursday := monday.AddDays(3)
-
-	// Both days: the activity is moved to 10:00, before the 11:45 arrival.
-	room := testpkg.CreateTestRoom(t, env.db, "Konflikt-Raum")
-	activity := testpkg.CreateTestActivityGroup(t, env.db, "Konflikt-AG")
-	movedStart := calendar.NormalizeWallClock(time.Date(2000, 1, 1, 10, 0, 0, 0, time.UTC))
-	for _, date := range []calendar.Date{monday, thursday} {
-		instance := testpkg.CreateTestActivityInstance(t, env.db, date, room.ID, testpkg.ActivityInstanceOpts{
-			ActivityGroupID: &activity.ID,
-		})
-		testpkg.CreateTestInstanceStudent(t, env.db, instance.ID, studentID, studentpresence.SessionAttendanceExpected)
-		createModifiedException(t, env, activity.ID, date, staff.ID, movedStart)
-	}
-
-	conflicts, err := exceptionConflictsWithArrivalBaseline(t, env, true).
-		DetectExceptionConflicts(ctx, monday, thursday)
-	require.NoError(t, err)
-
-	dates := make(map[string]bool, len(conflicts))
-	for _, conflict := range conflicts {
-		dates[conflict.Date] = true
-	}
-	assert.True(t, dates[monday.String()], "the booked day still warns about the moved start time")
-	assert.False(t, dates[thursday.String()],
-		"a stale arrival row must not warn about a child that is not in care that day")
-}
-
-func createModifiedException(
-	t *testing.T,
-	env *decisionTestEnv,
-	activityGroupID int64,
-	date calendar.Date,
-	staffID int64,
-	startTime time.Time,
-) {
-	t.Helper()
-	reason := "Verlegt"
-	exception := &timetable.ActivityException{
-		ActivityGroupID: activityGroupID,
-		ExceptionDate:   string(careplan.Date(date)),
-		ExceptionType:   timetable.ActivityExceptionModified,
-		StartTime:       activityClockPtr(&startTime),
-		Reason:          &reason,
-		CreatedBy:       &staffID,
-	}
-	exception.TenantID = testpkg.Tenant(t)
-	require.NoError(t, exception.Validate())
-	require.NoError(t, arrivalTimetable.NativeExceptionRecords(env.timetable.ActivityException).Create(testpkg.Ctx(t), exception))
 }

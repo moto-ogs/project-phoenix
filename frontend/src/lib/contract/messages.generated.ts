@@ -3,8 +3,10 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -15,6 +17,9 @@ import {
   str,
   success,
 } from "./runtime";
+import {
+  UploadResponseSchema,
+} from "./shared.generated";
 
 /** Go: messaging.GuardianReaderResponse */
 export interface GuardianReaderResponse {
@@ -428,6 +433,11 @@ export interface GetMessagesQuery {
   unread?: boolean;
 }
 
+/** Query of GET /api/messages/attachments/{attachmentId}/download */
+export interface GetMessagesAttachmentsAttachmentIdDownloadQuery {
+  inline?: string;
+}
+
 /** Query of GET /api/messages/group-threads/audience */
 export interface GetMessagesGroupThreadsAudienceQuery {
   target_id?: string;
@@ -446,6 +456,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["unread"],
     response: success(z.array(ParentChatInboxThreadResponseSchema)),
+  },
+  "GET /api/messages/attachments/{attachmentId}/download": {
+    method: "GET",
+    pattern: "/api/messages/attachments/{attachmentId}/download",
+    portals: ["tenant"],
+    query: ["inline"],
+    response: fileAnswer,
   },
   "GET /api/messages/count-scope": {
     method: "GET",
@@ -514,6 +531,15 @@ export const routes = {
     pattern: "/api/messages/unread-count",
     portals: ["tenant"],
     response: success(ParentChatUnreadCountResponseSchema),
+  },
+  "POST /api/messages/attachments": {
+    method: "POST",
+    pattern: "/api/messages/attachments",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(UploadResponseSchema),
   },
   "POST /api/messages/group-threads": {
     method: "POST",

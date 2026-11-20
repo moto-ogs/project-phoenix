@@ -286,6 +286,8 @@ func (rs *Resource) mountAdminRequestRoutes(r chi.Router) {
 		r.With(common.RequiresPermission("config:manage")).Post("/mark-all-read", rs.markAllAdminRequestsRead)
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission("config:manage")).Get("/", rs.getAdminRequest)
+			// The proof of the parent's signature as a PDF (#4786).
+			r.With(common.RequiresPermission("config:manage")).Get("/signature-proof", rs.getAdminSignatureProof)
 			// The questions of the request's form version, for the change
 			// request view (#6142); same permission as that view.
 			r.With(common.RequiresPermission("config:manage")).Get("/form-labels", rs.getAdminFormLabels)

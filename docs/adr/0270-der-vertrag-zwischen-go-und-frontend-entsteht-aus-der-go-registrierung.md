@@ -167,7 +167,8 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
   Upload ab.
 - Eine Datei, die mehr tut als durchzureichen (eigener Cache-Header für ein
   Logo, Umformung, Prüfung im BFF, mehrere Backend-Aufrufe), bleibt eine
-  eigene Datei.
+  eigene Datei. Siehe dazu den Nachtrag „Prüfungen und Umformungen gehören
+  ins Backend“.
 - Die Upload-Antwort ist JSON und läuft durch den Decoder der Route; sie hat
   danach die Hülle des Katalogs (`success`, `message`, `data`) statt der des
   Backends. Ein Client, der mehr als `data` liest, zieht beim Umzug mit.
@@ -237,3 +238,43 @@ aus. Dieser Nachtrag ersetzt ihn für markierte Einzelrouten.
   Freigabe in `HOST_RULES` von `src/proxy.ts` für jeden Portal-Host, der sie
   öffnet, und die Log-Redaction ihres Pfads im BFF und im Backend.
 - Befristete oder signierte Datei-URLs sind nicht Teil dieser Entscheidung.
+
+## Nachtrag vom 2026-11-19: Prüfungen und Umformungen gehören ins Backend
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Viele
+Datei-Routen hatten nur deshalb eine eigene Datei, weil der BFF etwas prüfte
+oder umformte, was der Go-Handler ohnehin tut. Entscheidung: Solche Routen
+ziehen auf den Katalog; es gibt keine Ausnahmen und keine befristeten Dateien.
+
+- **Dateityp und -name nennt das Backend.** Jeder Datei-Handler setzt
+  `Content-Type` und `Content-Disposition` selbst; der Proxy ergänzt nichts.
+  Ein Ersatztyp im BFF (`fallbackType`, `ICS_FILE`) entfällt.
+- **Prüfungen liegen im Handler.** Eine Zahl-Prüfung von IDs, eine
+  Format-Prüfung oder eine Query-Auswahl im BFF entfällt; der Handler lehnt
+  ungültige Werte mit 4xx ab, und der Vertrag nennt nur die Parameter, die er
+  liest.
+- **Der Client spricht das Backend-Format.** Er ruft den Backend-Pfad mit
+  dessen Parametern und sendet den Body so, wie der Handler ihn bindet. Ein
+  Pfad-Parameter, der im BFF zur Query wurde, ist im Client wieder Query.
+- **Der Proxy puffert nicht.** Eine Datei, die das Backend ohne
+  `Content-Length` streamt, geht ohne diesen Header durch.
+
+## Nachtrag vom 2026-11-20: Bilder, die der Browser behalten darf
+
+Für [#2352](https://github.com/moto-ogs/project-phoenix/issues/2352). Drei
+Datei-Routen hatten eine eigene Datei nur wegen ihres Cache-Headers: der eigene
+Avatar, der Avatar einer Mitarbeiterin und das Logo des Trägers. Ihre Adresse
+trägt die Version der Datei; ohne Cache lädt jede Liste jedes Bild neu.
+
+- **Das Backend setzt den Cache-Header.** Der Handler entscheidet, wie lange
+  der Browser die Datei behalten darf, auch abhängig von `?v`. Er setzt nur
+  `private`-Werte.
+- **Der Vertrag erlaubt das Durchreichen je Route.** `PrivateCache: true`
+  (nur zusammen mit `File`) lässt den Proxy das `Cache-Control` des Backends
+  durchreichen, wenn es `private` enthält und nicht `public`. Jeder andere
+  Wert, ein fehlender Header und jede Ablehnung oder fehlende Sitzung bleiben
+  `private, no-store`. Ohne das Merkmal bleiben Datei-Antworten
+  `private, no-store`.
+- Der Grenzfall „eigener Cache-Header für ein Logo“ ist damit keine eigene
+  Datei mehr.
+

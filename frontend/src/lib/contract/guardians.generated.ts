@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   noData,
@@ -526,6 +527,12 @@ export const routes = {
     pattern: "/api/guardians/invitations/{invitationId}/reject",
     portals: ["tenant"],
     response: noData,
+  },
+  "POST /api/guardians/payment-overview/export": {
+    method: "POST",
+    pattern: "/api/guardians/payment-overview/export",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "POST /api/guardians/students/{studentId}/guardians": {
     method: "POST",

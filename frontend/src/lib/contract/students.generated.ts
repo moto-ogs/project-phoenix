@@ -2561,6 +2561,38 @@ export const StaffExcusedRequestResponseSchema: z.ZodType<StaffExcusedRequestRes
   reviewed_at: optional(instant),
 });
 
+/** Go: presenceprojectionhttp.studentExportFilters */
+export interface studentExportFilters {
+  search?: string;
+  group_id?: string;
+  room_id?: string;
+  year?: string;
+  school_class?: string;
+  status?: string;
+  bus?: string;
+  photo_consent?: string;
+  pickup_status?: string;
+  day_status?: string;
+  date?: string;
+  pickup_time?: string;
+  arrival_time?: string;
+  sort?: string;
+  group_by_class?: boolean;
+  months?: string[] | null;
+  include_without_health_info?: boolean;
+  student_ids?: string[] | null;
+  enrollment_answer?: string;
+}
+
+/** Go: presenceprojectionhttp.studentExportRequest */
+export interface studentExportRequest {
+  format?: string;
+  preset?: string;
+  title?: string;
+  filters?: studentExportFilters;
+  columns?: string[] | null;
+}
+
 /** Go: careplanhttp.DecideMasterDataChangeRequestBody */
 export interface DecideMasterDataChangeRequestBody {
   approve?: boolean | null;
@@ -3376,6 +3408,13 @@ export interface GetStudentsIdAttendanceHistoryQuery {
   start?: string;
 }
 
+/** Query of GET /api/students/{id}/attendance-history/export */
+export interface GetStudentsIdAttendanceHistoryExportQuery {
+  format?: "docx" | "pdf" | "xlsx";
+  from?: string;
+  to?: string;
+}
+
 /** Query of GET /api/students/{id}/care-withdrawals */
 export interface GetStudentsIdCareWithdrawalsQuery {
   page?: number;
@@ -3528,6 +3567,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(CareRequestDetailResponseSchema),
   },
+  "GET /api/students/care-schedule-change-requests/{requestId}/proof": {
+    method: "GET",
+    pattern: "/api/students/care-schedule-change-requests/{requestId}/proof",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /api/students/care-withdrawals": {
     method: "GET",
     pattern: "/api/students/care-withdrawals",
@@ -3671,6 +3716,12 @@ export const routes = {
     query: ["include_privacy_consent"],
     response: success(StudentDetailResponseSchema),
   },
+  "GET /api/students/{id}/accident-reports/{documentId}/pdf": {
+    method: "GET",
+    pattern: "/api/students/{id}/accident-reports/{documentId}/pdf",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /api/students/{id}/arrival-schedules": {
     method: "GET",
     pattern: "/api/students/{id}/arrival-schedules",
@@ -3684,6 +3735,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["end", "start"],
     response: success(attendanceHistoryResponseSchema),
+  },
+  "GET /api/students/{id}/attendance-history/export": {
+    method: "GET",
+    pattern: "/api/students/{id}/attendance-history/export",
+    portals: ["tenant"],
+    query: ["format", "from", "to"],
+    response: fileAnswer,
   },
   "GET /api/students/{id}/care-withdrawals": {
     method: "GET",
@@ -3716,6 +3774,12 @@ export const routes = {
     portals: ["tenant"],
     query: ["category"],
     response: success(StudentDocumentListResponseSchema),
+  },
+  "GET /api/students/{id}/documents/{documentId}/download": {
+    method: "GET",
+    pattern: "/api/students/{id}/documents/{documentId}/download",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/students/{id}/enrollment-extra-fields": {
     method: "GET",
@@ -3878,6 +3942,14 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<DecideExcusedRequestBody>(),
     response: success(StaffExcusedRequestResponseSchema),
+  },
+  "POST /api/students/export": {
+    method: "POST",
+    pattern: "/api/students/export",
+    portals: ["tenant"],
+    maxBodyBytes: 1048576,
+    request: requestBody<studentExportRequest>(),
+    response: fileAnswer,
   },
   "POST /api/students/master-data-change-requests/{requestId}/decide": {
     method: "POST",

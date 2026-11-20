@@ -300,7 +300,7 @@ func TestStaffImportConfig_Validate_RoleLookupError(t *testing.T) {
 
 	require.Len(t, errs, 1)
 	assert.Equal(t, "role_lookup_failed", errs[0].Code)
-	assert.Contains(t, errs[0].Message, lookupErr.Error())
+	assert.Equal(t, "Die Rolle konnte nicht geprüft werden. Bitte versuche es erneut.", errs[0].Message)
 }
 
 func TestStaffImportConfig_FindExisting(t *testing.T) {

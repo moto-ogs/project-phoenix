@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64StringOrNumber,
   lazy,
@@ -532,6 +533,13 @@ export const routes = {
     pattern: "/api/me/profile",
     portals: ["tenant"],
     response: success(ProfileResponseSchema),
+  },
+  "GET /api/me/profile/avatar/{filename}": {
+    method: "GET",
+    pattern: "/api/me/profile/avatar/{filename}",
+    portals: ["tenant"],
+    privateCache: true,
+    response: fileAnswer,
   },
   "GET /api/me/staff": {
     method: "GET",

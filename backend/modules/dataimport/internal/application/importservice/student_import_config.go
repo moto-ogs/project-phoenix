@@ -111,7 +111,7 @@ func (c *StudentImportConfig) Validate(ctx context.Context, row *importModels.St
 	if mode := importModeFromContext(ctx); mode == importModels.ImportModeUpdate || mode == importModels.ImportModeUpsert {
 		existing, findErr := c.FindExisting(ctx, *row)
 		if findErr != nil {
-			return []importModels.ValidationError{{Field: "student", Message: fmt.Sprintf("Kind konnte nicht geprüft werden: %s", findErr.Error()), Code: "existing_lookup_failed", Severity: importModels.ErrorSeverityError}}
+			return []importModels.ValidationError{{Field: "student", Message: "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.", Code: "existing_lookup_failed", Severity: importModels.ErrorSeverityError}}
 		}
 		requiresCreateFields = existing == nil
 	}
@@ -176,7 +176,7 @@ func (c *StudentImportConfig) validateTag(ctx context.Context, row *importModels
 
 	tagID, found, err := c.FindRFIDCard(ctx, raw)
 	if err != nil {
-		return rfidLookupFailed(err)
+		return rfidLookupFailed()
 	}
 	if !found {
 		return []importModels.ValidationError{{
@@ -550,10 +550,10 @@ func validateStudentRetention(row *importModels.StudentImportRow) []importModels
 	return errors
 }
 
-func rfidLookupFailed(err error) []importModels.ValidationError {
+func rfidLookupFailed() []importModels.ValidationError {
 	return []importModels.ValidationError{{
 		Field:    "tag_id",
-		Message:  fmt.Sprintf("RFID-Karte konnte nicht geprüft werden: %s", err.Error()),
+		Message:  "Die Karte konnte nicht geprüft werden. Bitte versuche es erneut.",
 		Code:     "rfid_lookup_failed",
 		Severity: importModels.ErrorSeverityError,
 	}}
@@ -565,18 +565,18 @@ func (c *StudentImportConfig) validateTagWearer(ctx context.Context, row *import
 		if stdErrors.Is(err, ports.ErrPersonNotFound) {
 			return nil
 		}
-		return rfidLookupFailed(err)
+		return rfidLookupFailed()
 	}
 	students, err := c.Students.ListStudentsByPersonID(ctx, []int64{wearer.ID})
 	if err != nil {
-		return rfidLookupFailed(err)
+		return rfidLookupFailed()
 	}
 	if len(students) > 0 {
 		student := students[0]
 		if strings.TrimSpace(row.FirstName) != "" && strings.TrimSpace(row.LastName) != "" && strings.TrimSpace(row.SchoolClass) != "" {
 			matched, err := c.findStudentWithoutTag(ctx, *row)
 			if err != nil {
-				return rfidLookupFailed(err)
+				return rfidLookupFailed()
 			}
 			if matched != nil && *matched != student.ID {
 				return []importModels.ValidationError{{Field: "tag_id", Message: fmt.Sprintf("RFID-Karte '%s' ist bereits einer anderen Person zugeordnet.", raw), Code: "rfid_taken", Severity: importModels.ErrorSeverityError, ActualValue: raw}}

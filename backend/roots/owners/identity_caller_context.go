@@ -182,26 +182,6 @@ func (s callerSessions) SupervisedSessionIDs(ctx context.Context, staffID int64)
 	return liveGroupIDs(sessions), err
 }
 
-func (s callerSessions) SessionExists(ctx context.Context, sessionID int64) (bool, error) {
-	sessions, err := s.presence.ListLiveGroups(ctx, []int64{sessionID})
-	return len(sessions) > 0, err
-}
-
-func (s callerSessions) SessionVisits(ctx context.Context, sessionID int64) ([]identityaccess.CallerVisit, error) {
-	visits, err := s.presence.ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{sessionID}})
-	if err != nil {
-		return nil, err
-	}
-	result := make([]identityaccess.CallerVisit, 0, len(visits))
-	for _, visit := range visits {
-		result = append(result, identityaccess.CallerVisit{
-			ID: visit.ID, CreatedAt: visit.CreatedAt, UpdatedAt: visit.UpdatedAt, TenantID: visit.TenantID,
-			StudentID: visit.StudentID, ActiveGroupID: visit.ActiveGroupID, EntryTime: visit.EntryTime, ExitTime: visit.ExitTime,
-		})
-	}
-	return result, nil
-}
-
 func liveGroupIDs(sessions []studentpresence.LiveGroup) []int64 {
 	ids := make([]int64, 0, len(sessions))
 	for _, session := range sessions {

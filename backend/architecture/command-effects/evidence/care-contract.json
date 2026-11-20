@@ -529,6 +529,46 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "baa6c9b2e8386e33a7d13a8cbbac749b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "6f9a80e520a90bbd0f933751344558f4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "74433fe77792564bbd0e8fbc458d7b08",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "7ae9cb48d011fdd0965244419e063da4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "acfbcfa8c151065db4c50d17886a99c2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/internal/application/listrenderer.RendererService.CombineLetters",
       "binding_digest": "160e443296189dddb74e56b1586c6aee",
       "port": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.LetterRenderer.CombineLetters",

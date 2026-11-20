@@ -575,7 +575,7 @@ func TestListEndpointsFailWhenThePersonLookupFails(t *testing.T) {
 
 	// The handlers this adapter replaces read staff and person in one join,
 	// so a broken person lookup answered 500 instead of an empty list.
-	for _, target := range []string{"/staff", "/staff/documents-directory", "/staff/available"} {
+	for _, target := range []string{"/staff", "/staff/documents-directory"} {
 		recorder := h.do(t, http.MethodGet, target, nil)
 		assert.Equal(t, http.StatusInternalServerError, recorder.Code, target)
 		assert.Equal(t, "person store down", decodeError(t, recorder).Detail, target)
@@ -741,19 +741,6 @@ func TestSchoolClassFailuresAreDelegatedToTheRoot(t *testing.T) {
 	recorder := h.do(t, http.MethodGet, "/staff/2/school-classes", nil)
 	assert.Equal(t, http.StatusNotFound, recorder.Code, "the root's renderer decides the status")
 	assert.Equal(t, "Klassenname darf nicht leer sein", decodeError(t, recorder).Detail)
-}
-
-func TestAvailableStaffListsTeachersWithPersons(t *testing.T) {
-	t.Parallel()
-	h := withPersons(newHarness(t, directoryFixture()))
-	h.allow("users:read")
-
-	recorder := h.do(t, http.MethodGet, "/staff/available", nil)
-	require.Equal(t, http.StatusOK, recorder.Code)
-	body := decode(t, recorder)
-	assert.Equal(t, "Available staff members retrieved successfully", body.Message)
-	assert.Contains(t, string(body.Data), `"teacher_id":22`)
-	assert.NotContains(t, string(body.Data), `"person_id":"11"`, "only teachers are listed")
 }
 
 func TestStaffByRoleSplitsCaregiverPoolFromRoleLookup(t *testing.T) {

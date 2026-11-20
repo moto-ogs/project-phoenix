@@ -58,6 +58,10 @@ const mocks = vi.hoisted(() => ({
   fetchCareOfferingBookingStats: vi.fn(),
 }));
 
+// The contracts card of #4788 reads its own route; it has its own test.
+vi.mock("~/lib/application-contracts-api", () => ({
+  getApplicationContracts: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("~/lib/care-offering-api", () => ({
   listCareOfferings: mocks.listCareOfferings,
 }));

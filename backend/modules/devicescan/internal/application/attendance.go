@@ -12,30 +12,6 @@ import (
 
 func isPersonNotFound(err error) bool { return errors.Is(err, ports.ErrPersonNotFound) }
 
-// AttendanceStatus answers today's attendance of a student card.
-func (s *Service) AttendanceStatus(ctx context.Context, rfidTag string) (*devicescan.AttendanceStatus, error) {
-	device, err := s.device(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if rfidTag == "" {
-		return nil, devicescan.InvalidRequest(devicescan.MessageRFIDParameterRequired)
-	}
-	tag := s.people.NormalizeTag(rfidTag)
-	student, person, err := s.findAttendanceStudent(ctx, device, tag)
-	if err != nil {
-		return nil, err
-	}
-	state, err := s.attendance.Status(ctx, student.ID)
-	if err != nil {
-		return nil, devicescan.Internal(err.Error(), err)
-	}
-	return &devicescan.AttendanceStatus{
-		Student:    s.attendanceStudent(ctx, student, person),
-		Attendance: publicAttendanceState(state),
-	}, nil
-}
-
 // ToggleAttendance confirms, cancels or finalizes today's attendance.
 func (s *Service) ToggleAttendance(ctx context.Context, command devicescan.AttendanceToggleCommand) (*devicescan.AttendanceToggleResult, error) {
 	device, err := s.device(ctx)
@@ -157,23 +133,9 @@ func (s *Service) confirmDailyCheckout(ctx context.Context, device *devicescan.P
 
 // toggleAttendance flips today's row. The scan stays device-attributed.
 func (s *Service) toggleAttendance(ctx context.Context, device *devicescan.PrincipalDevice, tag string) (*devicescan.AttendanceToggleResult, error) {
-	person, err := s.people.FindPersonByTag(ctx, tag)
-	if err != nil {
-		if !isPersonNotFound(err) {
-			return nil, devicescan.Internal(devicescan.MessageInternalServerError, err)
-		}
-		s.recordUnregisteredScan(ctx, device, tag)
-		return nil, devicescan.NotFoundWithCode(devicescan.MessageRFIDTagNotFound, devicescan.CodeRFIDTagNotFound)
-	}
-	if person == nil || !person.HasTag {
-		return nil, devicescan.NotFoundWithCode(devicescan.MessageRFIDTagUnassigned, devicescan.CodeRFIDTagUnassigned)
-	}
-	student, err := s.lookupStudent(ctx, person.ID)
+	student, person, err := s.findAttendanceStudent(ctx, device, tag)
 	if err != nil {
 		return nil, err
-	}
-	if student == nil {
-		return nil, devicescan.NotFoundWithCode(devicescan.MessagePersonNotStudent, devicescan.CodePersonNotStudent)
 	}
 
 	action, err := s.attendance.Toggle(ctx, student.ID, deviceAttributed, device.ID, false)

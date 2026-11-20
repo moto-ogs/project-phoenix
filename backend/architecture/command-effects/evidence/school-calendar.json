@@ -2058,7 +2058,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation",
-      "binding_digest": "53c5c4f103e26d0ae01be467b8d3b414",
+      "binding_digest": "2ab7a8ef9862574416445b34700a7b3d",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.AcknowledgeSchoolVacation",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -2066,7 +2066,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation",
-      "binding_digest": "69d98a54642f21d79233fb4bd29fb086",
+      "binding_digest": "b5fe3744ee971ac10f5b00675f4fbcd9",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.AcknowledgeSchoolVacation",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
@@ -2090,7 +2090,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations",
-      "binding_digest": "53c5c4f103e26d0ae01be467b8d3b414",
+      "binding_digest": "2ab7a8ef9862574416445b34700a7b3d",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.TenantSchoolVacations",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -2098,7 +2098,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations",
-      "binding_digest": "69d98a54642f21d79233fb4bd29fb086",
+      "binding_digest": "b5fe3744ee971ac10f5b00675f4fbcd9",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.TenantSchoolVacations",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
@@ -2106,6 +2106,14 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.SeedSchoolVacations",
+      "binding_digest": "3369f751ecdc327b956f4556c66da829",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationSeed.SeedSchoolVacations",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.SeedSchoolVacations",
       "binding_digest": "3369f751ecdc327b956f4556c66da829",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationSeed.SeedSchoolVacations",
       "source_owner": "school-calendar",
@@ -2122,7 +2130,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation",
-      "binding_digest": "53c5c4f103e26d0ae01be467b8d3b414",
+      "binding_digest": "2ab7a8ef9862574416445b34700a7b3d",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.AcknowledgeSchoolVacation",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -2130,7 +2138,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.AcknowledgeSchoolVacation",
-      "binding_digest": "69d98a54642f21d79233fb4bd29fb086",
+      "binding_digest": "b5fe3744ee971ac10f5b00675f4fbcd9",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.AcknowledgeSchoolVacation",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
@@ -2138,7 +2146,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations",
-      "binding_digest": "53c5c4f103e26d0ae01be467b8d3b414",
+      "binding_digest": "2ab7a8ef9862574416445b34700a7b3d",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.TenantSchoolVacations",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -2146,7 +2154,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.SchoolVacationService.TenantSchoolVacations",
-      "binding_digest": "69d98a54642f21d79233fb4bd29fb086",
+      "binding_digest": "b5fe3744ee971ac10f5b00675f4fbcd9",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacations.TenantSchoolVacations",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",

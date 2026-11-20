@@ -2,17 +2,6 @@
   "entries": [
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.CountUnread",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.Capability.CountUnread",
-      "reason": "Platform protocol participation (scope): communication reaches tenant.WithinAdminRetry (tenant-runtime) through *modules/communication/internal/application.Service.CountUnread. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New platform target, newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdminRetry",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/application.Service.CreateAnnouncement",
       "classification": "platform",
       "effect": "scope",
@@ -2472,13 +2461,25 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CountUnread",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/ports.Audience.CountUnread",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CountUnread; modules/staffannouncementaudience/internal/adapters/postgres/mapped.go:33. May-bind method surface, not a production-call/liveness claim.",
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanDismiss",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/ports.Audience.CanDismiss",
+      "reason": "Owner-provided locking acknowledgement gate: the projection verifies the caller's current audience and keeps an already dismissed announcement valid for a repeat request after a lost response. The adapter only maps projection rows to Communication values; caller scope and target-local guard remain required. Target modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanDismiss; modules/staffannouncementaudience/internal/adapters/postgres/mapped.go:45. May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CountUnread",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanDismiss",
+      "target_owner": "staff-announcement-audience"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanSee",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/ports.Audience.CanSee",
+      "reason": "Owner-provided locking visibility gate: the projection verifies the caller's current audience and locks the announcement until the same transaction records its view. The adapter only maps projection rows to Communication values; caller scope and target-local guard remain required. Target modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanSee; modules/staffannouncementaudience/internal/adapters/postgres/mapped.go:39. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffannouncementaudience/internal/adapters/postgres.Mapped[github.com/moto-ogs/project-phoenix/modules/communication.Announcement, github.com/moto-ogs/project-phoenix/modules/communication.AnnouncementViewDetail, github.com/moto-ogs/project-phoenix/modules/communication/composition.OperationStats].CanSee",
       "target_owner": "staff-announcement-audience"
     },
     {

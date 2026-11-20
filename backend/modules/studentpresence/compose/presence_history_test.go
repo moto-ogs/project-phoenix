@@ -175,11 +175,8 @@ func TestRecordPresenceHistoryRejectsConflictingVisit(t *testing.T) {
 	visits, err := module.ListVisits(ctx, studentpresence.VisitFilter{StudentIDs: []int64{student.ID}})
 	require.NoError(t, err)
 	require.Len(t, visits, 1)
-	conflicting := visits[0]
 	conflictingExit := exit.Add(-time.Minute)
-	conflicting.ExitTime = &conflictingExit
-	conflicting.UpdatedAt = conflictingExit
-	_, err = module.ReviseVisit(ctx, conflicting)
+	_, err = db.NewRaw("UPDATE active.visits SET exit_time = ? WHERE id = ?", conflictingExit, visits[0].ID).Exec(ctx)
 	require.NoError(t, err)
 
 	_, err = history.RecordPresenceHistory(ctx, days)

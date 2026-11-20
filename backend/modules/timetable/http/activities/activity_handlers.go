@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
-	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -438,37 +437,6 @@ func (rs *Resource) deleteActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.Respond(w, r, http.StatusOK, nil, "Activity deleted successfully")
-}
-
-// getTimespans handles retrieving all available time spans for activities
-func (rs *Resource) getTimespans(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	// Fetch active timeframes from the Timetable owner
-	values, err := rs.Timeframes.ListTimeframes(ctx, timetableModule.TimeframeFilter{ActiveOnly: true})
-	var timeframes []timeframeSlot
-	if err == nil {
-		timeframes, err = timeframesToSlots(values)
-	}
-	if err != nil {
-		slog.Default().ErrorContext(ctx, "Error fetching timeframes", slog.String("error", err.Error()))
-		common.RespondWithError(w, r, http.StatusInternalServerError, "Failed to retrieve timeframes")
-		return
-	}
-
-	// Convert timeframes to TimespanResponse format
-	timespans := make([]TimespanResponse, len(timeframes))
-	for i, tf := range timeframes {
-		timespans[i] = TimespanResponse{
-			ID:          tf.ID,
-			Name:        tf.Description, // Use description as name for now
-			StartTime:   tf.StartTime.Format("15:04"),
-			EndTime:     formatEndTime(tf.EndTime),
-			Description: tf.Description,
-		}
-	}
-
-	common.Respond(w, r, http.StatusOK, timespans, "Time spans retrieved successfully")
 }
 
 func activityRequestSchedules(req *ActivityRequest) []*activityContract.Schedule {

@@ -98,6 +98,9 @@ type Route struct {
 	// PublicFile says why a file of the portal public may leave without a
 	// session; the proxy serves no other public file.
 	PublicFile string `json:"public_file,omitempty"`
+	// PrivateCache says the proxy passes a file's private Cache-Control on
+	// instead of private, no-store.
+	PrivateCache bool `json:"private_cache,omitempty"`
 }
 
 // Key is the route's line in the route catalog.

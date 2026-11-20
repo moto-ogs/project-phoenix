@@ -25,6 +25,7 @@ export const routes = {
     method: "GET",
     pattern: "/auth/permissions/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(PermissionResponseSchema),
   },
 } as const;

@@ -637,7 +637,8 @@ func (block demoBlock) updateBody(start, end int) map[string]any {
 	return body
 }
 
-// loadTimes reads the children's effective arrival and pickup today.
+// loadTimes reads the children's effective arrival and pickup today from
+// the child list, as the web app's arrival and pickup views do.
 func (day *demoDay) loadTimes(client Client, studentIDs []int64, now time.Time) error {
 	day.times = make(map[int64]demoTimes, len(studentIDs))
 	if len(studentIDs) == 0 {
@@ -647,38 +648,24 @@ func (day *demoDay) loadTimes(client Client, studentIDs []int64, now time.Time) 
 	for _, studentID := range studentIDs {
 		day.times[studentID] = demoTimes{arrival: -1, pickup: -1}
 	}
-	body := map[string]any{"student_ids": studentIDs, "date": day.date}
-	var arrivals, pickups struct {
-		Data []struct {
-			StudentID       int64   `json:"student_id"`
-			ExpectedArrival *string `json:"expected_arrival"`
-			PickupTime      *string `json:"pickup_time"`
-			IsException     bool    `json:"is_exception"`
-			Notes           string  `json:"notes"`
-		} `json:"data"`
+	rows, err := demoDayChildTimes(client)
+	if err != nil {
+		return err
 	}
-	for path, target := range map[string]any{
-		"/api/students/arrival-times/bulk": &arrivals, "/api/students/pickup-times/bulk": &pickups,
-	} {
-		raw, err := client.Post(path, body)
+	for _, row := range rows {
+		studentID, err := row.ID.Int64()
 		if err != nil {
-			return fmt.Errorf("read demo day times: %w", err)
+			return fmt.Errorf("decode demo day child %q: %w", row.ID, err)
 		}
-		if err := json.Unmarshal(raw, target); err != nil {
-			return fmt.Errorf("decode demo day times: %w", err)
+		times, ok := day.times[studentID]
+		if !ok {
+			continue
 		}
-	}
-	for _, row := range arrivals.Data {
-		times := day.times[row.StudentID]
-		times.arrival = minutesOf(row.ExpectedArrival)
-		times.changed = times.changed || (row.IsException && row.Notes != demoDayReason)
-		day.times[row.StudentID] = times
-	}
-	for _, row := range pickups.Data {
-		times := day.times[row.StudentID]
+		times.arrival = minutesOf(row.ArrivalTime)
 		times.pickup = minutesOf(row.PickupTime)
-		times.changed = times.changed || (row.IsException && row.Notes != demoDayReason)
-		day.times[row.StudentID] = times
+		times.changed = (row.ArrivalIsException && !demoDayNote(row.ArrivalNotes)) ||
+			(row.PickupIsException && !demoDayNote(row.PickupNotes))
+		day.times[studentID] = times
 	}
 	day.timesAt = now
 	return nil

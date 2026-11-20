@@ -133,7 +133,6 @@ export const nodeLogicTestFiles = [
   "src/lib/error-presentation.test.ts",
   "src/lib/excused-request-review-api.test.ts",
   "src/lib/expected-failure.test.ts",
-  "src/lib/export-proxy.server.test.ts",
   "src/lib/favicon-variants.test.ts",
   "src/lib/feedback-api.test.ts",
   "src/lib/format-utils.test.ts",

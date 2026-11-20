@@ -6,6 +6,7 @@ import {
   fileAnswer,
   instant,
   int64StringOrNumber,
+  multipart,
   noData,
   nullable,
   object,
@@ -288,10 +289,21 @@ export interface GetTraegerMasterDataDocumentTemplatesExportQuery {
   format?: "csv" | "pdf" | "xlsx";
 }
 
+/** Query of GET /traeger/master-data/logo */
+export interface GetTraegerMasterDataLogoQuery {
+  v?: string;
+}
+
 export const routes = {
   "DELETE /traeger/master-data/bank-accounts/{id}": {
     method: "DELETE",
     pattern: "/traeger/master-data/bank-accounts/{id}",
+    portals: ["org"],
+    response: noData,
+  },
+  "DELETE /traeger/master-data/logo": {
+    method: "DELETE",
+    pattern: "/traeger/master-data/logo",
     portals: ["org"],
     response: noData,
   },
@@ -319,6 +331,14 @@ export const routes = {
     pattern: "/traeger/master-data/document-templates/{kind}",
     portals: ["org"],
     response: success(TraegerDocumentTemplateDetailSchema),
+  },
+  "GET /traeger/master-data/logo": {
+    method: "GET",
+    pattern: "/traeger/master-data/logo",
+    portals: ["org"],
+    privateCache: true,
+    query: ["v"],
+    response: fileAnswer,
   },
   "POST /traeger/master-data/bank-accounts": {
     method: "POST",
@@ -354,6 +374,15 @@ export const routes = {
     portals: ["org"],
     request: requestBody<ContactRequest>(),
     response: success(TraegerContactSchema),
+  },
+  "PUT /traeger/master-data/logo": {
+    method: "PUT",
+    pattern: "/traeger/master-data/logo",
+    portals: ["org"],
+    maxBodyBytes: 1114112,
+    tooLargeCode: "traeger.logo_too_large",
+    request: multipart,
+    response: success(TraegerLogoSchema),
   },
   "PUT /traeger/master-data/withdrawal-contact": {
     method: "PUT",
