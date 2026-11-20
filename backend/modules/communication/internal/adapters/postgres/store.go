@@ -47,6 +47,7 @@ type viewRow struct {
 	AnnouncementID int64      `bun:"announcement_id,pk"`
 	SeenAt         *time.Time `bun:"seen_at"`
 	ShownAt        *time.Time `bun:"shown_at"`
+	DismissedAt    *time.Time `bun:"dismissed_at"`
 	Dismissed      bool       `bun:"dismissed,notnull"`
 }
 
@@ -214,6 +215,10 @@ func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismisse
 		row.SeenAt = &seenAt
 		row.ShownAt = &seenAt
 	}
+	if dismissed {
+		dismissedAt := s.now()
+		row.DismissedAt = &dismissedAt
+	}
 	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
 		On("CONFLICT (user_id, announcement_id) DO UPDATE")
 	if !shown {
@@ -226,7 +231,8 @@ func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismisse
 			Set("shown_at = COALESCE(platform.announcement_views.shown_at, EXCLUDED.shown_at)")
 	}
 	if dismissed {
-		query = query.Set("dismissed = TRUE")
+		query = query.Set("dismissed = TRUE").
+			Set("dismissed_at = COALESCE(platform.announcement_views.dismissed_at, EXCLUDED.dismissed_at)")
 	}
 	err = query.Returning("(xmax <> 0) AS conflicted").Scan(ctx, &conflicted)
 	stats.StatementDuration = time.Since(started)

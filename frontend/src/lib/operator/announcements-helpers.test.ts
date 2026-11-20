@@ -93,6 +93,7 @@ describe("mapViewDetail", () => {
       user_name: "Max Mustermann",
       seen_at: "2026-03-15T14:30:00Z",
       shown_at: "2026-03-15T14:30:00Z",
+      dismissed_at: null,
       dismissed: false,
     };
 
@@ -111,6 +112,7 @@ describe("mapViewDetail", () => {
       user_name: "Erika Muster",
       seen_at: "2026-03-15T15:00:00Z",
       shown_at: "2026-03-15T15:00:00Z",
+      dismissed_at: "2026-03-15T15:01:00Z",
       dismissed: true,
     };
 
@@ -124,13 +126,15 @@ describe("mapViewDetail", () => {
     const result = mapViewDetail({
       user_id: 456,
       user_name: "Erika Muster",
-      seen_at: null,
+      seen_at: "2026-03-15T15:01:00Z",
       shown_at: null,
+      dismissed_at: "2026-03-15T15:01:00Z",
       dismissed: true,
     });
 
-    expect(result.seenAt).toBeNull();
+    expect(result.seenAt).toBe("2026-03-15T15:01:00Z");
     expect(result.shownAt).toBeNull();
+    expect(result.dismissedAt).toBe("2026-03-15T15:01:00Z");
   });
 });
 

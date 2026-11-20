@@ -154,6 +154,7 @@ describe("AnnouncementViewsAccordion", () => {
         userName: "Alice",
         seenAt: "2024-01-01T10:00:00Z",
         shownAt: "2024-01-01T10:00:00Z",
+        dismissedAt: null,
         dismissed: true,
       },
       {
@@ -161,6 +162,7 @@ describe("AnnouncementViewsAccordion", () => {
         userName: "Bob",
         seenAt: "2024-01-01T11:00:00Z",
         shownAt: "2024-01-01T11:00:00Z",
+        dismissedAt: null,
         dismissed: true,
       },
     ];
@@ -187,6 +189,7 @@ describe("AnnouncementViewsAccordion", () => {
         userName: "Alice",
         seenAt: "2024-01-01T10:00:00Z",
         shownAt: "2024-01-01T10:00:00Z",
+        dismissedAt: null,
         dismissed: true,
       },
       {
@@ -194,6 +197,7 @@ describe("AnnouncementViewsAccordion", () => {
         userName: "Bob",
         seenAt: "2024-01-01T11:00:00Z",
         shownAt: "2024-01-01T11:00:00Z",
+        dismissedAt: null,
         dismissed: false,
       },
     ];
@@ -231,8 +235,9 @@ describe("AnnouncementViewsAccordion", () => {
       {
         userId: "1",
         userName: "Alice",
-        seenAt: null,
+        seenAt: "2026-09-09T10:00:00Z",
         shownAt: null,
+        dismissedAt: "2026-09-09T10:00:00Z",
         dismissed: true,
       },
     ]);
@@ -272,6 +277,7 @@ describe("AnnouncementViewsAccordion", () => {
         userName: "Alice",
         seenAt: "2024-01-01T10:00:00Z",
         shownAt: "2024-01-01T10:00:00Z",
+        dismissedAt: null,
         dismissed: false,
       },
     ];
@@ -352,6 +358,7 @@ describe("AnnouncementViewsAccordion", () => {
           userName: "Person A",
           seenAt: "2026-09-09T10:00:00Z",
           shownAt: "2026-09-09T10:00:00Z",
+          dismissedAt: null,
           dismissed: true,
         },
       ]);

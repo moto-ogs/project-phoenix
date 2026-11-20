@@ -25967,12 +25967,18 @@
         {
           "name": "seen_at",
           "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "shown_at",
+          "schema": {
             "kind": "string",
             "nullable": true
           }
         },
         {
-          "name": "shown_at",
+          "name": "dismissed_at",
           "schema": {
             "kind": "string",
             "nullable": true

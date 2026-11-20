@@ -194,11 +194,13 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	// tab's initial seen request reaches the server.
 	require.NoError(t, module.MarkDismissed(ctx, viewer, dismissedFirst.ID))
 	var dismissedFirstBeforeSeen struct {
-		SeenAt *time.Time `bun:"seen_at"`
+		SeenAt      *time.Time `bun:"seen_at"`
+		DismissedAt *time.Time `bun:"dismissed_at"`
 	}
-	require.NoError(t, db.NewRaw(`SELECT seen_at FROM platform.announcement_views
+	require.NoError(t, db.NewRaw(`SELECT seen_at, dismissed_at FROM platform.announcement_views
 		WHERE user_id = ? AND announcement_id = ?`, account.ID, dismissedFirst.ID).Scan(ctx, &dismissedFirstBeforeSeen))
 	assert.Nil(t, dismissedFirstBeforeSeen.SeenAt)
+	assert.NotNil(t, dismissedFirstBeforeSeen.DismissedAt)
 	require.NoError(t, module.MarkSeen(ctx, viewer, dismissedFirst.ID))
 	var dismissedFirstView struct {
 		ShownAt   *time.Time `bun:"shown_at"`
@@ -220,8 +222,9 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 	dismissedOnlyDetails, err := module.GetViewDetails(ctx, dismissedOnly.ID)
 	require.NoError(t, err)
 	require.Len(t, dismissedOnlyDetails, 1)
-	assert.Nil(t, dismissedOnlyDetails[0].SeenAt)
+	assert.NotZero(t, dismissedOnlyDetails[0].SeenAt)
 	assert.Nil(t, dismissedOnlyDetails[0].ShownAt)
+	assert.NotNil(t, dismissedOnlyDetails[0].DismissedAt)
 	count, err = module.CountUnread(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
 	assert.Zero(t, count, "dismissing an announcement closes it")

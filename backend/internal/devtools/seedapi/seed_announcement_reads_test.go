@@ -29,6 +29,7 @@ func TestSeedAnnouncementsDismissesOperatorAnnouncementForStaff(t *testing.T) {
 	require.NoError(t, (seedAnnouncementsStep{}).Run(t.Context(), rt))
 	assert.Equal(t, []string{
 		"/operator/announcements", "/operator/announcements", "/operator/announcements",
+		"/operator/announcements/1/publish",
 		"/api/platform/announcements/1/dismiss",
 	}, paths)
 }

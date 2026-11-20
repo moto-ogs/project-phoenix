@@ -101,7 +101,9 @@ export function AnnouncementViewsAccordion({
             {!isLoading && confirmedUsers.length > 0 && (
               <div className="space-y-0 divide-y divide-gray-100">
                 {confirmedUsers.map((detail) => {
-                  const shownAt = detail.seenAt ?? detail.shownAt;
+                  const shownAt =
+                    detail.shownAt ??
+                    (detail.dismissedAt ? null : detail.seenAt);
                   return (
                     <div
                       key={detail.userId}
