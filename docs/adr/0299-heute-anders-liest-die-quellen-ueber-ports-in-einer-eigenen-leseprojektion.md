@@ -86,13 +86,17 @@ Träger ([ADR 0194](0194-schliessstage-lesen-die-aktuelle-schulzugehoerigkeit.md
    Recht nicht sehen darf, fehlt. Das ist kein Fehler und kein Teilausfall.
    Beim Personal hat die Antwort kein Feld für einen Grund, schon im Port
    nicht.
-5. **Abhängigkeitsrichtung:** `day-changes-view` → Quell-Module, nie
-   umgekehrt. Die Projektion importiert kein Quell-Modul. Sie hängt nur von
-   Plattformmodulen ab (Tenant Runtime, Transaction Runtime, Security
-   Runtime). Die Root übersetzt zwischen den Ports und den öffentlichen
-   Fähigkeiten der Quellen. Kein Fachmodul hängt von der Projektion ab; die
-   Policy verbietet das seit Epoche 91 (ADR 0071, #4540). Nur Roots binden
-   sie. Damit entsteht kein Zyklus.
+5. **Abhängigkeitsrichtung:** Zur Laufzeit hängt `day-changes-view` von
+   den Quell-Modulen ab, nie umgekehrt: Ihr Verhalten braucht deren
+   öffentliche Fähigkeiten. Diese Abhängigkeit läuft nur über die eigenen
+   Ports der Projektion, die die Root bindet. Im Code importiert die
+   Projektion kein Quell-Modul und kein Plattformmodul außer dem Shared
+   Kernel (`calendar.Date`). Auch den Savepoint der Schul-Transaktion
+   (Punkt 7) bekommt sie als Port; die Root bindet ihn an die Tenant
+   Runtime. Ihr HTTP-Paket nutzt die gemeinsamen HTTP-Helfer
+   (`api/common`). Kein Fachmodul hängt von der Projektion ab; die Policy
+   verbietet das seit Epoche 91 (ADR 0071, #4540). Nur Roots binden sie.
+   Damit entsteht kein Zyklus.
 6. **Tenant und Tag.** Die Projektion liest nur die Schule der Sitzung, in
    der Schul-Transaktion der Anfrage mit RLS. Den Tag bestimmt das Backend
    als `calendar.Date` in der Zeitzone der Schule; es gibt keinen
@@ -146,3 +150,22 @@ Projektion nutzt „change“.
 - ADR 0066 Punkt 6 bekommt einen Hinweis auf diese Ausnahme.
 - Eine spätere SQL-Projektion für eine Quelle braucht eine eigene
   Entscheidung nach ADR 0081.
+
+## Nachtrag 2026-11-20: Umsetzung der Quelle Personal (#7659)
+
+- Die Route ist `GET /api/day-changes/today` (Basis, Staff-Portal). Pakete:
+  `modules/daychangesview` (Ports, Zusammenstellung, Sortierung) und
+  `modules/daychangesview/http`. Ein eigenes `compose`-Paket gibt es nicht:
+  Die Projektion hat nichts Eigenes zu verdrahten, und die Root bindet die
+  Ports in `backend/api/day_changes.go`.
+- Die Quelle Personal stammt aus mehreren Ownern (Workforce für
+  Abwesenheiten und Gruppen-Vertretungen, School Membership für die
+  Gruppen-Lehrkräfte, Identity & Access für die eigenen Gruppen). Ein
+  einzelnes besitzendes Modul gibt es dafür nicht. Ihre Sichtregel (Punkt 4)
+  wendet deshalb die Root-Bindung des Personal-Ports an, also die
+  Quell-Seite des Ports, nicht die Projektion. Die Leitung ist hier ein Konto
+  mit `vacation:approve` oder `time_tracking:manage` (die Rechte der
+  Abwesenheits-Detailseite) oder Admin; die Zahl für die übrige Schule
+  bekommt ein Konto mit `users:read`.
+- Terminbezogene Abwesenheit und Vertretung einzelner Termine
+  (`schedule.instance_staff`) kommen als eigenes Folge-Ticket hinzu.

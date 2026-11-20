@@ -29,6 +29,7 @@ import {
   type AnalyticsRouteSurface,
 } from "~/lib/analytics-routes";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
+import { KIND_VALUES as DAY_CHANGE_KINDS } from "~/lib/contract/day-changes.generated";
 
 /** Reiterarten auf „Alle Kinder“ (#5046); ein Aufsichtsreiter nennt keinen Raum. */
 const CHILD_SCOPE_ANALYTICS_VALUES = ["all", "groups", "room"] as const;
@@ -529,6 +530,10 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "notification_feed_all_read",
   // Reiter auf „Alle Kinder“ (#5046): nur die Art des Reiters, nie ein Raum.
   "child_scope_tab_selected",
+  // „Heute anders“ (#7659): Klick auf einen Eintrag nur mit seiner Art,
+  // „Alle anzeigen“ ohne Eigenschaft.
+  "day_changes_entry_clicked",
+  "day_changes_show_all",
   // Selbstöffnende Flächen des Einstiegs (#7541): nur die Fläche
   // (onboarding_surface); das Portal steht in `surface`.
   "onboarding_surface_shown",
@@ -551,6 +556,7 @@ const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   $dead_swipe_direction: new Set(["up", "down", "left", "right"]),
   notification_type: new Set(NOTIFICATION_FEED_ANALYTICS_TYPES),
   child_scope: new Set(CHILD_SCOPE_ANALYTICS_VALUES),
+  day_change_kind: new Set(DAY_CHANGE_KINDS),
   onboarding_surface: new Set(ONBOARDING_SURFACES),
   checklist: new Set(ONBOARDING_CHECKLISTS),
   checklist_step: new Set(ONBOARDING_CHECKLIST_STEPS),

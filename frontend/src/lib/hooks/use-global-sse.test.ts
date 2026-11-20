@@ -972,3 +972,51 @@ describe("useGlobalSSE — companion announcements", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// „Heute anders“ (#7659)
+// ---------------------------------------------------------------------------
+
+describe("useGlobalSSE — Heute anders", () => {
+  const dayChangesKey = "t1:home-day-changes:u1";
+  const dayChangesReloads = () =>
+    mockMutate.mock.calls
+      .map(([matcher]) => matcher)
+      .filter(
+        (matcher): matcher is (key: unknown) => boolean =>
+          typeof matcher === "function" && matcher(dayChangesKey),
+      ).length;
+
+  it.each([
+    "staffing_deviation_changed",
+    "group_access_changed",
+    "staff_time_tracking_changed",
+  ] as const)("reloads the block on %s", (type) => {
+    renderHook(() => useGlobalSSE());
+
+    fireSSE(makeEvent(type));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(dayChangesReloads()).toBe(1);
+  });
+
+  it("reloads once for a burst and not on unrelated events", () => {
+    renderHook(() => useGlobalSSE());
+
+    fireSSE(makeEvent("student_checkin", { student_id: "s1" }, "grp1"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(dayChangesReloads()).toBe(0);
+
+    fireSSE(makeEvent("staffing_deviation_changed"));
+    fireSSE(makeEvent("group_access_changed"));
+    fireSSE(makeEvent("staff_time_tracking_changed"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(dayChangesReloads()).toBe(1);
+  });
+});

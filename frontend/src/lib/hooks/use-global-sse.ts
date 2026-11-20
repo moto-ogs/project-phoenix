@@ -62,7 +62,7 @@ import {
 import type { SSEEvent, SSEHookState } from "~/lib/sse-types";
 import { createLogger } from "~/lib/logger";
 import { isOwnAttendanceEvent } from "~/lib/sse-optimistic-mutations";
-import { STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
+import { homeKeys, STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { announceCareScheduleStale } from "~/lib/care-schedule-stale";
 import { groupKeys } from "~/lib/swr/groups-keys";
@@ -954,6 +954,29 @@ export function useGlobalSSE(): SSEHookState {
         logger.debug("swr_revalidation_failed", {
           error: err instanceof Error ? err.message : String(err),
           scope: "timetable",
+        });
+      });
+    }
+
+    // „Heute anders“ (#7659) lists the day's absences and substitutions. A
+    // staffing deviation (staffing_deviation_changed rides the timetable
+    // flag), a Gruppenübergabe (group_access_changed) or an absence or shift
+    // (staff_time_tracking_changed) rewrites it. A source of a later ticket
+    // adds its flag here. The burst debounce makes several events one reload;
+    // the reconnect reconcile sets every flag.
+    if (
+      hasPendingTimetableEvent.current ||
+      hasPendingGroupAccessEvent.current ||
+      hasPendingStaffTimeTrackingEvent.current
+    ) {
+      mutate(
+        (key) =>
+          typeof key === "string" && key.includes(homeKeys.dayChanges("")),
+      ).catch((err) => {
+        // Fire-and-forget: the block keeps its data until the next event or load.
+        logger.debug("swr_revalidation_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          scope: "day_changes",
         });
       });
     }
