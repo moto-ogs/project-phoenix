@@ -54,9 +54,12 @@ func (seedAnnouncementsStep) Run(ctx context.Context, rt *Runtime) error {
 		}
 	}
 	if firstAnnouncementID != 0 {
+		if _, err := rt.Client.Post(fmt.Sprintf("/operator/announcements/%d/publish", firstAnnouncementID), nil); err != nil {
+			return fmt.Errorf("publish operator announcement: %w", err)
+		}
 		rt.Client.BindAuth(rt.TenantAuth)
-		if _, err := rt.Client.Post(fmt.Sprintf("/api/platform/announcements/%d/seen", firstAnnouncementID), nil); err != nil {
-			return fmt.Errorf("mark operator announcement seen: %w", err)
+		if _, err := rt.Client.Post(fmt.Sprintf("/api/platform/announcements/%d/dismiss", firstAnnouncementID), nil); err != nil {
+			return fmt.Errorf("dismiss operator announcement: %w", err)
 		}
 	}
 

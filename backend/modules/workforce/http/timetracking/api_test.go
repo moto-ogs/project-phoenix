@@ -1760,46 +1760,6 @@ func TestAbsenceMutations_RollBackWritesOnConflictResponses(t *testing.T) {
 	}
 }
 
-// --- getPresenceMap handler ---
-
-func TestGetPresenceMap_Success(t *testing.T) {
-	t.Parallel()
-
-	wsSvc := &mockWorkSessionService{
-		getTodayPresenceFn: func(_ context.Context) (map[int64]string, error) {
-			return map[int64]string{1: "present", 2: "home_office"}, nil
-		},
-	}
-	rs := testResource(wsSvc, &mockStaffAbsenceService{}, defaultPersonSvc(), nil)
-
-	r := httptest.NewRequest(http.MethodGet, "/presence-map", nil)
-	r = withCaller(r, testpkg.Tenant(t))
-	w := httptest.NewRecorder()
-
-	rs.getPresenceMap(w, r)
-	assert.Equal(t, http.StatusOK, w.Code)
-}
-
-func TestGetPresenceMap_ServiceError(t *testing.T) {
-	t.Parallel()
-
-	wsSvc := &mockWorkSessionService{
-		getTodayPresenceFn: func(_ context.Context) (map[int64]string, error) {
-			return nil, errors.New("database error")
-		},
-	}
-	rs := testResource(wsSvc, &mockStaffAbsenceService{}, defaultPersonSvc(), nil)
-
-	r := httptest.NewRequest(http.MethodGet, "/presence-map", nil)
-	r = withCaller(r, testpkg.Tenant(t))
-	w := httptest.NewRecorder()
-
-	rs.getPresenceMap(w, r)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-// --- Error classifier tests ---
-
 func TestClassifyServiceError(t *testing.T) {
 	t.Parallel()
 

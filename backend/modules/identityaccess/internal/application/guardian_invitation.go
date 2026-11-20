@@ -408,69 +408,6 @@ func (l *AccountLifecycle) claimGuardianEnrollments(ctx context.Context, account
 	return nil
 }
 
-// resendableGuardianProfile finds the guardian of an invitation and refuses a
-// resend that would change nothing.
-func (l *AccountLifecycle) resendableGuardianProfile(ctx context.Context, invitation domain.GuardianInvitation) (domain.GuardianProfile, error) {
-	profile, found, err := l.guardians.FindGuardianProfile(ctx, invitation.GuardianProfileID)
-	if err != nil {
-		return domain.GuardianProfile{}, err
-	}
-	if !found {
-		return domain.GuardianProfile{}, fmt.Errorf("guardian profile not found")
-	}
-	if err := l.refuseBlockedMail(ctx, invitation.TenantID, profile); err != nil {
-		return domain.GuardianProfile{}, err
-	}
-	return profile, nil
-}
-
-func (l *AccountLifecycle) ResendGuardianInvitation(ctx context.Context, invitationID, actorAccountID int64) (err error) {
-	if l == nil {
-		return errAccountLifecycleUnavailable
-	}
-	operation := func(ctx context.Context, invitationID, actorAccountID int64) error {
-		invitation, found, err := l.invitations.FindGuardianInvitation(ctx, invitationID)
-		if err != nil {
-			return failed(opGuardianInviteResend, err)
-		}
-		if !found {
-			return failed(opGuardianInviteResend, domain.ErrInvitationNotFound)
-		}
-		now, err := l.invitationTime(ctx)
-		if err != nil {
-			return failed(opGuardianInviteResend, err)
-		}
-		if redeemErr := invitation.Redeemable(now); redeemErr != nil {
-			return failed(opGuardianInviteResend, redeemErr)
-		}
-		profile, err := l.resendableGuardianProfile(ctx, invitation)
-		if err != nil {
-			return failed(opGuardianInviteResend, err)
-		}
-		// The delivery bookkeeping starts over; the previous attempt's outcome
-		// says nothing about the send that follows. The mail carries a new
-		// link for the address on file, and the previous one stops working.
-		issueGuardianInvitationLink(&invitation, profile)
-		invitation.EmailSentAt = nil
-		invitation.EmailError = nil
-		if err := l.invitations.UpdateGuardianInvitation(ctx, invitation, invitation.ApprovalStatus, invitation.ExpiresAt); err != nil {
-			return failed(opGuardianInviteResend, err)
-		}
-		l.logger.Info("guardian invitation resent",
-			slog.Int64("invitation_id", invitation.ID),
-			slog.Int64("actor_account_id", actorAccountID),
-		)
-		if _, err := l.enqueueInvitationEmail(ctx, invitation, invitation.ExpiresAt.Sub(now), profile, l.delivery.SchoolName(ctx, invitation.TenantID)); err != nil {
-			return failed(opGuardianInviteResend, err)
-		}
-		return nil
-	}
-	err = l.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-		return invitationError(operation(bindRuntime(l.auth.attach, txCtx), invitationID, actorAccountID))
-	})
-	return
-}
-
 // GuardianInvitationSchoolSlug resolves the school an invitation belongs to,
 // so the accepted guardian lands on their school's host. Best-effort: an
 // error or a deleted school yields "".

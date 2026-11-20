@@ -12,66 +12,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/ActiveGroupRequest.Bind",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/CombinedGroupRequest.Bind",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/SupervisorRequest.Bind",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/VisitRequest.Bind",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.PersonIDByAccount",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.StaffIDByPerson",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.StudentCurrentActiveGroupID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.StudentGroupID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.StudentIDByPerson",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.TeacherGroupIDs",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.TeacherIDByStaff",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/inbound/presence/visitAccessQuery.VisitStudentID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/adapters/postgres/SessionRepository.Create",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -143,11 +83,6 @@
     {
       "decision": "0090",
       "id": "modules/studentpresence/internal/adapters/postgres/SupervisionRepository.SetEndDate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.AddGroupToCombination",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -231,11 +166,6 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.DeleteCombination",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
       "decision": "0177",
       "id": "modules/studentpresence/internal/application/Service.DeleteExpiredVisits",
       "reason": "Set-based visit retention of #6455 (ADR 0199) replaces DeleteCompletedVisitsBefore: the owner validates and maps each student's retention onto its cutoff before the single store operation, inside its tenant transaction and observation wrapper (ADR 0075 floor)."
@@ -247,32 +177,12 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.DeleteGroupMapping",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.DeleteVisit",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/Service.DiscardActivitySession",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.EndCombination",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/Service.EndGroup",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.GetCombinedGroup",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -297,18 +207,8 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.ListCombinedGroups",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/Service.ListExpiredVisitMonths",
       "reason": "Slice 3844-b: explicit VisitRetentionPolicy replaces the day count. The owner retains its tenant transaction and observation wrapper around the same single store operation (ADR 0075 floor)."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.ListGroupMappings",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
@@ -402,17 +302,7 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.RecordCombination",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/Service.RecordGroupActivity",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.RecordGroupMapping",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -422,27 +312,7 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.RemoveGroupFromCombination",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/Service.RemoveSupervision",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.ReviseAttendance",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.ReviseCombination",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/Service.ReviseVisit",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -562,31 +432,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.AdmitVisit",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.AmendCombination",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.AmendSupervision",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.AmendVisit",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.AssignSupervision",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/presence/PresenceOperations.AssignTransitStudents",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -602,11 +447,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.CreateCombination",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/presence/PresenceOperations.CrossTenantStudents",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -617,32 +457,12 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.MoveStudentsToTransit",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.ReviseSession",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/presence/PresenceOperations.SessionRooms",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.StartSession",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/presence/PresenceOperations.StudentAttendanceStatus",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.StudentsAttendanceStatuses",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -712,11 +532,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/service.CreateCombinedGroup",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/studentpresence/internal/application/presence/service.FindDeviceActiveGroupInRoom",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -753,11 +568,6 @@
     {
       "decision": "0090",
       "id": "modules/studentpresence/internal/application/presence/service.ListStudentsPresentToday",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/studentpresence/internal/application/presence/service.UpdateCombinedGroup",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

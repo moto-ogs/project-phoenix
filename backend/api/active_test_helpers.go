@@ -100,11 +100,6 @@ type ActiveEducation struct {
 	Education schoolstructure.GroupManagement
 }
 
-// TeacherGroupIDs exposes the same assignment projection as attendance composition.
-func (m ActiveEducation) TeacherGroupIDs(ctx context.Context, teacherID int64) ([]int64, error) {
-	return NewAttendanceTeacherGroups(m.Education).TeacherGroupIDs(ctx, teacherID)
-}
-
 // ActivePeople is the People Directory side of the active graph.
 type ActivePeople struct {
 	Users  peoplePorts.PersonDirectory

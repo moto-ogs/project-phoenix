@@ -13,7 +13,6 @@ var (
 	NewCategoryResponseForTest       = newCategoryResponse
 	NewScheduleResponseForTest       = newScheduleResponse
 	NewSupervisorResponseForTest     = newSupervisorResponse
-	FormatEndTimeForTest             = formatEndTime
 	SystemActivityForbiddenForTest   = systemActivityForbidden
 	TimetableTemplateConflictForTest = timetableTemplateConflict
 	TimeframeToSlotForTest           = timeframeToSlot

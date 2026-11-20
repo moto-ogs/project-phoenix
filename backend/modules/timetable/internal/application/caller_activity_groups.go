@@ -4,13 +4,11 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
-
-	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 )
 
-// CallerActivityGroups serves the Identity & Access caller context and the
-// rows it renders the planned activity groups a staff member supervises,
-// read from the owner's group and planned supervisor capability (#3501).
+// CallerActivityGroups serves the Identity & Access caller context the
+// planned activity groups a staff member supervises, read from the owner's
+// group and planned supervisor capability (#3501).
 type CallerActivityGroups struct {
 	timetable timetable.Query
 }
@@ -40,27 +38,4 @@ func (g CallerActivityGroups) SupervisedActivityGroupIDs(ctx context.Context, st
 		ids = append(ids, group.ID)
 	}
 	return ids, nil
-}
-
-// ActivityGroupRows returns the planned activity groups the
-// /api/me/groups/activity route renders, in the order of ids.
-func (g CallerActivityGroups) ActivityGroupRows(ctx context.Context, ids []int64) (any, error) {
-	result := make([]*activityContract.Group, 0, len(ids))
-	if len(ids) == 0 {
-		return result, nil
-	}
-	rows, err := legacyGroupsByID(ctx, g.timetable, ids)
-	if err != nil {
-		return nil, err
-	}
-	byID := make(map[int64]*activityContract.Group, len(rows))
-	for _, row := range rows {
-		byID[row.ID] = row
-	}
-	for _, id := range ids {
-		if row := byID[id]; row != nil {
-			result = append(result, row)
-		}
-	}
-	return result, nil
 }

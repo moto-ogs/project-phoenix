@@ -6,7 +6,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
-	activitiesModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/activityrecords"
 )
 
 // The activity service, the template writes, the materializer and the
@@ -77,20 +76,6 @@ func capLegacySchedules(ctx context.Context, schedules timetable.ScheduleCommand
 		return 0, legacyActivityScheduleError("cap schedule valid_until", err)
 	}
 	return rows, nil
-}
-
-func templateStartTimes(ctx context.Context, schedules timetable.ScheduleQuery, groupIDs []int64) ([]*activitiesModels.TemplateStartTime, error) {
-	values, err := schedules.FindTemplateStartTimes(ctx, groupIDs)
-	if err != nil {
-		return nil, legacyActivityScheduleError("find template start times by group ids", err)
-	}
-	result := make([]*activitiesModels.TemplateStartTime, 0, len(values))
-	for _, value := range values {
-		result = append(result, &activitiesModels.TemplateStartTime{
-			ActivityGroupID: value.ActivityGroupID, Weekday: value.Weekday, StartTime: value.StartTime,
-		})
-	}
-	return result, nil
 }
 
 func legacySchedules(values []timetable.Schedule) []*activityContract.Schedule {

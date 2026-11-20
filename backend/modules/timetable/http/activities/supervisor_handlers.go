@@ -207,65 +207,6 @@ func (rs *Resource) assignSupervisor(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusCreated, newSupervisorResponse(supervisor), "Supervisor assigned successfully")
 }
 
-// updateSupervisorRole updates a supervisor's role (primary/non-primary)
-func (rs *Resource) updateSupervisorRole(w http.ResponseWriter, r *http.Request) {
-	activity, ok := rs.parseAndGetActivity(w, r)
-	if !ok {
-		return
-	}
-
-	supervisorID, ok := rs.parseSupervisorID(w, r)
-	if !ok {
-		return
-	}
-
-	// Parse request
-	var req SupervisorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	// Get existing supervisor
-	supervisor, err := rs.ActivityService.GetSupervisor(r.Context(), supervisorID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Check if supervisor belongs to the specified activity
-	if !rs.checkSupervisorOwnership(w, r, supervisor, activity.ID) {
-		return
-	}
-
-	// Update supervisor role within tenant transaction
-	tenantID := tenant.FromContext(r.Context())
-	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		// If making this supervisor primary, use the service method to handle it properly
-		if req.IsPrimary && !supervisor.IsPrimary {
-			return rs.ActivityService.SetPrimarySupervisor(ctx, supervisorID)
-		} else if supervisor.IsPrimary != req.IsPrimary {
-			// Only update if the primary status is changing
-			supervisor.IsPrimary = req.IsPrimary
-			_, txErr := rs.ActivityService.UpdateSupervisor(ctx, supervisor)
-			return txErr
-		}
-		return nil
-	}); err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Get the updated supervisor
-	updatedSupervisor, err := rs.ActivityService.GetSupervisor(r.Context(), supervisorID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, newSupervisorResponse(updatedSupervisor), "Supervisor role updated successfully")
-}
-
 // removeSupervisor removes a supervisor from an activity
 func (rs *Resource) removeSupervisor(w http.ResponseWriter, r *http.Request) {
 	activity, ok := rs.parseAndGetActivity(w, r)

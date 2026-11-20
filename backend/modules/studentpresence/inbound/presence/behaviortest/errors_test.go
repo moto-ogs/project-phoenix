@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/go-chi/render"
 	"github.com/stretchr/testify/require"
@@ -29,8 +28,6 @@ func TestErrorRenderer_NotFoundErrors(t *testing.T) {
 		{"ErrActiveGroupNotFound", studentpresence.ErrGroupNotFound},
 		{"ErrVisitNotFound", studentpresence.ErrVisitNotFound},
 		{"ErrGroupSupervisorNotFound", studentpresence.ErrGroupSupervisorNotFound},
-		{"ErrCombinedGroupNotFound", studentpresence.ErrCombinedGroupNotFound},
-		{"ErrGroupMappingNotFound", studentpresence.ErrGroupMappingNotFound},
 		{"ErrStudentNotFound", studentpresence.ErrStudentNotFound},
 		{"ErrStaffNotFound", studentpresence.ErrStaffNotFound},
 	}
@@ -57,8 +54,6 @@ func TestErrorRenderer_BadRequestErrors(t *testing.T) {
 		{"ErrActiveGroupAlreadyEnded", studentpresence.ErrGroupAlreadyEnded},
 		{"ErrVisitAlreadyEnded", studentpresence.ErrVisitAlreadyEnded},
 		{"ErrSupervisionAlreadyEnded", studentpresence.ErrSupervisionAlreadyEnded},
-		{"ErrCombinedGroupAlreadyEnded", studentpresence.ErrCombinedGroupAlreadyEnded},
-		{"ErrGroupAlreadyInCombination", studentpresence.ErrGroupAlreadyInCombination},
 		{"ErrStudentAlreadyInGroup", studentpresence.ErrStudentAlreadyInGroup},
 		// ErrStudentAlreadyActive moved out of the 400 list — see
 		// TestErrorRenderer_ConflictError. It now maps to 409 Conflict
@@ -174,20 +169,4 @@ func TestErrorRenderer_ChangedVisitCohortIsAConflict(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, http.StatusConflict, response.HTTPStatusCode)
 	assertEnvelope(t, response, "general.business_rejection")
-}
-
-// A visit correction crossing another visit answers 409 with its code and the
-// other visit's times (#5710).
-func TestErrorRenderer_VisitOverlapIsABusinessRejection(t *testing.T) {
-	t.Parallel()
-	exit := time.Date(2026, 11, 4, 10, 0, 0, 0, time.UTC)
-	err := &studentpresence.OperationError{Op: "UpdateVisit", Err: &studentpresence.VisitOverlapError{
-		VisitID:          1,
-		ConflictingVisit: studentpresence.Visit{ID: 2, StudentID: 3, EntryTime: exit.Add(-time.Hour), ExitTime: &exit},
-	}}
-	resp, ok := presence.ErrorRenderer(err).(*common.ErrResponse)
-	require.True(t, ok)
-	assert.Equal(t, http.StatusConflict, resp.HTTPStatusCode)
-	assertEnvelope(t, resp, common.CodePresenceVisitOverlap)
-	assert.Equal(t, map[string]any{"conflicting_visit_id": float64(2), "conflicting_from": "10:00", "conflicting_until": "11:00"}, resp.Details)
 }

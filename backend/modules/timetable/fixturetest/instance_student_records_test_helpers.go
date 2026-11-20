@@ -14,8 +14,6 @@ type ParticipantFixtureAttendance interface {
 	BulkUpdateStatus(arg0 context.Context, arg1 int64, arg2 string, arg3 string, arg4 []int64) (int, error)
 	CloseOpenCheckoutsByActiveGroupIDs(arg0 context.Context, arg1 []int64, arg2 time.Time) (int, error)
 
-	ReconcileAttendanceInterval(arg0 context.Context, arg1 int64, arg2 int64, arg3 time.Time, arg4 *time.Time, arg5 time.Time, arg6 *time.Time) (bool, error)
-
 	UpdateAttendanceCheckout(arg0 context.Context, arg1 int64, arg2 int64, arg3 time.Time) error
 	UpdateAttendanceCheckoutBatch(arg0 context.Context, arg1 []InstanceStudentKey, arg2 time.Time) error
 	UpdateAttendanceFields(arg0 context.Context, arg1 int64, arg2 AttendanceFieldPatch) error
@@ -241,11 +239,6 @@ func (adapter fromInstanceStudentRecords) MarkExpectedAbsentByActiveGroupIDs(arg
 func (adapter fromInstanceStudentRecords) MarkNotScheduled(arg0 context.Context, arg1 []StudentInstanceRef) error {
 	result0 := adapter.value.MarkNotScheduled(arg0, toNative30(arg1))
 	return result0
-}
-
-func (adapter fromInstanceStudentRecords) ReconcileAttendanceInterval(arg0 context.Context, arg1 int64, arg2 int64, arg3 time.Time, arg4 *time.Time, arg5 time.Time, arg6 *time.Time) (bool, error) {
-	result0, result1 := adapter.value.ReconcileAttendanceInterval(arg0, arg1, arg2, arg3, arg4, arg5, arg6)
-	return result0, result1
 }
 
 func (adapter fromInstanceStudentRecords) ReleasePartialAbsence(arg0 context.Context, arg1 int64) (int, error) {

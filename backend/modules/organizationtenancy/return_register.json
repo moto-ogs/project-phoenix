@@ -26657,13 +26657,25 @@
           "name": "seen_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "dismissed",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "shown_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "dismissed_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [

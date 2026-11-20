@@ -69,38 +69,6 @@ func (s *Service) SubmitBatch(ctx context.Context, inputs []feedback.CreateEntry
 	return toPublicEntries(entries), nil
 }
 
-func (s *Service) LookupEntry(ctx context.Context, id int64) (feedback.Entry, error) {
-	if id <= 0 {
-		err := &feedback.InvalidEntryDataError{Err: feedback.ErrInvalidParameters}
-		s.ObserveRejection("read", 0, err)
-		return feedback.Entry{}, err
-	}
-	var entry domain.Entry
-
-	var err error
-	err = s.runWhenEnabled(ctx, "read", func(txCtx context.Context) (domain.OperationStats, error) {
-		var stats domain.OperationStats
-		entry, stats, err = s.store.Get(txCtx, id)
-		return stats, err
-	})
-	if err != nil {
-		return feedback.Entry{}, err
-	}
-	return toPublicEntry(entry), nil
-}
-
-func (s *Service) EraseEntry(ctx context.Context, id int64) error {
-	if id <= 0 {
-		err := &feedback.InvalidEntryDataError{Err: feedback.ErrInvalidParameters}
-		s.ObserveRejection("delete", 0, err)
-		return err
-	}
-
-	return s.run(ctx, "delete", func(txCtx context.Context) (domain.OperationStats, error) {
-		return s.store.Delete(txCtx, id)
-	})
-}
-
 func (s *Service) FindEntries(ctx context.Context, filter feedback.Filter) ([]feedback.Entry, error) {
 	started := time.Now()
 	normalized, err := validateFilter(filter)

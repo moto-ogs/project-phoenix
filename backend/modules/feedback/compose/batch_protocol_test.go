@@ -45,9 +45,11 @@ func TestFeedbackBatchPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, inputs[i].Time, entry.Time)
 			require.Equal(t, inputs[i].StudentID, entry.StudentID)
 			require.Equal(t, inputs[i].IsMensaFeedback, entry.IsMensaFeedback)
-			found, err := module.LookupEntry(testpkg.Ctx(t), entry.ID)
-			require.NoError(t, err)
-			require.Equal(t, entry, found)
+		}
+		stored, err := module.FindEntries(testpkg.Ctx(t), feedback.Filter{StudentID: &student.ID})
+		require.NoError(t, err)
+		for _, entry := range entries {
+			require.Contains(t, stored, entry)
 		}
 		t.Logf("N=%d statements=%d scope=public-service-own-tenant-transaction", n, counter.Total())
 		if n == 3 {

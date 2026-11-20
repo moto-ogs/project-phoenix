@@ -415,7 +415,6 @@ type TenantAccountLogin interface {
 // SchoolAccountLogin authenticates accounts and switches their school portal.
 type SchoolAccountLogin interface {
 	IssueSchoolTokensForVerifiedMFA(ctx context.Context, proof VerifiedMFAChallenge, ipAddress, userAgent string) (string, string, error)
-	SwitchSchool(ctx context.Context, accountID int64, tenantSlug, ipAddress, userAgent, sourceFamilyID string) (accessToken, refreshToken string, err error)
 	LoginSchoolWithMFAGate(ctx context.Context, email, password, ipAddress, userAgent, trustedDeviceCookie string) (*LoginResult, error)
 	LoginSchoolAtTenantWithMFAGate(ctx context.Context, email, password, ipAddress, userAgent, trustedDeviceCookie, tenantSlug string) (*LoginResult, error)
 }
@@ -439,23 +438,12 @@ type AccountSessionAuthentication interface {
 	VerifyAccountTenantMembership(ctx context.Context, accountID, tenantID int64) (bool, error)
 }
 
-// ActiveSession is one live refresh session as the admin token listing shows
-// it.
-type ActiveSession struct {
-	ID         int64
-	Expiry     time.Time
-	Mobile     bool
-	Identifier *string
-	CreatedAt  time.Time
-}
-
 // AccountSessionMaintenance is the capability session cleanup and session
 // revocation consume: the cleanup CLI, the admin token routes and the
 // retained account, role and password flows.
 type AccountSessionMaintenance interface {
 	CountExpiredTokens(ctx context.Context) (int, error)
 	CleanupExpiredTokens(ctx context.Context) (int, error)
-	ListActiveSessions(ctx context.Context, accountID int64) ([]ActiveSession, error)
 	ListSessionIDs(ctx context.Context, accountID int64) ([]int64, error)
 	RevokeAllTokensWithReason(ctx context.Context, accountID int64, reason string) error
 	RevokeTokensByTenantID(ctx context.Context, tenantID int64) (int, error)

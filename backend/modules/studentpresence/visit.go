@@ -41,7 +41,5 @@ type VisitQuery interface {
 type VisitCommand interface {
 	VisitMaintenance
 	RecordVisit(context.Context, Visit) (Visit, error)
-	ReviseVisit(context.Context, Visit) (Visit, error)
-	DeleteVisit(context.Context, int64) error
 	CloseVisits(context.Context, []int64, time.Time) ([]Visit, error)
 }

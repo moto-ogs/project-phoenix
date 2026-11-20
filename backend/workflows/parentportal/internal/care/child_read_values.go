@@ -115,10 +115,10 @@ type EnrollmentRequestSummary struct {
 	ServiceEndDate   calendar.Date `json:"service_end_date"`
 
 	// ShowStatusReasonToParent mirrors the owning phase flag. Internal
-	// plumbing only (json:"-"): the parent service uses it to redact
-	// admin-internal child status reasons before returning, and the API
-	// handler maps an explicit response struct, so it never reaches the
-	// wire. See workflows/parentportal/care ListEnrollmentsForAccount.
+	// plumbing only (json:"-"): a reader that shows a child's status
+	// reason to the parent must drop it unless this flag is set, as the
+	// public status page and the decision email do. No parent route lists
+	// these requests since #2352; the news reads only their schools.
 	ShowStatusReasonToParent bool `json:"-"`
 
 	SchoolName string `json:"school_name"`

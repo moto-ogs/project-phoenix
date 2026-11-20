@@ -146,9 +146,6 @@ func (callerTestSessions) SupervisedSessionIDs(context.Context, int64) ([]int64,
 	return nil, nil
 }
 func (callerTestSessions) SessionExists(context.Context, int64) (bool, error) { return false, nil }
-func (callerTestSessions) SessionVisits(context.Context, int64) ([]domain.CallerVisit, error) {
-	return nil, nil
-}
 
 // callerTestLiveTopics stands in for Student Presence's live topics: every
 // open session of the school, or the staff member's own supervisions.

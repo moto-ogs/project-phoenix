@@ -33,9 +33,5 @@ func WithMirrorAfterWrite(rows *ports.MirrorParticipantRecords,
 	decorated.UpdateAttendanceCheckoutBatch = func(ctx context.Context, keys []timetable.InstanceStudentKey, at time.Time) error {
 		return after("checkout", false, rows.UpdateAttendanceCheckoutBatch(ctx, keys, at))
 	}
-	decorated.ReconcileAttendanceInterval = func(ctx context.Context, instanceID, studentID int64, previousIn time.Time, previousOut *time.Time, updatedIn time.Time, updatedOut *time.Time) (bool, error) {
-		changed, err := rows.ReconcileAttendanceInterval(ctx, instanceID, studentID, previousIn, previousOut, updatedIn, updatedOut)
-		return changed, after("revision", changed, err)
-	}
 	return &decorated
 }

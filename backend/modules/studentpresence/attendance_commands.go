@@ -7,7 +7,6 @@ import (
 
 type AttendanceHistoryCommand interface {
 	RecordAttendance(context.Context, Attendance) (Attendance, error)
-	ReviseAttendance(context.Context, Attendance) (Attendance, error)
 	DeleteAttendance(context.Context, int64) error
 	EnsureAttendanceBatch(context.Context, []Attendance) ([]int64, error)
 	CloseStaleAttendance(context.Context, int64, time.Time, time.Time) (int64, error)

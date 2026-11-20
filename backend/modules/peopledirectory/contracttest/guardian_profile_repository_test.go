@@ -221,32 +221,6 @@ func TestGuardianProfileRepository_ListWithOptions(t *testing.T) {
 	})
 }
 
-func TestGuardianProfileRepository_FindWithoutAccount(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).GuardianProfile
-	ctx := testpkg.Ctx(t)
-
-	t.Run("finds guardians without accounts", func(t *testing.T) {
-		profile := testpkg.CreateTestGuardianProfile(t, db, "noaccount")
-
-		// Profile should not have an account
-		profiles, err := testpkg.TenantQuery0(t, ctx, db, repo.FindWithoutAccount)
-		require.NoError(t, err)
-
-		var found bool
-		for _, p := range profiles {
-			if p.ID == profile.ID {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found, "Profile without account should be returned")
-	})
-}
-
 func TestGuardianProfileRepository_FindInvitable(t *testing.T) {
 	t.Parallel()
 

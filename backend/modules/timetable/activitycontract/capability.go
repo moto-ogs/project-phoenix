@@ -74,8 +74,6 @@ type SupervisorOperations interface {
 	GetGroupSupervisors(ctx context.Context, groupID int64) ([]*SupervisorPlanned, error)
 	GetSupervisorsForGroups(ctx context.Context, groupIDs []int64) (map[int64][]*SupervisorPlanned, error)
 	DeleteSupervisor(ctx context.Context, id int64) error
-	SetPrimarySupervisor(ctx context.Context, id int64) error
-	UpdateSupervisor(ctx context.Context, supervisor *SupervisorPlanned) (*SupervisorPlanned, error)
 	UpdateGroupSupervisors(ctx context.Context, groupID int64, staffIDs []int64) error
 	ReplaceSupervisor(ctx context.Context, activityID, supervisorID int64, replacementStaffID *int64) error
 }
@@ -91,5 +89,4 @@ type EnrollmentOperations interface {
 	GetEnrollmentCounts(ctx context.Context, groupIDs []int64) (map[int64]int, error)
 	GetStudentEnrollments(ctx context.Context, studentID int64) ([]*Group, error)
 	GetActiveStudentEnrollmentsByStudentIDs(ctx context.Context, studentIDs []int64, onDate calendar.Date) (map[int64][]*Group, error)
-	GetAvailableGroups(ctx context.Context, studentID int64) ([]*Group, error)
 }
