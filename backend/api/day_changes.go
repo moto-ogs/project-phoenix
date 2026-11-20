@@ -107,6 +107,9 @@ type staffViewer struct {
 	lead bool
 	// counts may read the team numbers ("Personal heute", users:read).
 	counts bool
+	// ownAbsences may open the caller's own time tracking absences.
+	// A staff record alone does not grant that destination.
+	ownAbsences bool
 	// groups are the caller's own groups and those it covers today; team
 	// are the staff of these groups (teachers and today's substitutes).
 	groups map[int64]bool
@@ -114,11 +117,7 @@ type staffViewer struct {
 }
 
 func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
-	handovers, err := s.handovers(ctx, day)
-	if err != nil {
-		return nil, err
-	}
-	viewer, err := s.viewer(ctx, handovers)
+	viewer, err := s.viewer(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +125,11 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 		// Nothing of this source is visible to the account.
 		return nil, nil
 	}
+	handovers, err := s.handovers(ctx, day)
+	if err != nil {
+		return nil, err
+	}
+	viewer.addSubstitutes(handovers)
 	absences, err := s.sources.Workforce.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		Statuses:    []string{workforce.AbsenceStatusReported, workforce.AbsenceStatusApproved},
 		OverlapFrom: day.String(), OverlapTo: day.String(),
@@ -153,13 +157,14 @@ func (s dayChangesStaff) handovers(ctx context.Context, day calendar.Date) ([]wo
 	return rows, nil
 }
 
-func (s dayChangesStaff) viewer(ctx context.Context, handovers []workforce.GroupSubstitution) (staffViewer, error) {
+func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 	granted := sessiontoken.PermissionsFromCtx(ctx)
 	admin := securityruntime.HasAdminWildcard(granted)
 	viewer := staffViewer{
 		lead: admin || securityruntime.HasPermission(permissions.VacationApprove, granted) ||
 			securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
-		groups: map[int64]bool{}, team: map[int64]bool{},
+		ownAbsences: securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
+		groups:      map[int64]bool{}, team: map[int64]bool{},
 	}
 	viewer.counts = viewer.lead || securityruntime.HasPermission(permissions.UsersRead, granted)
 	staffID, isStaff, err := s.sources.Caller.CurrentStaffID(ctx)
@@ -177,12 +182,12 @@ func (s dayChangesStaff) viewer(ctx context.Context, handovers []workforce.Group
 	if len(groupIDs) == 0 {
 		return viewer, nil
 	}
-	return viewer, s.addTeam(ctx, &viewer, groupIDs, handovers)
+	return viewer, s.addTeam(ctx, &viewer, groupIDs)
 }
 
-// addTeam names the staff of the caller's groups: their teachers and who
-// covers them today, as the team notice of #7138 does.
-func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, groupIDs []int64, handovers []workforce.GroupSubstitution) error {
+// addTeam names the teachers of the caller's groups. Today's substitutes are
+// added after their source query succeeds.
+func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, groupIDs []int64) error {
 	for _, id := range groupIDs {
 		viewer.groups[id] = true
 	}
@@ -195,12 +200,17 @@ func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, group
 			viewer.team[id] = true
 		}
 	}
+	return nil
+}
+
+// addSubstitutes completes the caller's team with today's covers, as the team
+// notice of #7138 does.
+func (viewer *staffViewer) addSubstitutes(handovers []workforce.GroupSubstitution) {
 	for _, cover := range handovers {
 		if viewer.groups[cover.GroupID] {
 			viewer.team[cover.SubstituteStaffID] = true
 		}
 	}
-	return nil
 }
 
 // staffAbsenceSpan is one staff member's absence over the day: overlapping
@@ -275,8 +285,10 @@ func (b *staffEntryBuilder) absence(span staffAbsenceSpan) {
 
 func (b *staffEntryBuilder) absenceLink(staffID int64, self bool) *daychangesview.Link {
 	switch {
-	case self:
+	case self && b.viewer.ownAbsences:
 		return &daychangesview.Link{Target: daychangesview.LinkOwnAbsences}
+	case self:
+		return nil
 	case b.viewer.lead:
 		return &daychangesview.Link{Target: daychangesview.LinkStaffAbsences, StaffID: &staffID}
 	default:

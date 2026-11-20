@@ -196,6 +196,35 @@ func TestDayChangesStaffSource(t *testing.T) {
 		}, summary(overview.Entries))
 		assert.NotContains(t, body, "Ben", "an absence from tomorrow is not on the day before")
 	})
+
+	t.Run("own absence has a link only with time_tracking:own", func(t *testing.T) {
+		testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, carer.StaffID, day, day, "Eigener Grund")
+
+		withoutPermission, _ := read(t, router, carerAccount.ID, tenantID)
+		ownWithoutPermission := ownAbsence(t, withoutPermission.Entries)
+		assert.Nil(t, ownWithoutPermission.Link)
+
+		withPermission, _ := read(t, router, carerAccount.ID, tenantID, "time_tracking:own")
+		ownWithPermission := ownAbsence(t, withPermission.Entries)
+		require.NotNil(t, ownWithPermission.Link)
+		assert.Equal(t, "own_absences", ownWithPermission.Link.Target)
+	})
+}
+
+func ownAbsence(t *testing.T, entries []wireEntry) wireEntry {
+	t.Helper()
+	for _, entry := range entries {
+		if entry.Kind != "staff_absent" {
+			continue
+		}
+		for _, person := range entry.People {
+			if person.IsSelf {
+				return entry
+			}
+		}
+	}
+	require.Fail(t, "own absence missing")
+	return wireEntry{}
 }
 
 // assertNoReason proves the Personal answer carries no reason: neither the
