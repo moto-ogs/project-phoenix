@@ -51,9 +51,13 @@ function cases(): readonly { name: string; props: HeadProps }[] {
       // Träger-Ferienanmeldung: Status und Kebab neben dem Titel.
       name: "Träger-Ferienanmeldung",
       props: {
+        // Symbolkachel wie `ConceptIconTile size="page"`.
+        leading: createElement("div", {
+          style: { width: 44, height: 44, flex: "none" },
+        }),
         title: "Anmeldung von Lena Frühauf",
         info: "Erklärung",
-        stats: "Nr. 12",
+        stats: "Ferienbetreuung Winterferien 2027",
         actions: createElement(Badge, { tone: "blue", label: "Eingegangen" }),
         overflowMenu: menu,
       },
@@ -152,6 +156,24 @@ test("a long title next to the info button keeps short words whole on a phone", 
           document.documentElement.clientWidth,
       );
       expect.soft(overflow, label).toBeLessThanOrEqual(0);
+
+      // Rückt der Kebab in eine eigene Zeile, steht er rechts, nicht
+      // verloren am linken Rand.
+      const edges = await page.evaluate(() => {
+        const row = document.querySelector("header > .flex.flex-wrap");
+        const kebab = [...document.querySelectorAll("header [data-icon-only]")]
+          .filter(
+            (element) =>
+              element.getAttribute("aria-label") !== "Hilfe zu dieser Seite",
+          )
+          .at(-1);
+        if (!row || !kebab) throw new Error("head row or menu is missing");
+        return {
+          row: row.getBoundingClientRect().right,
+          kebab: kebab.getBoundingClientRect().right,
+        };
+      });
+      expect.soft(Math.abs(edges.row - edges.kebab), label).toBeLessThan(1);
     }
   }
 });

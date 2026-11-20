@@ -656,7 +656,12 @@ function TenantPageView({
         )}
       >
         {back && <TenantBackLink href={backHref} label={backLabel} />}
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 max-sm:gap-x-2">
+        {/* `max-sm:justify-end`: Rückt ein Symbolknopf (Kebab, Status) unter
+            dem Titel in eine eigene Zeile, steht er rechts wie auf dem
+            Desktop, nicht verloren am linken Rand (#7649). In der ersten
+            Zeile nimmt der Titelblock (`flex-1`) den freien Platz, dort
+            ändert sich nichts. */}
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 max-sm:justify-end max-sm:gap-x-2">
           {/* `flex-1 basis-0`: der Titelblock nimmt, was die Aktionen übrig
               lassen, statt mit seiner natürlichen Breite zu ringen. Vorher
               schob eine zweizeilige Statuszeile auf dem Telefon selbst das
