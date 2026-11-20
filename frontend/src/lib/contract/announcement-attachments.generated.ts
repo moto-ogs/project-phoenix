@@ -2,10 +2,15 @@
 import { z } from "zod";
 import {
   fileAnswer,
+  multipart,
   object,
   str,
   success,
 } from "./runtime";
+import {
+  AnnouncementAttachmentListResponseSchema,
+  AnnouncementAttachmentResponseSchema,
+} from "./shared.generated";
 
 /** Go: files.AttachmentRemovedResponse */
 export interface AttachmentRemovedResponse {
@@ -28,11 +33,26 @@ export const routes = {
     portals: ["tenant"],
     response: success(AttachmentRemovedResponseSchema),
   },
+  "GET /api/announcement-attachments/{announcementId}": {
+    method: "GET",
+    pattern: "/api/announcement-attachments/{announcementId}",
+    portals: ["tenant"],
+    response: success(AnnouncementAttachmentListResponseSchema),
+  },
   "GET /api/announcement-attachments/{announcementId}/{attachmentId}/download": {
     method: "GET",
     pattern: "/api/announcement-attachments/{announcementId}/{attachmentId}/download",
     portals: ["tenant"],
     query: ["inline"],
     response: fileAnswer,
+  },
+  "POST /api/announcement-attachments/{announcementId}": {
+    method: "POST",
+    pattern: "/api/announcement-attachments/{announcementId}",
+    portals: ["tenant"],
+    maxBodyBytes: 26218496,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(AnnouncementAttachmentResponseSchema),
   },
 } as const;

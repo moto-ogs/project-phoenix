@@ -24,5 +24,8 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/{id}/team-notices/read", Portals: portals, Request: studentNoteTeamReadRequest{}, Response: []studentNoteTeamNoticeResponse{}},
 		{Method: "GET", Pattern: "/{id}/family-protection", Portals: portals, Response: familyProtectionResponse{}},
 		{Method: "PUT", Pattern: "/{id}/family-protection", Portals: portals, Request: setFamilyProtectionBody{}, Response: familyProtectionResponse{}},
+		{Method: "POST", Pattern: "/{id}/photo", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxStudentPhotoBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: studentPhotoUploadedResponse{}},
+		{Method: "DELETE", Pattern: "/{id}/photo", Portals: portals, NoData: true},
 	}
 }

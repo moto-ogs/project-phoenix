@@ -1,6 +1,7 @@
 package careplanhttp_test
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"mime/multipart"
 	"net/http"
 	"testing"
 
@@ -79,6 +81,12 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	assert.Equal(t, "unfallanzeige", created.Category)
 	assert.Equal(t, "open", created.AccidentReport.Status)
 
+	// The paper copy is a scan: a Word document is refused before anything is
+	// stored, as the upload form promises (PDF, PNG, JPEG).
+	paper := authExec(t, tc, accidentPaperCopyRequest(t, fmt.Sprintf("%s/%d/paper-copy", base, created.ID)), claims, perms)
+	require.Equal(t, http.StatusBadRequest, paper.Code, paper.Body.String())
+	assert.Contains(t, paper.Body.String(), `"code":"files.file_type_not_allowed"`)
+
 	updated := send(http.MethodPut, fmt.Sprintf("%s/%d", base, created.ID), report("Verstauchung"), http.StatusOK)
 	assert.Equal(t, created.ID, updated.ID)
 	assert.Equal(t, "Verstauchung", updated.AccidentReport.InjuryKind)
@@ -105,6 +113,30 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.NoError(t, tc.db.NewSelect().TableExpr("users.student_documents").ColumnExpr("COUNT(*)").
 		Where("student_id = ? AND deleted_at IS NULL", child.ID).Scan(testpkg.Ctx(t), &open))
 	assert.Equal(t, 1, open, "the signed report stays, the open correction is gone")
+}
+
+// accidentPaperCopyRequest uploads a valid Word document as the paper copy.
+func accidentPaperCopyRequest(t *testing.T, path string) *http.Request {
+	t.Helper()
+	var docx bytes.Buffer
+	archive := zip.NewWriter(&docx)
+	for _, name := range []string{"[Content_Types].xml", "word/document.xml"} {
+		entry, err := archive.Create(name)
+		require.NoError(t, err)
+		_, err = entry.Write([]byte("<x/>"))
+		require.NoError(t, err)
+	}
+	require.NoError(t, archive.Close())
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreateFormFile("file", "Unfallanzeige.docx")
+	require.NoError(t, err)
+	_, err = part.Write(docx.Bytes())
+	require.NoError(t, err)
+	require.NoError(t, form.Close())
+	req := testutil.NewRequest(http.MethodPost, path, &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	return req
 }
 
 // accidentSignaturePNG is a small drawn signature: a dark diagonal.

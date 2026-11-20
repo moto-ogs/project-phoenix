@@ -31,6 +31,10 @@ type UploadedFile struct {
 	File        io.ReadSeekCloser
 	Filename    string
 	ContentType string
+	// DeclaredType is the MIME type the browser declared for the part;
+	// ClientFilename the name as sent, with any path. Declared checks both.
+	DeclaredType   string
+	ClientFilename string
 }
 
 // ParseImage parses a multipart form upload, validates the content type via magic bytes,
@@ -82,16 +86,20 @@ func parseUploadWithLimits(
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 
 	if err := r.ParseMultipartForm(maxBodySize); err != nil {
-		return nil, ErrUploadTooLarge
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			return nil, tooLargeRefusal(maxFileSize)
+		}
+		return nil, uploadRefusal{code: CodeFilesFileUnreadable, text: "cannot read upload"}
 	}
 
 	file, header, err := r.FormFile(fieldName)
 	if err != nil {
-		return nil, ErrUploadMissing
+		return nil, uploadRefusal{code: CodeFilesFileMissing, text: ErrUploadMissing.Error()}
 	}
 	if header.Size > maxFileSize {
 		_ = file.Close()
-		return nil, ErrUploadTooLarge
+		return nil, tooLargeRefusal(maxFileSize)
 	}
 
 	contentType, err := detect(file)
@@ -101,9 +109,11 @@ func parseUploadWithLimits(
 	}
 
 	return &UploadedFile{
-		File:        file,
-		Filename:    header.Filename,
-		ContentType: contentType,
+		File:           file,
+		Filename:       header.Filename,
+		ContentType:    contentType,
+		DeclaredType:   declaredType(header),
+		ClientFilename: clientFilename(header),
 	}, nil
 }
 
@@ -123,14 +133,14 @@ func detectAllowedContentType(file io.ReadSeeker, allowed map[string]bool, inval
 	n, err := file.Read(buf)
 	if n == 0 {
 		if err != nil {
-			return "", errors.New("cannot read file")
+			return "", uploadRefusal{code: CodeFilesFileUnreadable, text: "cannot read file"}
 		}
-		return "", errors.New("empty file")
+		return "", uploadRefusal{code: CodeFilesFileUnreadable, text: "empty file"}
 	}
 
 	contentType := http.DetectContentType(buf[:n])
 	if !allowed[contentType] {
-		return "", errors.New(invalidMessage)
+		return "", uploadRefusal{code: CodeFilesFileTypeNotAllowed, text: invalidMessage}
 	}
 
 	if _, err := file.Seek(0, 0); err != nil {

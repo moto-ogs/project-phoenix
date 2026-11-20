@@ -49,7 +49,7 @@ type FileResponse struct {
 	ID          string    `json:"id"`
 	FolderID    string    `json:"folder_id"`
 	Filename    string    `json:"filename"`
-	SizeBytes   int64     `json:"size_bytes"`
+	SizeBytes   int64     `json:"size_bytes" contract:"number"`
 	ContentType string    `json:"content_type"`
 	UploadedAt  time.Time `json:"uploaded_at"`
 	UploadedBy  string    `json:"uploaded_by"`

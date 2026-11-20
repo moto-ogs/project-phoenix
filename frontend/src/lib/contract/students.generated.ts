@@ -10,6 +10,7 @@ import {
   int64String,
   int64StringOrNumber,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -1734,6 +1735,104 @@ export const CompanionResponseSchema: z.ZodType<CompanionResponse, unknown> = ob
   weekdays: nullable(arr(str)),
 });
 
+/** Go: careplanhttp.AccidentReportResponse */
+export interface AccidentReportResponse {
+  status: string;
+  version?: number;
+  supersedes_id?: string;
+  superseded_by_id?: string;
+  signed_at?: string;
+  signed_digitally: boolean;
+  occurred_at: string;
+  location: string;
+  description: string;
+  injured_body_parts: string;
+  injury_kind: string;
+  witnesses: string;
+  first_aid: string;
+  doctor_visited: boolean;
+  doctor: string;
+  parents_notified: string;
+  parents_notified_at?: string;
+  supervisor: string;
+}
+
+export const AccidentReportResponseSchema: z.ZodType<AccidentReportResponse, unknown> = object<AccidentReportResponse>({
+  status: str,
+  version: optional(safeInt),
+  supersedes_id: optional(str),
+  superseded_by_id: optional(str),
+  signed_at: optional(instant),
+  signed_digitally: bool,
+  occurred_at: instant,
+  location: str,
+  description: str,
+  injured_body_parts: str,
+  injury_kind: str,
+  witnesses: str,
+  first_aid: str,
+  doctor_visited: bool,
+  doctor: str,
+  parents_notified: str,
+  parents_notified_at: optional(instant),
+  supervisor: str,
+});
+
+/** Go: careplanhttp.StudentDocumentResponse */
+export interface StudentDocumentResponse {
+  id: string;
+  student_id: string;
+  category: string;
+  category_label: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+  sensitive: boolean;
+  has_file: boolean;
+  accident_report?: AccidentReportResponse;
+}
+
+export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, unknown> = object<StudentDocumentResponse>({
+  id: int64StringOrNumber,
+  student_id: int64StringOrNumber,
+  category: str,
+  category_label: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  uploaded_at: instant,
+  sensitive: bool,
+  has_file: bool,
+  accident_report: optional(AccidentReportResponseSchema),
+});
+
+/** Go: careplanhttp.StudentDocumentCategory */
+export interface StudentDocumentCategory {
+  value: string;
+  label: string;
+  sensitive: boolean;
+}
+
+export const StudentDocumentCategorySchema: z.ZodType<StudentDocumentCategory, unknown> = object<StudentDocumentCategory>({
+  value: str,
+  label: str,
+  sensitive: bool,
+});
+
+/** Go: careplanhttp.StudentDocumentListResponse */
+export interface StudentDocumentListResponse {
+  student_id: string;
+  documents: StudentDocumentResponse[] | null;
+  visible_categories: StudentDocumentCategory[] | null;
+}
+
+export const StudentDocumentListResponseSchema: z.ZodType<StudentDocumentListResponse, unknown> = object<StudentDocumentListResponse>({
+  student_id: int64StringOrNumber,
+  documents: nullable(arr(StudentDocumentResponseSchema)),
+  visible_categories: nullable(arr(StudentDocumentCategorySchema)),
+});
+
 /** Go: enrollmenthttp.StudentEnrollmentExtraFieldOption */
 export interface StudentEnrollmentExtraFieldOption {
   label: string;
@@ -2754,78 +2853,6 @@ export interface AccidentReportRequest {
   supervisor?: string;
 }
 
-/** Go: careplanhttp.AccidentReportResponse */
-export interface AccidentReportResponse {
-  status: string;
-  version?: number;
-  supersedes_id?: string;
-  superseded_by_id?: string;
-  signed_at?: string;
-  signed_digitally: boolean;
-  occurred_at: string;
-  location: string;
-  description: string;
-  injured_body_parts: string;
-  injury_kind: string;
-  witnesses: string;
-  first_aid: string;
-  doctor_visited: boolean;
-  doctor: string;
-  parents_notified: string;
-  parents_notified_at?: string;
-  supervisor: string;
-}
-
-export const AccidentReportResponseSchema: z.ZodType<AccidentReportResponse, unknown> = object<AccidentReportResponse>({
-  status: str,
-  version: optional(safeInt),
-  supersedes_id: optional(str),
-  superseded_by_id: optional(str),
-  signed_at: optional(instant),
-  signed_digitally: bool,
-  occurred_at: instant,
-  location: str,
-  description: str,
-  injured_body_parts: str,
-  injury_kind: str,
-  witnesses: str,
-  first_aid: str,
-  doctor_visited: bool,
-  doctor: str,
-  parents_notified: str,
-  parents_notified_at: optional(instant),
-  supervisor: str,
-});
-
-/** Go: careplanhttp.StudentDocumentResponse */
-export interface StudentDocumentResponse {
-  id: string;
-  student_id: string;
-  category: string;
-  category_label: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-  sensitive: boolean;
-  has_file: boolean;
-  accident_report?: AccidentReportResponse;
-}
-
-export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, unknown> = object<StudentDocumentResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
-  category: str,
-  category_label: str,
-  filename: str,
-  size_bytes: safeInt,
-  content_type: str,
-  uploaded_at: instant,
-  sensitive: bool,
-  has_file: bool,
-  accident_report: optional(AccidentReportResponseSchema),
-});
-
 /** Go: careplanhttp.AccidentSignatureRequest */
 export interface AccidentSignatureRequest {
   method?: string;
@@ -2891,6 +2918,15 @@ export interface PartialAbsenceRequest {
   from_time?: string;
   reason?: string;
 }
+
+/** Go: students.studentPhotoUploadedResponse */
+export interface studentPhotoUploadedResponse {
+  photo_url: string;
+}
+
+export const studentPhotoUploadedResponseSchema: z.ZodType<studentPhotoUploadedResponse, unknown> = object<studentPhotoUploadedResponse>({
+  photo_url: str,
+});
 
 /** Go: careplanhttp.pickupChangeNoticeRevision */
 export interface pickupChangeNoticeRevision {
@@ -3385,6 +3421,11 @@ export interface GetStudentsIdCareWithdrawalsQuery {
   page_size?: number;
 }
 
+/** Query of GET /api/students/{id}/documents */
+export interface GetStudentsIdDocumentsQuery {
+  category?: string;
+}
+
 /** Query of GET /api/students/{id}/notes */
 export interface GetStudentsIdNotesQuery {
   kind?: string;
@@ -3464,6 +3505,12 @@ export const routes = {
     pattern: "/api/students/{id}/partial-absences/{partialAbsenceId}",
     portals: ["tenant"],
     response: success(partialAbsenceDeletedResponseSchema),
+  },
+  "DELETE /api/students/{id}/photo": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/photo",
+    portals: ["tenant"],
+    response: noData,
   },
   "DELETE /api/students/{id}/pickup-exceptions/{exceptionId}": {
     method: "DELETE",
@@ -3721,6 +3768,13 @@ export const routes = {
     portals: ["tenant"],
     response: success(studentDeleteImpactResponseSchema),
   },
+  "GET /api/students/{id}/documents": {
+    method: "GET",
+    pattern: "/api/students/{id}/documents",
+    portals: ["tenant"],
+    query: ["category"],
+    response: success(StudentDocumentListResponseSchema),
+  },
   "GET /api/students/{id}/documents/{documentId}/download": {
     method: "GET",
     pattern: "/api/students/{id}/documents/{documentId}/download",
@@ -3954,6 +4008,15 @@ export const routes = {
     request: requestBody<AccidentReportRequest>(),
     response: success(StudentDocumentResponseSchema),
   },
+  "POST /api/students/{id}/accident-reports/{documentId}/paper-copy": {
+    method: "POST",
+    pattern: "/api/students/{id}/accident-reports/{documentId}/paper-copy",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(StudentDocumentResponseSchema),
+  },
   "POST /api/students/{id}/accident-reports/{documentId}/signature": {
     method: "POST",
     pattern: "/api/students/{id}/accident-reports/{documentId}/signature",
@@ -3982,6 +4045,15 @@ export const routes = {
     request: requestBody<careResumeRequest>(),
     response: success(careResumedResponseSchema),
   },
+  "POST /api/students/{id}/documents": {
+    method: "POST",
+    pattern: "/api/students/{id}/documents",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(StudentDocumentResponseSchema),
+  },
   "POST /api/students/{id}/notes": {
     method: "POST",
     pattern: "/api/students/{id}/notes",
@@ -4001,6 +4073,15 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<PartialAbsenceRequest>(),
     response: success(PartialAbsenceResponseSchema),
+  },
+  "POST /api/students/{id}/photo": {
+    method: "POST",
+    pattern: "/api/students/{id}/photo",
+    portals: ["tenant"],
+    maxBodyBytes: 5243904,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(studentPhotoUploadedResponseSchema),
   },
   "POST /api/students/{id}/pickup-change-notices/read": {
     method: "POST",

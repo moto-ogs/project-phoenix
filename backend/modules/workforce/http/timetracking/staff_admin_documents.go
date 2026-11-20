@@ -3,6 +3,7 @@ package timetracking
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -67,7 +68,7 @@ type StaffDocumentResponse struct {
 	StaffID     int64          `json:"staff_id"`
 	Category    string         `json:"category"`
 	Filename    string         `json:"filename"`
-	SizeBytes   int64          `json:"size_bytes"`
+	SizeBytes   int64          `json:"size_bytes" contract:"number"`
 	ContentType string         `json:"content_type"`
 	UploadedAt  time.Time      `json:"uploaded_at"`
 	RetainUntil *calendar.Date `json:"retain_until,omitempty"`
@@ -237,12 +238,16 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 		return
 	}
 
-	uploaded, err := common.ParseDocumentWithLimits(w, r, "file", maxStaffDocumentFile, maxStaffDocumentBody)
+	uploaded, err := common.Declared(common.ParseDocumentWithLimits, common.DeclaredDocumentTypes)(w, r, "file", maxStaffDocumentFile, maxStaffDocumentBody)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorUpload(err, maxStaffDocumentFile))
 		return
 	}
 	defer common.CloseFile(uploaded.File)
+	category, ok := requireDocumentCategory(w, r)
+	if !ok {
+		return
+	}
 
 	storedName, err := rs.reserveStoredDocument(r.Context(), id, uploaded.ContentType)
 	if err != nil {
@@ -259,7 +264,6 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 	uploadCtx, cancelUpload := context.WithTimeout(r.Context(), workforce.StaffDocumentUploadDeadline)
 	defer cancelUpload()
 
-	category := r.FormValue("category")
 	size, err := rs.documentObjects.SaveSealed(uploadCtx, workforce.StaffDocumentStorageKind, tenant.FromContext(uploadCtx), storedName, uploaded.File, workforce.StaffDocumentKeyRing(category))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
@@ -281,6 +285,18 @@ func (rs *StaffAdminResource) uploadStaffDocument(w http.ResponseWriter, r *http
 
 	resp := newStaffDocumentResponse(*info)
 	common.Respond(w, r, http.StatusCreated, &resp, "Staff document uploaded successfully")
+}
+
+// requireDocumentCategory reads the category of an upload. Without one
+// nothing is written: the service would refuse the document only after its
+// bytes are stored.
+func requireDocumentCategory(w http.ResponseWriter, r *http.Request) (string, bool) {
+	category := r.FormValue("category")
+	if category == "" {
+		renderDocumentError(w, r, fmt.Errorf("%w: category is required", workforce.ErrStaffDocumentInvalid))
+		return "", false
+	}
+	return category, true
 }
 
 // reserveStoredDocument names the file about to be written and queues its

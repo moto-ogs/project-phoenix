@@ -132,10 +132,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
   ],
   "~/lib/backend-proxy-route.server": ["createPublicJsonProxy"],
   "~/lib/auth-proxy.server": ["authStepProxy"],
-  "~/lib/file-upload-wrapper.server": [
-    "createFileUploadHandler",
-    "proxyFileUpload",
-  ],
+  "~/lib/file-upload-wrapper.server": ["createFileUploadHandler"],
 };
 
 /**
@@ -357,6 +354,10 @@ describe("BFF route cache policy (#4999)", () => {
         "auth/[...nextauth]/route.ts",
         "sse/events/route.ts",
       ]),
+    );
+    expect(files).toContain(path.join(API_ROOT, "auth/logout/route.ts"));
+    expect(files).toContain(
+      path.join(API_ROOT, "traeger/auth/logout/route.ts"),
     );
     for (const portal of [
       "",

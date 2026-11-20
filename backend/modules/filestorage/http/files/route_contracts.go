@@ -19,8 +19,8 @@ type AttachmentRemovedResponse struct {
 var inlineQuery = []common.QueryParam{{Name: "inline", Kind: common.QueryString}}
 
 // RouteContracts registers the typed contract of the school's file storage
-// (ADR 0270), with patterns relative to /api/files. The download streams
-// through the portal's proxy (#2352); the upload validates in its route file.
+// (ADR 0270), with patterns relative to /api/files. Uploads and downloads
+// stream through the catalog (#2352).
 func RouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
@@ -31,18 +31,24 @@ func RouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/folders/{folderId}", Portals: portals, Request: FolderRequest{}, Response: FolderResponse{}},
 		{Method: "DELETE", Pattern: "/folders/{folderId}", Portals: portals, Response: FolderRemovedResponse{}},
 		{Method: "DELETE", Pattern: "/folders/{folderId}/files/{fileId}", Portals: portals, Response: FolderRemovedResponse{}},
+		{Method: "GET", Pattern: "/folders/{folderId}/files", Portals: portals, Response: FileListResponse{}},
+		{Method: "POST", Pattern: "/folders/{folderId}/files", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: FileResponse{}},
 	}
 }
 
-// AnnouncementAttachmentRouteContracts registers the attachment delete of
-// the parent announcements, with patterns relative to
-// /api/announcement-attachments. The download streams through the portal's
-// proxy (#2352); list and upload keep their route file.
+// AnnouncementAttachmentRouteContracts registers the attachments of the
+// parent announcements, with patterns relative to
+// /api/announcement-attachments. List, upload and download go through the
+// catalog (#2352).
 func AnnouncementAttachmentRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{announcementId}/{attachmentId}/download", Portals: portals, Query: inlineQuery, File: true},
 		{Method: "DELETE", Pattern: "/{announcementId}/{attachmentId}", Portals: portals, Response: AttachmentRemovedResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: AnnouncementAttachmentListResponse{}},
+		{Method: "POST", Pattern: "/{announcementId}", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: AnnouncementAttachmentResponse{}},
 	}
 }
 

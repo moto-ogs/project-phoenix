@@ -9,6 +9,7 @@ import {
   int64String,
   int64StringOrNumber,
   json,
+  multipart,
   noData,
   nullable,
   num,
@@ -745,6 +746,44 @@ export const TargetCoverageSchema: z.ZodType<TargetCoverage, unknown> = object<T
   month: safeInt,
   staff_total: safeInt,
   staff_without_target: safeInt,
+});
+
+/** Go: timetracking.StaffDocumentResponse */
+export interface StaffDocumentResponse {
+  id: string;
+  staff_id: string;
+  category: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+  retain_until?: string;
+  review_due?: string;
+}
+
+export const StaffDocumentResponseSchema: z.ZodType<StaffDocumentResponse, unknown> = object<StaffDocumentResponse>({
+  id: int64StringOrNumber,
+  staff_id: int64StringOrNumber,
+  category: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  uploaded_at: instant,
+  retain_until: optional(calendarDate),
+  review_due: optional(calendarDate),
+});
+
+/** Go: timetracking.StaffDocumentListResponse */
+export interface StaffDocumentListResponse {
+  staff_id: string;
+  documents: StaffDocumentResponse[] | null;
+  visible_categories: string[] | null;
+}
+
+export const StaffDocumentListResponseSchema: z.ZodType<StaffDocumentListResponse, unknown> = object<StaffDocumentListResponse>({
+  staff_id: int64StringOrNumber,
+  documents: nullable(arr(StaffDocumentResponseSchema)),
+  visible_categories: nullable(arr(str)),
 });
 
 /** Go: timetracking.PayrollNumberResponse */
@@ -1564,6 +1603,11 @@ export interface GetStaffIdAvatarQuery {
   v?: string;
 }
 
+/** Query of GET /api/staff/{id}/documents */
+export interface GetStaffIdDocumentsQuery {
+  category?: string;
+}
+
 /** Query of GET /api/staff/{id}/time-tracking/adjustments */
 export interface GetStaffIdTimeTrackingAdjustmentsQuery {
   from?: string;
@@ -1841,6 +1885,13 @@ export const routes = {
     query: ["v"],
     response: fileAnswer,
   },
+  "GET /api/staff/{id}/documents": {
+    method: "GET",
+    pattern: "/api/staff/{id}/documents",
+    portals: ["tenant"],
+    query: ["category"],
+    response: success(StaffDocumentListResponseSchema),
+  },
   "GET /api/staff/{id}/documents/{documentId}/download": {
     method: "GET",
     pattern: "/api/staff/{id}/documents/{documentId}/download",
@@ -2046,6 +2097,15 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<RebookAbsencesBody>(),
     response: success(AbsenceRebookingResultSchema),
+  },
+  "POST /api/staff/{id}/documents": {
+    method: "POST",
+    pattern: "/api/staff/{id}/documents",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(StaffDocumentResponseSchema),
   },
   "POST /api/staff/{id}/stammdaten/bank-steuer/reveal": {
     method: "POST",
