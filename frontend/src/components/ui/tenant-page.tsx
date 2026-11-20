@@ -563,42 +563,6 @@ function useEmptyActionGuard(
   });
 }
 
-function isTechnicalTitleToken(token: string) {
-  return (
-    /[0-9/:@_?&=#]/u.test(token) ||
-    /^(?:www\.)?[^./]+(?:\.[^./]+)+(?:\/.*)?$/u.test(token) ||
-    (/^[A-Z-]+$/u.test(token) && token !== token.toLowerCase())
-  );
-}
-
-/**
- * Kurze Wörter bleiben zusammen, deutsche Komposita trennen weiter nach
- * Silben. Nur URLs und IDs ohne natürliche Trennstelle erhalten nach
- * 13 Unicode-Codepunkten eine Notbremse, ohne den Text einzuschließen.
- */
-function tenantPageTitle(title: string) {
-  return title.split(/(\s+)/).flatMap((part, partIndex) => {
-    const characters = Array.from(part);
-    if (
-      /\s/.test(part) ||
-      characters.length < 14 ||
-      !isTechnicalTitleToken(part)
-    ) {
-      return part;
-    }
-
-    const chunks = Array.from(
-      { length: Math.ceil(characters.length / 13) },
-      (_, index) => characters.slice(index * 13, (index + 1) * 13).join(""),
-    );
-    return chunks.flatMap((chunk, chunkIndex) =>
-      chunkIndex === chunks.length - 1
-        ? [chunk]
-        : [chunk, <wbr key={`${partIndex}-${chunkIndex}`} />],
-    );
-  });
-}
-
 function TenantPageView({
   title,
   stats,
@@ -704,13 +668,14 @@ function TenantPageView({
               einzelne Kebab-Menü in eine eigene, linksbündige Zeile -- und
               die Kopfkarte wuchs um genau den toten Streifen, den sie auf
               dem Desktop nicht mehr hat.
-              `max-sm:min-w-min`: Auf dem Telefon ist der Titelblock nie
-              schmaler als sein längstes kurzes Wort samt Info-Knopf. Passen
-              Hilfe, Status und Kebab daneben nicht mehr, rücken sie in die
-              nächste Zeile, statt dem Titel ein kurzes Wort mitten
-              durchzubrechen („Anmel|dung“, #7649). Lange Wörter bleiben
-              trennbar (s. u.); ID- und URL-Tokens brechen im Notfall um. */}
-          <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-min">
+              `max-sm:min-w-[calc(14ch+6rem)]`: Auf dem Telefon ist der
+              Titelblock breit genug für ein kurzes Wort samt Info-Knopf und
+              Symbolkachel. Passen Hilfe, Status und Kebab daneben nicht
+              mehr, rücken sie in die nächste Zeile, statt den Titel auf die
+              frühere 6-rem-Breite zu drücken („Anmel|dung“, #7649). Nicht
+              trennbare lange Titel bleiben mit `wrap-anywhere` trotzdem
+              innerhalb des Kopfes. */}
+          <div className="flex min-w-0 flex-1 basis-0 items-center gap-3 max-sm:min-w-[calc(14ch+6rem)]">
             {leading}
             <div className="min-w-0">
               <div className="flex items-center gap-1">
@@ -720,12 +685,8 @@ function TenantPageView({
                   // React behält dann den Servertext, statt die Seite zu
                   // verwerfen (greeting.ts).
                   suppressHydrationWarning
-                  // Die optionalen Umbruchstellen für lange IDs würden dem
-                  // zugänglichen Namen ein Leerzeichen hinzufügen. Der
-                  // unveränderte Titel bleibt deshalb der Name der Überschrift.
-                  aria-label={title}
                   className={cn(
-                    "min-w-0 font-semibold tracking-tight text-balance break-words text-gray-900",
+                    "min-w-0 font-semibold tracking-tight text-balance break-words text-gray-900 max-sm:wrap-anywhere",
                     // Neben Info, Status und Kebab bleibt dem Titel auf dem
                     // Telefon oft weniger als ein langes Wort. Dann trennt er
                     // nach Silben („Ferienbe-treuung“) statt mitten im Wort;
@@ -742,7 +703,7 @@ function TenantPageView({
                     HEAD_TITLE_SIZE[prominent ? "prominent" : "standard"],
                   )}
                 >
-                  {tenantPageTitle(title)}
+                  {title}
                 </h1>
                 {info != null && (
                   <TenantPageInfo title={title}>{info}</TenantPageInfo>
@@ -753,7 +714,7 @@ function TenantPageView({
                   Kinderseite rendert ein div). In einem p wäre das ungültiges
                   HTML und ein Hydration-Fehler. */}
               {statusLine != null && (
-                <div className="mt-1 text-sm leading-5 text-gray-600 max-sm:wrap-anywhere">
+                <div className="mt-1 w-full text-sm leading-5 text-gray-600 max-sm:wrap-anywhere max-sm:[&_*]:min-w-0 max-sm:[&_*]:[overflow-wrap:anywhere] max-sm:[&_*]:whitespace-normal">
                   {statusLine}
                 </div>
               )}
