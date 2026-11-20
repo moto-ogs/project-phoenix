@@ -54,36 +54,47 @@ func seedTodaysBlockChanges(rt *Runtime, today seedDate, now time.Time) error {
 	defer rt.Client.BindAuth(currentAuth)
 	rt.Client.BindAuth(rt.TenantAuth)
 
-	blocks, err := changeableBlocksToday(rt, today, now)
+	blocks, err := changeableBlocksToday(rt, today)
 	if err != nil {
 		return err
 	}
-	if len(blocks) < 3 {
-		fmt.Printf("  %d blocks left today, no changed blocks\n", len(blocks))
+	if len(blocks) < 2 {
+		fmt.Printf("  %d planned blocks today, no changed blocks\n", len(blocks))
 		return nil
 	}
-	// The latest block takes its cancellation back; it has not ended yet.
-	reinstated, cancelled, moved := blocks[0], blocks[1], blocks[2]
+	// The latest block takes its cancellation back while it has not ended;
+	// the planner refuses to take back the cancellation of an ended block.
+	cancelled, moved := blocks[0], blocks[1]
+	var reinstated *seedChangeableBlock
+	if len(blocks) > 2 && clockOf(blocks[0].EndTime) > now.In(seedBerlinLocation()).Format("15:04") {
+		reinstated, cancelled, moved = &blocks[0], blocks[1], blocks[2]
+	}
 	reason := "Die Leitung ist heute auf Fortbildung"
-	for _, block := range []seedChangeableBlock{reinstated, cancelled} {
+	toCancel := []seedChangeableBlock{cancelled}
+	if reinstated != nil {
+		toCancel = append(toCancel, *reinstated)
+	}
+	for _, block := range toCancel {
 		if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/cancel", block.ID), map[string]any{"reason": reason}); err != nil {
 			return fmt.Errorf("cancel %s today: %w", block.Title, err)
 		}
 	}
-	if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/reinstate", reinstated.ID), map[string]any{}); err != nil {
-		return fmt.Errorf("reinstate %s today: %w", reinstated.Title, err)
+	if reinstated != nil {
+		if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/reinstate", reinstated.ID), map[string]any{}); err != nil {
+			return fmt.Errorf("reinstate %s today: %w", reinstated.Title, err)
+		}
 	}
 	if err := moveBlockToday(rt, today, moved); err != nil {
 		return err
 	}
-	fmt.Printf("  %s cancelled, %s cancelled and taken back, %s in another room\n", cancelled.Title, reinstated.Title, moved.Title)
+	fmt.Printf("  %s cancelled, %s in another room, reinstated: %t\n", cancelled.Title, moved.Title, reinstated != nil)
 	return nil
 }
 
-// changeableBlocksToday lists today's planned series blocks that have not
-// ended, the latest first. The sick colleague's covered blocks and every
+// changeableBlocksToday lists today's planned series blocks, the latest
+// first. The sick colleague's covered blocks and every
 // block with a planned absence or a substitute stay as they are.
-func changeableBlocksToday(rt *Runtime, today seedDate, now time.Time) ([]seedChangeableBlock, error) {
+func changeableBlocksToday(rt *Runtime, today seedDate) ([]seedChangeableBlock, error) {
 	raw, err := rt.Client.Get(fmt.Sprintf("/api/timetable/instances?from=%s&to=%s", today.String(), today.String()))
 	if err != nil {
 		return nil, fmt.Errorf("list today's planning instances: %w", err)
@@ -96,11 +107,10 @@ func changeableBlocksToday(rt *Runtime, today seedDate, now time.Time) ([]seedCh
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return nil, fmt.Errorf("parse today's planning instances: %w", err)
 	}
-	clock := now.In(seedBerlinLocation()).Format("15:04")
 	var blocks []seedChangeableBlock
 	for _, block := range envelope.Data.Instances {
 		if block.Status != "planned" || block.ActivityGroupID == nil || block.RoomID == 0 ||
-			slices.Contains(coveredSubstituteBlocks, block.Title) || clockOf(block.EndTime) <= clock || blockHasDeviation(block) {
+			slices.Contains(coveredSubstituteBlocks, block.Title) || blockHasDeviation(block) {
 			continue
 		}
 		blocks = append(blocks, block)
