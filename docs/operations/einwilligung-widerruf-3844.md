@@ -206,7 +206,10 @@ lesen darf jede Person mit vollem Zugriff auf das Kind. Wirkung im Code:
   Bestätigungen** die Zeile „Raumverlauf und Stimmung“. Setzen und Aufheben
   verlangen das Beziehungsrecht `parent_portal.consent.manage` für genau
   dieses Kind (`GET`/`PUT`/`DELETE /parent/me/children/{studentId}/room-history-stop`);
-  ohne Schalter antwortet moto mit `care.room_history_stop_disabled`. Der
+  ohne Schalter antwortet moto mit `care.room_history_stop_disabled`.
+  Schaltet der Träger wieder aus, sehen Eltern einen bestehenden Stopp
+  weiter als „Gestoppt“, ohne ihn ändern zu können; aufheben kann ihn dann
+  nur die OGS-Verwaltung. Der
   Änderungsverlauf nennt den Elternteil, die Löschung trägt die Quelle
   `parent_portal`.
 - Nachweis: Setzen und Aufheben stehen im **Änderungsverlauf** des Kindes

@@ -157,10 +157,15 @@ func TestRoomHistoryStopRoutesAnswerTheStateAndTheirRefusals(t *testing.T) {
 	since := time.Date(2026, time.November, 21, 9, 0, 0, 0, time.UTC)
 	fake := &fakeParentService{roomHistoryStop: parentService.ChildRoomHistoryStop{Offered: true, Stopped: true, StoppedAt: &since, CanChange: true}}
 	rs := &Resource{ParentService: fake}
-	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
+	for method, call := range map[string]string{
+		http.MethodGet:    "GetChildRoomHistoryStop",
+		http.MethodPut:    "StopChildRoomHistory",
+		http.MethodDelete: "ResumeChildRoomHistory",
+	} {
 		t.Run(method, func(t *testing.T) {
 			w := serve(rs, method)
 			require.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, call, fake.roomHistoryCall, "the method picks stop or resume")
 			assert.Equal(t, int64(1234), fake.gotConsentAccount)
 			assert.Equal(t, int64(42), fake.gotConsentStudent)
 			assert.Contains(t, w.Body.String(), `"stopped":true`)

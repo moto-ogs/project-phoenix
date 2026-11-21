@@ -49,7 +49,8 @@ const roomHistoryStopCalls = {
 };
 
 // Die Zeile „Raumverlauf und Stimmung“ (#3844) kommt aus einer eigenen
-// Leseroute, nur wenn der Träger den Stopp für Eltern freigegeben hat.
+// Leseroute: wenn der Träger den Stopp für Eltern freigegeben hat oder das
+// Kind gestoppt ist.
 function roomHistoryRow(
   stop: ChildRoomHistoryStop | undefined,
 ): ChildConsent | null {
@@ -136,13 +137,13 @@ export function ChildConsentsSection({
   const actionErrors = useApiFormError();
   const latestConfirmRef = useRef<() => void>(() => undefined);
 
+  // Nur die Einwilligungen tragen die Ladefehler-Anzeige. Scheitert das Lesen
+  // des Stopps, fehlt bloß dessen Zeile: Die Foto-Einwilligung bleibt
+  // sichtbar und änderbar, der nächste Abruf versucht es erneut.
   const { error: loadError, failure: loadFailed } = useSwrResourceLoadError(
-    [resource, stopResource],
+    [resource],
     t("errorObjectList"),
-    () => {
-      void resource.mutate();
-      void stopResource.mutate();
-    },
+    () => void resource.mutate(),
   );
 
   async function confirmAction() {
@@ -205,16 +206,14 @@ export function ChildConsentsSection({
   } else if (photoGrantedElsewhere) {
     description = `${description} ${t("photoViaCareDescription")}`;
   }
-  // Raumverlauf und Stimmung: nur, wenn der Träger den Stopp für Eltern
-  // freigegeben hat (#3844).
-  if (
-    visibleConsents.some(
-      (consent) =>
-        consent.key === "room_history" &&
-        (consent.can_withdraw || consent.can_grant),
-    )
-  ) {
+  // Raumverlauf und Stimmung (#3844): Der Hinweis zum Stoppen steht nur,
+  // solange Eltern hier stoppen können. Ein Stopp, den sie nicht aufheben
+  // können (fehlendes Recht oder vom Träger abgeschaltet), nennt, wer ihn
+  // aufhebt.
+  if (roomHistory?.can_withdraw) {
     description = `${description} ${t("roomHistoryDescription")}`;
+  } else if (roomHistory?.state === "stopped" && !roomHistory.can_grant) {
+    description = `${description} ${t("roomHistoryViaCareDescription")}`;
   }
   const startAction = (action: ConsentAction) => {
     actionErrors.clear();

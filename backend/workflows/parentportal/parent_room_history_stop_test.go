@@ -31,8 +31,8 @@ func (*roomHistoryStopSwitch) LockParentPickupChangePolicySharedForTenant(contex
 }
 
 // TestParentRoomHistoryStopFollowsTheSwitchAndTheRelationship pins the
-// parents' stop of #3844: without the Träger's switch the row is absent and
-// the commands are refused; with it a guardian holding the consent right
+// parents' stop of #3844: without the Träger's switch the row is absent
+// (a stopped child stays visible, unchangeable) and the commands are refused; with it a guardian holding the consent right
 // stops (deleting the room history, keeping the current room) and resumes,
 // while a guardian without that right, another family and another school
 // are refused.
@@ -112,6 +112,15 @@ func TestParentRoomHistoryStopFollowsTheSwitchAndTheRelationship(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT metadata->>'source' FROM audit.data_deletions WHERE tenant_id = ? AND student_id = ? AND deletion_type = 'room_history_stop'`,
 		chain.TenantID, chain.StudentID).Scan(testpkg.Ctx(t), &source))
 	assert.Equal(t, "parent_portal", source)
+
+	toggle.on.Store(false)
+	view, err = svc.GetChildRoomHistoryStop(ctx, chain.AccountID, chain.StudentID)
+	require.NoError(t, err)
+	assert.True(t, view.Offered && view.Stopped, "a stopped child stays visible after the Träger switched off")
+	assert.False(t, view.CanChange, "without the switch parents cannot lift it")
+	_, err = svc.ResumeChildRoomHistory(ctx, chain.AccountID, chain.StudentID)
+	require.ErrorIs(t, err, parentService.ErrRoomHistoryStopDisabled)
+	toggle.on.Store(true)
 
 	view, err = svc.ResumeChildRoomHistory(ctx, chain.AccountID, chain.StudentID)
 	require.NoError(t, err)

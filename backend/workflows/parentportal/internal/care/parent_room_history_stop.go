@@ -32,8 +32,9 @@ type RoomHistoryStopPort interface {
 }
 
 // ChildRoomHistoryStop is what a guardian sees of the stop (#3844). Offered
-// is false while the Träger has not let parents stop it; then nothing else
-// is read. CanChange needs the relationship's consent permission.
+// is false while the Träger has not let parents stop it and the child is not
+// stopped. CanChange needs the Träger's switch and the relationship's
+// consent permission.
 type ChildRoomHistoryStop struct {
 	Offered   bool
 	Stopped   bool
@@ -113,18 +114,22 @@ func (s *Service) changeRoomHistoryStop(ctx context.Context, child *Child, accou
 	return s.readRoomHistoryStop(ctx, child, studentID)
 }
 
+// readRoomHistoryStop shows a stop even after the Träger switched the
+// parents' stop off, so a family still sees that nothing is recorded; it
+// stays unchangeable then. Without the switch an unstopped child shows
+// nothing.
 func (s *Service) readRoomHistoryStop(ctx context.Context, child *Child, studentID int64) (ChildRoomHistoryStop, error) {
 	enabled, err := s.roomHistoryStopEnabled(ctx, child.TenantID)
-	if err != nil || !enabled {
+	if err != nil {
 		return ChildRoomHistoryStop{}, err
 	}
 	stops, err := s.StudentConsents.RoomHistoryStoppedSince(ctx, []int64{studentID})
 	if err != nil {
 		return ChildRoomHistoryStop{}, fmt.Errorf("parent: read room history stop: %w", err)
 	}
-	view := ChildRoomHistoryStop{Offered: true, CanChange: child.HasPermission(GuardianPermissionConsentManage)}
+	view := ChildRoomHistoryStop{Offered: enabled, CanChange: enabled && child.HasPermission(GuardianPermissionConsentManage)}
 	if since, stopped := stops[studentID]; stopped {
-		view.Stopped, view.StoppedAt = true, &since
+		view.Offered, view.Stopped, view.StoppedAt = true, true, &since
 	}
 	return view, nil
 }

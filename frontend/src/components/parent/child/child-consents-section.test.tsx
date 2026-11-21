@@ -390,8 +390,51 @@ describe("ChildConsentsSection", () => {
     renderSection();
 
     expect(await screen.findByText("Foto-Einwilligung")).toBeInTheDocument();
+    await waitFor(() => expect(mockedStopRead).toHaveBeenCalledWith("42"));
     expect(
       screen.queryByText("Raumverlauf und Stimmung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt die Foto-Einwilligung weiter, wenn der Stopp nicht lesbar ist", async () => {
+    mockedStopRead.mockRejectedValue(
+      new ApiError("diag", 503, { code: "general.unavailable" }),
+    );
+    renderSection();
+
+    expect(await screen.findByText("Foto-Einwilligung")).toBeInTheDocument();
+    await waitFor(() => expect(mockedStopRead).toHaveBeenCalledWith("42"));
+    expect(
+      screen.getByRole("button", { name: "Foto-Einwilligung widerrufen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Raumverlauf und Stimmung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt einen Stopp, den Eltern nicht aufheben können, mit Hinweis auf die OGS", async () => {
+    mockedStopRead.mockResolvedValue({
+      offered: true,
+      stopped: true,
+      stopped_at: "2026-11-21T09:00:00Z",
+      can_change: false,
+    });
+    renderSection();
+
+    expect(
+      await screen.findByText("Raumverlauf und Stimmung"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Gestoppt")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Den Stopp für Raumverlauf und Stimmung hebt die/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Raumverlauf und Stimmung kannst du hier stoppen/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Raumverlauf und Stimmung wieder speichern",
+      }),
     ).not.toBeInTheDocument();
   });
 

@@ -11,7 +11,8 @@ import (
 
 // ChildRoomHistoryStopResponse tells a guardian whether the room history and
 // mood of the child are stopped (#3844). Offered is false while the Träger
-// has not let parents stop it; CanChange needs the consent permission.
+// has not let parents stop it and the child is not stopped; CanChange needs
+// the Träger's switch and the consent permission.
 type ChildRoomHistoryStopResponse struct {
 	Offered   bool       `json:"offered"`
 	Stopped   bool       `json:"stopped"`

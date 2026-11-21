@@ -690,8 +690,9 @@ export async function grantChildPhotoConsent(
 
 /**
  * Whether the room history and mood of the child are stopped (#3844).
- * `offered` is false while the Träger has not let parents stop it;
- * `can_change` needs the guardian's consent permission.
+ * `offered` is false while the Träger has not let parents stop it and the
+ * child is not stopped; `can_change` needs the Träger's switch and the
+ * guardian's consent permission.
  */
 export interface ChildRoomHistoryStop {
   readonly offered: boolean;

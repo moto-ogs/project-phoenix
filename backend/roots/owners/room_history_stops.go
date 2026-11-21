@@ -91,7 +91,10 @@ func (a roomHistoryStopAudit) RecordRoomHistoryStop(ctx context.Context, event s
 	return nil
 }
 
-// MustNewRoomHistoryStops is NewRoomHistoryStops for test graphs.
+// MustNewRoomHistoryStops is NewRoomHistoryStops for route mounts built at
+// startup and in test graphs. It fails fast with a panic when the database
+// is missing, so a miswired process does not start; it never runs per
+// request.
 func MustNewRoomHistoryStops(db transactionruntime.Database) studentpresence.RoomHistoryStops {
 	stops, err := NewRoomHistoryStops(db)
 	if err != nil {

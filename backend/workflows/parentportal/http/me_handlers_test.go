@@ -31,6 +31,7 @@ type fakeParentService struct {
 	// The room history stop (#3844).
 	roomHistoryStop    parentService.ChildRoomHistoryStop
 	roomHistoryStopErr error
+	roomHistoryCall    string
 
 	sepaView     parentService.SEPAMandateView
 	sepaText     parentService.SEPAMandateText
@@ -224,14 +225,17 @@ func (f *fakeParentService) GetChildConsents(_ context.Context, accountID, stude
 	return f.consents, f.consentsErr
 }
 func (f *fakeParentService) GetChildRoomHistoryStop(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.roomHistoryCall = "GetChildRoomHistoryStop"
 	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
 	return f.roomHistoryStop, f.roomHistoryStopErr
 }
 func (f *fakeParentService) StopChildRoomHistory(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.roomHistoryCall = "StopChildRoomHistory"
 	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
 	return f.roomHistoryStop, f.roomHistoryStopErr
 }
 func (f *fakeParentService) ResumeChildRoomHistory(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.roomHistoryCall = "ResumeChildRoomHistory"
 	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
 	return f.roomHistoryStop, f.roomHistoryStopErr
 }
