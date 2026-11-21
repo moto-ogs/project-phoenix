@@ -1,3 +1,7 @@
+import type {
+  AcceptGuardianInvitationRequest as WireAcceptGuardianInvitationRequest,
+  AcceptGuardianInvitationResponse as WireAcceptGuardianInvitationResponse,
+} from "~/lib/contract/auth-guardian-invitations.generated";
 import {
   apiErrorFromBody,
   transportFetch,
@@ -17,7 +21,12 @@ export interface GuardianInvitationValidation {
   schoolLogoUrl?: string;
 }
 
-export interface BackendGuardianInvitationValidation {
+/**
+ * Go's `GuardianInvitationValidateResponse`. The validation route is not in
+ * the contract: the accept page reads it from Go directly (`sendBackend`),
+ * so no decoder narrows it.
+ */
+export interface GuardianInvitationValidationBody {
   email: string;
   first_name?: string;
   last_name?: string;
@@ -36,12 +45,6 @@ export interface GuardianInvitationAcceptResult {
   accountId: string;
   email: string;
   tenantSlug?: string;
-}
-
-interface BackendAcceptGuardianResponse {
-  account_id: string;
-  email: string;
-  tenant_slug?: string;
 }
 
 const createApiError = async (
@@ -83,7 +86,7 @@ const extractData = <T>(payload: unknown): T => {
 };
 
 export const mapValidation = (
-  data: BackendGuardianInvitationValidation,
+  data: GuardianInvitationValidationBody,
 ): GuardianInvitationValidation => ({
   email: data.email,
   firstName: data.first_name,
@@ -107,7 +110,7 @@ export async function acceptGuardianInvitation(
       body: JSON.stringify({
         password: data.password,
         confirm_password: data.confirmPassword,
-      }),
+      } satisfies WireAcceptGuardianInvitationRequest),
     },
   );
   if (!response.ok) {
@@ -117,7 +120,7 @@ export async function acceptGuardianInvitation(
     );
   }
   const raw = (await response.json()) as unknown;
-  const payload = extractData<BackendAcceptGuardianResponse>(raw);
+  const payload = extractData<WireAcceptGuardianInvitationResponse>(raw);
   return {
     accountId: payload.account_id,
     email: payload.email,
