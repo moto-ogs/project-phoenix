@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog/ports"
 )
@@ -138,7 +139,7 @@ func (s fakeSchools) FindSchoolForShare(_ context.Context, id int64) (organizati
 	if owner, ok := s.f.schoolOwners[id]; ok {
 		org = owner
 	}
-	return organizationtenancy.School{ID: id, OrganizationID: org}, nil
+	return organizationtenancy.School{ID: ident.ID(id), OrganizationID: ident.ID(org)}, nil
 }
 
 type fakePhases struct{ f *fakeOwners }

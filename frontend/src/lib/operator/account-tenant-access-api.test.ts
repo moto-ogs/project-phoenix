@@ -119,7 +119,7 @@ describe("accountTenantAccessService", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          school_id: 7,
+          school_id: "7",
           role_id: roleId,
           first_name: "Ada",
           last_name: "Lovelace",

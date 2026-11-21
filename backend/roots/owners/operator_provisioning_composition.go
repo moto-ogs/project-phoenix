@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
@@ -204,7 +205,7 @@ func (p ProvisioningIdentity) RegisterSchoolAccount(ctx context.Context, registr
 	// The identity chain is provisioned by the caller's next step, and a
 	// fresh account carries neither an avatar nor a one-time password.
 	return organizationCompose.CreatedAccount{
-		ID: account.ID, CreatedAt: account.CreatedAt, UpdatedAt: account.UpdatedAt, Email: account.Email,
+		ID: ident.ID(account.ID), CreatedAt: account.CreatedAt, UpdatedAt: account.UpdatedAt, Email: account.Email,
 		Username: &username, Active: account.Active, LastLogin: account.LastLogin,
 	}, nil
 }
@@ -382,7 +383,7 @@ func provisioningTraegerInvitationError(err error) error {
 
 func provisioningTraegerInvitation(invitation identityaccess.TraegerInvitation) organizationtenancy.TraegerInvitation {
 	return organizationtenancy.TraegerInvitation{
-		ID: invitation.ID, Email: invitation.Email, Roles: invitation.Roles, ExpiresAt: invitation.ExpiresAt,
+		ID: ident.ID(invitation.ID), Email: invitation.Email, Roles: invitation.Roles, ExpiresAt: invitation.ExpiresAt,
 		Expired: invitation.Expired,
 	}
 }

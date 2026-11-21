@@ -118,7 +118,7 @@ export function CreateSchoolModal({
       clearError();
       try {
         await operatorProvisioningService.createSchool({
-          organization_id: parseInt(schoolOrgId, 10),
+          organization_id: schoolOrgId,
           name: schoolName.trim(),
           slug: schoolSlug.trim(),
           subdomain: schoolSubdomain.trim(),

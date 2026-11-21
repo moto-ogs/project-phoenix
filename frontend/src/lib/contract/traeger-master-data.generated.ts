@@ -5,7 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   noData,
   nullable,
@@ -71,7 +71,7 @@ export interface TraegerBankAccount {
 }
 
 export const TraegerBankAccountSchema: z.ZodType<TraegerBankAccount, unknown> = object<TraegerBankAccount>({
-  id: int64StringOrNumber,
+  id: int64String,
   label: str,
   account_holder: str,
   iban: str,

@@ -82,7 +82,7 @@ func schoolNames(schools organizationtenancy.Capability) func(context.Context, [
 			if school.IsDeleted() {
 				continue
 			}
-			names[school.ID] = school.Name
+			names[school.ID.Int64()] = school.Name
 		}
 		return names, nil
 	}

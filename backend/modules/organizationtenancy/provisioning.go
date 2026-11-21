@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Provisioning is the operator-led tenant provisioning capability (#3253):
@@ -158,7 +160,7 @@ type SchoolAdminInvitation struct {
 
 // CreatedAccount is a school account an operator created.
 type CreatedAccount struct {
-	ID            int64      `json:"id"`
+	ID            ident.ID   `json:"id"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 	Email         string     `json:"email"`
@@ -179,33 +181,33 @@ type SystemRole struct {
 
 // SchoolAccount is one account with access to a school.
 type SchoolAccount struct {
-	AccountID           int64  `json:"account_id"`
-	Email               string `json:"email"`
-	Active              bool   `json:"active"`
-	FirstName           string `json:"first_name"`
-	LastName            string `json:"last_name"`
-	RoleName            string `json:"role_name"`
-	PedagogicRole       string `json:"pedagogic_role"`
-	Status              string `json:"status"`
-	HasAdminRole        bool   `json:"has_admin_role"`
-	HasUserRole         bool   `json:"has_user_role"`
-	HasCaregiverProfile bool   `json:"has_caregiver_profile"`
-	IsActiveCaregiver   bool   `json:"is_active_caregiver"`
+	AccountID           ident.ID `json:"account_id"`
+	Email               string   `json:"email"`
+	Active              bool     `json:"active"`
+	FirstName           string   `json:"first_name"`
+	LastName            string   `json:"last_name"`
+	RoleName            string   `json:"role_name"`
+	PedagogicRole       string   `json:"pedagogic_role"`
+	Status              string   `json:"status"`
+	HasAdminRole        bool     `json:"has_admin_role"`
+	HasUserRole         bool     `json:"has_user_role"`
+	HasCaregiverProfile bool     `json:"has_caregiver_profile"`
+	IsActiveCaregiver   bool     `json:"is_active_caregiver"`
 }
 
 // OrganizationAccount is a school account with its school for the
 // organisation-wide and platform-wide listings.
 type OrganizationAccount struct {
 	SchoolAccount
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
 }
 
 // OperatorDevice is one device in the operator device listings with its
 // school and organisation. APIKey is populated only by creation and rotation;
 // every read and transfer returns only MaskedAPIKey.
 type OperatorDevice struct {
-	ID               int64      `json:"id"`
+	ID               ident.ID   `json:"id"`
 	DeviceID         string     `json:"device_id"`
 	DeviceType       string     `json:"device_type"`
 	Name             *string    `json:"name,omitempty"`
@@ -214,9 +216,9 @@ type OperatorDevice struct {
 	MaskedAPIKey     string     `json:"masked_api_key"`
 	LastSeen         *time.Time `json:"last_seen,omitempty"`
 	IsOnline         bool       `json:"is_online"`
-	SchoolID         int64      `json:"school_id"`
+	SchoolID         ident.ID   `json:"school_id"`
 	SchoolName       string     `json:"school_name"`
-	OrganizationID   int64      `json:"organization_id"`
+	OrganizationID   ident.ID   `json:"organization_id"`
 	OrganizationName string     `json:"organization_name"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
@@ -224,7 +226,7 @@ type OperatorDevice struct {
 
 // DeviceTransferSession describes the open kiosk session blocking a transfer.
 type DeviceTransferSession struct {
-	ID           int64     `json:"id"`
+	ID           ident.ID  `json:"id"`
 	StartedAt    time.Time `json:"started_at"`
 	ActivityName *string   `json:"activity_name,omitempty"`
 	RoomName     *string   `json:"room_name,omitempty"`
@@ -241,7 +243,7 @@ type DeviceTransferStatus struct {
 
 // OperatorPerson is one person with school and organisation context.
 type OperatorPerson struct {
-	ID               int64     `json:"id"`
+	ID               ident.ID  `json:"id"`
 	FirstName        string    `json:"first_name"`
 	LastName         string    `json:"last_name"`
 	HasAccount       bool      `json:"has_account"`
@@ -249,9 +251,9 @@ type OperatorPerson struct {
 	HasRFIDCard      bool      `json:"has_rfid_card"`
 	IsStaff          bool      `json:"is_staff"`
 	IsStudent        bool      `json:"is_student"`
-	SchoolID         int64     `json:"school_id"`
+	SchoolID         ident.ID  `json:"school_id"`
 	SchoolName       string    `json:"school_name"`
-	OrganizationID   int64     `json:"organization_id"`
+	OrganizationID   ident.ID  `json:"organization_id"`
 	OrganizationName string    `json:"organization_name"`
 	CreatedAt        time.Time `json:"created_at"`
 }
@@ -270,7 +272,7 @@ type ProvisioningStats struct {
 // schools, accounts, devices and persons. KontenCount counts an account once
 // per organisation.
 type OrganizationSummary struct {
-	ID            int64      `json:"id"`
+	ID            ident.ID   `json:"id"`
 	Name          string     `json:"name"`
 	Slug          string     `json:"slug"`
 	Active        bool       `json:"active"`
@@ -288,8 +290,8 @@ type OrganizationSummary struct {
 // SchoolSummary is a school with its organisation's name and the counts of
 // its accounts, devices and persons.
 type SchoolSummary struct {
-	ID               int64      `json:"id"`
-	OrganizationID   int64      `json:"organization_id"`
+	ID               ident.ID   `json:"id"`
+	OrganizationID   ident.ID   `json:"organization_id"`
 	OrganizationName string     `json:"organization_name"`
 	Name             string     `json:"name"`
 	Slug             string     `json:"slug"`
@@ -373,7 +375,7 @@ type SchoolRequiredDetailsProvisioning interface {
 // SchoolRequiredDetails names the required details one undeleted school is
 // missing, so the operator can complete them (#7174).
 type SchoolRequiredDetails struct {
-	SchoolID int64 `json:"school_id"`
+	SchoolID ident.ID `json:"school_id"`
 	// ReplyAddressMissing reports that neither email.reply_to_address nor
 	// the contact address yields a usable reply address, so replies from
 	// parents bounce (#1936).

@@ -248,8 +248,8 @@ func (s *Service) currentSchools(ctx context.Context, organizationID int64) (map
 	}
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
-		if school.OrganizationID == organizationID && !school.IsDeleted() {
-			names[school.ID] = school.Name
+		if school.OrganizationID == ident.ID(organizationID) && !school.IsDeleted() {
+			names[school.ID.Int64()] = school.Name
 		}
 	}
 	return names, nil

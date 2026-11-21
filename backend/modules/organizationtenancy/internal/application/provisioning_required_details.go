@@ -24,7 +24,7 @@ func (p *Provisioning) ListSchoolRequiredDetails(ctx context.Context) ([]organiz
 		}
 		ids := make([]int64, 0, len(schools))
 		for _, school := range schools {
-			ids = append(ids, school.ID)
+			ids = append(ids, school.ID.Int64())
 		}
 		replyTo, err := p.settings.ReplyToAddresses(adminCtx, ids)
 		if err != nil {
@@ -35,7 +35,7 @@ func (p *Provisioning) ListSchoolRequiredDetails(ctx context.Context) ([]organiz
 				SchoolID: school.ID,
 				// The mail identity's order (#1936): the reply setting first,
 				// then the contact address.
-				ReplyAddressMissing: !organizationtenancy.UsableReplyAddress(replyTo[school.ID]) &&
+				ReplyAddressMissing: !organizationtenancy.UsableReplyAddress(replyTo[school.ID.Int64()]) &&
 					!organizationtenancy.UsableReplyAddress(school.Email),
 			})
 		}

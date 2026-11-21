@@ -70,7 +70,7 @@ func schoolsByID(ctx context.Context, query schoolLister, ids []int64) (map[int6
 	}
 	result := make(map[int64]organizationtenancy.School, len(values))
 	for _, value := range values {
-		result[value.ID] = value
+		result[value.ID.Int64()] = value
 	}
 	return result, nil
 }

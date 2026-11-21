@@ -82,7 +82,7 @@ func (s *Service) WithdrawTraegerErasureOrder(ctx context.Context, organizationI
 		if order.StartedAt != nil {
 			return organizationtenancy.ErrTraegerErasureStarted
 		}
-		withdrawn, withdrawStats, withdrawErr := s.store.WithdrawTraegerErasureOrder(txCtx, order.ID, operatorID)
+		withdrawn, withdrawStats, withdrawErr := s.store.WithdrawTraegerErasureOrder(txCtx, order.ID.Int64(), operatorID)
 		stats.Add(withdrawStats)
 		if withdrawErr == nil && !withdrawn {
 			return organizationtenancy.ErrTraegerErasureOrderNotFound
@@ -115,7 +115,7 @@ func (s *Service) RecordTraegerErasureOrderRecords(ctx context.Context, organiza
 		}
 		var updated bool
 		var updateStats domain.OperationStats
-		order, updated, updateStats, findErr = s.store.UpdateTraegerErasureOrderRecords(txCtx, open.ID, records)
+		order, updated, updateStats, findErr = s.store.UpdateTraegerErasureOrderRecords(txCtx, open.ID.Int64(), records)
 		stats.Add(updateStats)
 		if findErr == nil && !updated {
 			return organizationtenancy.ErrTraegerErasureRecordsRecorded

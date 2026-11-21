@@ -153,7 +153,7 @@ func (t parentSchoolTraeger) TraegerOfSchools(ctx context.Context, schoolIDs []i
 	var organizationIDs []int64
 	for _, school := range schools {
 		if !school.IsDeleted() && school.OrganizationID > 0 {
-			organizationIDs = append(organizationIDs, school.OrganizationID)
+			organizationIDs = append(organizationIDs, school.OrganizationID.Int64())
 		}
 	}
 	if len(organizationIDs) == 0 {
@@ -166,13 +166,13 @@ func (t parentSchoolTraeger) TraegerOfSchools(ctx context.Context, schoolIDs []i
 	active := make(map[int64]string, len(organizations))
 	for _, organization := range organizations {
 		if organization.Active && !organization.IsDeleted() {
-			active[organization.ID] = organization.Name
+			active[organization.ID.Int64()] = organization.Name
 		}
 	}
 	of := make(map[int64]parentportal.Traeger, len(schools))
 	for _, school := range schools {
-		if name, ok := active[school.OrganizationID]; ok && !school.IsDeleted() {
-			of[school.ID] = parentportal.Traeger{ID: school.OrganizationID, Name: name}
+		if name, ok := active[school.OrganizationID.Int64()]; ok && !school.IsDeleted() {
+			of[school.ID.Int64()] = parentportal.Traeger{ID: school.OrganizationID.Int64(), Name: name}
 		}
 	}
 	return of, nil

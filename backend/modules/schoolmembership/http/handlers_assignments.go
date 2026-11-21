@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // getStaffGroups lists the groups a Betreuungskraft is assigned to. A staff
@@ -46,7 +47,7 @@ func (rs *Resource) getStaffSchoolClasses(w http.ResponseWriter, r *http.Request
 		rs.runtime.SchoolClassFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: id, SchoolClasses: classes}, "School classes retrieved successfully")
+	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: ident.ID(id), SchoolClasses: classes}, "School classes retrieved successfully")
 }
 
 // updateStaffSchoolClasses replaces the school class assignments with the
@@ -79,7 +80,7 @@ func (rs *Resource) updateStaffSchoolClasses(w http.ResponseWriter, r *http.Requ
 		rs.runtime.SchoolClassFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: id, SchoolClasses: classes}, "School classes updated successfully")
+	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: ident.ID(id), SchoolClasses: classes}, "School classes updated successfully")
 }
 
 // getStaffByRole answers GET /by-role?role=user or ?roles=teacher,staff,user.
@@ -153,10 +154,10 @@ func dedupeByStaffID(rows []StaffWithRoleResponse) []StaffWithRoleResponse {
 	seen := make(map[int64]bool, len(rows))
 	var results []StaffWithRoleResponse
 	for _, row := range rows {
-		if seen[row.ID] {
+		if seen[row.ID.Int64()] {
 			continue
 		}
-		seen[row.ID] = true
+		seen[row.ID.Int64()] = true
 		results = append(results, row)
 	}
 	return results

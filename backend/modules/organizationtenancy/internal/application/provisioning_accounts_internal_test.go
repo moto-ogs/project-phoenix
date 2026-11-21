@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -152,7 +153,7 @@ func TestProvisioningCreateSchoolAccount(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, account)
-		assert.Equal(t, int64(100), account.ID)
+		assert.Equal(t, ident.ID(int64(100)), account.ID)
 		assert.Equal(t, "jane@example.test", account.Email)
 		assert.Equal(t, []domain.SchoolAccountRegistration{{
 			TenantID: 10, Email: "jane@example.test", Username: "jane_doe_abc123", Password: "SecureP@ss1", RoleID: 2,
@@ -437,7 +438,7 @@ func TestProvisioningListSystemRoles(t *testing.T) {
 
 func schoolAccount(id int64, email string) domain.SchoolAccount {
 	return domain.SchoolAccount{
-		AccountID: id, Email: email, Active: true, FirstName: "Jane", LastName: "Doe",
+		AccountID: ident.ID(id), Email: email, Active: true, FirstName: "Jane", LastName: "Doe",
 		RoleName: "admin", PedagogicRole: "Leitung", Status: "active",
 		HasAdminRole: true, HasCaregiverProfile: true, IsActiveCaregiver: true,
 	}

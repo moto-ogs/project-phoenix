@@ -62,7 +62,7 @@ export interface OrganizationSummary {
 }
 
 export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> = object<OrganizationSummary>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   active: bool,
@@ -253,12 +253,12 @@ export interface TraegerErasureOrder {
 }
 
 export const TraegerErasureOrderSchema: z.ZodType<TraegerErasureOrder, unknown> = object<TraegerErasureOrder>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   order_reference: str,
   confirmed_on: nullable(calendarDate),
   erase_not_before: nullable(calendarDate),
-  recorded_by: int64StringOrNumber,
+  recorded_by: int64String,
   recorded_at: instant,
   started_at: optional(instant),
   records_notice_shown_at: optional(instant),
@@ -288,7 +288,7 @@ export interface TraegerMember {
 }
 
 export const TraegerMemberSchema: z.ZodType<TraegerMember, unknown> = object<TraegerMember>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   status: str,
   roles: nullable(arr(str)),
@@ -305,7 +305,7 @@ export interface TraegerInvitation {
 }
 
 export const TraegerInvitationSchema: z.ZodType<TraegerInvitation, unknown> = object<TraegerInvitation>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   roles: nullable(arr(str)),
   expires_at: instant,

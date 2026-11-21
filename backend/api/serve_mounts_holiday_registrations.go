@@ -30,7 +30,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/observability"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
@@ -157,7 +156,7 @@ func (d holidayTraegerDirectory) HolidayTraeger(ctx context.Context, organizatio
 	traeger := enrollmentOwner.HolidayTraeger{Name: organization.Name, Schools: []enrollmentOwner.HolidaySchool{}}
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			traeger.Schools = append(traeger.Schools, enrollmentOwner.HolidaySchool{ID: ident.ID(school.ID), Name: school.Name})
+			traeger.Schools = append(traeger.Schools, enrollmentOwner.HolidaySchool{ID: school.ID, Name: school.Name})
 		}
 	}
 	return traeger, nil

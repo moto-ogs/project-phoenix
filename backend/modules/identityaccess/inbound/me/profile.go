@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Avatar upload constants
@@ -44,7 +45,7 @@ type ProfileResponse struct {
 	Username  *string    `json:"username"`
 	LastLogin *time.Time `json:"last_login"`
 	Avatar    string     `json:"avatar,omitempty"`
-	ID        int64      `json:"id"`
+	ID        common.ID  `json:"id"`
 	FirstName string     `json:"first_name"`
 	LastName  string     `json:"last_name"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -61,11 +62,11 @@ func profileResponse(profile identityaccess.CallerProfile) ProfileResponse {
 		Bio: profile.Bio, Settings: profile.Settings,
 	}
 	if person := profile.Person; person != nil {
-		response.ID, response.FirstName, response.LastName = person.ID, person.FirstName, person.LastName
+		response.ID, response.FirstName, response.LastName = ident.ID(person.ID), person.FirstName, person.LastName
 		response.CreatedAt, response.UpdatedAt, response.RFIDCard = person.CreatedAt, person.UpdatedAt, person.TagID
 		return response
 	}
-	response.ID, response.CreatedAt, response.UpdatedAt = account.ID.Int64(), account.CreatedAt, account.UpdatedAt
+	response.ID, response.CreatedAt, response.UpdatedAt = account.ID, account.CreatedAt, account.UpdatedAt
 	return response
 }
 

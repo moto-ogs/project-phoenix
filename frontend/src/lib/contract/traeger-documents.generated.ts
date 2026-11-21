@@ -4,7 +4,7 @@ import {
   arr,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   noData,
   nullable,
@@ -26,10 +26,10 @@ export interface TraegerDocumentRelease {
 }
 
 export const TraegerDocumentReleaseSchema: z.ZodType<TraegerDocumentRelease, unknown> = object<TraegerDocumentRelease>({
-  id: int64StringOrNumber,
+  id: int64String,
   audience: str,
-  school_id: nullable(int64StringOrNumber),
-  group_id: nullable(int64StringOrNumber),
+  school_id: nullable(int64String),
+  group_id: nullable(int64String),
   group_name: str,
   released_at: instant,
 });
@@ -46,7 +46,7 @@ export interface SharedDocument {
 }
 
 export const SharedDocumentSchema: z.ZodType<SharedDocument, unknown> = object<SharedDocument>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   file_name: str,
   content_type: str,
@@ -68,7 +68,7 @@ export interface TraegerDocument {
 }
 
 export const TraegerDocumentSchema: z.ZodType<TraegerDocument, unknown> = object<TraegerDocument>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   file_name: str,
   content_type: str,
@@ -85,7 +85,7 @@ export interface TraegerDocumentGroup {
 }
 
 export const TraegerDocumentGroupSchema: z.ZodType<TraegerDocumentGroup, unknown> = object<TraegerDocumentGroup>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -97,7 +97,7 @@ export interface TraegerDocumentSchool {
 }
 
 export const TraegerDocumentSchoolSchema: z.ZodType<TraegerDocumentSchool, unknown> = object<TraegerDocumentSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   groups: nullable(arr(TraegerDocumentGroupSchema)),
 });
@@ -105,8 +105,8 @@ export const TraegerDocumentSchoolSchema: z.ZodType<TraegerDocumentSchool, unkno
 /** Go: traeger.ReleaseRequest */
 export interface ReleaseRequest {
   audience?: string;
-  school_id?: number | null;
-  group_id?: number | null;
+  school_id?: string | null;
+  group_id?: string | null;
 }
 
 /** Query of GET /traeger/documents/export */

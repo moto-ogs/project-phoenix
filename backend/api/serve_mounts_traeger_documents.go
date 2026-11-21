@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	organizationTenancyCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -107,7 +108,7 @@ func (g traegerDocumentGroups) SchoolGroups(ctx context.Context) ([]organization
 	}
 	result := make([]organizationtenancy.TraegerDocumentGroup, 0, len(groups))
 	for _, group := range groups {
-		result = append(result, organizationtenancy.TraegerDocumentGroup{ID: group.ID, Name: group.Name})
+		result = append(result, organizationtenancy.TraegerDocumentGroup{ID: ident.ID(group.ID), Name: group.Name})
 	}
 	return result, nil
 }

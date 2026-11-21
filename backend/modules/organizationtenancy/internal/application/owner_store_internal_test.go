@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
@@ -90,7 +91,7 @@ func (s fakeOwnerStore) FindBySlug(ctx context.Context, slug string) (organizati
 func (s fakeOwnerStore) CountNonDeletedSchools(_ context.Context, id int64) (int, domain.OperationStats, error) {
 	count := 0
 	for _, school := range s.engine.schools {
-		if school.OrganizationID == id && !school.IsDeleted() {
+		if school.OrganizationID == ident.ID(id) && !school.IsDeleted() {
 			count++
 		}
 	}

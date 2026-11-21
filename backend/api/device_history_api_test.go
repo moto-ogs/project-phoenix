@@ -42,10 +42,10 @@ func TestOperatorDeviceLifecycleReachesBothSchoolsHistories(t *testing.T) {
 	name := "Terminal Aula"
 	created, err := service.CreateDevice(ctx, sourceSchoolID, fmt.Sprintf("history-%d", sourceSchoolID), "rfid_terminal", &name, nil, operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
-	require.NoError(t, service.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP))
-	require.NoError(t, service.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP), "a repeated block")
-	require.NoError(t, service.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, false, operatorID, provisioningTestClientIP))
-	transferred, err := service.TransferDevice(ctx, created.ID, target.ID, operatorID, provisioningTestClientIP)
+	require.NoError(t, service.DeviceBlocking.SetDeviceBlocked(ctx, created.ID.Int64(), true, operatorID, provisioningTestClientIP))
+	require.NoError(t, service.DeviceBlocking.SetDeviceBlocked(ctx, created.ID.Int64(), true, operatorID, provisioningTestClientIP), "a repeated block")
+	require.NoError(t, service.DeviceBlocking.SetDeviceBlocked(ctx, created.ID.Int64(), false, operatorID, provisioningTestClientIP))
+	transferred, err := service.TransferDevice(ctx, created.ID.Int64(), target.ID.Int64(), operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
 
 	devices, err := NewDeviceTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
@@ -54,7 +54,7 @@ func TestOperatorDeviceLifecycleReachesBothSchoolsHistories(t *testing.T) {
 
 	var chain []devicefleet.LifecycleEvent
 	require.NoError(t, testpkg.WithinAdminContext(t, testpkg.Ctx(t), db, func(adminCtx context.Context) error {
-		chain, err = history.ListLifecycleEvents(adminCtx, transferred.ID)
+		chain, err = history.ListLifecycleEvents(adminCtx, transferred.ID.Int64())
 		return err
 	}))
 	actions := make([]devicefleet.LifecycleAction, 0, len(chain))
@@ -67,14 +67,14 @@ func TestOperatorDeviceLifecycleReachesBothSchoolsHistories(t *testing.T) {
 		devicefleet.LifecycleTransferredIn, devicefleet.LifecycleTransferredOut,
 		devicefleet.LifecycleUnblocked, devicefleet.LifecycleBlocked, devicefleet.LifecycleCreated,
 	}, actions, "newest first, across the transfer")
-	assert.Equal(t, target.ID, chain[0].TenantID)
+	assert.Equal(t, target.ID.Int64(), chain[0].TenantID)
 	assert.Equal(t, sourceSchoolID, chain[1].TenantID)
 	assert.Empty(t, chain[0].Changes, "the target school's entry does not name the source school")
 	assert.Empty(t, chain[1].Changes, "the source school's entry does not name the target school")
 
 	var own []devicefleet.LifecycleEvent
-	require.NoError(t, testpkg.WithinTenantContext(t, testpkg.ContextForTenant(testpkg.Ctx(t), target.ID), db, target.ID, func(tenantCtx context.Context) error {
-		own, err = history.ListLifecycleEvents(tenantCtx, transferred.ID)
+	require.NoError(t, testpkg.WithinTenantContext(t, testpkg.ContextForTenant(testpkg.Ctx(t), target.ID.Int64()), db, target.ID.Int64(), func(tenantCtx context.Context) error {
+		own, err = history.ListLifecycleEvents(tenantCtx, transferred.ID.Int64())
 		return err
 	}))
 	require.Len(t, own, 1, "the target school sees only its own entry")

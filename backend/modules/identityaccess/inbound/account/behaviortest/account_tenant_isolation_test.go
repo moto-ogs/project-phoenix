@@ -11,6 +11,7 @@ import (
 	"time"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -90,7 +91,7 @@ func (e *accountIsolationEnv) listAccounts(t *testing.T, claims testutil.Claims)
 func accountIDs(accounts []authAPI.AccountResponse) []int64 {
 	ids := make([]int64, 0, len(accounts))
 	for _, account := range accounts {
-		ids = append(ids, account.ID)
+		ids = append(ids, account.ID.Int64())
 	}
 	return ids
 }
@@ -107,7 +108,7 @@ func TestAccountManagementOwnTenantAllowed(t *testing.T) {
 	updatedEmail := fmt.Sprintf("account-scope-updated-%d@example.test", account.ID)
 	assertAccountActionStatus(t, e, e.claims, http.MethodPut, fmt.Sprintf("/auth/accounts/%d", account.ID), map[string]string{"email": updatedEmail}, http.StatusNoContent)
 
-	assert.Contains(t, e.listAccounts(t, e.claims), authAPI.AccountResponse{ID: account.ID, Email: updatedEmail, Active: true})
+	assert.Contains(t, e.listAccounts(t, e.claims), authAPI.AccountResponse{ID: ident.ID(account.ID), Email: updatedEmail, Active: true})
 }
 
 func assertAccountActionStatus(t *testing.T, e *accountIsolationEnv, claims testutil.Claims, method, path string, body any, status int) {

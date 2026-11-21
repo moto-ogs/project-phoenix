@@ -139,7 +139,7 @@ class AccountTenantAccessService {
     return request(basePath(accountId), {
       method: "POST",
       body: JSON.stringify({
-        school_id: Number(body.schoolId),
+        school_id: body.schoolId,
         role_id: body.roleId,
         first_name: body.firstName,
         last_name: body.lastName,

@@ -40,7 +40,7 @@ func (t traegerReportTemplates) ReportTemplate(ctx context.Context, organization
 	}
 	districts := make(map[int64]string, len(template.Districts))
 	for _, district := range template.Districts {
-		districts[district.SchoolID] = district.District
+		districts[district.SchoolID.Int64()] = district.District
 	}
-	return traegerview.ReportTemplate{ID: template.ID, Name: template.Name, Sections: template.Sections, Districts: districts}, nil
+	return traegerview.ReportTemplate{ID: template.ID.Int64(), Name: template.Name, Sections: template.Sections, Districts: districts}, nil
 }

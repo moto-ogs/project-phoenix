@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // JSONID accepts a JSON number or a decimal string. Person ids are bigints,
@@ -64,13 +65,13 @@ func (id JSONID) MarshalJSON() ([]byte, error) {
 
 // StaffPersonResponse represents a simplified person response.
 type StaffPersonResponse struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
 	Avatar    string    `json:"avatar,omitempty"`
 	TagID     string    `json:"tag_id,omitempty"`
-	AccountID *int64    `json:"account_id,omitempty"`
+	AccountID *ident.ID `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -125,9 +126,9 @@ type StaffResponse struct {
 // start at 1, so omitempty never drops a real one.
 type StaffRecordResponse struct {
 	StaffResponse
-	TeacherID      int64  `json:"teacher_id,omitempty"`
-	Specialization string `json:"specialization,omitempty"`
-	Role           string `json:"role,omitempty"`
+	TeacherID      ident.ID `json:"teacher_id,omitempty"`
+	Specialization string   `json:"specialization,omitempty"`
+	Role           string   `json:"role,omitempty"`
 	// RoleForm names the grammatical form the free-text Role takes for this
 	// person: "feminine" or "masculine", from the gender in the personnel
 	// record. Omitted without a stated gender, for "diverse" (the inclusive
@@ -145,13 +146,13 @@ type GroupResponse struct {
 
 // StaffWithRoleResponse represents a staff member with role information.
 type StaffWithRoleResponse struct {
-	ID                int64     `json:"id"`
-	PersonID          int64     `json:"person_id"`
-	TeacherID         int64     `json:"teacher_id,omitempty"`
+	ID                ident.ID  `json:"id"`
+	PersonID          ident.ID  `json:"person_id"`
+	TeacherID         ident.ID  `json:"teacher_id,omitempty"`
 	FirstName         string    `json:"first_name"`
 	LastName          string    `json:"last_name"`
 	FullName          string    `json:"full_name"`
-	AccountID         int64     `json:"account_id"`
+	AccountID         ident.ID  `json:"account_id"`
 	Email             string    `json:"email"`
 	IsActiveCaregiver bool      `json:"is_active_caregiver"`
 	CreatedAt         time.Time `json:"created_at"`
@@ -245,7 +246,7 @@ func (req *ExternalInvitationRequest) Bind(*http.Request) error {
 // SchoolClassesResponse is the wire shape of a staff member's school class
 // assignments (#1772).
 type SchoolClassesResponse struct {
-	StaffID       int64    `json:"staff_id"`
+	StaffID       ident.ID `json:"staff_id"`
 	SchoolClasses []string `json:"school_classes"`
 }
 
@@ -330,13 +331,13 @@ func newStaffPersonResponse(person *Person, email, avatar string) *StaffPersonRe
 		return nil
 	}
 	return &StaffPersonResponse{
-		ID:        person.ID,
+		ID:        ident.ID(person.ID),
 		FirstName: person.FirstName,
 		LastName:  person.LastName,
 		Email:     email,
 		Avatar:    avatar,
 		TagID:     person.TagID,
-		AccountID: person.AccountID,
+		AccountID: (*ident.ID)(person.AccountID),
 		CreatedAt: person.CreatedAt,
 		UpdatedAt: person.UpdatedAt,
 	}
@@ -400,7 +401,7 @@ func redactStaffFields(response *StaffResponse, access staffFieldAccess) {
 func buildStaffRecordResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, teacher schoolmembership.Teacher, data enrichment) StaffRecordResponse {
 	response := StaffRecordResponse{
 		StaffResponse:  buildStaffResponse(access, staff, person, true, data),
-		TeacherID:      teacher.ID,
+		TeacherID:      ident.ID(teacher.ID),
 		Specialization: strings.TrimSpace(teacher.Specialization),
 		Role:           teacher.Role,
 		Qualifications: teacher.Qualifications,

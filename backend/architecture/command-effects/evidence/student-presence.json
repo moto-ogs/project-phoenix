@@ -14650,7 +14650,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "binding_digest": "b45013a2aca4759c18ee37d5097302bb",
+      "binding_digest": "bb4f1252e67c51ec97f59d54cc65a9e3",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
@@ -14658,7 +14658,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "binding_digest": "f2c3d189d923251d048308056e0bc01f",
+      "binding_digest": "ac8367d9ed742b76e3e26cbf09e42aef",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",
@@ -14666,7 +14666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "binding_digest": "a2c1388a0aba039ef9f99166ed86fd5f",
+      "binding_digest": "a34f09e78a95e4df11c9e0e96a88eeaf",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolListQuery.ListSchoolsByID",

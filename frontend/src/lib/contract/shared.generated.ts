@@ -1277,7 +1277,7 @@ export interface OrganizationAccount {
 }
 
 export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> = object<OrganizationAccount>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   active: bool,
   first_name: str,
@@ -1289,7 +1289,7 @@ export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> 
   has_user_role: bool,
   has_caregiver_profile: bool,
   is_active_caregiver: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
 });
 
@@ -1324,7 +1324,7 @@ export interface OperatorDevice {
 }
 
 export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = object<OperatorDevice>({
-  id: int64StringOrNumber,
+  id: int64String,
   device_id: str,
   device_type: str,
   name: optional(str),
@@ -1333,9 +1333,9 @@ export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = object<O
   masked_api_key: str,
   last_seen: optional(instant),
   is_online: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   organization_name: str,
   created_at: instant,
   updated_at: instant,
@@ -1355,7 +1355,7 @@ export interface OperatorListItem {
 }
 
 export const OperatorListItemSchema: z.ZodType<OperatorListItem, unknown> = object<OperatorListItem>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   display_name: str,
   active: bool,
@@ -1380,7 +1380,7 @@ export interface Organization {
 }
 
 export const OrganizationSchema: z.ZodType<Organization, unknown> = object<Organization>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -1409,7 +1409,7 @@ export interface OperatorPerson {
 }
 
 export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<OperatorPerson>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   has_account: bool,
@@ -1417,9 +1417,9 @@ export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<O
   has_rfid_card: bool,
   is_staff: bool,
   is_student: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   organization_name: str,
   created_at: instant,
 });
@@ -1453,8 +1453,8 @@ export interface SchoolSummary {
 }
 
 export const SchoolSummarySchema: z.ZodType<SchoolSummary, unknown> = object<SchoolSummary>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   organization_name: str,
   name: str,
   slug: str,
@@ -1645,10 +1645,10 @@ export interface School {
 }
 
 export const SchoolSchema: z.ZodType<School, unknown> = object<School>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   name: str,
   slug: str,
   subdomain: str,

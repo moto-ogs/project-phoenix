@@ -88,7 +88,7 @@ func (d testSchoolDirectory) find(ctx context.Context, lookup func() (organizati
 func (d testSchoolDirectory) views(ctx context.Context, schools []organizationtenancy.School) ([]authAPI.TenantSchool, error) {
 	ids := make([]int64, 0, len(schools))
 	for _, school := range schools {
-		ids = append(ids, school.OrganizationID)
+		ids = append(ids, school.OrganizationID.Int64())
 	}
 	names := map[int64]string{}
 	if len(ids) > 0 {
@@ -97,13 +97,13 @@ func (d testSchoolDirectory) views(ctx context.Context, schools []organizationte
 			return nil, err
 		}
 		for _, organization := range organizations {
-			names[organization.ID] = organization.Name
+			names[organization.ID.Int64()] = organization.Name
 		}
 	}
 	views := make([]authAPI.TenantSchool, 0, len(schools))
 	for _, school := range schools {
 		views = append(views, authAPI.TenantSchool{
-			ID: school.ID, OrganizationID: school.OrganizationID, OrganizationName: names[school.OrganizationID],
+			ID: school.ID.Int64(), OrganizationID: school.OrganizationID.Int64(), OrganizationName: names[school.OrganizationID.Int64()],
 			Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Settings: school.Settings,
 			Active: school.Active, Hidden: school.Hidden, Deleted: school.IsDeleted(),
 		})

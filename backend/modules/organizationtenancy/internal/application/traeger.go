@@ -34,7 +34,7 @@ func (s *Service) ListAccountTraegerOrganizations(ctx context.Context, accountID
 		}
 		for _, organization := range organizations {
 			if organization.Active && !organization.IsDeleted() {
-				result = append(result, organizationtenancy.TraegerOrganization{ID: ident.ID(organization.ID), Name: organization.Name, TestSystem: organization.TestSystem})
+				result = append(result, organizationtenancy.TraegerOrganization{ID: organization.ID, Name: organization.Name, TestSystem: organization.TestSystem})
 			}
 		}
 		return nil

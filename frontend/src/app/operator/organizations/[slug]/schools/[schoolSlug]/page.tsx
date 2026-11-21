@@ -486,7 +486,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       const current = fresh?.find((item) => item.id === school.id) ?? school;
 
       await operatorProvisioningService.updateSchool(current.id, {
-        organization_id: parseInt(current.organizationId, 10),
+        organization_id: current.organizationId,
         name: current.name,
         slug: current.slug,
         subdomain: current.subdomain,

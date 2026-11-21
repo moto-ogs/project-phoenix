@@ -91,7 +91,7 @@ function renderModal(
 
 function schoolFieldsOf(target: SchoolSummary) {
   return {
-    organization_id: 1,
+    organization_id: "1",
     name: target.name,
     slug: target.slug,
     subdomain: target.subdomain,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // documentStoreDouble serves one file of one Träger and the schools its
@@ -48,7 +49,7 @@ type traegerSchoolsDouble []int64
 func (s traegerSchoolsDouble) TraegerSchools(context.Context, int64) ([]organizationtenancy.TraegerDocumentSchool, error) {
 	schools := make([]organizationtenancy.TraegerDocumentSchool, 0, len(s))
 	for _, id := range s {
-		schools = append(schools, organizationtenancy.TraegerDocumentSchool{ID: id})
+		schools = append(schools, organizationtenancy.TraegerDocumentSchool{ID: ident.ID(id)})
 	}
 	return schools, nil
 }

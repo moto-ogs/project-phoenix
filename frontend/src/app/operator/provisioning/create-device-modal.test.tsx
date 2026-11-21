@@ -137,7 +137,7 @@ describe("CreateDeviceModal", () => {
 
     await waitFor(() => {
       expect(mockCreateDevice).toHaveBeenCalledWith({
-        school_id: 10,
+        school_id: "10",
         device_id: "DEV-001",
         device_type: "terminal",
         name: "Eingang",
@@ -297,7 +297,7 @@ describe("CreateDeviceModal", () => {
 
     await waitFor(() => {
       expect(mockCreateDevice).toHaveBeenCalledWith(
-        expect.objectContaining({ school_id: 11 }),
+        expect.objectContaining({ school_id: "11" }),
       );
     });
   });

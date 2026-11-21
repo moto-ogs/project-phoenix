@@ -40,7 +40,7 @@ export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object
   username: nullable(str),
   last_login: nullable(instant),
   avatar: optional(str),
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   created_at: instant,

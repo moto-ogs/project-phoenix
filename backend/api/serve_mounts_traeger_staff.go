@@ -20,7 +20,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
@@ -192,7 +191,7 @@ func (s traegerStaffSchools) TraegerSchools(ctx context.Context, organizationID 
 	result := make([]workforce.TraegerStaffSchool, 0, len(schools))
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			result = append(result, workforce.TraegerStaffSchool{ID: ident.ID(school.ID), Name: school.Name})
+			result = append(result, workforce.TraegerStaffSchool{ID: school.ID, Name: school.Name})
 		}
 	}
 	slices.SortFunc(result, func(a, b workforce.TraegerStaffSchool) int {

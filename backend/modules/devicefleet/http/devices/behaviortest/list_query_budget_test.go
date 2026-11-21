@@ -10,10 +10,13 @@ import (
 	"testing"
 	"time"
 
+	answer "github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devices "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -22,17 +25,17 @@ import (
 
 // Deliberately independent of the production response and process-facade DTOs.
 type deviceListBudgetWire struct {
-	ID             int64   `json:"id"`
-	DeviceID       string  `json:"device_id"`
-	DeviceType     string  `json:"device_type"`
-	Name           *string `json:"name,omitempty"`
-	Status         string  `json:"status"`
-	LastSeen       *string `json:"last_seen,omitempty"`
-	RegisteredByID *int64  `json:"registered_by_id,omitempty"`
-	RoomName       *string `json:"room_name,omitempty"`
-	IsOnline       bool    `json:"is_online"`
-	CreatedAt      string  `json:"created_at"`
-	UpdatedAt      string  `json:"updated_at"`
+	ID             ident.ID  `json:"id"`
+	DeviceID       string    `json:"device_id"`
+	DeviceType     string    `json:"device_type"`
+	Name           *string   `json:"name,omitempty"`
+	Status         string    `json:"status"`
+	LastSeen       *string   `json:"last_seen,omitempty"`
+	RegisteredByID *ident.ID `json:"registered_by_id,omitempty"`
+	RoomName       *string   `json:"room_name,omitempty"`
+	IsOnline       bool      `json:"is_online"`
+	CreatedAt      string    `json:"created_at"`
+	UpdatedAt      string    `json:"updated_at"`
 }
 
 func TestDeviceListQueryBudgets(t *testing.T) {
@@ -189,7 +192,7 @@ func TestDeviceListQueryBudgets(t *testing.T) {
 }
 
 func expectedDeviceListWire(row devicefleet.Device, roomName *string, online bool) deviceListBudgetWire {
-	wire := deviceListBudgetWire{ID: row.ID, DeviceID: row.DeviceID, DeviceType: row.DeviceType, Name: row.Name, Status: string(row.Status), RegisteredByID: row.RegisteredByID, RoomName: roomName, IsOnline: online, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)}
+	wire := deviceListBudgetWire{ID: ident.ID(row.ID), DeviceID: row.DeviceID, DeviceType: row.DeviceType, Name: row.Name, Status: string(row.Status), RegisteredByID: (*ident.ID)(row.RegisteredByID), RoomName: roomName, IsOnline: online, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)}
 	if row.LastSeen != nil {
 		value := row.LastSeen.Format(time.RFC3339)
 		wire.LastSeen = &value
@@ -219,14 +222,14 @@ func assertDeviceListBudgetWire(t *testing.T, body []byte, message string, want 
 		require.True(t, decoder.Decode(&row) == nil, "invalid or secret-bearing list DTO")
 		var fields map[string]json.RawMessage
 		require.NoError(t, json.Unmarshal(raw, &fields))
-		encoded, err := json.Marshal(row)
+		encoded, err := answer.Marshal(row)
 		require.NoError(t, err)
 		actual, err := json.Marshal(fields)
 		require.NoError(t, err)
 		require.JSONEq(t, string(encoded), string(actual), "exact optional-field presence")
-		_, duplicate := got[row.ID]
+		_, duplicate := got[row.ID.Int64()]
 		require.False(t, duplicate, "duplicate list device")
-		got[row.ID] = row
+		got[row.ID.Int64()] = row
 	}
 	// SQL has no ORDER BY. Prove set identity, not an invented array order.
 	require.Equal(t, want, got)

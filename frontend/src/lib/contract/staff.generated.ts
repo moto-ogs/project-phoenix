@@ -7,7 +7,6 @@ import {
   fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
   multipart,
   noData,
@@ -64,13 +63,13 @@ export interface StaffPersonResponse {
 }
 
 export const StaffPersonResponseSchema: z.ZodType<StaffPersonResponse, unknown> = object<StaffPersonResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
   avatar: optional(str),
   tag_id: optional(str),
-  account_id: optional(int64StringOrNumber),
+  account_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
 });
@@ -123,7 +122,7 @@ export const StaffRecordResponseSchema: z.ZodType<StaffRecordResponse, unknown> 
   planned_exit_date: optional(calendarDate),
   created_at: instant,
   updated_at: instant,
-  teacher_id: optional(int64StringOrNumber),
+  teacher_id: optional(int64String),
   specialization: optional(str),
   role: optional(str),
   role_form: optional(str),
@@ -233,13 +232,13 @@ export interface StaffWithRoleResponse {
 }
 
 export const StaffWithRoleResponseSchema: z.ZodType<StaffWithRoleResponse, unknown> = object<StaffWithRoleResponse>({
-  id: int64StringOrNumber,
-  person_id: int64StringOrNumber,
-  teacher_id: optional(int64StringOrNumber),
+  id: int64String,
+  person_id: int64String,
+  teacher_id: optional(int64String),
   first_name: str,
   last_name: str,
   full_name: str,
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   is_active_caregiver: bool,
   created_at: instant,
@@ -291,7 +290,7 @@ export interface DocumentDirectoryEntry {
 }
 
 export const DocumentDirectoryEntrySchema: z.ZodType<DocumentDirectoryEntry, unknown> = object<DocumentDirectoryEntry>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   firstName: str,
   lastName: str,
@@ -308,7 +307,7 @@ export interface MinimalStaffProfileResponse {
 }
 
 export const MinimalStaffProfileResponseSchema: z.ZodType<MinimalStaffProfileResponse, unknown> = object<MinimalStaffProfileResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   firstName: str,
   lastName: str,
@@ -859,7 +858,7 @@ export interface SchoolClassesResponse {
 }
 
 export const SchoolClassesResponseSchema: z.ZodType<SchoolClassesResponse, unknown> = object<SchoolClassesResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   school_classes: nullable(arr(str)),
 });
 

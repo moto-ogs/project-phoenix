@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Report templates of a Träger (#4716, ADR 0246). Like the master data, the
@@ -63,7 +64,7 @@ func (t *TraegerReportTemplates) ReportTemplates(ctx context.Context, organizati
 	}
 	for i := range templates {
 		templates[i].Districts = slices.DeleteFunc(templates[i].Districts, func(district organizationtenancy.TraegerReportDistrict) bool {
-			return !slices.Contains(schools, district.SchoolID)
+			return !slices.Contains(schools, district.SchoolID.Int64())
 		})
 	}
 	return templates, nil
@@ -82,7 +83,7 @@ func (t *TraegerReportTemplates) AddReportTemplate(ctx context.Context, organiza
 	if err != nil {
 		return organizationtenancy.TraegerReportTemplate{}, err
 	}
-	if err := t.audit(ctx, organizationID, accountID, created.ID, domain.TraegerAuditActionCreate, nil, &created); err != nil {
+	if err := t.audit(ctx, organizationID, accountID, created.ID.Int64(), domain.TraegerAuditActionCreate, nil, &created); err != nil {
 		return organizationtenancy.TraegerReportTemplate{}, err
 	}
 	return created, nil
@@ -158,7 +159,7 @@ func (t *TraegerReportTemplates) prepare(ctx context.Context, organizationID int
 		return nil, input, err
 	}
 	for _, district := range input.Districts {
-		if !slices.Contains(schools, district.SchoolID) {
+		if !slices.Contains(schools, district.SchoolID.Int64()) {
 			return nil, input, validation.Errors{"districts": errDistrictSchool}
 		}
 	}
@@ -275,13 +276,13 @@ func daysInMonth(month int) int {
 // name, compared without case like the unique index.
 func reportNameTaken(templates []organizationtenancy.TraegerReportTemplate, name string, exceptID int64) bool {
 	return slices.ContainsFunc(templates, func(template organizationtenancy.TraegerReportTemplate) bool {
-		return template.ID != exceptID && strings.EqualFold(template.Name, name)
+		return template.ID != ident.ID(exceptID) && strings.EqualFold(template.Name, name)
 	})
 }
 
 func findReportTemplate(templates []organizationtenancy.TraegerReportTemplate, id int64) *organizationtenancy.TraegerReportTemplate {
 	for i := range templates {
-		if templates[i].ID == id {
+		if templates[i].ID == ident.ID(id) {
 			return &templates[i]
 		}
 	}

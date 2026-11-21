@@ -12,6 +12,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -33,7 +34,7 @@ func TestOperatorProvisioningIntegration_DeviceSlots(t *testing.T) {
 		summaries, err := graph.ListSchoolSummaries(ctx)
 		require.NoError(t, err)
 		for _, school := range summaries {
-			if school.ID == schoolID {
+			if school.ID == ident.ID(schoolID) {
 				return school
 			}
 		}
@@ -74,7 +75,7 @@ func TestOperatorProvisioningIntegration_DeviceSlots(t *testing.T) {
 	require.NoError(t, err)
 	for _, device := range devices {
 		if device.DeviceID == fmt.Sprintf("slots-second-%d", schoolID) {
-			require.NoError(t, graph.DeleteDevice(ctx, device.ID, operatorID, provisioningTestClientIP))
+			require.NoError(t, graph.DeleteDevice(ctx, device.ID.Int64(), operatorID, provisioningTestClientIP))
 		}
 	}
 	require.NoError(t, graph.DeviceSlots.SetSchoolDeviceSlots(ctx, schoolID, slots(1), operatorID, provisioningTestClientIP),
@@ -96,7 +97,7 @@ func TestOperatorProvisioningIntegration_DeviceSlots(t *testing.T) {
 	target, err := graph.CreateSchool(ctx, targetInput, operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
 	none := 0
-	require.NoError(t, graph.DeviceSlots.SetSchoolDeviceSlots(ctx, target.ID, &none, operatorID, provisioningTestClientIP))
+	require.NoError(t, graph.DeviceSlots.SetSchoolDeviceSlots(ctx, target.ID.Int64(), &none, operatorID, provisioningTestClientIP))
 	var moving organizationtenancy.OperatorDevice
 	for _, device := range refused {
 		if device.DeviceID == fmt.Sprintf("slots-before-limit-%d", schoolID) {
@@ -106,7 +107,7 @@ func TestOperatorProvisioningIntegration_DeviceSlots(t *testing.T) {
 	require.NotZero(t, moving.ID)
 	var hashBefore string
 	require.NoError(t, db.NewRaw(`SELECT api_key_hash FROM iot.devices WHERE id = ?`, moving.ID).Scan(testpkg.Ctx(t), &hashBefore))
-	_, err = graph.TransferDevice(ctx, moving.ID, target.ID, operatorID, provisioningTestClientIP)
+	_, err = graph.TransferDevice(ctx, moving.ID.Int64(), target.ID.Int64(), operatorID, provisioningTestClientIP)
 	requireProvisioningError(t, err, "DeviceSlotsFullError")
 	var source struct {
 		ArchivedAt *string `bun:"archived_at"`

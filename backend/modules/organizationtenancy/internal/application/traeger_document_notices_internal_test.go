@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // releaseNoticesDouble records the pushes a release enqueues.
@@ -37,7 +38,7 @@ func (s *releaseStoreDouble) InsertRelease(_ context.Context, _, _, _ int64, inp
 		return organizationtenancy.TraegerDocumentRelease{}, s.err
 	}
 	s.next++
-	return organizationtenancy.TraegerDocumentRelease{ID: s.next, Audience: input.Audience, SchoolID: input.SchoolID, GroupID: input.GroupID, GroupName: groupName}, nil
+	return organizationtenancy.TraegerDocumentRelease{ID: ident.ID(s.next), Audience: input.Audience, SchoolID: input.SchoolID, GroupID: input.GroupID, GroupName: groupName}, nil
 }
 
 // TestReleaseForParentsEnqueuesItsPushInTheReleaseTransaction pins #5941: a
@@ -58,7 +59,7 @@ func TestReleaseForParentsEnqueuesItsPushInTheReleaseTransaction(t *testing.T) {
 
 	release, err := service.Release(ctx, 3, 7, 11, organizationtenancy.TraegerDocumentReleaseInput{Audience: organizationtenancy.TraegerDocumentForParents})
 	require.NoError(t, err)
-	assert.Equal(t, []organizationtenancy.TraegerDocumentReleaseNotice{{OrganizationID: 3, ReleaseID: release.ID, DocumentID: 11}}, notices.notices)
+	assert.Equal(t, []organizationtenancy.TraegerDocumentReleaseNotice{{OrganizationID: 3, ReleaseID: release.ID.Int64(), DocumentID: 11}}, notices.notices)
 	assert.Equal(t, []int64{3}, runtime.traeger, "the push is enqueued in the release's one Träger transaction")
 
 	_, err = service.Release(ctx, 3, 7, 11, organizationtenancy.TraegerDocumentReleaseInput{Audience: organizationtenancy.TraegerDocumentForSchools})

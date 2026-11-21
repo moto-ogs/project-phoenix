@@ -76,7 +76,7 @@ describe("loadShellBootstrap", () => {
       "/api/me/profile": {
         status: "success",
         data: {
-          id: 7,
+          id: "7",
           first_name: "Ada",
           last_name: "L",
           email: "a@b",
@@ -89,11 +89,11 @@ describe("loadShellBootstrap", () => {
       "/auth/account/tenants": {
         data: [
           {
-            tenant_id: 1,
+            tenant_id: "1",
             slug: "school-a",
             name: "School A",
             subdomain: "school-a",
-            organization_id: 3,
+            organization_id: "3",
             organization_name: "Org",
           },
         ],
