@@ -74,6 +74,12 @@ or write a `Backend*` interface for a registered route.
   another form. Closed value sets are registered in `Enums`.
 - A new identifier is a `common.ID`, a count an `int`; the generator rejects a
   bare `int64` and a response shape that depends on a query parameter.
+  The fields that travel as numeric identifiers (`numeric_ids` in
+  `contract.json`: `NumericIDs`, `ReadsLaxIDs` readers, `common.JSONID`) and
+  the backend routes without a contract only shrink:
+  `scripts/check-contract-shrink.mjs <base>` fails on a new one. A route the contract cannot carry
+  (a sign-in step, a device or webhook endpoint) needs a new ADR that names
+  its catalog line.
 - In a request type an identifier is a `string`, except a field Go still
   reads only as a JSON number (`NumericIDs`): that one is a `number`. A
   request type with its own `UnmarshalJSON` needs an entry in `Readers`
@@ -153,9 +159,14 @@ The key is the scope claim of the portal's session token
   scope middleware.
 - A route file with a dynamic segment wins over the proxy too:
   `billing-families/[id]` answers `billing-families/debtor-number-format`.
-  Such a registered route keeps a literal route file that hands the request
-  to `catalogProxy` (see that Träger route);
-  `app/api/catalog-route-selection.test.ts` fails when one is missing.
+  No route file may stand in front of a registered path, literal or dynamic;
+  only the hand-off files below `/api/auth` that pass the request to
+  `catalogProxyUnder` do. `app/api/catalog-route-selection.test.ts` fails
+  otherwise.
+- A route file that calls the backend itself must name at least one backend
+  path the contract does not register (a sign-in step, a stream, a bundle);
+  `app/api/route-backend-paths.test.ts` fails a file whose backend paths are
+  all registered.
 - Not served by a proxy: a route with response variants
   (`GET /api/students/`).
 - A Go type two resources answer with (the staff portal and moto schule

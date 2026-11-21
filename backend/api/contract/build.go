@@ -35,6 +35,7 @@ type builder struct {
 	instants     map[reflect.Type]bool
 	used         map[string]bool
 	requestTypes map[string]bool
+	numericWire  map[string]bool
 }
 
 // Build walks the registrations with reflection, following encoding/json.
@@ -44,7 +45,7 @@ func Build(routes []Registration, options Options) (Document, error) {
 		types: map[string]Object{}, names: map[reflect.Type]string{}, enums: map[string]Enum{},
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
 		deprecated: map[string]bool{}, numericIDs: map[string]bool{}, used: map[string]bool{},
-		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
+		requestTypes: map[string]bool{}, numericWire: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
 		dates: map[reflect.Type]bool{dateType: true}, instants: map[reflect.Type]bool{timeType: true},
 	}
 	for _, t := range options.Dates {
@@ -68,7 +69,7 @@ func Build(routes []Registration, options Options) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
-	doc := Document{Routes: built}
+	doc := Document{Routes: built, NumericIDs: sortedKeys(b.numericWire)}
 	if err := b.unused(options); err != nil {
 		return Document{}, err
 	}
@@ -436,6 +437,7 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 	if errors.Is(err, errBareInt64) {
 		err = b.numericID(&s, t, sf.Name, false, at)
 	}
+	b.noteNumericWire(s, t, sf.Name)
 	return s, err
 }
 

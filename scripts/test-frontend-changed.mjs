@@ -131,6 +131,7 @@ const guards = [
   "src/app/api/route-session-coverage.test.ts",
   "src/app/api/traeger/catalog-routing.test.ts",
   "src/app/api/catalog-route-selection.test.ts",
+  "src/app/api/route-backend-paths.test.ts",
   "src/app/api/credential-route-coverage.test.ts",
   "src/app/api/auth/session-cookie-inventory.test.ts",
   "src/lib/app-route-invariants.test.ts",

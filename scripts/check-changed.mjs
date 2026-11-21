@@ -32,6 +32,7 @@ import { pathToFileURL } from 'node:url';
 import { checkLocalMigrationVersions } from './check-migration-versions.mjs';
 import { changedPaths } from './backend-source-ratchets.mjs';
 import { MODEL_PATH as CONTRACT_MODEL_PATH } from './check-contract-compat.mjs';
+import { CATALOG_DIR } from './check-contract-shrink.mjs';
 
 // The paths that start CI's "Backend architecture ratchet" (main.yml, filter
 // backend-architecture). Keep both lists in step.
@@ -54,6 +55,10 @@ export function stepsFor(root, base, paths) {
     // The stale-contract check is a Go test and runs with the tests below.
     ...(paths.includes(CONTRACT_MODEL_PATH)
       ? [{ name: 'contract', command: ['node', 'scripts/check-contract-compat.mjs', base] }]
+      : []),
+    // Numeric identifiers and routes without a contract only shrink (#2353).
+    ...(paths.some(path => path === CONTRACT_MODEL_PATH || path.startsWith(`${CATALOG_DIR}/`))
+      ? [{ name: 'contract-registers', command: ['node', 'scripts/check-contract-shrink.mjs', base] }]
       : []),
     { name: 'tests', command: ['bash', 'scripts/test-changed.sh', '--fast', base] },
   ];
