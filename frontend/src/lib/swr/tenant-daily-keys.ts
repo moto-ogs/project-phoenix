@@ -74,7 +74,7 @@ export const tenantDailyKeys = {
    * Raumfilter des Betreuungsplans: eine Antwort, ein Name.
    */
   plannerRooms: () => "timetable-filter-rooms",
-  /** Die Betreuenden einer laufenden Aufsicht (Schulhof-Banner). */
+  /** Die Betreuenden einer laufenden Aufsicht. */
   activeGroupSupervisors: (activeGroupId: string) =>
     `active-group-supervisors-${encodeURIComponent(activeGroupId)}`,
   /** Was einen Raum noch hält, bevor er entfernt wird (#6845). */

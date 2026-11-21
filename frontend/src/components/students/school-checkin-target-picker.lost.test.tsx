@@ -90,6 +90,7 @@ it("keeps the notice on a lost target without an X until a new target is chosen"
   );
 
   const notice = /In Werkraum läuft keine Aufsicht mehr/;
+  // Anker: the notice on the lost target is shown.
   expect(await screen.findByText(notice)).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: /schließen/i }),

@@ -847,7 +847,8 @@ describe("StudentSearchPage — school check-in wiring", () => {
         screen.getByRole("button", { name: "Nur „Zuhause“ zeigen" }),
       ).toBeInTheDocument();
 
-      // Closed with the notice's X (#7704), no own „Ausblenden“ button.
+      // Anker: the notice with its filter buttons is shown (above). It
+      // closes with its X (#7704), no own „Ausblenden“ button.
       expect(
         screen.queryByRole("button", { name: "Ausblenden" }),
       ).not.toBeInTheDocument();

@@ -45,8 +45,9 @@ it("uses the manual booking path when account and debtor errors coincide", () =>
     />,
   );
 
+  // Anker: the refused invoice is listed. An error has no X (#7704); it
+  // ends with the next attempt.
   expect(screen.getByText("Debitorennummer fehlt: MB-2")).toBeInTheDocument();
-  // An error has no X (#7704); it ends with the next attempt.
   expect(
     screen.queryByRole("button", { name: "Hinweis schließen" }),
   ).not.toBeInTheDocument();

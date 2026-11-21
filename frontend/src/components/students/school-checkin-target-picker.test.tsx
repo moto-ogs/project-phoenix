@@ -64,6 +64,7 @@ describe("SchoolCheckinTargetPicker", () => {
         state={state({ lostTargetName: "Werkraum" })}
       />,
     );
+    // Anker: the notice on the lost target is shown.
     expect(
       screen.getByText(/In Werkraum läuft keine Aufsicht mehr/),
     ).toBeInTheDocument();

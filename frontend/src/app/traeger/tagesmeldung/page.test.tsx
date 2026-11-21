@@ -231,6 +231,7 @@ describe("TraegerDailyAttendancePage", () => {
     const note = /Ein Zeitraum hat höchstens 31 Tage/;
 
     choose(testClockDay(-60), testClockDay(-1));
+    // Anker: the note on the shortened range is shown.
     expect(await screen.findByText(note)).toBeInTheDocument();
     expect(
       screen.getByText("Das Land legt das Format noch fest"),
@@ -240,10 +241,11 @@ describe("TraegerDailyAttendancePage", () => {
     ).not.toBeInTheDocument();
 
     choose(testClockDay(-10), testClockDay(-1));
-    expect(screen.queryByText(note)).not.toBeInTheDocument();
+    // Anker: the page still shows its format notice beside the gone note.
     expect(
       screen.getByText("Das Land legt das Format noch fest"),
     ).toBeInTheDocument();
+    expect(screen.queryByText(note)).not.toBeInTheDocument();
   });
 
   it("opens one school from its row", async () => {

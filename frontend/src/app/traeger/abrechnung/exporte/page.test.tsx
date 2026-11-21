@@ -369,7 +369,8 @@ it.each(["care", "holiday"] as const)(
       correction,
     );
     expect(files.downloadBlob).not.toHaveBeenCalled();
-    // An error has no X (#7704): it stays until the next download.
+    // Anker: the refusal with its correction steps is shown (above). An
+    // error has no X (#7704): it stays until the next download.
     expect(
       screen.queryByRole("button", { name: "Hinweis schließen" }),
     ).not.toBeInTheDocument();

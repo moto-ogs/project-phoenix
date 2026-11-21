@@ -186,7 +186,8 @@ it("shows a handover that did not arrive with its reason and a retry", async () 
   expect(
     screen.getByText(/Bitte prüfe den Fingerabdruck beim Empfänger/),
   ).toBeInTheDocument();
-  // An error has no X (#7704): it ends with the next handover.
+  // Anker: the reason of the failed handover is shown (above). An error has
+  // no X (#7704): it ends with the next handover.
   expect(
     screen.queryByRole("button", { name: "Hinweis schließen" }),
   ).not.toBeInTheDocument();
@@ -216,6 +217,7 @@ it("keeps a file made without a ready recipient on screen until the next handove
   renderPage();
   await chooseSollstellung();
   const title = "Für die Sollstellung fehlt der Empfänger";
+  // Anker: the notice on the missing recipient is shown.
   expect(await screen.findByText(title)).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Hinweis schließen" }),
@@ -234,6 +236,7 @@ it("lets the person close an unclear handover result", async () => {
   renderPage();
   await chooseSollstellung();
   const title = "sollstellung-111.csv: Ergebnis bei Kämmerei unklar";
+  // Anker: the unclear result is shown before it is closed.
   expect(await screen.findByText(title)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Hinweis schließen" }));
   expect(screen.queryByText(title)).not.toBeInTheDocument();
@@ -460,7 +463,8 @@ it("names the invoices DATEV would refuse when a DATEV handover makes no file", 
   expect(
     await screen.findByText("Debitorennummer passt nicht: MB-2026-0001"),
   ).toBeInTheDocument();
-  // The refusal has no X (#7704); the next handover ends it.
+  // Anker: the refused invoice is listed (above). The refusal has no X
+  // (#7704); the next handover ends it.
   expect(
     screen.queryByRole("button", { name: "Hinweis schließen" }),
   ).not.toBeInTheDocument();

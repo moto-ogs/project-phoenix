@@ -222,7 +222,7 @@ When a notice gets a close X (#7704). Position decides, because a box above the 
 
 - **Banner** (full width above the page content) **always has an X** and is only for events and info: a new change, an announcement, a tip, a one-time hint. What the X hides is unimportant or stays visible in the content.
 - **Lasting state is content, not a banner:** a marker at the value, a notice inside the section, form or dialog. No X; it disappears when the state ends.
-- **Result of an action:** a toast. A result that must stay (a link to copy, a handover result) stands where the action happened; X allowed, not stored.
+- **Result of an action:** a toast (X, expires). A result that must stay (a link to copy, a handover result) stands where the action happened; X allowed, not stored.
 - **Errors and checks** stand at the field or form, have no X and disappear once fixed.
 - **Exception „Ausblenden“ as acknowledgement** (conflict and offering-gap notices of the Betreuungsplan): only if the backend stores it, the notice returns when its data change, and „Wieder anzeigen“ exists. Label „Ausblenden“, no X.
 
