@@ -97,12 +97,21 @@ describe("substitutionService", () => {
     });
 
     await substitutionService.applyScheduleSubstitution("42", {
+      understaffedAck: true,
+      understaffedNote: "Vertretung offen",
+      absences: [{ staffId: "9", reason: "Krank", instanceIds: ["42"] }],
       substitutions: [
         {
           absentStaffId: "7",
           substituteStaffId: "8",
           instanceIds: ["42", "43"],
         },
+      ],
+      substitutionRemovals: [{ staffId: "10", instanceIds: ["43"] }],
+      presences: [
+        { staffId: "11", instanceIds: ["42"] },
+        { staffId: "12", instanceIds: [] },
+        { staffId: "13" },
       ],
     });
 
@@ -111,6 +120,9 @@ describe("substitutionService", () => {
         type: "schedule_substitution",
         schedule_substitution: {
           instance_id: 42,
+          understaffed_ack: true,
+          understaffed_note: "Vertretung offen",
+          absences: [{ staff_id: 9, reason: "Krank", instance_ids: [42] }],
           substitutions: [
             {
               absent_staff_id: 7,
@@ -118,41 +130,53 @@ describe("substitutionService", () => {
               instance_ids: [42, 43],
             },
           ],
+          substitution_removals: [{ staff_id: 10, instance_ids: [43] }],
+          presences: [
+            { staff_id: 11, instance_ids: [42] },
+            { staff_id: 12, instance_ids: [] },
+            { staff_id: 13 },
+          ],
         },
       },
     );
   });
 
-  it("assigns day-wide substitutions through the same module", async () => {
-    sessionFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        data: {
-          type: "schedule_substitution",
-          schedule_substitution: { days: [], total_affected: 0 },
-        },
-      }),
-    });
+  it.each([
+    { substituteStaffId: "8", expectedTarget: { substitute_staff_id: 8 } },
+    { substituteStaffId: undefined, expectedTarget: {} },
+  ])(
+    "assigns day-wide substitutions with target $substituteStaffId",
+    async ({ substituteStaffId, expectedTarget }) => {
+      sessionFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: {
+            type: "schedule_substitution",
+            schedule_substitution: { days: [], total_affected: 0 },
+          },
+        }),
+      });
 
-    await substitutionService.applyBulkSubstitution({
-      absentStaffId: "7",
-      substituteStaffId: "8",
-      dates: ["2026-08-31", "2026-09-01"],
-    });
+      await substitutionService.applyBulkSubstitution({
+        absentStaffId: "7",
+        substituteStaffId,
+        dates: ["2026-08-31", "2026-09-01"],
+      });
 
-    expect(JSON.parse(sessionFetch.mock.calls[0]?.[1]?.body as string)).toEqual(
-      {
+      expect(
+        JSON.parse(sessionFetch.mock.calls[0]?.[1]?.body as string),
+      ).toEqual({
         type: "schedule_substitution",
         schedule_substitution: {
           whole_days: {
             absent_staff_id: 7,
-            substitute_staff_id: 8,
+            ...expectedTarget,
             dates: ["2026-08-31", "2026-09-01"],
           },
         },
-      },
-    );
-  });
+      });
+    },
+  );
 
   it("maps the proxy-wrapped overview response", async () => {
     sessionFetch.mockResolvedValue({

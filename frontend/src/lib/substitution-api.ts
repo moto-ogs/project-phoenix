@@ -1,5 +1,6 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
 import type {
+  assignmentRequest,
   SubstitutionAssignmentResult,
   SubstitutionOverviewResult,
 } from "./contract/substitutions.generated";
@@ -82,16 +83,39 @@ class SubstitutionService {
       // Weg. Der Absturztext des Anzeigewegs ist dafür die richtige Folge.
       throw new Error("cancellations do not go through a substitution");
     }
+    const body = prepareApplyDeviationsBody(input);
     const response = await sessionFetch("/api/substitutions", {
       method: "POST",
       credentials: "include",
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
+          ...body,
+          // Unlike timetable writes, this endpoint still reads plain int64 IDs.
           instance_id: Number(instanceId),
-          ...prepareApplyDeviationsBody(input),
+          absences: body.absences?.map((item) => ({
+            ...item,
+            staff_id: Number(item.staff_id),
+            instance_ids: item.instance_ids?.map(Number),
+          })),
+          substitutions: body.substitutions?.map((item) => ({
+            ...item,
+            absent_staff_id: Number(item.absent_staff_id),
+            substitute_staff_id: Number(item.substitute_staff_id),
+            instance_ids: item.instance_ids?.map(Number),
+          })),
+          substitution_removals: body.substitution_removals?.map((item) => ({
+            ...item,
+            staff_id: Number(item.staff_id),
+            instance_ids: item.instance_ids?.map(Number),
+          })),
+          presences: body.presences?.map((item) => ({
+            ...item,
+            staff_id: Number(item.staff_id),
+            instance_ids: item.instance_ids?.map(Number),
+          })),
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
@@ -107,15 +131,22 @@ class SubstitutionService {
   async applyBulkSubstitution(
     input: BulkSubstitutionInput,
   ): Promise<BulkSubstitutionResponse> {
+    const body = prepareBulkSubstitutionBody(input);
     const response = await sessionFetch("/api/substitutions", {
       method: "POST",
       credentials: "include",
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          whole_days: prepareBulkSubstitutionBody(input),
+          whole_days: {
+            ...body,
+            absent_staff_id: Number(body.absent_staff_id),
+            substitute_staff_id: body.substitute_staff_id
+              ? Number(body.substitute_staff_id)
+              : undefined,
+          },
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
