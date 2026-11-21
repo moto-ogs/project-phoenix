@@ -304,7 +304,7 @@ describe("fetchOgsGroupLive", () => {
   it("GETs /api/students/ogs-group-live with the cookie and group_id query param", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true, data: wireResponse() }),
+      json: async () => ({ status: "success", data: wireResponse() }),
     } as Response);
 
     await fetchOgsGroupLive("5");
@@ -324,7 +324,7 @@ describe("fetchOgsGroupLive", () => {
   it("omits the group_id query param when groupId is null", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true, data: wireResponse() }),
+      json: async () => ({ status: "success", data: wireResponse() }),
     } as Response);
 
     await fetchOgsGroupLive(null);
@@ -340,7 +340,7 @@ describe("fetchOgsGroupLive", () => {
     async (invalidGroupId) => {
       fetchMock.mockResolvedValue({
         ok: true,
-        json: async () => ({ success: true, data: wireResponse() }),
+        json: async () => ({ status: "success", data: wireResponse() }),
       } as Response);
 
       await fetchOgsGroupLive(invalidGroupId);
@@ -359,7 +359,7 @@ describe("fetchOgsGroupLive", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          success: true,
+          status: "success",
           data: wireResponse({ group_id: "1" }),
         }),
       } as Response);

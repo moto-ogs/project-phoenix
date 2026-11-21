@@ -98,6 +98,53 @@ function shiftReplacementText(change: DayChange): string {
     : `${nameOf(substitute)} hat heute einen Dienst als Vertretung.`;
 }
 
+/** Der Termin in Anführungszeichen (#7662). */
+function activityName(change: DayChange, sentenceStart: boolean): string {
+  const title = change.activity?.title.trim();
+  if (title) return `„${title}“`;
+  return sentenceStart ? "Ein Termin" : "einem Termin";
+}
+
+/** „Anna“, „Anna und Ben“, „Anna, Ben und Clara“. */
+function namesOf(people: readonly DayChangePerson[]): string {
+  const names = people.map((person) => nameOf(person));
+  if (names.length <= 1) return names[0] ?? nameOf(undefined);
+  return `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
+}
+
+function activityLeadChangedText(change: DayChange): string {
+  const name = activityName(change, false);
+  // Ohne Namen: der Termin gehört anderen, und nur die Leitung sieht, wer
+  // fehlt und wer übernimmt (#7662).
+  if (change.people.length === 0) {
+    return `Bei ${name} ändert sich heute, wer betreut.`;
+  }
+  const substitutes = change.people.filter(
+    (person) => person.role === "substitute",
+  );
+  const absent = change.people.filter((person) => person.role === "absent");
+  const meAbsent = absent.some((person) => person.isSelf);
+  const others = absent.filter((person) => !person.isSelf);
+  if (substitutes.some((person) => person.isSelf)) {
+    return others.length > 0
+      ? `Du übernimmst heute ${name} für ${namesOf(others)}.`
+      : `Du übernimmst heute ${name}.`;
+  }
+  if (substitutes.length > 0) {
+    const forWhom = meAbsent
+      ? " für dich"
+      : absent.length > 0
+        ? ` für ${namesOf(absent)}`
+        : "";
+    const verb = substitutes.length === 1 ? "übernimmt" : "übernehmen";
+    return `${namesOf(substitutes)} ${verb} heute ${name}${forWhom}.`;
+  }
+  if (meAbsent) return `Bei ${name} bist du heute nicht da.`;
+  return absent.length === 1
+    ? `Bei ${name} ist ${namesOf(absent)} heute nicht da.`
+    : `Bei ${name} sind ${namesOf(absent)} heute nicht da.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -111,6 +158,14 @@ const DAY_CHANGE_TEXTS: Readonly<
   shift_replacement: shiftReplacementText,
   // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
   staff_notice: (change) => change.notice?.title ?? "",
+  // Termine aus dem Stundenplan (#7662).
+  activity_cancelled: (change) =>
+    `${activityName(change, true)} fällt heute aus.`,
+  activity_reinstated: (change) =>
+    `${activityName(change, true)} findet doch statt.`,
+  activity_room_changed: (change) =>
+    `${activityName(change, true)} ist heute in einem anderen Raum.`,
+  activity_lead_changed: activityLeadChangedText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -136,6 +191,14 @@ function timeOfDay(change: DayChange): string | null {
     : `ab ${start} Uhr`;
 }
 
+/** Der Raum eines Termins, bei einem Wechsel „Turnhalle statt Werkraum“. */
+function roomOf(change: DayChange): string | null {
+  if (!change.roomName) return null;
+  return change.previousRoomName
+    ? `${change.roomName} statt ${change.previousRoomName}`
+    : change.roomName;
+}
+
 /**
  * Wann: die Uhrzeit und „seit 3.11.“, „bis 21.11.“ oder beides, sonst null.
  * „Seit“ und „bis“ kommen aus der Antwort des Backends, nie aus einer
@@ -145,6 +208,8 @@ export function dayChangeSpan(change: DayChange): string | null {
   const parts: string[] = [];
   const time = timeOfDay(change);
   if (time) parts.push(time);
+  const where = roomOf(change);
+  if (where) parts.push(`· ${where}`);
   if (change.since) parts.push(`seit ${shortDay(change.since)}`);
   if (change.until) parts.push(`bis ${shortDay(change.until)}`);
   return parts.length > 0 ? parts.join(" ") : null;
@@ -155,6 +220,8 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff:
     "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
   notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
+  activities:
+    "Änderungen an Angeboten und AGs konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -187,6 +254,10 @@ export function dayChangeHref(change: DayChange): string | null {
         : "/dienstplan";
     case "staff_notices":
       return "/tagesinformationen";
+    case "day_plan":
+      // Die Zeile ersetzt den Weg durch den Tagesplan der Person
+      // (useDayPlanHref); das hier ist der Weg der Betreuung.
+      return "/tagesplan";
     default:
       return null;
   }

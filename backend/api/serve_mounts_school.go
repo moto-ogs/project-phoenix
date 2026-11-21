@@ -294,8 +294,6 @@ func mountSchoolRoutes(
 	// point: the root composes it and the IoT service hands it back here
 	// (#2676).
 	tenant.Mount("/display", NewDisplayHTTPRouter(iot.Fleet(), DisplayFeatureEnabled(settings)))
-	// The timeframe list the activity forms offer (Timetable owner).
-	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
 	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, requireDevicePINOperations(settings), owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools, uploads).SettingsRouter())

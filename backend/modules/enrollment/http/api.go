@@ -186,7 +186,6 @@ func (rs *Resource) mountConfigRoutes(r chi.Router) {
 		r.With(common.RequiresPermission("config:read")).Get("/", rs.getActiveSchema)
 		r.With(common.RequiresPermission("config:read")).Get("/versions", rs.listSchemaVersions)
 		r.With(common.RequiresPermission("config:read")).Get("/preview", rs.getSchemaPreviewBootstrap)
-		r.With(common.RequiresPermission("config:read")).Get("/{id}", rs.getSchemaByID)
 		r.With(common.RequiresPermission("config:manage")).Post("/", rs.publishSchema)
 		r.With(common.RequiresPermission("config:manage")).Put("/{id}", rs.updateSchema)
 		r.With(common.RequiresPermission("config:manage")).Patch("/{id}", rs.renameSchema)

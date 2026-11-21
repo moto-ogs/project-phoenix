@@ -1,7 +1,11 @@
-import type {
-  EmailAddressMark,
-  MailOutcome,
-  MailProviderBlock,
+import type * as guardiansWire from "~/lib/contract/guardians.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
+import {
+  type EmailAddressMark,
+  knownMailOutcome,
+  knownMailProviderBlock,
+  type MailOutcome,
+  type MailProviderBlock,
 } from "~/lib/email-delivery-status";
 import { type ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 // Guardian API Client
@@ -32,15 +36,9 @@ import {
   mapPhoneNumberCreateToBackend,
   mapPhoneNumberUpdateToBackend,
 } from "./guardian-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 const logger = createLogger({ component: "GuardianAPI" });
-
-// API Response Types
-interface ApiResponse<T> {
-  status: string;
-  data?: T;
-  message?: string;
-}
 
 interface PaginatedResponse<T> {
   status: string;
@@ -161,13 +159,16 @@ export async function fetchStudentGuardians(
   return (result.data ?? []).map(mapGuardianWithRelationshipResponse);
 }
 
-type GuardianSendBlock =
-  | "address"
-  | "delayed"
-  | "stopped"
-  | "departed"
-  | "provider"
-  | "provider_unknown";
+const SEND_BLOCKS = [
+  "address",
+  "delayed",
+  "stopped",
+  "departed",
+  "provider",
+  "provider_unknown",
+] as const;
+type GuardianSendBlock = (typeof SEND_BLOCKS)[number];
+const ADDRESS_MARKS: readonly EmailAddressMark[] = ["failed", "complained"];
 
 /** What the school knows about mail to one guardian's address (#5934). */
 export interface GuardianEmailState {
@@ -181,17 +182,6 @@ export interface GuardianEmailState {
   /** Why a new invitation would change nothing. */
   readonly sendBlock?: GuardianSendBlock;
   readonly outcomeAt?: string;
-}
-
-interface BackendGuardianEmailState {
-  guardian_profile_id: number | string;
-  mail_outcome?: MailOutcome;
-  address_mark?: EmailAddressMark;
-  emails_stopped?: boolean;
-  stop_shared?: boolean;
-  provider_block?: MailProviderBlock;
-  send_block?: GuardianSendBlock;
-  outcome_at?: string;
 }
 
 /** The mail state of every guardian of a student, keyed by guardian ID. */
@@ -209,17 +199,17 @@ export async function fetchStudentGuardianEmailStates(
     );
   }
   const result = (await response.json()) as ApiResponse<
-    BackendGuardianEmailState[]
+    guardiansWire.guardianEmailStatusResponse[]
   >;
   const states: Record<string, GuardianEmailState> = {};
   for (const line of result.data ?? []) {
-    states[String(line.guardian_profile_id)] = {
-      mailOutcome: line.mail_outcome,
-      addressMark: line.address_mark,
+    states[line.guardian_profile_id] = {
+      mailOutcome: knownMailOutcome(line.mail_outcome),
+      addressMark: knownEnum(ADDRESS_MARKS, line.address_mark),
       emailsStopped: line.emails_stopped,
       stopShared: line.stop_shared,
-      providerBlock: line.provider_block,
-      sendBlock: line.send_block,
+      providerBlock: knownMailProviderBlock(line.provider_block),
+      sendBlock: knownEnum(SEND_BLOCKS, line.send_block),
       outcomeAt: line.outcome_at,
     };
   }
@@ -832,20 +822,9 @@ export interface PendingApproval {
   roleUpgrade: boolean;
 }
 
-interface BackendPendingApproval {
-  id: string;
-  guardian_profile_id: string;
-  guardian_name: string;
-  guardian_email?: string;
-  student_id?: string;
-  student_name?: string;
-  requested_by_email?: string;
-  created_at: string;
-  expires_at: string;
-  role_upgrade?: boolean;
-}
-
-function mapPendingApproval(data: BackendPendingApproval): PendingApproval {
+function mapPendingApproval(
+  data: guardiansWire.pendingApprovalResponse,
+): PendingApproval {
   return {
     id: data.id,
     guardianProfileId: data.guardian_profile_id,
@@ -856,7 +835,7 @@ function mapPendingApproval(data: BackendPendingApproval): PendingApproval {
     requestedByEmail: data.requested_by_email,
     createdAt: data.created_at,
     expiresAt: data.expires_at,
-    roleUpgrade: data.role_upgrade ?? false,
+    roleUpgrade: data.role_upgrade,
   };
 }
 
@@ -873,7 +852,7 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
     );
   }
   const result = (await response.json()) as ApiResponse<
-    BackendPendingApproval[]
+    guardiansWire.pendingApprovalResponse[]
   >;
   return (result.data ?? []).map(mapPendingApproval);
 }

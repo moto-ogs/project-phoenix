@@ -10,7 +10,7 @@ const role: Role = {
   baseRole: "teacher",
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
-  permissions: [],
+  permissionNames: [],
 };
 
 const meta: Meta<typeof RolePermissionsTab> = {

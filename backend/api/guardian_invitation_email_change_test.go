@@ -61,7 +61,7 @@ func TestGuardianComposition_ListMarksDeadInvitationLinks(t *testing.T) {
 	statusOf := func(studentID, guardianID int64) string {
 		t.Helper()
 		for _, row := range ctx.studentGuardians(t, studentID) {
-			if row.Guardian.ID == guardianID {
+			if int64(row.Guardian.ID) == guardianID {
 				return row.AccountStatus
 			}
 		}

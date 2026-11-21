@@ -42,7 +42,7 @@ import {
 
 /** A route-wrapper success answer. */
 function ok(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify({ success: true, message: "", data }), {
+  return new Response(JSON.stringify({ status: "success", data }), {
     status,
     headers: { "Content-Type": "application/json" },
   });
@@ -57,7 +57,7 @@ function problem(status: number, body: unknown): Response {
 
 /** A paginated answer of the catalog proxy: the page beside the data. */
 function pageOf(data: unknown[], pagination: unknown): Response {
-  return Response.json({ success: true, message: "Success", data, pagination });
+  return Response.json({ status: "success", data, pagination });
 }
 
 function calledUrl(index = 0): string {

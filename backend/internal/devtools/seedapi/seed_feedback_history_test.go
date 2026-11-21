@@ -48,7 +48,7 @@ func TestFeedbackHistoryPlanRatesPresentDays(t *testing.T) {
 		require.True(t, ok, "feedback only on a present day: %+v", entry)
 		require.False(t, day.Date.Before(from), "inside the window")
 		values[entry.Value]++
-		students[entry.StudentID] = true
+		students[int64(entry.StudentID)] = true
 		if entry.IsMensaFeedback {
 			mensa++
 			assert.Less(t, entry.Time, day.CheckOut.In(seedBerlinLocation()).Format("15:04:05"))

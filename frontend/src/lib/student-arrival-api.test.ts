@@ -25,7 +25,7 @@ import {
 } from "./student-arrival-api";
 
 function wrapped(data: unknown): Response {
-  return Response.json({ success: true, message: "ok", data });
+  return Response.json({ status: "success", message: "ok", data });
 }
 
 function failed(status: number, text = ""): Response {
@@ -40,38 +40,39 @@ function requestInit(call = 0): RequestInit {
   return mockSessionFetch.mock.calls[call]![1] as RequestInit;
 }
 
+// The decoded answer of the catalog proxy: identifiers arrive as strings.
 const backendSchedule = {
-  id: 1,
-  student_id: 42,
+  id: "1",
+  student_id: "42",
   weekday: 1,
   weekday_name: "Montag",
   expected_arrival: "08:00",
   source: "class_schedule",
   source_class: "3a",
   notes: "Tor",
-  created_by: 7,
+  created_by: "7",
   created_at: "2026-05-01T00:00:00Z",
   updated_at: "2026-05-02T00:00:00Z",
 };
 
 const backendException = {
-  id: 77,
-  student_id: 42,
+  id: "77",
+  student_id: "42",
   exception_date: "2024-01-15",
   expected_arrival: "09:00",
   reason: "late",
   source: "guardian",
-  created_by: 3,
+  created_by: "3",
   created_at: "2024-01-10T00:00:00Z",
   updated_at: "2024-01-11T00:00:00Z",
 };
 
 const backendNote = {
-  id: 5,
-  student_id: 42,
+  id: "5",
+  student_id: "42",
   note_date: "2024-01-15",
   content: "note",
-  created_by: 3,
+  created_by: "3",
   created_at: "2024-01-10T00:00:00Z",
   updated_at: "2024-01-11T00:00:00Z",
 };

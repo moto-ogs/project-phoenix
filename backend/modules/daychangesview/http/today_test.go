@@ -15,7 +15,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -25,6 +24,13 @@ func TestMain(m *testing.M) { testpkg.PerTestTenants(); testutil.SeedTestJWTConf
 
 // day is the fixed school day of the tests; no wall clock (Rule 14).
 var day = calendar.NewDate(2026, 9, 9)
+
+// Legacy absence cascades persist these German labels on cancelled shifts.
+// The view must recognize historic rows without importing Workforce.
+const (
+	legacySickShiftChangeReason    = "Krankheit"
+	legacyAbsenceShiftChangeReason = "Abwesenheit"
+)
 
 type wirePerson struct {
 	Name   string `json:"name"`
@@ -384,8 +390,8 @@ func TestDayChangesShiftSourceDoesNotDuplicateLegacyAbsenceCancellations(t *test
 		firstName string
 		reason    string
 	}{
-		{firstName: "Lena", reason: workforce.SickShiftChangeReason},
-		{firstName: "Mia", reason: workforce.AbsenceShiftChangeReason},
+		{firstName: "Lena", reason: legacySickShiftChangeReason},
+		{firstName: "Mia", reason: legacyAbsenceShiftChangeReason},
 	} {
 		staff := testpkg.CreateTestStaff(t, db, legacy.firstName, "Altbestand")
 		testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, staff.ID, day, day, "Grippe "+legacy.firstName)

@@ -6,42 +6,99 @@
  * calendar dates stay "YYYY-MM-DD", instants ISO strings.
  */
 
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type {
+  BookingAccounts as WireBookingAccounts,
+  CostCenterRequest,
+  DatevRunOverviews as WireDatevRuns,
+  ExportProtocolEntry as WireEntry,
+  ExportProtocolPage as WireProtocolPage,
+  ExportRunPage as WireRunPage,
+  ExportSettings as WireSettings,
+  FileNumberStartRequest,
+  InvoiceHistory as WireHistory,
+  RevenueAccountRequest,
+  SollstellungMapping as WireMapping,
+  SollstellungMappingRequest,
+} from "./contract/traeger-finance-exports.generated";
 import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const RUN_KIND_VALUES = ["care", "holiday", "notice"] as const;
+const FORMAT_VALUES = ["sollstellung", "pain008", "datev"] as const;
+const HANDOVER_STATE_VALUES = [
+  "transferred",
+  "failed",
+  "in_progress",
+  "unknown",
+] as const;
+const SOLL_FIELD_VALUES = [
+  "invoice_number",
+  "invoice_date",
+  "due_on",
+  "amount",
+  "credit_amount",
+  "debtor_number",
+  "recipient_name",
+  "recipient_street",
+  "recipient_postal_code",
+  "recipient_city",
+  "child_name",
+  "school_name",
+  "service_from",
+  "service_until",
+  "payment_method",
+  "mandate_reference",
+  "document_kind",
+  "file_number",
+  "revenue_account",
+  "cost_center",
+  "cost_center_2",
+  "booking_text",
+  "constant",
+] as const;
+const DELIMITER_VALUES = [";", ",", "\t", "|"] as const;
+const DECIMAL_VALUES = [",", "."] as const;
+const DATE_FORMAT_VALUES = ["dd.mm.yyyy", "yyyy-mm-dd"] as const;
+const ENCODING_VALUES = ["utf-8-bom", "utf-8", "windows-1252"] as const;
+const FALLBACK_REASON_VALUES = [
+  "no_host_school",
+  "no_school_cost_center",
+] as const;
+const STEP_KIND_VALUES = [
+  "issued",
+  "mail_requested",
+  "sent",
+  "exported",
+  "submitted",
+  "cancelled",
+] as const;
+const REVENUE_SCOPE_VALUES = [
+  "care",
+  "meals",
+  "holiday",
+  "holiday_meals",
+  "offering",
+] as const;
+const COST_CENTER_SCOPE_VALUES = [
+  "school",
+  "school_holiday",
+  "holiday",
+  "offering",
+] as const;
+
 /** The kind of run, as the path names it. */
 export type ExportRunPathKind = "care-runs" | "holiday-runs" | "notice-months";
-type ExportRunKind = "care" | "holiday" | "notice";
-export type ExportFormat = "sollstellung" | "pain008" | "datev";
+type ExportRunKind = (typeof RUN_KIND_VALUES)[number];
+export type ExportFormat = (typeof FORMAT_VALUES)[number];
 
 /** The outcome of a handover, as the journal and the protocol name it. */
-export type HandoverState =
-  "transferred" | "failed" | "in_progress" | "unknown";
+export type HandoverState = (typeof HANDOVER_STATE_VALUES)[number];
 
-export type SollField =
-  | "invoice_number"
-  | "invoice_date"
-  | "due_on"
-  | "amount"
-  | "credit_amount"
-  | "debtor_number"
-  | "recipient_name"
-  | "recipient_street"
-  | "recipient_postal_code"
-  | "recipient_city"
-  | "child_name"
-  | "school_name"
-  | "service_from"
-  | "service_until"
-  | "payment_method"
-  | "mandate_reference"
-  | "document_kind"
-  | "file_number"
-  | "revenue_account"
-  | "cost_center"
-  | "cost_center_2"
-  | "booking_text"
-  | "constant";
+export type SollField = (typeof SOLL_FIELD_VALUES)[number];
 
 /** Placeholders a booking text fills per row (#7008), as the backend reads them. */
 export const SOLL_BOOKING_TEXT_PLACEHOLDERS = [
@@ -63,10 +120,10 @@ export const SOLL_BOOKING_FIELDS: readonly SollField[] = [
   "cost_center_2",
 ];
 
-export type SollDelimiter = ";" | "," | "\t" | "|";
-export type SollDecimal = "," | ".";
-export type SollDateFormat = "dd.mm.yyyy" | "yyyy-mm-dd";
-export type SollEncoding = "utf-8-bom" | "utf-8" | "windows-1252";
+export type SollDelimiter = (typeof DELIMITER_VALUES)[number];
+export type SollDecimal = (typeof DECIMAL_VALUES)[number];
+export type SollDateFormat = (typeof DATE_FORMAT_VALUES)[number];
+export type SollEncoding = (typeof ENCODING_VALUES)[number];
 
 export interface SollColumn {
   readonly field: SollField;
@@ -109,7 +166,8 @@ export interface DatevBookingProblem {
 }
 
 export interface ExportSettings {
-  readonly mapping: SollMapping;
+  /** null: the stored mapping holds a value this build does not know. */
+  readonly mapping: SollMapping | null;
   /** Whether the Träger set a mapping of its own. */
   readonly custom: boolean;
   readonly updatedAt: string | null;
@@ -123,7 +181,8 @@ export interface ExportSettings {
 export interface ExportProtocolEntry {
   readonly id: string;
   readonly fileNumber: number;
-  readonly format: ExportFormat;
+  /** undefined: a format this build does not know. */
+  readonly format: ExportFormat | undefined;
   readonly runKind: ExportRunKind;
   readonly runId: string;
   readonly runLabel: string;
@@ -158,6 +217,7 @@ export interface ExportProtocolEntry {
 
 /** Where a file of the protocol went and whether it arrived. */
 export interface ProtocolHandover {
+  /** "unknown" also stands for a state this build does not know. */
   readonly state: HandoverState;
   readonly reason: string;
   /** The recipient at the handover (ADR 0222); empty for an older one. */
@@ -167,14 +227,14 @@ export interface ProtocolHandover {
 }
 
 /** Why a holiday position booked on the cost center of the holiday care. */
-type CostCenterFallbackReason = "no_host_school" | "no_school_cost_center";
+type CostCenterFallbackReason = (typeof FALLBACK_REASON_VALUES)[number];
 
 export interface CostCenterFallback {
   readonly number: string;
   /** "YYYY-MM-DD", null for a line without a week. */
   readonly weekStartsOn: string | null;
   readonly weekEndsOn: string | null;
-  readonly reason: CostCenterFallbackReason;
+  readonly reason: CostCenterFallbackReason | undefined;
   /** The cost center the file booked on, empty for none. */
   readonly costCenter: string;
 }
@@ -194,11 +254,11 @@ export interface ExportRun {
 }
 
 export type InvoiceHistoryKind = "care-invoices" | "holiday-documents";
-type InvoiceStepKind =
-  "issued" | "mail_requested" | "sent" | "exported" | "submitted" | "cancelled";
+type InvoiceStepKind = (typeof STEP_KIND_VALUES)[number];
 
 export interface InvoiceStep {
-  readonly kind: InvoiceStepKind;
+  /** undefined: a step this build does not know. */
+  readonly kind: InvoiceStepKind | undefined;
   readonly at: string;
   readonly byYou: boolean;
   readonly byAccount: boolean;
@@ -214,101 +274,6 @@ export interface InvoiceHistory {
   readonly steps: readonly InvoiceStep[];
 }
 
-interface BackendColumn {
-  field: SollField;
-  header: string;
-  value?: string;
-}
-
-interface BackendMapping {
-  columns: BackendColumn[] | null;
-  delimiter: SollDelimiter;
-  decimal_separator: SollDecimal;
-  date_format: SollDateFormat;
-  encoding: SollEncoding;
-  header_row: boolean;
-  file_name_pattern: string;
-}
-
-interface BackendSettings {
-  sollstellung: {
-    mapping: BackendMapping;
-    custom: boolean;
-    updated_at: string | null;
-  };
-  file_numbers: { next: number; started: boolean };
-  datev?: {
-    ready: boolean;
-    missing_settings: string[] | null;
-    invalid_settings: string[] | null;
-  };
-}
-
-interface BackendEntry {
-  id: number | string;
-  file_number: number;
-  format: ExportFormat;
-  run_kind: ExportRunKind;
-  run_id: number | string;
-  run_label: string;
-  file_name: string;
-  invoice_count: number;
-  total_cents: number;
-  reference?: string;
-  repeat_of?: number;
-  datev_all?: boolean;
-  resolved_positions?: number;
-  cost_center_fallbacks?: BackendCostCenterFallback[] | null;
-  exported_by_account_id: number | string | null;
-  exported_by_you: boolean;
-  exported_by_name?: string | null;
-  exported_at: string;
-  submitted_at: string | null;
-  handover?: {
-    state: HandoverState;
-    reason?: string;
-    recipient_name?: string;
-    target_host: string;
-    target_directory: string;
-  } | null;
-}
-
-interface BackendCostCenterFallback {
-  number: string;
-  week_starts_on: string | null;
-  week_ends_on: string | null;
-  reason: CostCenterFallbackReason;
-  cost_center: string;
-}
-
-interface BackendRun {
-  run_kind: ExportRunKind;
-  run_id: number | string;
-  label: string;
-  issued_on: string;
-  invoice_count: number;
-  total_cents: number;
-  last_sollstellung: BackendEntry | null;
-  last_datev?: BackendEntry | null;
-  exports: number;
-}
-
-interface BackendHistory {
-  number: string;
-  entries:
-    | {
-        kind: InvoiceStepKind;
-        at: string;
-        account_id: number | string | null;
-        account_name?: string | null;
-        by_you: boolean;
-        positions?: number;
-        note?: string;
-        file?: BackendEntry;
-      }[]
-    | null;
-}
-
 const BASE = "/api/traeger/finance-exports";
 
 const PATH_KINDS: Record<ExportRunKind, ExportRunPathKind> = {
@@ -317,23 +282,35 @@ const PATH_KINDS: Record<ExportRunKind, ExportRunPathKind> = {
   notice: "notice-months",
 };
 
-function mappingFromBackend(mapping: BackendMapping): SollMapping {
+/**
+ * The mapping, or null when it holds a value this build does not know: the
+ * editor can neither show nor save it then, and a reload brings the newer
+ * build.
+ */
+function mappingFromBackend(mapping: WireMapping): SollMapping | null {
+  const delimiter = knownEnum(DELIMITER_VALUES, mapping.delimiter);
+  const decimalSeparator = knownEnum(DECIMAL_VALUES, mapping.decimal_separator);
+  const dateFormat = knownEnum(DATE_FORMAT_VALUES, mapping.date_format);
+  const encoding = knownEnum(ENCODING_VALUES, mapping.encoding);
+  const columns: SollColumn[] = [];
+  for (const column of mapping.columns ?? []) {
+    const field = knownEnum(SOLL_FIELD_VALUES, column.field);
+    if (!field) return null;
+    columns.push({ field, header: column.header, value: column.value ?? "" });
+  }
+  if (!delimiter || !decimalSeparator || !dateFormat || !encoding) return null;
   return {
-    columns: (mapping.columns ?? []).map((column) => ({
-      field: column.field,
-      header: column.header,
-      value: column.value ?? "",
-    })),
-    delimiter: mapping.delimiter,
-    decimalSeparator: mapping.decimal_separator,
-    dateFormat: mapping.date_format,
-    encoding: mapping.encoding,
+    columns,
+    delimiter,
+    decimalSeparator,
+    dateFormat,
+    encoding,
     headerRow: mapping.header_row,
     fileNamePattern: mapping.file_name_pattern,
   };
 }
 
-function mappingToBackend(mapping: SollMapping): BackendMapping {
+function mappingToBackend(mapping: SollMapping): SollstellungMappingRequest {
   return {
     columns: mapping.columns.map((column) => ({
       field: column.field,
@@ -349,7 +326,7 @@ function mappingToBackend(mapping: SollMapping): BackendMapping {
   };
 }
 
-function settingsFromBackend(settings: BackendSettings): ExportSettings {
+function settingsFromBackend(settings: WireSettings): ExportSettings {
   return {
     mapping: mappingFromBackend(settings.sollstellung.mapping),
     custom: settings.sollstellung.custom,
@@ -357,20 +334,26 @@ function settingsFromBackend(settings: BackendSettings): ExportSettings {
     nextFileNumber: settings.file_numbers.next,
     fileNumbersStarted: settings.file_numbers.started,
     datev: {
-      ready: settings.datev?.ready ?? false,
-      missingSettings: settings.datev?.missing_settings ?? [],
-      invalidSettings: settings.datev?.invalid_settings ?? [],
+      ready: settings.datev.ready,
+      missingSettings: settings.datev.missing_settings ?? [],
+      invalidSettings: settings.datev.invalid_settings ?? [],
     },
   };
 }
 
-function entryFromBackend(entry: BackendEntry): ExportProtocolEntry {
+/**
+ * A protocol entry; null for a run kind this build does not know, which has
+ * no page to link to.
+ */
+function entryFromBackend(entry: WireEntry): ExportProtocolEntry | null {
+  const runKind = knownEnum(RUN_KIND_VALUES, entry.run_kind);
+  if (!runKind) return null;
   return {
-    id: String(entry.id),
+    id: entry.id,
     fileNumber: entry.file_number,
-    format: entry.format,
-    runKind: entry.run_kind,
-    runId: String(entry.run_id),
+    format: knownEnum(FORMAT_VALUES, entry.format),
+    runKind,
+    runId: entry.run_id,
     runLabel: entry.run_label,
     fileName: entry.file_name,
     invoiceCount: entry.invoice_count,
@@ -384,20 +367,22 @@ function entryFromBackend(entry: BackendEntry): ExportProtocolEntry {
         number: fallback.number,
         weekStartsOn: fallback.week_starts_on,
         weekEndsOn: fallback.week_ends_on,
-        reason: fallback.reason,
+        reason: knownEnum(FALLBACK_REASON_VALUES, fallback.reason),
         costCenter: fallback.cost_center,
       }),
     ),
     exportedByYou: entry.exported_by_you,
     exportedByAccount: entry.exported_by_account_id !== null,
-    exportedByName: entry.exported_by_name ?? "",
+    exportedByName: entry.exported_by_name,
     exportedAt: entry.exported_at,
     submittedAt: entry.submitted_at,
     handover: entry.handover
       ? {
-          state: entry.handover.state,
+          // The backend names a state it cannot read "unknown" itself.
+          state:
+            knownEnum(HANDOVER_STATE_VALUES, entry.handover.state) ?? "unknown",
           reason: entry.handover.reason ?? "",
-          recipientName: entry.handover.recipient_name ?? "",
+          recipientName: entry.handover.recipient_name,
           targetHost: entry.handover.target_host,
           targetDirectory: entry.handover.target_directory,
         }
@@ -408,7 +393,7 @@ function entryFromBackend(entry: BackendEntry): ExportProtocolEntry {
 /** The mapping of the Sollstellung and the file numbers of the Träger. */
 export async function fetchExportSettings(): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<BackendSettings>(`${BASE}/settings`),
+    await traegerRequest<WireSettings>(`${BASE}/settings`),
   );
 }
 
@@ -417,7 +402,7 @@ export async function saveSollMapping(
   mapping: SollMapping,
 ): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<BackendSettings>(`${BASE}/settings/sollstellung`, {
+    await traegerRequest<WireSettings>(`${BASE}/settings/sollstellung`, {
       method: "PUT",
       body: mappingToBackend(mapping),
     }),
@@ -435,10 +420,10 @@ export async function setFileNumberStart(
   start: number,
 ): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<BackendSettings>(
-      `${BASE}/settings/file-number-start`,
-      { method: "PUT", body: { start } },
-    ),
+    await traegerRequest<WireSettings>(`${BASE}/settings/file-number-start`, {
+      method: "PUT",
+      body: { start } satisfies FileNumberStartRequest,
+    }),
   );
 }
 
@@ -456,11 +441,6 @@ export interface FinanceExportRunPage extends FinanceExportPage<ExportRun> {
   readonly notExported: number;
 }
 
-interface BackendPage {
-  total: number;
-  next_offset: number | null;
-}
-
 function pagePath(path: string, offset: number): string {
   return offset > 0 ? `${path}?offset=${offset}` : path;
 }
@@ -469,24 +449,31 @@ function pagePath(path: string, offset: number): string {
 export async function fetchExportRuns(
   offset = 0,
 ): Promise<FinanceExportRunPage> {
-  const body = await traegerRequest<
-    BackendPage & { runs: BackendRun[] | null; not_exported: number }
-  >(pagePath(`${BASE}/runs`, offset));
+  const body = await traegerRequest<WireRunPage>(
+    pagePath(`${BASE}/runs`, offset),
+  );
   return {
-    items: (body.runs ?? []).map((run) => ({
-      runKind: run.run_kind,
-      pathKind: PATH_KINDS[run.run_kind],
-      runId: String(run.run_id),
-      label: run.label,
-      issuedOn: run.issued_on,
-      invoiceCount: run.invoice_count,
-      totalCents: run.total_cents,
-      lastSollstellung: run.last_sollstellung
-        ? entryFromBackend(run.last_sollstellung)
-        : null,
-      lastDatev: run.last_datev ? entryFromBackend(run.last_datev) : null,
-      exports: run.exports,
-    })),
+    // A run of a kind this build does not know has no page; it is left out.
+    items: (body.runs ?? []).flatMap((run) => {
+      const runKind = knownEnum(RUN_KIND_VALUES, run.run_kind);
+      if (!runKind) return [];
+      return [
+        {
+          runKind,
+          pathKind: PATH_KINDS[runKind],
+          runId: run.run_id,
+          label: run.label,
+          issuedOn: requiredDay(run.issued_on, "export_run.issued_on"),
+          invoiceCount: run.invoice_count,
+          totalCents: run.total_cents,
+          lastSollstellung: run.last_sollstellung
+            ? entryFromBackend(run.last_sollstellung)
+            : null,
+          lastDatev: run.last_datev ? entryFromBackend(run.last_datev) : null,
+          exports: run.exports,
+        },
+      ];
+    }),
     total: body.total,
     notExported: body.not_exported,
     nextOffset: body.next_offset ?? null,
@@ -497,11 +484,14 @@ export async function fetchExportRuns(
 export async function fetchExportProtocol(
   offset = 0,
 ): Promise<FinanceExportPage<ExportProtocolEntry>> {
-  const body = await traegerRequest<
-    BackendPage & { files: BackendEntry[] | null }
-  >(pagePath(`${BASE}/files`, offset));
+  const body = await traegerRequest<WireProtocolPage>(
+    pagePath(`${BASE}/files`, offset),
+  );
   return {
-    items: (body.files ?? []).map(entryFromBackend),
+    items: (body.files ?? []).flatMap((file) => {
+      const entry = entryFromBackend(file);
+      return entry ? [entry] : [];
+    }),
     total: body.total,
     nextOffset: body.next_offset ?? null,
   };
@@ -572,24 +562,12 @@ export function datevRunKey(run: Pick<ExportRun, "runKind" | "runId">) {
   return `${run.runKind}/${run.runId}`;
 }
 
-interface BackendDatevRuns {
-  ready: boolean;
-  runs:
-    | {
-        run_kind: ExportRunKind;
-        run_id: number | string;
-        new_bookings: number;
-        fiscal_years: string[] | null;
-      }[]
-    | null;
-}
-
 /** Runs one request asks for: the size of a page of the run list. */
 const DATEV_RUNS_PER_REQUEST = 50;
 
 async function fetchDatevRunPage(
   runs: readonly ExportRun[],
-): Promise<BackendDatevRuns> {
+): Promise<WireDatevRuns> {
   const query = new URLSearchParams();
   for (const kind of ["care", "holiday"] as const) {
     const ids = runs
@@ -598,7 +576,7 @@ async function fetchDatevRunPage(
     if (ids.length > 0) query.set(kind, ids.join(","));
   }
   if (query.size === 0) return { ready: true, runs: [] };
-  return traegerRequest<BackendDatevRuns>(
+  return traegerRequest<WireDatevRuns>(
     `${BASE}/datev-runs?${query.toString()}`,
   );
 }
@@ -619,16 +597,21 @@ export async function fetchDatevRunStates(
     ready: bodies.length > 0 && bodies.every((body) => body.ready),
     runs: new Map(
       bodies.flatMap((body) =>
-        (body.runs ?? []).map(
-          (run) =>
+        (body.runs ?? []).flatMap((run) => {
+          const runKind = knownEnum(RUN_KIND_VALUES, run.run_kind);
+          if (!runKind) return [];
+          return [
             [
-              datevRunKey({ runKind: run.run_kind, runId: String(run.run_id) }),
+              datevRunKey({ runKind, runId: run.run_id }),
               {
                 newBookings: run.new_bookings,
-                fiscalYears: run.fiscal_years ?? [],
+                fiscalYears: (run.fiscal_years ?? []).flatMap((year) =>
+                  year ? [year] : [],
+                ),
               },
             ] as const,
-        ),
+          ];
+        }),
       ),
     ),
   };
@@ -685,17 +668,17 @@ export async function fetchInvoiceHistory(
   kind: InvoiceHistoryKind,
   invoiceId: string,
 ): Promise<InvoiceHistory> {
-  const body = await traegerRequest<BackendHistory>(
+  const body = await traegerRequest<WireHistory>(
     `${BASE}/invoice-history/${kind}/${encodeURIComponent(invoiceId)}`,
   );
   return {
     number: body.number,
     steps: (body.entries ?? []).map((entry) => ({
-      kind: entry.kind,
+      kind: knownEnum(STEP_KIND_VALUES, entry.kind),
       at: entry.at,
       byYou: entry.by_you,
       byAccount: entry.account_id !== null,
-      accountName: entry.account_name ?? "",
+      accountName: entry.account_name,
       positions: entry.positions ?? 0,
       note: entry.note ?? "",
       file: entry.file ? entryFromBackend(entry.file) : null,
@@ -704,19 +687,12 @@ export async function fetchInvoiceHistory(
 }
 
 /** Where a Leistung or an Angebot books (#4821). */
-export type RevenueScope =
-  | "care"
-  | "meals"
-  | "holiday"
-  /** The lunch of the holiday care (#5631). */
-  | "holiday_meals"
-  | "offering";
+export type RevenueScope = (typeof REVENUE_SCOPE_VALUES)[number];
 /**
  * Whose cost center: a school (KOST1), the holiday care a school hosts
  * (KOST1, #7357), the holiday care of the Träger (KOST1), an Angebot (KOST2).
  */
-export type CostCenterScope =
-  "school" | "school_holiday" | "holiday" | "offering";
+export type CostCenterScope = (typeof COST_CENTER_SCOPE_VALUES)[number];
 
 interface RevenueAccount {
   readonly scope: RevenueScope;
@@ -753,65 +729,49 @@ export interface BookingAccounts {
   readonly costCenters: readonly CostCenter[];
 }
 
-interface BackendBookingAccounts {
-  standard_account: string;
-  cost_center_required: boolean;
-  schools: { id: number | string; name: string }[] | null;
-  offerings:
-    | {
-        school_id: number | string;
-        care_offering_id: number | string;
-        module_names: string[] | null;
-      }[]
-    | null;
-  revenue_accounts:
-    | { scope: RevenueScope; scope_id: number | string; account: string }[]
-    | null;
-  cost_centers:
-    | {
-        id: number | string;
-        scope: CostCenterScope;
-        scope_id: number | string;
-        valid_from: string;
-        code: string;
-      }[]
-    | null;
-}
-
+// Accounts and cost centers of a scope this build does not know have no row
+// to show; they are left out.
 function bookingAccountsFromBackend(
-  body: BackendBookingAccounts,
+  body: WireBookingAccounts,
 ): BookingAccounts {
   return {
     standardAccount: body.standard_account,
     costCenterRequired: body.cost_center_required,
     schools: (body.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
     })),
     offerings: (body.offerings ?? []).map((offering) => ({
-      schoolId: String(offering.school_id),
-      offeringId: String(offering.care_offering_id),
+      schoolId: offering.school_id,
+      offeringId: offering.care_offering_id,
       moduleNames: offering.module_names ?? [],
     })),
-    revenueAccounts: (body.revenue_accounts ?? []).map((account) => ({
-      scope: account.scope,
-      scopeId: String(account.scope_id),
-      account: account.account,
-    })),
-    costCenters: (body.cost_centers ?? []).map((center) => ({
-      id: String(center.id),
-      scope: center.scope,
-      scopeId: String(center.scope_id),
-      validFrom: center.valid_from,
-      code: center.code,
-    })),
+    revenueAccounts: (body.revenue_accounts ?? []).flatMap((account) => {
+      const scope = knownEnum(REVENUE_SCOPE_VALUES, account.scope);
+      return scope
+        ? [{ scope, scopeId: account.scope_id, account: account.account }]
+        : [];
+    }),
+    costCenters: (body.cost_centers ?? []).flatMap((center) => {
+      const scope = knownEnum(COST_CENTER_SCOPE_VALUES, center.scope);
+      if (!scope) return [];
+      return [
+        {
+          id: center.id,
+          scope,
+          scopeId: center.scope_id,
+          validFrom: requiredDay(center.valid_from, "cost_center.valid_from"),
+          code: center.code,
+        },
+      ];
+    }),
   };
 }
 
 /** The revenue accounts and cost centers of the Träger (#4821). */
 export async function fetchBookingAccounts(): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<BackendBookingAccounts>(`${BASE}/booking-accounts`),
+    await traegerRequest<WireBookingAccounts>(`${BASE}/booking-accounts`),
   );
 }
 
@@ -822,11 +782,15 @@ export async function saveRevenueAccount(
   account: string,
 ): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<BackendBookingAccounts>(
+    await traegerRequest<WireBookingAccounts>(
       `${BASE}/booking-accounts/revenue-accounts`,
       {
         method: "PUT",
-        body: { scope, scope_id: Number(scopeId), account },
+        body: {
+          scope,
+          scope_id: Number(scopeId),
+          account,
+        } satisfies RevenueAccountRequest,
       },
     ),
   );
@@ -840,7 +804,7 @@ export async function addCostCenter(center: {
   code: string;
 }): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<BackendBookingAccounts>(
+    await traegerRequest<WireBookingAccounts>(
       `${BASE}/booking-accounts/cost-centers`,
       {
         method: "POST",
@@ -849,7 +813,7 @@ export async function addCostCenter(center: {
           scope_id: Number(center.scopeId),
           valid_from: center.validFrom,
           code: center.code,
-        },
+        } satisfies CostCenterRequest,
       },
     ),
   );

@@ -75,7 +75,7 @@ vi.mock("~/lib/swr", () => ({
         mutate: mutateDocumentDirectory,
       };
     }
-    if (key === 'staff-directory-list-{"strict":false}') {
+    if (key === "staff-directory-list-{}") {
       return { data: staffListRequest.data, isLoading: false, error: null };
     }
     return { data: undefined, isLoading: false, error: null };
@@ -172,7 +172,7 @@ describe("/staff — Berechtigungs-Split", () => {
     expect(screen.queryByTestId("schul-uebersicht")).not.toBeInTheDocument();
     expect(getDashboardSummary).not.toHaveBeenCalled();
     expect(getAllStaff).not.toHaveBeenCalled();
-    expect(swrKeys).not.toContain('staff-directory-list-{"strict":false}');
+    expect(swrKeys).not.toContain("staff-directory-list-{}");
     expect(getTimeAccounts).toHaveBeenCalledTimes(1);
     expect(
       screen.getByRole("heading", { name: "Zeitkonten" }),

@@ -68,20 +68,20 @@ export function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt, wer vertritt und welche Dienste sich geändert haben. Dazu kommen die Hinweise der Leitung für heute.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
-          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du heute fehlst.",
-          "Dort steht auch, ob dein Dienst heute anders ist oder ausfällt.",
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, Vertretungen, Termine und Dienste.",
+          "Dort steht auch, ob du heute fehlst oder dein Dienst anders ist oder ausfällt.",
           "Unter `Schule` steht der Rest der Schule.",
           // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
           // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
           // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
           "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          // Quelle Stundenplan (#7662): Uhrzeit und Raum.
+          "Bei Angeboten und AGs stehen Uhrzeit und Raum unter dem Satz. Sie stehen nach Beginn geordnet.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
-          // Dienste (#7661) sind die erste Quelle mit Uhrzeit: Ein Dienst, dessen
-          // Ende vorbei ist, steht eingeklappt unter „erledigt“.
-          "Ein Dienst, der heute schon vorbei ist, steht ganz unten unter `erledigt`. Wähle `erledigt`, um ihn zu sehen.",
+          "Dienste, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
@@ -124,6 +124,8 @@ export function appOverviewTopic(): HelpTopic {
       // Dienste in „Heute anders" (#7661): die Betreuung sieht nur den
       // eigenen, wer den Dienstplan der Schule öffnen darf, sieht alle.
       "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",
+      // Sichtregel der Quelle Stundenplan (#7662): wie im Tagesplan.
+      "In `Heute anders` fehlen Angebote anderer Leute? Die Karte zeigt die Termine, die du auch im Tagesplan siehst. Je nach Einstellung deiner Schule sind das nur deine eigenen.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
       "Steht am Computer oben links unter dem Namen deiner Schule `Träger:` und ein Name? Das ist der Träger deiner Schule. Die Zeile gibt es nur, wenn dein Träger mehrere Schulen hat.",

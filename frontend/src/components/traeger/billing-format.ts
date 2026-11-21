@@ -42,6 +42,7 @@ export function isEmptyBillingRun(run: BillingRunDetail): boolean {
 export function billingPositionLabel(position: BillingPosition): string {
   if (position.kind === "correction") return `Korrektur: ${position.note}`;
   if (position.kind === "credit") return `Gutschrift: ${position.note}`;
+  if (position.kind === undefined) return position.note || "Posten";
   return contributionLineLabel({ ...position, kind: position.kind });
 }
 

@@ -50,10 +50,10 @@ describe("POST /api/operator/provisioning/revalidate-tenant", () => {
 
     expect(response.status).toBe(200);
     const json = (await response.json()) as {
-      success: boolean;
+      status: string;
       data: { status: string; revalidated: string[] };
     };
-    expect(json.success).toBe(true);
+    expect(json.status).toBe("success");
     expect(json.data.status).toBe("ok");
     expect(json.data.revalidated).toEqual(["old-sub", "new-sub"]);
     expect(mockRevalidatePath).toHaveBeenCalledTimes(2);

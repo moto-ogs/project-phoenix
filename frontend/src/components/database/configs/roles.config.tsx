@@ -3,7 +3,7 @@
 // Role Entity Configuration
 
 import { defineEntityConfig, type SectionConfig } from "@/lib/database/types";
-import type { Role, BackendRole } from "@/lib/auth-helpers";
+import type { Role, RoleWire } from "@/lib/auth-helpers";
 import {
   mapRoleResponse,
   getRoleDisplayName,
@@ -135,7 +135,7 @@ export const rolesConfig = defineEntityConfig<Role>({
           {
             label: "Berechtigungen",
             value: (role: Role) =>
-              `${role.permissions?.length ?? 0} Berechtigungen zugewiesen`,
+              `${role.permissionNames?.length ?? 0} Berechtigungen zugewiesen`,
           },
           {
             label: "Erstellt am",
@@ -204,7 +204,7 @@ export const rolesConfig = defineEntityConfig<Role>({
         actualData = (data as { status: string; data: unknown }).data;
       }
 
-      return mapRoleResponse(actualData as BackendRole);
+      return mapRoleResponse(actualData as RoleWire);
     },
   },
 

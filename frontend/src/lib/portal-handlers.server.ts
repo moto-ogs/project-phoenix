@@ -31,7 +31,7 @@ import {
   extractParams,
   parseRequestBody,
   readBoundedBody,
-  wrapInApiResponse,
+  successResponse,
   type RouteContext,
 } from "./route-wrapper-utils.server";
 
@@ -48,8 +48,8 @@ export interface PortalBinding extends PortalSession {
 type Params = Record<string, unknown>;
 
 /**
- * A handler's result: data the factory answers as `{ success, message,
- * data }`, or a Response it answers as it is.
+ * A handler's result: data the factory answers in the backend's envelope
+ * `{ status, data }`, or a Response it answers as it is.
  */
 type NoBodyHandler<T> = (
   request: NextRequest,
@@ -74,12 +74,7 @@ interface BodyOptions extends HandlerOptions {
 /** A backend endpoint: a fixed path, or a builder from route params. */
 export type ProxyEndpoint = string | ((params: Params) => string);
 
-interface ProxyOptions {
-  /** Answer the backend JSON whole instead of its envelope's `data`. */
-  raw?: boolean;
-}
-
-interface GetProxyOptions extends ProxyOptions {
+interface GetProxyOptions {
   /** Forward only these query parameters, first non-empty value each. */
   forwardQuery?: readonly string[];
 }
@@ -108,7 +103,7 @@ const FILE_POST_MAX_BYTES = 1024 * 1024;
 const UPLOAD_OVERHEAD_BYTES = 64 * 1024;
 
 const json = (data: unknown) =>
-  data instanceof Response ? data : NextResponse.json(wrapInApiResponse(data));
+  data instanceof Response ? data : NextResponse.json(successResponse(data));
 
 /** A DELETE without a result answers 204, in every portal. */
 const deleted = (data: unknown) =>
@@ -206,9 +201,6 @@ export function makePortalHandlers(portal: PortalBinding) {
   const resolve = (endpoint: ProxyEndpoint, params: Params) =>
     typeof endpoint === "function" ? endpoint(params) : endpoint;
 
-  const answer = (body: unknown, options?: ProxyOptions) =>
-    options?.raw ? body : unwrapEnvelope(body);
-
   function proxyGet<T = unknown>(
     endpoint: ProxyEndpoint,
     options?: GetProxyOptions,
@@ -224,7 +216,7 @@ export function makePortalHandlers(portal: PortalBinding) {
         undefined,
         { request },
       );
-      return answer(body, options) as T;
+      return unwrapEnvelope<T>(body);
     });
   }
 
@@ -232,7 +224,7 @@ export function makePortalHandlers(portal: PortalBinding) {
     const factory = method === "POST" ? post : method === "PUT" ? put : patch;
     return <T = unknown, B = unknown>(
       endpoint: ProxyEndpoint,
-      options?: ProxyOptions & BodyOptions,
+      options?: BodyOptions,
     ) =>
       factory<T, B>(async (request, body, token, params) => {
         const response = await api(
@@ -242,7 +234,7 @@ export function makePortalHandlers(portal: PortalBinding) {
           body,
           { idempotencyKey: request.headers.get("Idempotency-Key"), request },
         );
-        return answer(response, options) as T;
+        return unwrapEnvelope<T>(response);
       }, options);
   }
 

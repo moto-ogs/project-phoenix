@@ -79,13 +79,13 @@ func listedCareStudentIDs(t *testing.T, tc *testContext, claims sessiontoken.App
 	require.Equal(t, http.StatusOK, response.Code, "Body: %s", response.Body.String())
 	var body struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))
 	ids := make(map[int64]bool, len(body.Data))
 	for _, row := range body.Data {
-		ids[row.ID] = true
+		ids[int64(row.ID)] = true
 	}
 	return ids
 }
@@ -119,15 +119,15 @@ func TestStudentList_CareStatusDecidesWhichSideIsShown(t *testing.T) {
 		require.Equal(t, http.StatusOK, response.Code, "Body: %s", response.Body.String())
 		var body struct {
 			Data []struct {
-				ID         int64  `json:"id"`
-				CareEndsOn string `json:"care_ends_on"`
-				CareEnded  bool   `json:"care_ended"`
+				ID         testpkg.ID `json:"id"`
+				CareEndsOn string     `json:"care_ends_on"`
+				CareEnded  bool       `json:"care_ended"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))
 		out := map[int64]bool{}
 		for _, row := range body.Data {
-			out[row.ID] = row.CareEnded
+			out[int64(row.ID)] = row.CareEnded
 		}
 		return out
 	}
@@ -250,9 +250,9 @@ func TestStudentList_MarksRecordedExitsOnly(t *testing.T) {
 
 	var body struct {
 		Data []struct {
-			ID               int64  `json:"id"`
-			CareEndsOn       string `json:"care_ends_on"`
-			CareExitRecorded bool   `json:"care_exit_recorded"`
+			ID               testpkg.ID `json:"id"`
+			CareEndsOn       string     `json:"care_ends_on"`
+			CareExitRecorded bool       `json:"care_exit_recorded"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))
@@ -260,8 +260,8 @@ func TestStudentList_MarksRecordedExitsOnly(t *testing.T) {
 	flags := map[int64]bool{}
 	dates := map[int64]string{}
 	for _, row := range body.Data {
-		flags[row.ID] = row.CareExitRecorded
-		dates[row.ID] = row.CareEndsOn
+		flags[int64(row.ID)] = row.CareExitRecorded
+		dates[int64(row.ID)] = row.CareEndsOn
 	}
 	require.Contains(t, flags, recorded.ID, "a planned exit stays in the ordinary list")
 	require.Contains(t, flags, phaseEnd.ID)

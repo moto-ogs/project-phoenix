@@ -5,22 +5,10 @@
 // On these days the backend resolves the staff Soll to 0, exactly like on
 // holidays.
 //
-// Backend reference: backend/models/schedule/closing_day.go,
-// backend/api/timetable/closing_days.go (ClosingDayRequest / Response).
+// Wire shape: ClosingDayResponse in lib/contract/timetable.generated.ts.
 
 import { formatDate, toISODate } from "~/lib/date-helpers";
-
-/** Backend wire shape (snake_case, int64 IDs). */
-export interface BackendClosingDay {
-  id: number | string;
-  start_date: string; // YYYY-MM-DD
-  end_date: string; // YYYY-MM-DD
-  reason: string;
-  created_at: string;
-  updated_at: string;
-  /** Planned by the school's Träger (#4702); only the Träger-Büro changes it. */
-  traeger?: boolean;
-}
+import type { ClosingDayResponse } from "./contract/timetable.generated";
 
 export interface ClosingDay {
   id: string;
@@ -38,9 +26,9 @@ export interface ClosingDayInput {
   reason: string;
 }
 
-export function mapClosingDay(data: BackendClosingDay): ClosingDay {
+export function mapClosingDay(data: ClosingDayResponse): ClosingDay {
   return {
-    id: data.id.toString(),
+    id: data.id,
     startDate: data.start_date.slice(0, 10),
     endDate: data.end_date.slice(0, 10),
     reason: data.reason,
@@ -48,7 +36,7 @@ export function mapClosingDay(data: BackendClosingDay): ClosingDay {
   };
 }
 
-export function mapClosingDays(data: BackendClosingDay[]): ClosingDay[] {
+export function mapClosingDays(data: ClosingDayResponse[]): ClosingDay[] {
   return data.map(mapClosingDay);
 }
 

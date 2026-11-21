@@ -9,6 +9,11 @@ import {
   apiErrorFromResponse,
   unavailableApiError,
 } from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  StaffDocumentListResponse,
+  StaffDocumentResponse,
+} from "./contract/staff.generated";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession, sessionFetch } from "./session-cache";
 
@@ -51,30 +56,20 @@ export interface StaffDocumentList {
   visibleCategories: StaffDocumentCategory[];
 }
 
-// The catalog renders the ids as decimal strings (#2352).
-interface BackendStaffDocument {
-  id: string;
-  staff_id: string;
-  category: StaffDocumentCategory;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-  retain_until?: string | null;
-  review_due?: string | null;
+const CATEGORIES = Object.keys(
+  staffDocumentCategoryLabels,
+) as StaffDocumentCategory[];
+
+/** A category this build does not know is shown as "Sonstiges". */
+function category(value: string): StaffDocumentCategory {
+  return knownEnum(CATEGORIES, value) ?? "sonstiges";
 }
 
-interface BackendStaffDocumentList {
-  staff_id: string;
-  documents: BackendStaffDocument[];
-  visible_categories: StaffDocumentCategory[];
-}
-
-function mapDocument(data: BackendStaffDocument): StaffDocument {
+function mapDocument(data: StaffDocumentResponse): StaffDocument {
   return {
     id: data.id,
     staffId: data.staff_id,
-    category: data.category,
+    category: category(data.category),
     filename: data.filename,
     sizeBytes: data.size_bytes,
     contentType: data.content_type,
@@ -93,10 +88,14 @@ class StaffDocumentsService {
         `Failed to fetch staff documents: ${response.statusText}`,
       );
     }
-    const json = (await response.json()) as { data: BackendStaffDocumentList };
+    const json = (await response.json()) as {
+      data: StaffDocumentListResponse;
+    };
     return {
-      documents: json.data.documents.map(mapDocument),
-      visibleCategories: json.data.visible_categories,
+      documents: (json.data.documents ?? []).map(mapDocument),
+      visibleCategories: (json.data.visible_categories ?? []).flatMap(
+        (value) => knownEnum(CATEGORIES, value) ?? [],
+      ),
     };
   }
 

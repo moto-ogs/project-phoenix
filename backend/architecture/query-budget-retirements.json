@@ -318,5 +318,20 @@
     "scenario": "operator.lists.passkeys_slash",
     "route": "GET /operator/auth/passkeys/",
     "issue": 2352
+  },
+  {
+    "scenario": "api.activities.presence20.schedules.n3",
+    "route": "GET /api/activities/{id}/schedules",
+    "issue": 2353
+  },
+  {
+    "scenario": "api.activities.presence20.schedules.n8",
+    "route": "GET /api/activities/{id}/schedules",
+    "issue": 2353
+  },
+  {
+    "scenario": "api.enrollment.schema.by_id.reads",
+    "route": "GET /api/enrollment/schema/{id}",
+    "issue": 2353
   }
 ]

@@ -38,11 +38,15 @@ import {
 } from "~/lib/traeger-care-contracts-api";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { CONTRACT_VERSIONS_SECTION_ID } from "./care-contract-detail-tabs";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "CareContractVersions" });
 
 /** Woher eine Version kommt, in einem Wort für die Liste. */
-const VERSION_SOURCE_LABELS: Record<ContractVersion["source"], string> = {
+const VERSION_SOURCE_LABELS: Record<
+  NonNullable<ContractVersion["source"]>,
+  string
+> = {
   abschluss: "Vertragsabschluss",
   buchungsaenderung: "Änderung der Betreuung",
   import: "Aus einer Datei importiert",
@@ -264,7 +268,7 @@ export function CareContractVersions({
                 </div>
                 <p className="mt-1 text-sm text-gray-600">
                   {formatValidity(version)} ·{" "}
-                  {VERSION_SOURCE_LABELS[version.source]}
+                  {labelOf(VERSION_SOURCE_LABELS, version.source, "–")}
                   {changed.size > 0
                     ? ` · ${changed.size === 1 ? "1 Tag" : `${changed.size} Tage`} geändert`
                     : null}

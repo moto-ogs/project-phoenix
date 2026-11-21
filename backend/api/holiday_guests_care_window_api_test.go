@@ -30,7 +30,7 @@ func TestHolidayGuestsAppearInTheSchoolListsOnlyDuringTheirWeek(t *testing.T) {
 
 	f.today.Store(calendar.NewDate(2099, 7, 1))
 	f.confirm(t, f.siblings, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 
 	before := calendar.NewDate(2099, 7, 3)
 	f.today.Store(before)

@@ -13,11 +13,8 @@ import type {
 } from "~/lib/contract/activities.generated";
 import { apiErrorFromResponse } from "~/lib/api-error";
 import { sessionFetch } from "~/lib/session-cache";
-import { createLogger } from "~/lib/logger";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { staffConcept } from "~/lib/concepts/staff";
-
-const logger = createLogger({ component: "ActivitiesConfig" });
 
 // Emoji mapping rules: [emoji, ...keywords]
 // Rules are checked in order; first match wins
@@ -98,6 +95,25 @@ function getActivityEmoji(activity: Activity): string {
     matchEmojiRule(category, CATEGORY_EMOJI_RULES) ??
     (activity.name ? activity.name.substring(0, 2).toUpperCase() : "AG")
   );
+}
+
+// The available supervisors as select options. A failure rejects with the
+// catalog error; an empty list would look like a school without supervisors
+// (#2517, #2353).
+async function loadSupervisorOptions(): Promise<
+  Array<{ value: string; label: string }>
+> {
+  const response = await sessionFetch("/api/activities/supervisors/available");
+  if (!response.ok) {
+    throw await apiErrorFromResponse(response, "failed to load supervisors");
+  }
+  const result = (await response.json()) as {
+    data?: ActivitySupervisorResponse[] | null;
+  };
+  return (result.data ?? []).map(mapSupervisorOption).map((sup) => ({
+    value: sup.id,
+    label: sup.name,
+  }));
 }
 
 export const activitiesConfig = defineEntityConfig<Activity>({
@@ -192,28 +208,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
             required: false,
             placeholder: "Keine Hauptbetreuung",
             optionsResource: "activity-supervisor-choice",
-            options: async () => {
-              // Not getSupervisors(): it answers a failure with an empty
-              // list, which would look like a school without supervisors.
-              const response = await sessionFetch(
-                "/api/activities/supervisors/available",
-              );
-              if (!response.ok) {
-                throw await apiErrorFromResponse(
-                  response,
-                  "failed to load supervisors",
-                );
-              }
-              const result = (await response.json()) as {
-                data?: ActivitySupervisorResponse[] | null;
-              };
-              return (result.data ?? [])
-                .map(mapSupervisorOption)
-                .map((sup) => ({
-                  value: sup.id,
-                  label: sup.name,
-                }));
-            },
+            options: loadSupervisorOptions,
           },
         ],
       },
@@ -323,33 +318,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
         id: "supervisor_id",
         label: "Betreuer",
         type: "select",
-        loadOptions: async () => {
-          try {
-            // Fetch supervisors from API; the route reads the session
-            // cookie (#5005).
-            const response = await fetch(
-              "/api/activities/supervisors/available",
-            );
-
-            if (!response.ok) {
-              logger.error("failed to fetch supervisors", {
-                status: response.status,
-              });
-              return [];
-            }
-
-            const result = (await response.json()) as {
-              data?: ActivitySupervisorResponse[] | null;
-            };
-            return (result.data ?? []).map(mapSupervisorOption).map((sup) => ({
-              value: sup.id,
-              label: sup.name,
-            }));
-          } catch (error) {
-            logger.error("error loading supervisors", { error: String(error) });
-            return [];
-          }
-        },
+        loadOptions: loadSupervisorOptions,
       },
     ],
 

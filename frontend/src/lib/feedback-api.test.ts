@@ -16,21 +16,21 @@ describe("fetchStudentFeedback", () => {
   it("fetches and maps feedback entries correctly", async () => {
     const backendEntries = [
       {
-        id: 10,
+        id: "10",
         value: "positive",
         day: "2026-04-01",
         time: "15:30:23",
-        student_id: 1,
+        student_id: "1",
         is_mensa_feedback: false,
         created_at: "2026-04-01T15:30:23Z",
         updated_at: "2026-04-01T15:30:23Z",
       },
       {
-        id: 11,
+        id: "11",
         value: "negative",
         day: "2026-04-02",
         time: "14:10:05",
-        student_id: 1,
+        student_id: "1",
         is_mensa_feedback: true,
         created_at: "2026-04-02T14:10:05Z",
         updated_at: "2026-04-02T14:10:05Z",

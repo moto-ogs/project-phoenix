@@ -28,6 +28,7 @@ import {
 } from "./care-notice-format";
 import { formatEuro } from "./contribution-format";
 import { TraegerLetterheadPreview } from "./traeger-letterhead-preview";
+import { labelOf } from "~/lib/label-of";
 
 function lineColumns(change: boolean): DataTableColumn<CareNoticeLine>[] {
   const columns: DataTableColumn<CareNoticeLine>[] = [
@@ -205,7 +206,7 @@ export function CareNoticeDocument({
   const account = letter.bankAccount;
   return (
     <TraegerLetterheadPreview
-      label={`${NOTICE_KIND_LABELS[notice.kind]} für ${notice.childFirstName} ${notice.childLastName}`}
+      label={`${labelOf(NOTICE_KIND_LABELS, notice.kind, "Bescheid")} für ${notice.childFirstName} ${notice.childLastName}`}
       logoSrc={letter.logoDataUrl || null}
       letterheadText={letter.senderText}
       footerText={letter.footerText}
@@ -261,8 +262,8 @@ function NoticeBody({
             Betreuung {notice.year}
           </h2>
           <StatusBadge
-            label={NOTICE_KIND_LABELS[notice.kind]}
-            tone={NOTICE_KIND_TONES[notice.kind]}
+            label={labelOf(NOTICE_KIND_LABELS, notice.kind, "Bescheid")}
+            tone={labelOf(NOTICE_KIND_TONES, notice.kind, "gray")}
           />
         </div>
         <p className="text-sm text-gray-700">

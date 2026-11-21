@@ -574,7 +574,6 @@ const mockHistorySession: WorkSessionHistory = {
   netMinutes: 480,
   isOvertime: false,
   isBreakCompliant: true,
-  restPeriodWarning: null,
   breaks: [],
   editCount: 0,
 };

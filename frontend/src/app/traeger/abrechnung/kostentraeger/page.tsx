@@ -44,6 +44,7 @@ import {
 } from "~/lib/traeger-care-cost-shares-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 // Menu icons as in the OGS menus; defined once, outside render.
 const PLUS_ICON = <Plus className="size-4" aria-hidden />;
@@ -93,7 +94,7 @@ function ShareCell({ share }: Readonly<{ share: CareCostShare }>) {
           {share.costBearerName}
         </span>
         <span className="text-gray-600">
-          {COST_SHARE_KIND_LABELS[share.kind]}
+          {labelOf(COST_SHARE_KIND_LABELS, share.kind, "–")}
         </span>
         <span className="font-semibold tabular-nums">
           {costShareAmountText(share)}

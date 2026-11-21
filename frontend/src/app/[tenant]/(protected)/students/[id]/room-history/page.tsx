@@ -270,29 +270,31 @@ function DayCard({
                   {/* Korrigieren nur mit Recht und nach Abschluss. Der fehlende
                       Instanzstatus synthetischer "Ohne Zuordnung"-Zeilen
                       schließt sie ebenfalls aus. */}
-                  {canCorrect && slot.instanceStatus === "completed" && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="md"
-                      onClick={() =>
-                        onCorrect({
-                          instanceId: slot.instanceId,
-                          title: slot.title,
-                          date: formatDateShort(day.date),
-                          startTime: slot.startTime,
-                          endTime: slot.endTime,
-                          status: slot.status,
-                          substatus: slot.substatus,
-                          note: slot.note,
-                        })
-                      }
-                      tooltip={CORRECTION_TOOLTIP}
-                      className="mt-0.5 ml-1"
-                    >
-                      Korrigieren
-                    </Button>
-                  )}
+                  {canCorrect &&
+                    slot.instanceStatus === "completed" &&
+                    slot.status && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="md"
+                        onClick={() =>
+                          onCorrect({
+                            instanceId: slot.instanceId,
+                            title: slot.title,
+                            date: formatDateShort(day.date),
+                            startTime: slot.startTime,
+                            endTime: slot.endTime,
+                            status: slot.status ?? "",
+                            substatus: slot.substatus,
+                            note: slot.note,
+                          })
+                        }
+                        tooltip={CORRECTION_TOOLTIP}
+                        className="mt-0.5 ml-1"
+                      >
+                        Korrigieren
+                      </Button>
+                    )}
                 </div>
               ))}
             </div>
@@ -491,29 +493,31 @@ function daySlotRows(
                 Bemerkung: {slot.note}
               </p>
             )}
-            {canCorrect && slot.instanceStatus === "completed" && (
-              <Button
-                type="button"
-                variant="link"
-                size="md"
-                onClick={() =>
-                  onCorrect({
-                    instanceId: slot.instanceId,
-                    title: slot.title,
-                    date: formatDateShort(day.date),
-                    startTime: slot.startTime,
-                    endTime: slot.endTime,
-                    status: slot.status,
-                    substatus: slot.substatus,
-                    note: slot.note,
-                  })
-                }
-                tooltip={CORRECTION_TOOLTIP}
-                className="mt-1"
-              >
-                Korrigieren
-              </Button>
-            )}
+            {canCorrect &&
+              slot.instanceStatus === "completed" &&
+              slot.status && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="md"
+                  onClick={() =>
+                    onCorrect({
+                      instanceId: slot.instanceId,
+                      title: slot.title,
+                      date: formatDateShort(day.date),
+                      startTime: slot.startTime,
+                      endTime: slot.endTime,
+                      status: slot.status ?? "",
+                      substatus: slot.substatus,
+                      note: slot.note,
+                    })
+                  }
+                  tooltip={CORRECTION_TOOLTIP}
+                  className="mt-1"
+                >
+                  Korrigieren
+                </Button>
+              )}
           </>
         ),
       },

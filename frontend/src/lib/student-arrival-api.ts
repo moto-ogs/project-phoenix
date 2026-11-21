@@ -1,6 +1,14 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import { DEPARTURE_WEEKDAYS } from "./departure-plan";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  ArrivalDataResponse,
+  ArrivalNoteResponse,
+  ArrivalScheduleResponse,
+  StudentArrivalExceptionResponse,
+  arrivalSettingsResponse,
+} from "./contract/students.generated";
 
 /**
  * One care day of a child. The row says the child is in care that weekday;
@@ -54,85 +62,51 @@ export interface ArrivalData {
   notes: ArrivalNote[];
 }
 
-interface BackendArrivalSchedule {
-  id: number | string;
-  student_id: number | string;
-  weekday: number;
-  weekday_name: string;
-  expected_arrival: string;
-  source?: "class_schedule" | "staff";
-  source_class?: string;
-  notes?: string | null;
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
-}
+type ArrivalScheduleSource = NonNullable<ArrivalSchedule["source"]>;
+const ARRIVAL_SCHEDULE_SOURCES: readonly ArrivalScheduleSource[] = [
+  "class_schedule",
+  "staff",
+];
 
-interface BackendArrivalException {
-  id: number | string;
-  student_id: number | string;
-  exception_date: string;
-  expected_arrival?: string | null;
-  reason?: string | null;
-  source?: string;
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface BackendArrivalNote {
-  id: number | string;
-  student_id: number | string;
-  note_date: string;
-  content: string;
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface BackendArrivalData {
-  schedules?: BackendArrivalSchedule[] | null;
-  exceptions?: BackendArrivalException[] | null;
-  notes?: BackendArrivalNote[] | null;
-}
-
-function mapArrivalSchedule(data: BackendArrivalSchedule): ArrivalSchedule {
+function mapArrivalSchedule(data: ArrivalScheduleResponse): ArrivalSchedule {
   return {
-    id: String(data.id),
-    studentId: String(data.student_id),
+    id: data.id,
+    studentId: data.student_id,
     weekday: data.weekday,
     weekdayName: data.weekday_name,
     expectedArrival: data.expected_arrival,
-    source: data.source,
+    source: knownEnum(ARRIVAL_SCHEDULE_SOURCES, data.source),
     sourceClass: data.source_class,
     notes: data.notes,
-    createdBy: String(data.created_by),
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
 }
 
-function mapArrivalException(data: BackendArrivalException): ArrivalException {
+function mapArrivalException(
+  data: StudentArrivalExceptionResponse,
+): ArrivalException {
   return {
-    id: String(data.id),
-    studentId: String(data.student_id),
+    id: data.id,
+    studentId: data.student_id,
     exceptionDate: data.exception_date,
     expectedArrival: data.expected_arrival,
     reason: data.reason,
     source: data.source,
-    createdBy: String(data.created_by),
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
 }
 
-function mapArrivalNote(data: BackendArrivalNote): ArrivalNote {
+function mapArrivalNote(data: ArrivalNoteResponse): ArrivalNote {
   return {
-    id: String(data.id),
-    studentId: String(data.student_id),
+    id: data.id,
+    studentId: data.student_id,
     noteDate: data.note_date,
     content: data.content,
-    createdBy: String(data.created_by),
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -148,21 +122,20 @@ export interface SchoolPeriod {
   endTime: string;
 }
 
+const CARE_DAYS_SOURCES: readonly CareDaysSource[] = [
+  "weekly_plan",
+  "bookings",
+];
+
 interface ArrivalSettings {
-  careDaysSource: CareDaysSource;
+  /** null: a source this build does not know; the weekly plan is not editable. */
+  careDaysSource: CareDaysSource | null;
   /** In lesson order; empty when the school maintains no lesson end times. */
   schoolPeriods: SchoolPeriod[];
   /** "HH:MM", or empty when the school maintains none (#3371). */
   defaultArrivalTime: string;
   /** "HH:MM", or empty when the school maintains none (#3371). */
   defaultPickupTime: string;
-}
-
-interface BackendArrivalSettings {
-  care_days_source: CareDaysSource;
-  school_periods?: Array<{ period: number; end_time: string }> | null;
-  default_arrival_time: string;
-  default_pickup_time: string;
 }
 
 /**
@@ -210,13 +183,13 @@ export async function fetchArrivalData(
   if (date) query.set("date", date);
   if (toDate) query.set("to", toDate);
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  const data = await bffJson<BackendArrivalData>(
+  const data = await bffJson<ArrivalDataResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-schedules${suffix}`,
   );
   return mapArrivalData(data);
 }
 
-function mapArrivalData(data: BackendArrivalData): ArrivalData {
+function mapArrivalData(data: ArrivalDataResponse): ArrivalData {
   return {
     schedules: (data.schedules ?? []).map(mapArrivalSchedule),
     exceptions: (data.exceptions ?? []).map(mapArrivalException),
@@ -238,11 +211,12 @@ export async function fetchBulkArrivalScheduleStatus(
 }
 
 export async function fetchArrivalSettings(): Promise<ArrivalSettings> {
-  const settings = await bffJson<BackendArrivalSettings>(
+  const settings = await bffJson<arrivalSettingsResponse>(
     "/api/students/arrival-settings",
   );
   return {
-    careDaysSource: settings.care_days_source,
+    careDaysSource:
+      knownEnum(CARE_DAYS_SOURCES, settings.care_days_source) ?? null,
     schoolPeriods: (settings.school_periods ?? []).map((period) => ({
       period: period.period,
       endTime: period.end_time,
@@ -256,7 +230,7 @@ export async function updateArrivalSchedules(
   studentId: string,
   schedules: ArrivalScheduleInput[],
 ): Promise<ArrivalData> {
-  const data = await bffJson<BackendArrivalData>(
+  const data = await bffJson<ArrivalDataResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-schedules`,
     { method: "PUT", body: { schedules } },
   );
@@ -310,7 +284,7 @@ export async function createArrivalException(
   studentId: string,
   input: ArrivalExceptionInput,
 ): Promise<ArrivalException> {
-  const data = await bffJson<BackendArrivalException>(
+  const data = await bffJson<StudentArrivalExceptionResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions`,
     { method: "POST", body: input },
   );
@@ -322,7 +296,7 @@ export async function updateArrivalException(
   exceptionId: string,
   input: ArrivalExceptionInput,
 ): Promise<ArrivalException> {
-  const data = await bffJson<BackendArrivalException>(
+  const data = await bffJson<StudentArrivalExceptionResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions/${encodeURIComponent(exceptionId)}`,
     { method: "PUT", body: input },
   );
@@ -348,7 +322,7 @@ export async function createArrivalNote(
   studentId: string,
   input: ArrivalNoteInput,
 ): Promise<ArrivalNote> {
-  const data = await bffJson<BackendArrivalNote>(
+  const data = await bffJson<ArrivalNoteResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-notes`,
     { method: "POST", body: input },
   );
@@ -360,7 +334,7 @@ export async function updateArrivalNote(
   noteId: string,
   input: ArrivalNoteInput,
 ): Promise<ArrivalNote> {
-  const data = await bffJson<BackendArrivalNote>(
+  const data = await bffJson<ArrivalNoteResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-notes/${encodeURIComponent(noteId)}`,
     { method: "PUT", body: input },
   );

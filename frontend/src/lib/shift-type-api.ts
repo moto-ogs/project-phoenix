@@ -4,11 +4,13 @@ import { apiErrorFromResponse, type ApiError } from "./api-error";
 // the portal's catalog proxy; update and delete left /api/staff/shift-types
 // in #7563.
 
-import type { ShiftTypeDeleteResponse } from "./contract/shift-types.generated";
+import type {
+  ShiftTypeDeleteResponse,
+  ShiftTypeResponse,
+} from "./contract/shift-types.generated";
 import { sessionFetch } from "./session-cache";
 import {
   mapShiftType,
-  type BackendShiftType,
   type ShiftType,
   type ShiftTypeRemoval,
 } from "./shift-type-helpers";
@@ -56,7 +58,7 @@ async function readList(response: Response): Promise<ShiftType[]> {
   if (!response.ok) {
     throw await readError(response, "Dienstarten konnten nicht geladen werden");
   }
-  const json = (await response.json()) as { data: BackendShiftType[] | null };
+  const json = (await response.json()) as { data: ShiftTypeResponse[] | null };
   return (json.data ?? []).map(mapShiftType);
 }
 
@@ -67,7 +69,7 @@ async function readOne(response: Response): Promise<ShiftType> {
       "Dienstart konnte nicht gespeichert werden",
     );
   }
-  const json = (await response.json()) as { data: BackendShiftType };
+  const json = (await response.json()) as { data: ShiftTypeResponse };
   return mapShiftType(json.data);
 }
 

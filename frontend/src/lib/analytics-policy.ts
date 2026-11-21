@@ -40,6 +40,10 @@ export type ChildScopeAnalyticsValue =
 // generated contract import type-only: importing its runtime enum would also
 // pull Zod and every route schema into every portal.
 const DAY_CHANGE_KINDS = [
+  "activity_cancelled",
+  "activity_lead_changed",
+  "activity_reinstated",
+  "activity_room_changed",
   "group_substitution",
   "group_substitution_count",
   "shift_cancelled",

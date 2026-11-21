@@ -43,9 +43,10 @@ export function mealStandStatus(
  */
 export function mealPositionLabel(
   mealMonth: string,
-  mode: CareMealMode,
+  mode: CareMealMode | undefined,
   quantity: number,
 ): string {
   if (mode === "flat") return `Mensa-Pauschale ${formatMonth(mealMonth)}`;
+  if (mode === undefined) return `Mensa ${formatMonth(mealMonth)}`;
   return `${quantity} Mittagessen im ${formatMonth(mealMonth)}`;
 }

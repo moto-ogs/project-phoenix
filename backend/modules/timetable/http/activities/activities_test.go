@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -120,15 +121,13 @@ func TestListActivities_WithCategoryFilter(t *testing.T) {
 	response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
 	data, ok := response["data"].([]interface{})
 	require.True(t, ok, "Expected data to be an array")
-	ids := make([]float64, 0, len(data))
+	ids := make([]int64, 0, len(data))
 	for _, item := range data {
 		row, ok := item.(map[string]interface{})
 		require.True(t, ok, "Expected activity to be an object")
-		id, ok := row["id"].(float64)
-		require.True(t, ok, "Expected activity id to be a number")
-		ids = append(ids, id)
+		ids = append(ids, testpkg.JSONID(t, row["id"]))
 	}
-	assert.Equal(t, []float64{float64(activity.ID)}, ids, "only the activity of the requested category is listed")
+	assert.Equal(t, []int64{activity.ID}, ids, "only the activity of the requested category is listed")
 }
 
 func TestGetActivity_Success(t *testing.T) {
@@ -146,7 +145,7 @@ func TestGetActivity_Success(t *testing.T) {
 	response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
 	data, ok := response["data"].(map[string]interface{})
 	require.True(t, ok, "Expected data to be an object")
-	assert.Equal(t, float64(activity.ID), data["id"])
+	assert.Equal(t, int64(activity.ID), testpkg.JSONID(t, data["id"]))
 }
 
 func TestGetActivity_NotFound(t *testing.T) {
@@ -273,17 +272,15 @@ func TestCreateActivity_AllowsNoParticipantLimit(t *testing.T) {
 	require.True(t, ok)
 	assert.Nil(t, data["max_participants"])
 
-	if id, ok := data["id"].(float64); ok {
-		activityID := int64(id)
-		var persistedCapacity *int
-		require.NoError(t, ctx.db.NewRaw(
-			`SELECT max_participants FROM activities.groups WHERE id = ?`, activityID,
-		).Scan(testpkg.Ctx(t), &persistedCapacity))
-		assert.Nil(t, persistedCapacity)
-		persistedActivity, err := ctx.resource.ActivityService.GetGroup(testpkg.Ctx(t), activityID)
-		require.NoError(t, err)
-		assert.Zero(t, persistedActivity.MaxParticipants)
-	}
+	activityID := testpkg.JSONID(t, data["id"])
+	var persistedCapacity *int
+	require.NoError(t, ctx.db.NewRaw(
+		`SELECT max_participants FROM activities.groups WHERE id = ?`, activityID,
+	).Scan(testpkg.Ctx(t), &persistedCapacity))
+	assert.Nil(t, persistedCapacity)
+	persistedActivity, err := ctx.resource.ActivityService.GetGroup(testpkg.Ctx(t), activityID)
+	require.NoError(t, err)
+	assert.Zero(t, persistedActivity.MaxParticipants)
 }
 
 func TestUpdateActivity_Success(t *testing.T) {
@@ -423,23 +420,6 @@ func TestListCategories_Success(t *testing.T) {
 }
 
 // =============================================================================
-// SCHEDULE TESTS
-// =============================================================================
-
-func TestGetActivitySchedules_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("ScheduleTest-%d", time.Now().UnixNano()))
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/activities/%d/schedules", activity.ID), nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-// =============================================================================
 // SUPERVISOR TESTS
 // =============================================================================
 
@@ -560,9 +540,7 @@ func supervisorIDs(t *testing.T, rows []interface{}) []int64 {
 	for _, row := range rows {
 		value, ok := row.(map[string]interface{})
 		require.True(t, ok)
-		staffID, ok := value["staff_id"].(float64)
-		require.True(t, ok)
-		ids = append(ids, int64(staffID))
+		ids = append(ids, testpkg.JSONID(t, value["staff_id"]))
 	}
 	return ids
 }
@@ -707,6 +685,27 @@ func TestBatchEnrollment_Success(t *testing.T) {
 	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 }
 
+// The roster takes the student IDs as decimal strings too, as the frontend
+// carries them.
+func TestBatchEnrollment_AcceptsStudentIDsAsStrings(t *testing.T) {
+	t.Parallel()
+	ctx := setupActivitiesRoute(t)
+
+	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("BatchStrings-%d", time.Now().UnixNano()))
+	student := testpkg.CreateTestStudent(t, ctx.db, "Batch", "Strings", "1a")
+
+	body := map[string]any{"student_ids": []string{strconv.FormatInt(student.ID, 10)}}
+	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/activities/%d/students", activity.ID), body)
+	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
+
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	var enrolled int
+	require.NoError(t, ctx.db.NewRaw(
+		`SELECT count(*) FROM activities.student_enrollments WHERE activity_group_id = ? AND student_id = ?`, activity.ID, student.ID,
+	).Scan(testpkg.Ctx(t), &enrolled))
+	assert.Equal(t, 1, enrolled)
+}
+
 func TestBatchEnrollment_BadRequest_MissingStudentIDs(t *testing.T) {
 	t.Parallel()
 	ctx := setupActivitiesRoute(t)
@@ -787,48 +786,6 @@ func TestQuickCreateActivity_BadRequest_MissingCategoryID(t *testing.T) {
 	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
 
 	testutil.AssertBadRequest(t, rr)
-}
-
-// =============================================================================
-// ADDITIONAL SCHEDULE TESTS (0% coverage functions)
-// =============================================================================
-
-func TestGetActivitySchedule_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("GetSched-%d", time.Now().UnixNano()))
-
-	// Create a schedule first using the service
-	actSvc := ctx.resource.ActivityService
-	schedData := &activityContract.Schedule{
-		ActivityGroupID: activity.ID,
-		Weekday:         1, // Monday
-	}
-	schedule, err := actSvc.AddSchedule(testpkg.Ctx(t), activity.ID, schedData)
-	require.NoError(t, err)
-	require.NotNil(t, schedule)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET",
-		fmt.Sprintf("/activities/%d/schedules/%d", activity.ID, schedule.ID), nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetActivitySchedule_NotFound(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("GetSchedNF-%d", time.Now().UnixNano()))
-
-	req := testutil.NewAuthenticatedRequest(t, "GET",
-		fmt.Sprintf("/activities/%d/schedules/999999", activity.ID), nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertNotFound(t, rr)
 }
 
 // =============================================================================

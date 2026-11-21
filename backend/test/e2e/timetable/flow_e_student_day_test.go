@@ -77,7 +77,7 @@ func TestFlowE_StudentDayWithUnplannedVisit(t *testing.T) {
 	// First visit: B into X (enrolled) → flips instance_students to present.
 	v1 := &studentpresence.Visit{
 		StudentID:     studentB.ID,
-		ActiveGroupID: startX.ActiveGroupID,
+		ActiveGroupID: int64(startX.ActiveGroupID),
 		EntryTime:     time.Now(),
 	}
 	require.NoError(t, s.createActiveVisit(ctx, v1), "visit B→X (enrolled)")
@@ -90,7 +90,7 @@ func TestFlowE_StudentDayWithUnplannedVisit(t *testing.T) {
 	// Second visit: B into Y (not enrolled) → surfaces as is_unplanned=true.
 	v2 := &studentpresence.Visit{
 		StudentID:     studentB.ID,
-		ActiveGroupID: startY.ActiveGroupID,
+		ActiveGroupID: int64(startY.ActiveGroupID),
 		EntryTime:     time.Now(),
 	}
 	require.NoError(t, s.createActiveVisit(ctx, v2), "visit B→Y (unplanned)")
@@ -101,7 +101,7 @@ func TestFlowE_StudentDayWithUnplannedVisit(t *testing.T) {
 
 	var dayResp struct {
 		Instances []struct {
-			ID         int64 `json:"id"`
+			ID         testpkg.ID `json:"id"`
 			Attendance struct {
 				Status      string
 				IsUnplanned bool `json:"is_unplanned"`
@@ -113,14 +113,14 @@ func TestFlowE_StudentDayWithUnplannedVisit(t *testing.T) {
 
 	byID := map[int64]bool{}
 	for _, inst := range dayResp.Instances {
-		switch inst.ID {
+		switch int64(inst.ID) {
 		case instX.ID:
-			byID[inst.ID] = true
+			byID[int64(inst.ID)] = true
 			assert.Equal(t, testpkg.ScheduleAttendanceStatusPresent, inst.Attendance.Status,
 				"B on X: present via enrollment check-in")
 			assert.False(t, inst.Attendance.IsUnplanned, "X was enrolled, so not unplanned")
 		case instY.ID:
-			byID[inst.ID] = true
+			byID[int64(inst.ID)] = true
 			assert.Equal(t, testpkg.ScheduleAttendanceStatusPresent, inst.Attendance.Status,
 				"B on Y: present via unplanned visit")
 			assert.True(t, inst.Attendance.IsUnplanned, "Y was NOT enrolled → unplanned")
@@ -165,17 +165,17 @@ func TestFlowE_StudentDayWithUnplannedVisit(t *testing.T) {
 
 // startInstance calls POST /instances/{id}/start and returns the parsed body.
 func startInstance(t *testing.T, s *scenario, instanceID int64) struct {
-	InstanceID    int64  `json:"instance_id"`
-	Status        string `json:"status"`
-	ActiveGroupID int64  `json:"active_group_id"`
+	InstanceID    testpkg.ID `json:"instance_id"`
+	Status        string     `json:"status"`
+	ActiveGroupID testpkg.ID `json:"active_group_id"`
 } {
 	t.Helper()
 	rr := s.do("POST", fmt.Sprintf("/instances/%d/start", instanceID), nil, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "start instance %d body=%s", instanceID, rr.Body.String())
 	var resp struct {
-		InstanceID    int64  `json:"instance_id"`
-		Status        string `json:"status"`
-		ActiveGroupID int64  `json:"active_group_id"`
+		InstanceID    testpkg.ID `json:"instance_id"`
+		Status        string     `json:"status"`
+		ActiveGroupID testpkg.ID `json:"active_group_id"`
 	}
 	decodeResponse(t, rr, &resp)
 	require.NotZero(t, resp.ActiveGroupID, "instance %d: active_group_id missing", instanceID)

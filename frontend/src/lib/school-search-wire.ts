@@ -8,15 +8,7 @@ import type {
   SchoolSearchResult,
 } from "~/lib/school-search-types";
 
-/**
- * The backend's search answer, the contract's SearchResult (snake_case, IDs
- * as strings); it arrives through the portal's catalog proxy (#7563).
- */
-export type BackendSchoolSearchResult = SearchResult;
-
-type BackendMatch = SearchMatch;
-
-function mapMatch(match: BackendMatch): SchoolSearchMatch {
+function mapMatch(match: SearchMatch): SchoolSearchMatch {
   return {
     field: match.field as SchoolSearchMatchField,
     ...(match.label ? { label: match.label } : {}),
@@ -26,7 +18,7 @@ function mapMatch(match: BackendMatch): SchoolSearchMatch {
 
 /** Maps the backend answer onto the frontend shape. */
 export function mapSchoolSearchResult(
-  result: BackendSchoolSearchResult,
+  result: SearchResult,
 ): SchoolSearchResult {
   return {
     children: (result.children ?? []).map((child) => ({

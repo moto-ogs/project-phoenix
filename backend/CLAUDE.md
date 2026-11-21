@@ -75,6 +75,13 @@ Before completing a backend code change:
 If a feature cannot fit these boundaries, stop its structural change and open
 an architecture issue for an ADR decision before continuing.
 
+### HTTP routes
+
+A route's contract sits beside its handler: `RouteContracts()` returning
+`[]common.RouteContract` (`api/common/route_contract.go`), mounted in
+`api/route_contracts.go`; `gencontract` writes the frontend types from it.
+Steps: [new API route](../docs/agents/new-route.md).
+
 ### Code conventions
 
 Read `.claude/rules/backend-conventions.md` for owner-private persistence, row

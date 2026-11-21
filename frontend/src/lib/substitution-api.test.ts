@@ -4,6 +4,7 @@ const sessionFetch = vi.hoisted(() => vi.fn());
 vi.mock("./session-cache", () => ({ sessionFetch }));
 
 import { substitutionService } from "./substitution-api";
+import { routes } from "./contract/substitutions.generated";
 
 const handover = {
   id: "5",
@@ -29,7 +30,7 @@ describe("substitutionService", () => {
           targets: [],
           schedule_appointments: [
             {
-              id: 42,
+              id: "42",
               type: "schedule_substitution",
               date: "2026-08-31",
               start_time: "12:00",
@@ -38,8 +39,8 @@ describe("substitutionService", () => {
               status: "planned",
               staff: [
                 {
-                  assignment_id: 9,
-                  staff: { id: 7, full_name: "Ada Alt" },
+                  assignment_id: "9",
+                  staff: { id: "7", full_name: "Ada Alt" },
                   is_absent: true,
                   is_substitute: false,
                   can_end: false,
@@ -47,7 +48,7 @@ describe("substitutionService", () => {
               ],
             },
           ],
-          schedule_targets: [{ id: 8, full_name: "Nora Neu" }],
+          schedule_targets: [{ id: "8", full_name: "Nora Neu" }],
         },
       }),
     });
@@ -214,17 +215,15 @@ describe("substitutionService", () => {
     });
   });
 
-  it("rejects a malformed overview instead of showing an empty plan", async () => {
-    sessionFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
+  // A malformed overview never reaches the client: the catalog proxy's
+  // decoder refuses it and answers 502, so no empty plan is shown.
+  it("refuses a malformed overview at the proxy instead of showing an empty plan", () => {
+    expect(
+      routes["GET /api/substitutions/"].response.safeParse({
+        status: "success",
         data: { group_handovers: null, targets: [] },
-      }),
-    });
-
-    await expect(substitutionService.fetchSubstitutions()).rejects.toThrow(
-      "Ungültige Antwort",
-    );
+      }).success,
+    ).toBe(false);
   });
 
   // The catalog proxy hands over the backend's answer, which names its

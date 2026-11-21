@@ -30,6 +30,7 @@ import {
   type DayChangesOverview,
 } from "~/lib/day-changes";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
+import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -142,6 +143,9 @@ function DayChangesAnnouncer({
             ]),
             entry.groupName,
             entry.count,
+            entry.activity?.title,
+            entry.roomName,
+            entry.previousRoomName,
             entry.notice
               ? [
                   entry.notice.id,
@@ -379,7 +383,7 @@ function dayChangeKeys(entries: readonly DayChange[]): string[] {
       return `${entry.section}:${entry.kind}:${entry.notice.id}`;
     }
     const people = entry.people.map((person) => person.staffId).join(",");
-    const base = `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}`;
+    const base = `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}:${entry.activity?.id ?? ""}`;
     const count = (seen.get(base) ?? 0) + 1;
     seen.set(base, count);
     return count === 1 ? base : `${base}#${count}`;
@@ -402,9 +406,18 @@ function DayChangeRow({
   readonly muted?: boolean;
 }) {
   const tenantPath = useTenantAwarePath();
+  const dayPlanHref = useDayPlanHref();
   const text = dayChangeText(entry) ?? "";
   const span = dayChangeSpan(entry);
-  const href = dayChangeHref(entry);
+  const path = dayChangeHref(entry);
+  // Der Tagesplan heißt je Rolle anders (#7662): die Leitung ohne Gruppe
+  // plant im Betreuungsplan.
+  const href =
+    path === null
+      ? null
+      : entry.link?.target === "day_plan"
+        ? dayPlanHref
+        : tenantPath(path);
   // Eine lange Änderung, die vor heute begann, steht kompakt in einer Zeile
   // („… · seit 3.11.“), damit sie nicht jeden Tag die neuen verdrängt.
   const compact = entry.since !== null;
@@ -441,7 +454,7 @@ function DayChangeRow({
       }
     >
       {href ? (
-        <ListRow href={tenantPath(href)} density="compact">
+        <ListRow href={href} density="compact">
           {body}
         </ListRow>
       ) : (

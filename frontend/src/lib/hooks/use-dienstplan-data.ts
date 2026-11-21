@@ -161,9 +161,8 @@ export function useDienstplanData(
     isLoading: legacyStaffLoading,
     mutate: mutateLegacyStaff,
   } = useSWRAuth<Staff[]>(
-    canUseAssignmentOverview ? null : staffKeys.key({}, { strict: true }),
-    // strict: a failed load must reject, not arrive as an empty staff list.
-    () => staffKeys.fetcher({}, { strict: true }),
+    canUseAssignmentOverview ? null : staffKeys.key(),
+    () => staffKeys.fetcher(),
   );
 
   const {

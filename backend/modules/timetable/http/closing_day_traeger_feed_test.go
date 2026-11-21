@@ -24,14 +24,14 @@ import (
 )
 
 type traegerFeedEntry struct {
-	ID         int64   `json:"id"`
-	Type       string  `json:"type"`
-	Title      string  `json:"title"`
-	Body       string  `json:"body"`
-	DeepLink   string  `json:"deep_link"`
-	ReadAt     *string `json:"read_at"`
-	SchoolID   string  `json:"school_id"`
-	SchoolName string  `json:"school_name"`
+	ID         testpkg.ID `json:"id"`
+	Type       string     `json:"type"`
+	Title      string     `json:"title"`
+	Body       string     `json:"body"`
+	DeepLink   string     `json:"deep_link"`
+	ReadAt     *string    `json:"read_at"`
+	SchoolID   string     `json:"school_id"`
+	SchoolName string     `json:"school_name"`
 }
 
 // traegerFeedCall runs a request of the Träger bell in a session of the

@@ -6121,22 +6121,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.GetPermission",
-      "binding_digest": "e882356333992a7bc17a6b489253b930",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.GetPermission",
-      "binding_digest": "6d2d5cd1be296990c08263e05f7e119a",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.GetPermissionByName",
       "binding_digest": "e882356333992a7bc17a6b489253b930",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermissionByName",
@@ -12356,22 +12340,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetAccountRoles",
       "binding_digest": "6d2d5cd1be296990c08263e05f7e119a",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.GetAccountRoles",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "binding_digest": "e882356333992a7bc17a6b489253b930",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.GetPermission",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "binding_digest": "6d2d5cd1be296990c08263e05f7e119a",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.GetPermission",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"

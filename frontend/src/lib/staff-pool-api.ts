@@ -9,6 +9,7 @@
  * Blockung und hebt sie auf. Jede Ansicht steht im Zugriffsprotokoll.
  */
 import { apiErrorFromResponse } from "~/lib/api-error";
+import type * as wire from "~/lib/contract/shared.generated";
 import { sessionFetch } from "~/lib/session-cache";
 import { traegerRequest } from "~/lib/traeger-api";
 import {
@@ -74,66 +75,41 @@ export interface PoolBlockInput {
   readonly endTime: string;
 }
 
-interface BackendBlock {
-  id?: number | string | null;
-  school_id: number | string;
-  school_name: string;
-  own: boolean;
-  date: string;
-  start_time: string;
-  end_time: string;
-  lifted: boolean;
-}
-
-interface BackendSpringer {
-  staff_record_id: number | string;
-  first_name: string;
-  last_name: string;
-  pool_from: string;
-  pool_until: string | null;
-  proofs:
-    { type_name: string; status: string; expires_on?: string | null }[] | null;
-  blocks: BackendBlock[] | null;
-}
-
-interface BackendWeek {
-  week_start: string;
-  today: string;
-  available: boolean;
-  springers: BackendSpringer[] | null;
-}
+/** A day the contract allows as null; "" never matches a real day. */
+const day = (value: string | null | undefined): string =>
+  (value ?? "").slice(0, 10);
 
 const proofState = (status: string): PoolProofState =>
   status === "complete" || status === "expiring" ? status : "missing";
 
-function mapPoolBlock(block: BackendBlock): PoolBlock {
+function mapPoolBlock(block: wire.PoolBlock): PoolBlock {
   return {
-    id: block.id === null || block.id === undefined ? null : String(block.id),
-    schoolId: String(block.school_id),
+    id: block.id ?? null,
+    schoolId: block.school_id,
     schoolName: block.school_name,
     own: block.own,
-    date: block.date.slice(0, 10),
+    date: day(block.date),
     startTime: block.start_time.slice(0, 5),
     endTime: block.end_time.slice(0, 5),
     lifted: block.lifted,
   };
 }
 
-function mapPoolWeek(week: BackendWeek): PoolWeek {
+function mapPoolWeek(week: wire.PoolWeek): PoolWeek {
   return {
-    weekStart: week.week_start.slice(0, 10),
-    today: week.today.slice(0, 10),
+    weekStart: day(week.week_start),
+    today: day(week.today),
     available: week.available,
     springers: (week.springers ?? []).map((springer) => ({
-      recordId: String(springer.staff_record_id),
+      recordId: springer.staff_record_id,
       firstName: springer.first_name,
       lastName: springer.last_name,
-      poolFrom: springer.pool_from.slice(0, 10),
-      poolUntil: springer.pool_until ? springer.pool_until.slice(0, 10) : null,
+      poolFrom: day(springer.pool_from),
+      poolUntil: springer.pool_until ? day(springer.pool_until) : null,
       proofs: (springer.proofs ?? []).map((proof) => ({
         typeName: proof.type_name,
         status: proofState(proof.status),
-        expiresOn: proof.expires_on ? proof.expires_on.slice(0, 10) : null,
+        expiresOn: proof.expires_on ? day(proof.expires_on) : null,
       })),
       blocks: (springer.blocks ?? []).map(mapPoolBlock),
     })),
@@ -166,7 +142,7 @@ async function tenantRequest<T>(
 export async function fetchSchoolPoolWeek(
   weekStart: string,
 ): Promise<PoolWeek> {
-  const week = await tenantRequest<BackendWeek>(
+  const week = await tenantRequest<wire.PoolWeek>(
     `/api/staff-pool?week=${encodeURIComponent(weekStart)}`,
     { method: "GET" },
     "staff pool load failed",
@@ -175,7 +151,7 @@ export async function fetchSchoolPoolWeek(
 }
 
 export async function blockSpringer(input: PoolBlockInput): Promise<PoolBlock> {
-  const block = await tenantRequest<BackendBlock>(
+  const block = await tenantRequest<wire.PoolBlock>(
     "/api/staff-pool/blocks",
     {
       method: "POST",
@@ -203,7 +179,7 @@ export async function liftSchoolBlock(blockId: string): Promise<void> {
 export async function fetchTraegerPoolWeek(
   weekStart: string,
 ): Promise<PoolWeek> {
-  const week = await traegerRequest<BackendWeek>(
+  const week = await traegerRequest<wire.PoolWeek>(
     `/api/traeger/staff-pool?week=${encodeURIComponent(weekStart)}`,
   );
   return mapPoolWeek(week);

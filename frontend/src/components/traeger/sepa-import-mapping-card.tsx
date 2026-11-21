@@ -103,7 +103,9 @@ export function SepaImportMappingCard({
             minSegmentWidth={150}
           />
           <p className="mt-2 text-xs text-gray-500">
-            {PAYER_KEY_HINTS[mapping.payerKey]}
+            {mapping.payerKey
+              ? PAYER_KEY_HINTS[mapping.payerKey]
+              : "Bitte wähle aus, was die Spalte enthält."}
           </p>
         </div>
         {withoutCreditorColumn ? (

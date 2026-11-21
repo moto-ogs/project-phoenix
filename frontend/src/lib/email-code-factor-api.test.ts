@@ -13,29 +13,25 @@ describe("emailCodeFactorApi", () => {
       .fn()
       .mockResolvedValueOnce(
         Response.json({
-          success: true,
-          message: "Success",
+          status: "success",
           data: { enabled: false, available: false, masked_email: "e***@x.de" },
         }),
       )
       .mockResolvedValueOnce(
         Response.json({
-          success: true,
-          message: "Success",
+          status: "success",
           data: { enabled: true, masked_email: "e***@x.de" },
         }),
       )
       .mockResolvedValueOnce(
         Response.json({
-          success: true,
-          message: "Success",
+          status: "success",
           data: { challenge_token: "first" },
         }),
       )
       .mockResolvedValueOnce(
         Response.json({
-          success: true,
-          message: "Success",
+          status: "success",
           data: { challenge_token: "wrapped", masked_email: "e***@x.de" },
         }),
       );
@@ -66,9 +62,7 @@ describe("emailCodeFactorApi", () => {
   it("switches the factor off with the backend's field name (#2352)", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(
-        Response.json({ success: true, message: "Success", data: null }),
-      );
+      .mockResolvedValueOnce(Response.json({ status: "success", data: null }));
     global.fetch = fetchMock as unknown as typeof global.fetch;
 
     await emailCodeFactorApi("/api/caterer/account/mfa").disable("Passw0rd!");

@@ -1,4 +1,5 @@
 import { ApiError, apiErrorFromResponse, transportFetch } from "./api-error";
+import type { ApiResponse } from "./api-envelope";
 import { hasSessionAccess } from "./session-access";
 import {
   sessionFetch,
@@ -16,15 +17,11 @@ import {
   type BackendProfile,
 } from "./profile-helpers";
 
-interface ProfileApiResult {
-  success: boolean;
-  message: string;
-  data: BackendProfile;
-}
+type ProfileApiResult = ApiResponse<BackendProfile>;
 
 /**
- * A 200 answer without `success` is a server defect: the shared error path
- * shows it as general.server (#2517).
+ * A 200 answer without the backend's success status is a server defect: the
+ * shared error path shows it as general.server (#2517).
  */
 function unsuccessfulResult(message: string): ApiError {
   return new ApiError(message, 500);
@@ -46,7 +43,7 @@ export async function fetchProfile(): Promise<Profile> {
 
     const result = (await response.json()) as ProfileApiResult;
 
-    if (!result.success) {
+    if (result.status !== "success") {
       throw unsuccessfulResult(result.message || "Failed to fetch profile");
     }
 
@@ -80,7 +77,7 @@ export async function updateProfile(
 
     const result = (await response.json()) as ProfileApiResult;
 
-    if (!result.success) {
+    if (result.status !== "success") {
       throw unsuccessfulResult(result.message || "Failed to update profile");
     }
 
@@ -136,7 +133,7 @@ export async function uploadAvatar(file: File): Promise<Profile> {
 
     const result = (await response.json()) as ProfileApiResult;
 
-    if (!result.success) {
+    if (result.status !== "success") {
       throw unsuccessfulResult(result.message || "Failed to upload avatar");
     }
 

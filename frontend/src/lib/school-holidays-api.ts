@@ -4,6 +4,7 @@
 
 import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
+import type { HolidaysResponse } from "~/lib/contract/timetable.generated";
 import type { CalendarEvent } from "~/lib/personal-calendar-api";
 
 const MAX_HOLIDAY_WINDOW_DAYS = 400;
@@ -19,12 +20,6 @@ export interface SchoolHolidays {
   /** Name des Bundeslands, z. B. „Nordrhein-Westfalen“. */
   readonly federalStateName: string;
   readonly holidays: readonly SchoolHoliday[];
-}
-
-interface BackendSchoolHolidays {
-  readonly federal_state: string;
-  readonly federal_state_name: string;
-  readonly holidays: SchoolHoliday[] | null;
 }
 
 function holidayWindows(
@@ -72,7 +67,7 @@ async function getSchoolHolidayWindow(
       await response.json().catch(() => undefined),
     );
   }
-  const envelope = (await response.json()) as { data: BackendSchoolHolidays };
+  const envelope = (await response.json()) as { data: HolidaysResponse };
   return {
     federalState: envelope.data.federal_state,
     federalStateName: envelope.data.federal_state_name,

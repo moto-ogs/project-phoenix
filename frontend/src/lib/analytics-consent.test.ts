@@ -26,7 +26,7 @@ const waitFor = <T>(callback: () => T) => vi.waitFor(callback, { interval: 5 });
 function answer(granted: boolean | null, status = 200): Response {
   return new Response(
     status === 200
-      ? JSON.stringify({ success: true, data: { granted } })
+      ? JSON.stringify({ status: "success", data: { granted } })
       : JSON.stringify({ status, code: "general.internal" }),
     { status, headers: { "Content-Type": "application/json" } },
   );

@@ -107,9 +107,9 @@ func TestTraegerStaffLinksLeaveTheVisitorOut(t *testing.T) {
 	suggestion := func(schoolID, staffID int64) seedTraegerStaffSuggestion {
 		var s seedTraegerStaffSuggestion
 		s.Members = append(s.Members, struct {
-			SchoolID int64 `json:"school_id"`
-			StaffID  int64 `json:"staff_id"`
-		}{schoolID, staffID})
+			SchoolID apiID `json:"school_id"`
+			StaffID  apiID `json:"staff_id"`
+		}{apiID(schoolID), apiID(staffID)})
 		return s
 	}
 	kept := withoutVisitorStaff(rt, []seedTraegerStaffSuggestion{

@@ -22,9 +22,9 @@ import (
 )
 
 type knownChildBody struct {
-	RegistrationID int64 `json:"registration_id"`
-	ChildID        int64 `json:"child_id"`
-	SchoolID       int64 `json:"school_id"`
+	RegistrationID wireID `json:"registration_id"`
+	ChildID        wireID `json:"child_id"`
+	SchoolID       wireID `json:"school_id"`
 }
 
 // schoolChild creates an actively managed child of a school with the names
@@ -71,18 +71,18 @@ func TestTraegerSeesWhichSchoolKnowsARegisteredChild(t *testing.T) {
 
 	// Ben came as a holiday guest, but the second school knows him; a
 	// namesake at another Träger's school does not count.
-	schoolChild(t, f, south, "Ben", "Muster", "2016-09-12")
+	schoolChild(t, f, int64(south), "Ben", "Muster", "2016-09-12")
 	schoolChild(t, f, foreign.schools[0], "Ben", "Muster", "2016-09-12")
 	// Lia has namesakes at both schools: no hint.
-	schoolChild(t, f, north, "Lia", "Muster", "2018-03-01")
-	schoolChild(t, f, south, "lia", "MUSTER", "2018-03-01")
+	schoolChild(t, f, int64(north), "Lia", "Muster", "2018-03-01")
+	schoolChild(t, f, int64(south), "lia", "MUSTER", "2018-03-01")
 
 	list := f.list(t, "")
 	ben := registrationByID(t, list, f.siblings).Children[1]
 	require.Equal(t, "Ben", ben.FirstName)
 
 	known := f.knownChildren(t, f.office.token, "")
-	assert.Equal(t, []knownChildBody{{RegistrationID: f.siblings, ChildID: ben.ID, SchoolID: south}}, known,
+	assert.Equal(t, []knownChildBody{{RegistrationID: wireID(f.siblings), ChildID: ben.ID, SchoolID: south}}, known,
 		"only Ben is known, at the one school of the Träger that manages him")
 	assert.Equal(t, known, f.knownChildren(t, f.office.token, fmt.Sprintf("?registration_id=%d", f.siblings)))
 	assert.Empty(t, f.knownChildren(t, f.office.token, fmt.Sprintf("?registration_id=%d", f.again)),
@@ -107,7 +107,7 @@ func TestTraegerKnownChildrenNeedTheRightAndStayWithTheTraeger(t *testing.T) {
 	f := newReviewFixture(t, "Träger Bekannt Grenze")
 	readOnly := newTraegerOffice(t, f.db, f.traeger, "Träger Bekannt Lesend", identityaccess.TraegerRoleReadOnly)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Bekannt Andere", identityaccess.TraegerRoleAdministration)
-	schoolChild(t, f, f.offer.Schools[1].ID, "Ben", "Muster", "2016-09-12")
+	schoolChild(t, f, int64(f.offer.Schools[1].ID), "Ben", "Muster", "2016-09-12")
 
 	rec := traegerJSON(t, f.traeger, readOnly.token, http.MethodGet, f.path("/known-children"), nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
@@ -121,7 +121,7 @@ func TestTraegerKnownChildrenNeedTheRightAndStayWithTheTraeger(t *testing.T) {
 func TestTraegerKnownChildrenQueryBudgetIsFlat(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Bekannt Budget")
-	schoolChild(t, f, f.offer.Schools[1].ID, "Ben", "Muster", "2016-09-12")
+	schoolChild(t, f, int64(f.offer.Schools[1].ID), "Ben", "Muster", "2016-09-12")
 	known := func() testpkg.QueryMeasurement {
 		counter := testpkg.CaptureQueriesForContext(t, f.db)
 		req := httptest.NewRequest(http.MethodGet, f.path("/known-children"), nil)
@@ -134,7 +134,7 @@ func TestTraegerKnownChildrenQueryBudgetIsFlat(t *testing.T) {
 	one := known()
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), siblingsRegistration(f.offer, "bekannt@example.org"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	schoolChild(t, f, f.offer.Schools[0].ID, "Ben", "Muster", "2016-09-13")
+	schoolChild(t, f, int64(f.offer.Schools[0].ID), "Ben", "Muster", "2016-09-13")
 	assert.Len(t, known().Statements, len(one.Statements), "the comparison reads the same statements for any number of children")
 	querybudgets.AssertQueryBudget(t, "api.traeger.holiday_known_children", one)
 }

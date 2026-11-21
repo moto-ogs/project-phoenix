@@ -95,8 +95,7 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
  * Types for common API responses
  */
 interface ApiSuccessResponse<T = unknown> {
-  success: boolean;
-  message: string;
+  status: "success";
   data: T;
 }
 
@@ -176,8 +175,7 @@ describe("createGetHandler", () => {
     expect(response.status).toBe(200);
     const json = await parseJsonResponse<unknown>(response);
     expect(json).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { id: 1, name: "Test" },
     });
   });
@@ -195,14 +193,15 @@ describe("createGetHandler", () => {
     expect(await parseJsonResponse<unknown>(response)).toEqual(roomsData);
   });
 
-  it("passes through response if already wrapped with success field", async () => {
-    const alreadyWrapped = { success: true, data: { id: 1 } };
-    const handler = createGetHandler(async () => alreadyWrapped);
+  it("wraps data that carries a success field of its own", async () => {
+    // The removed wrapper passed such data on unwrapped (#2353).
+    const payload = { success: true, data: { id: 1 } };
+    const handler = createGetHandler(async () => payload);
     const request = createMockRequest("/api/test");
     const response = await handler(request, createMockContext());
 
     const json = await parseJsonResponse<unknown>(response);
-    expect(json).toEqual(alreadyWrapped);
+    expect(json).toEqual({ status: "success", data: payload });
   });
 
   it("extracts ID from URL path when not in context params", async () => {
@@ -334,8 +333,7 @@ describe("createPostHandler", () => {
     expect(response.status).toBe(200);
     const json = await parseJsonResponse<unknown>(response);
     expect(json).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { id: 1, name: "Created" },
     });
   });
@@ -391,8 +389,7 @@ describe("createPutHandler", () => {
     expect(response.status).toBe(200);
     const json = await parseJsonResponse<unknown>(response);
     expect(json).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { id: 1, name: "Updated" },
     });
   });
@@ -444,8 +441,7 @@ describe("createDeleteHandler", () => {
     expect(response.status).toBe(200);
     const json = await parseJsonResponse<unknown>(response);
     expect(json).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { message: "Deleted successfully" },
     });
   });

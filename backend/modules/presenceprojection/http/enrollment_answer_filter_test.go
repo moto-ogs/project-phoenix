@@ -65,13 +65,13 @@ func listByAnswer(t *testing.T, tc *testContext, claims sessiontoken.AppClaims, 
 	}
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 	ids := make([]int64, 0, len(resp.Data))
 	for _, row := range resp.Data {
-		ids = append(ids, row.ID)
+		ids = append(ids, int64(row.ID))
 	}
 	return rr.Code, ids
 }

@@ -223,6 +223,8 @@ interface CareBoundaryItem {
    */
   readonly markerTone?: "warning";
   readonly markerTitle?: string;
+  /** Die reguläre Zeit, die eine Tagesausnahme ersetzt; steht durchgestrichen. */
+  readonly replacedValue?: string;
   readonly icon: React.ReactNode;
   readonly onEdit?: () => void;
 }
@@ -1652,6 +1654,12 @@ function CareBoundaryRow({
               whenever the value wrapped ("Keine Abholung" in a day column). */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5 font-semibold text-gray-900">
             <span className="min-w-0 break-words">{boundary.value}</span>
+            {boundary.replacedValue ? (
+              <span className="font-normal text-gray-500">
+                <span className="sr-only">statt </span>
+                <s>{boundary.replacedValue}</s>
+              </span>
+            ) : null}
             {boundary.marker && boundary.markerTone === "warning" ? (
               <StatusBadge
                 tone="warning"
@@ -1753,11 +1761,6 @@ function getArrivalMarker(day: ArrivalDayData): string | null {
   return arrivalScheduleSourceLabel(day.baseSchedule);
 }
 
-function getPickupMarker(day: PickupDayData): string | null {
-  if (day.isException) return "Ausnahme";
-  return pickupScheduleSourceLabel(day.baseSchedule);
-}
-
 /**
  * Die gebuchte Abholzeit, wenn eine von Hand eingetragene Zeit sie an diesem
  * Tag verdeckt. Die eingetragene Zeit gewinnt, deshalb muss die Abweichung
@@ -1776,12 +1779,33 @@ function hiddenBookedPickup(day: PickupDayData): string | null {
   return formatPickupTime(day.offeringSchedule.pickupTime);
 }
 
+/**
+ * Die reguläre Abholzeit, die eine Tagesausnahme ersetzt (#7707). Der Tag
+ * fällt so in der Woche auf, auch nachdem das Banner in der Kinderakte
+ * geschlossen ist.
+ */
+function replacedRegularPickup(day: PickupDayData): string | undefined {
+  if (!day.baseSchedule?.pickupTime) return undefined;
+  const regular = formatPickupTime(day.baseSchedule.pickupTime);
+  return day.effectiveTime && formatPickupTime(day.effectiveTime) === regular
+    ? undefined
+    : regular;
+}
+
 function pickupBoundary(day: PickupDayData) {
   const booked = hiddenBookedPickup(day);
+  if (day.isException) {
+    return {
+      description: getPickupDescription(day),
+      marker: "Ausnahme",
+      markerTone: "warning" as const,
+      replacedValue: replacedRegularPickup(day),
+    };
+  }
   if (booked === null || !day.baseSchedule) {
     return {
       description: getPickupDescription(day),
-      marker: getPickupMarker(day),
+      marker: pickupScheduleSourceLabel(day.baseSchedule),
     };
   }
   const offering = day.offeringSchedule?.careOfferingName;

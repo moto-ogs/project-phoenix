@@ -10,10 +10,8 @@ import type {
   PickupNoteFormData,
   PickupNote,
   WeekdayNoteEntry,
-  BackendPickupData,
-  BackendPickupException,
-  BackendPickupNote,
-  BackendDepartureException,
+  PickupDataWire,
+  PickupExceptionWire,
   DepartureException,
   DepartureMode,
 } from "./pickup-schedule-helpers";
@@ -26,13 +24,12 @@ import {
   mapPickupNoteFormToBackend,
 } from "./pickup-schedule-helpers";
 import type { ArrivalScheduleInput } from "./student-arrival-api";
-
-// API Response Types
-interface ApiResponse<T> {
-  status: string;
-  data?: T;
-  message?: string;
-}
+import type {
+  DepartureExceptionRequest,
+  DepartureExceptionResponse,
+  PickupNoteResponse,
+} from "./contract/students.generated";
+import type { ApiResponse } from "./api-envelope";
 
 export interface BulkPickupScheduleInput {
   weekday: number;
@@ -286,7 +283,7 @@ export async function fetchStudentPickupData(
     await throwResponseError(response, "Failed to fetch pickup schedules");
   }
 
-  const result = (await response.json()) as ApiResponse<BackendPickupData>;
+  const result = (await response.json()) as ApiResponse<PickupDataWire>;
 
   return mapPickupDataResponse(
     result.data ?? { schedules: [], exceptions: [], notes: [] },
@@ -315,7 +312,7 @@ export async function resetStudentPickupToOffering(
     await throwResponseError(response, "Failed to reset pickup schedule");
   }
 
-  return parseApiResult<BackendPickupData>(
+  return parseApiResult<PickupDataWire>(
     response,
     "Failed to reset pickup schedule",
   ).then(mapPickupDataResponse);
@@ -343,7 +340,7 @@ export async function createStudentPickupException(
     await throwResponseError(response, "Failed to create pickup exception");
   }
 
-  const data_ = await parseApiResult<BackendPickupException>(
+  const data_ = await parseApiResult<PickupExceptionWire>(
     response,
     "Failed to create pickup exception",
   );
@@ -373,7 +370,7 @@ export async function updateStudentPickupException(
     await throwResponseError(response, "Failed to update pickup exception");
   }
 
-  const data_ = await parseApiResult<BackendPickupException>(
+  const data_ = await parseApiResult<PickupExceptionWire>(
     response,
     "Failed to update pickup exception",
   );
@@ -405,7 +402,7 @@ export async function setStudentDepartureException(
   studentId: string,
   date: string,
   data: { departureMode: DepartureMode; reason?: string },
-): Promise<DepartureException> {
+): Promise<DepartureException | null> {
   const response = await transportFetch(
     `/api/students/${studentId}/departure-exceptions/${date}`,
     {
@@ -414,7 +411,7 @@ export async function setStudentDepartureException(
       body: JSON.stringify({
         departure_mode: data.departureMode,
         reason: data.reason,
-      }),
+      } satisfies DepartureExceptionRequest),
     },
   );
 
@@ -422,7 +419,7 @@ export async function setStudentDepartureException(
     await throwResponseError(response, "Failed to set departure exception");
   }
 
-  const result = await parseApiResult<BackendDepartureException>(
+  const result = await parseApiResult<DepartureExceptionResponse>(
     response,
     "Failed to set departure exception",
   );
@@ -472,7 +469,7 @@ export async function createStudentPickupNote(
     await throwResponseError(response, "Failed to create pickup note");
   }
 
-  const data_ = await parseApiResult<BackendPickupNote>(
+  const data_ = await parseApiResult<PickupNoteResponse>(
     response,
     "Failed to create pickup note",
   );
@@ -502,7 +499,7 @@ export async function updateStudentPickupNote(
     await throwResponseError(response, "Failed to update pickup note");
   }
 
-  const data_ = await parseApiResult<BackendPickupNote>(
+  const data_ = await parseApiResult<PickupNoteResponse>(
     response,
     "Failed to update pickup note",
   );

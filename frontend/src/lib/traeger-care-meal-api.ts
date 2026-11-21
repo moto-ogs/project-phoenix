@@ -6,9 +6,26 @@
  * calendar dates stay "YYYY-MM-DD".
  */
 
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type {
+  CareMealChanged as WireMealChanged,
+  CareMealGap as WireMealGap,
+  CareMealPosition as WireMealPosition,
+  CareMealUnbilled as WireMealUnbilled,
+} from "./contract/traeger-care-billing-runs.generated";
+import type {
+  CareMealPriceRequest,
+  CareMealTariffs as WireMealTariffs,
+} from "./contract/traeger-care-meal-tariffs.generated";
 import { traegerRequest } from "./traeger-api";
 
-export type CareMealMode = "flat" | "per_meal";
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const MEAL_MODE_VALUES = ["flat", "per_meal"] as const;
+const UNBILLED_REASON_VALUES = ["no_contract", "contract_billed"] as const;
+
+export type CareMealMode = (typeof MEAL_MODE_VALUES)[number];
 
 export interface CareMealTariff {
   readonly id: string;
@@ -16,7 +33,8 @@ export interface CareMealTariff {
   readonly validFrom: string;
   /** The day before the next price of the school; null while none follows. */
   readonly validUntil: string | null;
-  readonly mode: CareMealMode;
+  /** undefined: a mode this build does not know. */
+  readonly mode: CareMealMode | undefined;
   readonly amountCents: number;
 }
 
@@ -30,7 +48,7 @@ export interface CareMealTariffs {
 /** One Mensa month of a child on an invoice. */
 export interface CareMealPosition {
   readonly mealMonth: string;
-  readonly mode: CareMealMode;
+  readonly mode: CareMealMode | undefined;
   readonly quantity: number;
   readonly unitCents: number;
   readonly amountCents: number;
@@ -65,22 +83,8 @@ export interface CareMealChanged {
   readonly newCents: number;
 }
 
-export interface BackendMealChanged {
-  school_id: number | string;
-  school_name: string;
-  student_id: number | string;
-  child_first_name: string;
-  child_last_name: string;
-  month: string;
-  invoice_number: string;
-  billed_quantity: number;
-  billed_cents: number;
-  new_quantity: number;
-  new_cents: number;
-}
-
 export function mealChangedFromBackend(
-  entries: readonly BackendMealChanged[] | null | undefined,
+  entries: readonly WireMealChanged[] | null,
 ): CareMealChanged[] {
   return (entries ?? []).map((entry) => ({
     schoolId: id(entry.school_id),
@@ -88,7 +92,7 @@ export function mealChangedFromBackend(
     studentId: id(entry.student_id),
     childFirstName: entry.child_first_name,
     childLastName: entry.child_last_name,
-    month: entry.month,
+    month: requiredDay(entry.month, "care_meal_changed.month"),
     invoiceNumber: entry.invoice_number,
     billedQuantity: entry.billed_quantity,
     billedCents: entry.billed_cents,
@@ -106,65 +110,26 @@ export interface CareMealUnbilled {
   readonly childLastName: string;
   readonly month: string;
   readonly mealDays: number;
-  readonly reason: "no_contract" | "contract_billed";
-}
-
-export interface BackendMealPosition {
-  meal_month: string;
-  mode: CareMealMode;
-  quantity: number;
-  unit_cents: number;
-  amount_cents: number;
-  key?: string;
-}
-
-export interface BackendMealGap {
-  school_id: number | string;
-  school_name: string;
-  month: string;
-  expired?: boolean;
-}
-
-export interface BackendMealUnbilled {
-  school_id: number | string;
-  school_name: string;
-  student_id: number | string;
-  child_first_name: string;
-  child_last_name: string;
-  month: string;
-  meal_days: number;
-  reason: CareMealUnbilled["reason"];
-}
-
-interface BackendMealTariffs {
-  schools: { id: number | string; name: string }[] | null;
-  tariffs:
-    | {
-        id: number | string;
-        school_id: number | string;
-        valid_from: string;
-        valid_until: string | null;
-        mode: CareMealMode;
-        amount_cents: number;
-      }[]
-    | null;
-  billed_until: Record<string, string> | null;
+  /** undefined: a reason this build does not know. */
+  readonly reason: (typeof UNBILLED_REASON_VALUES)[number] | undefined;
 }
 
 const MEAL_TARIFFS_PATH = "/api/traeger/care-meal-tariffs";
 
-/** An ID of the backend, number or string; 0 is none. */
-function id(value: number | string): string {
-  const text = String(value);
-  return text === "0" ? "" : text;
+/** An ID of the contract; "0" is none. */
+function id(value: string): string {
+  return value === "0" ? "" : value;
 }
 
 export function mealPositionsFromBackend(
-  positions: readonly BackendMealPosition[] | null | undefined,
+  positions: readonly WireMealPosition[] | null,
 ): CareMealPosition[] {
   return (positions ?? []).map((position) => ({
-    mealMonth: position.meal_month,
-    mode: position.mode,
+    mealMonth: requiredDay(
+      position.meal_month,
+      "care_meal_position.meal_month",
+    ),
+    mode: knownEnum(MEAL_MODE_VALUES, position.mode),
     quantity: position.quantity,
     unitCents: position.unit_cents,
     amountCents: position.amount_cents,
@@ -173,18 +138,18 @@ export function mealPositionsFromBackend(
 }
 
 export function mealGapsFromBackend(
-  gaps: readonly BackendMealGap[] | null | undefined,
+  gaps: readonly WireMealGap[] | null,
 ): CareMealGap[] {
   return (gaps ?? []).map((gap) => ({
     schoolId: id(gap.school_id),
     schoolName: gap.school_name,
-    month: gap.month,
-    expired: gap.expired ?? false,
+    month: requiredDay(gap.month, "care_meal_gap.month"),
+    expired: gap.expired,
   }));
 }
 
 export function mealUnbilledFromBackend(
-  entries: readonly BackendMealUnbilled[] | null | undefined,
+  entries: readonly WireMealUnbilled[] | null,
 ): CareMealUnbilled[] {
   return (entries ?? []).map((entry) => ({
     schoolId: id(entry.school_id),
@@ -192,13 +157,13 @@ export function mealUnbilledFromBackend(
     studentId: id(entry.student_id),
     childFirstName: entry.child_first_name,
     childLastName: entry.child_last_name,
-    month: entry.month,
+    month: requiredDay(entry.month, "care_meal_unbilled.month"),
     mealDays: entry.meal_days,
-    reason: entry.reason,
+    reason: knownEnum(UNBILLED_REASON_VALUES, entry.reason),
   }));
 }
 
-function mealTariffsFromBackend(body: BackendMealTariffs): CareMealTariffs {
+function mealTariffsFromBackend(body: WireMealTariffs): CareMealTariffs {
   return {
     schools: (body.schools ?? []).map((school) => ({
       id: id(school.id),
@@ -207,18 +172,22 @@ function mealTariffsFromBackend(body: BackendMealTariffs): CareMealTariffs {
     tariffs: (body.tariffs ?? []).map((tariff) => ({
       id: id(tariff.id),
       schoolId: id(tariff.school_id),
-      validFrom: tariff.valid_from,
+      validFrom: requiredDay(tariff.valid_from, "care_meal_tariff.valid_from"),
       validUntil: tariff.valid_until,
-      mode: tariff.mode,
+      mode: knownEnum(MEAL_MODE_VALUES, tariff.mode),
       amountCents: tariff.amount_cents,
     })),
-    billedUntil: body.billed_until ?? {},
+    billedUntil: Object.fromEntries(
+      Object.entries(body.billed_until ?? {}).flatMap(([school, month]) =>
+        month ? [[school, month]] : [],
+      ),
+    ),
   };
 }
 
 export async function fetchCareMealTariffs(): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<BackendMealTariffs>(MEAL_TARIFFS_PATH),
+    await traegerRequest<WireMealTariffs>(MEAL_TARIFFS_PATH),
   );
 }
 
@@ -230,14 +199,14 @@ export async function saveCareMealTariff(input: {
   readonly amountCents: number;
 }): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<BackendMealTariffs>(MEAL_TARIFFS_PATH, {
+    await traegerRequest<WireMealTariffs>(MEAL_TARIFFS_PATH, {
       method: "PUT",
       body: {
         school_id: Number(input.schoolId),
         valid_from: input.validFrom,
         mode: input.mode,
         amount_cents: input.amountCents,
-      },
+      } satisfies CareMealPriceRequest,
     }),
   );
 }
@@ -248,7 +217,7 @@ export async function deleteCareMealTariff(
   validFrom: string,
 ): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<BackendMealTariffs>(
+    await traegerRequest<WireMealTariffs>(
       `${MEAL_TARIFFS_PATH}/${encodeURIComponent(schoolId)}/${encodeURIComponent(validFrom)}`,
       { method: "DELETE" },
     ),

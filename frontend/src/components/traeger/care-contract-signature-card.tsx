@@ -30,6 +30,7 @@ import {
   type ContractSignature,
   downloadPaperSignature,
 } from "~/lib/traeger-care-contracts-api";
+import { labelOf } from "~/lib/label-of";
 
 // The window with the date picker and the upload loads only when the office
 // records a paper contract.
@@ -43,13 +44,19 @@ const PaperSignatureModal = dynamic(
 
 const logger = createLogger({ component: "CareContractSignatureCard" });
 
-const CHANNEL_LABELS: Record<ContractSignature["channel"], string> = {
+const CHANNEL_LABELS: Record<
+  NonNullable<ContractSignature["channel"]>,
+  string
+> = {
   parent_account: "In der Eltern-App",
   mail_link: "Über den Link in der Mail",
   office: "Auf Papier, erfasst im Träger-Büro",
 };
 
-const METHOD_LABELS: Record<ContractSignature["method"], string> = {
+const METHOD_LABELS: Record<
+  NonNullable<ContractSignature["method"]>,
+  string
+> = {
   drawn: "Gezeichnet",
   typed: "Getippter Name",
   paper: "Papier mit Unterschrift",
@@ -163,9 +170,9 @@ function SignatureDetails({
               : `${formatBerlinDate(signature.signedAt)}, ${formatBerlinTime(signature.signedAt)} Uhr`}
           </DataField>
           <DataField label="Weg">
-            {CHANNEL_LABELS[signature.channel]}
+            {labelOf(CHANNEL_LABELS, signature.channel, "–")}
             <span className="block text-sm font-normal text-gray-500">
-              {METHOD_LABELS[signature.method]}
+              {labelOf(METHOD_LABELS, signature.method, "–")}
             </span>
           </DataField>
           {signature.withdrawalEndsOn ? (

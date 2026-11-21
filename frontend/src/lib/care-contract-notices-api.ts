@@ -5,12 +5,12 @@
  */
 
 import {
-  type BackendNoticeOptions,
   type ContractNoticeOptions,
   declarationBody,
   type NoticeDeclaration,
   noticeOptionsFromBackend,
 } from "./care-contract-notices";
+import type { NoticeOptions as WireNoticeOptions } from "./contract/traeger-contract-notices.generated";
 import { traegerRequest } from "./traeger-api";
 
 const officePath = (id: string) =>
@@ -21,7 +21,7 @@ export async function fetchContractNoticeOptions(
   receivedOn?: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(
+    await traegerRequest<WireNoticeOptions>(
       receivedOn
         ? `${officePath(id)}?${new URLSearchParams({ received_on: receivedOn })}`
         : officePath(id),
@@ -38,7 +38,7 @@ export async function setContractNoticeEnd(
   endsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(`${officePath(id)}/ends-on`, {
+    await traegerRequest<WireNoticeOptions>(`${officePath(id)}/ends-on`, {
       method: "PUT",
       body: { ends_on: endsOn },
     }),
@@ -55,7 +55,7 @@ export async function rejectContractNoticeReason(
   expectedEndsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(
+    await traegerRequest<WireNoticeOptions>(
       `${officePath(id)}/reason-rejection`,
       { method: "POST", body: { expected_ends_on: expectedEndsOn } },
     ),
@@ -71,7 +71,7 @@ export async function recordContractNotice(
   },
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(officePath(id), {
+    await traegerRequest<WireNoticeOptions>(officePath(id), {
       method: "POST",
       body: {
         ...declarationBody(declaration),

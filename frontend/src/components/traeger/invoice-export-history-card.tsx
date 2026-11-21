@@ -29,6 +29,7 @@ import {
   fetchInvoiceHistory,
 } from "~/lib/traeger-finance-exports-api";
 import { useTraegerResource } from "./use-traeger-resource";
+import { labelOf } from "~/lib/label-of";
 
 function stepIcon(step: InvoiceStep) {
   switch (step.kind) {
@@ -66,8 +67,10 @@ function stepTitle(step: InvoiceStep): string {
       return "Lastschrift bei der Bank eingereicht";
     case "exported":
       return step.file
-        ? `${FINANCE_FILE_KINDS[step.file.format]} Nr. ${step.file.fileNumber}`
+        ? `${labelOf(FINANCE_FILE_KINDS, step.file.format, "Datei")} Nr. ${step.file.fileNumber}`
         : "Exportiert";
+    case undefined:
+      return "Schritt";
   }
 }
 

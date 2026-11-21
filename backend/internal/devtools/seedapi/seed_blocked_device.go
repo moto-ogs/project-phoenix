@@ -29,7 +29,7 @@ func (s *FixedSeeder) seedBlockedDevice() error {
 	}
 	var device struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &device); err != nil {

@@ -1,5 +1,5 @@
 import type { NextRequest, NextResponse } from "next/server";
-import type { ApiResponse } from "./api-helpers";
+import type { ApiResponse } from "./api-envelope";
 import type { ProblemBody } from "./api-error";
 import { bffError, problemResponse } from "./api-response-error.server";
 
@@ -122,11 +122,13 @@ export function bodyTooLargeError(maxBodyBytes: number): Error {
   });
 }
 
-export function wrapInApiResponse<T>(data: T): ApiResponse<T> {
-  if (typeof data === "object" && data !== null && "success" in data) {
-    return data as unknown as ApiResponse<T>;
-  }
-  return { success: true, message: "Success", data };
+/**
+ * A handler's result in the backend's success envelope, `{ status, data }`
+ * (`common.Response`): every BFF JSON answer has the shape the backend
+ * writes (#2353).
+ */
+export function successResponse<T>(data: T): ApiResponse<T> {
+  return { status: "success", data };
 }
 
 export function createUnauthorizedResponse(

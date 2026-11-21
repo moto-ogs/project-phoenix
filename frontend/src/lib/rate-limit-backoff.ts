@@ -15,7 +15,7 @@ const REQUEST_LIMIT_CODE: ErrorCode = "general.unavailable";
  * the tab for its Retry-After would keep a parent from sending the form an
  * hour or a day long (#6726). A body without a code locks as before.
  */
-export function isRequestLimitRefusal(body: unknown): boolean {
+function isRequestLimitRefusal(body: unknown): boolean {
   const code =
     typeof body === "object" && body !== null && "code" in body
       ? wireErrorCode(body.code)

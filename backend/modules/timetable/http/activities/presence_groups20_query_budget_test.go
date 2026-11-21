@@ -85,7 +85,7 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 		target.EnrollmentCount = n
 		target.Supervisors = supervisors
 		expectedGroups[group.ID] = target
-		for _, route := range []struct{ key, path string }{{"list", "/"}, {"detail", fmt.Sprintf("/%d", group.ID)}, {"schedules", fmt.Sprintf("/%d/schedules", group.ID)}, {"students", fmt.Sprintf("/%d/students", group.ID)}, {"supervisors", fmt.Sprintf("/%d/supervisors", group.ID)}} {
+		for _, route := range []struct{ key, path string }{{"list", "/"}, {"detail", fmt.Sprintf("/%d", group.ID)}, {"students", fmt.Sprintf("/%d/students", group.ID)}, {"supervisors", fmt.Sprintf("/%d/supervisors", group.ID)}} {
 			path := "/api/activities" + route.path
 			counter.Reset()
 			counter.Start()
@@ -109,14 +109,6 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 				var rows []activitiesHTTP.ActivitySupervisorResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				require.Equal(t, supervisors, rows)
-			case "schedules":
-				var rows []activitiesHTTP.ActivityScheduleResponse
-				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-				for i := range rows {
-					rows[i].CreatedAt = rows[i].CreatedAt.UTC()
-					rows[i].UpdatedAt = rows[i].UpdatedAt.UTC()
-				}
-				require.Equal(t, schedules, rows)
 			case "detail":
 				var row activitiesHTTP.ActivityResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &row))
@@ -165,7 +157,7 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			require.Equal(t, 401, denied.Code)
 		}
 	}
-	for _, suffix := range []string{"", "/students", "/supervisors", "/schedules"} {
+	for _, suffix := range []string{"", "/students", "/supervisors"} {
 		path := fmt.Sprintf("/api/activities/%d%s", hidden.ID, suffix)
 		rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", path, nil, testutil.WithJWTBearer(token)))
 		require.Equal(t, 404, rr.Code)
@@ -192,10 +184,6 @@ func assertPresence20ActivitiesBudget(t *testing.T, key string, n int, queries q
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.detail.n3", queries)
 	case "detail.n8":
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.detail.n8", queries)
-	case "schedules.n3":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.schedules.n3", queries)
-	case "schedules.n8":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.schedules.n8", queries)
 	case "students.n3":
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.students.n3", queries)
 	case "students.n8":

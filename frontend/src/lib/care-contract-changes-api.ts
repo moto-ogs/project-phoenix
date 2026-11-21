@@ -3,8 +3,8 @@
  * (#5979): the open change of a contract's child and its decision.
  */
 
+import type { ContractChanges as WireContractChanges } from "./contract/traeger-contract-changes.generated";
 import {
-  type BackendContractChanges,
   type ContractChangeDecision,
   type ContractChanges,
   contractChangesFromBackend,
@@ -20,7 +20,7 @@ export async function fetchContractChanges(
   effectiveFrom?: string,
 ): Promise<ContractChanges> {
   return contractChangesFromBackend(
-    await traegerRequest<BackendContractChanges>(
+    await traegerRequest<WireContractChanges>(
       `${changesPath(contractId)}${effectiveFrom ? `?effective_from=${encodeURIComponent(effectiveFrom)}` : ""}`,
     ),
   );
@@ -33,7 +33,7 @@ export async function decideContractChange(
   decision: ContractChangeDecision,
 ): Promise<ContractChanges> {
   return contractChangesFromBackend(
-    await traegerRequest<BackendContractChanges>(
+    await traegerRequest<WireContractChanges>(
       `${changesPath(contractId)}/requests/${encodeURIComponent(requestId)}/decide`,
       { method: "POST", body: decisionBody(decision) },
     ),

@@ -184,7 +184,6 @@ import type {
 const periods: CalendarPeriod[] = [
   {
     id: "5",
-    tenantId: "1",
     name: "Schuljahr 2026/2027",
     periodType: "school_year",
     startDate: "2026-05-01",

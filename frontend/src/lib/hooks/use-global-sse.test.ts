@@ -992,6 +992,8 @@ describe("useGlobalSSE — Heute anders", () => {
     "group_access_changed",
     "staff_time_tracking_changed",
     "staff_notices_changed",
+    // A cancelled activity block (#7662).
+    "instance_cancelled",
   ] as const)("reloads the block on %s", (type) => {
     renderHook(() => useGlobalSSE());
 

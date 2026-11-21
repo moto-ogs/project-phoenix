@@ -158,21 +158,21 @@ func holidayWays() []holidayWay {
 		{name: "rebooking", setup: func(t *testing.T) (reviewFixture, func() *httptest.ResponseRecorder) {
 			f := newReviewFixture(t, "Träger Sperre Umbuchung")
 			first, second := f.offer.Weeks[0], f.offer.Weeks[1]
-			f.setCapacity(t, first.ID, 2)
+			f.setCapacity(t, int64(first.ID), 2)
 			f.submitPlaces(t, "tom.sperre@example.org", map[string][]int{"Tom": {0}})
 			ben := f.list(t, "").Registrations[0].Children[1]
 			return f, func() *httptest.ResponseRecorder {
-				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, f.siblings, ben.ID),
+				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)),
 					map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
 			}
 		}},
 		{name: "capacity", setup: func(t *testing.T) (reviewFixture, func() *httptest.ResponseRecorder) {
 			f := newReviewFixture(t, "Träger Sperre Kapazität")
 			first := f.offer.Weeks[0]
-			f.setCapacity(t, first.ID, 2)
+			f.setCapacity(t, int64(first.ID), 2)
 			f.submitPlaces(t, "tom.kapazitaet@example.org", map[string][]int{"Tom": {0}})
 			return f, func() *httptest.ResponseRecorder {
-				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(f.period.ID, first.ID), map[string]any{"capacity": 3})
+				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID)), map[string]any{"capacity": 3})
 			}
 		}},
 		{name: "decision", setup: func(t *testing.T) (reviewFixture, func() *httptest.ResponseRecorder) {
@@ -193,10 +193,10 @@ func TestHolidayAllocationWorkflowTakesTheBillingLockBeforeThePeriod(t *testing.
 	for _, way := range holidayWays() {
 		t.Run(way.name+"/waits for B without P", func(t *testing.T) {
 			f, request := way.setup(t)
-			holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, f.period.ID))
+			holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, int64(f.period.ID)))
 			done := asyncRequest(request)
 			holder.waitBlocked(t, 1)
-			assert.True(t, periodRowFree(t, holder.db, f.period.ID), "a request waiting for B holds no period row")
+			assert.True(t, periodRowFree(t, holder.db, int64(f.period.ID)), "a request waiting for B holds no period row")
 			holder.commit(t)
 			rec := <-done
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -206,7 +206,7 @@ func TestHolidayAllocationWorkflowTakesTheBillingLockBeforeThePeriod(t *testing.
 			holder := holdAllocationLock(t, actors, `SELECT id FROM enrollment.holiday_periods WHERE id = ? FOR UPDATE`, f.period.ID)
 			done := asyncRequest(request)
 			waiting := holder.waitBlocked(t, 1)
-			assert.True(t, holdsAdvisoryLock(t, holder.db, waiting[0], billingLockKey(f.office.organization, f.period.ID)),
+			assert.True(t, holdsAdvisoryLock(t, holder.db, waiting[0], billingLockKey(f.office.organization, int64(f.period.ID))),
 				"a request waiting for the period already holds the billing lock")
 			holder.commit(t)
 			rec := <-done
@@ -227,10 +227,10 @@ func releaseWays() []releaseWay {
 		f := newReviewFixture(t, name)
 		billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 		setNumberRange(t, f, billing, "FW-{NNNN}")
-		f.setCapacity(t, f.offer.Weeks[0].ID, 2)
+		f.setCapacity(t, int64(f.offer.Weeks[0].ID), 2)
 		tom := f.submitPlaces(t, "tom.lauf@example.org", map[string][]int{"Tom": {0, 1}})
-		require.Equal(t, http.StatusOK, f.confirmWith(t, tom.ID, nil).Code)
-		return f, billing, tom.ID
+		require.Equal(t, http.StatusOK, f.confirmWith(t, int64(tom.ID), nil).Code)
+		return f, billing, int64(tom.ID)
 	}
 	return []releaseWay{
 		{name: "rebooking", setup: func(t *testing.T) (reviewFixture, string, int64, func() *httptest.ResponseRecorder) {
@@ -238,14 +238,14 @@ func releaseWays() []releaseWay {
 			second := f.offer.Weeks[1]
 			ben := f.list(t, "").Registrations[0].Children[1]
 			return f, billing, tom, func() *httptest.ResponseRecorder {
-				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, f.siblings, ben.ID),
+				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)),
 					map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
 			}
 		}},
 		{name: "capacity", setup: func(t *testing.T) (reviewFixture, string, int64, func() *httptest.ResponseRecorder) {
 			f, billing, tom := placesSetup(t, "Träger Lauf Kapazität")
 			return f, billing, tom, func() *httptest.ResponseRecorder {
-				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(f.period.ID, f.offer.Weeks[0].ID), map[string]any{"capacity": 3})
+				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(f.offer.Weeks[0].ID)), map[string]any{"capacity": 3})
 			}
 		}},
 		{name: "decision", setup: func(t *testing.T) (reviewFixture, string, int64, func() *httptest.ResponseRecorder) {
@@ -255,7 +255,7 @@ func releaseWays() []releaseWay {
 			createContributionRule(t, a.reviewFixture, billing, siblingHalf())
 			first := a.submitCriteria(t, "erstes.lauf@example.org", false, false)
 			require.Equal(t, http.StatusOK, a.decide(t, decision(a.board(t).Weeks[0].Pending[0], "placed", "")).Code)
-			require.Equal(t, http.StatusOK, a.act(t, first.ID, "confirm").Code)
+			require.Equal(t, http.StatusOK, a.act(t, int64(first.ID), "confirm").Code)
 			body := placesRegistration(a.reviewFixture, "zweites.lauf@example.org", map[string][]int{"Ida": {0}})
 			body["criteria"] = map[string]bool{fmt.Sprint(a.working): true}
 			child := body["children"].([]map[string]any)[0]
@@ -264,10 +264,10 @@ func releaseWays() []releaseWay {
 			rec := publicJSON(t, a.public, http.MethodPost, registrationPath(a.period.PublicToken), body)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			second := decodeSchoolPortalData[receiptBody](t, rec.Body.Bytes())
-			require.Equal(t, http.StatusOK, a.merge(t, a.office.token, first.ID, second.ID).Code)
-			a.setCapacity(t, a.offer.Weeks[0].ID, 2)
+			require.Equal(t, http.StatusOK, a.merge(t, a.office.token, int64(first.ID), int64(second.ID)).Code)
+			a.setCapacity(t, int64(a.offer.Weeks[0].ID), 2)
 			candidate := a.board(t).Weeks[0].Pending[0]
-			return a.reviewFixture, billing, first.ID, func() *httptest.ResponseRecorder { return a.decide(t, decision(candidate, "placed", "")) }
+			return a.reviewFixture, billing, int64(first.ID), func() *httptest.ResponseRecorder { return a.decide(t, decision(candidate, "placed", "")) }
 		}},
 	}
 }
@@ -285,14 +285,14 @@ func TestHolidayAllocationWorkflowMeetsARunRelease(t *testing.T) {
 		t.Run(way.name, func(t *testing.T) {
 			f, billing, affected, request := way.setup(t)
 			before := f.cancelledContribution(t, affected).TotalCents
-			run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-			holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, f.period.ID))
+			run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+			holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, int64(f.period.ID)))
 			changed := asyncRequest(request)
 			released := asyncRequest(func() *httptest.ResponseRecorder {
-				return traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+				return traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 			})
 			holder.waitBlocked(t, 2)
-			assert.True(t, periodRowFree(t, holder.db, f.period.ID), "neither holds the period while it waits for the billing lock")
+			assert.True(t, periodRowFree(t, holder.db, int64(f.period.ID)), "neither holds the period while it waits for the billing lock")
 			holder.commit(t)
 			change, release := <-changed, <-released
 			refuseDeadlock(t, change, "the way")
@@ -302,8 +302,8 @@ func TestHolidayAllocationWorkflowMeetsARunRelease(t *testing.T) {
 			require.NotEqual(t, before, after.TotalCents, "the way changes the contribution")
 			if release.Code == http.StatusOK {
 				var billed int64
-				for _, document := range correctedRun(t, f, billing, run.ID).Documents {
-					if document.Kind == "invoice" && document.RegistrationID == affected {
+				for _, document := range correctedRun(t, f, billing, int64(run.ID)).Documents {
+					if document.Kind == "invoice" && int64(document.RegistrationID) == affected {
 						billed = document.TotalCents
 					}
 				}
@@ -314,7 +314,7 @@ func TestHolidayAllocationWorkflowMeetsARunRelease(t *testing.T) {
 			require.Equal(t, http.StatusConflict, release.Code, release.Body.String())
 			code, _ := registrationRefusalOf(t, release)
 			assert.Equal(t, "parent_billing.billing_run_changed", code, "the release refuses a run the way changed")
-			assert.NotEqual(t, "released", billingRun(t, f, billing, run.ID).Status)
+			assert.NotEqual(t, "released", billingRun(t, f, billing, int64(run.ID)).Status)
 		})
 	}
 }
@@ -329,35 +329,35 @@ func TestHolidayAllocationWorkflowWaysSerializeInOnePeriod(t *testing.T) {
 	t.Run("rebooking and capacity", func(t *testing.T) {
 		f := newReviewFixture(t, "Träger Wege Gleichzeitig")
 		first, second := f.offer.Weeks[0], f.offer.Weeks[1]
-		f.setCapacity(t, first.ID, 2)
+		f.setCapacity(t, int64(first.ID), 2)
 		tom := f.submitPlaces(t, "tom.wege@example.org", map[string][]int{"Tom": {0}})
 		ben := f.list(t, "").Registrations[0].Children[1]
-		holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, f.period.ID))
+		holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, int64(f.period.ID)))
 		rebooked := asyncRequest(func() *httptest.ResponseRecorder {
-			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, f.siblings, ben.ID),
+			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)),
 				map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
 		})
 		widened := asyncRequest(func() *httptest.ResponseRecorder {
-			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(f.period.ID, first.ID), map[string]any{"capacity": 3})
+			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID)), map[string]any{"capacity": 3})
 		})
 		holder.waitBlocked(t, 2)
-		assert.True(t, periodRowFree(t, holder.db, f.period.ID))
+		assert.True(t, periodRowFree(t, holder.db, int64(f.period.ID)))
 		holder.commit(t)
 		for _, rec := range []*httptest.ResponseRecorder{<-rebooked, <-widened} {
 			refuseDeadlock(t, rec, "a way of the same period")
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		}
-		assert.Empty(t, f.places(t)[first.ID].Waitlist)
-		assert.Equal(t, 1, f.mails(t, "holiday_place_granted", tom.ID), "Tom moves up once")
+		assert.Empty(t, f.places(t)[int64(first.ID)].Waitlist)
+		assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(tom.ID)), "Tom moves up once")
 	})
 	t.Run("decision and capacity", func(t *testing.T) {
 		a := newAllocationFixture(t, "Träger Entscheidung Gleichzeitig")
 		registration := a.submitCriteria(t, "tom.gleichzeitig@example.org", true, false)
 		candidate := a.board(t).Weeks[0].Pending[0]
-		holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(a.office.organization, a.period.ID))
+		holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(a.office.organization, int64(a.period.ID)))
 		decided := asyncRequest(func() *httptest.ResponseRecorder { return a.decide(t, decision(candidate, "placed", "")) })
 		widened := asyncRequest(func() *httptest.ResponseRecorder {
-			return traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayCapacityPath(a.period.ID, a.offer.Weeks[0].ID), map[string]any{"capacity": 2})
+			return traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayCapacityPath(int64(a.period.ID), int64(a.offer.Weeks[0].ID)), map[string]any{"capacity": 2})
 		})
 		holder.waitBlocked(t, 2)
 		holder.commit(t)
@@ -366,7 +366,7 @@ func TestHolidayAllocationWorkflowWaysSerializeInOnePeriod(t *testing.T) {
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		}
 		assert.Empty(t, a.board(t).Weeks[0].Pending)
-		assert.Equal(t, 1, a.mails(t, "holiday_place_granted", registration.ID))
+		assert.Equal(t, 1, a.mails(t, "holiday_place_granted", int64(registration.ID)))
 	})
 }
 
@@ -407,14 +407,14 @@ func TestHolidayAllocationWorkflowDecisionMeetsTheCatalogAndAnotherPeriod(t *tes
 	}
 	held := map[int64]int{}
 	for _, pid := range waiting {
-		for _, period := range []int64{a.period.ID, other.period.ID} {
+		for _, period := range []int64{int64(a.period.ID), int64(other.period.ID)} {
 			if holdsAdvisoryLock(t, holder.db, pid, billingLockKey(a.office.organization, period)) {
 				held[period]++
 			}
 		}
 	}
-	assert.Equal(t, map[int64]int{a.period.ID: 1, other.period.ID: 1}, held, "each decision holds the billing lock of its own period only")
-	assert.False(t, periodRowFree(t, holder.db, a.period.ID), "the decision holds its period while it waits for the catalog")
+	assert.Equal(t, map[int64]int{int64(a.period.ID): 1, int64(other.period.ID): 1}, held, "each decision holds the billing lock of its own period only")
+	assert.False(t, periodRowFree(t, holder.db, int64(a.period.ID)), "the decision holds its period while it waits for the catalog")
 	holder.commit(t)
 
 	rec := <-stale
@@ -440,7 +440,7 @@ func otherCriteriaPeriod(t *testing.T, a allocationFixture) allocationFixture {
 		body.Weeks[i].EndsOn = strings.Replace(body.Weeks[i].EndsOn, "2027-01-", "2027-04-", 1)
 	}
 	created := createHolidayPeriod(t, a.traeger, a.office, body)
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	other := a
 	other.period = decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
