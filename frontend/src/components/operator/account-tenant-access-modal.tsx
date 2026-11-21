@@ -101,7 +101,8 @@ function statusTone(status: AccountTenantAccess["status"]) {
 function statusLabel(status: AccountTenantAccess["status"]): string {
   if (status === "active") return "Aktiv";
   if (status === "pending") return "Ausstehend";
-  return "Kein Zugang";
+  if (status === "inactive") return "Kein Zugang";
+  return "–";
 }
 
 function accessRevocationBlocked(entry: AccountTenantAccess): boolean {

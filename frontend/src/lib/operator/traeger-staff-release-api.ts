@@ -3,22 +3,26 @@
  * Abschnitt 2). Vor der Freigabe bestätigt der Träger eine von zwei
  * Erklärungen; das moto-Team hält sie mit der Freigabe fest.
  */
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
+  TraegerStaffReleaseState as WireState,
+  grantRequest,
+} from "~/lib/contract/operator-organizations.generated";
 import { operatorFetch } from "./api-helpers";
 
-export type StaffRepresentation = "agreement" | "none";
+// Go does not register the set; the contract types it as string.
+const STAFF_REPRESENTATION_VALUES = ["agreement", "none"] as const;
+
+export type StaffRepresentation = (typeof STAFF_REPRESENTATION_VALUES)[number];
 
 export interface TraegerStaffReleaseState {
   readonly release: {
-    readonly representation: StaffRepresentation;
+    /** undefined: a declaration this build does not know. */
+    readonly representation: StaffRepresentation | undefined;
     readonly releasedAt: string;
   } | null;
   /** Wie viele Personalakten der Träger führt. */
   readonly records: number;
-}
-
-interface BackendState {
-  release: { representation: StaffRepresentation; released_at: string } | null;
-  records: number;
 }
 
 const base = (orgId: string) =>
@@ -26,15 +30,18 @@ const base = (orgId: string) =>
 
 export const traegerStaffReleaseService = {
   async getState(orgId: string): Promise<TraegerStaffReleaseState> {
-    const data = await operatorFetch<BackendState>(base(orgId));
+    const data = await operatorFetch<WireState>(base(orgId));
     return {
       release: data.release
         ? {
-            representation: data.release.representation,
+            representation: knownEnum(
+              STAFF_REPRESENTATION_VALUES,
+              data.release.representation,
+            ),
             releasedAt: data.release.released_at,
           }
         : null,
-      records: data.records ?? 0,
+      records: data.records,
     };
   },
   async grant(
@@ -43,7 +50,7 @@ export const traegerStaffReleaseService = {
   ): Promise<void> {
     await operatorFetch<unknown>(base(orgId), {
       method: "POST",
-      body: { representation },
+      body: { representation } satisfies grantRequest,
     });
   },
   async withdraw(orgId: string): Promise<void> {
