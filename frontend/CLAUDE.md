@@ -62,10 +62,10 @@ When a change alters what a school user sees (new screen, migrated component, la
 
 ## Data contracts
 
-Backend `int64` IDs become frontend strings; preserve nullable fields and
-map backend `snake_case` to frontend `camelCase` in existing domain helpers.
-Use the affected portal's route wrapper for authentication and error handling;
-SSE streaming is the explicit exception in the SSE contract below.
+Response types come from the generated `src/lib/contract/*.generated.ts`;
+identifiers arrive as strings. New or changed route:
+[new API route](../docs/agents/new-route.md). Map `snake_case` to `camelCase`
+in the domain helper; keep nullable fields nullable.
 
 ## Date Handling (MANDATORY)
 

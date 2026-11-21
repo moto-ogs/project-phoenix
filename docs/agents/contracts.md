@@ -1157,7 +1157,8 @@ moved pages. The page list comes from the `app/<portal>/` folders:
 `pnpm generate:portal-pages` writes `src/proxy-pages.generated.ts`, and
 `pnpm run check` fails when it is stale. A portal host answers 404 for every
 `/api/*` path outside its allow-list, because the domain-scoped tenant cookie
-reaches it too; a new BFF route that a portal page calls belongs in that list.
+reaches it too; a portal's catalog routes pass under its prefix, and a path
+outside it that a portal page calls belongs in that list.
 `[tenant]/layout.tsx` resolves slugs through `/auth/tenant/resolve?slug=...`
 (cached five minutes). `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
