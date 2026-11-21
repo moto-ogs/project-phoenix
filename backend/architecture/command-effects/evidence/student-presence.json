@@ -10162,7 +10162,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.roomHistoryStopAudit.RecordRoomHistoryStop",
-      "binding_digest": "56514ceeee07cdf75e9231a64309db0b",
+      "binding_digest": "c5aa8388f3054d065c55bf84a66e2bbe",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopAudit.RecordRoomHistoryStop",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataDeletionRepository.Create",
@@ -10170,7 +10170,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.roomHistoryStopAudit.RecordRoomHistoryStop",
-      "binding_digest": "5543eac330fd4587a80a0bc157b019d0",
+      "binding_digest": "3094b6345880cd63eb4b15d63d2b8b15",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopAudit.RecordRoomHistoryStop",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentFieldEditRepository.CreateBatch",
