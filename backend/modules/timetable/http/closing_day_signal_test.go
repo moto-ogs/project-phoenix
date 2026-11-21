@@ -70,7 +70,7 @@ func TestClosingDayWritesWakeTheSchoolsOpenPages(t *testing.T) {
 	assert.Equal(t, signal, signals.taken(), "a new closing day")
 	var created struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
