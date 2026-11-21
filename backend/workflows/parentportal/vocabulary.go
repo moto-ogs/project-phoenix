@@ -36,6 +36,7 @@ type (
 	ChildCareSchedule                = care.ChildCareSchedule
 	Child                            = care.Child
 	ChildConsent                     = care.ChildConsent
+	RoomHistoryStopRequest           = care.RoomHistoryStopRequest
 	ChildFeatureFlags                = care.ChildFeatureFlags
 	ChildGuardian                    = care.ChildGuardian
 	ChildMasterData                  = care.ChildMasterData
@@ -240,6 +241,7 @@ var (
 	ErrPickupChangeCareDayEnded         = care.ErrPickupChangeCareDayEnded
 	ErrPickupChangeCutoffPassed         = care.ErrPickupChangeCutoffPassed
 	ErrPickupChangeDisabled             = care.ErrPickupChangeDisabled
+	ErrRoomHistoryStopDisabled          = care.ErrRoomHistoryStopDisabled
 	ErrCareExceptionNotCareDay          = care.ErrCareExceptionNotCareDay
 	ErrPollClosed                       = messaging.ErrPollClosed
 	ErrRemoveDisabled                   = care.ErrRemoveDisabled
@@ -301,6 +303,7 @@ const (
 	KeyParentNotesEnabled              = care.KeyParentNotesEnabled
 	KeyParentPickupChangeCutoffTime    = care.KeyParentPickupChangeCutoffTime
 	KeyParentPickupChangeEnabled       = care.KeyParentPickupChangeEnabled
+	KeyParentRoomHistoryStopEnabled    = care.KeyParentRoomHistoryStopEnabled
 	KeySessionEndTime                  = care.KeySessionEndTime
 	KeyParentRequestReasonPolicy       = care.KeyParentRequestReasonPolicy
 	KeyParentSickNoteEnabled           = care.KeyParentSickNoteEnabled

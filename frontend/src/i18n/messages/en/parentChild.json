@@ -57,17 +57,22 @@
       "agb": "General terms and conditions",
       "data_processing": "Privacy information provided",
       "email_contact": "Contact by email allowed",
-      "photo": "Photo consent"
+      "photo": "Photo consent",
+      "room_history": "Room history and mood"
     },
     "states": {
       "granted": "Recorded",
       "withdrawn": "Withdrawn",
-      "not_recorded": "Not recorded"
+      "not_recorded": "Not recorded",
+      "recording": "Being saved",
+      "stopped": "Stopped"
     },
     "dates": {
       "granted": "Recorded on {date}",
       "withdrawn": "Withdrawn on {date}",
-      "not_recorded": "Not recorded"
+      "not_recorded": "Not recorded",
+      "recording": "Being saved",
+      "stopped": "Stopped on {date}"
     },
     "withdrawButton": "Withdraw photo consent",
     "withdrawButtonShort": "Withdraw",
@@ -88,7 +93,25 @@
     "errorObjectList": "the list of consents",
     "errorObjectPhoto": "the photo consent",
     "withdrawTooltip": "Ends the photo consent and deletes a stored photo. moto asks first.",
-    "grantTooltip": "Lets the {careTerm} store a photo again. moto asks first."
+    "grantTooltip": "Lets the {careTerm} store a photo again. moto asks first.",
+    "roomHistoryDescription": "You can stop the room history and mood here.",
+    "roomHistoryStopAria": "Stop room history and mood",
+    "roomHistoryStopShort": "Stop",
+    "roomHistoryStopTooltip": "Deletes the room history so far and stops recording. moto asks first.",
+    "roomHistoryStopTitle": "Stop room history and mood?",
+    "roomHistoryStopBody": "moto immediately deletes which rooms your child was in. After that, moto no longer saves your child's rooms or mood. The care staff can still see where your child is right now.",
+    "roomHistoryStopButton": "Stop now",
+    "roomHistoryStopping": "Stopping",
+    "roomHistoryStopSuccess": "Room history and mood are stopped. The room history so far has been deleted.",
+    "roomHistoryResumeAria": "Save room history and mood again",
+    "roomHistoryResumeShort": "Save again",
+    "roomHistoryResumeTooltip": "moto saves rooms and mood again from now on. moto asks first.",
+    "roomHistoryResumeTitle": "Save room history and mood again?",
+    "roomHistoryResumeBody": "From now on, moto saves again which rooms your child is in and how your child is feeling. Deleted data does not come back.",
+    "roomHistoryResumeButton": "Save again",
+    "roomHistoryResuming": "Saving",
+    "roomHistoryResumeSuccess": "moto saves room history and mood again from now on.",
+    "errorObjectRoomHistory": "room history and mood"
   },
   "errorObject": "the list of your children",
   "errorObjectCare": "the care overview"

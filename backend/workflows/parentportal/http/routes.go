@@ -136,6 +136,8 @@ func (rs *Resource) mountChildStatusRoutes(r chi.Router) {
 	r.Get("/me/children/{studentId}/consents", rs.getChildConsents)
 	r.Put("/me/children/{studentId}/consents/photo", rs.grantPhotoConsent)
 	r.Delete("/me/children/{studentId}/consents/photo", rs.withdrawPhotoConsent)
+	r.Put("/me/children/{studentId}/room-history-stop", rs.stopRoomHistory)
+	r.Delete("/me/children/{studentId}/room-history-stop", rs.resumeRoomHistory)
 	r.Get("/me/children/{studentId}/meal-plan", rs.getChildMealPlan)
 	r.Get("/me/children/{studentId}/meal-participation", rs.getMealParticipation)
 	r.Put("/me/children/{studentId}/meal-participation", rs.replaceMealParticipation)

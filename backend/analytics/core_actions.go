@@ -535,6 +535,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/parent/me/children/{studentId}/care-schedule/requests/{requestId}"}:                        notCaptured,
 	{http.MethodDelete, "/parent/me/children/{studentId}/consents/photo"}:                                         event("photo_consent_changed"),
 	{http.MethodPut, "/parent/me/children/{studentId}/consents/photo"}:                                            event("photo_consent_changed"),
+	{http.MethodDelete, "/parent/me/children/{studentId}/room-history-stop"}:                                      event("room_history_stop_changed"),
+	{http.MethodPut, "/parent/me/children/{studentId}/room-history-stop"}:                                         event("room_history_stop_changed"),
 	{http.MethodPost, "/parent/me/children/{studentId}/courses/requests"}:                                         event("offering_change_requested"),
 	{http.MethodPost, "/parent/me/children/{studentId}/courses/requests/{requestId}/withdraw"}:                    notCaptured,
 	{http.MethodPut, "/parent/me/children/{studentId}/excused-requests/{requestId}"}:                              notCaptured,

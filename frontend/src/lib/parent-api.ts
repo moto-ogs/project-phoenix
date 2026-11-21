@@ -99,9 +99,14 @@ export interface Child {
   readonly without_care_place?: boolean;
 }
 
-export type ChildConsentState = ConsentState;
+// The row "room_history" (#3844) shows whether moto records the child's
+// rooms and mood ("recording") or the stop is set ("stopped"). It only comes
+// when the Träger lets parents stop it.
+export type ChildConsentState = ConsentState | "recording" | "stopped";
 
-export interface ChildConsent extends ConsentRecord {
+export interface ChildConsent extends Omit<ConsentRecord, "key" | "state"> {
+  readonly key: ConsentRecord["key"] | "room_history";
+  readonly state: ChildConsentState;
   readonly can_withdraw: boolean;
   readonly can_grant: boolean;
 }
@@ -680,6 +685,28 @@ export async function grantChildPhotoConsent(
   return putJson<ChildConsent[]>(
     `/api/parent/me/children/${encodeURIComponent(studentId)}/consents/photo`,
     {},
+  );
+}
+
+/**
+ * Stops the room history and mood of the child (#3844); moto deletes the
+ * child's room history. Returns all updated states.
+ */
+export async function stopChildRoomHistory(
+  studentId: string,
+): Promise<ChildConsent[]> {
+  return putJson<ChildConsent[]>(
+    `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`,
+    {},
+  );
+}
+
+/** Lifts the stop; moto records again from now on. */
+export async function resumeChildRoomHistory(
+  studentId: string,
+): Promise<ChildConsent[]> {
+  return deleteJson<ChildConsent[]>(
+    `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`,
   );
 }
 

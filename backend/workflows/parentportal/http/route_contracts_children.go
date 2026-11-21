@@ -27,6 +27,8 @@ func childWriteRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: child + "/sick-note", Portals: portals, Request: SubmitSickNoteRequest{}, Response: SickNoteEnvelopeResponse{}},
 		{Method: "PUT", Pattern: child + "/consents/photo", Portals: portals, Response: []ChildConsentResponse{}},
 		{Method: "DELETE", Pattern: child + "/consents/photo", Portals: portals, Response: []ChildConsentResponse{}},
+		{Method: "PUT", Pattern: child + "/room-history-stop", Portals: portals, Response: []ChildConsentResponse{}},
+		{Method: "DELETE", Pattern: child + "/room-history-stop", Portals: portals, Response: []ChildConsentResponse{}},
 		{Method: "GET", Pattern: meals, Portals: portals, Query: dayRange, Response: MealParticipationResponse{}},
 		{Method: "PUT", Pattern: meals, Portals: portals, Request: ReplaceMealParticipationRequest{}, Response: MealPlanSavedResponse{}},
 		{Method: "PUT", Pattern: meals + "/{date}", Portals: portals, Request: SetMealParticipationDayRequest{}, NoData: true},

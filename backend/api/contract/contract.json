@@ -1046,6 +1046,20 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/parent/me/children/{studentId}/room-history-stop",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ChildConsentResponse"
+        }
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/parent/me/mfa/trusted-devices/{deviceId}",
       "portals": [
         "parent"
@@ -21455,6 +21469,20 @@
       "response": {
         "kind": "ref",
         "ref": "requestSharingResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/children/{studentId}/room-history-stop",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ChildConsentResponse"
+        }
       }
     },
     {

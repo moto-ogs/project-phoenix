@@ -48,6 +48,19 @@ export function parentChildDataTopic(): HelpTopic {
           "Tippe auf `Jetzt widerrufen`.",
         ],
       },
+      {
+        // #3844: nur, wenn der Träger den Eltern-Stopp eingeschaltet hat.
+        title: "Raumverlauf und Stimmung stoppen",
+        description:
+          "Diese Zeile siehst du nur, wenn deine Schule das erlaubt.",
+        steps: [
+          "Gehe zum Abschnitt `Einwilligungen und Bestätigungen`.",
+          "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
+          "Tippe auf `Jetzt stoppen`.",
+          "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist.",
+          "Mit `Wieder speichern` speichert moto ab dann wieder. Gelöschtes kommt nicht zurück.",
+        ],
+      },
     ],
     result:
       "Unter dem Feld steht dann `Beantragte Änderung` mit dem neuen Wert und `In Prüfung`. Bis zur Bestätigung gilt der Wert darüber.",

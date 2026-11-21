@@ -57,17 +57,22 @@
       "agb": "Kushtet e përgjithshme",
       "data_processing": "Informacioni për privatësinë u dha",
       "email_contact": "Kontakti me email lejohet",
-      "photo": "Pëlqimi për fotografinë"
+      "photo": "Pëlqimi për fotografinë",
+      "room_history": "Historiku i dhomave dhe disponimi"
     },
     "states": {
       "granted": "Ruajtur",
       "withdrawn": "Tërhequr",
-      "not_recorded": "Nuk është ruajtur"
+      "not_recorded": "Nuk është ruajtur",
+      "recording": "Po ruhet",
+      "stopped": "Ndalur"
     },
     "dates": {
       "granted": "Ruajtur më {date}",
       "withdrawn": "Tërhequr më {date}",
-      "not_recorded": "Nuk është ruajtur"
+      "not_recorded": "Nuk është ruajtur",
+      "recording": "Po ruhet",
+      "stopped": "Ndalur më {date}"
     },
     "withdrawButton": "Tërhiq pëlqimin për fotografinë",
     "withdrawButtonShort": "Tërhiq",
@@ -88,7 +93,25 @@
     "errorObjectList": "lista e pëlqimeve",
     "errorObjectPhoto": "pëlqimi për fotografinë",
     "withdrawTooltip": "Përfundon pëlqimin për foto dhe fshin foton e ruajtur. moto pyet më parë.",
-    "grantTooltip": "I lejon sërish {careTerm} një foto. moto pyet më parë."
+    "grantTooltip": "I lejon sërish {careTerm} një foto. moto pyet më parë.",
+    "roomHistoryDescription": "Këtu mund ta ndaloni historikun e dhomave dhe disponimin.",
+    "roomHistoryStopAria": "Ndalo historikun e dhomave dhe disponimin",
+    "roomHistoryStopShort": "Ndalo",
+    "roomHistoryStopTooltip": "Fshin historikun e deritanishëm të dhomave dhe ndalon regjistrimin. moto pyet më parë.",
+    "roomHistoryStopTitle": "Të ndalohet historiku i dhomave dhe disponimi?",
+    "roomHistoryStopBody": "moto fshin menjëherë në cilat dhoma ka qenë fëmija juaj. Pas kësaj moto nuk ruan më dhomat dhe disponimin e fëmijës suaj. Personeli i kujdesit sheh ende ku është fëmija juaj tani.",
+    "roomHistoryStopButton": "Ndalo tani",
+    "roomHistoryStopping": "Po ndalet",
+    "roomHistoryStopSuccess": "Historiku i dhomave dhe disponimi janë ndalur. Historiku i deritanishëm i dhomave është fshirë.",
+    "roomHistoryResumeAria": "Ruaj përsëri historikun e dhomave dhe disponimin",
+    "roomHistoryResumeShort": "Ruaj përsëri",
+    "roomHistoryResumeTooltip": "Nga tani moto ruan përsëri dhomat dhe disponimin. moto pyet më parë.",
+    "roomHistoryResumeTitle": "Të ruhet përsëri historiku i dhomave dhe disponimi?",
+    "roomHistoryResumeBody": "Nga tani moto ruan përsëri në cilat dhoma është fëmija juaj dhe si ndihet. Të dhënat e fshira nuk kthehen.",
+    "roomHistoryResumeButton": "Ruaj përsëri",
+    "roomHistoryResuming": "Po ruhet",
+    "roomHistoryResumeSuccess": "Nga tani moto ruan përsëri historikun e dhomave dhe disponimin.",
+    "errorObjectRoomHistory": "historiku i dhomave dhe disponimi"
   },
   "errorObject": "lista e fëmijëve tuaj",
   "errorObjectCare": "përmbledhja e kujdesit"

@@ -199,6 +199,16 @@ lesen darf jede Person mit vollem Zugriff auf das Kind. Wirkung im Code:
   eigene Frist (`feedback.data_retention_days`). Eine sofortige Löschweisung
   für Stimmungen bleibt ein gesonderter Auftrag (offen, siehe 2.3).
 - Aufheben stellt nichts wieder her; ab dann speichert moto wieder.
+- **Elternweg:** Schaltet der Träger unter **Einstellungen → Datenschutz →
+  Eltern dürfen Raumverlauf und Stimmung stoppen**
+  (`gdpr.parent_room_history_stop_enabled`, nur Träger-Ebene, Standard aus)
+  ein, sehen Eltern im Elternportal unter **Einwilligungen und
+  Bestätigungen** die Zeile „Raumverlauf und Stimmung“. Setzen und Aufheben
+  verlangen das Beziehungsrecht `parent_portal.consent.manage` für genau
+  dieses Kind (`PUT`/`DELETE /parent/me/children/{studentId}/room-history-stop`);
+  ohne Schalter antwortet moto mit `care.room_history_stop_disabled`. Der
+  Änderungsverlauf nennt den Elternteil, die Löschung trägt die Quelle
+  `parent_portal`.
 - Nachweis: Setzen und Aufheben stehen im **Änderungsverlauf** des Kindes
   (Feld „Raumverlauf und Stimmung“, mit Person und Zeit). Gelöschte
   Raumbesuche zählt `audit.data_deletions` mit `deletion_type =

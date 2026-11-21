@@ -2709,6 +2709,12 @@ export const routes = {
     portals: ["parent"],
     response: noData,
   },
+  "DELETE /parent/me/children/{studentId}/room-history-stop": {
+    method: "DELETE",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(z.array(ChildConsentResponseSchema)),
+  },
   "DELETE /parent/me/mfa/trusted-devices/{deviceId}": {
     method: "DELETE",
     pattern: "/parent/me/mfa/trusted-devices/{deviceId}",
@@ -3411,6 +3417,12 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<requestSharingBody>(),
     response: success(requestSharingResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/room-history-stop": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(z.array(ChildConsentResponseSchema)),
   },
   "PUT /parent/me/documents/{organizationId}/contracts/{contractId}/family-children": {
     method: "PUT",

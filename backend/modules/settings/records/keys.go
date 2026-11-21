@@ -105,6 +105,10 @@ const (
 	KeyAttendanceLogEnabled  = "gdpr.attendance_log_enabled"
 	KeyAttendanceVisibleDays = "gdpr.attendance_visible_days"
 	KeyRoomDetailVisibleDays = "gdpr.room_detail_visible_days"
+	// KeyParentRoomHistoryStopEnabled lets parents stop the room history
+	// and the mood of their own child in the parent portal (#3844). The
+	// Träger decides it for all its schools; off by default.
+	KeyParentRoomHistoryStopEnabled = "gdpr.parent_room_history_stop_enabled"
 )
 
 // Feedback settings.

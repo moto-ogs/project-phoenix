@@ -57,17 +57,22 @@
       "agb": "Общие условия",
       "data_processing": "Информация о защите данных предоставлена",
       "email_contact": "Связь по электронной почте разрешена",
-      "photo": "Согласие на фотографию"
+      "photo": "Согласие на фотографию",
+      "room_history": "История помещений и настроение"
     },
     "states": {
       "granted": "Сохранено",
       "withdrawn": "Отозвано",
-      "not_recorded": "Не сохранено"
+      "not_recorded": "Не сохранено",
+      "recording": "Сохраняется",
+      "stopped": "Остановлено"
     },
     "dates": {
       "granted": "Сохранено {date}",
       "withdrawn": "Отозвано {date}",
-      "not_recorded": "Не сохранено"
+      "not_recorded": "Не сохранено",
+      "recording": "Сохраняется",
+      "stopped": "Остановлено {date}"
     },
     "withdrawButton": "Отозвать согласие на фотографию",
     "withdrawButtonShort": "Отозвать",
@@ -88,7 +93,25 @@
     "errorObjectList": "список согласий",
     "errorObjectPhoto": "согласие на фотографию",
     "withdrawTooltip": "Отзывает согласие на фото и удаляет сохранённое фото. moto сначала спросит.",
-    "grantTooltip": "Снова разрешает {careTerm} хранить фото. moto сначала спросит."
+    "grantTooltip": "Снова разрешает {careTerm} хранить фото. moto сначала спросит.",
+    "roomHistoryDescription": "Здесь можно остановить историю помещений и настроение.",
+    "roomHistoryStopAria": "Остановить историю помещений и настроение",
+    "roomHistoryStopShort": "Остановить",
+    "roomHistoryStopTooltip": "Удаляет прежнюю историю помещений и останавливает запись. moto сначала спросит.",
+    "roomHistoryStopTitle": "Остановить историю помещений и настроение?",
+    "roomHistoryStopBody": "moto сразу удалит, в каких помещениях был ваш ребёнок. После этого moto больше не сохраняет помещения и настроение ребёнка. Воспитатели по-прежнему видят, где ребёнок сейчас.",
+    "roomHistoryStopButton": "Остановить сейчас",
+    "roomHistoryStopping": "Останавливается",
+    "roomHistoryStopSuccess": "История помещений и настроение остановлены. Прежняя история помещений удалена.",
+    "roomHistoryResumeAria": "Снова сохранять историю помещений и настроение",
+    "roomHistoryResumeShort": "Снова сохранять",
+    "roomHistoryResumeTooltip": "С этого момента moto снова сохраняет помещения и настроение. moto сначала спросит.",
+    "roomHistoryResumeTitle": "Снова сохранять историю помещений и настроение?",
+    "roomHistoryResumeBody": "С этого момента moto снова сохраняет, в каких помещениях ваш ребёнок и как он себя чувствует. Удалённые данные не вернутся.",
+    "roomHistoryResumeButton": "Снова сохранять",
+    "roomHistoryResuming": "Сохраняется",
+    "roomHistoryResumeSuccess": "С этого момента moto снова сохраняет историю помещений и настроение.",
+    "errorObjectRoomHistory": "история помещений и настроение"
   },
   "errorObject": "список ваших детей",
   "errorObjectCare": "обзор продлёнки"

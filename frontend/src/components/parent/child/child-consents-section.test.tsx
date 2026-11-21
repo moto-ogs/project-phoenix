@@ -8,6 +8,8 @@ import { catalogText } from "~/test/error-catalog-text";
 import {
   getChildConsents,
   grantChildPhotoConsent,
+  resumeChildRoomHistory,
+  stopChildRoomHistory,
   withdrawChildPhotoConsent,
 } from "~/lib/parent-api";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
@@ -19,11 +21,15 @@ vi.mock("~/lib/parent-api", () => ({
   getChildConsents: vi.fn(),
   grantChildPhotoConsent: vi.fn(),
   withdrawChildPhotoConsent: vi.fn(),
+  stopChildRoomHistory: vi.fn(),
+  resumeChildRoomHistory: vi.fn(),
 }));
 
 const mockedGet = vi.mocked(getChildConsents);
 const mockedGrant = vi.mocked(grantChildPhotoConsent);
 const mockedWithdraw = vi.mocked(withdrawChildPhotoConsent);
+const mockedStop = vi.mocked(stopChildRoomHistory);
+const mockedResume = vi.mocked(resumeChildRoomHistory);
 
 const granted = [
   {
@@ -311,5 +317,83 @@ describe("ChildConsentsSection", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/backend sentence/)).not.toBeInTheDocument();
+  });
+
+  // #3844: Raumverlauf und Stimmung, nur wenn der Träger es freigibt.
+  it("lässt Eltern Raumverlauf und Stimmung nach Rückfrage stoppen und wieder speichern", async () => {
+    const user = userEvent.setup();
+    const recording = {
+      key: "room_history" as const,
+      state: "recording" as const,
+      can_withdraw: true,
+      can_grant: false,
+    };
+    const stopped = {
+      key: "room_history" as const,
+      state: "stopped" as const,
+      changed_at: "2026-11-21T09:00:00Z",
+      can_withdraw: false,
+      can_grant: true,
+    };
+    mockedGet.mockResolvedValue([...granted, recording]);
+    mockedStop.mockResolvedValue([...granted, stopped]);
+    mockedResume.mockResolvedValue([...granted, recording]);
+    renderSection();
+
+    expect(
+      await screen.findByText("Raumverlauf und Stimmung"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Wird gespeichert")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Raumverlauf und Stimmung stoppen" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/moto löscht sofort, in welchen Räumen/),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Jetzt stoppen" }),
+    );
+    await waitFor(() => expect(mockedStop).toHaveBeenCalledWith("42"));
+    expect(
+      await screen.findByText(
+        "Raumverlauf und Stimmung sind gestoppt. Der bisherige Raumverlauf ist gelöscht.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Gestoppt")).toBeInTheDocument();
+    expect(mockedWithdraw).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Raumverlauf und Stimmung wieder speichern",
+      }),
+    );
+    const resumeDialog = await screen.findByRole("dialog");
+    await user.click(
+      within(resumeDialog).getByRole("button", { name: "Wieder speichern" }),
+    );
+    await waitFor(() => expect(mockedResume).toHaveBeenCalledWith("42"));
+  });
+
+  it("zeigt Raumverlauf und Stimmung ohne Aktion, wenn das Einwilligungsrecht fehlt", async () => {
+    mockedGet.mockResolvedValue([
+      ...granted,
+      {
+        key: "room_history" as const,
+        state: "recording" as const,
+        can_withdraw: false,
+        can_grant: false,
+      },
+    ]);
+    renderSection();
+
+    expect(
+      await screen.findByText("Raumverlauf und Stimmung"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Raumverlauf und Stimmung stoppen",
+      }),
+    ).not.toBeInTheDocument();
   });
 });

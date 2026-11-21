@@ -57,17 +57,22 @@
       "agb": "Ogólne warunki umowy (regulamin)",
       "data_processing": "Przekazano informację o ochronie danych",
       "email_contact": "Zgoda na kontakt e-mailem",
-      "photo": "Zgoda na zdjęcia"
+      "photo": "Zgoda na zdjęcia",
+      "room_history": "Historia sal i nastrój"
     },
     "states": {
       "granted": "Zapisano",
       "withdrawn": "Wycofano",
-      "not_recorded": "Nie zapisano"
+      "not_recorded": "Nie zapisano",
+      "recording": "Zapisywane",
+      "stopped": "Zatrzymane"
     },
     "dates": {
       "granted": "Zapisano {date}",
       "withdrawn": "Wycofano {date}",
-      "not_recorded": "Nie zapisano"
+      "not_recorded": "Nie zapisano",
+      "recording": "Zapisywane",
+      "stopped": "Zatrzymane dnia {date}"
     },
     "withdrawButton": "Wycofaj zgodę na zdjęcia",
     "withdrawButtonShort": "Wycofaj",
@@ -88,7 +93,25 @@
     "errorObjectList": "lista zgód",
     "errorObjectPhoto": "zgoda na zdjęcia",
     "withdrawTooltip": "Kończy zgodę na zdjęcia i usuwa zapisane zdjęcie. moto najpierw zapyta.",
-    "grantTooltip": "Znów pozwala {careTerm} na zdjęcie. moto najpierw zapyta."
+    "grantTooltip": "Znów pozwala {careTerm} na zdjęcie. moto najpierw zapyta.",
+    "roomHistoryDescription": "Tutaj możesz zatrzymać historię sal i nastrój.",
+    "roomHistoryStopAria": "Zatrzymaj historię sal i nastrój",
+    "roomHistoryStopShort": "Zatrzymaj",
+    "roomHistoryStopTooltip": "Usuwa dotychczasową historię sal i zatrzymuje zapisywanie. moto najpierw zapyta.",
+    "roomHistoryStopTitle": "Zatrzymać historię sal i nastrój?",
+    "roomHistoryStopBody": "moto od razu usuwa informacje, w których salach było Twoje dziecko. Potem moto nie zapisuje już sal ani nastroju Twojego dziecka. Opiekunowie nadal widzą, gdzie Twoje dziecko jest teraz.",
+    "roomHistoryStopButton": "Zatrzymaj teraz",
+    "roomHistoryStopping": "Zatrzymywanie",
+    "roomHistoryStopSuccess": "Historia sal i nastrój są zatrzymane. Dotychczasowa historia sal została usunięta.",
+    "roomHistoryResumeAria": "Znowu zapisuj historię sal i nastrój",
+    "roomHistoryResumeShort": "Znowu zapisuj",
+    "roomHistoryResumeTooltip": "moto od teraz znowu zapisuje sale i nastrój. moto najpierw zapyta.",
+    "roomHistoryResumeTitle": "Znowu zapisywać historię sal i nastrój?",
+    "roomHistoryResumeBody": "Od teraz moto znowu zapisuje, w których salach jest Twoje dziecko i jak się czuje. Usunięte dane nie wrócą.",
+    "roomHistoryResumeButton": "Znowu zapisuj",
+    "roomHistoryResuming": "Zapisywanie",
+    "roomHistoryResumeSuccess": "moto od teraz znowu zapisuje historię sal i nastrój.",
+    "errorObjectRoomHistory": "historia sal i nastrój"
   },
   "errorObject": "lista Państwa dzieci",
   "errorObjectCare": "przegląd opieki"

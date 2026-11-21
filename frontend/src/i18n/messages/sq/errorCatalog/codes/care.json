@@ -79,6 +79,7 @@
   "request_not_found": "Nuk u gjet: {object}. Ju lutemi ringarkoni faqen.",
   "request_not_open": "Nuk është më i hapur: {object}. Pyetni personin tuaj të kontaktit.",
   "request_sharing_invalid": "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
+  "room_history_stop_disabled": "Për momentin nuk mund ta ndryshoni këtu: {object}. Pyetni personin tuaj të kontaktit.",
   "sick_note_disabled": "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
   "staff_managed_guardian_protected": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "guardian_invite_unavailable": "Kjo ftesë nuk mund të dërgohej tani. Ju lutemi kontaktoni kujdesin pas shkollës."
