@@ -10,6 +10,7 @@ import type {
   FamilyImportRowStatus,
 } from "~/lib/traeger-family-children-import-api";
 import { childrenLabel } from "./family-children-format";
+import { labelOf } from "~/lib/label-of";
 
 /** Die Felder in der Reihenfolge der Zuordnung. */
 export const FAMILY_IMPORT_FIELDS: readonly FamilyImportField[] = [
@@ -59,7 +60,7 @@ export function familyImportStatus(row: FamilyImportRow): {
 } {
   return row.problems.some((problem) => problem.code === "confirmations_differ")
     ? { label: "Verschiedene Angaben", tone: "red" }
-    : FAMILY_IMPORT_STATUS[row.status];
+    : labelOf(FAMILY_IMPORT_STATUS, row.status, { label: "–", tone: "gray" });
 }
 
 /** Der Name des Kindes, „–“ ohne Namen. */
@@ -81,10 +82,12 @@ export function familyImportProblemText(
   problem: FamilyImportRow["problems"][number],
   row: FamilyImportRow,
 ): string {
-  const label = FAMILY_IMPORT_FIELD_LABELS[problem.field] ?? problem.field;
+  const { field } = problem;
+  if (field === undefined) return "Ein Feld dieser Zeile prüfen.";
+  const label = FAMILY_IMPORT_FIELD_LABELS[field] ?? field;
   switch (problem.code) {
     case "missing":
-      return MISSING_TEXT[problem.field] ?? `${label} fehlt.`;
+      return MISSING_TEXT[field] ?? `${label} fehlt.`;
     case "invalid":
       return problem.field === "children"
         ? "Die Kinderzahl ist keine ganze Zahl von 1 bis 20."

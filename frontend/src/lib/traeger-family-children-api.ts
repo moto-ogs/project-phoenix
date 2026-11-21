@@ -6,20 +6,30 @@
  * its address. Backend int64 IDs leave here as strings; calendar dates stay
  * "YYYY-MM-DD".
  */
+import { knownEnum } from "./contract/known-enum";
+import type {
+  FamilyChildCount as WireCount,
+  FamilyChildrenRequest,
+  FamilyChildrenSet as WireSet,
+} from "./contract/traeger-family-children.generated";
 import { traegerRequest } from "./traeger-api";
 import type { CareRule } from "./traeger-care-reductions-api";
 
+// Go does not register the set; the contract types it as string.
+const STATUS_VALUES = [
+  "missing",
+  "stated",
+  "changed",
+  "confirmed",
+  "expiring",
+  "expired",
+  "upcoming",
+  // Contracts that became one family brought different numbers (#7356).
+  "differing",
+] as const;
+
 /** The state of a family's number today; the most urgent check wins. */
-export type FamilyChildrenStatus =
-  | "missing"
-  | "stated"
-  | "changed"
-  | "confirmed"
-  | "expiring"
-  | "expired"
-  | "upcoming"
-  /** Contracts that became one family brought different numbers (#7356). */
-  | "differing";
+export type FamilyChildrenStatus = (typeof STATUS_VALUES)[number];
 
 export interface FamilyChildCount {
   readonly id: string;
@@ -52,7 +62,8 @@ export interface FamilyChildren {
   readonly recipientEmail: string;
   readonly children: readonly FamilyContractChild[];
   readonly count: FamilyChildCount | null;
-  readonly status: FamilyChildrenStatus;
+  /** undefined: a state this build does not know. */
+  readonly status: FamilyChildrenStatus | undefined;
 }
 
 export interface FamilyChildrenSet {
@@ -68,45 +79,12 @@ export interface FamilyChildrenInput {
   readonly validUntil: string | null;
 }
 
-interface BackendCount {
-  id: number | string;
-  contract_id: number | string;
-  stated_children: number | null;
-  stated_at: string | null;
-  confirmed_children: number | null;
-  valid_from: string | null;
-  valid_until: string | null;
-  confirmed_at: string | null;
-}
-
-interface BackendFamily {
-  contract_id: number | string;
-  recipient_first_name: string;
-  recipient_last_name: string;
-  recipient_email: string;
-  children:
-    | {
-        contract_id: number | string;
-        school_name: string;
-        child_first_name: string;
-        child_last_name: string;
-      }[]
-    | null;
-  count: BackendCount | null;
-  status: FamilyChildrenStatus;
-}
-
-interface BackendSet {
-  families: BackendFamily[] | null;
-  rules: { id: number | string; name: string }[] | null;
-}
-
 const PATH = "/api/traeger/family-children";
 
-function countFromBackend(count: BackendCount): FamilyChildCount {
+function countFromBackend(count: WireCount): FamilyChildCount {
   return {
-    id: String(count.id),
-    contractId: String(count.contract_id),
+    id: count.id,
+    contractId: count.contract_id,
     statedChildren: count.stated_children,
     statedAt: count.stated_at,
     confirmedChildren: count.confirmed_children,
@@ -116,31 +94,31 @@ function countFromBackend(count: BackendCount): FamilyChildCount {
   };
 }
 
-function familyChildrenSetFromBackend(body: BackendSet): FamilyChildrenSet {
+function familyChildrenSetFromBackend(body: WireSet): FamilyChildrenSet {
   return {
     families: (body.families ?? []).map((family) => ({
-      contractId: String(family.contract_id),
+      contractId: family.contract_id,
       recipientFirstName: family.recipient_first_name,
       recipientLastName: family.recipient_last_name,
       recipientEmail: family.recipient_email,
       children: (family.children ?? []).map((child) => ({
-        contractId: String(child.contract_id),
+        contractId: child.contract_id,
         schoolName: child.school_name,
         childFirstName: child.child_first_name,
         childLastName: child.child_last_name,
       })),
       count: family.count ? countFromBackend(family.count) : null,
-      status: family.status,
+      status: knownEnum(STATUS_VALUES, family.status),
     })),
     rules: (body.rules ?? []).map((rule) => ({
-      id: String(rule.id),
+      id: rule.id,
       name: rule.name,
     })),
   };
 }
 
 export async function fetchFamilyChildren(): Promise<FamilyChildrenSet> {
-  return familyChildrenSetFromBackend(await traegerRequest<BackendSet>(PATH));
+  return familyChildrenSetFromBackend(await traegerRequest<WireSet>(PATH));
 }
 
 /** Confirms or changes the number of the family of a contract. */
@@ -148,14 +126,16 @@ export async function confirmFamilyChildren(
   input: FamilyChildrenInput,
 ): Promise<FamilyChildrenSet> {
   return familyChildrenSetFromBackend(
-    await traegerRequest<BackendSet>(PATH, {
+    // traegerRequest writes the JSON itself: a string here went out as a
+    // JSON string, and Go refused it (parent_billing.family_children_invalid).
+    await traegerRequest<WireSet>(PATH, {
       method: "PUT",
-      body: JSON.stringify({
+      body: {
         contract_id: Number(input.contractId),
         children: input.children,
         valid_from: input.validFrom,
         valid_until: input.validUntil,
-      }),
+      } satisfies FamilyChildrenRequest,
     }),
   );
 }

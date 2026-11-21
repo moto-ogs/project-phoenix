@@ -61,6 +61,7 @@ import {
   fetchFamilyChildren,
   removeFamilyChildren,
 } from "~/lib/traeger-family-children-api";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerKinderzahlPage" });
 
@@ -204,8 +205,9 @@ export default function TraegerKinderzahlPage() {
   };
 
   const families = data?.families ?? [];
-  const toCheck = families.filter((family) =>
-    NEEDS_CHECK.includes(family.status),
+  const toCheck = families.filter(
+    (family) =>
+      family.status !== undefined && NEEDS_CHECK.includes(family.status),
   );
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -268,8 +270,8 @@ export default function TraegerKinderzahlPage() {
       className: "w-44 align-top",
       render: (family) => (
         <StatusBadge
-          tone={STATUS_TONES[family.status]}
-          label={STATUS_LABELS[family.status]}
+          tone={labelOf(STATUS_TONES, family.status, "gray")}
+          label={labelOf(STATUS_LABELS, family.status, "–")}
         />
       ),
     },
@@ -453,8 +455,8 @@ export default function TraegerKinderzahlPage() {
                     <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
                       {familyName(family)}
                       <StatusBadge
-                        tone={STATUS_TONES[family.status]}
-                        label={STATUS_LABELS[family.status]}
+                        tone={labelOf(STATUS_TONES, family.status, "gray")}
+                        label={labelOf(STATUS_LABELS, family.status, "–")}
                       />
                     </p>
                     <p className="mt-0.5 text-sm text-gray-600">
