@@ -52,6 +52,13 @@ type DueSource = (typeof DUE_SOURCE_VALUES)[number];
 /** The payment methods in the order the forms show them. */
 export const PAYMENT_METHODS: readonly PaymentMethod[] = PAYMENT_METHOD_VALUES;
 
+/** The payment method a value names, undefined when unknown. */
+export function knownPaymentMethod(
+  value: string | undefined,
+): PaymentMethod | undefined {
+  return knownEnum(PAYMENT_METHOD_VALUES, value);
+}
+
 /** The recipient kind a value names, or undefined for one this build does not know. */
 export function knownRecipientKind(
   value: string | undefined,
