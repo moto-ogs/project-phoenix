@@ -52,7 +52,6 @@ const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/register/[[...path]]": "tenant",
   "/api/auth/staff-preview/[...path]": "tenant",
   "/api/auth/password-reset/[[...path]]": "tenant",
-  "/api/students/export": "tenant",
   "/api/auth/password/[[...path]]": "tenant",
   "/api/caterer/auth/mfa/trusted-devices/[[...path]]": "caterer",
   "/api/caterer/auth/passkeys/[[...path]]": "caterer",
