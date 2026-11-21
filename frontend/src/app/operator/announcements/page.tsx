@@ -34,12 +34,12 @@ import {
   SEVERITY_LABELS,
   ANNOUNCEMENT_STATUS_LABELS,
   SYSTEM_ROLE_LABELS,
+  systemRoleLabel,
 } from "~/lib/operator/announcements-helpers";
 import type {
   Announcement,
   AnnouncementType,
   AnnouncementSeverity,
-  SystemRole,
   CreateAnnouncementRequest,
   UpdateAnnouncementRequest,
 } from "~/lib/operator/announcements-helpers";
@@ -81,7 +81,7 @@ interface FormData {
   severity: AnnouncementSeverity;
   version: string;
   expiresAt: string;
-  targetRoles: SystemRole[];
+  targetRoles: string[];
   targetOrgIds: string[];
   targetTenantIds: string[];
 }
@@ -1113,9 +1113,7 @@ function AnnouncementCard({
             />
           </svg>
           <span>
-            {announcement.targetRoles
-              .map((r) => SYSTEM_ROLE_LABELS[r])
-              .join(", ")}
+            {announcement.targetRoles.map(systemRoleLabel).join(", ")}
           </span>
         </div>
       )}

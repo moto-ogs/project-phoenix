@@ -1,10 +1,12 @@
 import { operatorFetch } from "./api-helpers";
 import type {
-  BackendAnnouncement,
+  AnnouncementViewDetailResponse as WireAnnouncementViewDetail,
+  OperatorAnnouncementResponse as WireAnnouncement,
+} from "~/lib/contract/operator-announcements.generated";
+import type {
   Announcement,
   AnnouncementStats,
   AnnouncementViewDetail,
-  BackendAnnouncementViewDetail,
   CreateAnnouncementRequest,
   UpdateAnnouncementRequest,
 } from "./announcements-helpers";
@@ -12,21 +14,21 @@ import { mapAnnouncement, mapViewDetail } from "./announcements-helpers";
 
 class OperatorAnnouncementsService {
   async fetchAll(includeInactive = true): Promise<Announcement[]> {
-    const data = await operatorFetch<BackendAnnouncement[]>(
+    const data = await operatorFetch<WireAnnouncement[]>(
       `/api/operator/announcements?include_inactive=${includeInactive}`,
     );
     return data.map(mapAnnouncement);
   }
 
   async fetchById(id: string): Promise<Announcement> {
-    const data = await operatorFetch<BackendAnnouncement>(
+    const data = await operatorFetch<WireAnnouncement>(
       `/api/operator/announcements/${id}`,
     );
     return mapAnnouncement(data);
   }
 
   async create(data: CreateAnnouncementRequest): Promise<Announcement> {
-    const result = await operatorFetch<BackendAnnouncement>(
+    const result = await operatorFetch<WireAnnouncement>(
       "/api/operator/announcements",
       { method: "POST", body: data },
     );
@@ -37,7 +39,7 @@ class OperatorAnnouncementsService {
     id: string,
     data: UpdateAnnouncementRequest,
   ): Promise<Announcement> {
-    const result = await operatorFetch<BackendAnnouncement>(
+    const result = await operatorFetch<WireAnnouncement>(
       `/api/operator/announcements/${id}`,
       { method: "PUT", body: data },
     );
@@ -63,7 +65,7 @@ class OperatorAnnouncementsService {
   }
 
   async fetchViewDetails(id: string): Promise<AnnouncementViewDetail[]> {
-    const data = await operatorFetch<BackendAnnouncementViewDetail[]>(
+    const data = await operatorFetch<WireAnnouncementViewDetail[]>(
       `/api/operator/announcements/${id}/views`,
     );
     return data.map(mapViewDetail);
