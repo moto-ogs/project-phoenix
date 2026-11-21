@@ -4,6 +4,7 @@
 // Zeile ohnehin zeigt.
 
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
+import { labelOf } from "~/lib/label-of";
 import type {
   StaffImportCounts,
   StaffImportField,
@@ -119,7 +120,7 @@ export function staffImportDoneDescription(counts: StaffImportCounts): string {
 
 /** Der Grund, warum eine Zeile draußen bleibt, ohne einen Wert zu nennen. */
 export function staffImportProblemText(problem: StaffImportProblem): string {
-  const field = STAFF_IMPORT_FIELD_LABELS[problem.field];
+  const field = labelOf(STAFF_IMPORT_FIELD_LABELS, problem.field, "Ein Wert");
   switch (problem.code) {
     case "missing":
       return `${field} fehlt.`;
@@ -135,6 +136,8 @@ export function staffImportProblemText(problem: StaffImportProblem): string {
       return "Die Personalnummer steht mehrmals in der Datei.";
     case "differs":
       return `${field} weicht von der Akte ab.`;
+    case "other":
+      return `${field} kann moto so nicht übernehmen.`;
   }
 }
 

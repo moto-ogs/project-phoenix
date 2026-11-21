@@ -8,11 +8,20 @@
  */
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
+import type {
+  TraegerExportPerson as WirePerson,
+  TraegerPayrollReport as WirePayrollReport,
+  TraegerTimeReport as WireTimeReport,
+} from "./contract/traeger-staff-exports.generated";
+import { knownEnum } from "./contract/known-enum";
 import { readJson, traegerRequest } from "./traeger-api";
 
 const BASE = "/api/traeger/staff-exports";
 
-export type PayrollFormat = "datev_lodas" | "datev_lug";
+// Go does not register the set; the contract types it as string.
+const PAYROLL_FORMAT_VALUES = ["datev_lodas", "datev_lug"] as const;
+
+export type PayrollFormat = (typeof PAYROLL_FORMAT_VALUES)[number];
 
 /** Die sieben Kategorien der Lohndatei in Dateireihenfolge. */
 export const PAYROLL_CATEGORIES = [
@@ -63,7 +72,8 @@ export interface PayrollGap {
 export interface PayrollReport {
   readonly year: number;
   readonly month: number;
-  readonly format: PayrollFormat;
+  /** undefined: a format this build does not know. */
+  readonly format: PayrollFormat | undefined;
   readonly contracts: number;
   readonly people: number;
   readonly schools: number;
@@ -91,57 +101,29 @@ export interface TimeReport {
   readonly withoutNumber: readonly ExportPerson[];
 }
 
-interface BackendPerson {
-  record_id: string | number;
-  first_name: string;
-  last_name: string;
-}
-
-interface BackendPayrollReport {
-  year: number;
-  month: number;
-  format: PayrollFormat;
-  contracts: number;
-  people: number;
-  schools: number;
-  line_count: number;
-  kinds: PayrollKindCount[] | null;
-  without_number: BackendPerson[] | null;
-  unconfigured: PayrollGap[] | null;
-  missing_client: boolean;
-  no_wage_type: boolean;
-  open_schools: string[] | null;
-  contract_changes: BackendPerson[] | null;
-  ready: boolean;
-}
-
-interface BackendTimeReport {
-  year: number;
-  month: number;
-  people: number;
-  schools: number;
-  rows: number;
-  without_number: BackendPerson[] | null;
-}
-
-const mapPerson = (person: BackendPerson): ExportPerson => ({
-  recordId: String(person.record_id),
+const mapPerson = (person: WirePerson): ExportPerson => ({
+  recordId: person.record_id,
   firstName: person.first_name,
   lastName: person.last_name,
 });
 
-function mapPayrollReport(data: BackendPayrollReport): PayrollReport {
+function mapPayrollReport(data: WirePayrollReport): PayrollReport {
   return {
     year: data.year,
     month: data.month,
-    format: data.format,
+    format: knownEnum(PAYROLL_FORMAT_VALUES, data.format),
     contracts: data.contracts,
     people: data.people,
     schools: data.schools,
     lineCount: data.line_count,
     kinds: data.kinds ?? [],
     withoutNumber: (data.without_number ?? []).map(mapPerson),
-    unconfigured: data.unconfigured ?? [],
+    // A category this build does not know has no field to fill in; `ready`
+    // from the backend still holds the file back.
+    unconfigured: (data.unconfigured ?? []).flatMap((gap) => {
+      const category = knownEnum(PAYROLL_CATEGORIES, gap.category);
+      return category === undefined ? [] : [{ category, kind: gap.kind }];
+    }),
     missingClient: data.missing_client,
     noWageType: data.no_wage_type,
     openSchools: data.open_schools ?? [],
@@ -150,7 +132,7 @@ function mapPayrollReport(data: BackendPayrollReport): PayrollReport {
   };
 }
 
-function mapTimeReport(data: BackendTimeReport): TimeReport {
+function mapTimeReport(data: WireTimeReport): TimeReport {
   return {
     year: data.year,
     month: data.month,
@@ -170,7 +152,7 @@ export async function fetchPayrollReport(
   format: PayrollFormat,
 ): Promise<PayrollReport> {
   return mapPayrollReport(
-    await traegerRequest<BackendPayrollReport>(
+    await traegerRequest<WirePayrollReport>(
       `${BASE}/payroll?${monthQuery(year, month)}&format=${format}`,
     ),
   );
@@ -181,7 +163,7 @@ export async function fetchTimeReport(
   month: number,
 ): Promise<TimeReport> {
   return mapTimeReport(
-    await traegerRequest<BackendTimeReport>(
+    await traegerRequest<WireTimeReport>(
       `${BASE}/times?${monthQuery(year, month)}`,
     ),
   );

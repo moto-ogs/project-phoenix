@@ -25,6 +25,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { labelOf } from "~/lib/label-of";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
@@ -270,7 +271,7 @@ function ContractPanel({
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-gray-900">
-              {CONTRACT_KIND_LABELS[contract.kind]}
+              {labelOf(CONTRACT_KIND_LABELS, contract.kind, "–")}
             </h3>
             <StatusBadge
               label={contractPhaseLabel(contract, phase)}
@@ -288,7 +289,7 @@ function ContractPanel({
           </p>
         </div>
         <OverflowMenu
-          ariaLabel={`Aktionen für den Vertrag ${CONTRACT_KIND_LABELS[contract.kind]} ${contractTerm(contract)}`}
+          ariaLabel={`Aktionen für den Vertrag ${labelOf(CONTRACT_KIND_LABELS, contract.kind, "–")} ${contractTerm(contract)}`}
           items={[
             {
               label: "Soll ändern",
