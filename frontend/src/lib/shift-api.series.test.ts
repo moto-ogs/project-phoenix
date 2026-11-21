@@ -18,7 +18,12 @@ describe("staffShiftSeriesService", () => {
     mockSessionFetch.mockResolvedValueOnce(
       Response.json(
         {
-          data: { series_id: "5", created: 12, skipped_dates: ["2026-09-07"] },
+          data: {
+            series_id: "5",
+            created: 12,
+            skipped_dates: ["2026-09-07"],
+            skipped_non_working_days: 0,
+          },
         },
         { status: 201 },
       ),
@@ -67,7 +72,14 @@ describe("staffShiftSeriesService", () => {
   it("defaults missing skipped_dates to an empty list and null type stays null", async () => {
     mockSessionFetch.mockResolvedValueOnce(
       Response.json(
-        { data: { series_id: "5", created: 3, skipped_dates: null } },
+        {
+          data: {
+            series_id: "5",
+            created: 3,
+            skipped_dates: null,
+            skipped_non_working_days: 0,
+          },
+        },
         { status: 201 },
       ),
     );

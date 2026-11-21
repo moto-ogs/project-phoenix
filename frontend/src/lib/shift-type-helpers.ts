@@ -1,17 +1,7 @@
 // Types and mapping for tenant-defined shift types (Schichtarten, #1836).
-// Backend wire format: snake_case, int64 id as number or decimal string, color as hex string.
+// Wire shape: ShiftTypeResponse in lib/contract/shift-types.generated.ts.
 
-export interface BackendShiftType {
-  id: number | string;
-  name: string;
-  color: string;
-  description?: string;
-  is_active: boolean;
-  /** Set on a type the school removed while planned shifts still carry it. */
-  archived_at?: string;
-  /** Only on a list requested with `with_usage=true`. */
-  usage?: { shifts: number; series: number };
-}
+import type { ShiftTypeResponse } from "./contract/shift-types.generated";
 
 export interface ShiftType {
   id: string;
@@ -38,9 +28,9 @@ export interface ShiftTypeUsage {
 /** What removing a shift type did (#6845). */
 export type ShiftTypeRemoval = "deleted" | "archived";
 
-export function mapShiftType(data: BackendShiftType): ShiftType {
+export function mapShiftType(data: ShiftTypeResponse): ShiftType {
   return {
-    id: data.id.toString(),
+    id: data.id,
     name: data.name,
     color: data.color,
     description: data.description ?? "",

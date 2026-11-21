@@ -7,9 +7,10 @@ vi.mock("./session-cache", () => ({
 }));
 
 import { ownShiftService, staffShiftService } from "./shift-api";
+import type { ShiftResponse } from "./contract/shared.generated";
 
 const backendAssignment = {
-  instance_id: 81,
+  instance_id: "81",
   title: "Frühbetreuung",
   group_name: "Lernzeit",
   room_name: "Sonnenraum",
@@ -26,30 +27,32 @@ const backendAssignment = {
   understaffed_ack: false,
 };
 
-const backendShift = {
-  id: 42,
-  staff_id: 7,
+const backendShift: ShiftResponse = {
+  id: "42",
+  staff_id: "7",
   date: "2026-07-06",
   start_time: "08:00",
   end_time: "16:00",
   break_minutes: 30,
+  detached: false,
+  cancelled: false,
 };
 
 const backendOverview = {
   from: "2026-07-06",
   to: "2026-07-10",
   dienstplan_in_use: true,
-  staff: [{ id: 7, first_name: "Ada", last_name: "Lovelace" }],
+  staff: [{ id: "7", first_name: "Ada", last_name: "Lovelace" }],
   shifts: [backendShift],
   assignments: [
     {
-      instance_id: 81,
-      staff_id: 7,
+      instance_id: "81",
+      staff_id: "7",
       date: "2026-07-06",
       start_time: "08:00",
       end_time: "09:00",
       activity_title: "Frühbetreuung",
-      room_id: 12,
+      room_id: "12",
       room_name: "Sonnenraum",
       status: "planned",
       is_absent: false,
@@ -278,7 +281,7 @@ describe("staffShiftService requests", () => {
 
   it("serializes a linked shift type id to a number", async () => {
     mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ data: { ...backendShift, shift_type_id: 5 } }),
+      Response.json({ data: { ...backendShift, shift_type_id: "5" } }),
     );
 
     await staffShiftService.createShift({
@@ -338,7 +341,7 @@ describe("staffShiftService requests", () => {
 
   it("serializes an atomic move with explicit source and target owners", async () => {
     mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ data: { ...backendShift, staff_id: 8 } }),
+      Response.json({ data: { ...backendShift, staff_id: "8" } }),
     );
 
     await staffShiftService.moveShift("42", {
