@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { mapInstance } from "~/lib/timetable-helpers";
-import type { BackendEnrichedInstance } from "~/lib/timetable-types";
 import { makeCatalogProxy } from "./catalog-proxy.server";
 import { portalRoutes } from "./portals.generated";
+import type { enrichedInstance } from "./timetable.generated";
 
 /**
  * A created block whose enriched re-read failed (#2352): the backend answers
@@ -89,7 +89,7 @@ describe("POST /api/timetable/instances without enrichment", () => {
     );
     const { status, data } = (await response.json()) as {
       status: string;
-      data: BackendEnrichedInstance;
+      data: enrichedInstance;
     };
     expect(status).toBe("success");
     // The page shows the block with what was saved and nothing invented.
