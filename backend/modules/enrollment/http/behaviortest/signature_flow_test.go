@@ -263,6 +263,8 @@ func TestEnrollmentSignature_StatusLinkAndStaffShowTheSignatureAndItsProof(t *te
 	assert.NotEmpty(t, detail.Data.Signature.ImagePNG, "the staff detail shows the image")
 	assert.Equal(t, status.Data.Signature.DocumentSHA, detail.Data.Signature.DocumentSHA)
 	requirePDF(t, env.do(t, http.MethodGet, idPath(signed.Request.ID, "/signature-proof"), staff, ""))
+	// The staff detail answers JSON only; the proof has its own path (#7644).
+	assert.Contains(t, env.do(t, http.MethodGet, idPath(signed.Request.ID, "/?format=pdf"), staff, "").Header().Get("Content-Type"), "application/json")
 }
 
 func TestEnrollmentSignature_ParentEditSignsAgain(t *testing.T) {

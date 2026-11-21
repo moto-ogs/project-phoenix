@@ -68,12 +68,22 @@ export function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt, wer vertritt und welche Dienste sich geändert haben.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt, wer vertritt und welche Dienste sich geändert haben. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du heute fehlst.",
           "Dort steht auch, ob dein Dienst heute anders ist oder ausfällt.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
+          // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
+          // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
+          "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          // Dienste (#7661) sind die erste Quelle mit Uhrzeit: Ein Dienst, dessen
+          // Ende vorbei ist, steht eingeklappt unter „erledigt“.
+          "Ein Dienst, der heute schon vorbei ist, steht ganz unten unter `erledigt`. Wähle `erledigt`, um ihn zu sehen.",
+          // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
+          "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",

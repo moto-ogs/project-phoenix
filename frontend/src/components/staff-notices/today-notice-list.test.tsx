@@ -11,6 +11,12 @@ import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 
 import { TodayNoticeList } from "./today-notice-list";
 
+const invalidate = vi.hoisted(() => vi.fn());
+
+vi.mock("~/lib/swr", () => ({
+  useInvalidateMatching: () => invalidate,
+}));
+
 // The component refreshes the scoped cache, which needs the session.
 function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -73,6 +79,10 @@ describe("TodayNoticeList", () => {
     await waitFor(() => expect(onChanged).toHaveBeenCalledOnce());
     expect(acknowledge).toHaveBeenCalledTimes(2);
     expect(acknowledge).toHaveBeenLastCalledWith("42");
+    const matcher = invalidate.mock.calls.at(-1)?.[0];
+    expect(matcher).toEqual(expect.any(Function));
+    expect(matcher("staff-notices:1")).toBe(true);
+    expect(matcher("staff-notice-acknowledgements-42")).toBe(true);
   });
 
   // #6652: die Kenntnisnahme gilt, sobald sie gespeichert ist; ein

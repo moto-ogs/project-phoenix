@@ -342,9 +342,9 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       STAFF_INVITATION_LINK,
       "/api/invitations/accept",
       "/api/auth/guardian-invitations/",
-      "/api/holiday-registrations/",
-      // The holiday link and its summary through the Träger proxy's public
-      // routes (#2352); every other /api/traeger/ path stays off this host.
+      // The holiday link, its summary, documents and proof upload through
+      // the Träger proxy's public routes (#2352); every other /api/traeger/
+      // path stays off this host.
       "/api/traeger/holiday-registrations/",
       "/api/traeger/holiday-quotes/",
       "/api/auth/holiday-parent-setups/",

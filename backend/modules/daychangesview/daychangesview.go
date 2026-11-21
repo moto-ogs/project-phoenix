@@ -29,6 +29,8 @@ const (
 	// SourceStaff is Personal: full-day absences, group substitutions and
 	// the changed or cancelled shifts of the Dienstplan (#7661).
 	SourceStaff Source = "staff"
+	// SourceNotices is Hinweise der Leitung: the notices that apply today.
+	SourceNotices Source = "notices"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -62,6 +64,8 @@ const (
 	KindShiftCancelled Kind = "shift_cancelled"
 	// KindShiftReplacement: somebody covers (part of) a cancelled shift.
 	KindShiftReplacement Kind = "shift_replacement"
+	// KindStaffNotice: a Hinweis der Leitung applies today.
+	KindStaffNotice Kind = "staff_notice"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -93,6 +97,8 @@ const (
 	LinkOwnShiftPlan LinkTarget = "own_shift_plan"
 	// LinkShiftPlan is a staff member's week in the Dienstplan.
 	LinkShiftPlan LinkTarget = "shift_plan"
+	// LinkStaffNotices is the page of the Hinweise der Leitung.
+	LinkStaffNotices LinkTarget = "staff_notices"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -114,6 +120,26 @@ type Group struct {
 type Link struct {
 	Target  LinkTarget `json:"target"`
 	StaffID *int64     `json:"staff_id,string,omitempty"`
+}
+
+// NoticePriority is how important a Hinweis der Leitung is.
+type NoticePriority string
+
+const (
+	NoticeInfo      NoticePriority = "info"
+	NoticeImportant NoticePriority = "important"
+)
+
+// DayNotice is a Hinweis der Leitung. Title and body are the leadership's own
+// text. Acknowledged is the caller's own acknowledgement; the caller confirms
+// through the notices' existing write path, never through this read.
+type DayNotice struct {
+	ID                      int64          `json:"id,string"`
+	Title                   string         `json:"title"`
+	Body                    string         `json:"body"`
+	Priority                NoticePriority `json:"priority"`
+	RequiresAcknowledgement bool           `json:"requires_acknowledgement"`
+	Acknowledged            bool           `json:"acknowledged"`
 }
 
 // SourceEntry is what a source port returns: an entry without its section,
@@ -139,6 +165,8 @@ type SourceEntry struct {
 	Link     *Link
 	// Count is set on the summary kinds only.
 	Count *int
+	// Notice is set on KindStaffNotice only.
+	Notice *DayNotice
 }
 
 // Entry is one change to regular operation of the day.
@@ -151,13 +179,15 @@ type Entry struct {
 	Since   *calendar.Date `json:"since"`
 	Until   *calendar.Date `json:"until"`
 	// StartsAt and EndsAt are instants; the frontend shows the school's wall
-	// clock (a shift's time, #7661).
+	// clock (a shift's time, #7661) and folds a change whose end has passed into
+	// "erledigt" (#7660).
 	StartsAt *time.Time `json:"starts_at"`
 	EndsAt   *time.Time `json:"ends_at"`
 	People   []Person   `json:"people"`
 	Group    *Group     `json:"group"`
 	Link     *Link      `json:"link"`
 	Count    *int       `json:"count"`
+	Notice   *DayNotice `json:"notice"`
 }
 
 // SourceStatus reports one source.
@@ -181,9 +211,18 @@ type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
-// Isolation runs one source read so that its failure leaves the request's
+// StaffNotices is the Hinweise der Leitung port: the notices that apply on
+// the day for the caller, with the caller's own acknowledgement. A caller who
+// may not read the notices gets none.
+type StaffNotices interface {
+	StaffNotices(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
+// Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
+// Consecutive sources share one isolation, so a source must only read: a
+// later source's failure rolls back everything since the isolation began.
 type Isolation interface {
 	Run(ctx context.Context, read func(context.Context) error) error
 	// IsFatal reports an error of the isolation itself: the state of the
@@ -198,6 +237,7 @@ type Dependencies struct {
 	Today     func() calendar.Date
 	Isolation Isolation
 	Staff     StaffChanges
+	Notices   StaffNotices
 	Logger    *slog.Logger
 }
 
@@ -223,7 +263,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Notices == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -237,6 +277,7 @@ func New(deps Dependencies) (Query, error) {
 		// The order is the order of the statuses in the answer.
 		sources: []sourceRead{
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
+			{source: SourceNotices, read: deps.Notices.StaffNotices},
 		},
 	}, nil
 }
@@ -244,35 +285,65 @@ func New(deps Dependencies) (Query, error) {
 // Today reads every source separately. A failed source leaves its entries
 // out and is marked failed; only a failure of the isolation itself fails the
 // request.
+//
+// The sources only read, so consecutive sources share one isolation while
+// they succeed: rolling a failed source back also rolls back the reads before
+// it, which changes nothing, and their entries are already held. After a
+// failure the remaining sources get a fresh isolation. Every source still
+// runs isolated from a failed statement of another (ADR 0299 point 7,
+// addendum of #7667), at two statements per request instead of two per
+// source.
 func (v *view) Today(ctx context.Context) (Overview, error) {
 	day := v.today()
+	results := make([][]SourceEntry, len(v.sources))
+	failed := make([]bool, len(v.sources))
+	for start := 0; start < len(v.sources); {
+		failedAt, err := v.readFrom(ctx, day, start, results)
+		if err == nil {
+			break
+		}
+		if v.isolation.IsFatal(err) || failedAt < 0 {
+			return Overview{}, fmt.Errorf("day changes sources: %w", err)
+		}
+		// The source and the error; source reads name no person in their errors.
+		v.logger.ErrorContext(ctx, "day changes source failed",
+			"source", string(v.sources[failedAt].source),
+			"error", err.Error(),
+		)
+		failed[failedAt] = true
+		start = failedAt + 1
+	}
 	overview := Overview{Date: day, Sources: make([]SourceStatus, 0, len(v.sources)), Entries: []Entry{}}
-	for _, source := range v.sources {
-		var entries []SourceEntry
-		err := v.isolation.Run(ctx, func(ctx context.Context) error {
-			var readErr error
-			entries, readErr = source.read(ctx, day)
-			return readErr
-		})
-		if err != nil {
-			if v.isolation.IsFatal(err) {
-				return Overview{}, fmt.Errorf("day changes source %s: %w", source.source, err)
-			}
-			// The source and the error; source reads name no person in their errors.
-			v.logger.ErrorContext(ctx, "day changes source failed",
-				"source", string(source.source),
-				"error", err.Error(),
-			)
+	for i, source := range v.sources {
+		if failed[i] {
 			overview.Sources = append(overview.Sources, SourceStatus{Source: source.source, Status: SourceFailed})
 			continue
 		}
 		overview.Sources = append(overview.Sources, SourceStatus{Source: source.source, Status: SourceLoaded})
-		for _, entry := range entries {
+		for _, entry := range results[i] {
 			overview.Entries = append(overview.Entries, toEntry(entry))
 		}
 	}
 	sortEntries(overview.Entries)
 	return overview, nil
+}
+
+// readFrom reads the sources from start on inside one isolation until one
+// fails. It returns the index of the failed source, or -1.
+func (v *view) readFrom(ctx context.Context, day calendar.Date, start int, results [][]SourceEntry) (int, error) {
+	failedAt := -1
+	err := v.isolation.Run(ctx, func(ctx context.Context) error {
+		for i := start; i < len(v.sources); i++ {
+			entries, err := v.sources[i].read(ctx, day)
+			if err != nil {
+				failedAt = i
+				return err
+			}
+			results[i] = entries
+		}
+		return nil
+	})
+	return failedAt, err
 }
 
 func toEntry(entry SourceEntry) Entry {
@@ -287,14 +358,16 @@ func toEntry(entry SourceEntry) Entry {
 	return Entry{
 		Kind: entry.Kind, Section: section, AllDay: entry.StartsAt == nil, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
-		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count,
+		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
 	}
 }
 
-// sortEntries puts "Betrifft dich" before "Schule". Inside a section, new
-// changes stand first, the long ones that began before today follow
-// compactly, and the summaries close the section. Ties sort by kind, first
-// name and group, so the order is stable.
+// sortEntries puts "Betrifft dich" before "Schule". Inside a section (#7660),
+// new full-day changes stand first, the changes with a time of day follow by
+// their start, then the long ones that began before today compactly, and the
+// summaries close the section. An unacknowledged Hinweis der Leitung stands
+// above everything. The frontend folds what has ended into "erledigt". Ties
+// sort by kind, first name and group, so the order is stable.
 func sortEntries(entries []Entry) {
 	sort.SliceStable(entries, func(i, j int) bool {
 		a, b := entries[i], entries[j]
@@ -303,6 +376,9 @@ func sortEntries(entries []Entry) {
 		}
 		if ra, rb := rank(a), rank(b); ra != rb {
 			return ra < rb
+		}
+		if a.StartsAt != nil && b.StartsAt != nil && !a.StartsAt.Equal(*b.StartsAt) {
+			return a.StartsAt.Before(*b.StartsAt)
 		}
 		if a.Kind != b.Kind {
 			return a.Kind < b.Kind
@@ -316,9 +392,13 @@ func sortEntries(entries []Entry) {
 
 func rank(entry Entry) int {
 	switch {
+	case entry.Notice != nil && entry.Notice.RequiresAcknowledgement && !entry.Notice.Acknowledged:
+		return -1
 	case entry.Count != nil:
-		return 2
+		return 3
 	case entry.Since != nil:
+		return 2
+	case entry.StartsAt != nil:
 		return 1
 	default:
 		return 0

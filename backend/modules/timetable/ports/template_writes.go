@@ -26,9 +26,20 @@ func (e *ScheduleError) Unwrap() error {
 
 // StaffingAnnouncer wakes the tenant's planner and "Heute geplant" caches
 // after writes that bypass the instance lifecycle (#1844). The event carries
-// no payload; the composition root binds the realtime broadcaster.
+// no payload; the composition root binds the realtime broadcaster. The staff
+// notices reuse the port for their own change signal (#7667): the root binds
+// their announcer to staff_notices_changed, not to the staffing event.
 type StaffingAnnouncer interface {
 	AnnounceStaffingChanged(tenantID int64, source string) error
+}
+
+// StaffingAnnouncerFunc lets a function serve as a StaffingAnnouncer; the
+// root binds the staff notices' signal with it (#7667).
+type StaffingAnnouncerFunc func(tenantID int64, source string) error
+
+// AnnounceStaffingChanged calls f.
+func (f StaffingAnnouncerFunc) AnnounceStaffingChanged(tenantID int64, source string) error {
+	return f(tenantID, source)
 }
 
 // EducationGroupDirectory is School Structure's existence check of an

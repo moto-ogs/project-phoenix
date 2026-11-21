@@ -168,6 +168,12 @@ const (
 	// high-frequency check-in/out traffic — so listeners can refetch unconditionally.
 	EventChangeRequestsChanged EventType = "change_requests_changed"
 
+	// EventStaffNoticesChanged is a tenant-wide staff signal that a Hinweis
+	// der Leitung was created, changed or deleted (#7667). It carries no
+	// content: the notices have an audience, and readers refetch their own
+	// view („Heute anders“, Tagesinformationen, the sidebar count).
+	EventStaffNoticesChanged EventType = "staff_notices_changed"
+
 	// Tenant-scoped settings change. Fires when a setting whose value travels
 	// through /auth/tenant/resolve (currently operations.student_photos_enabled)
 	// is written or reset. Already-open tabs at the affected tenant pick this

@@ -47,6 +47,7 @@ const DAY_CHANGE_KINDS = [
   "shift_replacement",
   "staff_absent",
   "staff_absent_count",
+  "staff_notice",
 ] as const satisfies readonly DayChangeKind[];
 
 /**
@@ -544,9 +545,11 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   // Reiter auf „Alle Kinder“ (#5046): nur die Art des Reiters, nie ein Raum.
   "child_scope_tab_selected",
   // „Heute anders“ (#7659): Klick auf einen Eintrag nur mit seiner Art,
-  // „Alle anzeigen“ ohne Eigenschaft.
+  // „Alle anzeigen“ und das Aufklappen von „erledigt“ (#7660) ohne
+  // Eigenschaft.
   "day_changes_entry_clicked",
   "day_changes_show_all",
+  "day_changes_done_expanded",
   // Selbstöffnende Flächen des Einstiegs (#7541): nur die Fläche
   // (onboarding_surface); das Portal steht in `surface`.
   "onboarding_surface_shown",

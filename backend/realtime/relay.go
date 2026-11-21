@@ -476,7 +476,7 @@ func invalidationReason(reason *string) *string {
 
 func relayEventType(kind EventType) bool {
 	switch kind {
-	case EventStudentCheckIn, EventStudentCheckOut, EventStudentUpdated, EventStudentCompanionsChanged, EventBulkStudentCheckOut, EventBulkStudentCheckIn, EventActivityStart, EventActivityEnd, EventActivityUpdate, EventInstanceStarted, EventInstanceCompleted, EventInstanceCancelled, EventInstanceOverdue, EventStaffingDeviationChanged, EventDashboardCountsChanged, EventGroupAccessChanged, EventStaffTimeTrackingChanged, EventActiveSupervisionChanged, EventArrivalScheduleChanged, EventPickupScheduleChanged, EventChangeRequestsChanged, EventTenantSettingsChanged, EventParentMessage, EventParentMessageRead, EventParentMessageUnreadChanged, EventStaffMessage, EventParentChildUpdated, EventClassDayChanged, EventNotificationFeedChanged:
+	case EventStudentCheckIn, EventStudentCheckOut, EventStudentUpdated, EventStudentCompanionsChanged, EventBulkStudentCheckOut, EventBulkStudentCheckIn, EventActivityStart, EventActivityEnd, EventActivityUpdate, EventInstanceStarted, EventInstanceCompleted, EventInstanceCancelled, EventInstanceOverdue, EventStaffingDeviationChanged, EventDashboardCountsChanged, EventGroupAccessChanged, EventStaffTimeTrackingChanged, EventActiveSupervisionChanged, EventArrivalScheduleChanged, EventPickupScheduleChanged, EventChangeRequestsChanged, EventStaffNoticesChanged, EventTenantSettingsChanged, EventParentMessage, EventParentMessageRead, EventParentMessageUnreadChanged, EventStaffMessage, EventParentChildUpdated, EventClassDayChanged, EventNotificationFeedChanged:
 		return true
 	default:
 		return false

@@ -5,6 +5,7 @@
  */
 import { bffJson } from "~/lib/bff-fetch";
 import type {
+  DayNotice,
   Entry,
   Kind,
   LinkTarget,
@@ -21,6 +22,17 @@ export interface DayChangePerson {
   readonly isSelf: boolean;
 }
 
+/** Ein Hinweis der Leitung (#7667); Titel und Text schreibt die Leitung. */
+export interface DayChangeNotice {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  readonly important: boolean;
+  readonly requiresAcknowledgement: boolean;
+  /** Die eigene Kenntnisnahme ist gespeichert. */
+  readonly acknowledged: boolean;
+}
+
 export interface DayChange {
   readonly kind: Kind | (string & {});
   readonly section: Section | (string & {});
@@ -31,7 +43,7 @@ export interface DayChange {
   readonly until: string | null;
   /**
    * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (ein Dienst,
-   * #7661), sonst null.
+   * #7661, #7660), sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
    */
   readonly startsAt: string | null;
   readonly endsAt: string | null;
@@ -42,6 +54,8 @@ export interface DayChange {
     readonly staffId: string | null;
   } | null;
   readonly count: number | null;
+  /** Nur bei der Art `staff_notice`. */
+  readonly notice?: DayChangeNotice | null;
 }
 
 export interface DayChangesOverview {
@@ -49,6 +63,18 @@ export interface DayChangesOverview {
   /** Quellen, die gerade nicht geladen werden konnten. */
   readonly failedSources: readonly (Source | (string & {}))[];
   readonly entries: readonly DayChange[];
+}
+
+function mapNotice(notice: DayNotice | null): DayChangeNotice | null {
+  if (!notice) return null;
+  return {
+    id: notice.id,
+    title: notice.title,
+    body: notice.body,
+    important: notice.priority === "important",
+    requiresAcknowledgement: notice.requires_acknowledgement,
+    acknowledged: notice.acknowledged,
+  };
 }
 
 function mapEntry(entry: Entry): DayChange {
@@ -71,6 +97,7 @@ function mapEntry(entry: Entry): DayChange {
       ? { target: entry.link.target, staffId: entry.link.staff_id ?? null }
       : null,
     count: entry.count,
+    notice: mapNotice(entry.notice ?? null),
   };
 }
 

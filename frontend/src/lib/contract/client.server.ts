@@ -15,6 +15,35 @@ import type { RequestBody } from "./runtime";
 
 const logger = createLogger({ component: "Contract" });
 
+// These queries do not commit the requested domain change. Import previews
+// may write audit rows, so this is not the read-only-session permission list.
+// Match explicit catalog keys, not a path suffix; unknown POSTs remain writes.
+const READ_ONLY_POST_ROUTES = new Set([
+  "POST /api/import/class-list-entries/preview",
+  "POST /api/import/opening-balances/preview",
+  "POST /api/import/students/preview",
+  "POST /api/import/teachers/preview",
+  "POST /api/parent-announcements/letter-preview",
+  "POST /api/search/",
+  "POST /api/students/arrival-schedules/status",
+  "POST /api/students/care-end/preview",
+  "POST /api/students/care-withdrawals/{completionId}/care-end/preview",
+  "POST /api/students/offering-change-requests/{requestId}/preview",
+  "POST /api/students/{id}/pickup-schedules/preview",
+  "POST /api/timetable/lists/options",
+  "POST /api/timetable/lists/preview",
+  "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
+  "POST /school/parent-letters/letter-preview",
+  "POST /traeger/catalog/phases/{id}/preview",
+  "POST /traeger/contract-imports/preview",
+  "POST /traeger/family-children/imports/preview",
+  "POST /traeger/holiday-closures/preview",
+  "POST /traeger/master-data/document-templates/{kind}/preview",
+  "POST /traeger/sepa-mandates/imports/preview",
+  "POST /traeger/staff-record-imports/preview",
+  "POST /traeger/staff-records/link-preview",
+]);
+
 interface ContractFailure {
   status: number;
   /** The registry code of the RFC 9457 body, when the backend sent one. */
@@ -51,14 +80,24 @@ export function decodeContract<T>(
 ): ContractResult<T> {
   const parsed = schema.safeParse(payload);
   if (parsed.success) return { ok: true, value: parsed.data };
+  // A backend success may already have committed a change. Only known
+  // queries can safely offer a retry; writes ask to reload first (#7563).
+  const write = !route.startsWith("GET ") && !READ_ONLY_POST_ROUTES.has(route);
   // Paths and issue codes only: the values are personal data.
   logger.error("contract_decode_failed", {
     route,
+    write,
     issues: parsed.error.issues
       .slice(0, 20)
       .map((issue) => `${issue.path.join(".")}: ${issue.code}`),
   });
-  return failure(bffError(502, "backend response does not match the contract"));
+  return failure(
+    bffError(
+      502,
+      "backend response does not match the contract",
+      write ? { code: "general.write_answer_unreadable" } : undefined,
+    ),
+  );
 }
 
 /** GET of a registered route. `route` is its catalog line, for the log. */

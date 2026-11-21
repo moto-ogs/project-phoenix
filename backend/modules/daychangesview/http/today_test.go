@@ -153,9 +153,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 	t.Run("care staff sees names for its group and numbers for the school", func(t *testing.T) {
 		overview, body := read(t, router, carerAccount.ID, tenantID, "users:read")
 		assert.Equal(t, day.String(), overview.Date)
-		require.Len(t, overview.Sources, 1)
-		assert.Equal(t, "staff", overview.Sources[0].Source)
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 		assert.Equal(t, []string{
 			"you group_substitution Tom Hilfe/substitute @Igel bis 2026-09-10 ->group_handovers",
 			"you staff_absent Ben Kollege/absent bis 2026-09-11 ->staff_member",
@@ -171,7 +169,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 			"you group_substitution Tom Hilfe/substitute @Igel bis 2026-09-10 ->group_handovers",
 			"you staff_absent Ben Kollege/absent bis 2026-09-11",
 		}, summary(overview.Entries))
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("lead sees every name of the school and no other school", func(t *testing.T) {
@@ -190,8 +188,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 	t.Run("account without the rights gets no entries and no failure", func(t *testing.T) {
 		overview, _ := read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, overview.Entries)
-		require.Len(t, overview.Sources, 1)
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("the day before shows that day only", func(t *testing.T) {
@@ -306,8 +303,7 @@ func TestDayChangesShiftSource(t *testing.T) {
 		assert.Equal(t, []string{
 			"you shift_changed Anna Betreuung/on_duty(du) 10:00-14:00 ->own_shift_plan",
 		}, summary(overview.Entries))
-		require.Len(t, overview.Sources, 1)
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 		assert.NotContains(t, body, "Ben", "another person's shift stays with the lead")
 		assertNoShiftReason(t, body)
 	})
@@ -324,11 +320,12 @@ func TestDayChangesShiftSource(t *testing.T) {
 	t.Run("lead of the Dienstplan sees every changed shift of the school", func(t *testing.T) {
 		overview, body := read(t, router, leadAccount.ID, tenantID, "time_tracking:manage")
 		assert.Equal(t, []string{
-			"school shift_cancelled Ben Kollege/on_duty 12:00-16:00 ->shift_plan",
+			// Over the day (#7660): without a time first, then by start.
 			"school shift_cancelled Fritz Verschoben/on_duty ->shift_plan",
-			"school shift_changed Anna Betreuung/on_duty 10:00-14:00 ->shift_plan",
-			"school shift_replacement Tom Hilfe/substitute Ben Kollege/replaced 12:00-15:00 ->shift_plan",
 			"school staff_absent Clara Krank/absent ->staff_absences",
+			"school shift_changed Anna Betreuung/on_duty 10:00-14:00 ->shift_plan",
+			"school shift_cancelled Ben Kollege/on_duty 12:00-16:00 ->shift_plan",
+			"school shift_replacement Tom Hilfe/substitute Ben Kollege/replaced 12:00-15:00 ->shift_plan",
 		}, summary(overview.Entries))
 		for _, absent := range []string{"Dora", "Gerd", "Emil", "Xaver"} {
 			assert.NotContains(t, body, absent, "unchanged times, a standalone shift, yesterday and another school stay out")
@@ -339,8 +336,7 @@ func TestDayChangesShiftSource(t *testing.T) {
 	t.Run("account without the rights gets no shifts and no failure", func(t *testing.T) {
 		overview, _ := read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, overview.Entries)
-		require.Len(t, overview.Sources, 1)
-		assert.Equal(t, "loaded", overview.Sources[0].Status)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("the day before shows that day only", func(t *testing.T) {

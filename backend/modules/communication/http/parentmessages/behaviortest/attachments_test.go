@@ -60,7 +60,9 @@ func messagingFixture(t *testing.T, reads owners.StaffStudentReads) (chi.Router,
 	persons := owners.ParentMessagePeopleWithLeaders{ParentMessagePeople: owners.BindParentMessagePeople(directory), ParentMessageLeadership: owners.BindParentMessageLeadership(people.Staff, owners.NewPeopleIdentityAccess(database, nil))}
 	svc, groups, attachments, handling, _ := compose.NewParentMessaging(compose.ParentMessagingConfig{ThreadRepo: repos.ParentMessageThread, MessageRepo: parentStore.NewParentMessageRepository(db), ReadRepo: repos.ParentMessageRead, Persons: persons, UserContext: reads, Session: api.CommunicationSession{}, Settings: settingsValues.NewParentMessagingValues(settings.Settings), Broadcaster: realtime.NewHub(slog.Default()), DB: db, Logger: slog.Default(), Observe: func(compose.Observation) {}, GroupAudience: owners.NewParentGroupAudience(database)}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	routes := api.NewMessageAttachmentRoutesForTests(attachments, common.RequiresPermission(permissions.UsersRead))
-	return messaging.NewResource(svc, groups, handling, nil).Router(api.ProtectedTenantRoutesWith(routes.Register)), testpkg.CreateTestParentGuardianChain(t, db)
+	router := chi.NewRouter()
+	router.Mount("/api/messages", messaging.NewResource(svc, groups, handling, nil).Router(api.ProtectedTenantRoutesWith(routes.Register)))
+	return router, testpkg.CreateTestParentGuardianChain(t, db)
 }
 
 func staffToken(t *testing.T, name string, grants ...string) string {
@@ -75,7 +77,7 @@ func call(t *testing.T, router chi.Router, token, method, path, contentType stri
 	if body == nil {
 		body = &bytes.Buffer{}
 	}
-	req := httptest.NewRequest(method, path, body).WithContext(testpkg.Ctx(t))
+	req := httptest.NewRequest(method, "/api/messages"+path, body).WithContext(testpkg.Ctx(t))
 	req.Header.Set("Authorization", "Bearer "+token)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)

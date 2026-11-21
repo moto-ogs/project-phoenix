@@ -67,49 +67,35 @@ function groupSubstitutionCountText(change: DayChange): string {
     : `In ${count} weiteren Gruppen vertritt heute jemand.`;
 }
 
-/** „12:00 bis 16:00 Uhr“ für einen Dienst mit Uhrzeit, sonst null. */
-function shiftClock(change: DayChange): string | null {
-  if (!change.startsAt || !change.endsAt) return null;
-  return `${formatTime(change.startsAt)} bis ${formatTime(change.endsAt)} Uhr`;
-}
-
-/** „ von 12:00 bis 16:00 Uhr“ für einen Satz, sonst leer. */
-function shiftTime(change: DayChange): string {
-  const clock = shiftClock(change);
-  return clock ? ` von ${clock}` : "";
-}
-
+// Die Uhrzeit eines Dienstes steht nicht im Satz, sondern daneben
+// (`dayChangeSpan`, #7660).
 function shiftChangedText(change: DayChange): string {
   const person = personWith(change, "on_duty");
-  const clock = shiftClock(change);
-  const sentence = person?.isSelf
-    ? "Dein Dienst ist heute anders"
-    : `${nameOf(person)} hat heute einen anderen Dienst`;
-  return clock ? `${sentence}: ${clock}.` : `${sentence}.`;
+  return person?.isSelf
+    ? "Dein Dienst ist heute anders."
+    : `${nameOf(person)} hat heute einen anderen Dienst.`;
 }
 
 function shiftCancelledText(change: DayChange): string {
   const person = personWith(change, "on_duty");
-  const time = shiftTime(change);
-  if (person?.isSelf) return `Dein Dienst${time} fällt heute aus.`;
-  return `Der Dienst von ${nameOf(person)}${time} fällt heute aus.`;
+  if (person?.isSelf) return "Dein Dienst fällt heute aus.";
+  return `Der Dienst von ${nameOf(person)} fällt heute aus.`;
 }
 
 function shiftReplacementText(change: DayChange): string {
   const substitute = personWith(change, "substitute");
   const replaced = personWith(change, "replaced");
-  const time = shiftTime(change);
   if (substitute?.isSelf) {
     return replaced
-      ? `Du vertrittst heute ${nameOf(replaced)}${time}.`
-      : `Du hast heute einen Dienst als Vertretung${time}.`;
+      ? `Du vertrittst heute ${nameOf(replaced)}.`
+      : "Du hast heute einen Dienst als Vertretung.";
   }
   if (replaced?.isSelf) {
-    return `${nameOf(substitute)} vertritt dich heute${time}.`;
+    return `${nameOf(substitute)} vertritt dich heute.`;
   }
   return replaced
-    ? `${nameOf(substitute)} vertritt heute ${nameOf(replaced)}${time}.`
-    : `${nameOf(substitute)} hat heute einen Dienst als Vertretung${time}.`;
+    ? `${nameOf(substitute)} vertritt heute ${nameOf(replaced)}.`
+    : `${nameOf(substitute)} hat heute einen Dienst als Vertretung.`;
 }
 
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
@@ -123,10 +109,13 @@ const DAY_CHANGE_TEXTS: Readonly<
   shift_changed: shiftChangedText,
   shift_cancelled: shiftCancelledText,
   shift_replacement: shiftReplacementText,
+  // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
+  staff_notice: (change) => change.notice?.title ?? "",
 };
 
 export function dayChangeText(change: DayChange): string | null {
-  return DAY_CHANGE_TEXTS[change.kind]?.(change) ?? null;
+  // Ein leerer Satz (ein Hinweis ohne Titel) zählt wie eine unbekannte Art.
+  return DAY_CHANGE_TEXTS[change.kind]?.(change) || null;
 }
 
 /** „3.11.“ aus „2026-11-03“. */
@@ -135,9 +124,27 @@ function shortDay(iso: string): string {
   return `${Number(day)}.${Number(month)}.`;
 }
 
-/** „seit 3.11.“, „bis 21.11.“ oder beides, sonst null. */
+/**
+ * Die Uhrzeit in der Zeitzone der Schule: „08:00 bis 09:30 Uhr“ oder
+ * „ab 14:00 Uhr“, ohne Uhrzeit null.
+ */
+function timeOfDay(change: DayChange): string | null {
+  if (!change.startsAt) return null;
+  const start = formatTime(change.startsAt);
+  return change.endsAt
+    ? `${start} bis ${formatTime(change.endsAt)} Uhr`
+    : `ab ${start} Uhr`;
+}
+
+/**
+ * Wann: die Uhrzeit und „seit 3.11.“, „bis 21.11.“ oder beides, sonst null.
+ * „Seit“ und „bis“ kommen aus der Antwort des Backends, nie aus einer
+ * Rechnung hier (#7660).
+ */
 export function dayChangeSpan(change: DayChange): string | null {
   const parts: string[] = [];
+  const time = timeOfDay(change);
+  if (time) parts.push(time);
   if (change.since) parts.push(`seit ${shortDay(change.since)}`);
   if (change.until) parts.push(`bis ${shortDay(change.until)}`);
   return parts.length > 0 ? parts.join(" ") : null;
@@ -147,6 +154,7 @@ export function dayChangeSpan(change: DayChange): string | null {
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff:
     "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
+  notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -177,6 +185,8 @@ export function dayChangeHref(change: DayChange): string | null {
       return link.staffId
         ? `/dienstplan?view=person&staff=${link.staffId}`
         : "/dienstplan";
+    case "staff_notices":
+      return "/tagesinformationen";
     default:
       return null;
   }
