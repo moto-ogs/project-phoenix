@@ -24,6 +24,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -162,14 +163,14 @@ func TestCreateInstance_WithoutTemplateIsPlanned(t *testing.T) {
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 
 	got := decodeCreate(t, w)
-	assert.Equal(t, persisted.ID, got.ID)
+	assert.Equal(t, ident.ID(persisted.ID), got.ID)
 	assert.Equal(t, "Geplante Bastelstunde", got.Title)
 	assert.Equal(t, "14:00", got.StartTime)
 	assert.Equal(t, "15:00", got.EndTime)
 	assert.Equal(t, timetable.InstanceStatusPlanned, got.Status)
 	assert.False(t, got.IsSpontaneous, "is_spontaneous is serialized from the service result")
 	assert.False(t, got.IsLive)
-	assert.Equal(t, s.roomID, got.RoomID)
+	assert.Equal(t, ident.ID(s.roomID), got.RoomID)
 	assert.NotEmpty(t, got.RoomName, "room name should resolve via RoomRepo")
 
 	// Verify the service was called with the parsed inputs.

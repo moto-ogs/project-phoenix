@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -65,7 +66,7 @@ func TestDraftOfferingSuggestion(t *testing.T) {
 
 	suggestion := getDraftSuggestion(t, router, query(class))
 	require.NotNil(t, suggestion)
-	assert.Equal(t, []templateRosterMaintenanceOfferingResponse{{ID: rosterReviewOfferingID, Name: "Randstunde"}}, suggestion.Offerings)
+	assert.Equal(t, []templateRosterMaintenanceOfferingResponse{{ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"}}, suggestion.Offerings)
 	assert.Equal(t, []string{"1b"}, suggestion.SchoolClasses)
 	assert.Empty(t, suggestion.GradeLevels)
 	assert.Equal(t, 2, suggestion.UnbookedCount)
@@ -114,8 +115,8 @@ func TestDraftOfferingSuggestionCombined(t *testing.T) {
 	require.NotNil(t, suggestion)
 	assert.False(t, suggestion.Ambiguous)
 	both := []templateRosterMaintenanceOfferingResponse{
-		{ID: ganztagID, Name: "Ganztag"},
-		{ID: rosterReviewOfferingID, Name: "Randstunde"},
+		{ID: ident.ID(ganztagID), Name: "Ganztag"},
+		{ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"},
 	}
 	assert.Equal(t, both, suggestion.Offerings)
 	assert.Equal(t, both, suggestion.Candidates)
@@ -136,7 +137,7 @@ func TestDraftOfferingSuggestionCombined(t *testing.T) {
 	assert.True(t, suggestion.Ambiguous)
 	assert.Equal(t, [][]templateRosterMaintenanceOfferingResponse{
 		both,
-		{{ID: spaetID, Name: "Ganztag spät"}, {ID: rosterReviewOfferingID, Name: "Randstunde"}},
+		{{ID: ident.ID(spaetID), Name: "Ganztag spät"}, {ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"}},
 	}, suggestion.Combinations)
 }
 
@@ -168,10 +169,10 @@ func TestDraftOfferingPreview(t *testing.T) {
 	monday, wednesday := preview.Weekdays[0], preview.Weekdays[1]
 	assert.Equal(t, 1, monday.Weekday)
 	require.Len(t, monday.Added, 1)
-	assert.Equal(t, class[4], monday.Added[0].StudentID)
+	assert.Equal(t, ident.ID(class[4]), monday.Added[0].StudentID)
 	assert.NotEmpty(t, monday.Added[0].Name)
 	require.Len(t, monday.Removed, 1)
-	assert.Equal(t, class[0], monday.Removed[0].StudentID)
+	assert.Equal(t, ident.ID(class[0]), monday.Removed[0].StudentID)
 	assert.Equal(t, 3, monday.KeptCount)
 	assert.Equal(t, 3, wednesday.Weekday)
 	assert.Len(t, wednesday.Removed, 2, "nobody books Wednesday")
@@ -183,7 +184,7 @@ func TestDraftOfferingPreview(t *testing.T) {
 	assert.Empty(t, monday.Removed[0].ExcludedBy)
 	booked := make(map[int64][]int, len(wednesday.Removed))
 	for _, child := range wednesday.Removed {
-		booked[child.StudentID] = child.BookedWeekdays
+		booked[child.StudentID.Int64()] = child.BookedWeekdays
 	}
 	assert.Equal(t, map[int64][]int{class[0]: {}, class[1]: {1}}, booked)
 }
@@ -219,7 +220,7 @@ func TestDraftOfferingPreviewNamesOtherOfferings(t *testing.T) {
 	require.Len(t, preview.Weekdays, 2)
 	assert.Len(t, preview.Weekdays[0].Removed, 2)
 	assert.Equal(t, []offeringPreviewAlternativeResponse{
-		{OfferingID: ganztagID, Name: "Ganztag", ChildCount: 2},
+		{OfferingID: ident.ID(ganztagID), Name: "Ganztag", ChildCount: 2},
 	}, preview.OtherOfferings, "each dropped child counts once over both days")
 }
 
@@ -274,7 +275,7 @@ func TestOfferingPreviewsUseMensaKindForCombinedCareAndLunch(t *testing.T) {
 			require.Len(t, preview.Weekdays, 1)
 			assert.Len(t, preview.Weekdays[0].Removed, 1)
 			assert.Equal(t, []offeringPreviewAlternativeResponse{
-				{OfferingID: lunchID, Name: "Mittagessen", ChildCount: 1},
+				{OfferingID: ident.ID(lunchID), Name: "Mittagessen", ChildCount: 1},
 			}, preview.OtherOfferings)
 		})
 	}

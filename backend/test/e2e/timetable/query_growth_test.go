@@ -42,7 +42,7 @@ func TestPopulatedTimetableRequestGrowthQueryBudgets(t *testing.T) {
 			response := s.do(http.MethodGet, fmt.Sprintf("/student/%d/week?from=%s&to=%s", students[0], target, target.AddDays(13)), nil, s.primaryAdminClaims())
 			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 			var body struct {
-				Days []struct{ Instances []struct{ ID int64 } }
+				Days []struct{ Instances []struct{ ID testpkg.ID } }
 			}
 			decodeResponse(t, response, &body)
 			require.Len(t, body.Days, 14)
@@ -89,7 +89,7 @@ func TestEditedOccurrenceRouteGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 			var body struct {
 				Count       int
-				Occurrences []struct{ ID int64 }
+				Occurrences []struct{ ID testpkg.ID }
 			}
 			decodeResponse(t, response, &body)
 			require.Equal(t, n, body.Count)

@@ -143,7 +143,7 @@ func TestFlowE_StudentDayWithUnplannedVisit(t *testing.T) {
 		Days []struct {
 			Date      string
 			Instances []struct {
-				ID int64
+				ID testpkg.ID
 			}
 		}
 	}

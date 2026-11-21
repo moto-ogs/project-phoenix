@@ -20,6 +20,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -412,15 +413,15 @@ func TestTemplateCreateListGetUpdateArchive(t *testing.T) {
 	require.Equal(t, created.TemplateID, tpl.ID, "created template missing from list")
 	assert.Equal(t, "Tpl-CreateListUpdate", tpl.Name)
 	assert.Equal(t, timetable.GroupTypeCare, tpl.Type)
-	assert.Equal(t, s.roomID, *tpl.RoomID)
-	assert.Equal(t, s.category.ID, tpl.CategoryID)
+	assert.Equal(t, ident.ID(s.roomID), *tpl.RoomID)
+	assert.Equal(t, ident.ID(s.category.ID), tpl.CategoryID)
 	require.NotNil(t, tpl.EducationGroupID)
-	assert.Equal(t, educationGroup.ID, *tpl.EducationGroupID)
+	assert.Equal(t, ident.ID(educationGroup.ID), *tpl.EducationGroupID)
 	assert.Equal(t, educationGroup.Name, tpl.EducationGroupName)
-	assert.Equal(t, []int64{s.studentA, s.studentB}, tpl.StudentIDs)
-	assert.Equal(t, []int64{s.staffB, s.staffA}, tpl.StaffIDs)
+	assert.Equal(t, []ident.ID{ident.ID(s.studentA), ident.ID(s.studentB)}, tpl.StudentIDs)
+	assert.Equal(t, []ident.ID{ident.ID(s.staffB), ident.ID(s.staffA)}, tpl.StaffIDs)
 	require.NotNil(t, tpl.PrimaryStaffID)
-	assert.Equal(t, s.staffB, *tpl.PrimaryStaffID)
+	assert.Equal(t, ident.ID(s.staffB), *tpl.PrimaryStaffID)
 	assert.Len(t, tpl.Schedules, 2)
 	assert.Equal(t, "12:00", tpl.Schedules[0].StartTime)
 	assert.Equal(t, "12:50", tpl.Schedules[0].EndTime)
@@ -438,7 +439,7 @@ func TestTemplateCreateListGetUpdateArchive(t *testing.T) {
 	got := decodeTemplateData[templateResponse](t, getW)
 	assert.Equal(t, created.TemplateID, got.ID)
 	require.NotNil(t, got.EducationGroupID)
-	assert.Equal(t, educationGroup.ID, *got.EducationGroupID)
+	assert.Equal(t, ident.ID(educationGroup.ID), *got.EducationGroupID)
 	assert.Equal(t, educationGroup.Name, got.EducationGroupName)
 
 	updateBody := createTemplateBody(s, "Tpl-Updated")
@@ -455,8 +456,8 @@ func TestTemplateCreateListGetUpdateArchive(t *testing.T) {
 	updated := decodeTemplateData[templateResponse](t, updateW)
 	assert.Equal(t, "Tpl-Updated", updated.Name)
 	assert.Equal(t, timetable.GroupTypeActivity, updated.Type)
-	assert.Equal(t, []int64{s.studentB}, updated.StudentIDs)
-	assert.Equal(t, []int64{s.staffA}, updated.StaffIDs)
+	assert.Equal(t, []ident.ID{ident.ID(s.studentB)}, updated.StudentIDs)
+	assert.Equal(t, []ident.ID{ident.ID(s.staffA)}, updated.StaffIDs)
 	require.Len(t, updated.Schedules, 1)
 	assert.Equal(t, timetable.WeekdayFriday, updated.Schedules[0].Weekday)
 	assert.Equal(t, "13:15", updated.Schedules[0].StartTime)
@@ -495,7 +496,7 @@ func TestTemplateUpdatePropagatesListKindToFutureInstances(t *testing.T) {
 		tmplID := created.TemplateID
 		inst, err := s.owner.CreateActivityInstance(s.ctx, timetable.ActivityInstanceInput{
 			Date:            date.String(),
-			ActivityGroupID: &tmplID,
+			ActivityGroupID: (*int64)(&tmplID),
 			Title:           name,
 			StartTime:       fmt.Sprintf("%02d:00:00", hour),
 			EndTime:         fmt.Sprintf("%02d:00:00", hour+1),
@@ -1022,7 +1023,7 @@ func TestListTemplatesFiltersByPeriod(t *testing.T) {
 			sawPeriodA = true
 			for _, sched := range tpl.Schedules {
 				require.NotNil(t, sched.CalendarPeriodID)
-				assert.Equal(t, periodA.ID, *sched.CalendarPeriodID)
+				assert.Equal(t, ident.ID(periodA.ID), *sched.CalendarPeriodID)
 			}
 		case "Tpl-Period-B":
 			assert.Fail(t, "period B template must not appear when filtering for period A")
@@ -1064,24 +1065,24 @@ func TestUpdateTemplatePeopleScopesReplacementToSelectedPeriod(t *testing.T) {
 
 	createTemplateEnrollment(t, s, timetable.StudentEnrollmentInput{
 		StudentID:        s.studentB,
-		ActivityGroupID:  created.TemplateID,
+		ActivityGroupID:  created.TemplateID.Int64(),
 		ValidFrom:        periodB.StartDate.String(),
 		CalendarPeriodID: &periodB.ID,
 	})
 	createTemplateEnrollment(t, s, timetable.StudentEnrollmentInput{
 		StudentID:       studentC.ID,
-		ActivityGroupID: created.TemplateID,
+		ActivityGroupID: created.TemplateID.Int64(),
 		ValidFrom:       calendar.NewDate(2026, time.January, 1).String(),
 	})
 	createTemplateSupervisor(t, s, timetable.PlannedSupervisorInput{
 		StaffID:          s.staffB,
-		GroupID:          created.TemplateID,
+		GroupID:          created.TemplateID.Int64(),
 		ValidFrom:        periodB.StartDate.String(),
 		CalendarPeriodID: &periodB.ID,
 	})
 	createTemplateSupervisor(t, s, timetable.PlannedSupervisorInput{
 		StaffID:   staffC.ID,
-		GroupID:   created.TemplateID,
+		GroupID:   created.TemplateID.Int64(),
 		ValidFrom: calendar.NewDate(2026, time.January, 1).String(),
 	})
 
@@ -1177,7 +1178,7 @@ func TestUpdateTemplateCanMoveToAnotherCalendarPeriod(t *testing.T) {
 	require.NotEmpty(t, updated.Schedules)
 	for _, schedule := range updated.Schedules {
 		require.NotNil(t, schedule.CalendarPeriodID)
-		assert.Equal(t, periodB.ID, *schedule.CalendarPeriodID)
+		assert.Equal(t, ident.ID(periodB.ID), *schedule.CalendarPeriodID)
 	}
 }
 
@@ -1199,7 +1200,7 @@ func TestGetTemplateExposesProtectedStudentWeekdays(t *testing.T) {
 
 	createTemplateEnrollment(t, s, timetable.StudentEnrollmentInput{
 		StudentID:        s.studentA,
-		ActivityGroupID:  created.TemplateID,
+		ActivityGroupID:  created.TemplateID.Int64(),
 		ValidFrom:        period.StartDate.String(),
 		CalendarPeriodID: &period.ID,
 		SelectedWeekdays: []int{timetable.WeekdayMonday},
@@ -1211,7 +1212,7 @@ func TestGetTemplateExposesProtectedStudentWeekdays(t *testing.T) {
 	got := decodeTemplateData[templateResponse](t, getW)
 	assert.Equal(t, []templateProtectedStudentAssignmentResponse{{
 		Weekday:    timetable.WeekdayMonday,
-		StudentIDs: []int64{s.studentA},
+		StudentIDs: []ident.ID{ident.ID(s.studentA)},
 	}}, got.ProtectedStudentAssignments)
 }
 
@@ -1286,7 +1287,7 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 	boundedUntil := periodP.EndDate.String()
 	createTemplateEnrollment(t, s, timetable.StudentEnrollmentInput{
 		StudentID:        s.studentA,
-		ActivityGroupID:  createdBounded.TemplateID,
+		ActivityGroupID:  createdBounded.TemplateID.Int64(),
 		ValidFrom:        periodP.StartDate.String(),
 		ValidUntil:       &boundedUntil,
 		CalendarPeriodID: &periodP.ID,
@@ -1305,14 +1306,14 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 	} {
 		createTemplateEnrollment(t, s, timetable.StudentEnrollmentInput{
 			StudentID:        roster.studentID,
-			ActivityGroupID:  createdGlobal.TemplateID,
+			ActivityGroupID:  createdGlobal.TemplateID.Int64(),
 			ValidFrom:        periodP.StartDate.String(),
 			CalendarPeriodID: roster.periodID,
 		})
 	}
 	createTemplateSupervisor(t, s, timetable.PlannedSupervisorInput{
 		StaffID:          s.staffA,
-		GroupID:          createdGlobal.TemplateID,
+		GroupID:          createdGlobal.TemplateID.Int64(),
 		ValidFrom:        periodP.StartDate.String(),
 		CalendarPeriodID: &periodP.ID,
 	})
@@ -1322,7 +1323,7 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 	boundedSupervisorUntil := periodP.EndDate.String()
 	createTemplateSupervisor(t, s, timetable.PlannedSupervisorInput{
 		StaffID:          s.staffB,
-		GroupID:          createdGlobal.TemplateID,
+		GroupID:          createdGlobal.TemplateID.Int64(),
 		ValidFrom:        periodP.StartDate.String(),
 		ValidUntil:       &boundedSupervisorUntil,
 		CalendarPeriodID: &periodP.ID,
@@ -1333,7 +1334,7 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 	for _, staffID := range []int64{s.staffB, staffC.ID} {
 		createTemplateSupervisor(t, s, timetable.PlannedSupervisorInput{
 			StaffID:          staffID,
-			GroupID:          createdGlobal.TemplateID,
+			GroupID:          createdGlobal.TemplateID.Int64(),
 			ValidFrom:        periodQ.StartDate.String(),
 			CalendarPeriodID: &periodQ.ID,
 		})
@@ -1346,7 +1347,7 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 		list := decodeTemplateData[listTemplatesResponse](t, w)
 		byID := make(map[int64]templateResponse, len(list.Templates))
 		for _, tpl := range list.Templates {
-			byID[tpl.ID] = tpl
+			byID[tpl.ID.Int64()] = tpl
 		}
 		return byID
 	}
@@ -1354,12 +1355,12 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 	t.Run("filter by the roster's own period P", func(t *testing.T) {
 		byID := listFor(t, periodP.ID)
 
-		tplP, ok := byID[createdP.TemplateID]
+		tplP, ok := byID[createdP.TemplateID.Int64()]
 		require.True(t, ok, "P-scoped template must appear under its own period")
 		assert.Equal(t, 2, tplP.EnrollmentCount)
-		assert.ElementsMatch(t, []int64{s.studentA, s.studentB}, tplP.StudentIDs)
+		assert.ElementsMatch(t, []int64{s.studentA, s.studentB}, ident.Int64s(tplP.StudentIDs))
 
-		tplGlobal, ok := byID[createdGlobal.TemplateID]
+		tplGlobal, ok := byID[createdGlobal.TemplateID.Int64()]
 		require.True(t, ok, "unscoped template must appear under every period")
 		assert.Equal(t, 3, tplGlobal.EnrollmentCount)
 		assert.Equal(t, 3, tplGlobal.SupervisorCount,
@@ -1375,7 +1376,7 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 			"fully unpinned detail must expose the worst actual active-period occurrence")
 		assert.Equal(t, 2, globalDetail.AssignedStaffCount)
 
-		tplBounded, ok := byID[createdBounded.TemplateID]
+		tplBounded, ok := byID[createdBounded.TemplateID.Int64()]
 		require.True(t, ok, "unscoped template with bounded roster must appear")
 		assert.Equal(t, 0, tplBounded.EnrollmentCount,
 			"bounded decision roster stays out of the open editor roster")
@@ -1392,24 +1393,24 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 
 	t.Run("filter by overlapping period Q keeps display roster but has no occurrences", func(t *testing.T) {
 		byID := listFor(t, periodQ.ID)
-		_, pVisible := byID[createdP.TemplateID]
+		_, pVisible := byID[createdP.TemplateID.Int64()]
 		assert.False(t, pVisible,
 			"an unpinned schedule must inherit its group-level P pin, not appear in Q")
 
 		// The card with unscoped schedules appears under Q — and must carry
 		// its P-scoped roster instead of "0 Kinder".
-		tplGlobal, ok := byID[createdGlobal.TemplateID]
+		tplGlobal, ok := byID[createdGlobal.TemplateID.Int64()]
 		require.True(t, ok, "unscoped template must appear under period Q")
 		assert.Equal(t, 3, tplGlobal.EnrollmentCount,
 			"roster written for overlapping period P must still be counted (the 0-Kinder bug)")
 		assert.Equal(t, 3, tplGlobal.SupervisorCount)
-		assert.ElementsMatch(t, []int64{s.studentA, s.studentB, studentC.ID}, tplGlobal.StudentIDs)
+		assert.ElementsMatch(t, []int64{s.studentA, s.studentB, studentC.ID}, ident.Int64s(tplGlobal.StudentIDs))
 		assert.Zero(t, tplGlobal.RequiredStaffCount,
 			"materialization assigns globally unpinned overlapping dates to lower-ID period P")
 		assert.Zero(t, tplGlobal.AssignedStaffCount,
 			"period-Q roster must not imply coverage for occurrences owned by P")
 
-		_, boundedVisible := byID[createdBounded.TemplateID]
+		_, boundedVisible := byID[createdBounded.TemplateID.Int64()]
 		assert.False(t, boundedVisible,
 			"P-pinned template must not appear under period Q")
 	})
@@ -1701,9 +1702,9 @@ func TestListTemplatesCapacityUsesActualOccurrences(t *testing.T) {
 		require.Equal(t, http.StatusOK, periodPDetailW.Code, "body=%s", periodPDetailW.Body.String())
 		periodPDetail := decodeTemplateData[templateResponse](t, periodPDetailW)
 		assert.Equal(t, 1, periodPDetail.EnrollmentCount)
-		assert.Equal(t, []int64{s.studentA}, periodPDetail.StudentIDs)
+		assert.Equal(t, []ident.ID{ident.ID(s.studentA)}, periodPDetail.StudentIDs)
 		assert.Equal(t, 1, periodPDetail.SupervisorCount)
-		assert.Equal(t, []int64{s.staffA}, periodPDetail.StaffIDs)
+		assert.Equal(t, []ident.ID{ident.ID(s.staffA)}, periodPDetail.StaffIDs)
 		assert.Equal(t, 1, periodPDetail.RequiredStaffCount)
 		assert.Equal(t, 1, periodPDetail.AssignedStaffCount)
 
@@ -1712,7 +1713,7 @@ func TestListTemplatesCapacityUsesActualOccurrences(t *testing.T) {
 		require.Equal(t, http.StatusOK, periodQDetailW.Code, "body=%s", periodQDetailW.Body.String())
 		periodQDetail := decodeTemplateData[templateResponse](t, periodQDetailW)
 		assert.Equal(t, 1, periodQDetail.EnrollmentCount)
-		assert.Equal(t, []int64{s.studentB}, periodQDetail.StudentIDs)
+		assert.Equal(t, []ident.ID{ident.ID(s.studentB)}, periodQDetail.StudentIDs)
 		assert.Zero(t, periodQDetail.SupervisorCount)
 		assert.Empty(t, periodQDetail.StaffIDs)
 		assert.Equal(t, 1, periodQDetail.RequiredStaffCount)
@@ -1758,7 +1759,7 @@ func createCapacityTemplate(
 	delete(body, "primary_staff_id")
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
-	return decodeTemplateData[createTemplateResponse](t, w).TemplateID
+	return (decodeTemplateData[createTemplateResponse](t, w).TemplateID).Int64()
 }
 
 func createCapacityEnrollment(
@@ -1868,7 +1869,7 @@ func listCapacityTemplateFromListPath(t *testing.T, router chi.Router, path stri
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	list := decodeTemplateData[listTemplatesResponse](t, w)
 	for _, template := range list.Templates {
-		if template.ID == templateID {
+		if template.ID == ident.ID(templateID) {
 			return template
 		}
 	}
@@ -1945,7 +1946,7 @@ func TestTemplate_WochennotizRoundTrip(t *testing.T) {
 		require.Equal(t, http.StatusOK, listW.Code, "body=%s", listW.Body.String())
 		list := decodeTemplateData[listTemplatesResponse](t, listW)
 		for _, c := range list.Templates {
-			if c.ID == templateID {
+			if c.ID == ident.ID(templateID) {
 				return c.Notes
 			}
 		}
@@ -1960,7 +1961,7 @@ func TestTemplate_WochennotizRoundTrip(t *testing.T) {
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, w)
 
-	got := notesOf(created.TemplateID)
+	got := notesOf(created.TemplateID.Int64())
 	require.NotNil(t, got, "series note must round-trip onto the template response")
 	assert.Equal(t, "Raum erst ab 14 Uhr offen", *got)
 
@@ -1969,7 +1970,7 @@ func TestTemplate_WochennotizRoundTrip(t *testing.T) {
 	upd["notes"] = "Neuer Hinweis"
 	uw := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), upd)
 	require.Equal(t, http.StatusOK, uw.Code, "body=%s", uw.Body.String())
-	got = notesOf(created.TemplateID)
+	got = notesOf(created.TemplateID.Int64())
 	require.NotNil(t, got)
 	assert.Equal(t, "Neuer Hinweis", *got)
 
@@ -1977,7 +1978,7 @@ func TestTemplate_WochennotizRoundTrip(t *testing.T) {
 	clear := createTemplateBody(s, "Tpl-Wochennotiz")
 	cw := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), clear)
 	require.Equal(t, http.StatusOK, cw.Code, "body=%s", cw.Body.String())
-	assert.Nil(t, notesOf(created.TemplateID), "omitted note clears the series note")
+	assert.Nil(t, notesOf(created.TemplateID.Int64()), "omitted note clears the series note")
 }
 
 func TestTemplate_CreateRejectsOverlongNotes(t *testing.T) {
@@ -2052,14 +2053,14 @@ func TestTemplateCreateWithStartDateStampsValidity(t *testing.T) {
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, w)
 
-	tpl := listCapacityTemplate(t, router, period.ID, created.TemplateID)
+	tpl := listCapacityTemplate(t, router, period.ID, created.TemplateID.Int64())
 	require.Len(t, tpl.Schedules, 2)
 	for _, sched := range tpl.Schedules {
 		assert.Equal(t, "2026-08-13", sched.ValidFrom, "schedule valid_from must be the series start")
 		assert.Empty(t, sched.ValidUntil)
 	}
 
-	assertTemplateRosterValidFrom(t, s, created.TemplateID, calendar.NewDate(2026, 8, 13))
+	assertTemplateRosterValidFrom(t, s, created.TemplateID.Int64(), calendar.NewDate(2026, 8, 13))
 }
 
 // #2135: without a pinned calendar period the start_date still stamps the
@@ -2077,13 +2078,13 @@ func TestTemplateCreateWithStartDateWithoutPeriod(t *testing.T) {
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, w)
 
-	tpl := listCapacityTemplateFromListPath(t, router, "/templates", created.TemplateID)
+	tpl := listCapacityTemplateFromListPath(t, router, "/templates", created.TemplateID.Int64())
 	require.Len(t, tpl.Schedules, 2)
 	for _, sched := range tpl.Schedules {
 		assert.Equal(t, "2026-08-13", sched.ValidFrom)
 	}
 
-	assertTemplateRosterValidFrom(t, s, created.TemplateID, calendar.NewDate(2026, 8, 13))
+	assertTemplateRosterValidFrom(t, s, created.TemplateID.Int64(), calendar.NewDate(2026, 8, 13))
 }
 
 // #2135: start_date format and period-bounds violations are 400s, and the
@@ -2123,12 +2124,12 @@ func TestTemplateCreateStartDateValidation(t *testing.T) {
 	w = doTemplateJSON(t, router, http.MethodPost, "/templates", omitted)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, w)
-	tpl := listCapacityTemplate(t, router, period.ID, created.TemplateID)
+	tpl := listCapacityTemplate(t, router, period.ID, created.TemplateID.Int64())
 	require.NotEmpty(t, tpl.Schedules)
 	for _, sched := range tpl.Schedules {
 		assert.Empty(t, sched.ValidFrom, "omitted start_date must leave schedules open-started")
 	}
-	assertTemplateRosterValidFrom(t, s, created.TemplateID, calendar.Date(period.StartDate))
+	assertTemplateRosterValidFrom(t, s, created.TemplateID.Int64(), calendar.Date(period.StartDate))
 }
 
 // assertTemplateRosterValidFrom checks that every enrollment and supervisor

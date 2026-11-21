@@ -25,6 +25,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // isoWeekday returns 1..7 (Mon..Sun) for the weekday of d.
@@ -125,7 +126,7 @@ func (rs *Resource) getStudentWeek(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := StudentWeekResponse{
-		StudentID: studentID,
+		StudentID: ident.ID(studentID),
 		From:      from.String(),
 		To:        to.String(),
 		Days:      days,
@@ -253,7 +254,7 @@ func buildStudentDayFromPreload(pre *timetable.StudentWeek, studentID int64, dat
 	})
 
 	return StudentDayResponse{
-		StudentID: studentID,
+		StudentID: ident.ID(studentID),
 		Date:      date.String(),
 		Weekday:   isoWeekday(date),
 		Arrival:   resolveArrivalSlotFromPreload(pre, date, planWeekday),

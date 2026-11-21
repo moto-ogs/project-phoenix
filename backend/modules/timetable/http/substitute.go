@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -26,10 +27,10 @@ type StaffingAnnouncer interface {
 
 // AffectedInstance is one row in the affected_instances list of the response.
 type AffectedInstance struct {
-	InstanceID int64  `json:"instance_id"`
-	Title      string `json:"title"`
-	StartTime  string `json:"start_time"`
-	Action     string `json:"action"`
+	InstanceID common.ID `json:"instance_id"`
+	Title      string    `json:"title"`
+	StartTime  string    `json:"start_time"`
+	Action     string    `json:"action"`
 }
 
 // understaffedAckNoteMaxLength caps a deviation reason. Mirrors

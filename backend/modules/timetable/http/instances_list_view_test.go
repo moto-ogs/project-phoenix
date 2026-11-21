@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,7 +52,7 @@ func TestListInstances_SlimViewDropsOnlyTheAttendanceRows(t *testing.T) {
 	fullItem, slimItem := full.Instances[0], slim.Instances[0]
 	fullItem.Students = nil
 	assert.Equal(t, fullItem, slimItem)
-	assert.ElementsMatch(t, []int64{student1.ID, student2.ID}, slimItem.StudentIDs)
+	assert.ElementsMatch(t, []int64{student1.ID, student2.ID}, ident.Int64s(slimItem.StudentIDs))
 	assert.Equal(t, 1, slimItem.ExpectedStudentsCount)
 	assert.Equal(t, 1, slimItem.PresentStudentsCount)
 

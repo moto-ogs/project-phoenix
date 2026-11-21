@@ -15,6 +15,7 @@ import (
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -77,10 +78,10 @@ func (s *offeringGapsSetup) createSourcedTemplate(t *testing.T, name string, per
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	id := decodeTemplateData[createTemplateResponse](t, w).TemplateID
-	s.sources.results[id] = timetableModule.TemplateRosterMaintenance{
+	s.sources.results[id.Int64()] = timetableModule.TemplateRosterMaintenance{
 		Mode: "automatic", Offerings: []timetableModule.OfferingRef{{ID: offeringID, Name: name}}, GradeLevels: grades,
 	}
-	return id
+	return id.Int64()
 }
 
 func (s *offeringGapsSetup) listGaps(t *testing.T, periodID int64) []offeringGapResponse {
@@ -120,7 +121,7 @@ func TestOfferingGapsSchuleAmBerg(t *testing.T) {
 	gaps := s.listGaps(t, period.ID)
 	require.Len(t, gaps, 1, "%+v", gaps)
 	assert.Equal(t, offeringGapResponse{
-		Offering:     templateRosterMaintenanceOfferingResponse{ID: randstunde, Name: "Randstunde"},
+		Offering:     templateRosterMaintenanceOfferingResponse{ID: ident.ID(randstunde), Name: "Randstunde"},
 		StudentCount: 3, SchoolClasses: []string{"3a"}, Weekdays: []int{1, 3}, AcknowledgedClasses: []string{},
 		NewSeriesClasses: []string{"3a"},
 	}, gaps[0])

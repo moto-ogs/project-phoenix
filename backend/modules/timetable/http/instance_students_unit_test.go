@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -513,9 +514,9 @@ func TestMapAttendanceToResponse_WithCheckedInAt(t *testing.T) {
 	}
 
 	resp := mapAttendanceToResponse(row)
-	assert.Equal(t, int64(99), resp.ID)
-	assert.Equal(t, int64(11), resp.InstanceID)
-	assert.Equal(t, int64(22), resp.StudentID)
+	assert.Equal(t, ident.ID(int64(99)), resp.ID)
+	assert.Equal(t, ident.ID(int64(11)), resp.InstanceID)
+	assert.Equal(t, ident.ID(int64(22)), resp.StudentID)
 	assert.Equal(t, timetable.SlotAttendancePresent, resp.Status)
 	require.NotNil(t, resp.Substatus)
 	assert.Equal(t, timetable.SlotSubstatusExcused, *resp.Substatus)
