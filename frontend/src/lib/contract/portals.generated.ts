@@ -84,7 +84,6 @@ import { routes as publicRequestFeed } from "./public-request-feed.generated";
 import { routes as pwa } from "./pwa.generated";
 import { routes as reminders } from "./reminders.generated";
 import { routes as rooms } from "./rooms.generated";
-import { routes as schedules } from "./schedules.generated";
 import { routes as schoolAuth } from "./school-auth.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
@@ -984,8 +983,6 @@ export const portalRoutes = {
     activities["GET /api/activities/categories"],
     activities["GET /api/activities/supervisors/available"],
     activities["GET /api/activities/{id}"],
-    activities["GET /api/activities/{id}/schedules"],
-    activities["GET /api/activities/{id}/schedules/{scheduleId}"],
     activities["POST /api/activities/"],
     activities["POST /api/activities/categories"],
     activities["POST /api/activities/categories/{categoryId}/restore"],
@@ -1033,7 +1030,6 @@ export const portalRoutes = {
     authPasskeys["POST /auth/passkeys/register/verify"],
     authPassword["POST /auth/password"],
     authPermissions["GET /auth/permissions/"],
-    authPermissions["GET /auth/permissions/{id}/"],
     authRegister["POST /auth/register"],
     authRoles["DELETE /auth/roles/{id}/"],
     authRoles["GET /auth/roles/"],
@@ -1112,7 +1108,6 @@ export const portalRoutes = {
     enrollment["GET /api/enrollment/schema/"],
     enrollment["GET /api/enrollment/schema/preview"],
     enrollment["GET /api/enrollment/schema/versions"],
-    enrollment["GET /api/enrollment/schema/{id}"],
     enrollment["PATCH /api/enrollment/schema/{id}"],
     enrollment["POST /api/enrollment/admin/change-requests/{id}/approve"],
     enrollment["POST /api/enrollment/admin/change-requests/{id}/question"],
@@ -1318,7 +1313,6 @@ export const portalRoutes = {
     rooms["POST /api/rooms/"],
     rooms["POST /api/rooms/export"],
     rooms["PUT /api/rooms/{id}"],
-    schedules["GET /api/schedules/timeframes/"],
     schoolSetup["GET /api/school-setup/"],
     schoolSetup["POST /api/school-setup/complete"],
     schoolSetup["PUT /api/school-setup/dismissal"],

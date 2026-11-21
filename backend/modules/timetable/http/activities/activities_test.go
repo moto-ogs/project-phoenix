@@ -420,23 +420,6 @@ func TestListCategories_Success(t *testing.T) {
 }
 
 // =============================================================================
-// SCHEDULE TESTS
-// =============================================================================
-
-func TestGetActivitySchedules_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("ScheduleTest-%d", time.Now().UnixNano()))
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/activities/%d/schedules", activity.ID), nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-// =============================================================================
 // SUPERVISOR TESTS
 // =============================================================================
 
@@ -803,48 +786,6 @@ func TestQuickCreateActivity_BadRequest_MissingCategoryID(t *testing.T) {
 	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
 
 	testutil.AssertBadRequest(t, rr)
-}
-
-// =============================================================================
-// ADDITIONAL SCHEDULE TESTS (0% coverage functions)
-// =============================================================================
-
-func TestGetActivitySchedule_Success(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("GetSched-%d", time.Now().UnixNano()))
-
-	// Create a schedule first using the service
-	actSvc := ctx.resource.ActivityService
-	schedData := &activityContract.Schedule{
-		ActivityGroupID: activity.ID,
-		Weekday:         1, // Monday
-	}
-	schedule, err := actSvc.AddSchedule(testpkg.Ctx(t), activity.ID, schedData)
-	require.NoError(t, err)
-	require.NotNil(t, schedule)
-
-	req := testutil.NewAuthenticatedRequest(t, "GET",
-		fmt.Sprintf("/activities/%d/schedules/%d", activity.ID, schedule.ID), nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetActivitySchedule_NotFound(t *testing.T) {
-	t.Parallel()
-	ctx := setupActivitiesRoute(t)
-
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("GetSchedNF-%d", time.Now().UnixNano()))
-
-	req := testutil.NewAuthenticatedRequest(t, "GET",
-		fmt.Sprintf("/activities/%d/schedules/999999", activity.ID), nil)
-
-	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-
-	testutil.AssertNotFound(t, rr)
 }
 
 // =============================================================================

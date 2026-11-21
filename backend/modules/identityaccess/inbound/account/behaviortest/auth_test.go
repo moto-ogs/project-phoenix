@@ -1136,12 +1136,6 @@ func TestPermissionManagement(t *testing.T) {
 		testutil.AssertBadRequest(t, rr)
 	})
 
-	t.Run("get permission not found", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/permissions/99999", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"permissions:read"})
-
-		testutil.AssertNotFound(t, rr)
-	})
 }
 
 // TestAccountManagement tests account management endpoints (protected)

@@ -1771,33 +1771,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/activities/{id}/schedules",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "ActivityScheduleResponse"
-        }
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/activities/{id}/schedules/{scheduleId}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "ref",
-        "ref": "ActivityScheduleResponse"
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/admin/grade-transitions/",
       "portals": [
         "tenant"
@@ -2712,18 +2685,6 @@
           "kind": "ref",
           "ref": "FormSchemaResponse"
         }
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/enrollment/schema/{id}",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "ref",
-        "ref": "FormSchemaResponse"
       }
     },
     {
@@ -4096,36 +4057,6 @@
       "response": {
         "kind": "ref",
         "ref": "RoomRemovalImpactResponse"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/schedules/timeframes/",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "paginated": true,
-      "query": [
-        {
-          "name": "description",
-          "kind": "string"
-        },
-        {
-          "name": "page",
-          "kind": "int"
-        },
-        {
-          "name": "page_size",
-          "kind": "int"
-        }
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "TimeframeResponse"
-        }
       }
     },
     {
@@ -7758,18 +7689,6 @@
           "kind": "ref",
           "ref": "PermissionResponse"
         }
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/auth/permissions/{id}/",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "ref",
-        "ref": "PermissionResponse"
       }
     },
     {
@@ -93593,56 +93512,6 @@
       ]
     },
     {
-      "name": "TimeframeResponse",
-      "go_type": "httpadapter.TimeframeResponse",
-      "fields": [
-        {
-          "name": "id",
-          "schema": {
-            "kind": "legacy_id"
-          }
-        },
-        {
-          "name": "start_time",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "end_time",
-          "optional": true,
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "is_active",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
-          "name": "description",
-          "optional": true,
-          "schema": {
-            "kind": "string"
-          }
-        },
-        {
-          "name": "created_at",
-          "schema": {
-            "kind": "instant"
-          }
-        },
-        {
-          "name": "updated_at",
-          "schema": {
-            "kind": "instant"
-          }
-        }
-      ]
-    },
-    {
       "name": "TodayStatusResponse",
       "go_type": "parent.TodayStatusResponse",
       "fields": [
@@ -119706,7 +119575,6 @@
     "httpadapter.RoomResponse.ID",
     "httpadapter.RoomSessionEntry.SessionID",
     "httpadapter.ScheduleRequest.TimeframeID",
-    "httpadapter.TimeframeResponse.ID",
     "me.ProfileResponse.ID",
     "mealplan.BillingMonthChild.StudentID",
     "notifications.feedEntryResponse.ID",

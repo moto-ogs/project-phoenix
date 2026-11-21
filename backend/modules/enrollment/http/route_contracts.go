@@ -51,7 +51,6 @@ func ConfigRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/schema/", Portals: portals, Response: FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/versions", Portals: portals, Response: []FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/preview", Portals: portals, Query: preview, Response: SchemaPreviewBootstrapResponse{}},
-		{Method: "GET", Pattern: "/schema/{id}", Portals: portals, Deprecated: true, Response: FormSchemaResponse{}},
 		{Method: "PUT", Pattern: "/schema/{id}", Portals: portals, Response: FormSchemaResponse{}},
 		{Method: "PATCH", Pattern: "/schema/{id}", Portals: portals, Request: RenameSchemaRequest{}, Response: FormSchemaResponse{}},
 		{Method: "DELETE", Pattern: "/schema/{id}", Portals: portals, NoData: true},
