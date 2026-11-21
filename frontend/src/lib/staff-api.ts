@@ -1,5 +1,7 @@
 // Staff API service for fetching all staff members and their supervision status
 
+import type * as shared from "~/lib/contract/shared.generated";
+import type * as staffWire from "~/lib/contract/staff.generated";
 import type { RoleForm } from "~/lib/position-title";
 import { sessionFetch } from "./session-cache";
 import { createLogger } from "~/lib/logger";
@@ -1156,8 +1158,8 @@ class StaffHistoryService {
     const json = (await response.json()) as {
       data: {
         sessions: StaffHistorySession[] | null;
-        weekly_summaries?: BackendWeeklySummary[] | null;
-        labor_days?: BackendWorkDayLaborHint[] | null;
+        weekly_summaries?: shared.WorkWeekSummary[] | null;
+        labor_days?: shared.WorkDayLaborHint[] | null;
       };
     };
     return {
@@ -1169,7 +1171,7 @@ class StaffHistoryService {
 }
 
 // Admin counterpart to /api/time-tracking/absences (which is self-scoped).
-// Backend response shape matches BackendStaffAbsence in time-tracking-helpers.ts.
+// Backend response shape matches shared.StaffAbsenceResponse in time-tracking-helpers.ts.
 export interface StaffAbsenceRow {
   // The contract decoder hands every identifier over as a decimal string.
   id: string;
@@ -1761,15 +1763,7 @@ import {
   mapWeeklySummaries,
   mapWorkDayLaborHint,
   mapWorkSessionEditResponse,
-  type BackendBalanceAdjustment,
-  type BackendDailyProjection,
   type DayProjection,
-  type BackendMonthCloseResult,
-  type BackendMonthCloseSnapshot,
-  type BackendMonthSummary,
-  type BackendWeeklySummary,
-  type BackendWorkDayLaborHint,
-  type BackendWorkSessionEdit,
   type BalanceAdjustment,
   type MonthCloseResult,
   type MonthCloseSnapshot,
@@ -1818,7 +1812,7 @@ class StaffSessionEditsService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendWorkSessionEdit[] | null;
+      data: shared.WorkSessionEditView[] | null;
     };
     return (json.data ?? []).map(mapWorkSessionEditResponse);
   }
@@ -1845,7 +1839,7 @@ class StaffMonthSummaryService {
         `Failed to fetch month summary: ${response.statusText}`,
       );
     }
-    const json = (await response.json()) as { data: BackendMonthSummary };
+    const json = (await response.json()) as { data: shared.MonthSummary };
     return mapMonthSummaryResponse(json.data);
   }
 
@@ -1868,7 +1862,7 @@ class StaffMonthSummaryService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendDailyProjection[] | null;
+      data: shared.DailyProjection[] | null;
     };
     return mapDailyProjectionResponse(json.data);
   }
@@ -2042,7 +2036,7 @@ class StaffBalanceAdjustmentService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendBalanceAdjustment[] | null;
+      data: staffWire.StaffBalanceAdjustment[] | null;
     };
     return (json.data ?? []).map(mapBalanceAdjustmentResponse);
   }
@@ -2074,7 +2068,9 @@ class StaffBalanceAdjustmentService {
     if (!response.ok) {
       throw await readStaffAPIError(response, "Buchung fehlgeschlagen");
     }
-    const json = (await response.json()) as { data: BackendBalanceAdjustment };
+    const json = (await response.json()) as {
+      data: staffWire.StaffBalanceAdjustment;
+    };
     return mapBalanceAdjustmentResponse(json.data);
   }
 
@@ -2114,7 +2110,9 @@ class StaffBalanceAdjustmentService {
     if (!response.ok) {
       throw await readStaffAPIError(response, "Reset fehlgeschlagen");
     }
-    const json = (await response.json()) as { data: BackendBalanceAdjustment };
+    const json = (await response.json()) as {
+      data: staffWire.StaffBalanceAdjustment;
+    };
     return mapBalanceAdjustmentResponse(json.data);
   }
 
@@ -2144,7 +2142,9 @@ class StaffBalanceAdjustmentService {
     if (!response.ok) {
       throw await readStaffAPIError(response, "Eröffnungssaldo fehlgeschlagen");
     }
-    const json = (await response.json()) as { data: BackendBalanceAdjustment };
+    const json = (await response.json()) as {
+      data: staffWire.StaffBalanceAdjustment;
+    };
     return mapBalanceAdjustmentResponse(json.data);
   }
 }
@@ -2169,7 +2169,7 @@ class StaffMonthCloseService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendMonthCloseSnapshot[] | null;
+      data: staffWire.StaffMonthBalanceSnapshot[] | null;
     };
     return (json.data ?? []).map(mapMonthCloseSnapshotResponse);
   }
@@ -2217,7 +2217,9 @@ class StaffMonthCloseService {
     if (!response.ok) {
       throw await readStaffAPIError(response, "Monatsabschluss fehlgeschlagen");
     }
-    const json = (await response.json()) as { data: BackendMonthCloseResult };
+    const json = (await response.json()) as {
+      data: staffWire.MonthCloseResult;
+    };
     return mapMonthCloseResultResponse(json.data);
   }
 
