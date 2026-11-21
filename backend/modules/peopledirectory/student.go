@@ -72,21 +72,10 @@ type StudentName struct {
 	SchoolMemberUntil *calendar.Date `json:"-"`
 	// SchoolClass and GroupID are set by the read by id, so an owner names a
 	// child and places it in its class and group in one statement ("Heute
-	// anders", #7681). Not on the wire.
+	// anders", #7681). A soft-deleted person has empty names but retains this
+	// placement. Not on the wire.
 	SchoolClass string `json:"-"`
 	GroupID     *int64 `json:"-"`
-}
-
-// StudentPlacement combines a student's class and group with the current
-// display name. A soft-deleted person leaves the placement intact but has no
-// name, so projections can retain facts owned by the student record without
-// exposing the deleted person's identity.
-type StudentPlacement struct {
-	StudentID   int64
-	FirstName   string
-	LastName    string
-	SchoolClass string
-	GroupID     *int64
 }
 
 func (s Student) IsAlumnus() bool { return s.Status == StudentStatusAlumnus }
@@ -122,10 +111,6 @@ type StudentQuery interface {
 	// that need the lifecycle status of a graduate can still see it.
 	ListStudentsByID(context.Context, []int64) ([]Student, error)
 	ListStudentNamesByID(context.Context, []int64) ([]StudentName, error)
-	// ListStudentPlacementsByID returns the class and group of the student
-	// records, even when their related person has been soft-deleted. Names are
-	// empty for a deleted person.
-	ListStudentPlacementsByID(context.Context, []int64) ([]StudentPlacement, error)
 	// ListStudentNamesByClass returns the names of every child of one class,
 	// alumni included, ordered by id, in one statement. The class matches
 	// trimmed and case-insensitive; an empty class has no children. It reads

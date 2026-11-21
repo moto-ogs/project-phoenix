@@ -67,16 +67,6 @@ func (s *StudentService) ListNamesByIDs(ctx context.Context, ids []int64) (resul
 	return result, err
 }
 
-func (s *StudentService) ListPlacementsByIDs(ctx context.Context, ids []int64) (result []peopledirectory.StudentPlacement, err error) {
-	err = s.run(ctx, "list_student_placements_by_id", s.tx.RunRead, func(txCtx context.Context, stats *domain.OperationStats) error {
-		var queryStats domain.OperationStats
-		result, queryStats, err = s.store.ListPlacementsByIDs(txCtx, ids)
-		stats.Add(queryStats)
-		return err
-	})
-	return result, err
-}
-
 // ListNamesByClass reads in the caller's transaction: the class lists that
 // need the names (the absence list, #6165) already hold their school unit,
 // so the read opens no boundary of its own and fails without one. It skips

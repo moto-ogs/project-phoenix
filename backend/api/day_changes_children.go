@@ -39,7 +39,7 @@ type dayChangesCarePlan interface {
 // class and group in one statement (#7681). A deleted person has no name but
 // retains the metadata of their student record.
 type dayChangesStudents interface {
-	ListStudentPlacementsByID(context.Context, []int64) ([]peopledirectory.StudentPlacement, error)
+	ListStudentNamesByID(context.Context, []int64) ([]peopledirectory.StudentName, error)
 }
 
 // dayChangesChildren is the Kinder source.
@@ -218,13 +218,13 @@ type childRecord struct {
 // children reads the group, class and name of every child in one statement
 // (#7681). A student whose person was deleted remains, without their name.
 func (s dayChangesChildren) children(ctx context.Context, ids []int64) (map[int64]childRecord, error) {
-	placements, err := s.sources.Students.ListStudentPlacementsByID(ctx, ids)
+	names, err := s.sources.Students.ListStudentNamesByID(ctx, ids)
 	if err != nil {
-		return nil, fmt.Errorf("list student placements: %w", err)
+		return nil, fmt.Errorf("list student names: %w", err)
 	}
-	records := make(map[int64]childRecord, len(placements))
-	for _, placement := range placements {
-		records[placement.StudentID] = childRecord{first: placement.FirstName, last: placement.LastName, groupID: placement.GroupID, class: placement.SchoolClass}
+	records := make(map[int64]childRecord, len(names))
+	for _, name := range names {
+		records[name.StudentID] = childRecord{first: name.FirstName, last: name.LastName, groupID: name.GroupID, class: name.SchoolClass}
 	}
 	return records, nil
 }

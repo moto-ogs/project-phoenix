@@ -173,7 +173,7 @@ func TestStudentDirectoryTenantIsolation(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestStudentNamesExcludeSoftDeletedPeople(t *testing.T) {
+func TestStudentNamesKeepPlacementOfSoftDeletedPeople(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	module := buildStudentOwnersModule(t, db)
@@ -187,13 +187,9 @@ func TestStudentNamesExcludeSoftDeletedPeople(t *testing.T) {
 
 	names, err := module.ListStudentNamesByID(testpkg.Ctx(t), []int64{student.ID})
 	require.NoError(t, err)
-	assert.Empty(t, names)
-
-	placements, err := module.ListStudentPlacementsByID(testpkg.Ctx(t), []int64{student.ID})
-	require.NoError(t, err)
-	assert.Equal(t, []peopledirectory.StudentPlacement{{
+	assert.Equal(t, []peopledirectory.StudentName{{
 		StudentID: student.ID, SchoolClass: "2c",
-	}}, placements)
+	}}, names, "the student placement remains but the deleted person's names are empty")
 }
 
 // The absence list reads a class and its names in one statement (#6165):

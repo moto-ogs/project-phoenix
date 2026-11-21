@@ -28,16 +28,6 @@ func (s *Service) ListStudentNamesByID(ctx context.Context, ids []int64) ([]peop
 	return result, MapError(err)
 }
 
-func (s *Service) ListStudentPlacementsByID(ctx context.Context, ids []int64) ([]peopledirectory.StudentPlacement, error) {
-	ids = peopledirectory.PositiveIDs(ids)
-	if len(ids) == 0 {
-		return []peopledirectory.StudentPlacement{}, nil
-	}
-
-	values, err := s.students.ListPlacementsByIDs(ctx, ids)
-	return append([]peopledirectory.StudentPlacement{}, values...), MapError(err)
-}
-
 func (s *Service) ListStudentNamesByClass(ctx context.Context, schoolClass string) ([]peopledirectory.StudentName, error) {
 	if strings.TrimSpace(schoolClass) == "" {
 		return []peopledirectory.StudentName{}, nil
