@@ -21,12 +21,6 @@ vi.mock("next-auth/react", () => ({
   ),
 }));
 
-vi.mock("./api", () => ({
-  default: {
-    get: vi.fn(),
-  },
-}));
-
 vi.mock("./fetch-with-auth", () => ({
   fetchWithAuth: vi.fn(),
 }));
@@ -61,17 +55,16 @@ describe("userContextService", () => {
     it("returns mapped educational groups on success", async () => {
       const backendData = [
         {
-          id: 1,
+          id: "1",
           name: "Group 1",
-          room_id: 10,
-          room: { id: 10, name: "Raum 101" },
+          room_id: "10",
+          room: { id: "10", name: "Raum 101" },
         },
       ];
 
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: backendData }),
+        json: () => Promise.resolve({ status: "success", data: backendData }),
       } as Response);
 
       const result = await userContextService.getMyEducationalGroups();
@@ -85,7 +78,7 @@ describe("userContextService", () => {
     it("returns empty array when data is null", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, message: "", data: null }),
+        json: () => Promise.resolve({ status: "success", data: null }),
       } as Response);
 
       const result = await userContextService.getMyEducationalGroups();
@@ -96,8 +89,7 @@ describe("userContextService", () => {
     it("returns empty array when data is not an array", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: "invalid" }),
+        json: () => Promise.resolve({ status: "success", data: "invalid" }),
       } as Response);
 
       const result = await userContextService.getMyEducationalGroups();
@@ -121,7 +113,7 @@ describe("userContextService", () => {
     it("sends no Authorization header", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, message: "", data: [] }),
+        json: () => Promise.resolve({ status: "success", data: [] }),
       } as Response);
 
       await userContextService.getMyEducationalGroups();
@@ -136,30 +128,28 @@ describe("userContextService", () => {
     it("returns mapped supervised groups on success", async () => {
       const backendData = [
         {
-          id: 2,
-          name: "Supervised Group",
-          room_id: 20,
-          room: { id: 20, name: "Raum 202" },
+          id: "2",
+          room_id: "20",
+          room: { id: "20", name: "Raum 202" },
         },
       ];
 
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: backendData }),
+        json: () => Promise.resolve({ status: "success", data: backendData }),
       } as Response);
 
       const result = await userContextService.getMySupervisedGroups();
 
       expect(result).toHaveLength(1);
       expect(result[0]?.id).toBe("2");
-      expect(result[0]?.name).toBe("Supervised Group");
+      expect(result[0]?.room?.name).toBe("Raum 202");
     });
 
     it("handles null response data", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, message: "", data: null }),
+        json: () => Promise.resolve({ status: "success", data: null }),
       } as Response);
 
       const result = await userContextService.getMySupervisedGroups();
@@ -171,14 +161,13 @@ describe("userContextService", () => {
   describe("getCurrentStaff", () => {
     it("returns mapped staff profile on success", async () => {
       const backendData = {
-        id: 10,
-        person_id: 100,
+        id: "10",
+        person_id: "100",
       };
 
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: backendData }),
+        json: () => Promise.resolve({ status: "success", data: backendData }),
       } as Response);
 
       const result = await userContextService.getCurrentStaff();

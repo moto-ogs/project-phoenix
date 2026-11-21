@@ -6,20 +6,17 @@
 // Nachweise auf sie zeigen.
 
 import { apiErrorFromResponse } from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  QualificationEntryResponse,
+  QualificationOverviewResponse,
+  QualificationTypeResponse,
+  TraegerProofResponse,
+} from "./contract/staff.generated";
 import { sessionFetch } from "./session-cache";
 
 export type QualificationStatus =
   "valid" | "expiring_soon" | "expired" | "missing";
-
-interface BackendQualificationType {
-  id: string;
-  standard_key?: string;
-  name: string;
-  validity_months: number | null;
-  reminder_lead_weeks: number;
-  mandatory: boolean;
-  archived: boolean;
-}
 
 export interface QualificationType {
   readonly id: string;
@@ -40,22 +37,6 @@ export interface QualificationTypeInput {
   readonly reminderLeadWeeks: number;
   readonly mandatory: boolean;
   readonly archived: boolean;
-}
-
-interface BackendQualificationEntry {
-  staff_id: string;
-  qualification_id: string | null;
-  type_id: string | null;
-  name: string;
-  acquired_on: string | null;
-  expires_on: string | null;
-  status: QualificationStatus;
-  mandatory: boolean;
-}
-
-interface BackendQualificationOverviewRow extends BackendQualificationEntry {
-  first_name: string;
-  last_name: string;
 }
 
 /**
@@ -85,32 +66,41 @@ export interface QualificationOverviewRow extends QualificationEntry {
   readonly lastName: string;
 }
 
-const optionalId = (value: string | null | undefined) =>
-  value === null || value === undefined ? null : String(value);
+const STATUSES: readonly QualificationStatus[] = [
+  "valid",
+  "expiring_soon",
+  "expired",
+  "missing",
+];
+
+/** A status this build does not know asks for a look, like a missing proof. */
+function status(value: string): QualificationStatus {
+  return knownEnum(STATUSES, value) ?? "missing";
+}
 
 function mapQualificationType(
-  data: BackendQualificationType,
+  data: QualificationTypeResponse,
 ): QualificationType {
   return {
     id: data.id,
     standardKey: data.standard_key ?? null,
     name: data.name,
-    validityMonths: data.validity_months ?? null,
+    validityMonths: data.validity_months,
     reminderLeadWeeks: data.reminder_lead_weeks,
     mandatory: data.mandatory,
     archived: data.archived,
   };
 }
 
-function mapEntry(data: BackendQualificationEntry): QualificationEntry {
+function mapEntry(data: QualificationEntryResponse): QualificationEntry {
   return {
     staffId: data.staff_id,
-    qualificationId: optionalId(data.qualification_id),
-    typeId: optionalId(data.type_id),
+    qualificationId: data.qualification_id,
+    typeId: data.type_id,
     name: data.name,
-    acquiredOn: data.acquired_on ?? null,
-    expiresOn: data.expires_on ?? null,
-    status: data.status,
+    acquiredOn: data.acquired_on,
+    expiresOn: data.expires_on,
+    status: status(data.status),
     mandatory: data.mandatory,
   };
 }
@@ -135,15 +125,15 @@ function typeBody(input: QualificationTypeInput): string {
 
 class StaffQualificationService {
   async listTypes(): Promise<QualificationType[]> {
-    const data = await readData<BackendQualificationType[] | null>(
+    const data = await readData<QualificationTypeResponse[]>(
       await sessionFetch("/api/staff/qualification-types"),
       "Nachweisarten konnten nicht geladen werden",
     );
-    return (data ?? []).map(mapQualificationType);
+    return data.map(mapQualificationType);
   }
 
   async createType(input: QualificationTypeInput): Promise<QualificationType> {
-    const data = await readData<BackendQualificationType>(
+    const data = await readData<QualificationTypeResponse>(
       await sessionFetch("/api/staff/qualification-types", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,7 +148,7 @@ class StaffQualificationService {
     id: string,
     input: QualificationTypeInput,
   ): Promise<QualificationType> {
-    const data = await readData<BackendQualificationType>(
+    const data = await readData<QualificationTypeResponse>(
       await sessionFetch(`/api/staff/qualification-types/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -170,11 +160,11 @@ class StaffQualificationService {
   }
 
   async overview(): Promise<QualificationOverviewRow[]> {
-    const data = await readData<BackendQualificationOverviewRow[] | null>(
+    const data = await readData<QualificationOverviewResponse[]>(
       await sessionFetch("/api/staff/qualifications"),
       "Nachweise konnten nicht geladen werden",
     );
-    return (data ?? []).map((row) => ({
+    return data.map((row) => ({
       ...mapEntry(row),
       firstName: row.first_name,
       lastName: row.last_name,
@@ -182,39 +172,32 @@ class StaffQualificationService {
   }
 
   async staffEntries(staffId: string): Promise<QualificationEntry[]> {
-    const data = await readData<BackendQualificationEntry[] | null>(
+    const data = await readData<QualificationEntryResponse[]>(
       await sessionFetch(`/api/staff/${staffId}/qualifications`),
       "Nachweise konnten nicht geladen werden",
     );
-    return (data ?? []).map(mapEntry);
+    return data.map(mapEntry);
   }
 
   /** Der Stand der Nachweise, die der Träger für die Person führt (#4707). */
   async traegerProofs(staffId: string): Promise<TraegerProofStatus[]> {
-    const data = await readData<
-      | {
-          type_name: string;
-          status: QualificationStatus;
-          expires_on: string | null;
-        }[]
-      | null
-    >(
+    const data = await readData<TraegerProofResponse[]>(
       await sessionFetch(`/api/staff/${staffId}/traeger-proofs`),
       "Nachweise des Trägers konnten nicht geladen werden",
     );
-    return (data ?? []).map((proof) => ({
+    return data.map((proof) => ({
       typeName: proof.type_name,
-      status: proof.status,
+      status: status(proof.status),
       expiresOn: proof.expires_on ?? "",
     }));
   }
 
   async ownEntries(): Promise<QualificationEntry[]> {
-    const data = await readData<BackendQualificationEntry[] | null>(
+    const data = await readData<QualificationEntryResponse[]>(
       await sessionFetch("/api/staff/me/qualifications"),
       "Nachweise konnten nicht geladen werden",
     );
-    return (data ?? []).map(mapEntry);
+    return data.map(mapEntry);
   }
 }
 

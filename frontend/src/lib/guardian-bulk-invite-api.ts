@@ -1,3 +1,5 @@
+import type { bulkInviteResponse } from "~/lib/contract/guardians.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import {
   apiErrorFromBody,
   apiErrorFromResponse,
@@ -7,15 +9,17 @@ import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "GuardianBulkInviteAPI" });
 
-type BulkInviteProblemReason =
-  | "missing_email"
-  | "invalid_email"
-  | "duplicate_email"
-  | "email_not_queued"
-  | "address_blocked"
-  | "provider_blocked"
-  | "block_unreadable"
-  | "mail_delayed";
+const PROBLEM_REASONS = [
+  "missing_email",
+  "invalid_email",
+  "duplicate_email",
+  "email_not_queued",
+  "address_blocked",
+  "provider_blocked",
+  "block_unreadable",
+  "mail_delayed",
+] as const;
+type BulkInviteProblemReason = (typeof PROBLEM_REASONS)[number];
 
 export interface BulkInviteProblem {
   guardianProfileId: string;
@@ -37,25 +41,9 @@ export interface BulkInviteResult {
   problems: BulkInviteProblem[];
 }
 
-interface BackendBulkInviteResult {
-  dry_run: boolean;
-  invited: number;
-  linked_existing_account: number;
-  resent: number;
-  skipped_active: number;
-  skipped_open: number;
-  skipped_restricted: number;
-  problems: Array<{
-    guardian_profile_id: string;
-    guardian_name: string;
-    student_names: string[];
-    reason: BulkInviteProblemReason;
-  }>;
-}
-
 interface BulkInviteResponse {
   status?: string;
-  data?: BackendBulkInviteResult;
+  data?: bulkInviteResponse;
 }
 
 /**
@@ -99,11 +87,12 @@ export async function bulkInviteGuardians(
     skippedActive: data.skipped_active,
     skippedOpen: data.skipped_open,
     skippedRestricted: data.skipped_restricted,
-    problems: data.problems.map((problem) => ({
+    problems: (data.problems ?? []).map((problem) => ({
       guardianProfileId: problem.guardian_profile_id,
       guardianName: problem.guardian_name,
-      studentNames: problem.student_names,
-      reason: problem.reason,
+      studentNames: problem.student_names ?? [],
+      // A reason this build does not know reads as "not sent".
+      reason: knownEnum(PROBLEM_REASONS, problem.reason) ?? "email_not_queued",
     })),
   };
 }

@@ -6,28 +6,58 @@
  * Money stays whole cent. Backend int64 IDs leave here as strings.
  */
 
-import type { BillingDocumentKind } from "./traeger-billing-api";
-import { familyKeyEmail } from "~/lib/family-key";
 import {
-  type BackendDebtorNumberFormat,
+  type BillingDocumentKind,
+  knownDocumentKind,
+} from "./traeger-billing-api";
+import { familyKeyEmail } from "~/lib/family-key";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  BillingFamily as WireFamily,
+  BillingFamilyDetail as WireFamilyDetail,
+  BillingFamilyDocument as WireFamilyDocument,
+  BillingPayment as WirePayment,
+  ChildDebtorNumberRequest,
+  FamilyChild as WireFamilyChild,
+  FamilyChildNumbers as WireFamilyChildNumbers,
+  FamilyDebtorNumber,
+  FamilyDebtorNumberRequest,
+  debtorNumberSettings as WireDebtorNumberSettings,
+} from "./contract/traeger-billing-families.generated";
+import {
   type DebtorNumberFormat,
   debtorNumberFormatOf,
 } from "./debtor-number-format";
 import { traegerRequest } from "./traeger-api";
-import type { PaymentMethod } from "./traeger-billing-terms-api";
+import {
+  type PaymentMethod,
+  knownPaymentMethod,
+} from "./traeger-billing-terms-api";
+
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const PAYMENT_KIND_VALUES = ["family", "cost_bearer", "exempt"] as const;
+const INVOICE_STATUS_VALUES = [
+  "open",
+  "partly_credited",
+  "credited",
+  "cancelled",
+  "nothing_due",
+] as const;
+const SERVICE_VALUES = ["holiday", "care"] as const;
 
 /** Who pays an invoice. */
-type BillingPaymentKind = "family" | "cost_bearer" | "exempt";
+type BillingPaymentKind = (typeof PAYMENT_KIND_VALUES)[number];
 
 export interface BillingPayment {
-  readonly kind: BillingPaymentKind;
+  /** undefined: a kind this build does not know. */
+  readonly kind: BillingPaymentKind | undefined;
   /** The name the invoice copied; empty unless a cost bearer pays. */
   readonly costBearerName: string;
 }
 
 /** What an invoice still asks for. */
-export type BillingInvoiceStatus =
-  "open" | "partly_credited" | "credited" | "cancelled" | "nothing_due";
+export type BillingInvoiceStatus = (typeof INVOICE_STATUS_VALUES)[number];
 
 export interface BillingAmounts {
   readonly issuedCents: number;
@@ -94,14 +124,16 @@ export interface DebtorNumberSettings {
 export interface BillingFamilyDocument {
   readonly id: string;
   /** Holiday care or monthly care (#4689); the run belongs to it. */
-  readonly service?: "holiday" | "care";
+  readonly service?: (typeof SERVICE_VALUES)[number];
   readonly runId: string;
-  readonly kind: BillingDocumentKind;
+  /** undefined: a kind this build does not know. */
+  readonly kind: BillingDocumentKind | undefined;
   readonly number: string;
-  readonly issuedOn: string;
+  /** Calendar dates "YYYY-MM-DD"; null when the backend has none. */
+  readonly issuedOn: string | null;
   readonly periodName: string;
-  readonly serviceFrom: string;
-  readonly serviceUntil: string;
+  readonly serviceFrom: string | null;
+  readonly serviceUntil: string | null;
   /** The number of the invoice a Storno or Gutschrift refers to. */
   readonly referenceNumber: string;
   readonly reason: string;
@@ -123,79 +155,40 @@ export interface BillingFamilyDetail extends BillingFamily {
   readonly documents: readonly BillingFamilyDocument[];
 }
 
-interface BackendPayment {
-  kind: BillingPaymentKind;
-  cost_bearer_name?: string;
-}
-
-interface BackendFamily {
-  id: number | string;
-  recipient_first_name: string;
-  recipient_last_name: string;
-  recipient_email: string;
-  debtor_numbers?: string[] | null;
-  payments?: BackendPayment[] | null;
-  payment_methods?: PaymentMethod[] | null;
-  invoice_count: number;
-  open_invoice_count: number;
-  document_count: number;
-  last_issued_on?: string;
-  family_email?: string;
-  family_debtor_number?: string;
-  holiday_only?: boolean;
-  issued_cents: number;
-  cancelled_cents: number;
-  credited_cents: number;
-  open_cents: number;
-}
-
-interface BackendFamilyDocument {
-  id: number | string;
-  service?: string;
-  run_id: number | string;
-  kind: BillingDocumentKind;
-  number: string;
-  issued_on: string;
-  period_name: string;
-  service_from: string;
-  service_until: string;
-  reference_number?: string;
-  reason?: string;
-  child_names?: string[] | null;
-  debtor_number?: string;
-  total_cents: number;
-  payment?: BackendPayment | null;
-  status?: BillingInvoiceStatus | "";
-  open_cents: number;
-  payment_method?: PaymentMethod | "";
-  due_on?: string | null;
-}
-
-interface BackendFamilyDetail extends BackendFamily {
-  documents?: BackendFamilyDocument[] | null;
-}
-
-function paymentFromBackend(payment: BackendPayment): BillingPayment {
-  return { kind: payment.kind, costBearerName: payment.cost_bearer_name ?? "" };
-}
-
-function familyFromBackend(family: BackendFamily): BillingFamily {
+function paymentFromBackend(payment: WirePayment): BillingPayment {
   return {
-    id: String(family.id),
+    kind: knownEnum(PAYMENT_KIND_VALUES, payment.kind),
+    costBearerName: payment.cost_bearer_name,
+  };
+}
+
+/** The payment methods this build knows; an unknown one is left out. */
+function knownPaymentMethods(
+  methods: readonly string[] | null,
+): PaymentMethod[] {
+  return (methods ?? []).flatMap((method) => {
+    const known = knownPaymentMethod(method);
+    return known ? [known] : [];
+  });
+}
+
+function familyFromBackend(family: WireFamily): BillingFamily {
+  return {
+    id: family.id,
     recipientFirstName: family.recipient_first_name,
     recipientLastName: family.recipient_last_name,
     recipientEmail: family.recipient_email,
     debtorNumbers: family.debtor_numbers ?? [],
     payments: (family.payments ?? []).map(paymentFromBackend),
-    paymentMethods: family.payment_methods ?? [],
+    paymentMethods: knownPaymentMethods(family.payment_methods),
     invoiceCount: family.invoice_count,
     openInvoiceCount: family.open_invoice_count,
     documentCount: family.document_count,
     lastIssuedOn: family.last_issued_on ?? "",
-    familyEmail: family.family_email ?? family.recipient_email,
-    familyDebtorNumber: family.family_debtor_number ?? "",
-    holidayOnly: family.holiday_only ?? false,
-    hasDocuments: String(family.id) !== "0",
+    familyEmail: family.family_email,
+    familyDebtorNumber: family.family_debtor_number,
+    holidayOnly: family.holiday_only,
+    hasDocuments: family.id !== "0",
     issuedCents: family.issued_cents,
     cancelledCents: family.cancelled_cents,
     creditedCents: family.credited_cents,
@@ -204,28 +197,31 @@ function familyFromBackend(family: BackendFamily): BillingFamily {
 }
 
 function documentFromBackend(
-  document: BackendFamilyDocument,
+  document: WireFamilyDocument,
 ): BillingFamilyDocument {
   return {
-    id: String(document.id),
-    service: document.service === "care" ? "care" : "holiday",
-    runId: String(document.run_id),
-    kind: document.kind,
+    id: document.id,
+    service: knownEnum(SERVICE_VALUES, document.service),
+    runId: document.run_id,
+    kind: knownDocumentKind(document.kind),
     number: document.number,
     issuedOn: document.issued_on,
     periodName: document.period_name,
     serviceFrom: document.service_from,
     serviceUntil: document.service_until,
-    referenceNumber: document.reference_number ?? "",
-    reason: document.reason ?? "",
+    referenceNumber: document.reference_number,
+    reason: document.reason,
     childNames: document.child_names ?? [],
-    debtorNumber: document.debtor_number ?? "",
+    debtorNumber: document.debtor_number,
     totalCents: document.total_cents,
     payment: document.payment ? paymentFromBackend(document.payment) : null,
-    status: document.status || null,
+    status: knownEnum(INVOICE_STATUS_VALUES, document.status) ?? null,
     openCents: document.open_cents,
-    paymentMethod: document.payment_method ?? "",
-    dueOn: document.due_on ?? null,
+    paymentMethod:
+      document.payment_method === ""
+        ? ""
+        : knownPaymentMethod(document.payment_method),
+    dueOn: document.due_on,
   };
 }
 
@@ -236,15 +232,15 @@ const FAMILIES_PATH = "/api/traeger/billing-families";
  * families of the holiday care before their first invoice (#6692), by name.
  */
 export async function fetchBillingFamilies(): Promise<BillingFamily[]> {
-  const families = await traegerRequest<BackendFamily[] | null>(FAMILIES_PATH);
-  return (families ?? []).map(familyFromBackend);
+  const families = await traegerRequest<WireFamily[]>(FAMILIES_PATH);
+  return families.map(familyFromBackend);
 }
 
 /** One family with every document, the newest first. */
 export async function fetchBillingFamily(
   id: string,
 ): Promise<BillingFamilyDetail> {
-  const family = await traegerRequest<BackendFamilyDetail>(
+  const family = await traegerRequest<WireFamilyDetail>(
     `${FAMILIES_PATH}/${encodeURIComponent(id)}`,
   );
   return {
@@ -261,11 +257,14 @@ export async function setFamilyDebtorNumber(
   familyEmail: string,
   debtorNumber: string,
 ): Promise<string> {
-  const saved = await traegerRequest<{ debtor_number: string }>(
+  const saved = await traegerRequest<FamilyDebtorNumber>(
     `${FAMILIES_PATH}/debtor-number`,
     {
       method: "PUT",
-      body: { family_email: familyEmail, debtor_number: debtorNumber },
+      body: {
+        family_email: familyEmail,
+        debtor_number: debtorNumber,
+      } satisfies FamilyDebtorNumberRequest,
     },
   );
   return saved.debtor_number;
@@ -276,35 +275,22 @@ export async function setFamilyDebtorNumber(
  * and check it before the backend does, and whom they name (#7007).
  */
 export async function fetchDebtorNumberSettings(): Promise<DebtorNumberSettings> {
-  const raw = await traegerRequest<
-    (BackendDebtorNumberFormat & { scope?: string }) | null
-  >(`${FAMILIES_PATH}/debtor-number-format`);
+  const raw = await traegerRequest<WireDebtorNumberSettings>(
+    `${FAMILIES_PATH}/debtor-number-format`,
+  );
   return {
     format: debtorNumberFormatOf(raw),
-    scope: raw?.scope === "child" ? "child" : "payer",
+    // "payer" is the backend's default scope (DebtorNumberScopePayer).
+    scope: raw.scope === "child" ? "child" : "payer",
   };
 }
 
-interface BackendFamilyChild {
-  first_name: string;
-  last_name: string;
-  birth_date?: string | null;
-  debtor_number?: string;
-}
-
-interface BackendFamilyChildNumbers {
-  family_email: string;
-  recipient_first_name?: string;
-  recipient_last_name?: string;
-  children?: BackendFamilyChild[] | null;
-}
-
-function childFromBackend(child: BackendFamilyChild): FamilyChild {
+function childFromBackend(child: WireFamilyChild): FamilyChild {
   return {
     firstName: child.first_name,
     lastName: child.last_name,
-    birthDate: child.birth_date ?? null,
-    debtorNumber: child.debtor_number ?? "",
+    birthDate: child.birth_date,
+    debtorNumber: child.debtor_number,
   };
 }
 
@@ -313,13 +299,13 @@ function childFromBackend(child: BackendFamilyChild): FamilyChild {
  * and their own numbers (#7007).
  */
 export async function fetchFamilyChildren(): Promise<FamilyChildNumbers[]> {
-  const families = await traegerRequest<BackendFamilyChildNumbers[] | null>(
+  const families = await traegerRequest<WireFamilyChildNumbers[]>(
     `${FAMILIES_PATH}/children`,
   );
-  return (families ?? []).map((family) => ({
+  return families.map((family) => ({
     familyEmail: family.family_email,
-    recipientFirstName: family.recipient_first_name ?? "",
-    recipientLastName: family.recipient_last_name ?? "",
+    recipientFirstName: family.recipient_first_name,
+    recipientLastName: family.recipient_last_name,
     children: (family.children ?? []).map(childFromBackend),
   }));
 }
@@ -333,7 +319,7 @@ export async function setChildDebtorNumber(
   child: FamilyChild,
   debtorNumber: string,
 ): Promise<FamilyChild> {
-  const saved = await traegerRequest<BackendFamilyChild>(
+  const saved = await traegerRequest<WireFamilyChild>(
     `${FAMILIES_PATH}/child-debtor-number`,
     {
       method: "PUT",
@@ -343,7 +329,7 @@ export async function setChildDebtorNumber(
         child_last_name: child.lastName,
         child_birth_date: child.birthDate,
         debtor_number: debtorNumber,
-      },
+      } satisfies ChildDebtorNumberRequest,
     },
   );
   return childFromBackend(saved);

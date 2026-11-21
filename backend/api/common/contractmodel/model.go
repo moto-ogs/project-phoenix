@@ -141,4 +141,8 @@ type Document struct {
 	Routes []Route  `json:"routes"`
 	Enums  []Enum   `json:"enums"`
 	Types  []Object `json:"types"`
+	// NumericIDs names every field that travels as a JSON number identifier
+	// (legacy_id, lax_id), as "package.Type.GoField" of its declaring type.
+	// scripts/check-contract-shrink.mjs refuses a new one (#2353).
+	NumericIDs []string `json:"numeric_ids"`
 }

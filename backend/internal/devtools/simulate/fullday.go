@@ -160,7 +160,7 @@ const isoDate = "2006-01-02"
 // window itself are what PUT /periods requires to echo a period back
 // unchanged except for is_active.
 type calendarPeriodWindow struct {
-	ID              int64   `json:"id"`
+	ID              apiID   `json:"id"`
 	Name            string  `json:"name"`
 	PeriodType      string  `json:"period_type"`
 	StartDate       string  `json:"start_date"`
@@ -383,7 +383,7 @@ func (seedStaffFeedTombstoneAction) Run(_ context.Context, rt *Runtime) error {
 	}
 	var envelope struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &envelope); err != nil {

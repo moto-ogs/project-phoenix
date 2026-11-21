@@ -56,6 +56,7 @@ import {
 } from "~/lib/traeger-care-notice-letters-api";
 import { fetchCareNoticeRun } from "~/lib/traeger-care-notices-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerCareNoticeDeliveryPage" });
 
@@ -182,8 +183,8 @@ function noticeColumns(
         <div className="flex min-w-0 flex-col items-start gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
-              label={NOTICE_KIND_LABELS[notice.kind]}
-              tone={NOTICE_KIND_TONES[notice.kind]}
+              label={labelOf(NOTICE_KIND_LABELS, notice.kind, "Bescheid")}
+              tone={labelOf(NOTICE_KIND_TONES, notice.kind, "gray")}
             />
             <span className="text-sm text-gray-900 tabular-nums">
               {notice.number}
@@ -439,7 +440,9 @@ export default function TraegerCareNoticeDeliveryPage() {
             <CareLetterPanel
               letter={shown}
               title={
-                shown ? `${NOTICE_KIND_LABELS[shown.kind]} ${shown.number}` : ""
+                shown
+                  ? `${labelOf(NOTICE_KIND_LABELS, shown.kind, "Bescheid")} ${shown.number}`
+                  : ""
               }
               fileKey={shown ? `notice-${shown.noticeId}` : ""}
               load={(notice) =>

@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The staff portal's catalog proxy reaches these routes below /auth
@@ -141,8 +142,8 @@ func TestCaregiverCapabilityRoutesAnswerTheState(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 		var envelope struct {
 			Data struct {
-				AccountID         int64 `json:"account_id"`
-				IsActiveCaregiver bool  `json:"is_active_caregiver"`
+				AccountID         testpkg.ID `json:"account_id"`
+				IsActiveCaregiver bool       `json:"is_active_caregiver"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &envelope))

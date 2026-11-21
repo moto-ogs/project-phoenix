@@ -53,7 +53,7 @@ describe("mapBirthdayOverview", () => {
       celebrations: [
         {
           kind: "student",
-          id: 12,
+          id: "12",
           name: "Lina Adler",
           group_name: "Delfine",
           school_class: "1a",
@@ -63,7 +63,7 @@ describe("mapBirthdayOverview", () => {
         },
         {
           kind: "staff",
-          id: 7,
+          id: "7",
           name: "Anna Berg",
           date: "2026-08-01",
           is_today: false,
@@ -142,7 +142,7 @@ describe("fetchBirthdayOverviewClient", () => {
             celebrations: [
               {
                 kind: "student",
-                id: 3,
+                id: "3",
                 name: "Mika Klein",
                 date: "2026-08-05",
                 age: 9,

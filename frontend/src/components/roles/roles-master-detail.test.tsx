@@ -50,17 +50,7 @@ const customRole: Role = {
   baseRole: "teacher",
   createdAt: "2026-01-01",
   updatedAt: "2026-01-02",
-  permissions: [
-    {
-      id: "p1",
-      name: "permission.read",
-      description: "",
-      resource: "x",
-      action: "read",
-      createdAt: "",
-      updatedAt: "",
-    },
-  ],
+  permissionNames: ["permission.read"],
 };
 
 const systemRole: Role = {

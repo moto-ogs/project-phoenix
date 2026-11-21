@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { ApiError } from "~/lib/api-error";
+import { presentError } from "~/lib/error-presentation";
+import { suppressConsole } from "~/test/helpers/console";
+import { routes as importRoutes } from "./import.generated";
 import { makePortalHandlers } from "~/lib/portal-handlers.server";
 import { testPortalBinding } from "~/test/portal-binding";
 import {
@@ -485,8 +489,7 @@ describe("catalog multipart upload", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: null,
     });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -512,8 +515,7 @@ describe("catalog multipart upload", () => {
 
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { id: "9" },
     });
     expect(received).toEqual(new Uint8Array([1, 2, 3, 4]));
@@ -664,5 +666,41 @@ describe("catalog file and upload access", () => {
 
     expect(response.status).toBe(404);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("catalog multipart preview", () => {
+  suppressConsole("error");
+
+  it.each([
+    "POST /api/import/class-list-entries/preview",
+    "POST /api/import/opening-balances/preview",
+    "POST /api/import/students/preview",
+    "POST /api/import/teachers/preview",
+  ] as const)("keeps an unreadable preview retryable: %s", async (key) => {
+    const entry = importRoutes[key];
+    mockFetch.mockResolvedValueOnce(
+      Response.json({ status: "success", data: null }),
+    );
+    const path = entry.pattern.slice("/api/".length).split("/");
+    const handler = makeCatalogProxy(portal, "/api", [entry], "POST");
+    const response = await handler(
+      new NextRequest(`http://localhost:3000${entry.pattern}`, {
+        method: "POST",
+        body: "abcd",
+        headers: uploadHeaders(4),
+      }),
+      { params: Promise.resolve({ path }) },
+    );
+    expect(response.status).toBe(502);
+    const body = (await response.json()) as { code: string };
+    expect(body.code).toBe("general.unavailable");
+    expect(
+      presentError(
+        new ApiError("Bad Gateway", response.status, body),
+        "Vorschau",
+      ).retryable,
+    ).toBe(true);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -5,7 +5,15 @@
 // without it.
 
 import { apiErrorFromResponse } from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  AuditLogEvent as AuditLogEventWire,
+  AuditLogPage as AuditLogPageWire,
+} from "./contract/staff.generated";
+import { createLogger } from "./logger";
 import { sessionFetch } from "./session-cache";
+
+const logger = createLogger({ component: "StaffAuditLogApi" });
 
 // ─── Wire shapes (backend snake_case) ────────────────────────────────────────
 
@@ -21,28 +29,8 @@ export type AuditLogSource =
   | "deletion"
   | "personnel_number";
 
-export interface BackendAuditLogEvent {
-  occurred_at: string;
-  source: AuditLogSource;
-  entry_id: number | string;
-  staff?: { id: number | string; name: string };
-  actor: {
-    staff_id?: number | string;
-    name: string;
-    is_system: boolean;
-    is_self: boolean;
-  };
-  reason: string;
-  /** Source-typed payload; see the render switch in staff-audit-log.tsx. */
-  detail: Record<string, unknown>;
-}
-
-interface BackendAuditLogPage {
-  events: BackendAuditLogEvent[];
-  next_cursor?: string;
-  /** Oldest day session edits can still exist for (retention setting). */
-  retention_cutoff: string;
-}
+/** An event of a source this build can describe. */
+export type KnownAuditLogEvent = AuditLogEventWire & { source: AuditLogSource };
 
 // ─── Frontend shapes ─────────────────────────────────────────────────────────
 
@@ -79,20 +67,35 @@ export const auditLogSourceLabels: Record<AuditLogSource, string> = {
   personnel_number: "Personalnummer",
 };
 
-export function mapAuditLogEvent(data: BackendAuditLogEvent): AuditLogEvent {
+const SOURCES = Object.keys(auditLogSourceLabels) as AuditLogSource[];
+
+function isKnown(event: AuditLogEventWire | null): event is KnownAuditLogEvent {
+  if (event === null) return false;
+  if (knownEnum(SOURCES, event.source)) return true;
+  // A source a newer backend added: this build has no sentence for it.
+  logger.warn("audit_log_unknown_source", { source: event.source });
+  return false;
+}
+
+function detailOf(detail: unknown): Record<string, unknown> {
+  return typeof detail === "object" && detail !== null && !Array.isArray(detail)
+    ? (detail as Record<string, unknown>)
+    : {};
+}
+
+export function mapAuditLogEvent(data: KnownAuditLogEvent): AuditLogEvent {
   return {
     occurredAt: data.occurred_at,
     source: data.source,
-    entryId: data.entry_id.toString(),
-    staffId: data.staff ? data.staff.id.toString() : null,
+    entryId: data.entry_id,
+    staffId: data.staff?.id ?? null,
     staffName: data.staff?.name ?? "",
-    actorStaffId:
-      data.actor.staff_id !== undefined ? data.actor.staff_id.toString() : null,
+    actorStaffId: data.actor.staff_id ?? null,
     actorName: data.actor.name,
     actorIsSystem: data.actor.is_system,
     actorIsSelf: data.actor.is_self,
     reason: data.reason,
-    detail: data.detail,
+    detail: detailOf(data.detail),
   };
 }
 
@@ -130,9 +133,9 @@ export const staffAuditLogService = {
     if (!response.ok) {
       throw await apiErrorFromResponse(response, "Failed to fetch audit log");
     }
-    const json = (await response.json()) as { data: BackendAuditLogPage };
+    const json = (await response.json()) as { data: AuditLogPageWire };
     return {
-      events: json.data.events.map(mapAuditLogEvent),
+      events: (json.data.events ?? []).filter(isKnown).map(mapAuditLogEvent),
       nextCursor: json.data.next_cursor ?? null,
       retentionCutoff: json.data.retention_cutoff,
     };

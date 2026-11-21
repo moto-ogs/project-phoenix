@@ -181,8 +181,8 @@ func TestTraegerStaffImportTakesOverStaffWithoutDuplicates(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		var proposed bool
 		for _, suggestion := range decode[staffOverviewBody](t, rec).Suggestions {
-			if suggestion.RecordID != nil && *suggestion.RecordID == mira && suggestion.Reason == workforce.TraegerStaffMatchPersonnelNumber {
-				proposed = len(suggestion.Members) == 1 && suggestion.Members[0].StaffID == person.ID
+			if suggestion.RecordID != nil && int64(*suggestion.RecordID) == mira && suggestion.Reason == workforce.TraegerStaffMatchPersonnelNumber {
+				proposed = len(suggestion.Members) == 1 && int64(suggestion.Members[0].StaffID) == person.ID
 			}
 		}
 		assert.True(t, proposed, "the import links nobody by itself; the office confirms the proposal")

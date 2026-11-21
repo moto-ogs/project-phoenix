@@ -960,6 +960,38 @@ describe("StudentDetailPage", () => {
       },
     );
 
+    // #2353: failed status days are an error in the record, not a child
+    // who was never sick or excused.
+    it("shows failed status days as an error instead of no absences", async () => {
+      mockFetchStudentStatusDays.mockRejectedValue(
+        new ApiError("status days failed", 500, {
+          code: "general.server",
+          instance: "req-days",
+        }),
+      );
+
+      render(
+        <SWRConfig
+          value={{
+            provider: () => new Map(),
+            dedupingInterval: 0,
+            shouldRetryOnError: false,
+          }}
+        >
+          <StudentDetailPage />
+        </SWRConfig>,
+      );
+
+      expect(
+        await screen.findByText(
+          catalogText(
+            "general.server",
+            "die Liste der Abwesenheiten des Kindes",
+          ),
+        ),
+      ).toBeInTheDocument();
+    });
+
     it("uses Berlin's calendar day for the header plans", async () => {
       setTestClock("2026-09-12T12:00:00+02:00");
       vi.mocked(useWeekendFollowsFriday).mockReturnValue(true);

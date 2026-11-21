@@ -17,7 +17,7 @@ beforeEach(() => {
 describe("bffJson", () => {
   it("returns the data of the route wrapper's answer", async () => {
     mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ success: true, message: "Success", data: { id: "7" } }),
+      Response.json({ status: "success", data: { id: "7" } }),
     );
 
     await expect(bffJson("/api/x")).resolves.toEqual({ id: "7" });
@@ -29,8 +29,8 @@ describe("bffJson", () => {
 
   it("sends a JSON body serialized and a FormData body as is", async () => {
     mockSessionFetch
-      .mockResolvedValueOnce(Response.json({ success: true, data: null }))
-      .mockResolvedValueOnce(Response.json({ success: true, data: null }));
+      .mockResolvedValueOnce(Response.json({ status: "success", data: null }))
+      .mockResolvedValueOnce(Response.json({ status: "success", data: null }));
     const form = new FormData();
 
     await bffJson("/api/x", { method: "PUT", body: { a: 1 } });
@@ -77,7 +77,7 @@ describe("bffJson", () => {
   it("forwards the abort signal", async () => {
     const controller = new AbortController();
     mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ success: true, data: 1 }),
+      Response.json({ status: "success", data: 1 }),
     );
 
     await bffJson("/api/x", { signal: controller.signal });

@@ -8,6 +8,7 @@ import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { PlannedActivity, TeacherHint } from "~/lib/student-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 // Wire types (Go DTOs from backend/api/students/ogs_group_live_handlers.go)
 
@@ -214,9 +215,6 @@ export async function fetchOgsGroupLive(
     throw await apiErrorFromResponse(response, `API error: ${response.status}`);
   }
 
-  const json = (await response.json()) as {
-    success: boolean;
-    data: OgsGroupLiveWireResponse;
-  };
+  const json = (await response.json()) as ApiResponse<OgsGroupLiveWireResponse>;
   return mapOgsGroupLiveResponse(json.data);
 }

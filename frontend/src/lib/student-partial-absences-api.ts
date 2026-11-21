@@ -1,4 +1,8 @@
 import { bffJson } from "~/lib/bff-fetch";
+import type {
+  PartialAbsenceRequest,
+  PartialAbsenceResponse,
+} from "~/lib/contract/students.generated";
 
 export interface StudentPartialAbsence {
   id: string;
@@ -14,29 +18,16 @@ export interface StudentPartialAbsence {
   updatedAt: string;
 }
 
-interface BackendPartialAbsence {
-  id: number | string;
-  student_id: number | string;
-  date: string;
-  from_time: string;
-  reason?: string;
-  pickup_time?: string;
-  auto?: boolean;
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
-}
-
-function mapPartialAbsence(row: BackendPartialAbsence): StudentPartialAbsence {
+function mapPartialAbsence(row: PartialAbsenceResponse): StudentPartialAbsence {
   return {
-    id: row.id.toString(),
-    studentId: row.student_id.toString(),
+    id: row.id,
+    studentId: row.student_id,
     date: row.date,
     fromTime: row.from_time,
     reason: row.reason,
     pickupTime: row.pickup_time,
-    auto: row.auto ?? false,
-    createdBy: row.created_by.toString(),
+    auto: row.auto,
+    createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -52,7 +43,7 @@ export async function fetchStudentPartialAbsences(
   from: string,
   to: string,
 ): Promise<StudentPartialAbsence[]> {
-  const rows = await bffJson<BackendPartialAbsence[]>(
+  const rows = await bffJson<PartialAbsenceResponse[]>(
     `${partialAbsencesPath(studentId)}?from=${from}&to=${to}`,
   );
   return rows.map(mapPartialAbsence);
@@ -65,14 +56,12 @@ export async function saveStudentPartialAbsence(
   fromTime: string,
   reason?: string,
 ): Promise<StudentPartialAbsence> {
-  const row = await bffJson<BackendPartialAbsence>(
+  const body: PartialAbsenceRequest = reason
+    ? { date, from_time: fromTime, reason }
+    : { date, from_time: fromTime };
+  const row = await bffJson<PartialAbsenceResponse>(
     partialAbsencesPath(studentId, partialAbsenceId),
-    {
-      method: partialAbsenceId ? "PUT" : "POST",
-      body: reason
-        ? { date, from_time: fromTime, reason }
-        : { date, from_time: fromTime },
-    },
+    { method: partialAbsenceId ? "PUT" : "POST", body },
   );
   return mapPartialAbsence(row);
 }

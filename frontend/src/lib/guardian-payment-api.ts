@@ -1,3 +1,4 @@
+import type * as wire from "~/lib/contract/guardians.generated";
 import { apiErrorFromResponse } from "./api-error";
 import {
   downloadBlob,
@@ -47,29 +48,6 @@ export interface PaymentOverviewRow {
 
 export type PaymentExportFormat = "pdf" | "xlsx" | "docx";
 
-interface BackendMasked {
-  guardian_id: string;
-  iban_masked: string | null;
-  account_holder: string | null;
-}
-
-interface BackendPlain {
-  guardian_id: string;
-  iban: string | null;
-  account_holder: string | null;
-}
-
-interface BackendOverviewRow {
-  student_id: string;
-  student_name: string;
-  school_class: string;
-  guardian_id: string | null;
-  guardian_name: string;
-  relationship_type: string;
-  account_holder: string;
-  iban_masked: string;
-}
-
 // A failed request becomes an ApiError with the wire code, field errors and
 // request ID, so the shared error display shows the catalog text (#2517).
 // The message is a diagnostic for the logs.
@@ -80,7 +58,9 @@ export async function fetchGuardianPayment(
   if (!response.ok) {
     throw await apiErrorFromResponse(response, "load guardian payment failed");
   }
-  const json = (await response.json()) as { data: BackendMasked };
+  const json = (await response.json()) as {
+    data: wire.GuardianPaymentMaskedResponse;
+  };
   return {
     guardianId: json.data.guardian_id,
     ibanMasked: json.data.iban_masked,
@@ -101,7 +81,9 @@ export async function revealGuardianPayment(
       "reveal guardian payment failed",
     );
   }
-  const json = (await response.json()) as { data: BackendPlain };
+  const json = (await response.json()) as {
+    data: wire.GuardianPaymentRevealResponse;
+  };
   return {
     guardianId: json.data.guardian_id,
     iban: json.data.iban,
@@ -152,7 +134,9 @@ export async function fetchPaymentOverview(): Promise<PaymentOverviewRow[]> {
   if (!response.ok) {
     throw await apiErrorFromResponse(response, "load payment overview failed");
   }
-  const json = (await response.json()) as { data: BackendOverviewRow[] | null };
+  const json = (await response.json()) as {
+    data: wire.PaymentOverviewRow[] | null;
+  };
   return (json.data ?? []).map((row) => ({
     studentId: row.student_id,
     studentName: row.student_name,

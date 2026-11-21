@@ -34,7 +34,7 @@ type timeAccountBody struct {
 	BalanceMinutes        int    `json:"balance_minutes"`
 	ClosingBalanceMinutes int    `json:"closing_balance_minutes"`
 	Schools               []struct {
-		SchoolID        int64  `json:"school_id"`
+		SchoolID        wireID `json:"school_id"`
 		SchoolName      string `json:"school_name"`
 		TargetMinutes   int    `json:"target_minutes"`
 		ActualMinutes   int    `json:"actual_minutes"`

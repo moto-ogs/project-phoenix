@@ -34,9 +34,9 @@ type paymentBody struct {
 
 type termsInvoiceBody struct {
 	FamilyEmail string `json:"family_email"`
-	ID          int64  `json:"id"`
+	ID          wireID `json:"id"`
 	Number      string `json:"number"`
-	ContractID  int64  `json:"contract_id"`
+	ContractID  wireID `json:"contract_id"`
 	Recipient   struct {
 		FirstName  string `json:"first_name"`
 		LastName   string `json:"last_name"`
@@ -53,7 +53,7 @@ type termsInvoiceBody struct {
 }
 
 type termsRunBody struct {
-	ID       int64              `json:"id"`
+	ID       wireID             `json:"id"`
 	Status   string             `json:"status"`
 	Invoices []termsInvoiceBody `json:"invoices"`
 	DueDates []struct {
@@ -74,9 +74,9 @@ type termsDocumentBody struct {
 }
 
 type familyBillingBody struct {
-	ID            int64  `json:"id"`
+	ID            wireID `json:"id"`
 	FamilyEmail   string `json:"family_email"`
-	ContractID    int64  `json:"contract_id"`
+	ContractID    wireID `json:"contract_id"`
 	RecipientKind string `json:"recipient_kind"`
 	PayerEmail    string `json:"payer_email"`
 	PaymentMethod string `json:"payment_method"`
@@ -177,9 +177,9 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 	createMandate(t, care, mandateBody(contract, "SJR-4689-1"))
 
 	monthly := care.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", monthly.ID), dueDates("2030-01-02", "2030-01-04"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", int64(monthly.ID)), dueDates("2030-01-02", "2030-01-04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	preview := termsRun(t, care, billing, monthly.ID)
+	preview := termsRun(t, care, billing, int64(monthly.ID))
 	require.Len(t, preview.DueDates, 2)
 	require.Len(t, preview.Invoices, 1)
 	assert.Equal(t, &paymentBody{Method: "direct_debit", DueOn: "2030-01-04", DueSource: "run"}, preview.Invoices[0].Payment,
@@ -187,26 +187,26 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 	assert.Equal(t, "applicant", preview.Invoices[0].Recipient.Kind)
 
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
-	holiday := startBillingRun(t, f, billing, f.period.ID)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("holiday", holiday.ID), dueDates("2026-12-20", "2026-12-22"))
+	holiday := startBillingRun(t, f, billing, int64(f.period.ID))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("holiday", int64(holiday.ID)), dueDates("2026-12-20", "2026-12-22"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	holidayPreview := billingRun(t, f, billing, holiday.ID)
+	holidayPreview := billingRun(t, f, billing, int64(holiday.ID))
 
 	// The due dates are part of the reviewed state (#5916): a change after
 	// the review refuses the release, the reviewed state releases.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", monthly.ID), dueDates("2030-01-02", "2030-01-05"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", int64(monthly.ID)), dueDates("2030-01-02", "2030-01-05"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunPath(monthly.ID, "/release"), termsRelease(preview))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunPath(int64(monthly.ID), "/release"), termsRelease(preview))
 	assert.Equal(t, http.StatusConflict, rec.Code, "a changed due date refuses the release: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_changed")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", monthly.ID), dueDates("2030-01-02", "2030-01-04"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", int64(monthly.ID)), dueDates("2030-01-02", "2030-01-04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, preview.Fingerprint, termsRun(t, care, billing, monthly.ID).Fingerprint, "the same dates give the same state")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunPath(monthly.ID, "/release"),
+	assert.Equal(t, preview.Fingerprint, termsRun(t, care, billing, int64(monthly.ID)).Fingerprint, "the same dates give the same state")
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunPath(int64(monthly.ID), "/release"),
 		termsRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[termsRunBody](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(holiday.ID, "/release"), releaseBody(holidayPreview))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(holiday.ID), "/release"), releaseBody(holidayPreview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	documents := decodeSchoolPortalData[struct {
 		Documents []termsDocumentBody `json:"documents"`
@@ -222,10 +222,10 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 
 	// The release copied the payment: the run's dates and the terms change
 	// nothing on the issued invoices.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", monthly.ID), dueDates("2030-02-02", "2030-02-04"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, runDueDatesPathOf("care", int64(monthly.ID)), dueDates("2030-02-02", "2030-02-04"))
 	assert.Equal(t, http.StatusConflict, rec.Code, "a released run keeps its dates: %s", rec.Body.String())
 	setTerms(t, f.traeger, billing, "care", map[string]any{"payment_method": "transfer", "due_days": 30})
-	again := termsRun(t, care, billing, monthly.ID)
+	again := termsRun(t, care, billing, int64(monthly.ID))
 	assert.Equal(t, monthlyInvoice.Payment, again.Invoices[0].Payment)
 	_, err = f.db.ExecContext(context.Background(), `UPDATE parent_billing.care_invoices SET due_on = DATE '2030-03-01' WHERE id = ?`,
 		monthlyInvoice.ID)
@@ -242,13 +242,13 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, "/traeger/billing-families", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	type familyBody struct {
-		ID             int64    `json:"id"`
+		ID             wireID   `json:"id"`
 		InvoiceCount   int      `json:"invoice_count"`
 		IssuedCents    int64    `json:"issued_cents"`
 		PaymentMethods []string `json:"payment_methods"`
 		Documents      []struct {
 			Service       string `json:"service"`
-			RunID         int64  `json:"run_id"`
+			RunID         wireID `json:"run_id"`
 			Number        string `json:"number"`
 			PaymentMethod string `json:"payment_method"`
 			PeriodName    string `json:"period_name"`
@@ -270,16 +270,16 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 	require.Len(t, detail.Documents, 2)
 	services := map[string]int64{}
 	for _, document := range detail.Documents {
-		services[document.Service] = document.RunID
+		services[document.Service] = int64(document.RunID)
 	}
-	assert.Equal(t, map[string]int64{"care": monthly.ID, "holiday": holiday.ID}, services, "each document names the run of its service")
+	assert.Equal(t, map[string]int64{"care": int64(monthly.ID), "holiday": int64(holiday.ID)}, services, "each document names the run of its service")
 	var careReads int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_run_events WHERE run_id = ? AND action = 'read'
 		AND details->>'view' IN ('families', 'family')`, monthly.ID).Scan(context.Background(), &careReads))
 	assert.Equal(t, 2, careReads, "the list and the family page record their read of the monthly invoice")
 
 	// The overview for the Kämmerei names payment method and due date.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(holiday.ID, "/export?format=csv"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(holiday.ID), "/export?format=csv"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "Zahlungsweg")
 	assert.Contains(t, rec.Body.String(), "Überweisung")
@@ -299,8 +299,8 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	first := f.startRun(t, careMonth)
-	firstPreview := termsRun(t, f, f.office.token, first.ID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(first.ID, "/release"),
+	firstPreview := termsRun(t, f, f.office.token, int64(first.ID))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(first.ID), "/release"),
 		termsRelease(firstPreview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	issued := decodeSchoolPortalData[termsRunBody](t, rec.Body.Bytes()).Invoices[0]
@@ -338,13 +338,13 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	assert.Equal(t, family, saved.FamilyEmail, "the family is the address of the registration, not the payer's")
 
 	// The issued invoice keeps its recipient; the next month goes to the payer.
-	released := termsRun(t, f, f.office.token, first.ID)
+	released := termsRun(t, f, f.office.token, int64(first.ID))
 	assert.Equal(t, "Eva", released.Invoices[0].Recipient.FirstName, "issued invoices never change")
 	// The payer's direct debit needs a mandate (#4695).
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 1, "missing_mandate": "transfer"})
 	createMandate(t, f, mandateBody(contract, "SJR-4689-2"))
 	next := f.startRun(t, "2030-02-01")
-	preview := termsRun(t, f, f.office.token, next.ID)
+	preview := termsRun(t, f, f.office.token, int64(next.ID))
 	var shown int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_billing_events WHERE family_billing_id = ? AND action = 'read'`,
 		saved.ID).Scan(context.Background(), &shown))
@@ -359,7 +359,7 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	require.NotNil(t, invoice.Payment)
 	assert.Equal(t, "direct_debit", invoice.Payment.Method)
 	assert.Equal(t, "family", invoice.Payment.DueSource)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(next.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(next.ID), "/release"),
 		termsRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var familyEmail, kind, street string
@@ -374,8 +374,8 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/billing-families", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	listed := decodeSchoolPortalData[[]struct {
-		ID           int64 `json:"id"`
-		InvoiceCount int   `json:"invoice_count"`
+		ID           wireID `json:"id"`
+		InvoiceCount int    `json:"invoice_count"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, listed, 1, "the payer does not split the family")
 	assert.Negative(t, listed[0].ID)
@@ -434,8 +434,8 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		{http.MethodPut, billingTermsPath + "/care", map[string]any{"payment_method": "transfer", "due_days": 1}},
 		{http.MethodGet, familyBillingPath, nil},
 		{http.MethodPut, familyBillingPath, map[string]any{"contract_id": contract, "recipient_kind": "applicant"}},
-		{http.MethodPut, runDueDatesPathOf("care", run.ID), dueDates("2030-01-02", "2030-01-04")},
-		{http.MethodPut, runDueDatesPathOf("holiday", run.ID), dueDates("2030-01-02", "2030-01-04")},
+		{http.MethodPut, runDueDatesPathOf("care", int64(run.ID)), dueDates("2030-01-02", "2030-01-04")},
+		{http.MethodPut, runDueDatesPathOf("holiday", int64(run.ID)), dueDates("2030-01-02", "2030-01-04")},
 	}
 	for _, request := range requests {
 		rec := traegerJSON(t, f.traeger, answer.AccessToken, request.method, request.path, request.body)
@@ -452,7 +452,7 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code, "a contract of another Träger names no family here: %s", rec.Body.String())
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodDelete, familyBillingPath+fmt.Sprintf("/%d", deviation.ID), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPut, runDueDatesPathOf("care", run.ID), dueDates("2030-01-02", "2030-01-04"))
+	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPut, runDueDatesPathOf("care", int64(run.ID)), dueDates("2030-01-02", "2030-01-04"))
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	setTerms(t, f.traeger, foreign.token, "care", map[string]any{"payment_method": "direct_debit", "due_days": 3})
 
@@ -460,7 +460,7 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT recipient_kind FROM parent_billing.family_billing WHERE id = ?`, deviation.ID).
 		Scan(context.Background(), &kind))
 	assert.Equal(t, "both", kind, "the deviation stays as its Träger set it")
-	preview := termsRun(t, f, f.office.token, run.ID)
+	preview := termsRun(t, f, f.office.token, int64(run.ID))
 	assert.Empty(t, preview.DueDates, "no due date of another Träger")
 	assert.Empty(t, preview.Invoices, "no price yet")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, billingTermsPath, nil)

@@ -67,7 +67,7 @@ func emailStatusLine(t *testing.T, rr *httptest.ResponseRecorder, guardianID int
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	for _, raw := range dataArray(t, rr.Body.Bytes()) {
 		line := raw.(map[string]any)
-		if int64(line["guardian_profile_id"].(float64)) == guardianID {
+		if testpkg.JSONID(t, line["guardian_profile_id"]) == guardianID {
 			return line
 		}
 	}

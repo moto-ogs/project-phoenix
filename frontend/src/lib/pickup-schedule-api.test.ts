@@ -15,42 +15,46 @@ import {
   applyStudentPickupAdjustment,
 } from "./pickup-schedule-api";
 import type {
-  BackendPickupData,
+  PickupDataWire,
   PickupExceptionFormData,
   PickupNoteFormData,
-  BackendPickupException,
-  BackendPickupSchedule,
-  BackendPickupNote,
+  PickupExceptionWire,
+  PickupScheduleWire,
 } from "./pickup-schedule-helpers";
+import type { PickupNoteResponse } from "./contract/students.generated";
 
 // Mock data
-const mockBackendSchedule: BackendPickupSchedule = {
-  id: 1,
-  student_id: 123,
+const mockBackendSchedule: PickupScheduleWire = {
+  id: "1",
+  student_id: "123",
   weekday: 1,
   weekday_name: "Montag",
   pickup_time: "15:30",
   notes: "Test notes",
-  created_by: 1,
+  source: "staff",
+  created_by: "1",
   created_at: "2024-01-15T10:00:00Z",
   updated_at: "2024-01-15T10:00:00Z",
 };
 
-const mockBackendException: BackendPickupException = {
-  id: 2,
-  student_id: 123,
+const mockBackendException: PickupExceptionWire = {
+  id: "2",
+  student_id: "123",
   exception_date: "2024-01-20",
   pickup_time: "16:00",
   reason: "Arzttermin",
-  created_by: 1,
+  source: "staff",
+  excused_auto: false,
+  created_by: "1",
   created_at: "2024-01-15T10:00:00Z",
   updated_at: "2024-01-15T10:00:00Z",
 };
 
-const mockBackendPickupData: BackendPickupData = {
+const mockPickupDataWire: PickupDataWire = {
   schedules: [mockBackendSchedule],
   exceptions: [mockBackendException],
   notes: [],
+  departure_exceptions: [],
 };
 
 // Helper to create mock fetch response
@@ -255,7 +259,7 @@ describe("pickup-schedule-api", () => {
       global.fetch = vi.fn().mockResolvedValue(
         createMockResponse(true, 200, {
           status: "success",
-          data: mockBackendPickupData,
+          data: mockPickupDataWire,
         }),
       );
 
@@ -273,6 +277,7 @@ describe("pickup-schedule-api", () => {
         weekdayName: "Montag",
         pickupTime: "15:30",
         notes: "Test notes",
+        source: "staff",
         createdBy: "1",
         createdAt: "2024-01-15T10:00:00Z",
         updatedAt: "2024-01-15T10:00:00Z",
@@ -284,6 +289,8 @@ describe("pickup-schedule-api", () => {
         exceptionDate: "2024-01-20",
         pickupTime: "16:00",
         reason: "Arzttermin",
+        source: "staff",
+        excusedAuto: false,
         createdBy: "1",
         createdAt: "2024-01-15T10:00:00Z",
         updatedAt: "2024-01-15T10:00:00Z",
@@ -294,7 +301,7 @@ describe("pickup-schedule-api", () => {
       global.fetch = vi.fn().mockResolvedValue(
         createMockResponse(true, 200, {
           status: "success",
-          data: mockBackendPickupData,
+          data: mockPickupDataWire,
         }),
       );
 
@@ -379,7 +386,7 @@ describe("pickup-schedule-api", () => {
       global.fetch = vi.fn().mockResolvedValue(
         createMockResponse(true, 200, {
           status: "success",
-          data: mockBackendPickupData,
+          data: mockPickupDataWire,
         }),
       );
 
@@ -702,12 +709,12 @@ describe("pickup-schedule-api", () => {
   // Note CRUD API Tests
   // ===========================================================================
 
-  const mockBackendNote: BackendPickupNote = {
-    id: 10,
-    student_id: 123,
+  const mockBackendNote: PickupNoteResponse = {
+    id: "10",
+    student_id: "123",
     note_date: "2024-01-22",
     content: "Doctor appointment pickup",
-    created_by: 1,
+    created_by: "1",
     created_at: "2024-01-22T08:00:00Z",
     updated_at: "2024-01-22T08:00:00Z",
   };

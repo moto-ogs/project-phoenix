@@ -8,7 +8,8 @@ import { useEffect, useRef } from "react";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import {
   SEPA_DEBIT_LEFT_LABELS,
-  SEPA_SEQUENCE_BADGES,
+  debitDay,
+  sepaSequenceBadge,
   debitDocumentLabel,
 } from "~/components/traeger/sepa-debit-format";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -78,7 +79,7 @@ const columns: DataTableColumn<SepaDebit>[] = [
     header: "Abbuchung am",
     render: (debit) => (
       <span className="tabular-nums">
-        {formatDate(debit.collectOn ?? debit.dueOn)}
+        {debitDay(debit) ? formatDate(debitDay(debit)) : "–"}
       </span>
     ),
   },
@@ -86,7 +87,7 @@ const columns: DataTableColumn<SepaDebit>[] = [
     key: "sequence",
     header: "Art",
     render: (debit) => {
-      const badge = SEPA_SEQUENCE_BADGES[debit.sequenceType];
+      const badge = sepaSequenceBadge(debit.sequenceType);
       return <StatusBadge label={badge.label} tone={badge.tone} size="xs" />;
     },
   },
@@ -111,7 +112,9 @@ export function SepaCollectionsCard({
       const lists = await Promise.all(
         ids.map((id) => fetchSepaMandateCollections(id)),
       );
-      return lists.flat().sort((a, b) => b.dueOn.localeCompare(a.dueOn));
+      return lists
+        .flat()
+        .sort((a, b) => (b.dueOn ?? "").localeCompare(a.dueOn ?? ""));
     },
     "die Abbuchungen",
   );

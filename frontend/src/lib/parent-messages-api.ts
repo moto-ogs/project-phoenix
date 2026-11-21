@@ -25,6 +25,7 @@ import {
   leadershipNameList,
 } from "~/lib/messaging-status";
 import { getRelationshipTypeLabel } from "~/lib/guardian-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 /** The school switched sending off; existing conversations remain readable. */
 export function isParentMessagingDisabled(error: unknown): boolean {
@@ -97,12 +98,6 @@ export interface Guardian {
   readers?: ThreadReaders;
   /** True only for a leadership member while a new leadership conversation may begin. */
   leadership_available?: boolean;
-}
-
-interface ApiResponse<T> {
-  status?: string;
-  success?: boolean;
-  data?: T;
 }
 
 /**

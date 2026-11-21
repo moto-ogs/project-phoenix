@@ -9,6 +9,17 @@
 import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
 import { filenameFromDisposition } from "~/lib/file-download";
 import { readJson, traegerRequest } from "~/lib/traeger-api";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  ReleaseRequest,
+  SharedDocument as WireSharedDocument,
+  TraegerDocument as WireDocument,
+  TraegerDocumentRelease as WireRelease,
+  TraegerDocumentSchool as WireSchool,
+} from "./contract/traeger-documents.generated";
+
+// Go does not register the set; the contract types it as string.
+const AUDIENCE_VALUES = ["parents", "schools"] as const;
 
 /** Größte Datei, die ein Träger teilt; das Backend prüft sie ebenso. */
 export const TRAEGER_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
@@ -17,7 +28,7 @@ export const TRAEGER_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 export const TRAEGER_DOCUMENT_ACCEPT =
   ".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg";
 
-export type TraegerDocumentAudience = "parents" | "schools";
+export type TraegerDocumentAudience = (typeof AUDIENCE_VALUES)[number];
 
 export interface TraegerDocumentRelease {
   readonly id: string;
@@ -70,86 +81,58 @@ export interface TraegerDocumentReleaseInput {
   readonly groupId: string | null;
 }
 
-// The catalog proxy hands identifiers out as strings (ADR 0270); a route
-// outside it may still send numbers.
-type BackendId = string | number;
-
-interface BackendRelease {
-  id: BackendId;
-  audience: TraegerDocumentAudience;
-  school_id: BackendId | null;
-  group_id: BackendId | null;
-  group_name: string;
-  released_at: string;
+/**
+ * The releases this build knows; a release to an audience it does not know
+ * has no row to show and is left out.
+ */
+function releasesFromBackend(
+  releases: readonly WireRelease[] | null,
+): TraegerDocumentRelease[] {
+  return (releases ?? []).flatMap((release) => {
+    const mapped = mapTraegerDocumentRelease(release);
+    return mapped ? [mapped] : [];
+  });
 }
-
-interface BackendDocument {
-  id: string;
-  title: string;
-  file_name: string;
-  content_type: string;
-  size_bytes: number;
-  created_at: string;
-  releases: BackendRelease[] | null;
-  reads: number;
-}
-
-interface BackendSharedDocument {
-  id: BackendId;
-  title: string;
-  file_name: string;
-  content_type: string;
-  size_bytes: number;
-  released_at: string;
-  releases: BackendRelease[] | null;
-}
-
-interface BackendSchool {
-  id: BackendId;
-  name: string;
-  groups: { id: BackendId; name: string }[] | null;
-}
-
-const optionalId = (id: BackendId | null): string | null =>
-  id === null ? null : String(id);
 
 function mapTraegerDocumentRelease(
-  release: BackendRelease,
-): TraegerDocumentRelease {
+  release: WireRelease,
+): TraegerDocumentRelease | null {
+  const audience = knownEnum(AUDIENCE_VALUES, release.audience);
+  if (!audience) return null;
   return {
-    id: String(release.id),
-    audience: release.audience,
-    schoolId: optionalId(release.school_id),
-    groupId: optionalId(release.group_id),
-    groupName: release.group_name ?? "",
+    id: release.id,
+    audience,
+    schoolId: release.school_id,
+    groupId: release.group_id,
+    groupName: release.group_name,
     releasedAt: release.released_at,
   };
 }
 
-function mapDocument(document: BackendDocument): TraegerDocument {
+function mapDocument(document: WireDocument): TraegerDocument {
   return {
-    id: String(document.id),
+    id: document.id,
     title: document.title,
     fileName: document.file_name,
     contentType: document.content_type,
     sizeBytes: document.size_bytes,
     createdAt: document.created_at,
-    releases: (document.releases ?? []).map(mapTraegerDocumentRelease),
+    releases: releasesFromBackend(document.releases),
     reads: document.reads,
   };
 }
 
 function mapSharedDocument(
-  document: BackendSharedDocument,
+  document: WireSharedDocument,
 ): SharedTraegerDocument {
   return {
-    id: String(document.id),
+    id: document.id,
     title: document.title,
     fileName: document.file_name,
     contentType: document.content_type,
     sizeBytes: document.size_bytes,
     releasedAt: document.released_at,
-    releases: (document.releases ?? []).map(mapTraegerDocumentRelease),
+    releases: releasesFromBackend(document.releases),
   };
 }
 
@@ -157,24 +140,22 @@ const traegerDocumentsPath = "/api/traeger/documents";
 
 /** Die Dokumente des Trägers, das neueste zuerst. */
 export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
-  const documents = await traegerRequest<BackendDocument[] | null>(
-    traegerDocumentsPath,
-  );
-  return (documents ?? []).map(mapDocument);
+  const documents = await traegerRequest<WireDocument[]>(traegerDocumentsPath);
+  return documents.map(mapDocument);
 }
 
 /** Die Schulen des Trägers mit ihren Gruppen, für eine Freigabe. */
 export async function fetchTraegerDocumentAudiences(): Promise<
   TraegerDocumentSchool[]
 > {
-  const schools = await traegerRequest<BackendSchool[] | null>(
+  const schools = await traegerRequest<WireSchool[]>(
     `${traegerDocumentsPath}/audiences`,
   );
-  return (schools ?? []).map((school) => ({
-    id: String(school.id),
+  return schools.map((school) => ({
+    id: school.id,
     name: school.name,
     groups: (school.groups ?? []).map((group) => ({
-      id: String(group.id),
+      id: group.id,
       name: group.name,
     })),
   }));
@@ -202,7 +183,7 @@ export async function uploadTraegerDocument(
       data,
     );
   }
-  const document = (data as { data?: BackendDocument } | null)?.data;
+  const document = (data as { data?: WireDocument } | null)?.data;
   if (!document) {
     throw apiErrorFromBody("Document response without data", 502, data);
   }
@@ -214,7 +195,7 @@ export async function releaseTraegerDocument(
   documentId: string,
   input: TraegerDocumentReleaseInput,
 ): Promise<TraegerDocumentRelease> {
-  const release = await traegerRequest<BackendRelease>(
+  const release = await traegerRequest<WireRelease>(
     `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/releases`,
     {
       method: "POST",
@@ -222,10 +203,14 @@ export async function releaseTraegerDocument(
         audience: input.audience,
         school_id: input.schoolId === null ? null : Number(input.schoolId),
         group_id: input.groupId === null ? null : Number(input.groupId),
-      },
+      } satisfies ReleaseRequest,
     },
   );
-  return mapTraegerDocumentRelease(release);
+  const mapped = mapTraegerDocumentRelease(release);
+  if (!mapped) {
+    throw apiErrorFromBody("Release with an unknown audience", 502, release);
+  }
+  return mapped;
 }
 
 /** Nimmt eine Freigabe zurück. Wirft einen ApiError bei Ablehnung. */
@@ -295,8 +280,7 @@ export async function fetchSchoolTraegerDocuments(): Promise<
       data,
     );
   }
-  const documents =
-    (data as { data?: BackendSharedDocument[] | null } | null)?.data ?? [];
+  const documents = (data as { data: WireSharedDocument[] }).data;
   return documents.map(mapSharedDocument);
 }
 

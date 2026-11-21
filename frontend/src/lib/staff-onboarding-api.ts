@@ -1,5 +1,8 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
-import type { PutStaffOnboardingDismissalQuery } from "./contract/staff-onboarding.generated";
+import type {
+  PutStaffOnboardingDismissalQuery,
+  StaffStatus,
+} from "./contract/staff-onboarding.generated";
 import { createLogger } from "./logger";
 import { sessionFetch } from "./session-cache";
 
@@ -34,26 +37,18 @@ export interface StaffOnboardingState {
   skippedSteps: readonly StaffOnboardingStepKey[];
 }
 
-interface BackendState {
-  dismissed?: unknown;
-  school_ready?: unknown;
-  done_steps?: unknown;
-  skipped_steps?: unknown;
-}
-
-function stepKeys(raw: unknown): StaffOnboardingStepKey[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((key): key is StaffOnboardingStepKey =>
+function stepKeys(raw: readonly string[] | null): StaffOnboardingStepKey[] {
+  return (raw ?? []).filter((key): key is StaffOnboardingStepKey =>
     STAFF_ONBOARDING_STEP_KEYS.includes(key as StaffOnboardingStepKey),
   );
 }
 
 export function mapStaffOnboardingState(
-  raw: BackendState,
+  raw: StaffStatus,
 ): StaffOnboardingState {
   return {
-    dismissed: raw.dismissed === true,
-    schoolReady: raw.school_ready === true,
+    dismissed: raw.dismissed,
+    schoolReady: raw.school_ready,
     doneSteps: stepKeys(raw.done_steps),
     skippedSteps: stepKeys(raw.skipped_steps),
   };
@@ -70,9 +65,7 @@ async function readState(
       `staff onboarding request failed (${response.status})`,
     );
   }
-  const body = (await response.json()) as
-    { data?: BackendState } | BackendState;
-  const data = "data" in body && body.data ? body.data : (body as BackendState);
+  const { data } = (await response.json()) as { data: StaffStatus };
   // Ohne die beiden Listen ist die Antwort nicht die erwartete. Sie darf den
   // Stand nicht ersetzen, sonst stünde jeder Schritt wieder offen.
   if (!Array.isArray(data.done_steps) || !Array.isArray(data.skipped_steps)) {

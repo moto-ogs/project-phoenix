@@ -41,7 +41,7 @@ type handoverResultBody struct {
 }
 
 type recipientBody struct {
-	ID      int64    `json:"id"`
+	ID      wireID   `json:"id"`
 	Name    string   `json:"name"`
 	Ready   bool     `json:"ready"`
 	Formats []string `json:"formats"`
@@ -50,8 +50,8 @@ type recipientBody struct {
 type recipientsPageBody struct {
 	Recipients  []recipientBody `json:"recipients"`
 	Assignments []struct {
-		Format      string `json:"format"`
-		RecipientID *int64 `json:"recipient_id"`
+		Format      string  `json:"format"`
+		RecipientID *wireID `json:"recipient_id"`
 	} `json:"assignments"`
 }
 
@@ -62,7 +62,7 @@ func addRecipient(t *testing.T, f careBillingFixture, body map[string]any) (*htt
 	if rec.Code != http.StatusCreated {
 		return rec, 0
 	}
-	return rec, decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes()).ID
+	return rec, int64(decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes()).ID)
 }
 
 // assignFormats sends each format to its recipient, 0 for the download.
@@ -178,7 +178,7 @@ func TestFinanceExportHandoverOfARun(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, recipientPath(recipient), renamed)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	saved := decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes())
-	assert.Equal(t, recipient, saved.ID)
+	assert.Equal(t, recipient, int64(saved.ID))
 	assert.Equal(t, "Kämmerei Nord", saved.Name)
 	assert.True(t, saved.Ready, "a saved recipient with its password stays ready")
 

@@ -19,6 +19,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type cancelledContributionBody struct {
@@ -28,12 +29,12 @@ type cancelledContributionBody struct {
 
 func (f reviewFixture) cancel(t *testing.T, token string, id int64) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, token, http.MethodPost, holidayCancelPath(f.period.ID, id), nil)
+	return traegerJSON(t, f.traeger, token, http.MethodPost, holidayCancelPath(int64(f.period.ID), id), nil)
 }
 
 func (f reviewFixture) cancelledContribution(t *testing.T, id int64) cancelledContributionBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, id), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), id), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[cancelledContributionBody](t, rec.Body.Bytes())
 }
@@ -62,10 +63,10 @@ func TestCancellationComputesTheRestOfTheSiblingGroupAgain(t *testing.T) {
 	rec := f.cancel(t, f.office.token, first)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	cancelled := decodeSchoolPortalData[struct {
-		ID     int64  `json:"id"`
+		ID     wireID `json:"id"`
 		Status string `json:"status"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, first, cancelled.ID)
+	assert.Equal(t, first, int64(cancelled.ID))
 	assert.Equal(t, "cancelled", cancelled.Status)
 
 	assert.Equal(t, []int64{4500, 2250, 4500}, f.contributionVersions(t, second),
@@ -100,7 +101,7 @@ func TestCancellationKeepsTheRestOfALargerGroupTogether(t *testing.T) {
 
 	groups := f.siblingGroups(t)
 	require.Len(t, groups, 1)
-	assert.Equal(t, []int64{second, third}, groups[0].RegistrationIDs)
+	assert.Equal(t, []int64{second, third}, testpkg.IDs(groups[0].RegistrationIDs))
 	assert.Equal(t, int64(4500), f.cancelledContribution(t, second).TotalCents, "the second child moves up to the first")
 	assert.Equal(t, int64(2250), f.cancelledContribution(t, third).TotalCents)
 	action, siblings := f.lastHistory(t, first)
@@ -120,8 +121,8 @@ func TestCancellationComputesAnInvoicedSiblingAgainAndShowsTheCorrection(t *test
 	require.Equal(t, http.StatusOK, f.confirmWith(t, second, nil).Code)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.False(t, f.cancelledContribution(t, second).CorrectionNeeded, "the invoice bills what the group ranks")
 
@@ -140,16 +141,16 @@ func TestCancellationComputesAnInvoicedSiblingAgainAndShowsTheCorrection(t *test
 	// Review of #5671: the Träger-Büro cancels the invoice, as the page
 	// asks, and the next run bills the new contribution.
 	var invoice int64
-	for _, document := range correctedRun(t, f, billing, run.ID).Documents {
-		if document.Kind == "invoice" && document.RegistrationID == second {
-			invoice = document.ID
+	for _, document := range correctedRun(t, f, billing, int64(run.ID)).Documents {
+		if document.Kind == "invoice" && int64(document.RegistrationID) == second {
+			invoice = int64(document.ID)
 		}
 	}
 	require.NotZero(t, invoice)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, invoice), map[string]any{"reason": "Geschwister storniert"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), invoice), map[string]any{"reason": "Geschwister storniert"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.False(t, f.cancelledContribution(t, second).CorrectionNeeded, "no valid invoice, nothing to check")
-	next := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	next := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	assert.Equal(t, 1, next.PreviewCount)
 	assert.Equal(t, int64(4500), next.PreviewCents, "the replacement invoice bills the full price")
 }
@@ -172,8 +173,8 @@ func TestCancellationShowsTheCorrectionOfACostTakeover(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.True(t, f.cancelledContribution(t, second).Invoiced)
 	assert.False(t, f.cancelledContribution(t, second).CorrectionNeeded, "the invoice bills what the group ranks")
@@ -284,8 +285,8 @@ func TestRuleChangeRaisesNoCorrectionHintWithoutSiblings(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, alone, map[string]any{"benefits_exemption": true}).Code)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, fmt.Sprintf("%s/%d", contributionRulesPath, exemption.ID), nil)

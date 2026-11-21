@@ -1037,11 +1037,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/internal/application/ActivityService.GetSchedule",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/internal/application/ActivityService.GetSupervisor",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

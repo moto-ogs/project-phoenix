@@ -30,7 +30,6 @@ import type { TeacherHint } from "~/lib/student-helpers";
 import type {
   ActiveSupervisionRoom,
   ActiveSupervisionStudent,
-  MinimalActiveGroup,
   OpenRoomView,
   SchulhofStatusResponse,
   SupervisionSessionInfo,
@@ -93,7 +92,6 @@ export interface SupervisionDashboard {
   readonly myGroupRooms: string[];
   readonly myGroupIds: string[];
   readonly groupNameToIdMap: Map<string, string>;
-  readonly cachedActiveGroups: MinimalActiveGroup[];
   readonly schulhofStatus: SchulhofStatusResponse | null;
   /**
    * Every permanently released room, in the order the backend reports them.
@@ -323,20 +321,6 @@ export function useSupervisionDashboard(
     () => snapshot?.educationalGroups.map((group) => group.id) ?? [],
     [snapshot],
   );
-
-  const cachedActiveGroups = useMemo<MinimalActiveGroup[]>(() => {
-    if (!snapshot || snapshot.supervisedGroups.length === 0) return [];
-    return [
-      ...snapshot.supervisedGroups.map((g) => ({
-        id: g.id,
-        room: g.room ? { name: g.room.name } : undefined,
-      })),
-      ...snapshot.unclaimedGroups.map((g) => ({
-        id: g.id,
-        room: g.room,
-      })),
-    ];
-  }, [snapshot]);
 
   const plannedNow = useMemo(() => snapshot?.plannedNow ?? [], [snapshot]);
 
@@ -849,7 +833,6 @@ export function useSupervisionDashboard(
     myGroupRooms,
     myGroupIds,
     groupNameToIdMap,
-    cachedActiveGroups,
     schulhofStatus,
     openRooms,
     webSpontaneousActivitiesEnabled,

@@ -23,9 +23,9 @@ import (
 )
 
 type accidentReportAnswer struct {
-	ID             int64  `json:"id"`
-	StudentID      int64  `json:"student_id"`
-	Category       string `json:"category"`
+	ID             testpkg.ID `json:"id"`
+	StudentID      testpkg.ID `json:"student_id"`
+	Category       string     `json:"category"`
 	AccidentReport struct {
 		Status       string  `json:"status"`
 		SupersedesID *string `json:"supersedes_id"`
@@ -50,7 +50,9 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.NoError(t, err)
 	tc.resource.StudentDocumentService = documents
 	tc.resource.StudentAccidentReports = reports
-	tc.resource.DocumentStorage = api.NewStudentDocumentStorage(api.TestUploadFileKeys(), nativeUploads.UploadFiles{})
+	uploadFiles, err := nativeUploads.NewUploadFiles(nativeUploads.NewLocal(t.TempDir()))
+	require.NoError(t, err)
+	tc.resource.DocumentStorage = api.NewStudentDocumentStorage(api.TestUploadFileKeys(), uploadFiles)
 	child := testpkg.CreateTestStudent(t, tc.db, "Unfall", "Kind", "U1")
 	actor := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("accident-routes-%d@example.com", child.ID))
 	claims := testutil.AdminTestClaims(int(actor.ID))
@@ -77,7 +79,7 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	base := fmt.Sprintf("/%d/accident-reports", child.ID)
 
 	created := send(http.MethodPost, base, report("Prellung"), http.StatusCreated)
-	assert.Equal(t, child.ID, created.StudentID)
+	assert.Equal(t, child.ID, int64(created.StudentID))
 	assert.Equal(t, "unfallanzeige", created.Category)
 	assert.Equal(t, "open", created.AccidentReport.Status)
 
@@ -104,15 +106,48 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var deleted struct {
 		Data struct {
-			StudentID int64 `json:"student_id"`
+			StudentID testpkg.ID `json:"student_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &deleted))
-	assert.Equal(t, child.ID, deleted.Data.StudentID)
+	assert.Equal(t, child.ID, int64(deleted.Data.StudentID))
 	var open int
 	require.NoError(t, tc.db.NewSelect().TableExpr("users.student_documents").ColumnExpr("COUNT(*)").
 		Where("student_id = ? AND deleted_at IS NULL", child.ID).Scan(testpkg.Ctx(t), &open))
 	assert.Equal(t, 1, open, "the signed report stays, the open correction is gone")
+
+	paperReport := send(http.MethodPost, base, report("Prellung"), http.StatusCreated)
+	// A valid scan is stored and answers with the same report's document ID.
+	var scan bytes.Buffer
+	scanForm := multipart.NewWriter(&scan)
+	scanPart, err := scanForm.CreatePart(map[string][]string{
+		"Content-Disposition": {`form-data; name="file"; filename="Unfallanzeige.png"`},
+		"Content-Type":        {"image/png"},
+	})
+	require.NoError(t, err)
+	imageBytes, err := base64.StdEncoding.DecodeString(accidentSignaturePNG(t))
+	require.NoError(t, err)
+	_, err = scanPart.Write(imageBytes)
+	require.NoError(t, err)
+	require.NoError(t, scanForm.Close())
+	scanRequest := testutil.NewRequest(http.MethodPost, fmt.Sprintf("%s/%d/paper-copy", base, paperReport.ID), &scan)
+	scanRequest.Header.Set("Content-Type", scanForm.FormDataContentType())
+	storedScan := authExec(t, tc, scanRequest, claims, perms)
+	require.Equal(t, http.StatusCreated, storedScan.Code, storedScan.Body.String())
+	var scanAnswer struct {
+		Data struct {
+			ID          testpkg.ID `json:"id"`
+			Filename    string     `json:"filename"`
+			ContentType string     `json:"content_type"`
+			HasFile     bool       `json:"has_file"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(storedScan.Body.Bytes(), &scanAnswer))
+	require.Equal(t, paperReport.ID, scanAnswer.Data.ID)
+
+	require.Equal(t, "Unfallanzeige.png", scanAnswer.Data.Filename)
+	require.Equal(t, "image/png", scanAnswer.Data.ContentType)
+	require.True(t, scanAnswer.Data.HasFile)
 }
 
 // accidentPaperCopyRequest uploads a valid Word document as the paper copy.

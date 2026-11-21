@@ -83,6 +83,7 @@ import {
 import { TRAEGER_HOLIDAY_TAB } from "~/lib/traeger-payment-text";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { labelOf } from "~/lib/label-of";
 
 // The direct debit file of a released run (#4697) loads with the run.
 const SepaDebitCard = dynamic(
@@ -411,8 +412,8 @@ export default function TraegerBillingRunPage() {
         <>
           {run ? (
             <StatusBadge
-              label={BILLING_RUN_STATUS_LABELS[run.status]}
-              tone={BILLING_RUN_STATUS_TONES[run.status]}
+              label={labelOf(BILLING_RUN_STATUS_LABELS, run.status, "–")}
+              tone={labelOf(BILLING_RUN_STATUS_TONES, run.status, "gray")}
             />
           ) : null}
           {empty ? (

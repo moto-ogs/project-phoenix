@@ -13,33 +13,35 @@ import {
   CONTACT_METHODS,
   LANGUAGE_PREFERENCES,
   PHONE_TYPE_LABELS,
-  type BackendGuardianProfile,
-  type BackendGuardianWithRelationship,
   type StudentGuardianLinkRequest,
   type Guardian,
-  type BackendPhoneNumber,
   type PhoneNumberCreateRequest,
   type PhoneNumberUpdateRequest,
 } from "./guardian-helpers";
+import type {
+  GuardianResponse,
+  GuardianWithRelationship as GuardianWithRelationshipWire,
+  PhoneNumberResponse,
+} from "./contract/guardians.generated";
 
 describe("guardian-helpers", () => {
   describe("mapGuardianResponse", () => {
     it("maps all fields from backend to frontend format", () => {
-      const backendData: BackendGuardianProfile = {
-        id: 123,
+      const backendData: GuardianResponse = {
+        id: "123",
         first_name: "John",
         last_name: "Doe",
         email: "john.doe@example.com",
         phone_numbers: [
           {
-            id: 1,
+            id: "1",
             phone_number: "030-12345678",
             phone_type: "home",
             is_primary: true,
             priority: 1,
           },
           {
-            id: 2,
+            id: "2",
             phone_number: "0170-12345678",
             phone_type: "mobile",
             is_primary: false,
@@ -53,7 +55,7 @@ describe("guardian-helpers", () => {
         language_preference: "de",
         notes: "Some notes",
         has_account: true,
-        account_id: 456,
+        account_id: "456",
       };
 
       const result = mapGuardianResponse(backendData);
@@ -93,8 +95,8 @@ describe("guardian-helpers", () => {
     });
 
     it("converts numeric id to string", () => {
-      const backendData: BackendGuardianProfile = {
-        id: 999,
+      const backendData: GuardianResponse = {
+        id: "999",
         first_name: "Jane",
         last_name: "Smith",
         preferred_contact_method: "phone",
@@ -109,8 +111,8 @@ describe("guardian-helpers", () => {
     });
 
     it("handles optional fields when undefined", () => {
-      const backendData: BackendGuardianProfile = {
-        id: 1,
+      const backendData: GuardianResponse = {
+        id: "1",
         first_name: "Test",
         last_name: "User",
         preferred_contact_method: "email",
@@ -137,8 +139,8 @@ describe("guardian-helpers", () => {
     });
 
     it("handles guardian without account", () => {
-      const backendData: BackendGuardianProfile = {
-        id: 1,
+      const backendData: GuardianResponse = {
+        id: "1",
         first_name: "Test",
         last_name: "User",
         preferred_contact_method: "mobile",
@@ -153,29 +155,63 @@ describe("guardian-helpers", () => {
     });
   });
 
+  // Open enums and nullable objects of the contract (#2353).
+  describe("unknown contract values", () => {
+    it("leaves a phone type this build does not know undefined", () => {
+      const phone = mapPhoneNumberResponse({
+        id: "1",
+        phone_number: "030-1",
+        phone_type: "fax",
+        is_primary: true,
+        priority: 1,
+      });
+      expect(phone.phoneType).toBeUndefined();
+    });
+
+    it("maps a link without its guardian profile to null", () => {
+      expect(
+        mapGuardianWithRelationshipResponse({
+          guardian: null,
+          relationship_id: "10",
+          relationship_type: "parent",
+          guardian_role: "primary_guardian",
+          is_primary: true,
+          is_emergency_contact: false,
+          can_pickup: true,
+          emergency_priority: 1,
+          is_payer: false,
+          account_status: "active",
+        }),
+      ).toBeNull();
+    });
+  });
+
   describe("mapGuardianWithRelationshipResponse", () => {
     it("maps guardian with relationship data", () => {
-      const backendData: BackendGuardianWithRelationship = {
+      const backendData: GuardianWithRelationshipWire = {
         guardian: {
-          id: 100,
+          id: "100",
           first_name: "Parent",
           last_name: "One",
           email: "parent@example.com",
           preferred_contact_method: "email",
           language_preference: "de",
           has_account: true,
-          account_id: 200,
+          account_id: "200",
         },
-        relationship_id: 50,
+        relationship_id: "50",
         relationship_type: "parent",
         is_primary: true,
         is_emergency_contact: true,
         can_pickup: true,
         pickup_notes: "Usually picks up at 15:00",
         emergency_priority: 1,
+        guardian_role: "",
+        is_payer: false,
+        account_status: "",
       };
 
-      const result = mapGuardianWithRelationshipResponse(backendData);
+      const result = mapGuardianWithRelationshipResponse(backendData)!;
 
       expect(result).toEqual({
         id: "100",
@@ -207,48 +243,53 @@ describe("guardian-helpers", () => {
     });
 
     it("carries the payment mark through", () => {
-      const backendData: BackendGuardianWithRelationship = {
+      const backendData: GuardianWithRelationshipWire = {
         guardian: {
-          id: 101,
+          id: "101",
           first_name: "Payer",
           last_name: "One",
           preferred_contact_method: "email",
           language_preference: "de",
           has_account: false,
         },
-        relationship_id: 51,
+        relationship_id: "51",
         relationship_type: "parent",
         is_primary: true,
         is_emergency_contact: false,
         can_pickup: true,
         is_payer: true,
         emergency_priority: 1,
+        guardian_role: "",
+        account_status: "",
       };
 
-      expect(mapGuardianWithRelationshipResponse(backendData).isPayer).toBe(
+      expect(mapGuardianWithRelationshipResponse(backendData)!.isPayer).toBe(
         true,
       );
     });
 
     it("handles non-primary, non-emergency guardian", () => {
-      const backendData: BackendGuardianWithRelationship = {
+      const backendData: GuardianWithRelationshipWire = {
         guardian: {
-          id: 1,
+          id: "1",
           first_name: "Relative",
           last_name: "Person",
           preferred_contact_method: "phone",
           language_preference: "en",
           has_account: false,
         },
-        relationship_id: 10,
+        relationship_id: "10",
         relationship_type: "relative",
         is_primary: false,
         is_emergency_contact: false,
         can_pickup: false,
         emergency_priority: 3,
+        guardian_role: "",
+        is_payer: false,
+        account_status: "",
       };
 
-      const result = mapGuardianWithRelationshipResponse(backendData);
+      const result = mapGuardianWithRelationshipResponse(backendData)!;
 
       expect(result.isPrimary).toBe(false);
       expect(result.isEmergencyContact).toBe(false);
@@ -538,8 +579,8 @@ describe("guardian-helpers", () => {
 
   describe("mapPhoneNumberResponse", () => {
     it("maps all fields from backend to frontend format", () => {
-      const backendData: BackendPhoneNumber = {
-        id: 42,
+      const backendData: PhoneNumberResponse = {
+        id: "42",
         phone_number: "+49 30 123456",
         phone_type: "work",
         label: "Büro",
@@ -560,8 +601,8 @@ describe("guardian-helpers", () => {
     });
 
     it("converts numeric id to string", () => {
-      const backendData: BackendPhoneNumber = {
-        id: 999,
+      const backendData: PhoneNumberResponse = {
+        id: "999",
         phone_number: "030-123456",
         phone_type: "home",
         is_primary: false,
@@ -575,8 +616,8 @@ describe("guardian-helpers", () => {
     });
 
     it("handles undefined label", () => {
-      const backendData: BackendPhoneNumber = {
-        id: 1,
+      const backendData: PhoneNumberResponse = {
+        id: "1",
         phone_number: "0170-123456",
         phone_type: "mobile",
         is_primary: true,

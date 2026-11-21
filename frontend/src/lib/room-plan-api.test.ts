@@ -22,7 +22,7 @@ describe("fetchRoomPlanBlocks (#4768)", () => {
         data: {
           instances: [
             {
-              id: 41,
+              id: "41",
               date: "2026-09-09",
               start_time: "14:00",
               end_time: "15:00",
@@ -30,10 +30,10 @@ describe("fetchRoomPlanBlocks (#4768)", () => {
               status: "cancelled",
               group_name: "Sonnengruppe",
               cancel_reason: "Krank",
-              room_id: 3,
+              room_id: "3",
             },
             {
-              id: 12,
+              id: "12",
               date: "2026-09-09",
               start_time: "12:00",
               end_time: "13:00",

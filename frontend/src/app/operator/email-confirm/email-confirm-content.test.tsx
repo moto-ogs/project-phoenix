@@ -417,7 +417,7 @@ describe("EmailConfirmContent", () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ success: true }),
+      json: async () => ({ status: "success" }),
     });
     setQueryToken("strict-token");
 
@@ -448,7 +448,7 @@ describe("EmailConfirmContent", () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ success: true }),
+      json: async () => ({ status: "success" }),
     });
     setQueryToken("back-token");
 

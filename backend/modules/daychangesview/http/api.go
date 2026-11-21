@@ -32,12 +32,14 @@ func RouteContracts() []common.RouteContract {
 		Response: daychangesview.Overview{},
 		Enums: []common.EnumContract{
 			{Type: daychangesview.Section(""), Values: []string{string(daychangesview.SectionYou), string(daychangesview.SectionSchool)}},
-			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceNotices)}},
+			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceNotices), string(daychangesview.SourceActivities)}},
 			{Type: daychangesview.SourceState(""), Values: []string{string(daychangesview.SourceLoaded), string(daychangesview.SourceFailed)}},
 			{Type: daychangesview.Kind(""), Values: []string{
 				string(daychangesview.KindStaffAbsent), string(daychangesview.KindStaffAbsentCount),
 				string(daychangesview.KindGroupSubstitution), string(daychangesview.KindGroupSubstitutionCount),
 				string(daychangesview.KindStaffNotice),
+				string(daychangesview.KindActivityCancelled), string(daychangesview.KindActivityReinstated),
+				string(daychangesview.KindActivityRoomChanged), string(daychangesview.KindActivityLeadChanged),
 			}},
 			{Type: daychangesview.PersonRole(""), Values: []string{
 				string(daychangesview.RoleAbsent), string(daychangesview.RoleSubstitute), string(daychangesview.RoleReplaced),
@@ -45,7 +47,7 @@ func RouteContracts() []common.RouteContract {
 			{Type: daychangesview.LinkTarget(""), Values: []string{
 				string(daychangesview.LinkStaffAbsences), string(daychangesview.LinkStaffMember), string(daychangesview.LinkOwnAbsences),
 				string(daychangesview.LinkStaffList), string(daychangesview.LinkGroupHandovers),
-				string(daychangesview.LinkStaffNotices),
+				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkDayPlan),
 			}},
 			{Type: daychangesview.NoticePriority(""), Values: []string{
 				string(daychangesview.NoticeInfo), string(daychangesview.NoticeImportant),

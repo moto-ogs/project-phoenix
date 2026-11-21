@@ -130,11 +130,9 @@ describe("caterer second factor (#4497)", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        Response.json({ success: true, message: "Success", data: [device] }),
+        Response.json({ status: "success", data: [device] }),
       )
-      .mockResolvedValueOnce(
-        Response.json({ success: true, message: "Success", data: null }),
-      )
+      .mockResolvedValueOnce(Response.json({ status: "success", data: null }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     global.fetch = fetchMock as unknown as typeof global.fetch;
 

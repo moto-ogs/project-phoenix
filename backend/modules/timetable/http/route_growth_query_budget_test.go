@@ -261,14 +261,14 @@ func TestStudentDayPopulatedGrowthQueryBudget(t *testing.T) {
 		response := doGrowthGet(t, router, fmt.Sprintf("/student/%d/day?date=%s", s.StudentID, date))
 		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 		var body struct {
-			StudentID int64  `json:"student_id"`
-			Date      string `json:"date"`
+			StudentID testpkg.ID `json:"student_id"`
+			Date      string     `json:"date"`
 			Instances []struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"instances"`
 		}
 		decodeGrowthEnvelope(t, response, &body)
-		require.Equal(t, s.StudentID, body.StudentID)
+		require.Equal(t, s.StudentID, int64(body.StudentID))
 		require.Equal(t, date.String(), body.Date)
 		require.Len(t, body.Instances, n)
 		require.Zero(t, counter.WriteRows())

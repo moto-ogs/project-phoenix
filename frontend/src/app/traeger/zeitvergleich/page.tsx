@@ -196,7 +196,7 @@ function schoolColumns(
           >
             {school.schoolName}
           </NavigationLink>
-          {school.dataFrom > to ? (
+          {school.dataFrom === null || school.dataFrom > to ? (
             <span className="block text-sm text-gray-500">
               Keine Check-ins mehr gespeichert
             </span>

@@ -133,29 +133,19 @@ describe("one backend call for every portal route", () => {
 });
 
 describe("one response contract", () => {
-  it("answers the envelope's data, or the whole body with raw", async () => {
-    fetchMock
-      .mockResolvedValueOnce(json({ status: "success", data: [1] }))
-      .mockResolvedValueOnce(
-        json({ status: "success", data: [1], pagination: { page: 1 } }),
-      );
-
-    const unwrapped = await portal.proxyGet("/x")(
-      request("/api/x"),
-      createMockContext(),
+  it("answers the backend's data in the backend's envelope", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({ status: "success", data: [1], message: "ok" }),
     );
-    const raw = await portal.proxyGet("/x", { raw: true })(
+
+    const response = await portal.proxyGet("/x")(
       request("/api/x"),
       createMockContext(),
     );
 
-    await expect(unwrapped.json()).resolves.toEqual({
-      success: true,
-      message: "Success",
+    await expect(response.json()).resolves.toEqual({
+      status: "success",
       data: [1],
-    });
-    await expect(raw.json()).resolves.toMatchObject({
-      data: { pagination: { page: 1 } },
     });
   });
 

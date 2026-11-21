@@ -117,14 +117,14 @@ func TestListPendingAbsences_IncludesQuestionStatus(t *testing.T) {
 
 	var resp struct {
 		Data []struct {
-			ID     int64  `json:"id"`
-			Status string `json:"status"`
+			ID     testpkg.ID `json:"id"`
+			Status string     `json:"status"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 	found := false
 	for _, row := range resp.Data {
-		if row.ID == absenceID {
+		if int64(row.ID) == absenceID {
 			found = true
 			assert.Equal(t, absenceStatusQuestn, row.Status)
 		}

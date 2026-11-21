@@ -1,4 +1,3 @@
-import api from "./api-transport";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "AuthService" });
@@ -7,16 +6,11 @@ import {
   mapPermissionResponse,
   type Role,
   type Permission,
-  type BackendRole,
-  type BackendPermission,
+  type RoleWire,
+  type PermissionWire,
 } from "./auth-helpers";
 import { apiErrorFromText } from "./api-error";
-
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+import type { ApiResponse } from "./api-envelope";
 
 type HttpMethod = "GET" | "PUT";
 
@@ -27,8 +21,6 @@ interface AuthFetchOptions<TBackend, TFrontend> {
   body?: unknown;
   /** Map backend response to frontend type. If omitted, returns void. */
   mapper?: (data: TBackend) => TFrontend;
-  /** Whether this endpoint requires authentication (default: true) */
-  requiresAuth?: boolean;
   /** Custom error message prefix for logging */
   errorPrefix?: string;
   /** Extract data from nested response structure (default: extract from .data) */
@@ -87,27 +79,8 @@ async function executeBrowserFetch<TBackend>(
 }
 
 /**
- * Execute axios request in server context.
- */
-async function executeServerFetch<TBackend>(
-  url: string,
-  method: HttpMethod,
-  body: unknown,
-  requiresAuth: boolean,
-): Promise<ApiResponse<TBackend>> {
-  const config = requiresAuth ? undefined : {};
-
-  switch (method) {
-    case "GET":
-      return (await api.get<ApiResponse<TBackend>>(url, config)).data;
-    case "PUT":
-      return (await api.put<ApiResponse<TBackend>>(url, body, config)).data;
-  }
-}
-
-/**
  * Generic helper for auth service API calls.
- * Handles proxy vs direct API calls, authentication, error handling, and response mapping.
+ * Calls the BFF route under /api; handles error handling and response mapping.
  */
 async function authFetch<TBackend, TFrontend = void>(
   endpoint: string,
@@ -117,44 +90,28 @@ async function authFetch<TBackend, TFrontend = void>(
     method = "GET",
     body,
     mapper,
-    requiresAuth = true,
     errorPrefix = endpoint,
     extractData,
   } = options;
 
-  const useProxyApi = globalThis.window !== undefined;
   const url = `/api${endpoint}`;
 
   try {
-    let backendData: TBackend;
+    const responseData = await executeBrowserFetch<unknown>(
+      url,
+      method,
+      BROWSER_HEADERS,
+      body,
+      errorPrefix,
+    );
 
-    if (useProxyApi) {
-      const responseData = await executeBrowserFetch<unknown>(
-        url,
-        method,
-        BROWSER_HEADERS,
-        body,
-        errorPrefix,
-      );
-
-      if (responseData === null) {
-        return undefined as TFrontend;
-      }
-
-      backendData = extractData
-        ? extractData(responseData)
-        : (responseData as ApiResponse<TBackend>).data;
-    } else {
-      const responseData = await executeServerFetch<TBackend>(
-        url,
-        method,
-        body,
-        requiresAuth,
-      );
-
-      // Apply extractData on server path (matches browser behavior)
-      backendData = extractData ? extractData(responseData) : responseData.data;
+    if (responseData === null) {
+      return undefined as TFrontend;
     }
+
+    const backendData = extractData
+      ? extractData(responseData)
+      : (responseData as ApiResponse<TBackend>).data;
 
     return mapper ? mapper(backendData) : (undefined as TFrontend);
   } catch (error) {
@@ -194,9 +151,9 @@ async function authFetchVoid(
  * Extract permissions from nested response structures.
  * Handles: { data: [] }, { data: { data: [] } }
  */
-function extractNestedPermissions(response: unknown): BackendPermission[] {
+function extractNestedPermissions(response: unknown): PermissionWire[] {
   const data = response as {
-    data?: { data?: BackendPermission[] } | BackendPermission[];
+    data?: { data?: PermissionWire[] } | PermissionWire[];
   };
 
   if (
@@ -220,13 +177,13 @@ function extractNestedPermissions(response: unknown): BackendPermission[] {
  * Extract roles from nested response structures.
  * Handles: [], { data: [] }, { data: { data: [] } }
  */
-function extractNestedRoles(response: unknown): BackendRole[] {
+function extractNestedRoles(response: unknown): RoleWire[] {
   if (Array.isArray(response)) {
-    return response as BackendRole[];
+    return response as RoleWire[];
   }
 
   const data = response as {
-    data?: { data?: BackendRole[] } | BackendRole[];
+    data?: { data?: RoleWire[] } | RoleWire[];
   };
 
   if (
@@ -252,13 +209,13 @@ export const authService = {
     if (filters?.name) params.append("name", filters.name);
     const queryString = params.toString();
     const endpoint = queryString ? `/auth/roles?${queryString}` : "/auth/roles";
-    return authFetchList<BackendRole, Role>(endpoint, mapRoleResponse, {
+    return authFetchList<RoleWire, Role>(endpoint, mapRoleResponse, {
       errorPrefix: "Get roles",
     });
   },
 
   getRolePermissions: async (roleId: string): Promise<Permission[]> =>
-    authFetchList<BackendPermission, Permission>(
+    authFetchList<PermissionWire, Permission>(
       `/auth/roles/${roleId}/permissions`,
       mapPermissionResponse,
       {
@@ -288,7 +245,7 @@ export const authService = {
     const endpoint = queryString
       ? `/auth/permissions?${queryString}`
       : "/auth/permissions";
-    return authFetchList<BackendPermission, Permission>(
+    return authFetchList<PermissionWire, Permission>(
       endpoint,
       mapPermissionResponse,
       { errorPrefix: "Get permissions" },
@@ -310,7 +267,7 @@ export const authService = {
     }),
 
   getAccountRoles: async (accountId: string): Promise<Role[]> =>
-    authFetchList<BackendRole, Role>(
+    authFetchList<RoleWire, Role>(
       `/auth/accounts/${accountId}/roles`,
       mapRoleResponse,
       {

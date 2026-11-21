@@ -89,7 +89,7 @@ func TestParentCalendarHTTPFlow_ViewICSAndFeed(t *testing.T) {
 	assert.Equal(t, "Elternabend", listed.Data.Events[0].Title)
 
 	// The guardian downloads the .ics for that appointment.
-	icsPath := "/parent/me/calendar/appointments/" + strconv.FormatInt(apptID, 10) + "/ics"
+	icsPath := "/parent/me/calendar/appointments/" + strconv.FormatInt(int64(apptID), 10) + "/ics"
 	icsReq := httptest.NewRequest(http.MethodGet, icsPath, nil)
 	icsReq.Header.Set("Authorization", "Bearer "+parentToken)
 	icsRR := httptest.NewRecorder()
@@ -131,7 +131,7 @@ func TestParentCalendarHTTPFlow_AnswerAndRotateFeed(t *testing.T) {
 	require.Len(t, created.Data.Recipients, 1)
 	parentToken := parentCalendarToken(t, chain.AccountID)
 
-	respondPath := "/parent/me/calendar/recipients/" + strconv.FormatInt(created.Data.Recipients[0].ID, 10) + "/response"
+	respondPath := "/parent/me/calendar/recipients/" + strconv.FormatInt(int64(created.Data.Recipients[0].ID), 10) + "/response"
 	respondRR := doJSON(t, router, http.MethodPost, respondPath, parentToken, map[string]any{"status": "declined"})
 	require.Equal(t, http.StatusOK, respondRR.Code, respondRR.Body.String())
 	listRR := doJSON(t, router, http.MethodGet, "/parent/me/calendar?from=2026-06-12&to=2026-06-12", parentToken, nil)

@@ -62,8 +62,6 @@ type GroupOperations interface {
 type ScheduleOperations interface {
 	// Schedule operations
 	AddSchedule(ctx context.Context, groupID int64, schedule *Schedule) (*Schedule, error)
-	GetSchedule(ctx context.Context, id int64) (*Schedule, error)
-	GetGroupSchedules(ctx context.Context, groupID int64) ([]*Schedule, error)
 	DeleteSchedule(ctx context.Context, id int64) error
 }
 

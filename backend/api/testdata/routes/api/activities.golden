@@ -7,8 +7,6 @@ GET /api/activities/categories
 GET /api/activities/students/{studentId}
 GET /api/activities/supervisors/available
 GET /api/activities/{id}
-GET /api/activities/{id}/schedules
-GET /api/activities/{id}/schedules/{scheduleId}
 GET /api/activities/{id}/students
 GET /api/activities/{id}/supervisors
 POST /api/activities/

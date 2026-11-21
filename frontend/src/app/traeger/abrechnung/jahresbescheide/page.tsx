@@ -44,6 +44,7 @@ import {
 } from "~/lib/traeger-care-notices-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 // The start dialog loads when it opens.
 const CareNoticeRunStartModal = dynamic(
@@ -76,9 +77,9 @@ function runColumns(
           label={
             run.status === "released" && run.noticeCount === 0
               ? "Abgeschlossen"
-              : NOTICE_RUN_STATUS_LABELS[run.status]
+              : labelOf(NOTICE_RUN_STATUS_LABELS, run.status, "–")
           }
-          tone={NOTICE_RUN_STATUS_TONES[run.status]}
+          tone={labelOf(NOTICE_RUN_STATUS_TONES, run.status, "gray")}
         />
       ),
       stacked: "meta",

@@ -6,12 +6,13 @@
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
 import type {
+  SepaDebit,
   SepaDebitGroup,
   SepaDebitLeft,
   SepaSequenceType,
 } from "~/lib/traeger-sepa-debits-api";
 
-export const SEPA_SEQUENCE_BADGES: Record<
+const SEPA_SEQUENCE_BADGES: Record<
   SepaSequenceType,
   { readonly label: string; readonly tone: StatusBadgeTone }
 > = {
@@ -19,6 +20,19 @@ export const SEPA_SEQUENCE_BADGES: Record<
   RCUR: { label: "Folgelastschrift", tone: "gray" },
   OOFF: { label: "Einmalig", tone: "purple" },
 };
+
+/** The badge of a sequence type; a type this build does not know shows „–“. */
+export function sepaSequenceBadge(type: SepaSequenceType | undefined): {
+  readonly label: string;
+  readonly tone: StatusBadgeTone;
+} {
+  return type ? SEPA_SEQUENCE_BADGES[type] : { label: "–", tone: "gray" };
+}
+
+/** The day a debit is collected, else the day it is due; "" without either. */
+export function debitDay(debit: SepaDebit): string {
+  return debit.collectOn ?? debit.dueOn ?? "";
+}
 
 export const SEPA_DEBIT_LEFT_LABELS: Record<SepaDebitLeft, string> = {
   mandate_missing:
@@ -33,6 +47,8 @@ export const SEPA_DEBIT_LEFT_LABELS: Record<SepaDebitLeft, string> = {
     "Das Mandat ist verfallen: 36 Monate lang wurde nicht abgebucht. Die Familie braucht ein neues Mandat.",
   creditor_changed:
     "Das Mandat gilt für eine frühere Gläubiger-ID. Die Familie braucht ein neues Mandat.",
+  other:
+    "Diese Lastschrift ist nicht in der Datei. Lade die Seite neu, dann siehst du den Grund.",
 };
 
 /** „1 Lastschrift“, „3 Lastschriften“. */
@@ -42,7 +58,11 @@ export function debitCountLabel(count: number): string {
 
 /** The days the bank collects: one date, or the first and how many more. */
 export function collectDatesText(groups: readonly SepaDebitGroup[]): string {
-  const dates = [...new Set(groups.map((group) => group.collectOn))].sort();
+  const dates = [
+    ...new Set(
+      groups.flatMap((group) => (group.collectOn ? [group.collectOn] : [])),
+    ),
+  ].sort();
   const [first] = dates;
   if (!first) return "–";
   if (dates.length === 1) return formatDate(first);

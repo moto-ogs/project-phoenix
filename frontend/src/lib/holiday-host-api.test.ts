@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { ApiError } from "./api-error";
+import type { HostedHolidayWeek as HostedHolidayWeekWire } from "./contract/holiday-weeks.generated";
 import {
   assignHolidayGuestGroup,
   downloadHolidayParticipants,
@@ -32,8 +33,8 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-const BACKEND_WEEK = {
-  id: 51,
+const BACKEND_WEEK: HostedHolidayWeekWire = {
+  id: "51",
   period_name: "Sommerferien 2026",
   starts_on: "2026-09-14",
   ends_on: "2026-09-18",
@@ -42,6 +43,10 @@ const BACKEND_WEEK = {
   care_starts_at: "07:45",
   care_ends_at: "16:00",
   day_participants: [],
+  guest_group_id: null,
+  guests: 0,
+  lunch_offered: false,
+  lunches: null,
 };
 
 describe("holiday host api", () => {
@@ -113,7 +118,7 @@ describe("holiday host api", () => {
           week: BACKEND_WEEK,
           time_models: [
             {
-              id: 61,
+              id: "61",
               name: "bis 13 Uhr",
               starts_at: "08:00",
               ends_at: "13:00",
@@ -123,15 +128,21 @@ describe("holiday host api", () => {
           home_schools: [{ school_id: null, name: "Feriengäste", count: 1 }],
           participants: [
             {
-              child_id: 9,
+              child_id: "9",
               first_name: "Ben",
               last_name: "Muster",
               birth_date: "2016-09-12",
               home_school_id: null,
               home_school_name: "Feriengast (Grundschule Melle)",
-              time_model_id: 61,
+              guest_school_name: "Grundschule Melle",
+              time_model_id: "61",
+              lunch: false,
+              second_guardian: null,
+              answers: null,
+              health: null,
             },
           ],
+          questions: null,
         },
       }),
     );
@@ -159,6 +170,28 @@ describe("holiday host api", () => {
     expect(list.questions).toEqual([]);
   });
 
+  it("reads a week without time models or children, which Go sends as null lists", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        status: "success",
+        data: {
+          week: BACKEND_WEEK,
+          time_models: null,
+          home_schools: null,
+          questions: null,
+          participants: null,
+        },
+      }),
+    );
+
+    const list = await fetchHolidayParticipants("51");
+
+    expect(list.week.id).toBe("51");
+    expect(list.timeModels).toEqual([]);
+    expect(list.homeSchools).toEqual([]);
+    expect(list.participants).toEqual([]);
+  });
+
   it("maps the shared answers and the second guardian of a participant (#5202)", async () => {
     const answers = [
       {
@@ -183,13 +216,13 @@ describe("holiday host api", () => {
           })),
           participants: [
             {
-              child_id: 9,
+              child_id: "9",
               first_name: "Ida",
               last_name: "Sommer",
               birth_date: "2018-03-01",
-              home_school_id: 31,
+              home_school_id: "31",
               home_school_name: "OGS Süd",
-              time_model_id: 61,
+              time_model_id: "61",
               second_guardian: { name: "Tom Zweit", phone: "0170 2222222" },
               answers,
             },
@@ -275,7 +308,7 @@ describe("holiday host api", () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
-        data: [{ ...BACKEND_WEEK, guest_group_id: 7, guests: 2 }],
+        data: [{ ...BACKEND_WEEK, guest_group_id: "7", guests: 2 }],
       }),
     );
 
@@ -289,7 +322,7 @@ describe("holiday host api", () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
-        data: { week_id: 51, group_id: 7, guests: 2, own_children: 3 },
+        data: { week_id: "51", group_id: "7", guests: 2, own_children: 3 },
       }),
     );
 
@@ -328,8 +361,8 @@ describe("holiday host api", () => {
       jsonResponse(200, {
         status: "success",
         data: {
-          student_id: 91,
-          week_id: 51,
+          student_id: "91",
+          week_id: "51",
           starts_on: "2026-09-14",
           ends_on: "2026-09-18",
           time_model_name: "bis 13 Uhr",
@@ -378,22 +411,22 @@ describe("holiday host api", () => {
         status: "success",
         data: [
           {
-            child_id: 901,
+            child_id: "901",
             first_name: "Tom",
             last_name: "Beispiel",
             birth_date: "2017-05-20",
-            week_id: 71,
+            week_id: "71",
             period_name: "Weihnachtsferien 2026",
             starts_on: "2027-01-04",
             ends_on: "2027-01-08",
-            host_school_id: 3,
+            host_school_id: "3",
             host_school_name: "GS Bissendorf",
             time_model_name: "bis 15 Uhr",
             time_model_starts_at: "08:00",
             time_model_ends_at: "15:00",
             days: null,
             assignment: "matched",
-            student_id: 42,
+            student_id: "42",
           },
         ],
       }),
@@ -425,7 +458,7 @@ describe("holiday host api", () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
-        data: [{ student_id: 12, school_name: "OGS Am Park" }],
+        data: [{ student_id: "12", school_name: "OGS Am Park" }],
       }),
     );
 
@@ -440,7 +473,7 @@ describe("holiday host api", () => {
       jsonResponse(200, {
         data: [
           {
-            week_id: 51,
+            week_id: "51",
             period_name: "Sommerferien",
             starts_on: "2026-09-14",
             ends_on: "2026-09-18",
@@ -493,8 +526,8 @@ describe("Feriengruppe vor ihrer Woche", () => {
       jsonResponse(200, {
         data: [
           {
-            group_id: 7,
-            week_id: 51,
+            group_id: "7",
+            week_id: "51",
             starts_on: "2027-01-04",
             ends_on: "2027-01-08",
             guests: 3,
@@ -518,15 +551,15 @@ describe("Feriengruppe vor ihrer Woche", () => {
       jsonResponse(200, {
         data: [
           {
-            group_id: 3,
-            week_id: 50,
+            group_id: "3",
+            week_id: "50",
             starts_on: TEST_CLOCK_TODAY,
             ends_on: testClockDay(4),
             guests: 2,
           },
           {
-            group_id: 7,
-            week_id: 51,
+            group_id: "7",
+            week_id: "51",
             starts_on: upcoming.startsOn,
             ends_on: upcoming.endsOn,
             guests: 3,

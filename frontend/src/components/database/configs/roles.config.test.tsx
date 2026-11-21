@@ -96,7 +96,7 @@ describe("rolesConfig", () => {
       name: "admin",
       description: "Administrator role",
       isSystem: false,
-      permissions: [],
+      permissionNames: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -115,7 +115,7 @@ describe("rolesConfig", () => {
       name: "admin",
       description: "Administrator role",
       isSystem: false,
-      permissions: [],
+      permissionNames: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

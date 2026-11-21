@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { ApiError } from "~/lib/api-error";
+import { presentError } from "~/lib/error-presentation";
 import { ApiResponseError } from "~/lib/api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
 import { contractGet, contractWrite } from "./client.server";
@@ -82,9 +84,13 @@ describe("contractGet", () => {
       data: { name: 7, secret: "Ada Beispiel" },
     });
     const result = await read();
-    expect(!result.ok && result.error.status).toBe(502);
+    expect(!result.ok && result.error).toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
     expect(consoleSpies.error).toHaveBeenCalledWith("contract_decode_failed", {
       route: "GET /api/rows/{id}",
+      write: false,
       issues: ["data.name: invalid_type"],
     });
   });
@@ -160,15 +166,89 @@ describe("contractWrite", () => {
     });
   });
 
-  it("answers 502 for a written answer outside the contract", async () => {
+  it("answers 502 for a written answer outside the contract without inviting a resend", async () => {
+    // The backend has stored the write; general.unavailable would offer
+    // to send it again (#7563).
     mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
     const result = await contractWrite(create, "/api/rows", "token", {});
-    expect(!result.ok && result.error.status).toBe(502);
+    expect(!result.ok && result.error).toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
     expect(consoleSpies.error).toHaveBeenCalledWith("contract_decode_failed", {
       route: "POST /api/rows/",
+      write: true,
       issues: ["data.name: invalid_type"],
     });
   });
+
+  it.each([
+    "/api/students/care-end/preview",
+    "/api/import/students/preview",
+    "/api/search/",
+    "/api/students/arrival-schedules/status",
+    "/api/students/{id}/pickup-schedules/preview",
+    "/api/timetable/lists/options",
+    "/traeger/contract-imports/preview",
+    "/traeger/staff-records/link-preview",
+    "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
+    "/school/parent-letters/letter-preview",
+  ])("keeps an unreadable POST query retryable: %s", async (pattern) => {
+    mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
+    const result = await contractWrite(
+      entry("POST", pattern),
+      pattern,
+      "token",
+      {},
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
+    expect(
+      presentError(
+        new ApiError("Bad Gateway", result.error.status, {
+          code: result.error.code,
+        }),
+        "Vorschau",
+      ),
+    ).toMatchObject({ retryable: true, errorClass: "unavailable" });
+    expect(consoleSpies.error).toHaveBeenCalledWith("contract_decode_failed", {
+      route: `POST ${pattern}`,
+      write: false,
+      issues: ["data.name: invalid_type"],
+    });
+  });
+
+  it.each([
+    "/api/import/students/import",
+    "/auth/staff-preview",
+    "/api/rows/preview",
+  ])(
+    "does not enable retry for a write or an unknown POST: %s",
+    async (pattern) => {
+      mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
+      const result = await contractWrite(
+        entry("POST", pattern),
+        pattern,
+        "token",
+        {},
+      );
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.code).toBe("general.write_answer_unreadable");
+      expect(
+        presentError(
+          new ApiError("Bad Gateway", result.error.status, {
+            code: result.error.code,
+          }),
+          "Änderung",
+        ).retryable,
+      ).toBe(false);
+    },
+  );
 
   it("lets a failure that is no backend response pass through", async () => {
     mockApiPut.mockRejectedValueOnce(new TypeError("aborted"));

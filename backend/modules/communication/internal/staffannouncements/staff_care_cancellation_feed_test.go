@@ -93,12 +93,12 @@ func (f *guardianFeedFixture) cancel(t *testing.T, actor int64, studentIDs ...in
 type guardianFeedResponse struct {
 	Data struct {
 		Entries []struct {
-			ID       int64   `json:"id"`
-			Type     string  `json:"type"`
-			Title    string  `json:"title"`
-			Body     string  `json:"body"`
-			DeepLink string  `json:"deep_link"`
-			ReadAt   *string `json:"read_at"`
+			ID       testpkg.ID `json:"id"`
+			Type     string     `json:"type"`
+			Title    string     `json:"title"`
+			Body     string     `json:"body"`
+			DeepLink string     `json:"deep_link"`
+			ReadAt   *string    `json:"read_at"`
 		} `json:"entries"`
 		UnreadCount int `json:"unread_count"`
 	} `json:"data"`

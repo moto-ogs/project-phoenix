@@ -48,17 +48,16 @@ const createdWithoutEnrichment = {
 type Handler = (...args: unknown[]) => Promise<unknown>;
 
 // Stands for the portal's handlers; makePortalHandlers has its own tests.
+// The catalog proxy answers a Response, which the portal hands on as it is.
 const withBody =
   (handler: Handler) =>
   async (request: NextRequest, context: { params: Promise<unknown> }) =>
-    Response.json({
-      data: await handler(
-        request,
-        await request.json(),
-        "token",
-        await context.params,
-      ),
-    });
+    (await handler(
+      request,
+      await request.json(),
+      "token",
+      await context.params,
+    )) as Response;
 
 describe("POST /api/timetable/instances without enrichment", () => {
   it("reaches the client as the created block, not as a 502", async () => {
@@ -88,9 +87,11 @@ describe("POST /api/timetable/instances without enrichment", () => {
       { title: "Hausaufgaben" },
       expect.anything(),
     );
-    const { data } = (await response.json()) as {
+    const { status, data } = (await response.json()) as {
+      status: string;
       data: BackendEnrichedInstance;
     };
+    expect(status).toBe("success");
     // The page shows the block with what was saved and nothing invented.
     expect(mapInstance(data)).toMatchObject({
       id: "41",

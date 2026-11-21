@@ -28,6 +28,7 @@ import {
 } from "./care-meal-format";
 import { formatEuro } from "./contribution-format";
 import { schoolsConcept } from "~/lib/concepts/schools";
+import { labelOf } from "~/lib/label-of";
 
 const STAND_TONES: Record<MealStandStatus, StatusBadgeTone> = {
   current: "green",
@@ -52,7 +53,9 @@ function columns(currentMonth: string): DataTableColumn<CareMealTariff>[] {
       header: "Abrechnungsart",
       stacked: "field",
       render: (tariff) => (
-        <span className="text-gray-700">{MEAL_MODE_LABELS[tariff.mode]}</span>
+        <span className="text-gray-700">
+          {labelOf(MEAL_MODE_LABELS, tariff.mode, "–")}
+        </span>
       ),
     },
     {
@@ -122,7 +125,10 @@ export function CareMealSchoolCard({
       // The mode that counts this month, in green beside the school.
       titleBadge={
         current ? (
-          <StatusBadge tone="green" label={MEAL_MODE_LABELS[current.mode]} />
+          <StatusBadge
+            tone="green"
+            label={labelOf(MEAL_MODE_LABELS, current.mode, "–")}
+          />
         ) : undefined
       }
       description={

@@ -22,6 +22,7 @@ import {
   STAFF_ONBOARDING_STEP_KEYS,
   type StaffOnboardingStepKey,
 } from "../src/lib/staff-onboarding-api";
+import type { StaffWriteStatus } from "../src/lib/contract/staff-onboarding.generated";
 import { loadSeedAccess } from "../scripts/seed-state";
 import { expect, test } from "./a11y/scan";
 import { Deadline } from "./deadline";
@@ -722,10 +723,8 @@ for (const device of VIEWPORTS) {
           saved.text(),
         );
         expect(saved.ok(), text).toBe(true);
-        const body = JSON.parse(text) as { data?: object };
-        expect(mapStaffOnboardingState(body.data ?? body).doneSteps).toContain(
-          step,
-        );
+        const body = JSON.parse(text) as { data: StaffWriteStatus };
+        expect(mapStaffOnboardingState(body.data).doneSteps).toContain(step);
         const checklist = page.getByRole("region", {
           name: "Erste Schritte mit moto",
         });

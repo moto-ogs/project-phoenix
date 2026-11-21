@@ -188,7 +188,7 @@ async function browserApi(
         });
         return;
       }
-      await route.fulfill({ json: { status: "success", success: true, data } });
+      await route.fulfill({ json: { status: "success", data } });
     },
   );
 }
@@ -257,6 +257,25 @@ test("network guard aborts dedicated-worker CDN imports before sending", async (
   await expect(proof.check()).rejects.toThrow(
     "Requests outside this scenario's explicit allowlist",
   );
+});
+
+// GET /api/auth/tenants is a route file without a dynamic segment: Next
+// hands it `params: undefined`, which the unit tests did not (#7563).
+test("main domain lists the schools to choose from", async ({
+  page,
+  context,
+}) => {
+  const origin = `http://localhost:${port}`;
+  const proof = await observe(context, origin, { analytics: false });
+  const answer = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth/tenants",
+  );
+  await page.goto(`${origin}/`, { waitUntil: "domcontentloaded" });
+  expect((await answer).status()).toBe(200);
+  await page.getByRole("combobox", { name: "Einrichtung" }).click();
+  await visible(page.getByRole("option", { name: "School A" }));
+  await visible(page.getByRole("option", { name: "School B" }));
+  await proof.check("network-school-picker");
 });
 
 for (const analytics of [false, true]) {

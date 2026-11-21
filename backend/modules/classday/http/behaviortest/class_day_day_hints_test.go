@@ -96,7 +96,7 @@ func rowHints(t *testing.T, report map[string]any, studentID int64) []any {
 	rows, _ := report["rows"].([]any)
 	for _, raw := range rows {
 		row, _ := raw.(map[string]any)
-		if id, _ := row["student_id"].(float64); int64(id) == studentID {
+		if testpkg.JSONID(t, row["student_id"]) == studentID {
 			hints, _ := row["day_hints"].([]any)
 			return hints
 		}

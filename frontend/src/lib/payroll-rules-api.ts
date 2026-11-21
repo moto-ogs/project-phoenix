@@ -4,6 +4,7 @@
 // backend writes every change into the settings audit.
 
 import { apiErrorFromResponse } from "./api-error";
+import type { PayrollRulesResponse } from "./contract/staff.generated";
 import { sessionFetch } from "./session-cache";
 
 export type WageTypeUnit = "stunden" | "tage" | "betrag";
@@ -43,25 +44,6 @@ export interface PayrollRules {
   absenceTypes: PayrollAbsenceTypeMapping[];
 }
 
-interface BackendPayrollRules {
-  wage_types: { id: string; name: string; number: string; unit: string }[];
-  surcharge_rules: {
-    id: string;
-    kind: string;
-    window_start_minute: number | null;
-    window_end_minute: number | null;
-    rate_type: string;
-    rate_hundredths: number;
-    wage_type_id: string;
-  }[];
-  absence_types: {
-    id: string;
-    name: string;
-    is_active: boolean;
-    wage_type_id: string | null;
-  }[];
-}
-
 const UNITS: readonly WageTypeUnit[] = ["stunden", "tage", "betrag"];
 const KINDS: readonly SurchargeKind[] = ["nacht", "sonntag", "feiertag"];
 
@@ -73,15 +55,15 @@ function kindOf(value: string): SurchargeKind {
   return KINDS.find((kind) => kind === value) ?? "nacht";
 }
 
-export function mapPayrollRules(data: BackendPayrollRules): PayrollRules {
+export function mapPayrollRules(data: PayrollRulesResponse): PayrollRules {
   return {
-    wageTypes: data.wage_types.map((wageType) => ({
+    wageTypes: (data.wage_types ?? []).map((wageType) => ({
       id: wageType.id,
       name: wageType.name,
       number: wageType.number,
       unit: unitOf(wageType.unit),
     })),
-    surchargeRules: data.surcharge_rules.map((rule) => ({
+    surchargeRules: (data.surcharge_rules ?? []).map((rule) => ({
       id: rule.id,
       kind: kindOf(rule.kind),
       windowStartMinute: rule.window_start_minute,
@@ -90,7 +72,7 @@ export function mapPayrollRules(data: BackendPayrollRules): PayrollRules {
       rateHundredths: rule.rate_hundredths,
       wageTypeId: rule.wage_type_id,
     })),
-    absenceTypes: data.absence_types.map((absenceType) => ({
+    absenceTypes: (data.absence_types ?? []).map((absenceType) => ({
       id: absenceType.id,
       name: absenceType.name,
       isActive: absenceType.is_active,
@@ -126,7 +108,7 @@ export async function fetchPayrollRules(): Promise<PayrollRules> {
       `Failed to fetch payroll rules: ${response.statusText}`,
     );
   }
-  const json = (await response.json()) as { data: BackendPayrollRules };
+  const json = (await response.json()) as { data: PayrollRulesResponse };
   return mapPayrollRules(json.data);
 }
 

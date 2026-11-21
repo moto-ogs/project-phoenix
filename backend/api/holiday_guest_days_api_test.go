@@ -24,7 +24,7 @@ func TestHolidayGuestPlansOnlyBookedDaysAndReconcilesDateChanges(t *testing.T) {
 	require.NoError(t, err)
 	f.confirm(t, f.siblings, "confirm")
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
-	rec := f.assign(t, lead, week.ID, f.group)
+	rec := f.assign(t, lead, int64(week.ID), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var guest struct {
 		StudentID int64

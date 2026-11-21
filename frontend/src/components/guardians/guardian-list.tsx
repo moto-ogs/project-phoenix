@@ -496,7 +496,7 @@ function getPrimaryPhone(
 
 // Helper to get phone label with type and custom label
 function getPhoneLabel(phone: PhoneNumber): string {
-  const typeLabel = PHONE_TYPE_LABELS[phone.phoneType] ?? phone.phoneType;
+  const typeLabel = phone.phoneType ? PHONE_TYPE_LABELS[phone.phoneType] : "–";
   if (phone.label) {
     return `${typeLabel} (${phone.label})`;
   }

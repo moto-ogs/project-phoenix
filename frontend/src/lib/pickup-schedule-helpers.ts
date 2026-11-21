@@ -2,6 +2,30 @@
 import { berlinTodayISO, toISODate as formatDateISO } from "./date-helpers";
 import type { StudentStatusKind } from "./student-status-days-api";
 import type { DepartureMode } from "~/lib/departure-plan";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
+  BulkPickupScheduleRequest,
+  DepartureExceptionResponse,
+  PickupDataResponse,
+  PickupExceptionRequest,
+  PickupExceptionResponse,
+  PickupNoteRequest,
+  PickupNoteResponse,
+  PickupScheduleRequest,
+  PickupScheduleResponse,
+} from "~/lib/contract/students.generated";
+
+// Wire types: the decoded responses of the catalog proxy (#2353).
+export type PickupScheduleWire = PickupScheduleResponse;
+export type PickupExceptionWire = PickupExceptionResponse;
+export type PickupDataWire = PickupDataResponse;
+
+const DEPARTURE_MODES: readonly DepartureMode[] = [
+  "alone",
+  "bus",
+  "pickup",
+  "accompanied",
+];
 
 // Frontend Pickup Schedule Type
 export interface PickupSchedule {
@@ -18,22 +42,6 @@ export interface PickupSchedule {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-}
-
-// Backend Pickup Schedule Response
-export interface BackendPickupSchedule {
-  id: number | string;
-  student_id: number | string;
-  weekday: number;
-  weekday_name: string;
-  pickup_time: string; // HH:MM format
-  notes?: string;
-  source?: string; // "staff" | "care_offering" (#2290)
-  care_offering_id?: string;
-  care_offering_name?: string;
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
 }
 
 // Frontend Pickup Exception Type
@@ -53,21 +61,6 @@ export interface PickupException {
   updatedAt: string;
 }
 
-// Backend Pickup Exception Response
-export interface BackendPickupException {
-  id: number | string;
-  student_id: number | string;
-  exception_date: string; // YYYY-MM-DD format
-  pickup_time?: string; // HH:MM format
-  reason?: string;
-  source?: string; // "staff" or "guardian"
-  excused_from?: string;
-  excused_auto?: boolean;
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
-}
-
 // Frontend Pickup Note Type. A note is either dated (noteDate) or recurs on a
 // weekday (weekday 1-5, #3369). The recurring shape needs no pickup time, so a
 // day the child is not expected can still carry a note.
@@ -82,18 +75,6 @@ export interface PickupNote {
   updatedAt: string;
 }
 
-// Backend Pickup Note Response
-export interface BackendPickupNote {
-  id: number | string;
-  student_id: number | string;
-  note_date?: string; // YYYY-MM-DD format; absent for a recurring note
-  weekday?: number;
-  content: string;
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
-}
-
 // Combined Pickup Data (schedules + exceptions + notes)
 // Abholart eines einzelnen Tages, von der OGS gesetzt oder bestätigt (#3945).
 export type { DepartureMode };
@@ -103,14 +84,6 @@ export interface DepartureException {
   studentId: string;
   exceptionDate: string; // YYYY-MM-DD
   departureMode: DepartureMode;
-  reason?: string;
-}
-
-export interface BackendDepartureException {
-  id: number | string;
-  student_id: number | string;
-  exception_date: string;
-  departure_mode: DepartureMode;
   reason?: string;
 }
 
@@ -128,19 +101,6 @@ export interface DatedPickupSchedule {
   offeringSchedule?: PickupSchedule | null;
 }
 
-// Backend Combined Pickup Data Response
-export interface BackendPickupData {
-  schedules: BackendPickupSchedule[];
-  effective_schedules?: Array<{
-    date: string;
-    schedule: BackendPickupSchedule | null;
-    offering_schedule?: BackendPickupSchedule | null;
-  }>;
-  exceptions: BackendPickupException[];
-  notes: BackendPickupNote[];
-  departure_exceptions?: BackendDepartureException[];
-}
-
 // Request types for creating/updating schedules
 export interface PickupScheduleFormData {
   weekday: number;
@@ -148,23 +108,10 @@ export interface PickupScheduleFormData {
   notes?: string;
 }
 
-// Backend schedule request
-export interface BackendPickupScheduleRequest {
-  weekday: number;
-  pickup_time: string;
-  notes?: string;
-}
-
 // Bulk schedule update request
 export interface BulkPickupScheduleFormData {
   schedules: PickupScheduleFormData[];
   effectiveDate?: string;
-}
-
-// Backend bulk schedule request
-export interface BackendBulkPickupScheduleRequest {
-  schedules: BackendPickupScheduleRequest[];
-  effective_date?: string;
 }
 
 // Request types for creating/updating exceptions
@@ -175,22 +122,10 @@ export interface PickupExceptionFormData {
   reason?: string;
 }
 
-// Backend exception request
-export interface BackendPickupExceptionRequest {
-  exception_date: string;
-  pickup_time?: string;
-  clear_pickup_time?: boolean;
-  reason?: string;
-}
-
 // Request types for creating/updating notes
 export type PickupNoteFormData =
   | { noteDate: string; content: string } // dated, YYYY-MM-DD
   | { weekday: number; content: string }; // recurring, 1-5 (#3369)
-
-// Backend note request
-export type BackendPickupNoteRequest =
-  { note_date: string; content: string } | { weekday: number; content: string };
 
 /** The note of one weekday without a pickup time (#3369). */
 export interface WeekdayNoteEntry {
@@ -201,11 +136,11 @@ export interface WeekdayNoteEntry {
 // Mapping Functions
 
 export function mapPickupScheduleResponse(
-  data: BackendPickupSchedule,
+  data: PickupScheduleWire,
 ): PickupSchedule {
   return {
-    id: data.id.toString(),
-    studentId: data.student_id.toString(),
+    id: data.id,
+    studentId: data.student_id,
     weekday: data.weekday,
     weekdayName: data.weekday_name,
     pickupTime: data.pickup_time,
@@ -213,7 +148,7 @@ export function mapPickupScheduleResponse(
     source: data.source,
     careOfferingId: data.care_offering_id,
     careOfferingName: data.care_offering_name,
-    createdBy: data.created_by.toString(),
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -230,37 +165,37 @@ export function pickupScheduleSourceLabel(
 }
 
 export function mapPickupExceptionResponse(
-  data: BackendPickupException,
+  data: PickupExceptionWire,
 ): PickupException {
   return {
-    id: data.id.toString(),
-    studentId: data.student_id.toString(),
+    id: data.id,
+    studentId: data.student_id,
     exceptionDate: data.exception_date,
     pickupTime: data.pickup_time,
     reason: data.reason,
     source: data.source,
     excusedFrom: data.excused_from,
     excusedAuto: data.excused_auto,
-    createdBy: data.created_by.toString(),
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
 }
 
-export function mapPickupNoteResponse(data: BackendPickupNote): PickupNote {
+export function mapPickupNoteResponse(data: PickupNoteResponse): PickupNote {
   return {
-    id: data.id.toString(),
-    studentId: data.student_id.toString(),
+    id: data.id,
+    studentId: data.student_id,
     noteDate: data.note_date ?? "",
     ...(data.weekday ? { weekday: data.weekday } : {}),
     content: data.content,
-    createdBy: data.created_by.toString(),
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
 }
 
-export function mapPickupDataResponse(data: BackendPickupData): PickupData {
+export function mapPickupDataResponse(data: PickupDataWire): PickupData {
   return {
     schedules: (data.schedules ?? []).map(mapPickupScheduleResponse),
     effectiveSchedules: (data.effective_schedules ?? []).map((dated) => ({
@@ -274,27 +209,34 @@ export function mapPickupDataResponse(data: BackendPickupData): PickupData {
     })),
     exceptions: (data.exceptions ?? []).map(mapPickupExceptionResponse),
     notes: (data.notes ?? []).map(mapPickupNoteResponse),
-    departureExceptions: (data.departure_exceptions ?? []).map(
-      mapDepartureExceptionResponse,
+    // A departure mode this build does not know drops its entry.
+    departureExceptions: (data.departure_exceptions ?? []).flatMap(
+      (exception) => {
+        const mapped = mapDepartureExceptionResponse(exception);
+        return mapped ? [mapped] : [];
+      },
     ),
   };
 }
 
+/** null: a departure mode this build does not know. */
 export function mapDepartureExceptionResponse(
-  data: BackendDepartureException,
-): DepartureException {
+  data: DepartureExceptionResponse,
+): DepartureException | null {
+  const departureMode = knownEnum(DEPARTURE_MODES, data.departure_mode);
+  if (!departureMode) return null;
   return {
-    id: data.id.toString(),
-    studentId: data.student_id.toString(),
+    id: data.id,
+    studentId: data.student_id,
     exceptionDate: data.exception_date,
-    departureMode: data.departure_mode,
+    departureMode,
     reason: data.reason,
   };
 }
 
 export function mapPickupScheduleFormToBackend(
   data: PickupScheduleFormData,
-): BackendPickupScheduleRequest {
+): PickupScheduleRequest {
   return {
     weekday: data.weekday,
     pickup_time: data.pickupTime,
@@ -304,7 +246,7 @@ export function mapPickupScheduleFormToBackend(
 
 export function mapBulkPickupScheduleFormToBackend(
   data: BulkPickupScheduleFormData,
-): BackendBulkPickupScheduleRequest {
+): BulkPickupScheduleRequest & { schedules: PickupScheduleRequest[] } {
   return {
     schedules: data.schedules.map(mapPickupScheduleFormToBackend),
     ...(data.effectiveDate ? { effective_date: data.effectiveDate } : {}),
@@ -313,7 +255,7 @@ export function mapBulkPickupScheduleFormToBackend(
 
 export function mapPickupExceptionFormToBackend(
   data: PickupExceptionFormData,
-): BackendPickupExceptionRequest {
+): PickupExceptionRequest {
   return {
     exception_date: data.exceptionDate,
     pickup_time: data.pickupTime,
@@ -324,7 +266,7 @@ export function mapPickupExceptionFormToBackend(
 
 export function mapPickupNoteFormToBackend(
   data: PickupNoteFormData,
-): BackendPickupNoteRequest {
+): PickupNoteRequest {
   return "weekday" in data
     ? { weekday: data.weekday, content: data.content }
     : { note_date: data.noteDate, content: data.content };

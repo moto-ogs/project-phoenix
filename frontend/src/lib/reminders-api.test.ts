@@ -25,7 +25,7 @@ describe("reminders-api", () => {
       count: 1,
       enabled: true,
     };
-    mockAuthFetch.mockResolvedValue({ success: true, data: payload });
+    mockAuthFetch.mockResolvedValue({ status: "success", data: payload });
 
     const result = await fetchReminders();
 

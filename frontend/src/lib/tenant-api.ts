@@ -5,7 +5,7 @@
  */
 
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
-import { apiErrorFromResponse } from "./api-error";
+import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { clearSessionCache, sessionFetch } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
 import { mapAccountTenant, type AccountTenantBackend } from "./account-tenants";
@@ -355,80 +355,81 @@ export function normalizePresenceMode(raw: unknown): PresenceMode {
 
 /**
  * Resolve a tenant slug to its metadata.
- * This is a public (no-auth) call used before login.
+ * This is a public (no-auth) call used before login. A failed or refused
+ * answer rejects with its code and request ID (#2353); the caller decides
+ * what a missing school means on its screen.
  */
-export async function resolveTenant(slug: string): Promise<TenantInfo | null> {
-  try {
-    const response = await fetch(
-      `/api/tenant/resolve?slug=${encodeURIComponent(slug)}`,
+export async function resolveTenant(slug: string): Promise<TenantInfo> {
+  const response = await transportFetch(
+    `/api/tenant/resolve?slug=${encodeURIComponent(slug)}`,
+  );
+
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      `Failed to resolve tenant: ${response.statusText}`,
     );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const json = (await response.json()) as {
-      status: string;
-      data: TenantResolveResponse;
-    };
-    const data = json.data;
-    return {
-      tenantId: data.tenant_id,
-      slug: data.slug,
-      name: data.name,
-      subdomain: data.subdomain,
-      organizationId: data.organization_id,
-      organizationName: data.organization_name,
-      traegerName: data.traeger_name,
-      hidden: data.hidden === true,
-      settings: data.settings ?? {},
-      presenceMode: normalizePresenceMode(data.presence_mode),
-      studentPhotosEnabled: data.student_photos_enabled === true,
-      ...bookedModuleFields(data.booked_modules),
-      messagingEnabled: data.parent_messaging_enabled === true,
-      parentMessageCardBadgeEnabled:
-        data.parent_message_card_badge_enabled === true,
-      staffMessagingEnabled: data.staff_messaging_enabled === true,
-      displayEnabled: data.display_enabled === true,
-      caldavEnabled: data.caldav_enabled === true,
-      careOfferingsEnabled: data.care_offerings_enabled !== false,
-      attendanceWebEnabled: data.attendance_web_enabled === true,
-      attendanceLogEnabled: data.attendance_log_enabled === true,
-      groupMode: data.group_mode === "open_care" ? "open_care" : "fixed_groups",
-      operationalOverviewScope: normalizeOverviewScope(
-        data.operational_overview_scope,
-      ),
-      attendanceEditScope: normalizeAttendanceEditScope(
-        data.attendance_edit_scope,
-      ),
-      parentRequestReasonPolicy: normalizeReasonPolicy(
-        data.parent_request_reason_policy,
-      ),
-      showTimetableCounts: data.show_timetable_counts !== false,
-      timetableEnabled: data.timetable_enabled !== false,
-      mealPlanEnabled: data.meal_plan_enabled === true,
-      mealRegistrationEnabled: data.meal_registration_enabled === true,
-      waitlistEnabled: data.waitlist_enabled !== false,
-      gradeLevelMax: data.grade_level_max,
-      analyticsEnabled: data.analytics_enabled === true,
-      analyticsFreigabe:
-        data.analytics_enabled === true && data.analytics_freigabe === true,
-      analyticsRecordingSamplePercent: normalizeRecordingSamplePercent(
-        data.analytics_recording_sample_percent,
-      ),
-      earlyCheckoutNoteToleranceMinutes: normalizeEarlyCheckoutTolerance(
-        data.early_checkout_note_enabled,
-        data.early_checkout_note_tolerance_minutes,
-      ),
-      weekendFollowsFriday: data.weekend_follows_friday === true,
-      childrenWithoutCarePlace: data.children_without_care_place === true,
-      childSearchOnlyNavigation: data.child_search_only_navigation === true,
-      simpleStaffNavigation: data.simple_staff_navigation === true,
-      careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
-    };
-  } catch {
-    return null;
   }
+
+  const json = (await response.json()) as {
+    status: string;
+    data: TenantResolveResponse;
+  };
+  const data = json.data;
+  return {
+    tenantId: data.tenant_id,
+    slug: data.slug,
+    name: data.name,
+    subdomain: data.subdomain,
+    organizationId: data.organization_id,
+    organizationName: data.organization_name,
+    traegerName: data.traeger_name,
+    hidden: data.hidden === true,
+    settings: data.settings ?? {},
+    presenceMode: normalizePresenceMode(data.presence_mode),
+    studentPhotosEnabled: data.student_photos_enabled === true,
+    ...bookedModuleFields(data.booked_modules),
+    messagingEnabled: data.parent_messaging_enabled === true,
+    parentMessageCardBadgeEnabled:
+      data.parent_message_card_badge_enabled === true,
+    staffMessagingEnabled: data.staff_messaging_enabled === true,
+    displayEnabled: data.display_enabled === true,
+    caldavEnabled: data.caldav_enabled === true,
+    careOfferingsEnabled: data.care_offerings_enabled !== false,
+    attendanceWebEnabled: data.attendance_web_enabled === true,
+    attendanceLogEnabled: data.attendance_log_enabled === true,
+    groupMode: data.group_mode === "open_care" ? "open_care" : "fixed_groups",
+    operationalOverviewScope: normalizeOverviewScope(
+      data.operational_overview_scope,
+    ),
+    attendanceEditScope: normalizeAttendanceEditScope(
+      data.attendance_edit_scope,
+    ),
+    parentRequestReasonPolicy: normalizeReasonPolicy(
+      data.parent_request_reason_policy,
+    ),
+    showTimetableCounts: data.show_timetable_counts !== false,
+    timetableEnabled: data.timetable_enabled !== false,
+    mealPlanEnabled: data.meal_plan_enabled === true,
+    mealRegistrationEnabled: data.meal_registration_enabled === true,
+    waitlistEnabled: data.waitlist_enabled !== false,
+    gradeLevelMax: data.grade_level_max,
+    analyticsEnabled: data.analytics_enabled === true,
+    analyticsFreigabe:
+      data.analytics_enabled === true && data.analytics_freigabe === true,
+    analyticsRecordingSamplePercent: normalizeRecordingSamplePercent(
+      data.analytics_recording_sample_percent,
+    ),
+    earlyCheckoutNoteToleranceMinutes: normalizeEarlyCheckoutTolerance(
+      data.early_checkout_note_enabled,
+      data.early_checkout_note_tolerance_minutes,
+    ),
+    weekendFollowsFriday: data.weekend_follows_friday === true,
+    childrenWithoutCarePlace: data.children_without_care_place === true,
+    childSearchOnlyNavigation: data.child_search_only_navigation === true,
+    simpleStaffNavigation: data.simple_staff_navigation === true,
+    careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
+  };
 }
 
 /** Public tenant response (no internal IDs) */
@@ -513,7 +514,10 @@ export async function listAvailableTenants(): Promise<TenantSummary[]> {
   // The backend path, through the staff portal's catalog proxy (#2352).
   const response = await sessionFetch("/api/auth/account/tenants");
   if (!response.ok) {
-    return [];
+    throw await apiErrorFromResponse(
+      response,
+      `Failed to list tenants: ${response.statusText}`,
+    );
   }
   const json = (await response.json()) as { data?: AccountTenantBackend[] };
   return (json.data ?? []).map(mapAccountTenant);

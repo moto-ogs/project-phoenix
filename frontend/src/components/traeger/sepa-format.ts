@@ -89,21 +89,27 @@ export function mandateState(
   return { label: "Gültig", tone: "green" };
 }
 
+/** The name of a mandate kind; "–" for a kind this build does not know. */
+export function mandateKindLabel(kind: MandateKind | undefined): string {
+  return kind ? MANDATE_KIND_LABELS[kind] : "–";
+}
+
 /** What the next collection of a mandate is. */
 export function nextDebitLabel(mandate: SepaMandate): string {
   if (mandate.revokedOn) return "–";
   if (mandate.kind === "one_off") return "Einmalige Lastschrift";
+  if (mandate.kind === undefined || mandate.sequence === undefined) return "–";
   return MANDATE_SEQUENCE_LABELS[mandate.sequence];
 }
 
 /** One line of the trail: what happened and where. */
 export function mandateEventLabel(event: SepaMandateEvent): string {
-  const action = ACTION_LABELS[event.action];
+  const action = event.action ? ACTION_LABELS[event.action] : "Eintrag";
   const fields = event.fields
     .map((field) => FIELD_LABELS[field] ?? field)
     .join(", ");
   const what = fields ? `${action}: ${fields}` : action;
-  return `${what} ${SOURCE_LABELS[event.source]}`;
+  return event.source ? `${what} ${SOURCE_LABELS[event.source]}` : what;
 }
 
 /** Who acted in a trail entry: the e-mail of a known account, else its

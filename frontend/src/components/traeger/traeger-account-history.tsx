@@ -25,6 +25,7 @@ import {
 } from "~/lib/traeger-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerAccountHistory" });
 
@@ -81,7 +82,7 @@ const COLUMNS: DataTableColumn<TraegerAccountHistoryEntry>[] = [
     render: (entry) => (
       <span>
         <span className="font-medium text-gray-900">
-          {ACTION_LABELS[entry.action]}
+          {labelOf(ACTION_LABELS, entry.action, "Änderung")}
         </span>
         <span className="block text-gray-600">{historyDetail(entry)}</span>
       </span>

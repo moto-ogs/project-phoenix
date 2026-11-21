@@ -333,6 +333,23 @@ func TestARequestBodyHasOnlyOptionalFields(t *testing.T) {
 	}
 }
 
+// A request field of the strict identifier type is a string in the client
+// and has no decoder: Go reads it (common.ID reads a string or a number), so
+// a legacy request field moves to common.ID without a generator change.
+func TestARequestIdentifierIsAStringWithoutDecoder(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{post(body{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	assert.Equal(t, KindID, fieldsOf(t, doc, "body")["id"].Schema.Kind)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "  id?: string;")
+	assert.Contains(t, source, "    request: requestBody<body>(),")
+	assert.NotContains(t, source, "bodySchema", "a request has no decoder")
+	assert.NotContains(t, source, "int64StringOrNumber", "the answer carries only strict identifiers")
+}
+
 // ownDay is a day type an owner keeps beside calendar.Date: it writes
 // "YYYY-MM-DD" and its zero value as null.
 type ownDay string
@@ -773,4 +790,27 @@ func TestResourceAliasAvoidsReservedWords(t *testing.T) {
 			t.Errorf("resourceAlias(%q) = %q, want %q", resource, got, want)
 		}
 	}
+}
+
+func TestTheModelNamesEveryNumericIdentifierOnTheWire(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{rowRoute()}, rowOptions)
+	require.NoError(t, err)
+	// A register entry and a lax type travel as numbers; a string ID, an ID
+	// sent as a quoted number, a count and a running number do not.
+	assert.Equal(t, []string{"contract.row.Lax", "contract.row.Legacy"}, doc.NumericIDs)
+
+	options := Options{
+		Identifiers: identifiers,
+		NumericIDs:  []string{"contract.presence.Value"},
+		Readers: map[reflect.Type]string{
+			reflect.TypeFor[ownReader](): ReadsLaxIDs, reflect.TypeFor[presence](): ReadsValue,
+		},
+	}
+	wrapper := post(presenceBody{})
+	wrapper.Method = "PUT"
+	doc, err = Build([]Registration{post(ownReader{}), wrapper}, options)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"contract.ownReader.Friend", "contract.presence.Value", "contract.presenceBody.Track"}, doc.NumericIDs,
+		"a reader's fields, a wrapper's value and the field that holds it count too")
 }

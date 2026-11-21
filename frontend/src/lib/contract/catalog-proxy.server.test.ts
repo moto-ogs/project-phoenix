@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
+import { ApiError } from "~/lib/api-error";
+import { presentError } from "~/lib/error-presentation";
+import { ApiResponseError } from "~/lib/api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
 import {
   makeCatalogProxy,
@@ -21,17 +24,18 @@ let sessionReads = 0;
 type Handler = (...args: unknown[]) => Promise<unknown>;
 
 // Stands for the portal's handlers: each reads the session, then runs the
-// handler with the session's token. makePortalHandlers has its own tests;
-// here each request records the options its handler was built with.
+// handler with the session's token and hands a Response on as it is.
+// makePortalHandlers has its own tests; here each request records the
+// options its handler was built with.
 let usedOptions: unknown;
+const answered = (result: unknown) =>
+  result instanceof Response ? result : Response.json({ data: result });
 const noBody =
   (handler: Handler, options?: unknown) =>
   async (request: NextRequest, context: { params: Promise<unknown> }) => {
     sessionReads++;
     usedOptions = options;
-    return Response.json({
-      data: await handler(request, "token", await context.params),
-    });
+    return answered(await handler(request, "token", await context.params));
   };
 const withBody =
   (handler: Handler, options?: unknown) =>
@@ -41,9 +45,9 @@ const withBody =
     // Like parseRequestBody: an empty body reads as {}.
     const text = await request.text();
     const body: unknown = text ? JSON.parse(text) : {};
-    return Response.json({
-      data: await handler(request, body, "token", await context.params),
-    });
+    return answered(
+      await handler(request, body, "token", await context.params),
+    );
   };
 const portal = {
   get: noBody,
@@ -166,9 +170,15 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce({
       status: "success",
       data: { name: "Ada", more: 1 },
+      message: "found",
     });
     const response = await call("GET", ["rows", "a/b"], "?day=2026-09-09");
-    expect(await data(response)).toEqual({ name: "Ada" });
+    // The backend's envelope with the decoded data and its message (#2353).
+    expect(await response.json()).toEqual({
+      status: "success",
+      data: { name: "Ada" },
+      message: "found",
+    });
     // The segment is encoded again, and this route registers no query.
     expect(api).toHaveBeenCalledExactlyOnceWith(
       "GET",
@@ -194,11 +204,10 @@ describe("makeCatalogProxy", () => {
         pagination,
       });
       const response = await call("GET", ["pages"], "?view=names&page=2");
-      // The names variant drops what it does not declare; the portal's
-      // handler passes this envelope through as it is.
-      expect(await data(response)).toEqual({
-        success: true,
-        message: "Success",
+      // The names variant drops what it does not declare; the backend's
+      // envelope passes on with its page.
+      expect(await response.json()).toEqual({
+        status: "success",
         data: [{ name: "Ada" }],
         pagination,
       });
@@ -223,8 +232,9 @@ describe("makeCatalogProxy", () => {
         pagination,
       });
       const response = await call("GET", ["pages"], "?view=other");
-      expect(await data(response)).toMatchObject({
+      expect(await response.json()).toMatchObject({
         data: [{ name: "Ada", age: 7 }],
+        pagination,
       });
     });
   });
@@ -409,10 +419,63 @@ describe("makeCatalogProxy", () => {
     ).rejects.toMatchObject({ status: 502 });
   });
 
+  it("asks to reload instead of resending a stored write whose answer leaves the contract", async () => {
+    api.mockResolvedValueOnce({ status: "success", data: { name: "Ada" } });
+    const refusal = await call("PUT", ["rows", "1", "seen"], "", {
+      on: true,
+    }).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(ApiResponseError);
+    expect((refusal as ApiResponseError).body()).toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
+  });
+
+  it.each([
+    "students/care-end/preview",
+    "students/care-withdrawals/7/care-end/preview",
+  ])("keeps a failed catalog POST query retryable: %s", async (path) => {
+    api.mockResolvedValueOnce({ status: "success", data: null });
+    const handler = makeCatalogProxy(
+      portal,
+      "/api",
+      portalRoutes.tenant,
+      "POST",
+    );
+    const request = new NextRequest(`http://school-a.localhost/api/${path}`, {
+      method: "POST",
+      body: "{}",
+    });
+    const refusal: unknown = await handler(request, {
+      params: Promise.resolve({ path: path.split("/") }),
+    }).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(ApiResponseError);
+    if (!(refusal instanceof ApiResponseError)) return;
+    expect(refusal.body()).toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
+    expect(
+      presentError(
+        new ApiError(
+          "Bad Gateway",
+          refusal.status,
+          refusal.body<{ code: string }>() ?? undefined,
+        ),
+        "Vorschau",
+      ).retryable,
+    ).toBe(true);
+  });
+
   it("refuses an answer outside the contract with 502", async () => {
     api.mockResolvedValueOnce({ status: "success", data: { name: 7 } });
-    await expect(call("GET", ["rows", "1"])).rejects.toMatchObject({
-      status: 502,
+    const refusal = await call("GET", ["rows", "1"]).catch(
+      (error: unknown) => error,
+    );
+    expect(refusal).toMatchObject({ status: 502 });
+    // A read may be sent again.
+    expect((refusal as ApiResponseError).body()).toMatchObject({
+      code: "general.unavailable",
     });
   });
 

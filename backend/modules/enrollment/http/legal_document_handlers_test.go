@@ -42,10 +42,14 @@ func TestUploadLegalDocument_SavesTenantPrefixedPDF(t *testing.T) {
 	req = req.WithContext(tenant.WithTenantID(req.Context(), 42))
 	w := httptest.NewRecorder()
 
-	(&Resource{
+	resource := &Resource{
 		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
-		uploads:  nativeUploads.UploadFiles{}}).uploadLegalDocument(w, req)
+		uploads:  nativeUploads.UploadFiles{}}
+	router := chi.NewRouter()
+	router.Post("/api/enrollment/legal-documents", resource.uploadLegalDocument)
+	req.URL.Path = "/api/enrollment/legal-documents"
+	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	var body struct {

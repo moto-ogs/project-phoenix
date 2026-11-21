@@ -4,8 +4,8 @@ import { apiErrorFromBody, transportFetch } from "./api-error";
 // /api/timetable/closing-days (CRUD via SchedulesRead/Create/Update/Delete).
 
 import { createLogger } from "~/lib/logger";
+import type { ClosingDayResponse } from "./contract/timetable.generated";
 import {
-  type BackendClosingDay,
   type ClosingDay,
   type ClosingDayInput,
   mapClosingDay,
@@ -44,7 +44,7 @@ class ClosingDayService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<BackendClosingDay[]>(response);
+    const raw = await unwrap<ClosingDayResponse[]>(response);
     return mapClosingDays(raw ?? []);
   }
 
@@ -58,7 +58,7 @@ class ClosingDayService {
       credentials: "include",
       body: JSON.stringify(body),
     });
-    const raw = await unwrap<BackendClosingDay>(response);
+    const raw = await unwrap<ClosingDayResponse>(response);
     logger.info("closing_day_created", { closing_day_id: raw.id });
     return mapClosingDay(raw);
   }
@@ -73,7 +73,7 @@ class ClosingDayService {
       credentials: "include",
       body: JSON.stringify(body),
     });
-    const raw = await unwrap<BackendClosingDay>(response);
+    const raw = await unwrap<ClosingDayResponse>(response);
     logger.info("closing_day_updated", { closing_day_id: raw.id });
     return mapClosingDay(raw);
   }

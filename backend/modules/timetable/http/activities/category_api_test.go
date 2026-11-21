@@ -220,7 +220,7 @@ func TestListCategories_ReportsUsageCount(t *testing.T) {
 	for _, raw := range list {
 		entry, entryOK := raw.(map[string]any)
 		require.True(t, entryOK)
-		if int64(entry["id"].(float64)) != activity.CategoryID {
+		if testpkg.JSONID(t, entry["id"]) != activity.CategoryID {
 			continue
 		}
 		found = true

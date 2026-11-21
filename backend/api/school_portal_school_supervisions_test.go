@@ -85,14 +85,14 @@ func instanceIDsInDayList(t *testing.T, body []byte) []int64 {
 	var envelope struct {
 		Data struct {
 			Instances []struct {
-				ID int64 `json:"id"`
+				ID wireID `json:"id"`
 			} `json:"instances"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(body, &envelope), string(body))
 	ids := make([]int64, 0, len(envelope.Data.Instances))
 	for _, inst := range envelope.Data.Instances {
-		ids = append(ids, inst.ID)
+		ids = append(ids, int64(inst.ID))
 	}
 	return ids
 }
@@ -380,12 +380,12 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var absent struct {
 		Data struct {
-			StudentID int64  `json:"student_id"`
+			StudentID wireID `json:"student_id"`
 			Status    string `json:"status"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &absent), rec.Body.String())
-	assert.Equal(t, away.ID, absent.Data.StudentID)
+	assert.Equal(t, away.ID, int64(absent.Data.StudentID))
 	assert.Equal(t, "absent", absent.Data.Status, rec.Body.String())
 
 	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, childPath+"/check-out", nil)
@@ -393,7 +393,7 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	var roster struct {
 		Data struct {
 			Rows []struct {
-				StudentID        int64   `json:"student_id"`
+				StudentID        wireID  `json:"student_id"`
 				CurrentlyPresent bool    `json:"currently_present"`
 				CheckedOutAt     *string `json:"checked_out_at"`
 			} `json:"rows"`
@@ -403,7 +403,7 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	require.Len(t, roster.Data.Rows, 2, "the checked-out child and the absent one")
 	var checkedOut bool
 	for _, row := range roster.Data.Rows {
-		if row.StudentID == child.ID {
+		if int64(row.StudentID) == child.ID {
 			checkedOut = true
 			assert.False(t, row.CurrentlyPresent, rec.Body.String())
 			assert.NotNil(t, row.CheckedOutAt, rec.Body.String())
@@ -415,13 +415,13 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var completed struct {
 		Data struct {
-			ID          int64   `json:"id"`
+			ID          wireID  `json:"id"`
 			Status      string  `json:"status"`
 			CompletedAt *string `json:"completed_at"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &completed), rec.Body.String())
-	assert.Equal(t, mine.ID, completed.Data.ID)
+	assert.Equal(t, mine.ID, int64(completed.Data.ID))
 	assert.Equal(t, "completed", completed.Data.Status, rec.Body.String())
 	assert.NotNil(t, completed.Data.CompletedAt, rec.Body.String())
 }

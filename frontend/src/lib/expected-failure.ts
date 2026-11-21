@@ -17,12 +17,12 @@ export type ExpectedFailure =
 const NETWORK_ERROR =
   /(?:^|: )(?:Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/;
 
-// Some API helpers put the status only into the message.
 // The browser's AbortError text for a request aborted before its response
 // (Safari/Chrome/Firefox wording), optionally prefixed like NETWORK_ERROR.
 const ABORT_ERROR =
   /(?:^|: )(?:The operation was aborted\.?|This operation was aborted|The user aborted a request\.?|signal is aborted without reason|The fetch is aborted)$/;
 
+// Some API helpers put the status only into the message.
 const API_ERROR_STATUS = /API error[:\s(]+(\d{3})/;
 const HTTP_ERROR_STATUS = /^(?:Error: )?HTTP error! status: (\d{3})$/;
 
@@ -46,6 +46,11 @@ export function expectedFailure(
   ) {
     return "network";
   }
+  // A log entry may carry only the text of what was thrown: the browser's
+  // fetch and abort errors have no code or status, and some callers log an
+  // error's message without its status. Text is the only carrier here; the
+  // result picks a log level and decides nothing for the user.
+  /* oxlint-disable error-path/no-error-text-match -- log classification of browser error texts and statuses named in log text, see above */
   const message = typeof context.error === "string" ? context.error : "";
   const status =
     typeof context.status === "number"
@@ -58,6 +63,7 @@ export function expectedFailure(
   if (source !== "client") return null;
   if (NETWORK_ERROR.test(message)) return "network";
   return ABORT_ERROR.test(message) ? "aborted" : null;
+  /* oxlint-enable error-path/no-error-text-match */
 }
 
 /**

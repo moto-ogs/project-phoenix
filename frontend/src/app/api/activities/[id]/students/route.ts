@@ -9,10 +9,12 @@ import {
   mapStudentEnrollmentsResponse,
   type BackendStudentEnrollment,
 } from "~/lib/activity-helpers";
+import { int64StringOrNumber } from "~/lib/contract/runtime";
 
 interface StudentListPage {
   data?: Array<{
-    id: number;
+    // A JSON number today, a decimal string once Go sends strings (ADR 0270).
+    id: number | string;
     first_name: string;
     last_name: string;
     school_class?: string;
@@ -27,6 +29,15 @@ interface StudentListPage {
 
 // Reject oversized/inconsistent responses, never truncate them into a success.
 const MAX_STUDENT_PAGES = 1_000;
+
+/** The student ID as a decimal string, or null unless it is a positive int64. */
+function studentIdOf(value: unknown): string | null {
+  const parsed = int64StringOrNumber.safeParse(value);
+  if (!parsed.success || parsed.data === "0" || parsed.data.startsWith("-")) {
+    return null;
+  }
+  return parsed.data;
+}
 
 function failStudentPagination(reason: string): never {
   logger.error("invalid_student_pagination", { reason });
@@ -61,8 +72,10 @@ async function fetchAllStudents(params: URLSearchParams, token: string) {
     failStudentPagination("invalid pagination bounds");
   }
 
-  const students: NonNullable<StudentListPage["data"]> = [];
-  const seenIds = new Set<number>();
+  const students: Array<
+    NonNullable<StudentListPage["data"]>[number] & { id: string }
+  > = [];
+  const seenIds = new Set<string>();
   for (let page = 1; page <= Math.max(1, totalPages); page++) {
     let response = firstResponse;
     if (page > 1) {
@@ -89,16 +102,12 @@ async function fetchAllStudents(params: URLSearchParams, token: string) {
       failStudentPagination("unexpected page length");
     }
     for (const student of data) {
-      if (
-        !student ||
-        !Number.isSafeInteger(student.id) ||
-        student.id < 1 ||
-        seenIds.has(student.id)
-      ) {
+      const studentId = student ? studentIdOf(student.id) : null;
+      if (!student || studentId === null || seenIds.has(studentId)) {
         failStudentPagination("invalid or repeated student ID");
       }
-      seenIds.add(student.id);
-      students.push(student);
+      seenIds.add(studentId);
+      students.push({ ...student, id: studentId });
     }
   }
   if (students.length !== totalRecords) {
@@ -142,14 +151,14 @@ export const GET = createGetHandler(
           fetchAllStudents(allStudentsParams, token),
         ]);
         const enrolledStudentIds = new Set(
-          (enrolledResponse.data ?? []).map((e) => e.id),
+          (enrolledResponse.data ?? []).map((e) => String(e.id)),
         );
 
         // Filter out enrolled students and format for frontend
         const availableStudents = allStudents
           .filter((student) => !enrolledStudentIds.has(student.id))
           .map((student) => ({
-            id: String(student.id),
+            id: student.id,
             name: `${student.first_name} ${student.last_name}`.trim(),
             school_class: student.school_class ?? "",
           }));
@@ -197,12 +206,10 @@ export const PUT = createPutHandler(
       throw new Error("student_ids array is required");
     }
 
-    // Convert string IDs to numbers for backend
-    const studentIds = body.student_ids.map((id) => Number.parseInt(id, 10));
-
-    // Call backend to update enrollments
+    // Go reads each ID as a decimal string or a number; the strings pass
+    // through unchanged, so no ID is rounded on the way.
     const endpoint = `/api/activities/${encodeURIComponent(id)}/students`;
-    await apiPut(endpoint, token, { student_ids: studentIds });
+    await apiPut(endpoint, token, { student_ids: body.student_ids });
 
     // Return updated enrolled students - call backend directly with token
     const response = await apiGet<{ data: BackendStudentEnrollment[] }>(

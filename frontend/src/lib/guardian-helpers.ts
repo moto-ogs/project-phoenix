@@ -1,23 +1,31 @@
 // Guardian Type Definitions and Mapping Helpers
 
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
+  GuardianPickerResponse,
+  GuardianResponse,
+  GuardianWithRelationship as GuardianWithRelationshipWire,
+  PhoneNumberCreateRequest as PhoneNumberCreateWire,
+  PhoneNumberResponse,
+  PhoneNumberUpdateRequest as PhoneNumberUpdateWire,
+  StudentGuardianLinkRequest as StudentGuardianLinkWire,
+} from "~/lib/contract/guardians.generated";
+
 // Phone Number Types
 export type PhoneType = "mobile" | "home" | "work" | "other";
+
+const PHONE_TYPES: readonly PhoneType[] = ["mobile", "home", "work", "other"];
 
 export interface PhoneNumber {
   id: string;
   phoneNumber: string;
-  phoneType: PhoneType;
+  /**
+   * undefined: a type this build does not know. The list shows „–“; an edit
+   * leaves the stored type unchanged.
+   */
+  phoneType: PhoneType | undefined;
   label?: string;
   isPrimary: boolean;
-  priority: number;
-}
-
-export interface BackendPhoneNumber {
-  id: number | string;
-  phone_number: string;
-  phone_type: PhoneType;
-  label?: string;
-  is_primary: boolean;
   priority: number;
 }
 
@@ -79,38 +87,6 @@ export interface Guardian {
   linkedChildrenCount?: number;
 }
 
-// Backend Guardian Profile Response
-export interface BackendGuardianProfile {
-  id: number | string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone_numbers?: BackendPhoneNumber[]; // Flexible phone numbers
-  address_street?: string;
-  address_city?: string;
-  address_postal_code?: string;
-  preferred_contact_method: string;
-  language_preference: string;
-  notes?: string;
-  has_account: boolean;
-  account_id?: number | string;
-}
-
-// Backend Guardian Picker Response (GET /guardians/search). This is the
-// deliberately minimal, enumeration-resistant projection the picker endpoint
-// emits — NOT a full profile. Address, notes, language, contact method,
-// account, and phone numbers are all withheld server-side; and only a COUNT of
-// other linked children is exposed, never their names (#1513 GDPR
-// minimization). Kept separate from BackendGuardianProfile so callers can't
-// accidentally read fields the picker never sends.
-export interface BackendGuardianPickerResponse {
-  id: number | string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  linked_children_count: number;
-}
-
 // Student-Guardian Relationship
 
 // Backend Student-Guardian Relationship
@@ -147,22 +123,6 @@ export interface GuardianWithRelationship extends Guardian {
   // mapGuardianWithRelationshipResponse), but omittable in test fixtures and
   // older payloads. Consumers default a missing value to "none".
   accountStatus?: GuardianAccountStatus;
-}
-
-// Backend Guardian with Relationship
-export interface BackendGuardianWithRelationship {
-  guardian: BackendGuardianProfile;
-  relationship_id: number | string;
-  relationship_type: string;
-  guardian_role?: string;
-  is_primary: boolean;
-  is_emergency_contact: boolean;
-  can_pickup: boolean;
-  pickup_weekdays?: number[];
-  pickup_notes?: string;
-  emergency_priority: number;
-  is_payer?: boolean;
-  account_status?: GuardianAccountStatus;
 }
 
 // Guardian Create/Update Request
@@ -206,7 +166,7 @@ export interface StudentGuardianPayload {
   emergency_priority: number;
   phone_numbers: Array<{
     phone_number: string;
-    phone_type: PhoneType;
+    phone_type?: PhoneType;
     label?: string;
     is_primary: boolean;
   }>;
@@ -224,39 +184,29 @@ export interface StudentGuardianLinkRequest {
   emergencyPriority: number;
 }
 
-// Backend Student-Guardian Link Request
-interface BackendStudentGuardianLinkRequest {
-  guardian_profile_id: number;
-  relationship_type: string;
-  guardian_role?: GuardianRole;
-  is_primary: boolean;
-  is_emergency_contact: boolean;
-  can_pickup: boolean;
-  pickup_notes?: string;
-  emergency_priority: number;
-}
-
 // Mapping Functions
 
 // Map backend phone number to frontend format
-export function mapPhoneNumberResponse(data: BackendPhoneNumber): PhoneNumber {
+export function mapPhoneNumberResponse(data: PhoneNumberResponse): PhoneNumber {
   return {
-    id: data.id.toString(),
+    id: data.id,
     phoneNumber: data.phone_number,
-    phoneType: data.phone_type,
+    phoneType: knownEnum(PHONE_TYPES, data.phone_type),
     label: data.label,
     isPrimary: data.is_primary,
     priority: data.priority,
   };
 }
 
-export function mapGuardianResponse(data: BackendGuardianProfile): Guardian {
+export function mapGuardianResponse(data: GuardianResponse): Guardian {
   return {
-    id: data.id.toString(),
+    id: data.id,
     firstName: data.first_name,
     lastName: data.last_name,
     email: data.email,
-    phoneNumbers: (data.phone_numbers ?? []).map(mapPhoneNumberResponse),
+    phoneNumbers: (data.phone_numbers ?? []).flatMap((phone) =>
+      phone ? [mapPhoneNumberResponse(phone)] : [],
+    ),
     addressStreet: data.address_street,
     addressCity: data.address_city,
     addressPostalCode: data.address_postal_code,
@@ -264,7 +214,7 @@ export function mapGuardianResponse(data: BackendGuardianProfile): Guardian {
     languagePreference: data.language_preference,
     notes: data.notes,
     hasAccount: data.has_account,
-    accountId: data.account_id?.toString(),
+    accountId: data.account_id,
   };
 }
 
@@ -276,10 +226,10 @@ export function mapGuardianResponse(data: BackendGuardianProfile): Guardian {
 // real data. Use this — never mapGuardianResponse — for picker results, so
 // nothing downstream trusts a field the picker never sent.
 export function mapGuardianPickerResponse(
-  data: BackendGuardianPickerResponse,
+  data: GuardianPickerResponse,
 ): Guardian {
   return {
-    id: data.id.toString(),
+    id: data.id,
     firstName: data.first_name,
     lastName: data.last_name,
     email: data.email,
@@ -291,12 +241,26 @@ export function mapGuardianPickerResponse(
   };
 }
 
+const ACCOUNT_STATUSES: readonly GuardianAccountStatus[] = [
+  "active",
+  "active_no_access",
+  "pending",
+  "link_invalid",
+  "none",
+];
+
+/**
+ * null: a link without its guardian profile. Go always sends the profile;
+ * lists leave such a link out.
+ */
 export function mapGuardianWithRelationshipResponse(
-  data: BackendGuardianWithRelationship,
-): GuardianWithRelationship {
+  data: GuardianWithRelationshipWire,
+): GuardianWithRelationship | null {
+  const guardian = data.guardian;
+  if (!guardian) return null;
   return {
-    ...mapGuardianResponse(data.guardian),
-    relationshipId: data.relationship_id.toString(),
+    ...mapGuardianResponse(guardian),
+    relationshipId: data.relationship_id,
     relationshipType: data.relationship_type,
     guardianRole: normalizeGuardianRole(data.guardian_role),
     isPrimary: data.is_primary,
@@ -305,19 +269,20 @@ export function mapGuardianWithRelationshipResponse(
     ...(data.pickup_weekdays?.length
       ? { pickupWeekdays: data.pickup_weekdays }
       : {}),
-    isPayer: data.is_payer ?? false,
+    isPayer: data.is_payer,
     pickupNotes: data.pickup_notes,
     emergencyPriority: data.emergency_priority,
-    // Fall back to deriving from has_account if the backend omits the field
-    // (older builds): account → active, otherwise none.
+    // A status this build does not know falls back to Go's own derivation
+    // from has_account: account → active, otherwise none.
     accountStatus:
-      data.account_status ?? (data.guardian.has_account ? "active" : "none"),
+      knownEnum(ACCOUNT_STATUSES, data.account_status) ??
+      (guardian.has_account ? "active" : "none"),
   };
 }
 
 export function mapStudentGuardianLinkToBackend(
   data: StudentGuardianLinkRequest,
-): BackendStudentGuardianLinkRequest {
+): StudentGuardianLinkWire {
   return {
     guardian_profile_id: Number.parseInt(data.guardianProfileId),
     relationship_type: data.relationshipType,
@@ -379,7 +344,7 @@ export function getRelationshipTypeLabel(type: string): string {
 // Phone number request types
 export interface PhoneNumberCreateRequest {
   phoneNumber: string;
-  phoneType: PhoneType;
+  phoneType: PhoneType | undefined;
   label?: string;
   isPrimary?: boolean;
 }
@@ -390,23 +355,10 @@ export interface PhoneNumberUpdateRequest {
   label?: string;
 }
 
-interface BackendPhoneNumberCreateRequest {
-  phone_number: string;
-  phone_type: PhoneType;
-  label?: string;
-  is_primary?: boolean;
-}
-
-interface BackendPhoneNumberUpdateRequest {
-  phone_number?: string;
-  phone_type?: PhoneType;
-  label?: string;
-}
-
 // Map phone number create request to backend format
 export function mapPhoneNumberCreateToBackend(
   data: PhoneNumberCreateRequest,
-): BackendPhoneNumberCreateRequest {
+): PhoneNumberCreateWire {
   return {
     phone_number: data.phoneNumber,
     phone_type: data.phoneType,
@@ -418,8 +370,8 @@ export function mapPhoneNumberCreateToBackend(
 // Map phone number update request to backend format
 export function mapPhoneNumberUpdateToBackend(
   data: PhoneNumberUpdateRequest,
-): BackendPhoneNumberUpdateRequest {
-  const result: BackendPhoneNumberUpdateRequest = {};
+): PhoneNumberUpdateWire {
+  const result: PhoneNumberUpdateWire = {};
   if (data.phoneNumber !== undefined) result.phone_number = data.phoneNumber;
   if (data.phoneType !== undefined) result.phone_type = data.phoneType;
   if (data.label !== undefined) result.label = data.label;

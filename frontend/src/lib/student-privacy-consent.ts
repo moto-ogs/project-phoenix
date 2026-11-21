@@ -6,6 +6,7 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import { createLogger } from "./logger";
+import type { PrivacyConsentResponse } from "./contract/students.generated";
 
 const logger = createLogger({ component: "StudentPrivacyConsent" });
 
@@ -25,11 +26,6 @@ export interface ConsentPairInput {
 // The policy version the backend states as its default
 // (studentpresence defaultPrivacyPolicyVersion).
 const POLICY_VERSION = "1.0";
-
-interface BackendConsent {
-  accepted: boolean;
-  data_retention_days: number;
-}
 
 /**
  * The pair a write carries, or null when it carries neither field. The
@@ -78,7 +74,7 @@ async function readStudentConsent(
   studentId: string,
 ): Promise<ConsentPair | null> {
   try {
-    const consent = await bffJson<BackendConsent>(
+    const consent = await bffJson<PrivacyConsentResponse>(
       `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
     );
     return {

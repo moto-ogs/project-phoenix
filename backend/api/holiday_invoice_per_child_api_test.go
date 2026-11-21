@@ -24,18 +24,18 @@ import (
 type holidayChildNumbersBody struct {
 	DebtorNumber string `json:"debtor_number"`
 	Children     []struct {
-		ChildID      int64  `json:"child_id"`
+		ChildID      wireID `json:"child_id"`
 		FirstName    string `json:"first_name"`
 		DebtorNumber string `json:"debtor_number"`
 	} `json:"children"`
 }
 
 type perChildDocumentBody struct {
-	ID                  int64  `json:"id"`
+	ID                  wireID `json:"id"`
 	Kind                string `json:"kind"`
 	Number              string `json:"number"`
-	RegistrationID      int64  `json:"registration_id"`
-	RegistrationChildID int64  `json:"registration_child_id"`
+	RegistrationID      wireID `json:"registration_id"`
+	RegistrationChildID wireID `json:"registration_child_id"`
 	DebtorNumber        string `json:"debtor_number"`
 	ReferenceNumber     string `json:"reference_number"`
 	Children            []struct {
@@ -58,7 +58,7 @@ func setTraegerSetting(t *testing.T, f reviewFixture, key string, value any) {
 
 func holidayChildNumbers(t *testing.T, f reviewFixture, registrationID int64) holidayChildNumbersBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registrationID)+"/family-debtor-number", nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), registrationID)+"/family-debtor-number", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[holidayChildNumbersBody](t, rec.Body.Bytes())
 }
@@ -74,10 +74,10 @@ func perChildRun(t *testing.T, f reviewFixture, token string, id int64) perChild
 // the issued run.
 func releasePerChildRun(t *testing.T, f reviewFixture, token string) perChildRunBody {
 	t.Helper()
-	run := perChildRun(t, f, token, startBillingRun(t, f, token, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, token, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run.billingRunBody))
+	run := perChildRun(t, f, token, int64(startBillingRun(t, f, token, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, token, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run.billingRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	return perChildRun(t, f, token, run.ID)
+	return perChildRun(t, f, token, int64(run.ID))
 }
 
 func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
@@ -92,7 +92,7 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 	first, second := proposal.Children[0], proposal.Children[1]
 	assert.Empty(t, first.DebtorNumber)
 
-	confirm := holidayConfirmPath(f.period.ID, f.siblings)
+	confirm := holidayConfirmPath(int64(f.period.ID), f.siblings)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, confirm, map[string]any{"child_debtor_numbers": []map[string]any{
 		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": " "},
 	}})
@@ -107,7 +107,7 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 		{"child_id": first.ChildID, "debtor_number": "60101"}, {"child_id": second.ChildID, "debtor_number": "60102"},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, f.again),
+	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.again),
 		map[string]any{"debtor_number": "70001"}).Code, "a registration of one child keeps its single number")
 
 	stored := holidayChildNumbers(t, f, f.siblings)
@@ -115,7 +115,7 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 	assert.Equal(t, "60102", stored.Children[1].DebtorNumber)
 
 	// The office corrects a number after the confirmation.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayContributionPath(f.period.ID, f.siblings)+"/child-debtor-numbers",
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayContributionPath(int64(f.period.ID), f.siblings)+"/child-debtor-numbers",
 		map[string]any{"children": []map[string]any{{"child_id": second.ChildID, "debtor_number": "60103"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
@@ -128,15 +128,15 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 	}
 	var got []issued
 	for _, document := range released.Documents {
-		got = append(got, issued{document.RegistrationID, document.RegistrationChildID, document.DebtorNumber, len(document.Children)})
+		got = append(got, issued{int64(document.RegistrationID), int64(document.RegistrationChildID), document.DebtorNumber, len(document.Children)})
 	}
 	assert.Equal(t, []issued{
-		{f.siblings, first.ChildID, "60101", 1}, {f.siblings, second.ChildID, "60103", 1}, {f.again, againChild(t, f), "70001", 1},
+		{f.siblings, int64(first.ChildID), "60101", 1}, {f.siblings, int64(second.ChildID), "60103", 1}, {f.again, againChild(t, f), "70001", 1},
 	}, got, "each child its invoice with its number")
 
 	// A cancelled invoice keeps its child number after switching to payer scope.
 	setTraegerSetting(t, f, configModels.KeyParentBillingDebtorNumberScope, "payer")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(released.ID, released.Documents[1].ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(released.ID), int64(released.Documents[1].ID)),
 		map[string]any{"reason": "Falsche Debitorennummer"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	setTraegerSetting(t, f, configModels.KeyParentBillingDebtorNumberOnConfirm, false)
@@ -145,7 +145,7 @@ func TestHolidayInvoicePerChildCarriesTheNumberOfEachChild(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = f.changeDebtorNumber(t, f.office.token, newRegistration, "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	again := perChildRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	again := perChildRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	require.Len(t, again.Documents, 2)
 	assert.Zero(t, again.Documents[1].RegistrationChildID)
 	assert.Equal(t, "80001", again.Documents[1].DebtorNumber)
@@ -177,13 +177,13 @@ func TestHolidayInvoiceOfAWholeRegistrationKeepsItsShapeAfterTheSwitch(t *testin
 	assert.Zero(t, released.Documents[0].RegistrationChildID)
 
 	setTraegerSetting(t, f, configModels.KeyParentBillingDebtorNumberScope, "child")
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, f.siblings), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), f.siblings), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), `"correction_needed":true`, "the invoice of the whole still bills it")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(released.ID, released.Documents[0].ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(released.ID), int64(released.Documents[0].ID)),
 		map[string]any{"reason": "Anschrift falsch"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	again := perChildRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	again := perChildRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	require.Len(t, again.Documents, 1, "the invoice of the whole is issued again as one")
 	assert.Zero(t, again.Documents[0].RegistrationChildID)
 	assert.Len(t, again.Documents[0].Children, 2)
@@ -213,7 +213,7 @@ func TestHolidayChildNumbersKeepUnchangedLegacyValues(t *testing.T) {
 	rec := f.confirmWith(t, f.siblings, map[string]any{"child_debtor_numbers": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	fiveDigits(t, f)
-	path := holidayContributionPath(f.period.ID, f.siblings) + "/child-debtor-numbers"
+	path := holidayContributionPath(int64(f.period.ID), f.siblings) + "/child-debtor-numbers"
 	inputs[1]["debtor_number"] = "60102"
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"children": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -251,7 +251,7 @@ func TestHolidayChildNumberRemovalsAreBatched(t *testing.T) {
 		f.traeger.ServeHTTP(w, r.WithContext(counter.Context(r.Context())))
 	})
 	rec = traegerJSON(t, tracked, f.office.token, http.MethodPut,
-		holidayContributionPath(f.period.ID, f.siblings)+"/child-debtor-numbers", map[string]any{"children": inputs})
+		holidayContributionPath(int64(f.period.ID), f.siblings)+"/child-debtor-numbers", map[string]any{"children": inputs})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Len(t, counter.Matching(func(sql string) bool {
 		return strings.Contains(sql, "update parent_billing.child_debtor_numbers as child")

@@ -59,8 +59,44 @@ export async function loginToTenant(
   await page.evaluate((storageKey) => {
     localStorage.setItem(storageKey, JSON.stringify({ done: true }));
   }, key);
+  await dismissUnreadAnnouncements(page, base);
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForSignedInRedirect(page);
+}
+
+/**
+ * Schließt alle ungelesenen Ankündigungen des Kontos, wie „Verstanden“ es tut.
+ *
+ * Das Ankündigungs-Modal (AnnouncementModal im Tenant-Layout) bleibt seit
+ * #7604 offen, bis jemand es schließt, und fängt dann jeden Klick ab. Der Seed
+ * veröffentlicht eine Ankündigung, die nur das Konto des Seed-Laufs schon
+ * geschlossen hat; jedes andere Seed-Konto sähe sie. Die Specs prüfen ihre
+ * eigenen Abläufe, nicht die Ankündigung (die decken die Vitest-Tests des
+ * Modals ab), deshalb erledigt der Login sie über dieselben BFF-Routen wie
+ * das Modal, bevor die Seite neu lädt.
+ */
+async function dismissUnreadAnnouncements(
+  page: Page,
+  base: string,
+): Promise<void> {
+  const unread = await page.request.get(
+    `${base}/api/platform/announcements/unread`,
+  );
+  expect(
+    unread.ok(),
+    `Ankündigungen laden fehlgeschlagen (${unread.status()})`,
+  ).toBe(true);
+  const body = (await unread.json()) as { data?: Array<{ id: string }> };
+  for (const { id } of body.data ?? []) {
+    const res = await page.request.post(
+      `${base}/api/platform/announcements/${id}/dismiss`,
+      { headers: { Origin: base } },
+    );
+    expect(
+      res.ok(),
+      `Ankündigung ${id} schließen fehlgeschlagen (${res.status()})`,
+    ).toBe(true);
+  }
 }
 
 /** Längste Zeit für die Weiterleitung von `/`, samt kalter Übersetzung. */
