@@ -238,7 +238,7 @@ describe("GET /api/activities/[id]/students", () => {
     { scenario: "zero", id: "0" },
     { scenario: "negative", id: "-4" },
     { scenario: "non-decimal", id: "4a" },
-    { scenario: "unsafe number", id: 9007199254740993 },
+    { scenario: "unsafe number", id: Number.MAX_SAFE_INTEGER + 2 },
     { scenario: "missing", id: undefined },
     { scenario: "repeated string and number", id: "1", repeat: 1 },
   ])(
