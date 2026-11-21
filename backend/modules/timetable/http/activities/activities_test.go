@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -699,6 +700,27 @@ func TestBatchEnrollment_Success(t *testing.T) {
 	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
 
 	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+}
+
+// The roster takes the student IDs as decimal strings too, as the frontend
+// carries them.
+func TestBatchEnrollment_AcceptsStudentIDsAsStrings(t *testing.T) {
+	t.Parallel()
+	ctx := setupActivitiesRoute(t)
+
+	activity := testpkg.CreateTestActivityGroup(t, ctx.db, fmt.Sprintf("BatchStrings-%d", time.Now().UnixNano()))
+	student := testpkg.CreateTestStudent(t, ctx.db, "Batch", "Strings", "1a")
+
+	body := map[string]any{"student_ids": []string{strconv.FormatInt(student.ID, 10)}}
+	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/activities/%d/students", activity.ID), body)
+	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
+
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	var enrolled int
+	require.NoError(t, ctx.db.NewRaw(
+		`SELECT count(*) FROM activities.student_enrollments WHERE activity_group_id = ? AND student_id = ?`, activity.ID, student.ID,
+	).Scan(testpkg.Ctx(t), &enrolled))
+	assert.Equal(t, 1, enrolled)
 }
 
 func TestBatchEnrollment_BadRequest_MissingStudentIDs(t *testing.T) {

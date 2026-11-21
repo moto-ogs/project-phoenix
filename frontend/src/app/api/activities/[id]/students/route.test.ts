@@ -208,6 +208,71 @@ describe("GET /api/activities/[id]/students", () => {
     },
   );
 
+  it("compares student IDs as strings, whether the backend sends numbers or strings", async () => {
+    mockApiGet
+      .mockResolvedValueOnce({ data: [{ id: 1 }, { id: "9007199254740993" }] })
+      .mockResolvedValueOnce(
+        studentListResponse([
+          { id: "1", first_name: "Kind", last_name: "Eins" },
+          { id: 2, first_name: "Kind", last_name: "Zwei" },
+          { id: "9007199254740993", first_name: "Kind", last_name: "Groß" },
+          { id: "9007199254740995", first_name: "Kind", last_name: "Neu" },
+        ]),
+      );
+
+    const response = await GET(
+      createMockRequest("/api/activities/5/students?available=true"),
+      createMockContext({ id: "5" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      data: [
+        { id: "2", name: "Kind Zwei", school_class: "" },
+        { id: "9007199254740995", name: "Kind Neu", school_class: "" },
+      ],
+    });
+  });
+
+  it.each([
+    { scenario: "zero", id: "0" },
+    { scenario: "negative", id: "-4" },
+    { scenario: "non-decimal", id: "4a" },
+    { scenario: "unsafe number", id: 9007199254740993 },
+    { scenario: "missing", id: undefined },
+    { scenario: "repeated string and number", id: "1", repeat: 1 },
+  ])(
+    "rejects a $scenario student ID instead of returning it",
+    async ({ id, repeat }) => {
+      const rows = [{ id, first_name: "Kind", last_name: "Eins" }];
+      if (repeat !== undefined) {
+        rows.push({ id: repeat, first_name: "Kind", last_name: "Zwei" });
+      }
+      mockApiGet
+        .mockResolvedValueOnce({ data: [] })
+        .mockResolvedValueOnce({
+          data: rows,
+          pagination: {
+            current_page: 1,
+            page_size: rows.length,
+            total_pages: 1,
+            total_records: rows.length,
+          },
+        });
+
+      const response = await GET(
+        createMockRequest("/api/activities/5/students?available=true"),
+        createMockContext({ id: "5" }),
+      );
+
+      expect(response.status).toBe(502);
+      expect(await response.json()).toMatchObject({
+        status: 502,
+        code: "general.unavailable",
+      });
+    },
+  );
+
   it("starts roster and student requests before either response resolves", async () => {
     const enrolled = deferred<{ data: Array<{ id: number }> }>();
     const students = deferred<ReturnType<typeof studentListResponse>>();
@@ -464,7 +529,7 @@ describe("PUT /api/activities/[id]/students", () => {
     expect(mockApiPut).toHaveBeenCalledWith(
       "/api/activities/5/students",
       "test-token",
-      { student_ids: [20, 21] },
+      { student_ids: ["20", "21"] },
     );
     expect(response.status).toBe(200);
 
@@ -476,6 +541,26 @@ describe("PUT /api/activities/[id]/students", () => {
     expect(json.data[0]!.id).toBe("20");
     expect(json.data[0]!.student_id).toBe("20");
     expect(json.data[0]!.name).toBe("Grace Lee");
+  });
+
+  it("passes an ID beyond 2^53 to the backend without rounding it", async () => {
+    mockApiPut.mockResolvedValueOnce(undefined);
+    mockApiGet.mockResolvedValueOnce({ data: [] });
+
+    const response = await PUT(
+      createMockRequest("/api/activities/5/students", {
+        method: "PUT",
+        body: { student_ids: ["9007199254740993"] },
+      }),
+      createMockContext({ id: "5" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockApiPut).toHaveBeenCalledWith(
+      "/api/activities/5/students",
+      "test-token",
+      { student_ids: ["9007199254740993"] },
+    );
   });
 
   it("throws error when student_ids not provided", async () => {
