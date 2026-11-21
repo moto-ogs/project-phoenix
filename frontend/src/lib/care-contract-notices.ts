@@ -6,16 +6,33 @@
  * only; the Träger client lives in care-contract-notices-api.ts.
  */
 
-import type { CareContractStatus } from "./traeger-care-contracts-api";
+import { knownEnum } from "./contract/known-enum";
+import type { ContractNoticeOptions as ParentNoticeOptions } from "./contract/parent-me.generated";
+import { requiredDay } from "./contract/required-day";
+import type { NoticeOptions as OfficeNoticeOptions } from "./contract/traeger-contract-notices.generated";
+import {
+  type CareContractStatus,
+  knownContractStatus,
+} from "./traeger-care-contracts-api";
 
-export type NoticeKind = "kuendigung" | "widerruf";
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const NOTICE_KIND_VALUES = ["kuendigung", "widerruf"] as const;
+const TERMINATION_KIND_VALUES = [
+  "ordentlich",
+  "sonderkuendigung",
+  "ausserordentlich",
+] as const;
+const CHANNEL_VALUES = ["eltern_app", "traeger_buero"] as const;
+const END_DECISION_VALUES = ["festgelegt", "umgedeutet"] as const;
+
+export type NoticeKind = (typeof NOTICE_KIND_VALUES)[number];
 /**
  * How the parents terminate (§ 312k Abs. 2 BGB): to the next date, to the
  * special date, or extraordinarily for a reason they name. The Träger sets
  * the end of an extraordinary termination after it checked the reason.
  */
-export type TerminationKind =
-  "ordentlich" | "sonderkuendigung" | "ausserordentlich";
+export type TerminationKind = (typeof TERMINATION_KIND_VALUES)[number];
 
 /** Why the notice of a decided end was not mailed, recorded at decision time. */
 const END_NOTICE_NOT_SENT_REASONS = [
@@ -37,16 +54,17 @@ function endNoticeNotSentReason(
  * set the last day, or it did not accept the reason and the declaration
  * holds as an ordinary termination (Umdeutung, § 140 BGB).
  */
-type EndDecision = "festgelegt" | "umgedeutet";
+type EndDecision = (typeof END_DECISION_VALUES)[number];
 
 /** A declaration as recorded, with its confirmation as sent. */
 export interface ContractNotice {
-  readonly kind: NoticeKind;
+  /** undefined: a kind this build does not know. */
+  readonly kind: NoticeKind | undefined;
   readonly terminationKind: TerminationKind | null;
   /** The parents' reason of an extraordinary termination, else null. */
   readonly reason: string | null;
   /** The parents with the button, or the office for a received letter. */
-  readonly channel: "eltern_app" | "traeger_buero";
+  readonly channel: (typeof CHANNEL_VALUES)[number] | undefined;
   readonly declaredAt: string;
   readonly receivedOn: string;
   readonly dispatchedOn?: string | null;
@@ -74,7 +92,8 @@ export interface ContractNotice {
 export interface ContractNoticeOptions {
   readonly contractId: string;
   readonly traegerName: string;
-  readonly status: CareContractStatus;
+  /** undefined: a status this build does not know. */
+  readonly status: CareContractStatus | undefined;
   readonly childName: string;
   readonly modules: string;
   readonly schoolName: string;
@@ -102,47 +121,20 @@ export interface NoticeDeclaration {
   readonly reason?: string;
 }
 
-interface BackendNotice {
-  kind: NoticeKind;
-  termination_kind?: TerminationKind;
-  reason?: string;
-  channel: "eltern_app" | "traeger_buero";
-  declared_at: string;
-  received_on: string;
-  dispatched_on?: string | null;
-  ends_on: string | null;
-  recipient: string;
-  confirmation_text: string;
-  end_decision?: EndDecision;
-  end_decided_at?: string;
-  end_notice_text?: string;
-  end_notice_sent?: boolean;
-  end_notice_not_sent_reason?: string;
-}
-
-export interface BackendNoticeOptions {
-  contract_id: number | string;
-  traeger_name?: string;
-  status: CareContractStatus;
-  child_name: string;
-  modules: string;
-  school_name: string;
-  terms: string;
-  ordinary_ends_on: string | null;
-  special_ends_on: string | null;
-  withdrawal_until: string | null;
-  early_start: boolean;
-  reinterpreted_ends_on?: string | null;
-  notice: BackendNotice | null;
-}
+/**
+ * The options as the office route or the parents' route sends them; only
+ * the parents' route names the Träger, only the office's the decided end.
+ */
+export type NoticeOptionsWire = OfficeNoticeOptions | ParentNoticeOptions;
 
 export function noticeOptionsFromBackend(
-  row: BackendNoticeOptions,
+  row: NoticeOptionsWire,
 ): ContractNoticeOptions {
+  const notice = row.notice;
   return {
-    contractId: String(row.contract_id),
-    traegerName: row.traeger_name ?? "",
-    status: row.status,
+    contractId: row.contract_id,
+    traegerName: "traeger_name" in row ? row.traeger_name : "",
+    status: knownContractStatus(row.status),
     childName: row.child_name,
     modules: row.modules,
     schoolName: row.school_name,
@@ -151,25 +143,34 @@ export function noticeOptionsFromBackend(
     specialEndsOn: row.special_ends_on,
     withdrawalUntil: row.withdrawal_until,
     earlyStart: row.early_start,
-    reinterpretedEndsOn: row.reinterpreted_ends_on ?? null,
-    notice: row.notice
+    reinterpretedEndsOn:
+      ("reinterpreted_ends_on" in row ? row.reinterpreted_ends_on : null) ??
+      null,
+    notice: notice
       ? {
-          kind: row.notice.kind,
-          terminationKind: row.notice.termination_kind ?? null,
-          reason: row.notice.reason ?? null,
-          channel: row.notice.channel,
-          declaredAt: row.notice.declared_at,
-          receivedOn: row.notice.received_on,
-          dispatchedOn: row.notice.dispatched_on ?? null,
-          endsOn: row.notice.ends_on,
-          recipient: row.notice.recipient,
-          confirmationText: row.notice.confirmation_text,
-          endDecision: row.notice.end_decision ?? null,
-          endDecidedAt: row.notice.end_decided_at ?? null,
-          endNoticeText: row.notice.end_notice_text ?? null,
-          endNoticeSent: row.notice.end_notice_sent ?? false,
+          kind: knownEnum(NOTICE_KIND_VALUES, notice.kind),
+          terminationKind:
+            knownEnum(TERMINATION_KIND_VALUES, notice.termination_kind) ?? null,
+          reason: notice.reason ?? null,
+          channel: knownEnum(CHANNEL_VALUES, notice.channel),
+          declaredAt: notice.declared_at,
+          receivedOn: requiredDay(notice.received_on, "notice.received_on"),
+          dispatchedOn: notice.dispatched_on ?? null,
+          endsOn: notice.ends_on,
+          recipient: notice.recipient,
+          confirmationText: notice.confirmation_text,
+          endDecision:
+            knownEnum(END_DECISION_VALUES, notice.end_decision) ?? null,
+          endDecidedAt: notice.end_decided_at ?? null,
+          endNoticeText: notice.end_notice_text ?? null,
+          endNoticeSent:
+            "end_notice_sent" in notice
+              ? (notice.end_notice_sent ?? false)
+              : false,
           endNoticeNotSentReason: endNoticeNotSentReason(
-            row.notice.end_notice_not_sent_reason,
+            "end_notice_not_sent_reason" in notice
+              ? notice.end_notice_not_sent_reason
+              : undefined,
           ),
         }
       : null,

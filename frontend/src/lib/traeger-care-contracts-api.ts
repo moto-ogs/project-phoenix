@@ -125,7 +125,9 @@ const SEND_BLOCK_VALUES = [
 ] as const;
 
 /** The status a value names, undefined for one this build does not know. */
-function knownContractStatus(value: string): CareContractStatus | undefined {
+export function knownContractStatus(
+  value: string,
+): CareContractStatus | undefined {
   return knownEnum(STATUS_VALUES, value);
 }
 
