@@ -39,7 +39,7 @@ export interface DayChangeNotice {
  * und Ort schreibt, wer den Termin angelegt hat; die neue Uhrzeit steht in
  * `startsAt` und `endsAt` des Eintrags.
  */
-export interface DayChangeAppointment {
+interface DayChangeAppointment {
   readonly id: string;
   readonly occurrenceDate: string | null;
   readonly title: string;
