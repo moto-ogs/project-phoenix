@@ -79,8 +79,8 @@ export interface DayChange {
   /** Letzter Tag einer Änderung, die über heute hinausgeht („bis“). */
   readonly until: string | null;
   /**
-   * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (#7660),
-   * sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
+   * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (ein Dienst,
+   * #7661, #7660), sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
    */
   readonly startsAt: string | null;
   readonly endsAt: string | null;

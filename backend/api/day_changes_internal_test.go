@@ -32,6 +32,7 @@ func (invisibleDayChangesCaller) MyTeacherGroupIDs(context.Context) ([]int64, er
 type unavailableDayChangesWorkforce struct {
 	handoversRead bool
 	absencesRead  bool
+	shiftsRead    bool
 }
 
 func (w *unavailableDayChangesWorkforce) ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error) {
@@ -42,6 +43,11 @@ func (w *unavailableDayChangesWorkforce) ListStaffAbsences(context.Context, work
 func (w *unavailableDayChangesWorkforce) ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error) {
 	w.handoversRead = true
 	return nil, errors.New("group substitutions unavailable")
+}
+
+func (w *unavailableDayChangesWorkforce) ListStaffShifts(context.Context, workforce.StaffShiftFilter) ([]workforce.StaffShift, error) {
+	w.shiftsRead = true
+	return nil, errors.New("staff shifts unavailable")
 }
 
 type directDayChangesIsolation struct{}
@@ -83,6 +89,7 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)
 	assert.False(t, workforceSource.absencesRead)
+	assert.False(t, workforceSource.shiftsRead)
 }
 
 func TestDayChangesLinksRequireDestinationAccess(t *testing.T) {

@@ -26,7 +26,8 @@ const (
 type Source string
 
 const (
-	// SourceStaff is Personal: full-day absences and group substitutions.
+	// SourceStaff is Personal: full-day absences, group substitutions and
+	// the changed or cancelled shifts of the Dienstplan (#7661).
 	SourceStaff Source = "staff"
 	// SourceChildren is Kinder: sick or excused children, changed pickup
 	// times, children who go home alone and dated pickup notes (#7665).
@@ -64,6 +65,14 @@ const (
 	KindGroupSubstitution Kind = "group_substitution"
 	// KindGroupSubstitutionCount: how many further groups are covered today.
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
+	// KindShiftChanged: a shift of a series runs differently today (other
+	// time or day). Never a reason.
+	KindShiftChanged Kind = "shift_changed"
+	// KindShiftCancelled: a shift does not take place today. A shift the
+	// plan cancelled for an absence is not one: the absence is the entry.
+	KindShiftCancelled Kind = "shift_cancelled"
+	// KindShiftReplacement: somebody covers (part of) a cancelled shift.
+	KindShiftReplacement Kind = "shift_replacement"
 	// KindChildAbsent: a child is reported sick or excused today; Child
 	// carries the status, never a reason.
 	KindChildAbsent Kind = "child_absent"
@@ -107,6 +116,8 @@ const (
 	RoleAbsent     PersonRole = "absent"
 	RoleSubstitute PersonRole = "substitute"
 	RoleReplaced   PersonRole = "replaced"
+	// RoleOnDuty is the staff member whose shift changed or is cancelled.
+	RoleOnDuty PersonRole = "on_duty"
 )
 
 // LinkTarget names the page an entry leads to; the frontend builds the path.
@@ -123,6 +134,10 @@ const (
 	LinkStaffList LinkTarget = "staff_list"
 	// LinkGroupHandovers is the page of the group substitutions.
 	LinkGroupHandovers LinkTarget = "group_handovers"
+	// LinkOwnShiftPlan is the caller's own Dienstplan.
+	LinkOwnShiftPlan LinkTarget = "own_shift_plan"
+	// LinkShiftPlan is a staff member's week in the Dienstplan.
+	LinkShiftPlan LinkTarget = "shift_plan"
 	// LinkStudent is a child's detail page.
 	LinkStudent LinkTarget = "student"
 	// LinkStaffNotices is the page of the Hinweise der Leitung.
@@ -281,7 +296,8 @@ type Entry struct {
 	Since   *calendar.Date `json:"since"`
 	Until   *calendar.Date `json:"until"`
 	// StartsAt and EndsAt are instants; the frontend shows the school's wall
-	// clock and folds a change whose end has passed into "erledigt" (#7660).
+	// clock (a shift's time, #7661) and folds a change whose end has passed into
+	// "erledigt" (#7660).
 	StartsAt *time.Time  `json:"starts_at"`
 	EndsAt   *time.Time  `json:"ends_at"`
 	People   []Person    `json:"people"`
@@ -313,8 +329,8 @@ type Overview struct {
 	Entries []Entry        `json:"entries"`
 }
 
-// StaffChanges is the Personal port: full-day absences and group
-// substitutions of the day as the caller may see them. It never carries a
+// StaffChanges is the Personal port: full-day absences, group substitutions
+// and changed or cancelled shifts of the day as the caller may see them. It never carries a
 // reason for an absence; the port has no field for one.
 type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)

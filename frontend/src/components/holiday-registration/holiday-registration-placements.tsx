@@ -14,8 +14,7 @@ import type {
 } from "~/lib/holiday-registration-api";
 import type { ChildDraft } from "./holiday-registration-model";
 import { useWeekLabels } from "./holiday-registration-sections";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { HOLIDAY_PLACEMENT_BADGES } from "./holiday-registration-badges";
+import { HolidayPlacementBadge } from "./holiday-placement-badge";
 
 export function HolidayRegistrationPlacements({
   childDrafts,
@@ -55,20 +54,16 @@ export function HolidayRegistrationPlacements({
                     own.some((placement) => placement.weekId === week.id),
                   )
                   .map((week) => {
-                    const state =
-                      own.find((placement) => placement.weekId === week.id)
-                        ?.placement ?? "placed";
+                    const state = own.find(
+                      (placement) => placement.weekId === week.id,
+                    )?.placement;
                     return (
                       <li
                         key={week.id}
                         className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-700"
                       >
                         <span>{labels.range(week)}</span>
-                        <StatusBadge
-                          label={t(HOLIDAY_PLACEMENT_BADGES[state].key)}
-                          tone={HOLIDAY_PLACEMENT_BADGES[state].tone}
-                          size="xs"
-                        />
+                        <HolidayPlacementBadge placement={state} size="xs" />
                       </li>
                     );
                   })}

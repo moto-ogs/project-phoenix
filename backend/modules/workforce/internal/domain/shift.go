@@ -79,15 +79,19 @@ type StaffShift struct {
 	// SeriesOccurrenceDate is the recurrence slot a series row materialized
 	// for; it stays put when the row is moved. Empty for standalone rows.
 	SeriesOccurrenceDate string
-	Cancelled            bool
-	ChangeReason         *string
-	OriginShiftID        *int64
-	SickAbsenceID        *int64
-	CreatedBy            int64
-	UpdatedBy            *int64
-	PlannedByTraeger     bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// SeriesStartTime and SeriesEndTime are the times planned by the linked
+	// series. They are empty for standalone shifts and reads without a series.
+	SeriesStartTime  string
+	SeriesEndTime    string
+	Cancelled        bool
+	ChangeReason     *string
+	OriginShiftID    *int64
+	SickAbsenceID    *int64
+	CreatedBy        int64
+	UpdatedBy        *int64
+	PlannedByTraeger bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // StaffShiftOrderField names a column a shift listing may be ordered by.
@@ -106,24 +110,27 @@ type StaffShiftOrder struct {
 }
 
 // StaffShiftFilter narrows a shift listing; every set field is combined with
-// AND. From/To select rows with From <= date <= To. A non-nil StaffIDs,
-// Dates or OriginShiftIDs that is empty matches nothing, because a caller
-// that resolved an empty set expects an empty answer, not every row.
+// AND. From/To select rows with From <= date <= To. IncludeSeriesOccurrenceDate
+// also selects a row materialized for that recurrence slot, even if it was
+// moved outside the date selection. A non-nil StaffIDs, Dates or OriginShiftIDs
+// that is empty matches nothing, because a caller that resolved an empty set
+// expects an empty answer, not every row.
 type StaffShiftFilter struct {
-	StaffID        int64
-	StaffIDs       []int64
-	From           string
-	To             string
-	Dates          []string
-	SeriesID       int64
-	OriginShiftID  int64
-	OriginShiftIDs []int64
-	SickAbsenceID  *int64
-	Cancelled      *bool
-	Detached       *bool
-	Order          []StaffShiftOrder
-	Limit          int
-	Offset         int
+	StaffID                     int64
+	StaffIDs                    []int64
+	From                        string
+	To                          string
+	Dates                       []string
+	IncludeSeriesOccurrenceDate string
+	SeriesID                    int64
+	OriginShiftID               int64
+	OriginShiftIDs              []int64
+	SickAbsenceID               *int64
+	Cancelled                   *bool
+	Detached                    *bool
+	Order                       []StaffShiftOrder
+	Limit                       int
+	Offset                      int
 }
 
 // Validate rejects malformed dates in the filter before they reach a query.
@@ -132,6 +139,9 @@ func (f StaffShiftFilter) Validate() error {
 		return err
 	}
 	if err := validateShiftDate(f.To, "to"); err != nil {
+		return err
+	}
+	if err := validateShiftDate(f.IncludeSeriesOccurrenceDate, "series occurrence date"); err != nil {
 		return err
 	}
 	for _, date := range f.Dates {

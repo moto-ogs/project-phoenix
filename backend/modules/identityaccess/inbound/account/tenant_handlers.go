@@ -355,7 +355,7 @@ func (rs *Resource) switchTenant(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.SwitchRules)
 		return
 	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 // listAccountTenants handles GET /auth/account/tenants

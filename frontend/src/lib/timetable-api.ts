@@ -12,8 +12,29 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 
 import type { PatchAttendanceRequest } from "./contract/shared.generated";
 import type {
+  ApplyDeviationsResponse as WireApplyDeviations,
   AttendanceResponse as WireAttendance,
+  BulkCancelResult as WireBulkCancel,
+  bulkCancelRequest,
+  BulkSubstitutionResponse as WireBulkSubstitution,
+  CancelInstanceRequest,
+  conflictAcksResponse,
   createInstanceRequest,
+  editedInWindowResponse as WireEditedInWindow,
+  GuardianNoticeReachResponse as WireGuardianNoticeReach,
+  InstanceParticipantsResponse,
+  InstanceStatusResponse as WireInstanceStatus,
+  materializeRequest,
+  materializeResponse as WireMaterialize,
+  moveStaffRequest,
+  MoveStaffResponse as WireMoveStaff,
+  PlannedConflictsResponse as WireConflictCheck,
+  replanWeekRequest,
+  replanWeekResponse as WireReplanWeek,
+  ShiftCoverageRequest,
+  ShiftCoverageResponse as WireShiftCoverage,
+  StaffPoolResponse as WireStaffPool,
+  StartInstanceResponse as WireStartInstance,
   DeviationHistoryResponse as WireDeviationHistory,
   enrichedInstance as WireInstance,
   GapsResponse as WireGaps,
@@ -31,22 +52,10 @@ import {
   type PlanFilter,
 } from "./plan-filter";
 import type {
-  BackendConflictCheckResult,
-  BackendShiftCoverageCheckResult,
   BackendCreateTemplateResult,
   BackendConvertInstanceToSeriesResult,
   BackendEndTemplateResult,
-  BackendGuardianNoticeReach,
-  BackendInstanceStatusResult,
-  BackendMaterializeResult,
-  BackendBulkCancelResult,
-  BackendReplanWeekResult,
-  BackendEditedInWindowResult,
   BackendSplitTemplateResult,
-  BackendStartInstanceResult,
-  BackendApplyDeviationsResponse,
-  BackendMoveStaffResponse,
-  BackendStaffPoolResponse,
   MoveStaffInput,
   MoveStaffResponse,
   StaffPoolResponse,
@@ -86,7 +95,6 @@ import type {
   ApplyDeviationsResponse,
   BulkSubstitutionInput,
   BulkSubstitutionResponse,
-  BackendBulkSubstitutionResponse,
   TemplatesResponse,
   TimetableTemplate,
   UpdateTemplateBody,
@@ -709,7 +717,7 @@ class TimetableService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<BackendConflictCheckResult>(response);
+    const raw = await unwrap<WireConflictCheck>(response);
     return mapConflictCheckResult(raw);
   }
 
@@ -723,7 +731,7 @@ class TimetableService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<{ fingerprints: string[] | null }>(response);
+    const raw = await unwrap<conflictAcksResponse>(response);
     return raw.fingerprints ?? [];
   }
 
@@ -779,21 +787,15 @@ class TimetableService {
         dates: params.dates,
         start_time: params.startTime,
         end_time: params.endTime,
-        staff_ids: params.staffIds.map(Number),
-        exclude_instance_id: params.excludeInstanceId
-          ? Number(params.excludeInstanceId)
-          : undefined,
+        staff_ids: params.staffIds,
+        exclude_instance_id: params.excludeInstanceId || undefined,
         concrete_instance_date: params.concreteInstanceDate,
-        replan_activity_group_id: params.replanActivityGroupId
-          ? Number(params.replanActivityGroupId)
-          : undefined,
-        calendar_period_id: params.calendarPeriodId
-          ? Number(params.calendarPeriodId)
-          : undefined,
+        replan_activity_group_id: params.replanActivityGroupId || undefined,
+        calendar_period_id: params.calendarPeriodId || undefined,
         week_pattern: params.weekPattern,
-      }),
+      } satisfies ShiftCoverageRequest),
     });
-    const raw = await unwrap<BackendShiftCoverageCheckResult>(response);
+    const raw = await unwrap<WireShiftCoverage>(response);
     return mapShiftCoverageCheckResult(raw);
   }
 
@@ -871,7 +873,7 @@ class TimetableService {
    * caller can surface them.
    */
   async start(instanceId: string): Promise<StartInstanceResult> {
-    return this.lifecycle<BackendStartInstanceResult, StartInstanceResult>(
+    return this.lifecycle<WireStartInstance, StartInstanceResult>(
       instanceId,
       "start",
       mapStartInstanceResult,
@@ -897,17 +899,15 @@ class TimetableService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          confirmed_present_student_ids: confirmedPresentStudentIds.map(Number),
+          confirmed_present_student_ids: confirmedPresentStudentIds,
         }),
       },
     );
-    return mapInstanceStatusResult(
-      await unwrap<BackendInstanceStatusResult>(response),
-    );
+    return mapInstanceStatusResult(await unwrap<WireInstanceStatus>(response));
   }
 
   async reopen(instanceId: string): Promise<StartInstanceResult> {
-    return this.lifecycle<BackendStartInstanceResult, StartInstanceResult>(
+    return this.lifecycle<WireStartInstance, StartInstanceResult>(
       instanceId,
       "reopen",
       mapStartInstanceResult,
@@ -924,7 +924,7 @@ class TimetableService {
     reason?: string,
     guardianNotice?: GuardianNoticeInput,
   ): Promise<InstanceStatusResult> {
-    const body: Record<string, unknown> = {};
+    const body: CancelInstanceRequest = {};
     if (reason) body.reason = reason;
     if (guardianNotice) {
       body.guardian_notice = {
@@ -932,7 +932,7 @@ class TimetableService {
         message: guardianNotice.message,
       };
     }
-    return this.lifecycle<BackendInstanceStatusResult, InstanceStatusResult>(
+    return this.lifecycle<WireInstanceStatus, InstanceStatusResult>(
       instanceId,
       "cancel",
       mapInstanceStatusResult,
@@ -946,7 +946,7 @@ class TimetableService {
    * planned again and its staff hear "findet doch statt".
    */
   async reinstate(instanceId: string): Promise<InstanceStatusResult> {
-    return this.lifecycle<BackendInstanceStatusResult, InstanceStatusResult>(
+    return this.lifecycle<WireInstanceStatus, InstanceStatusResult>(
       instanceId,
       "reinstate",
       mapInstanceStatusResult,
@@ -969,7 +969,7 @@ class TimetableService {
       },
     );
     return mapGuardianNoticeReach(
-      await unwrap<BackendGuardianNoticeReach>(response),
+      await unwrap<WireGuardianNoticeReach>(response),
     );
   }
 
@@ -977,7 +977,7 @@ class TimetableService {
     instanceId: string,
     action: "start" | "complete" | "cancel" | "reopen" | "reinstate",
     mapper: (raw: TBackend) => TFront,
-    body: Record<string, unknown> = {},
+    body: CancelInstanceRequest = {},
   ): Promise<TFront> {
     const response = await transportFetch(
       `/api/timetable/instances/${instanceId}/${action}`,
@@ -1007,7 +1007,7 @@ class TimetableService {
    * materialization for that window.
    */
   async materialize(from?: string, to?: string): Promise<MaterializeResult> {
-    const body: Record<string, string> = {};
+    const body: materializeRequest = {};
     if (from) body.from_date = from;
     if (to) body.to_date = to;
 
@@ -1021,7 +1021,7 @@ class TimetableService {
       body: JSON.stringify(body),
     });
 
-    const raw = await unwrap<BackendMaterializeResult>(response);
+    const raw = await unwrap<WireMaterialize>(response);
     logger.info("materialize_completed", {
       from: raw.from,
       to: raw.to,
@@ -1041,9 +1041,9 @@ class TimetableService {
     to: string,
     activityGroupId?: string,
   ): Promise<ReplanWeekResult> {
-    const body: Record<string, unknown> = { from_date: from, to_date: to };
+    const body: replanWeekRequest = { from_date: from, to_date: to };
     if (activityGroupId) {
-      body.activity_group_id = Number(activityGroupId);
+      body.activity_group_id = activityGroupId;
     }
     const response = await transportFetch(
       "/api/timetable/instances/re-plan-week",
@@ -1058,7 +1058,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendReplanWeekResult>(response);
+    const raw = await unwrap<WireReplanWeek>(response);
     logger.info("week_replanned", {
       from: raw.from,
       to: raw.to,
@@ -1095,11 +1095,11 @@ class TimetableService {
           to,
           dry_run: dryRun,
           include_closing_day_series: includeClosingDaySeries,
-        }),
+        } satisfies bulkCancelRequest),
       },
     );
 
-    const raw = await unwrap<BackendBulkCancelResult>(response);
+    const raw = await unwrap<WireBulkCancel>(response);
     if (!dryRun) {
       logger.info("instances_bulk_cancelled", {
         from: raw.from,
@@ -1140,7 +1140,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendEditedInWindowResult>(response);
+    const raw = await unwrap<WireEditedInWindow>(response);
     return mapEditedInWindowResult(raw);
   }
 
@@ -1206,7 +1206,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendApplyDeviationsResponse>(response);
+    const raw = await unwrap<WireApplyDeviations>(response);
     logger.info("deviations_applied", {
       instance_id: instanceId,
       cancelled: raw.cancelled,
@@ -1235,7 +1235,7 @@ class TimetableService {
       body: JSON.stringify(body),
     });
 
-    const raw = await unwrap<BackendBulkSubstitutionResponse>(response);
+    const raw = await unwrap<WireBulkSubstitution>(response);
     const result = mapBulkSubstitution(raw);
     logger.info("bulk_substitution_applied", {
       dates: input.dates.length,
@@ -1259,7 +1259,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendStaffPoolResponse>(response);
+    const raw = await unwrap<WireStaffPool>(response);
     return mapStaffPool(raw);
   }
 
@@ -1281,16 +1281,13 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<{
-      participants: { student_id: number; display_name: string }[];
-      staff: { staff_id: number; display_name: string }[];
-    }>(response);
+    const raw = await unwrap<InstanceParticipantsResponse>(response);
     return {
       studentNames: new Map(
-        raw.participants.map((p) => [p.student_id.toString(), p.display_name]),
+        (raw.participants ?? []).map((p) => [p.student_id, p.display_name]),
       ),
       staffNames: new Map(
-        raw.staff.map((s) => [s.staff_id.toString(), s.display_name]),
+        (raw.staff ?? []).map((s) => [s.staff_id, s.display_name]),
       ),
     };
   }
@@ -1304,9 +1301,9 @@ class TimetableService {
     instanceId: string,
     input: MoveStaffInput,
   ): Promise<MoveStaffResponse> {
-    const body: Record<string, unknown> = { staff_id: Number(input.staffId) };
+    const body: moveStaffRequest = { staff_id: input.staffId };
     if (input.sourceInstanceId) {
-      body.source_instance_id = Number(input.sourceInstanceId);
+      body.source_instance_id = input.sourceInstanceId;
     }
     const response = await transportFetch(
       `/api/timetable/instances/${instanceId}/move-staff`,
@@ -1320,7 +1317,7 @@ class TimetableService {
         body: JSON.stringify(body),
       },
     );
-    const raw = await unwrap<BackendMoveStaffResponse>(response);
+    const raw = await unwrap<WireMoveStaff>(response);
     logger.info("staff_moved", {
       target_instance_id: instanceId,
       action: raw.action,

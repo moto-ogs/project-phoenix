@@ -140,7 +140,7 @@ func (rs *Resource) verifyMFA(w http.ResponseWriter, r *http.Request, after func
 	}
 	after(r.Context(), session.Email)
 	common.SetTrustedDevice(w, session.TrustedDeviceCookie, session.TrustedDeviceExpiresAt)
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
 }
 
 // resendMFA mails a new code for a parents-portal challenge.
@@ -155,7 +155,7 @@ func (rs *Resource) resendMFA(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, signInRules)
 		return
 	}
-	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
 // ParentMFAStatusResponse is the second factor as the portal's settings show it.
@@ -209,7 +209,7 @@ func (rs *Resource) confirmMFA(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
 }
 
 func (rs *Resource) disableMFA(w http.ResponseWriter, r *http.Request) {

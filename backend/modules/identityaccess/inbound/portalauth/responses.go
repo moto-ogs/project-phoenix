@@ -3,8 +3,7 @@ package portalauth
 import (
 	"net/http"
 
-	"github.com/go-chi/render"
-
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 )
 
@@ -54,7 +53,7 @@ func LoginBody(result identityaccess.LoginResult) LoginResponse {
 
 // RenderLogin answers a login result as plain JSON.
 func RenderLogin(w http.ResponseWriter, r *http.Request, result *identityaccess.LoginResult) {
-	render.JSON(w, r, LoginBody(*result))
+	common.RenderJSON(w, r, LoginBody(*result))
 }
 
 // EnrollStartResponse names the challenge the enrollment code belongs to;

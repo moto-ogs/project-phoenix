@@ -24,6 +24,8 @@ type staffShiftRow struct {
 	Detached             bool          `bun:"detached,notnull,default:false"`
 	SeriesOverride       bool          `bun:"series_override,notnull,default:false"`
 	SeriesOccurrenceDate *calendarDate `bun:"series_occurrence_date,type:date"`
+	SeriesStartTime      *time.Time    `bun:"series_start_time,scanonly"`
+	SeriesEndTime        *time.Time    `bun:"series_end_time,scanonly"`
 	Cancelled            bool          `bun:"cancelled,notnull,default:false"`
 	ChangeReason         *string       `bun:"change_reason"`
 	OriginShiftID        *int64        `bun:"origin_shift_id"`
@@ -124,7 +126,7 @@ func staffShiftFromDomain(value domain.StaffShift) (*staffShiftRow, error) {
 }
 
 func staffShiftToDomain(row staffShiftRow) domain.StaffShift {
-	return domain.StaffShift{
+	value := domain.StaffShift{
 		ID: row.ID, TenantID: row.TenantID, StaffID: row.StaffID, Date: string(row.Date),
 		StartTime: wallClockString(row.StartTime), EndTime: wallClockString(row.EndTime), BreakMinutes: row.BreakMinutes,
 		ShiftTypeID: row.ShiftTypeID, Notes: row.Notes, SeriesID: row.SeriesID, Detached: row.Detached, SeriesOverride: row.SeriesOverride,
@@ -133,6 +135,13 @@ func staffShiftToDomain(row staffShiftRow) domain.StaffShift {
 		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, PlannedByTraeger: row.PlannedByTraeger,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
+	if row.SeriesStartTime != nil {
+		value.SeriesStartTime = wallClockString(*row.SeriesStartTime)
+	}
+	if row.SeriesEndTime != nil {
+		value.SeriesEndTime = wallClockString(*row.SeriesEndTime)
+	}
+	return value
 }
 
 func staffShiftsToDomain(rows []staffShiftRow) []domain.StaffShift {

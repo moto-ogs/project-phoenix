@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common/contractmodel"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Every test binary holds the success answers its handlers write against
@@ -86,7 +87,7 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 	var body []byte
 	if envelope != nil {
 		var err error
-		if body, err = json.Marshal(envelope); err != nil {
+		if body, err = wire.Marshal(envelope); err != nil {
 			return nil // Respond reports what does not render.
 		}
 	}

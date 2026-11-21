@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,13 @@ func TestMain(m *testing.M) { testpkg.PerTestTenants(); testutil.SeedTestJWTConf
 // day is the fixed school day of the tests; no wall clock (Rule 14).
 var day = calendar.NewDate(2026, 9, 9)
 
+// Legacy absence cascades persist these German labels on cancelled shifts.
+// The view must recognize historic rows without importing Workforce.
+const (
+	legacySickShiftChangeReason    = "Krankheit"
+	legacyAbsenceShiftChangeReason = "Abwesenheit"
+)
+
 type wirePerson struct {
 	Name   string `json:"name"`
 	Role   string `json:"role"`
@@ -31,12 +39,14 @@ type wirePerson struct {
 }
 
 type wireEntry struct {
-	Kind    string       `json:"kind"`
-	Section string       `json:"section"`
-	Since   *string      `json:"since"`
-	Until   *string      `json:"until"`
-	People  []wirePerson `json:"people"`
-	Group   *struct {
+	Kind     string       `json:"kind"`
+	Section  string       `json:"section"`
+	Since    *string      `json:"since"`
+	Until    *string      `json:"until"`
+	StartsAt *time.Time   `json:"starts_at"`
+	EndsAt   *time.Time   `json:"ends_at"`
+	People   []wirePerson `json:"people"`
+	Group    *struct {
 		Name string `json:"name"`
 	} `json:"group"`
 	Link *struct {
@@ -98,6 +108,9 @@ func summary(entries []wireEntry) []string {
 		}
 		if entry.Until != nil {
 			line += " bis " + *entry.Until
+		}
+		if entry.StartsAt != nil && entry.EndsAt != nil {
+			line += " " + entry.StartsAt.In(calendar.Berlin).Format("15:04") + "-" + entry.EndsAt.In(calendar.Berlin).Format("15:04")
 		}
 		if entry.Count != nil {
 			line += fmt.Sprintf(" n=%d", *entry.Count)
@@ -194,6 +207,21 @@ func TestDayChangesStaffSource(t *testing.T) {
 		assert.NotContains(t, body, "Ben", "an absence from tomorrow is not on the day before")
 	})
 
+	t.Run("a cover sees the team of the group it covers today by name", func(t *testing.T) {
+		biber := testpkg.CreateTestEducationGroup(t, db, "Biber")
+		regular := testpkg.CreateTestTeacher(t, db, "Rita", "Biber")
+		testpkg.CreateTestGroupTeacher(t, db, biber.ID, regular.ID)
+		testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, regular.StaffID, day, day, "Grippe Rita")
+		cover, coverAccount := testpkg.CreateTestStaffWithAccount(t, db, "Nora", "Vertretung")
+		testpkg.CreateTestGroupSubstitution(t, db, biber.ID, nil, cover.ID, day, day)
+
+		overview, _ := read(t, router, coverAccount.ID, tenantID)
+		assert.Equal(t, []string{
+			"you group_substitution Nora Vertretung/substitute(du) @Biber ->group_handovers",
+			"you staff_absent Rita Biber/absent",
+		}, summary(overview.Entries))
+	})
+
 	t.Run("own absence has a link only with time_tracking:own", func(t *testing.T) {
 		testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, carer.StaffID, day, day, "Eigener Grund")
 
@@ -233,8 +261,180 @@ func assertNoReason(t *testing.T, body string) {
 	}
 }
 
+// TestDayChangesShiftSource is Seam 1 for the Dienstplan part of the
+// Personal source (#7661): one school with care staff, colleagues, a lead of
+// the Dienstplan, an account without rights and a second school.
+func TestDayChangesShiftSource(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	sick, talk := "Krankheit", "Personalgespräch"
+	yesterday := day.AddDays(-1)
+
+	carer, carerAccount := testpkg.CreateTestTeacherWithAccount(t, db, "Anna", "Betreuung")
+	annaSeries := testpkg.CreateTestStaffShiftSeries(t, db, carer.StaffID, day)
+	testpkg.CreateTestStaffShiftChange(t, db, carer.StaffID, yesterday, testpkg.StaffShiftChange{Series: &annaSeries})
+	testpkg.CreateTestStaffShiftChange(t, db, carer.StaffID, day, testpkg.StaffShiftChange{Series: &annaSeries, Detached: true, StartHHMM: "10:00", EndHHMM: "14:00"})
+	// A withdrawn sick report leaves the occurrence detached at the series' times.
+	same := testpkg.CreateTestStaff(t, db, "Dora", "Gleich")
+	doraSeries := testpkg.CreateTestStaffShiftSeries(t, db, same.ID, day)
+	testpkg.CreateTestStaffShiftChange(t, db, same.ID, yesterday, testpkg.StaffShiftChange{Series: &doraSeries})
+	testpkg.CreateTestStaffShiftChange(t, db, same.ID, day, testpkg.StaffShiftChange{Series: &doraSeries, Detached: true})
+	moved := testpkg.CreateTestStaff(t, db, "Fritz", "Verschoben")
+	fritzSeries := testpkg.CreateTestStaffShiftSeries(t, db, moved.ID, day)
+	testpkg.CreateTestStaffShiftChange(t, db, moved.ID, day.AddDays(1), testpkg.StaffShiftChange{
+		Series: &fritzSeries, Slot: &day, Detached: true, Cancelled: true, ChangeReason: &talk,
+	})
+	colleague, colleagueAccount := testpkg.CreateTestStaffWithAccount(t, db, "Ben", "Kollege")
+	cancelled := testpkg.CreateTestStaffShiftChange(t, db, colleague.ID, day, testpkg.StaffShiftChange{Cancelled: true, ChangeReason: &talk, StartHHMM: "12:00", EndHHMM: "16:00"})
+	cover := testpkg.CreateTestStaff(t, db, "Tom", "Hilfe")
+	testpkg.CreateTestStaffShiftChange(t, db, cover.ID, day, testpkg.StaffShiftChange{Covers: &cancelled.ID, StartHHMM: "12:00", EndHHMM: "15:00"})
+	ill := testpkg.CreateTestStaff(t, db, "Clara", "Krank")
+	absence := testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, ill.ID, day, day, "Grippe Clara")
+	testpkg.CreateTestStaffShiftChange(t, db, ill.ID, day, testpkg.StaffShiftChange{Cancelled: true, ChangeReason: &sick, SickAbsence: &absence})
+	standalone := testpkg.CreateTestStaff(t, db, "Gerd", "Einzeln")
+	testpkg.CreateTestStaffShiftChange(t, db, standalone.ID, day, testpkg.StaffShiftChange{StartHHMM: "07:00", EndHHMM: "07:30"})
+	before := testpkg.CreateTestStaff(t, db, "Emil", "Gestern")
+	testpkg.CreateTestStaffShiftChange(t, db, before.ID, yesterday, testpkg.StaffShiftChange{Cancelled: true})
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+	_, plainAccount := testpkg.CreateTestStaffWithAccount(t, db, "Zoe", "Ohne")
+
+	t.Run("other school", func(t *testing.T) {
+		testpkg.OwnTenant(t)
+		foreign := testpkg.CreateTestStaff(t, db, "Xaver", "Fremd")
+		testpkg.CreateTestStaffShiftChange(t, db, foreign.ID, day, testpkg.StaffShiftChange{Cancelled: true})
+	})
+
+	router := newRouter(t, db, day)
+
+	t.Run("care staff sees only its own changed shift", func(t *testing.T) {
+		overview, body := read(t, router, carerAccount.ID, tenantID, "time_tracking:own")
+		assert.Equal(t, []string{
+			"you shift_changed Anna Betreuung/on_duty(du) 10:00-14:00 ->own_shift_plan",
+		}, summary(overview.Entries))
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
+		assert.NotContains(t, body, "Ben", "another person's shift stays with the lead")
+		assertNoShiftReason(t, body)
+	})
+
+	t.Run("care staff sees its cancelled shift and who covers it", func(t *testing.T) {
+		overview, body := read(t, router, colleagueAccount.ID, tenantID, "time_tracking:own")
+		assert.Equal(t, []string{
+			"you shift_cancelled Ben Kollege/on_duty(du) 12:00-16:00 ->own_shift_plan",
+			"you shift_replacement Tom Hilfe/substitute Ben Kollege/replaced(du) 12:00-15:00",
+		}, summary(overview.Entries))
+		assertNoShiftReason(t, body)
+	})
+
+	t.Run("lead of the Dienstplan sees every changed shift of the school", func(t *testing.T) {
+		overview, body := read(t, router, leadAccount.ID, tenantID, "time_tracking:manage")
+		assert.Equal(t, []string{
+			// Over the day (#7660): without a time first, then by start.
+			"school shift_cancelled Fritz Verschoben/on_duty ->shift_plan",
+			"school staff_absent Clara Krank/absent ->staff_absences",
+			"school shift_changed Anna Betreuung/on_duty 10:00-14:00 ->shift_plan",
+			"school shift_cancelled Ben Kollege/on_duty 12:00-16:00 ->shift_plan",
+			"school shift_replacement Tom Hilfe/substitute Ben Kollege/replaced 12:00-15:00 ->shift_plan",
+		}, summary(overview.Entries))
+		for _, absent := range []string{"Dora", "Gerd", "Emil", "Xaver"} {
+			assert.NotContains(t, body, absent, "unchanged times, a standalone shift, yesterday and another school stay out")
+		}
+		assertNoShiftReason(t, body)
+	})
+
+	t.Run("account without the rights gets no shifts and no failure", func(t *testing.T) {
+		overview, _ := read(t, router, plainAccount.ID, tenantID)
+		assert.Empty(t, overview.Entries)
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
+	})
+
+	t.Run("the day before shows that day only", func(t *testing.T) {
+		overview, _ := read(t, newRouter(t, db, yesterday), leadAccount.ID, tenantID, "time_tracking:manage")
+		assert.Equal(t, []string{
+			"school shift_cancelled Emil Gestern/on_duty 08:00-16:00 ->shift_plan",
+		}, summary(overview.Entries))
+	})
+}
+
+func TestDayChangesShiftSourceIncludesMoveToADistantDay(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	staff, _ := testpkg.CreateTestStaffWithAccount(t, db, "Fritz", "Verschoben")
+	series := testpkg.CreateTestStaffShiftSeries(t, db, staff.ID, day)
+	testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day.AddDays(8), testpkg.StaffShiftChange{Series: &series, Slot: &day, Detached: true})
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+
+	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
+	assert.Equal(t, []string{
+		"school shift_cancelled Fritz Verschoben/on_duty ->shift_plan",
+	}, summary(overview.Entries))
+}
+
+func TestDayChangesShiftSourceManagerLinksOwnShiftWithoutOwnPermission(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+	testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day, testpkg.StaffShiftChange{Cancelled: true})
+
+	overview, _ := read(t, newRouter(t, db, day), account.ID, tenantID, "time_tracking:manage")
+	assert.Equal(t, []string{
+		"you shift_cancelled Lea Leitung/on_duty(du) 08:00-16:00 ->shift_plan",
+	}, summary(overview.Entries))
+}
+
+func TestDayChangesShiftSourceComparesDetachedShiftToTheSeries(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	staff := testpkg.CreateTestStaff(t, db, "Dora", "Gleich")
+	series := testpkg.CreateTestStaffShiftSeries(t, db, staff.ID, day)
+	testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day, testpkg.StaffShiftChange{Series: &series, Detached: true})
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+
+	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
+	assert.Empty(t, overview.Entries, "a detach without a time change is not a day change")
+}
+
+func TestDayChangesShiftSourceDoesNotDuplicateLegacyAbsenceCancellations(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	for _, legacy := range []struct {
+		firstName string
+		reason    string
+	}{
+		{firstName: "Lena", reason: legacySickShiftChangeReason},
+		{firstName: "Mia", reason: legacyAbsenceShiftChangeReason},
+	} {
+		staff := testpkg.CreateTestStaff(t, db, legacy.firstName, "Altbestand")
+		testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, staff.ID, day, day, "Grippe "+legacy.firstName)
+		testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day, testpkg.StaffShiftChange{
+			Cancelled: true, ChangeReason: &legacy.reason,
+		})
+	}
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+
+	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
+	assert.Equal(t, []string{
+		"school staff_absent Lena Altbestand/absent ->staff_absences",
+		"school staff_absent Mia Altbestand/absent ->staff_absences",
+	}, summary(overview.Entries))
+}
+
+// assertNoShiftReason proves no reason of an absence or a cancellation
+// reaches the answer.
+func assertNoShiftReason(t *testing.T, body string) {
+	t.Helper()
+	assertNoReason(t, body)
+	for _, leak := range []string{"Personalgespräch", "Krankheit", "change_reason"} {
+		assert.NotContains(t, body, leak)
+	}
+}
+
 // TestDayChangesQueryBudget proves the statement count does not grow with
-// the number of absences and substitutions.
+// the number of absences, substitutions and changed shifts.
 func TestDayChangesQueryBudget(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -254,13 +454,16 @@ func TestDayChangesQueryBudget(t *testing.T) {
 			other := testpkg.CreateTestEducationGroup(t, db, fmt.Sprintf("Budget-%d", created))
 			jumper := testpkg.CreateTestStaff(t, db, "Budget", fmt.Sprintf("Springer-%d", created))
 			testpkg.CreateTestGroupSubstitution(t, db, other.ID, nil, jumper.ID, day, day)
+			testpkg.CreateTestStaffShiftChange(t, db, jumper.ID, day, testpkg.StaffShiftChange{Cancelled: true})
 		}
 		baseline = n
 		counter.Reset()
-		// time_tracking:own reads the closing days too (#7664). The Kinder and
-		// Stundenplan sources have their own query-budget scenarios.
-		overview, _ := read(t, router, account.ID, tenantID, "vacation:approve", "time_tracking:own")
-		require.Len(t, overview.Entries, 2*n)
+		// Without users:read neither the Kinder source (#7665) nor the
+		// notices read; children_test.go measures both with users:read. The
+		// Dienstplan right keeps its source in this budget and reads the
+		// closing days too (#7661, #7664).
+		overview, _ := read(t, router, account.ID, tenantID, "vacation:approve", "time_tracking:manage")
+		require.Len(t, overview.Entries, 3*n)
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {
 			require.Len(t, measured.Statements, len(statements.Statements), "statements must not grow with the rows")

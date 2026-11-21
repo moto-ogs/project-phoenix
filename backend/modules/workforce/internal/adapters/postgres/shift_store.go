@@ -53,7 +53,10 @@ func (s *Store) ListStaffShifts(ctx context.Context, filter domain.StaffShiftFil
 	rows := []staffShiftRow{}
 	query, empty := applyStaffShiftFilter(withTenant(db.NewSelect().
 		Model(&rows).
-		ModelTableExpr(tableStaffShifts+` AS "staff_shift"`), aliasStaffShift, scope), filter)
+		ModelTableExpr(tableStaffShifts+` AS "staff_shift"`).
+		ColumnExpr(`"staff_shift".*`).
+		ColumnExpr(`"staff_shift_series".start_time AS series_start_time, "staff_shift_series".end_time AS series_end_time`).
+		Join(`LEFT JOIN `+tableStaffShiftSeries+` AS "staff_shift_series" ON "staff_shift_series".id = "staff_shift".series_id AND "staff_shift_series".tenant_id = "staff_shift".tenant_id`), aliasStaffShift, scope), filter)
 	if empty {
 		return []domain.StaffShift{}, domain.OperationStats{}, nil
 	}
@@ -90,6 +93,28 @@ func applyStaffShiftStaffAndDateFilter(query *bun.SelectQuery, filter domain.Sta
 		}
 		query = query.Where(`"staff_shift".staff_id IN (?)`, bun.List(filter.StaffIDs))
 	}
+	if filter.Dates != nil && len(filter.Dates) == 0 {
+		return query, true
+	}
+	return applyStaffShiftDateFilter(query, filter), false
+}
+
+func applyStaffShiftDateFilter(query *bun.SelectQuery, filter domain.StaffShiftFilter) *bun.SelectQuery {
+	if filter.IncludeSeriesOccurrenceDate == "" {
+		return applyStaffShiftDateRange(query, filter)
+	}
+	if filter.From == "" && filter.To == "" && filter.Dates == nil {
+		return query.Where(`"staff_shift".series_occurrence_date = ?`, filter.IncludeSeriesOccurrenceDate)
+	}
+	return query.WhereGroup(" AND ", func(group *bun.SelectQuery) *bun.SelectQuery {
+		group = group.WhereGroup(" OR ", func(dates *bun.SelectQuery) *bun.SelectQuery {
+			return applyStaffShiftDateRange(dates, filter)
+		})
+		return group.WhereOr(`"staff_shift".series_occurrence_date = ?`, filter.IncludeSeriesOccurrenceDate)
+	})
+}
+
+func applyStaffShiftDateRange(query *bun.SelectQuery, filter domain.StaffShiftFilter) *bun.SelectQuery {
 	if filter.From != "" {
 		query = query.Where(`"staff_shift".date >= ?`, filter.From)
 	}
@@ -97,16 +122,13 @@ func applyStaffShiftStaffAndDateFilter(query *bun.SelectQuery, filter domain.Sta
 		query = query.Where(`"staff_shift".date <= ?`, filter.To)
 	}
 	if filter.Dates != nil {
-		if len(filter.Dates) == 0 {
-			return query, true
-		}
 		dates := make([]calendarDate, 0, len(filter.Dates))
 		for _, date := range filter.Dates {
 			dates = append(dates, calendarDate(date))
 		}
 		query = query.Where(`"staff_shift".date IN (?)`, bun.List(dates))
 	}
-	return query, false
+	return query
 }
 
 // applyStaffShiftLinkFilter renders the series, cover, sick-report and state

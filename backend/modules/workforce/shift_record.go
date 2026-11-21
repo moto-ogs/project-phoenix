@@ -35,6 +35,10 @@ type ShiftRecord struct {
 	// It does not follow Date when an occurrence is moved, so exceptions,
 	// re-plans and splits keep addressing the source slot.
 	SeriesOccurrenceDate *calendar.Date `json:"-"`
+	// SeriesStartTime and SeriesEndTime are the times planned by the linked
+	// series. They are empty for standalone shifts and reads without a series.
+	SeriesStartTime *time.Time `json:"-"`
+	SeriesEndTime   *time.Time `json:"-"`
 	// Cancelled marks a shift that does not take place (#1841).
 	Cancelled bool `json:"cancelled"`
 	// ChangeReason carries the optional "why" of a flexible daily change.

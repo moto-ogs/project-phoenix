@@ -228,7 +228,7 @@ func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.LoginRules)
 		return
 	}
-	render.JSON(w, r, loginResponse(result))
+	common.RenderJSON(w, r, loginResponse(result))
 }
 
 func loginResponse(result *identityaccess.TraegerLoginResult) LoginResponse {

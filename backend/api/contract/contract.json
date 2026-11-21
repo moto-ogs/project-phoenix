@@ -22657,6 +22657,9 @@
         "closing_day",
         "group_substitution",
         "group_substitution_count",
+        "shift_cancelled",
+        "shift_changed",
+        "shift_replacement",
         "staff_absent",
         "staff_absent_count",
         "staff_notice"
@@ -22669,6 +22672,8 @@
         "day_plan",
         "group_handovers",
         "own_absences",
+        "own_shift_plan",
+        "shift_plan",
         "staff_absences",
         "staff_list",
         "staff_member",
@@ -22701,6 +22706,7 @@
       "name": "PersonRole",
       "values": [
         "absent",
+        "on_duty",
         "replaced",
         "substitute"
       ]

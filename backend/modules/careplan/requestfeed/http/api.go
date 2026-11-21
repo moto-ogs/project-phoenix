@@ -3,13 +3,13 @@
 package requestfeedhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -133,8 +133,14 @@ func (rs *Resource) failure(w http.ResponseWriter, err error) {
 	writeJSON(w, status, feedProblem{Status: status, Detail: http.StatusText(status), Code: code})
 }
 
+// writeJSON writes an answer with identifiers as strings (ADR 0300, addendum).
 func writeJSON(w http.ResponseWriter, status int, value any) {
+	body, err := wire.Marshal(value)
+	if err != nil {
+		status = http.StatusInternalServerError
+		body, _ = wire.Marshal(feedProblem{Status: status, Detail: http.StatusText(status), Code: codeGeneralServer})
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
+	_, _ = w.Write(append(body, '\n'))
 }

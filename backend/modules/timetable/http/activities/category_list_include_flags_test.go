@@ -5,11 +5,11 @@ package httpadapter_test
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -46,7 +46,7 @@ func TestActivityCategoriesListIncludeFlags(t *testing.T) {
 						if (category.IsSystem && !includeSystem) || (category.ArchivedAt != nil && !includeArchived) {
 							continue
 						}
-						row := map[string]any{"id": ident.ID(category.ID), "name": category.Name, "is_system": category.IsSystem, "created_at": category.CreatedAt, "updated_at": category.UpdatedAt}
+						row := map[string]any{"id": strconv.FormatInt(category.ID, 10), "name": category.Name, "is_system": category.IsSystem, "created_at": category.CreatedAt, "updated_at": category.UpdatedAt}
 						if category.ArchivedAt != nil {
 							row["archived_at"] = category.ArchivedAt
 						}

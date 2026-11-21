@@ -74,6 +74,37 @@ function groupSubstitutionCountText(change: DayChange): string {
     : `In ${count} weiteren Gruppen vertritt heute jemand.`;
 }
 
+// Die Uhrzeit eines Dienstes steht nicht im Satz, sondern daneben
+// (`dayChangeSpan`, #7660).
+function shiftChangedText(change: DayChange): string {
+  const person = personWith(change, "on_duty");
+  return person?.isSelf
+    ? "Dein Dienst ist heute anders."
+    : `${nameOf(person)} hat heute einen anderen Dienst.`;
+}
+
+function shiftCancelledText(change: DayChange): string {
+  const person = personWith(change, "on_duty");
+  if (person?.isSelf) return "Dein Dienst fällt heute aus.";
+  return `Der Dienst von ${nameOf(person)} fällt heute aus.`;
+}
+
+function shiftReplacementText(change: DayChange): string {
+  const substitute = personWith(change, "substitute");
+  const replaced = personWith(change, "replaced");
+  if (substitute?.isSelf) {
+    return replaced
+      ? `Du vertrittst heute ${nameOf(replaced)}.`
+      : "Du hast heute einen Dienst als Vertretung.";
+  }
+  if (replaced?.isSelf) {
+    return `${nameOf(substitute)} vertritt dich heute.`;
+  }
+  return replaced
+    ? `${nameOf(substitute)} vertritt heute ${nameOf(replaced)}.`
+    : `${nameOf(substitute)} hat heute einen Dienst als Vertretung.`;
+}
+
 function childName(child: DayChangeChild): string {
   return child.name || "Ein Kind";
 }
@@ -205,6 +236,9 @@ const DAY_CHANGE_TEXTS: Readonly<
   staff_absent_count: staffAbsentCountText,
   group_substitution: groupSubstitutionText,
   group_substitution_count: groupSubstitutionCountText,
+  shift_changed: shiftChangedText,
+  shift_cancelled: shiftCancelledText,
+  shift_replacement: shiftReplacementText,
   child_absent: childText,
   child_pickup_changed: childText,
   child_goes_alone: childText,
@@ -273,7 +307,8 @@ export function dayChangeSpan(change: DayChange): string | null {
 
 /** Der Hinweis, wenn eine Quelle gerade nicht geladen werden konnte. */
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
-  staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+  staff:
+    "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
   children:
     "Krankmeldungen und Abholzeiten der Kinder konnten gerade nicht geladen werden.",
   notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
@@ -308,6 +343,12 @@ export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
       return "/staff";
     case "group_handovers":
       return "/substitutions";
+    case "own_shift_plan":
+      return "/mein-dienstplan";
+    case "shift_plan":
+      return link.staffId
+        ? `/dienstplan?view=person&staff=${link.staffId}`
+        : "/dienstplan";
     case "student":
       return link.studentId ? `/students/${link.studentId}` : null;
     case "staff_notices":

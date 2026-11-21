@@ -167,13 +167,16 @@ type DemoAccessProgress struct {
 
 // DemoAccess is the capability the public demo routes consume, separate from
 // the module every environment composes.
-type DemoAccess struct{ engine DemoAccessEngine }
+type DemoAccess struct {
+	engine  DemoAccessEngine
+	crmJobs DemoCRMJobs
+}
 
-func NewDemoAccess(engine DemoAccessEngine) *DemoAccess {
+func NewDemoAccess(engine DemoAccessEngine, jobs DemoCRMJobs) *DemoAccess {
 	if engine == nil {
 		panic("demo access requires an engine")
 	}
-	return &DemoAccess{engine: engine}
+	return &DemoAccess{engine: engine, crmJobs: jobs}
 }
 
 func (d *DemoAccess) RequestDemoAccess(ctx context.Context, request DemoAccessRequest) error {
@@ -199,4 +202,11 @@ func (d *DemoAccess) RedeemDemoAccess(ctx context.Context, token, role, ipAddres
 // counts against the request limits of the address and of clientIP (#3466).
 func (d *DemoAccess) ResetDemoAccess(ctx context.Context, token, clientIP string) error {
 	return d.engine.ResetDemoAccess(ctx, token, clientIP)
+}
+
+func (d *DemoAccess) CRMJobs() DemoCRMJobs {
+	if d == nil {
+		return nil
+	}
+	return d.crmJobs
 }

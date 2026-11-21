@@ -17,11 +17,29 @@ import {
 import { LOCATION_COLORS } from "./location-helper";
 import { knownEnum } from "./contract/known-enum";
 import type {
+  applyDeviationsRequest,
+  bulkSubstitutionRequest,
+  ApplyDeviationsResponse as WireApplyDeviations,
   AttendanceResponse as WireAttendance,
+  BulkCancelResult as WireBulkCancel,
+  BulkSubstitutionResponse as WireBulkSubstitution,
   DeviationHistoryResponse as WireDeviationHistory,
+  editedInWindowResponse as WireEditedInWindow,
   enrichedInstance as WireInstance,
   GapInstance as WireGapInstance,
   GapsResponse as WireGaps,
+  GuardianNoticeReachResponse as WireGuardianNoticeReach,
+  GuardianNoticeResponse as WireGuardianNotice,
+  InstanceStatusResponse as WireInstanceStatus,
+  materializeResponse as WireMaterialize,
+  MoveStaffResponse as WireMoveStaff,
+  PlannedConflictsResponse as WireConflictCheck,
+  replanWeekResponse as WireReplanWeek,
+  ShiftCoverageResponse as WireShiftCoverage,
+  ShiftCoverageWarning as WireShiftCoverageWarning,
+  StaffPoolResponse as WireStaffPool,
+  StartInstanceResponse as WireStartInstance,
+  SubstituteTimeConflict as WireSubstituteTimeConflict,
   weeklyInstancesResponse as WireWeeklyInstances,
 } from "./contract/timetable.generated";
 import type { InstanceConflictWarning as WireConflictWarning } from "./contract/shared.generated";
@@ -34,26 +52,14 @@ import {
 import type {
   ActivityType,
   CareDayStatus,
+  EditedChange,
   InstanceStatus,
   TimetableListKind,
-  BackendConflictCheckResult,
-  BackendShiftCoverageCheckResult,
   BackendCreateTemplateResult,
   BackendEndTemplateResult,
-  BackendMoveStaffResponse,
-  BackendStaffPoolResponse,
   MoveStaffResponse,
   StaffPoolResponse,
-  BackendApplyDeviationsResponse,
-  BackendBulkSubstitutionResponse,
   BulkSubstitutionResponse,
-  BackendGuardianNoticeReach,
-  BackendGuardianNoticeResult,
-  BackendInstanceStatusResult,
-  BackendMaterializeResult,
-  BackendBulkCancelResult,
-  BackendReplanWeekResult,
-  BackendEditedInWindowResult,
   EditedInWindowResult,
   BackendCombinedOfferingCountsResponse,
   BackendOfferingSourcesResponse,
@@ -61,7 +67,6 @@ import type {
   BackendSplitTemplateResult,
   BackendTemplatesResponse,
   OfferingSourceOption,
-  BackendStartInstanceResult,
   AttendanceResponse,
   ConflictCheckResult,
   CreateTemplateResult,
@@ -544,6 +549,38 @@ const EMPTY_ROSTER_REASON_VALUES = [
   "offering_source_empty",
 ] as const;
 const CONFLICT_KIND_VALUES = ["staff", "student"] as const;
+const EDITED_CHANGE_VALUES = [
+  "title",
+  "description",
+  "notes",
+  "room",
+  "time",
+  "staff",
+  "students",
+  "attendance",
+  "list_kind",
+  "deleted",
+] as const satisfies readonly EditedChange[];
+const SUBSTITUTE_ACTION_VALUES = [
+  "substituted",
+  "already_substituted",
+  "already_on_instance",
+  "marked_absent",
+  "already_absent",
+  "marked_present",
+] as const;
+const STAFF_POOL_CATEGORY_VALUES = [
+  "assigned_here",
+  "absent",
+  "assigned_elsewhere",
+  "on_shift_free",
+  "not_on_shift",
+] as const;
+const MOVE_STAFF_ACTION_VALUES = [
+  "moved",
+  "assigned",
+  "already_applied",
+] as const;
 
 type ConflictWarning = EnrichedInstance["conflictWarnings"][number];
 
@@ -678,37 +715,31 @@ export function mapWeeklyInstances(
   };
 }
 
-export function mapMaterializeResult(
-  raw: BackendMaterializeResult,
-): MaterializeResult {
+export function mapMaterializeResult(raw: WireMaterialize): MaterializeResult {
   return {
     from: raw.from,
     to: raw.to,
     instancesCreated: raw.instances_created,
     candidatesSkippedExisting: raw.candidates_skipped_existing,
-    skippedHolidays: raw.skipped_holidays ?? 0,
-    skippedClosingDays: raw.skipped_closing_days ?? 0,
+    skippedHolidays: raw.skipped_holidays,
+    skippedClosingDays: raw.skipped_closing_days,
+    // The code stays open (MaterializeWarning): a new one shows its message.
     warnings: (raw.warnings ?? []).map((w) => ({
-      // The codes the backend emits today are bounded; widening to string
-      // here keeps the mapper forward-compatible if a new code lands without
-      // requiring a frontend release.
-      code: w.code as MaterializeResult["warnings"][number]["code"],
+      code: w.code,
       message: w.message,
     })),
     durationMs: raw.duration_ms,
   };
 }
 
-export function mapBulkCancelResult(
-  raw: BackendBulkCancelResult,
-): BulkCancelResult {
+export function mapBulkCancelResult(raw: WireBulkCancel): BulkCancelResult {
   return {
     from: raw.from,
     to: raw.to,
     dryRun: raw.dry_run,
     count: raw.count,
     days: (raw.days ?? []).map((day) => ({ date: day.date, count: day.count })),
-    kept: raw.kept ?? 0,
+    kept: raw.kept,
     keptSeries: (raw.kept_series ?? []).map((series) => ({
       name: series.name,
       count: series.count,
@@ -716,9 +747,7 @@ export function mapBulkCancelResult(
   };
 }
 
-export function mapReplanWeekResult(
-  raw: BackendReplanWeekResult,
-): ReplanWeekResult {
+export function mapReplanWeekResult(raw: WireReplanWeek): ReplanWeekResult {
   return {
     from: raw.from,
     to: raw.to,
@@ -727,26 +756,25 @@ export function mapReplanWeekResult(
     instancesCreated: raw.instances_created,
     instanceStudentsCreated: raw.instance_students_created,
     instanceStaffCreated: raw.instance_staff_created,
-    warnings: (raw.warnings ?? []).map((w) => ({
-      code: w.code as ReplanWeekResult["warnings"][number]["code"],
-      message: w.message,
-    })),
     durationMs: raw.duration_ms,
   };
 }
 
 export function mapEditedInWindowResult(
-  raw: BackendEditedInWindowResult,
+  raw: WireEditedInWindow,
 ): EditedInWindowResult {
   return {
     count: raw.count,
     occurrences: (raw.occurrences ?? []).map((o) => ({
-      instanceId: String(o.instance_id),
+      instanceId: o.instance_id,
       date: o.date,
       startTime: o.start_time,
       title: o.title,
-      changes:
-        o.changes as EditedInWindowResult["occurrences"][number]["changes"],
+      // A change this build does not know is left out of the list.
+      changes: (o.changes ?? []).flatMap((change) => {
+        const known = knownEnum(EDITED_CHANGE_VALUES, change);
+        return known ? [known] : [];
+      }),
     })),
   };
 }
@@ -847,39 +875,48 @@ export function mapAttendance(raw: WireAttendance): AttendanceResponse {
   };
 }
 
+function mapAffectedInstances(
+  items: WireApplyDeviations["affected_instances"],
+): ApplyDeviationsResponse["affectedInstances"] {
+  return (items ?? []).map((item) => ({
+    instanceId: item.instance_id,
+    title: item.title,
+    startTime: item.start_time,
+    action: knownEnum(SUBSTITUTE_ACTION_VALUES, item.action),
+  }));
+}
+
+function mapTimeConflicts(
+  conflicts: readonly WireSubstituteTimeConflict[] | null,
+): ApplyDeviationsResponse["warnings"] {
+  return (conflicts ?? []).map((conflict) => ({
+    instanceId: conflict.instance_id,
+    kind: conflict.kind,
+    otherInstanceId: conflict.other_instance_id,
+    message: conflict.message,
+  }));
+}
+
+/**
+ * The tenant route and the substitution route answer the same Go result;
+ * only the tenant route informs the families on a cancellation.
+ */
 export function mapApplyDeviations(
-  raw: BackendApplyDeviationsResponse,
+  raw: WireApplyDeviations,
 ): ApplyDeviationsResponse {
   return {
-    instanceId: String(raw.instance_id),
+    instanceId: raw.instance_id,
     cancelled: raw.cancelled,
     understaffedAck: raw.understaffed_ack,
-    affectedInstances: (raw.affected_instances ?? []).map((item) => ({
-      instanceId: String(item.instance_id),
-      title: item.title,
-      startTime: item.start_time,
-      action: item.action,
-    })),
-    warnings: (raw.warnings ?? []).map((warning) => ({
-      instanceId: String(warning.instance_id),
-      kind: warning.kind,
-      otherInstanceId:
-        warning.other_instance_id === undefined
-          ? undefined
-          : String(warning.other_instance_id),
-      message: warning.message,
-      title: warning.title,
-      date: warning.date,
-      startTime: warning.start_time,
-      endTime: warning.end_time,
-    })),
+    affectedInstances: mapAffectedInstances(raw.affected_instances),
+    warnings: mapTimeConflicts(raw.warnings),
     guardianNotice: mapGuardianNoticeResult(raw.guardian_notice),
   };
 }
 
 export function prepareApplyDeviationsBody(
   input: ApplyDeviationsInput,
-): Record<string, unknown> {
+): applyDeviationsRequest {
   if (input.cancel) {
     return {
       cancel: true,
@@ -894,7 +931,7 @@ export function prepareApplyDeviationsBody(
         : {}),
     };
   }
-  const body: Record<string, unknown> = {};
+  const body: applyDeviationsRequest = {};
   if (input.understaffedAck !== undefined) {
     body.understaffed_ack = input.understaffedAck;
     if (input.understaffedAck && input.understaffedNote) {
@@ -903,17 +940,17 @@ export function prepareApplyDeviationsBody(
   }
   if (input.absences?.length) {
     body.absences = input.absences.map((item) => ({
-      staff_id: Number(item.staffId),
+      staff_id: item.staffId,
       reason: item.reason,
-      instance_ids: item.instanceIds?.map(Number),
+      instance_ids: item.instanceIds ? [...item.instanceIds] : undefined,
     }));
   }
   if (input.substitutions?.length) {
     body.substitutions = input.substitutions.map((item) => ({
-      absent_staff_id: Number(item.absentStaffId),
-      substitute_staff_id: Number(item.substituteStaffId),
+      absent_staff_id: item.absentStaffId,
+      substitute_staff_id: item.substituteStaffId,
       reason: item.reason,
-      instance_ids: item.instanceIds?.map(Number),
+      instance_ids: item.instanceIds ? [...item.instanceIds] : undefined,
     }));
   }
   if (input.substitutionRemovals?.length) {
@@ -928,67 +965,60 @@ export function prepareApplyDeviationsBody(
 
 function scopedStaffBody(item: { staffId: string; instanceIds?: string[] }) {
   return {
-    staff_id: Number(item.staffId),
-    instance_ids: item.instanceIds?.map(Number),
+    staff_id: item.staffId,
+    instance_ids: item.instanceIds ? [...item.instanceIds] : undefined,
   };
 }
 
 export function prepareBulkSubstitutionBody(
   input: BulkSubstitutionInput,
-): Record<string, unknown> {
+): bulkSubstitutionRequest {
   return {
-    absent_staff_id: Number(input.absentStaffId),
+    absent_staff_id: input.absentStaffId,
     dates: input.dates,
     ...(input.substituteStaffId
-      ? { substitute_staff_id: Number(input.substituteStaffId) }
+      ? { substitute_staff_id: input.substituteStaffId }
       : {}),
     ...(input.reason ? { reason: input.reason } : {}),
   };
 }
 
+/** The substitution route leaves `days` out when it is empty. */
 export function mapBulkSubstitution(
-  raw: BackendBulkSubstitutionResponse,
+  raw: Pick<WireBulkSubstitution, "total_affected"> & {
+    days?: WireBulkSubstitution["days"];
+  },
 ): BulkSubstitutionResponse {
   const days = (raw.days ?? []).map((day) => ({
     date: day.date,
-    affectedInstances: (day.affected_instances ?? []).map((item) => ({
-      instanceId: String(item.instance_id),
-      title: item.title,
-      startTime: item.start_time,
-      action: item.action,
-    })),
+    affectedInstances: mapAffectedInstances(day.affected_instances),
     warningCount: (day.warnings ?? []).length,
   }));
   return {
     days,
-    totalAffected: raw.total_affected ?? 0,
+    totalAffected: raw.total_affected,
     warningCount: days.reduce((sum, day) => sum + day.warningCount, 0),
   };
 }
 
 export function mapStartInstanceResult(
-  raw: BackendStartInstanceResult,
+  raw: WireStartInstance,
 ): StartInstanceResult {
   return {
-    instanceId: String(raw.instance_id),
-    status: raw.status,
-    activeGroupId: String(raw.active_group_id),
+    instanceId: raw.instance_id,
+    status: knownEnum(INSTANCE_STATUS_VALUES, raw.status),
+    activeGroupId: raw.active_group_id,
     startedAt: raw.started_at,
-    warnings: (raw.warnings ?? []).map((w) => ({
-      kind: w.kind,
-      resourceId: String(w.resource_id),
-      message: w.message,
-      canOverride: w.can_override,
-    })),
+    warnings: (raw.warnings ?? []).map(mapConflictWarning),
   };
 }
 
 export function mapInstanceStatusResult(
-  raw: BackendInstanceStatusResult,
+  raw: WireInstanceStatus,
 ): InstanceStatusResult {
   return {
-    instanceId: String(raw.instance_id),
-    status: raw.status,
+    instanceId: raw.instance_id,
+    status: knownEnum(INSTANCE_STATUS_VALUES, raw.status),
     completedAt: raw.completed_at,
     reopenUntil: raw.reopen_until,
     guardianNotice: mapGuardianNoticeResult(raw.guardian_notice),
@@ -996,18 +1026,18 @@ export function mapInstanceStatusResult(
 }
 
 function mapGuardianNoticeResult(
-  raw: BackendGuardianNoticeResult | undefined | null,
+  raw: WireGuardianNotice | undefined,
 ): GuardianNoticeResult | undefined {
   if (!raw) return undefined;
   return {
-    announcementId: String(raw.announcement_id),
+    announcementId: raw.announcement_id,
     childCount: raw.child_count,
     familyCount: raw.family_count,
   };
 }
 
 export function mapGuardianNoticeReach(
-  raw: BackendGuardianNoticeReach,
+  raw: WireGuardianNoticeReach,
 ): GuardianNoticeReach {
   return {
     childCount: raw.child_count,
@@ -1051,95 +1081,89 @@ export function mapEndTemplateResult(
 }
 
 export function mapConflictCheckResult(
-  raw: BackendConflictCheckResult,
+  raw: WireConflictCheck,
 ): ConflictCheckResult {
   return {
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,
     warnings: (raw.warnings ?? []).map((warning) => ({
-      kind: warning.kind,
-      resourceId: String(warning.resource_id),
+      kind: conflictKind(warning.kind),
+      resourceId: warning.resource_id,
       message: warning.message,
-      conflictingInstanceId: String(warning.conflicting_instance_id),
+      conflictingInstanceId: warning.conflicting_instance_id,
       conflictingTitle: warning.conflicting_title,
     })),
   };
 }
 
+function mapCoverageWarning(
+  warning: WireShiftCoverageWarning,
+): ShiftCoverageCheckResult["coverageWarnings"][number] {
+  return {
+    staffId: warning.staff_id,
+    staffName: warning.staff_name,
+    date: warning.date,
+    startTime: warning.start_time,
+    endTime: warning.end_time,
+    uncoveredStartTime: warning.uncovered_start_time,
+    uncoveredEndTime: warning.uncovered_end_time,
+    message: warning.message,
+  };
+}
+
 export function mapShiftCoverageCheckResult(
-  raw: BackendShiftCoverageCheckResult,
+  raw: WireShiftCoverage,
 ): ShiftCoverageCheckResult {
   return {
-    coverageWarnings: (raw.coverage_warnings ?? []).map((warning) => ({
-      staffId: String(warning.staff_id),
-      staffName: warning.staff_name,
-      date: warning.date,
-      startTime: warning.start_time,
-      endTime: warning.end_time,
-      uncoveredStartTime: warning.uncovered_start_time,
-      uncoveredEndTime: warning.uncovered_end_time,
-      message: warning.message,
-    })),
-    coverageWarningCount:
-      raw.coverage_warning_count ?? raw.coverage_warnings?.length ?? 0,
+    coverageWarnings: (raw.coverage_warnings ?? []).map(mapCoverageWarning),
+    coverageWarningCount: raw.coverage_warning_count,
   };
 }
 
 /** #1884 Personalpool: Backend-Snake-Case auf das Frontend-Modell abbilden. */
-export function mapStaffPool(raw: BackendStaffPoolResponse): StaffPoolResponse {
+export function mapStaffPool(raw: WireStaffPool): StaffPoolResponse {
   return {
-    instanceId: String(raw.instance_id),
+    instanceId: raw.instance_id,
     title: raw.title,
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,
     dienstplanInUse: raw.dienstplan_in_use,
-    entries: (raw.entries ?? []).map((entry) => ({
-      staffId: String(entry.staff_id),
-      displayName: entry.display_name,
-      category: entry.category,
-      onShift: entry.on_shift,
-      coversWindow: entry.covers_window,
-      shiftWindows: entry.shift_windows ?? [],
-      absenceReason: entry.absence_reason ?? undefined,
-      assignments: (entry.assignments ?? []).map((assignment) => ({
-        instanceId: String(assignment.instance_id),
-        title: assignment.title,
-        startTime: assignment.start_time,
-        endTime: assignment.end_time,
-        isSubstitute: assignment.is_substitute,
-      })),
-    })),
+    // A category this build does not know has no section: the entry is left out.
+    entries: (raw.entries ?? []).flatMap((entry) => {
+      const category = knownEnum(STAFF_POOL_CATEGORY_VALUES, entry.category);
+      if (!category) return [];
+      return [
+        {
+          staffId: entry.staff_id,
+          displayName: entry.display_name,
+          category,
+          onShift: entry.on_shift,
+          coversWindow: entry.covers_window,
+          shiftWindows: entry.shift_windows ?? [],
+          absenceReason: entry.absence_reason,
+          assignments: (entry.assignments ?? []).map((assignment) => ({
+            instanceId: assignment.instance_id,
+            title: assignment.title,
+            startTime: assignment.start_time,
+            endTime: assignment.end_time,
+            isSubstitute: assignment.is_substitute,
+          })),
+        },
+      ];
+    }),
   };
 }
 
 /** #1884: Antwort des atomaren Personal-Moves abbilden. */
-export function mapMoveStaff(raw: BackendMoveStaffResponse): MoveStaffResponse {
+export function mapMoveStaff(raw: WireMoveStaff): MoveStaffResponse {
   return {
-    targetInstanceId: String(raw.target_instance_id),
-    sourceInstanceId:
-      raw.source_instance_id != null
-        ? String(raw.source_instance_id)
-        : undefined,
-    action: raw.action,
-    timeConflicts: (raw.time_conflicts ?? []).map((conflict) => ({
-      instanceId: String(conflict.instance_id),
-      title: conflict.title,
-      date: conflict.date,
-      startTime: conflict.start_time,
-      endTime: conflict.end_time,
-    })),
-    coverageWarnings: (raw.coverage_warnings ?? []).map((warning) => ({
-      staffId: String(warning.staff_id),
-      staffName: warning.staff_name,
-      date: warning.date,
-      startTime: warning.start_time,
-      endTime: warning.end_time,
-      uncoveredStartTime: warning.uncovered_start_time,
-      uncoveredEndTime: warning.uncovered_end_time,
-      message: warning.message,
-    })),
+    targetInstanceId: raw.target_instance_id,
+    sourceInstanceId: raw.source_instance_id,
+    action: knownEnum(MOVE_STAFF_ACTION_VALUES, raw.action),
+    timeConflicts: mapTimeConflicts(raw.time_conflicts),
+    coverageWarnings: (raw.coverage_warnings ?? []).map(mapCoverageWarning),
   };
 }
 

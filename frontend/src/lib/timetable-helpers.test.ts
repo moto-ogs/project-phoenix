@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildEnrichedInstance } from "~/test/fixtures/timetable";
+import {
+  buildEnrichedInstance,
+  buildMaterializeResponse,
+} from "~/test/fixtures/timetable";
 import { setTestClock } from "~/test/clock";
 
 import {
@@ -31,6 +34,7 @@ import {
   mapBulkSubstitution,
   mapMoveStaff,
   mapStaffPool,
+  mapEditedInWindowResult,
   mapAttendance,
   mapConflictCheckResult,
   mapDeviationHistory,
@@ -655,6 +659,7 @@ describe("backend mappers", () => {
       dry_run: false,
       count: 0,
       days: null,
+      kept: 0,
       kept_series: null,
     });
     expect(empty.days).toEqual([]);
@@ -663,21 +668,22 @@ describe("backend mappers", () => {
 
   it("maps materialization and re-plan results", () => {
     expect(
-      mapMaterializeResult({
-        from: "2026-05-04",
-        to: "2026-05-08",
-        instances_created: 3,
-        candidates_skipped_existing: 1,
-        skipped_holidays: 1,
-        warnings: [{ code: "period_missing", message: "keine Periode" }],
-        duration_ms: 12,
-      }),
+      mapMaterializeResult(
+        buildMaterializeResponse({
+          from: "2026-05-04",
+          to: "2026-05-08",
+          instances_created: 3,
+          candidates_skipped_existing: 1,
+          skipped_holidays: 1,
+          warnings: [{ code: "period_missing", message: "keine Periode" }],
+          duration_ms: 12,
+        }),
+      ),
     ).toEqual({
       from: "2026-05-04",
       to: "2026-05-08",
       instancesCreated: 3,
       candidatesSkippedExisting: 1,
-      // #3594: an older backend without the counter reads as 0.
       skippedHolidays: 1,
       skippedClosingDays: 0,
       warnings: [{ code: "period_missing", message: "keine Periode" }],
@@ -693,7 +699,6 @@ describe("backend mappers", () => {
         instances_created: 3,
         instance_students_created: 4,
         instance_staff_created: 5,
-        warnings: [{ code: "staff_missing", message: "Personal fehlt" }],
         duration_ms: 13,
       }),
     ).toMatchObject({
@@ -701,7 +706,6 @@ describe("backend mappers", () => {
       instancesCreated: 3,
       instanceStudentsCreated: 4,
       instanceStaffCreated: 5,
-      warnings: [{ code: "staff_missing" }],
       durationMs: 13,
     });
   });
@@ -732,14 +736,14 @@ describe("backend mappers", () => {
 
     expect(
       mapStartInstanceResult({
-        instance_id: 42,
+        instance_id: "42",
         status: "active",
-        active_group_id: 99,
+        active_group_id: "99",
         started_at: "2026-05-04T12:00:00Z",
         warnings: [
           {
             kind: "staff",
-            resource_id: 11,
+            resource_id: "11",
             message: "Doppelt",
             can_override: true,
           },
@@ -748,7 +752,7 @@ describe("backend mappers", () => {
     ).toMatchObject({ instanceId: "42", activeGroupId: "99" });
     expect(
       mapInstanceStatusResult({
-        instance_id: 42,
+        instance_id: "42",
         status: "completed",
         completed_at: "2026-05-04T13:00:00Z",
       }),
@@ -776,13 +780,7 @@ describe("backend mappers", () => {
 
   it("maps empty backend arrays from optional collections", () => {
     expect(
-      mapMaterializeResult({
-        from: "2026-05-04",
-        to: "2026-05-08",
-        instances_created: 0,
-        candidates_skipped_existing: 0,
-        duration_ms: 1,
-      }),
+      mapMaterializeResult(buildMaterializeResponse({ warnings: null })),
     ).toMatchObject({ warnings: [] });
 
     expect(
@@ -796,7 +794,7 @@ describe("backend mappers", () => {
         instance_staff_created: 0,
         duration_ms: 1,
       }),
-    ).toMatchObject({ warnings: [] });
+    ).toMatchObject({ deletedInstances: 0 });
 
     expect(
       mapGaps({
@@ -873,12 +871,12 @@ describe("backend mappers", () => {
   it("maps an applied-deviations result with affected instances and warnings (#1840)", () => {
     expect(
       mapApplyDeviations({
-        instance_id: 42,
+        instance_id: "42",
         cancelled: false,
         understaffed_ack: true,
         affected_instances: [
           {
-            instance_id: 43,
+            instance_id: "43",
             title: "Mensa",
             start_time: "12:00",
             action: "marked_absent",
@@ -886,11 +884,10 @@ describe("backend mappers", () => {
         ],
         warnings: [
           {
-            instance_id: 44,
-            title: "AG",
-            date: "2026-05-04",
-            start_time: "14:00",
-            end_time: "15:00",
+            kind: "substitute_time_conflict",
+            instance_id: "42",
+            other_instance_id: "44",
+            message: "Vertretung ist auf Instanz 44 um 14:00 eingetragen",
           },
         ],
       }),
@@ -908,11 +905,10 @@ describe("backend mappers", () => {
       ],
       warnings: [
         {
-          instanceId: "44",
-          title: "AG",
-          date: "2026-05-04",
-          startTime: "14:00",
-          endTime: "15:00",
+          instanceId: "42",
+          kind: "substitute_time_conflict",
+          otherInstanceId: "44",
+          message: "Vertretung ist auf Instanz 44 um 14:00 eingetragen",
         },
       ],
     });
@@ -921,11 +917,11 @@ describe("backend mappers", () => {
   it("maps applied-deviations with empty optional collections (#1840)", () => {
     expect(
       mapApplyDeviations({
-        instance_id: 42,
+        instance_id: "42",
         cancelled: true,
         understaffed_ack: false,
-        affected_instances: undefined as never,
-        warnings: undefined as never,
+        affected_instances: null,
+        warnings: null,
       }),
     ).toMatchObject({
       instanceId: "42",
@@ -938,15 +934,15 @@ describe("backend mappers", () => {
   it("preserves shared-substitution conflict details", () => {
     expect(
       mapApplyDeviations({
-        instance_id: 42,
+        instance_id: "42",
         cancelled: false,
         understaffed_ack: false,
         affected_instances: [],
         warnings: [
           {
             kind: "staff_overlap",
-            instance_id: 42,
-            other_instance_id: 43,
+            instance_id: "42",
+            other_instance_id: "43",
             message: "Die Ersatzperson hat gleichzeitig einen anderen Termin.",
           },
         ],
@@ -964,6 +960,12 @@ describe("backend mappers", () => {
   });
 
   it("maps a bulk-substitution result per day and aggregates warnings (#2284)", () => {
+    const CONFLICT = {
+      kind: "substitute_time_conflict",
+      instance_id: "43",
+      other_instance_id: "44",
+      message: "überschneidet sich",
+    };
     expect(
       mapBulkSubstitution({
         days: [
@@ -971,18 +973,18 @@ describe("backend mappers", () => {
             date: "2026-08-18",
             affected_instances: [
               {
-                instance_id: 43,
+                instance_id: "43",
                 title: "Mensa",
                 start_time: "12:00",
                 action: "substituted",
               },
             ],
-            warnings: [{}, {}],
+            warnings: [CONFLICT, CONFLICT],
           },
           {
             date: "2026-08-19",
             affected_instances: [],
-            warnings: [{}],
+            warnings: [CONFLICT],
           },
         ],
         total_affected: 3,
@@ -1011,8 +1013,8 @@ describe("backend mappers", () => {
   it("maps a bulk-substitution result with missing optional collections (#2284)", () => {
     expect(
       mapBulkSubstitution({
-        days: undefined as never,
-        total_affected: undefined as never,
+        days: null,
+        total_affected: 0,
       }),
     ).toEqual({ days: [], totalAffected: 0, warningCount: 0 });
   });
@@ -1903,9 +1905,9 @@ describe("mapConflictCheckResult", () => {
         warnings: [
           {
             kind: "staff",
-            resource_id: 11,
+            resource_id: "11",
             message: "Person doppelt eingeplant",
-            conflicting_instance_id: 42,
+            conflicting_instance_id: "42",
             conflicting_title: "Mensa",
           },
         ],
@@ -1930,6 +1932,7 @@ describe("mapConflictCheckResult", () => {
         date: "2026-05-04",
         start_time: "12:00",
         end_time: "13:00",
+        warnings: null,
       }),
     ).toEqual({
       date: "2026-05-04",
@@ -1946,7 +1949,7 @@ describe("mapShiftCoverageCheckResult", () => {
       mapShiftCoverageCheckResult({
         coverage_warnings: [
           {
-            staff_id: 12,
+            staff_id: "12",
             staff_name: "Ada Lovelace",
             date: "2026-05-06",
             start_time: "12:00",
@@ -1956,6 +1959,7 @@ describe("mapShiftCoverageCheckResult", () => {
             message: "Mittwoch ist nicht vollständig abgedeckt.",
           },
         ],
+        coverage_warning_count: 1,
       }),
     ).toEqual({
       coverageWarningCount: 1,
@@ -1972,7 +1976,12 @@ describe("mapShiftCoverageCheckResult", () => {
         },
       ],
     });
-    expect(mapShiftCoverageCheckResult({})).toEqual({
+    expect(
+      mapShiftCoverageCheckResult({
+        coverage_warnings: null,
+        coverage_warning_count: 0,
+      }),
+    ).toEqual({
       coverageWarnings: [],
       coverageWarningCount: 0,
     });
@@ -2066,7 +2075,7 @@ describe("staff pool + move mappers (#1884)", () => {
   it("maps a staff pool response including null collections", () => {
     expect(
       mapStaffPool({
-        instance_id: 42,
+        instance_id: "42",
         title: "Mensa",
         date: "2026-05-04",
         start_time: "12:30",
@@ -2074,16 +2083,15 @@ describe("staff pool + move mappers (#1884)", () => {
         dienstplan_in_use: true,
         entries: [
           {
-            staff_id: 7,
+            staff_id: "7",
             display_name: "Ina Umzieherin",
             category: "assigned_elsewhere",
             on_shift: true,
             covers_window: true,
             shift_windows: ["08:00–16:00"],
-            absence_reason: null,
             assignments: [
               {
-                instance_id: 41,
+                instance_id: "41",
                 title: "Schulhof",
                 start_time: "12:00",
                 end_time: "14:00",
@@ -2092,7 +2100,7 @@ describe("staff pool + move mappers (#1884)", () => {
             ],
           },
           {
-            staff_id: 8,
+            staff_id: "8",
             display_name: "Frido Verfuegbar",
             category: "on_shift_free",
             on_shift: true,
@@ -2145,21 +2153,20 @@ describe("staff pool + move mappers (#1884)", () => {
   it("maps a move result with advisory warnings", () => {
     expect(
       mapMoveStaff({
-        target_instance_id: 42,
-        source_instance_id: 41,
+        target_instance_id: "42",
+        source_instance_id: "41",
         action: "moved",
         time_conflicts: [
           {
-            instance_id: 44,
-            title: "AG",
-            date: "2026-05-04",
-            start_time: "13:00",
-            end_time: "14:00",
+            kind: "substitute_time_conflict",
+            instance_id: "42",
+            other_instance_id: "44",
+            message: "Vertretung ist auf Instanz 44 um 13:00 eingetragen",
           },
         ],
         coverage_warnings: [
           {
-            staff_id: 7,
+            staff_id: "7",
             staff_name: "Ina Umzieherin",
             date: "2026-05-04",
             start_time: "12:30",
@@ -2176,11 +2183,10 @@ describe("staff pool + move mappers (#1884)", () => {
       action: "moved",
       timeConflicts: [
         {
-          instanceId: "44",
-          title: "AG",
-          date: "2026-05-04",
-          startTime: "13:00",
-          endTime: "14:00",
+          instanceId: "42",
+          kind: "substitute_time_conflict",
+          otherInstanceId: "44",
+          message: "Vertretung ist auf Instanz 44 um 13:00 eingetragen",
         },
       ],
       coverageWarnings: [
@@ -2198,11 +2204,57 @@ describe("staff pool + move mappers (#1884)", () => {
     });
   });
 
+  it("leaves out pool entries and edited changes this build does not know", () => {
+    const pool = mapStaffPool({
+      instance_id: "42",
+      title: "Mensa",
+      date: "2026-05-04",
+      start_time: "12:00",
+      end_time: "13:00",
+      dienstplan_in_use: true,
+      entries: [
+        {
+          staff_id: "7",
+          display_name: "Ina",
+          category: "on_call",
+          on_shift: true,
+          covers_window: true,
+          shift_windows: null,
+          assignments: null,
+        },
+        {
+          staff_id: "8",
+          display_name: "Ole",
+          category: "on_shift_free",
+          on_shift: true,
+          covers_window: true,
+          shift_windows: null,
+          assignments: null,
+        },
+      ],
+    });
+    expect(pool.entries.map((entry) => entry.staffId)).toEqual(["8"]);
+
+    expect(
+      mapEditedInWindowResult({
+        count: 1,
+        occurrences: [
+          {
+            instance_id: "42",
+            date: "2026-05-04",
+            start_time: "12:00:00",
+            title: "Mensa",
+            changes: ["room", "colour"],
+          },
+        ],
+      }).occurrences[0]?.changes,
+    ).toEqual(["room"]);
+  });
+
   it("maps a pool assign without source and defaults null warning lists", () => {
     expect(
       mapMoveStaff({
-        target_instance_id: 42,
-        source_instance_id: null,
+        target_instance_id: "42",
         action: "assigned",
         time_conflicts: null,
         coverage_warnings: null,
