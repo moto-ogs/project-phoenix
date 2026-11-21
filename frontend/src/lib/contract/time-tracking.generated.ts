@@ -4,7 +4,6 @@ import {
   bool,
   instant,
   int64String,
-  int64StringOrNumber,
   noData,
   nullable,
   num,
@@ -94,7 +93,7 @@ export interface assignmentResponse {
 }
 
 export const assignmentResponseSchema: z.ZodType<assignmentResponse, unknown> = object<assignmentResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   group_name: optional(str),
   room_name: optional(str),
@@ -210,7 +209,7 @@ export interface RequestVacationRequest {
   start_half_day?: boolean;
   end_half_day?: boolean;
   note?: string;
-  substitute_staff_id?: number | null;
+  substitute_staff_id?: string | null;
 }
 
 /** Go: workforce.UpdateAbsenceRequest */

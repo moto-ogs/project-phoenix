@@ -3,6 +3,7 @@ package application
 import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func absenceFilterToDomain(filter workforce.StaffAbsenceFilter) domain.StaffAbsenceFilter {
@@ -20,24 +21,24 @@ func absenceFilterToDomain(filter workforce.StaffAbsenceFilter) domain.StaffAbse
 
 func absenceToDomain(value workforce.StaffAbsence) domain.StaffAbsence {
 	return domain.StaffAbsence{
-		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, AbsenceType: value.AbsenceType,
-		AbsenceTypeID: value.AbsenceTypeID, DateStart: value.DateStart, DateEnd: value.DateEnd,
+		ID: value.ID.Int64(), TenantID: value.TenantID.Int64(), StaffID: value.StaffID.Int64(), AbsenceType: value.AbsenceType,
+		AbsenceTypeID: (*int64)(value.AbsenceTypeID), DateStart: value.DateStart, DateEnd: value.DateEnd,
 		HalfDay: value.HalfDay, StartHalfDay: value.StartHalfDay, EndHalfDay: value.EndHalfDay, Note: value.Note,
-		Status: value.Status, ApprovedBy: value.ApprovedBy, ApprovedAt: value.ApprovedAt, CreatedBy: value.CreatedBy,
+		Status: value.Status, ApprovedBy: (*int64)(value.ApprovedBy), ApprovedAt: value.ApprovedAt, CreatedBy: value.CreatedBy.Int64(),
 		WorkingDays: value.WorkingDays, DecisionNote: value.DecisionNote, RequestedAt: value.RequestedAt,
-		SubstituteStaffID: value.SubstituteStaffID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		SubstituteStaffID: (*int64)(value.SubstituteStaffID), CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
 // AbsenceToPublic maps an absence onto the contract.
 func AbsenceToPublic(value domain.StaffAbsence) workforce.StaffAbsence {
 	return workforce.StaffAbsence{
-		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, AbsenceType: value.AbsenceType,
-		AbsenceTypeID: value.AbsenceTypeID, DateStart: value.DateStart, DateEnd: value.DateEnd,
+		ID: ident.ID(value.ID), TenantID: ident.ID(value.TenantID), StaffID: ident.ID(value.StaffID), AbsenceType: value.AbsenceType,
+		AbsenceTypeID: (*ident.ID)(value.AbsenceTypeID), DateStart: value.DateStart, DateEnd: value.DateEnd,
 		HalfDay: value.HalfDay, StartHalfDay: value.StartHalfDay, EndHalfDay: value.EndHalfDay, Note: value.Note,
-		Status: value.Status, ApprovedBy: value.ApprovedBy, ApprovedAt: value.ApprovedAt, CreatedBy: value.CreatedBy,
+		Status: value.Status, ApprovedBy: (*ident.ID)(value.ApprovedBy), ApprovedAt: value.ApprovedAt, CreatedBy: ident.ID(value.CreatedBy),
 		WorkingDays: value.WorkingDays, DecisionNote: value.DecisionNote, RequestedAt: value.RequestedAt,
-		SubstituteStaffID: value.SubstituteStaffID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		SubstituteStaffID: (*ident.ID)(value.SubstituteStaffID), CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 

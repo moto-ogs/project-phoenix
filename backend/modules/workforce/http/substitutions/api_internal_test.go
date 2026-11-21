@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -132,7 +133,7 @@ func TestScheduleAssignmentRequestPreservesAppointmentScope(t *testing.T) {
 	assignment, err := request.toAssignment()
 	require.NoError(t, err)
 	require.Equal(t, int64(42), assignment.ScheduleSubstitution.InstanceID)
-	require.Equal(t, []int64{42, 43}, *assignment.ScheduleSubstitution.Substitutions[0].InstanceIDs)
+	require.Equal(t, []ident.ID{42, 43}, *assignment.ScheduleSubstitution.Substitutions[0].InstanceIDs)
 }
 
 func TestGroupAssignmentRequestPreservesDateErrors(t *testing.T) {

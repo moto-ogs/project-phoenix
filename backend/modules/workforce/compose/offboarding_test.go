@@ -71,7 +71,7 @@ func TestOffboardingWorkforceCannotDeleteAnotherTenantsPlans(t *testing.T) {
 	counts, err := offboarding.Execute(otherCtx, staff.ID, staff.ID, "2026-02-01", preview.Revision)
 	require.NoError(t, err)
 	require.Equal(t, workforce.OffboardingCounts{}, counts)
-	_, err = module.FindStaffAbsence(ctx, absence.ID)
+	_, err = module.FindStaffAbsence(ctx, absence.ID.Int64())
 	require.NoError(t, err)
 	_, err = module.FindStaffShift(ctx, shift.ID)
 	require.NoError(t, err)
@@ -182,7 +182,7 @@ func TestOffboardingWorkforcePreservesHistoryAndRequiresAbsenceAudit(t *testing.
 	require.EqualValues(t, 1, preview.Counts.Absences)
 	_, err = offboarding.Execute(ctx, staff.ID, staff.ID, "2026-02-01", preview.Revision)
 	require.ErrorIs(t, err, failure)
-	_, err = module.FindStaffAbsence(ctx, future.ID)
+	_, err = module.FindStaffAbsence(ctx, future.ID.Int64())
 	require.NoError(t, err)
 	failure = nil
 	counts, err := offboarding.Execute(ctx, staff.ID, staff.ID, "2026-02-01", preview.Revision)
@@ -190,9 +190,9 @@ func TestOffboardingWorkforcePreservesHistoryAndRequiresAbsenceAudit(t *testing.
 	require.Equal(t, preview.Counts, counts)
 	require.Len(t, archived, 1)
 	require.Equal(t, future, archived[0])
-	_, err = module.FindStaffAbsence(ctx, future.ID)
+	_, err = module.FindStaffAbsence(ctx, future.ID.Int64())
 	require.ErrorIs(t, err, workforce.ErrStaffAbsenceNotFound)
-	_, err = module.FindStaffAbsence(ctx, history.ID)
+	_, err = module.FindStaffAbsence(ctx, history.ID.Int64())
 	require.NoError(t, err)
 }
 

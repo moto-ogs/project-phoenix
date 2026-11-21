@@ -43,7 +43,7 @@ func (t *TraegerStaff) PreviewLink(ctx context.Context, actor workforce.TraegerS
 		preview.Record = &summary
 	}
 	for _, member := range plan.members {
-		preview.Members = append(preview.Members, publicCandidate(member.member, member.ref.SchoolID, plan.names))
+		preview.Members = append(preview.Members, publicCandidate(member.member, member.ref.SchoolID.Int64(), plan.names))
 	}
 	for _, field := range domain.PreviewStaffFields(plan.sources) {
 		public := workforce.TraegerStaffFieldPreview{Field: field.Field, Conflict: field.Conflict(), Options: []workforce.TraegerStaffFieldOption{}}
@@ -114,7 +114,7 @@ func (t *TraegerStaff) planLink(ctx context.Context, actor workforce.TraegerStaf
 	}
 	wanted := make(map[int64][]int64, len(request.Members))
 	for _, ref := range request.Members {
-		wanted[ref.SchoolID] = []int64{ref.StaffID}
+		wanted[ref.SchoolID.Int64()] = []int64{ref.StaffID.Int64()}
 	}
 	reads, err := t.readSchools(ctx, actor, staffView{name: workforce.TraegerStaffViewLinkPreview}, slices.Sorted(maps.Keys(wanted)), wanted, true)
 	if err != nil {
@@ -128,7 +128,7 @@ func (t *TraegerStaff) planLink(ctx context.Context, actor workforce.TraegerStaf
 func (t *TraegerStaff) checkLinkTarget(ctx context.Context, actor workforce.TraegerStaffActor, request workforce.TraegerStaffLinkRequest) (*domain.TraegerStaffRecord, error) {
 	schools, staff := make([]int64, 0, len(request.Members)), make([]int64, 0, len(request.Members))
 	for _, ref := range request.Members {
-		schools, staff = append(schools, ref.SchoolID), append(staff, ref.StaffID)
+		schools, staff = append(schools, ref.SchoolID.Int64()), append(staff, ref.StaffID.Int64())
 	}
 	linked, err := t.store.LinkedEmployments(ctx, actor.OrganizationID, schools, staff)
 	if err != nil {
@@ -159,7 +159,7 @@ func linkTargets(plan linkPlan) []domain.TraegerStaffLink {
 		targets = append(targets, plan.record.Links...)
 	}
 	for _, member := range plan.members {
-		targets = append(targets, domain.TraegerStaffLink{SchoolID: member.ref.SchoolID, StaffID: member.ref.StaffID})
+		targets = append(targets, domain.TraegerStaffLink{SchoolID: member.ref.SchoolID.Int64(), StaffID: member.ref.StaffID.Int64()})
 	}
 	return targets
 }
@@ -170,13 +170,13 @@ func validateLinkMembers(members []workforce.TraegerStaffMemberRef, schools map[
 	}
 	seen := make(map[int64]bool, len(members))
 	for _, ref := range members {
-		if _, ok := schools[ref.SchoolID]; !ok || ref.StaffID <= 0 {
+		if _, ok := schools[ref.SchoolID.Int64()]; !ok || ref.StaffID <= 0 {
 			return &workforce.TraegerStaffLinkError{Field: "members", Reason: "an employment is not one of the Träger's schools"}
 		}
-		if seen[ref.SchoolID] {
+		if seen[ref.SchoolID.Int64()] {
 			return &workforce.TraegerStaffLinkError{Field: "members", Reason: "a record holds one employment per school"}
 		}
-		seen[ref.SchoolID] = true
+		seen[ref.SchoolID.Int64()] = true
 	}
 	return nil
 }
@@ -191,13 +191,13 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		plan.sources = append(plan.sources, staffSource(domain.StaffSourceRecord, 0, "", recordValues(*plan.record, financial)))
 	}
 	for _, ref := range refs {
-		read := reads[ref.SchoolID]
-		member, ok := read.members[ref.StaffID]
+		read := reads[ref.SchoolID.Int64()]
+		member, ok := read.members[ref.StaffID.Int64()]
 		if !ok {
 			return linkPlan{}, &workforce.TraegerStaffLinkError{Field: "members", Reason: "an employment is no longer live at its school"}
 		}
 		source := linkSource{ref: ref, member: member, financial: map[string]string{}}
-		if row, ok := read.financial[ref.StaffID]; ok {
+		if row, ok := read.financial[ref.StaffID.Int64()]; ok {
 			opened, err := t.openSchoolFinancial(row)
 			if err != nil {
 				return linkPlan{}, err
@@ -206,7 +206,7 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		}
 		plan.members = append(plan.members, source)
 		values := personValues(member.FirstName, member.LastName, member.Birthday, member.PersonnelNumber, source.financial)
-		plan.sources = append(plan.sources, staffSource(domain.SchoolSourceKey(ref.SchoolID), ref.SchoolID, plan.names[ref.SchoolID], values))
+		plan.sources = append(plan.sources, staffSource(domain.SchoolSourceKey(ref.SchoolID.Int64()), ref.SchoolID.Int64(), plan.names[ref.SchoolID.Int64()], values))
 	}
 	return plan, nil
 }

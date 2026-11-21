@@ -4,7 +4,6 @@ import {
   arr,
   bool,
   int64String,
-  int64StringOrNumber,
   nullable,
   object,
   optional,
@@ -86,7 +85,7 @@ export interface ScheduleAppointmentStaff {
 }
 
 export const ScheduleAppointmentStaffSchema: z.ZodType<ScheduleAppointmentStaff, unknown> = object<ScheduleAppointmentStaff>({
-  assignment_id: int64StringOrNumber,
+  assignment_id: int64String,
   staff: StaffRefSchema,
   is_absent: bool,
   is_substitute: bool,
@@ -106,7 +105,7 @@ export interface ScheduleAppointmentOverview {
 }
 
 export const ScheduleAppointmentOverviewSchema: z.ZodType<ScheduleAppointmentOverview, unknown> = object<ScheduleAppointmentOverview>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   date: str,
   start_time: str,
@@ -175,42 +174,42 @@ export interface additionalSupervisionRequest {
 
 /** Go: workforce.ScheduleAbsenceChange */
 export interface ScheduleAbsenceChange {
-  staff_id?: number;
+  staff_id?: string;
   reason?: string | null;
-  instance_ids?: number[] | null;
+  instance_ids?: string[] | null;
 }
 
 /** Go: workforce.ScheduleSubstitutionChange */
 export interface ScheduleSubstitutionChange {
-  absent_staff_id?: number;
-  substitute_staff_id?: number;
+  absent_staff_id?: string;
+  substitute_staff_id?: string;
   reason?: string | null;
-  instance_ids?: number[] | null;
+  instance_ids?: string[] | null;
 }
 
 /** Go: workforce.ScheduleSubstitutionRemoval */
 export interface ScheduleSubstitutionRemoval {
-  staff_id?: number;
-  instance_ids?: number[] | null;
+  staff_id?: string;
+  instance_ids?: string[] | null;
 }
 
 /** Go: workforce.SchedulePresenceChange */
 export interface SchedulePresenceChange {
-  staff_id?: number;
-  instance_ids?: number[] | null;
+  staff_id?: string;
+  instance_ids?: string[] | null;
 }
 
 /** Go: substitutions.wholeDaysRequest */
 export interface wholeDaysRequest {
-  absent_staff_id?: number;
-  substitute_staff_id?: number | null;
+  absent_staff_id?: string;
+  substitute_staff_id?: string | null;
   dates?: (string | null)[] | null;
   reason?: string | null;
 }
 
 /** Go: substitutions.scheduleAssignmentRequest */
 export interface scheduleAssignmentRequest {
-  instance_id?: number;
+  instance_id?: string;
   understaffed_ack?: boolean | null;
   understaffed_note?: string | null;
   absences?: ScheduleAbsenceChange[] | null;
@@ -237,7 +236,7 @@ export interface ScheduleAffectedAppointment {
 }
 
 export const ScheduleAffectedAppointmentSchema: z.ZodType<ScheduleAffectedAppointment, unknown> = object<ScheduleAffectedAppointment>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   start_time: str,
   action: str,
@@ -253,8 +252,8 @@ export interface ScheduleTimeConflict {
 
 export const ScheduleTimeConflictSchema: z.ZodType<ScheduleTimeConflict, unknown> = object<ScheduleTimeConflict>({
   kind: str,
-  instance_id: int64StringOrNumber,
-  other_instance_id: int64StringOrNumber,
+  instance_id: int64String,
+  other_instance_id: int64String,
   message: str,
 });
 
@@ -283,7 +282,7 @@ export interface ScheduleSubstitutionResult {
 }
 
 export const ScheduleSubstitutionResultSchema: z.ZodType<ScheduleSubstitutionResult, unknown> = object<ScheduleSubstitutionResult>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   cancelled: bool,
   understaffed_ack: bool,
   affected_instances: nullable(arr(ScheduleAffectedAppointmentSchema)),

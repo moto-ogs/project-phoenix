@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	"github.com/stretchr/testify/assert"
@@ -145,7 +146,7 @@ func TestStaffBalanceAdjustmentService_ChecksFrozenMonthAfterLock(t *testing.T) 
 	)
 	effectiveDate := NewDate(2026, time.July, 7)
 	frozen := &MonthSnapshot{
-		StaffID: staffID,
+		StaffID: ident.ID(staffID),
 		Year:    effectiveDate.Year(),
 		Month:   int(effectiveDate.Month()),
 	}

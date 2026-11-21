@@ -227,7 +227,7 @@ func applyChainSplice(summary *MonthSummary, splice *chainSplice) {
 	if own := splice.ownSnapshot; own != nil {
 		summary.IsClosed = true
 		closedAt, closedBy := own.ClosedAt, own.ClosedBy
-		summary.ClosedAt, summary.ClosedBy = &closedAt, &closedBy
+		summary.ClosedAt, summary.ClosedBy = &closedAt, (*int64)(&closedBy)
 		if own.Source == SnapshotSourceTraeger {
 			summary.ClosedBy, summary.ClosedByTraeger = nil, true
 		}

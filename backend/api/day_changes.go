@@ -328,11 +328,11 @@ func mergeAbsences(rows []workforce.StaffAbsence, day calendar.Date) []staffAbse
 	byStaff := map[int64]*staffAbsenceSpan{}
 	order := []int64{}
 	for _, row := range rows {
-		span, ok := byStaff[row.StaffID]
+		span, ok := byStaff[row.StaffID.Int64()]
 		if !ok {
-			span = &staffAbsenceSpan{staffID: row.StaffID, start: row.DateStart, end: row.DateEnd, half: true}
-			byStaff[row.StaffID] = span
-			order = append(order, row.StaffID)
+			span = &staffAbsenceSpan{staffID: row.StaffID.Int64(), start: row.DateStart, end: row.DateEnd, half: true}
+			byStaff[row.StaffID.Int64()] = span
+			order = append(order, row.StaffID.Int64())
 		}
 		span.start = min(span.start, row.DateStart)
 		span.end = max(span.end, row.DateEnd)

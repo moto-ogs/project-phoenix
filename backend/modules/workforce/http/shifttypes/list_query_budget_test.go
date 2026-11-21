@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api"
@@ -47,7 +48,7 @@ func TestShiftTypesListQueryBudgetIsFlat(t *testing.T) {
 				Name: name, Color: "#5080D8", Description: description, IsActive: &active,
 			})
 			require.NoError(t, createErr)
-			row := map[string]any{"id": created.ID, "name": name, "color": "#5080D8", "is_active": active}
+			row := map[string]any{"id": strconv.FormatInt(int64(created.ID), 10), "name": name, "color": "#5080D8", "is_active": active}
 			if description != "" {
 				row["description"] = description
 			}

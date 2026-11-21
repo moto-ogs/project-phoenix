@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -152,8 +153,8 @@ func newAuditLogFixture(t *testing.T) *auditLogFixture {
 	reopenedAt := time.Date(2025, time.September, 2, 10, 0, 0, 0, time.UTC)
 	reopenReason := "Abschluss war verfrüht"
 	for _, snap := range []*timetracking.MonthSnapshot{
-		{StaffID: staffA.ID, Year: 2025, Month: 8, ClosingBalanceMinutes: 30, ClosedAt: closedAt, ClosedBy: admin.ID, CloseReason: "Monatsabschluss August", Source: "admin", ReopenedAt: &reopenedAt, ReopenedBy: &admin.ID, ReopenReason: reopenReason},
-		{StaffID: staffB.ID, Year: 2025, Month: 8, ClosingBalanceMinutes: -15, ClosedAt: closedAt, ClosedBy: admin.ID, CloseReason: "Monatsabschluss August", Source: "admin"},
+		{StaffID: ident.ID(staffA.ID), Year: 2025, Month: 8, ClosingBalanceMinutes: 30, ClosedAt: closedAt, ClosedBy: ident.ID(admin.ID), CloseReason: "Monatsabschluss August", Source: "admin", ReopenedAt: &reopenedAt, ReopenedBy: (*ident.ID)(&admin.ID), ReopenReason: reopenReason},
+		{StaffID: ident.ID(staffB.ID), Year: 2025, Month: 8, ClosingBalanceMinutes: -15, ClosedAt: closedAt, ClosedBy: ident.ID(admin.ID), CloseReason: "Monatsabschluss August", Source: "admin"},
 	} {
 		_, err := timetracking.MonthSnapshotCapability(workTime).RecordClosedMonth(ctx, *snap)
 		require.NoError(t, err)
@@ -219,7 +220,7 @@ func TestTimeTrackingAuditLog_MergedFeed(t *testing.T) {
 
 	edit := bySource[sourceSessionEdit][0]
 	require.NotNil(t, edit.Staff)
-	assert.Equal(t, f.staffA, edit.Staff.ID)
+	assert.Equal(t, ident.ID(f.staffA), edit.Staff.ID)
 	assert.Equal(t, "Audit Leitung", edit.Actor.Name)
 	assert.False(t, edit.Actor.IsSelf)
 	assert.Equal(t, "Korrektur nach Rücksprache", edit.Reason)
@@ -239,7 +240,7 @@ func TestTimeTrackingAuditLog_MergedFeed(t *testing.T) {
 	// Absence actor arrives as an account id and must resolve to the admin.
 	absence := bySource[sourceAbsence][0]
 	require.NotNil(t, absence.Actor.StaffID)
-	assert.Equal(t, f.admin, *absence.Actor.StaffID)
+	assert.Equal(t, ident.ID(f.admin), *absence.Actor.StaffID)
 	assert.Equal(t, "Attest liegt vor", absence.Reason)
 
 	closeEvent := bySource[sourceMonthClose][0]
@@ -254,9 +255,9 @@ func TestTimeTrackingAuditLog_MergedFeed(t *testing.T) {
 
 	deletion := bySource[sourceDeletion][0]
 	require.NotNil(t, deletion.Staff)
-	assert.Equal(t, f.staffB, deletion.Staff.ID)
+	assert.Equal(t, ident.ID(f.staffB), deletion.Staff.ID)
 	require.NotNil(t, deletion.Actor.StaffID)
-	assert.Equal(t, f.admin, *deletion.Actor.StaffID)
+	assert.Equal(t, ident.ID(f.admin), *deletion.Actor.StaffID)
 	var deletionDetail struct {
 		DeletedSource string          `json:"deleted_source"`
 		Payload       json.RawMessage `json:"payload"`
@@ -273,7 +274,7 @@ func TestTimeTrackingAuditLog_ReopeningLegacyClose(t *testing.T) {
 	snapshots := timetracking.MonthSnapshotCapability(owners.MustNewWorkforce(testpkg.NewDatabase(t, f.db)))
 	closedAt := time.Date(2025, time.October, 1, 9, 0, 0, 0, time.UTC)
 	closed, err := snapshots.RecordClosedMonth(f.ctx, timetracking.MonthSnapshot{
-		StaffID: f.staffA, Year: 2025, Month: 9, ClosedAt: closedAt, ClosedBy: f.admin,
+		StaffID: ident.ID(f.staffA), Year: 2025, Month: 9, ClosedAt: closedAt, ClosedBy: ident.ID(f.admin),
 		Source: "admin", CloseReason: "Altbestand",
 	})
 	require.NoError(t, err)
@@ -285,7 +286,7 @@ func TestTimeTrackingAuditLog_ReopeningLegacyClose(t *testing.T) {
 	before := testpkg.DatabaseNow(t, f.db)
 	ownerReopenedAt := closedAt.Add(time.Hour)
 	require.NoError(t, testpkg.WithinTenantContext(t, f.ctx, f.db, f.tenantID, func(ctx context.Context) error {
-		affected, err := snapshots.ReopenMonthSnapshot(ctx, closed.ID, f.admin, ownerReopenedAt, "Korrektur")
+		affected, err := snapshots.ReopenMonthSnapshot(ctx, closed.ID.Int64(), f.admin, ownerReopenedAt, "Korrektur")
 		require.NoError(t, err)
 		require.EqualValues(t, 1, affected)
 		return nil
@@ -298,7 +299,7 @@ func TestTimeTrackingAuditLog_ReopeningLegacyClose(t *testing.T) {
 	require.NoError(t, err)
 	matching := map[string]time.Time{}
 	for _, event := range page.Events {
-		if event.EntryID == closed.ID {
+		if ident.ID(event.EntryID) == closed.ID {
 			matching[event.Source] = event.OccurredAt
 		}
 	}
@@ -328,7 +329,7 @@ func TestTimeTrackingAuditLog_Filters(t *testing.T) {
 		require.NotEmpty(t, page.Events)
 		for _, e := range page.Events {
 			require.NotNil(t, e.Actor.StaffID)
-			assert.Equal(t, f.admin, *e.Actor.StaffID)
+			assert.Equal(t, ident.ID(f.admin), *e.Actor.StaffID)
 		}
 		// Every fixture event was acted by the admin, so nothing is lost.
 		assert.Len(t, page.Events, 6)

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -61,7 +62,7 @@ func (e *sickCascadeEnv) raceMismatchedAbsenceWrite(t *testing.T, write func(con
 			AbsenceType: workforce.AbsenceTypeSick, DateStart: stampWeekOne.String(), DateEnd: stampWeekOne.String(),
 		})
 		if err == nil {
-			ownID = created.ID
+			ownID = created.ID.Int64()
 		}
 		return err
 	})
@@ -76,7 +77,7 @@ func (e *sickCascadeEnv) raceMismatchedAbsenceWrite(t *testing.T, write func(con
 	requireNoDeadlock(t, map[string]chan error{"valid absence write": valid.done})
 	stored, err := e.shifts.FindStaffAbsence(e.ctx, ownID)
 	require.NoError(t, err, "the caller's valid absence commits")
-	require.Equal(t, e.sub.ID, stored.StaffID)
+	require.Equal(t, ident.ID(e.sub.ID), stored.StaffID)
 	if returned {
 		return early
 	}
