@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   nullable,
   object,
@@ -32,7 +32,7 @@ export interface FamilyContractChild {
 }
 
 export const FamilyContractChildSchema: z.ZodType<FamilyContractChild, unknown> = object<FamilyContractChild>({
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -52,8 +52,8 @@ export interface FamilyChildCount {
 }
 
 export const FamilyChildCountSchema: z.ZodType<FamilyChildCount, unknown> = object<FamilyChildCount>({
-  id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  contract_id: int64String,
   stated_children: nullable(safeInt),
   stated_at: nullable(instant),
   confirmed_children: nullable(safeInt),
@@ -76,7 +76,7 @@ export interface FamilyChildren {
 }
 
 export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<FamilyChildren>({
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   recipient_first_name: str,
   recipient_last_name: str,
   recipient_email: str,
@@ -122,7 +122,7 @@ export interface FamilyChildrenImportMapping {
 
 export const FamilyChildrenImportMappingSchema: z.ZodType<FamilyChildrenImportMapping, unknown> = object<FamilyChildrenImportMapping>({
   columns: FamilyChildrenImportColumnsSchema,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
 });
 
 /** Go: parentbilling.FamilyChildrenImportCounts */
@@ -179,7 +179,7 @@ export const FamilyChildrenImportRowSchema: z.ZodType<FamilyChildrenImportRow, u
   child_birth_date: nullable(calendarDate),
   school_name: str,
   children: nullable(safeInt),
-  contract_id: optional(int64StringOrNumber),
+  contract_id: optional(int64String),
   valid_from: nullable(calendarDate),
   confirmed_children: nullable(safeInt),
   problems: nullable(arr(FamilyChildrenImportProblemSchema)),
@@ -215,7 +215,7 @@ export const FamilyChildrenImportSchema: z.ZodType<FamilyChildrenImport, unknown
 
 /** Go: parentbillinghttp.FamilyChildrenRequest */
 export interface FamilyChildrenRequest {
-  contract_id?: number;
+  contract_id?: string;
   children?: number;
   valid_from?: string | null;
   valid_until?: string | null;

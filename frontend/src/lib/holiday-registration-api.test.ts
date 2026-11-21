@@ -198,7 +198,7 @@ describe("quoteHolidayContribution (#5664)", () => {
     const body = JSON.parse(String(init.body)) as unknown;
     expect(body).toEqual({
       children: [
-        { bookings: [{ week_id: 1, time_model_id: 2 }], age_rank: 2 },
+        { bookings: [{ week_id: "1", time_model_id: "2" }], age_rank: 2 },
         { bookings: [], age_rank: 1 },
       ],
       benefits_declared: false,

@@ -43,7 +43,7 @@ export async function mergeHolidaySiblings(
     await traegerRequest<WireGroup>(groupsPath(periodId), {
       method: "POST",
       body: {
-        registration_ids: registrationIds.map(Number),
+        registration_ids: [...registrationIds],
       } satisfies HolidaySiblingMergeRequest,
     }),
   );

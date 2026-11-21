@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -61,7 +62,7 @@ func seedCostShareScope(t *testing.T, ctx context.Context, tx bun.IDB, store *St
 
 func costShareInput(contract, bearer int64) parentbilling.CareCostShareInput {
 	points := 10000
-	return parentbilling.CareCostShareInput{ContractID: contract, Kind: parentbilling.CostShareYouthOffice, CostBearerID: bearer,
+	return parentbilling.CareCostShareInput{ContractID: ident.ID(contract), Kind: parentbilling.CostShareYouthOffice, CostBearerID: ident.ID(bearer),
 		ShareBasisPoints: &points, ValidFrom: calendar.NewDate(2029, 9, 1), ValidUntil: calendar.NewDate(2030, 7, 31),
 		Reference: "Bescheid 4-12", CheckedOn: calendar.NewDate(2029, 8, 20)}
 }
@@ -88,7 +89,7 @@ func TestCareCostShareFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		all, err := store.CareCostShares(ctx, own.organization, nil)
 		require.NoError(t, err)
 		require.Len(t, all, 1, "CareCostShares of the Träger")
-		assert.Equal(t, own.share, all[0].ID)
+		assert.Equal(t, ident.ID(own.share), all[0].ID)
 		assert.Equal(t, "Jugendamt A", all[0].CostBearerName, "the share carries its cost bearer's name")
 		named, err := store.CareCostShares(ctx, own.organization, []int64{own.contract, other.contract})
 		require.NoError(t, err)
@@ -120,7 +121,7 @@ func TestCareCostShareFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, issued, 1, "CareRunInvoices of the Träger")
 		require.Len(t, issued[0].CostShares, 1, "the issued invoice reads its share in the same statement")
-		assert.Equal(t, own.bearer, issued[0].CostShares[0].CostBearerID)
+		assert.Equal(t, ident.ID(own.bearer), issued[0].CostShares[0].CostBearerID)
 		assert.Equal(t, int64(3200), issued[0].CostShares[0].AmountCents)
 
 		inUse, err := store.CostBearersInUse(ctx, own.organization)

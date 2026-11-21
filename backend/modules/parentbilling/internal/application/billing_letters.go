@@ -79,7 +79,7 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetters{}, err
 	}
-	existing, err := b.store.RunLetters(ctx, reviewer.OrganizationID, run.ID)
+	existing, err := b.store.RunLetters(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetters{}, fmt.Errorf("parent billing: read letters: %w", err)
 	}
@@ -90,7 +90,7 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetters{}, err
 	}
-	letters, err := b.store.InsertRunLetters(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, input, head.Template.Version)
+	letters, err := b.store.InsertRunLetters(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, input, head.Template.Version)
 	if err != nil {
 		return parentbilling.BillingLetters{}, err
 	}
@@ -100,12 +100,12 @@ func (b *BillingLetters) CreateBillingLetters(ctx context.Context, reviewer pare
 		if err != nil {
 			return parentbilling.BillingLetters{}, err
 		}
-		if err := b.store.InsertDocumentLetter(ctx, reviewer.OrganizationID, run.ID, document.ID, file); err != nil {
+		if err := b.store.InsertDocumentLetter(ctx, reviewer.OrganizationID, run.ID.Int64(), document.ID.Int64(), file); err != nil {
 			return parentbilling.BillingLetters{}, fmt.Errorf("parent billing: store letter: %w", err)
 		}
-		addHolderSnapshotRead(details, document.ID, document.TotalCents, document.Payment)
+		addHolderSnapshotRead(details, document.ID.Int64(), document.TotalCents, document.Payment)
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventLetters, details); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventLetters, details); err != nil {
 		return parentbilling.BillingLetters{}, fmt.Errorf("parent billing: record letters: %w", err)
 	}
 	return letters, nil
@@ -136,9 +136,9 @@ func (b *BillingLetters) PreviewBillingLetter(ctx context.Context, reviewer pare
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	details := map[string]any{"document_id": invoice.ID, "letter": "preview"}
-	addHolderSnapshotRead(details, invoice.ID, invoice.TotalCents, invoice.Payment)
-	if err := b.recordRead(ctx, reviewer, run.ID, details); err != nil {
+	details := map[string]any{"document_id": invoice.ID.Int64(), "letter": "preview"}
+	addHolderSnapshotRead(details, invoice.ID.Int64(), invoice.TotalCents, invoice.Payment)
+	if err := b.recordRead(ctx, reviewer, run.ID.Int64(), details); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -159,11 +159,11 @@ func (b *BillingLetters) BillingLetter(ctx context.Context, reviewer parentbilli
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	file, err := b.store.DocumentLetter(ctx, reviewer.OrganizationID, run.ID, documentID)
+	file, err := b.store.DocumentLetter(ctx, reviewer.OrganizationID, run.ID.Int64(), documentID)
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	if err := b.recordRead(ctx, reviewer, run.ID, map[string]any{"document_id": documentID, "letter": "download"}); err != nil {
+	if err := b.recordRead(ctx, reviewer, run.ID.Int64(), map[string]any{"document_id": documentID, "letter": "download"}); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -218,7 +218,7 @@ func (b *BillingLetters) material(ctx context.Context, reviewer parentbilling.Ho
 	if missingSender(head) {
 		return parentbilling.Letterhead{}, nil, parentbilling.ErrLetterheadMissing
 	}
-	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
+	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.Letterhead{}, nil, fmt.Errorf("parent billing: read invoices: %w", err)
 	}

@@ -441,7 +441,13 @@ export async function quoteHolidayContribution(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         children: children.map((bookings, index) => ({
-          bookings,
+          // The quote names its weeks and time models as strings (#2342);
+          // the registration form keeps numbers until its route reads both.
+          bookings: bookings.map((booking) => ({
+            ...booking,
+            week_id: String(booking.week_id),
+            time_model_id: String(booking.time_model_id),
+          })),
           age_rank: ageRanks[index] ?? 0,
         })),
         benefits_declared: benefitsDeclared,

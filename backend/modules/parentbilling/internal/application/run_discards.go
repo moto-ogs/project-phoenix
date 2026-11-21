@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Discarding an empty open run (#6626; holiday runs #6628). An open run stores nothing it would
@@ -75,12 +76,12 @@ func (c *CareBilling) DiscardCareRun(ctx context.Context, reviewer parentbilling
 	if !emptyCareReview(review) {
 		return parentbilling.CareRunDetail{}, parentbilling.ErrBillingRunNotEmpty
 	}
-	discarded, err := c.store.MarkCareRunDiscarded(ctx, reviewer.OrganizationID, run.ID)
+	discarded, err := c.store.MarkCareRunDiscarded(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
-	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventDiscard,
-		map[string]any{"school_ids": run.SchoolIDs}); err != nil {
+	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventDiscard,
+		map[string]any{"school_ids": ident.Int64s(run.SchoolIDs)}); err != nil {
 		return parentbilling.CareRunDetail{}, fmt.Errorf("parent billing: record care run discard: %w", err)
 	}
 	return c.detail(ctx, reviewer, discarded)
@@ -92,7 +93,7 @@ func (c *CareBilling) discardedDetail(ctx context.Context, organizationID int64,
 	detail.Invoices = []parentbilling.CareInvoice{}
 	detail.DueDates = []parentbilling.RunDueDate{}
 	detail.CostBearers = []parentbilling.CareCostBearerTotal{}
-	schools, err := c.runSchoolNames(ctx, organizationID, detail.SchoolIDs)
+	schools, err := c.runSchoolNames(ctx, organizationID, ident.Int64s(detail.SchoolIDs))
 	if err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
@@ -135,12 +136,12 @@ func (n *CareFeeNotices) DiscardCareNoticeRun(ctx context.Context, reviewer pare
 	if !emptyNoticePreview(preview) {
 		return parentbilling.CareNoticeRunDetail{}, parentbilling.ErrBillingRunNotEmpty
 	}
-	discarded, err := n.store.MarkCareNoticeRunDiscarded(ctx, reviewer.OrganizationID, run.ID)
+	discarded, err := n.store.MarkCareNoticeRunDiscarded(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.CareNoticeRunDetail{}, err
 	}
-	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventDiscard,
-		map[string]any{"school_ids": run.SchoolIDs}); err != nil {
+	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventDiscard,
+		map[string]any{"school_ids": ident.Int64s(run.SchoolIDs)}); err != nil {
 		return parentbilling.CareNoticeRunDetail{}, fmt.Errorf("parent billing: record notice run discard: %w", err)
 	}
 	return n.detail(ctx, reviewer.OrganizationID, discarded)
@@ -171,7 +172,7 @@ func (b *BillingRuns) DiscardBillingRun(ctx context.Context, reviewer parentbill
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
-	if err := b.store.LockPeriodBilling(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID); err != nil {
+	if err := b.store.LockPeriodBilling(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID.Int64()); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: hold the invoices of the period: %w", err)
 	}
 	current, err := b.preview(ctx, reviewer, run)
@@ -181,12 +182,12 @@ func (b *BillingRuns) DiscardBillingRun(ctx context.Context, reviewer parentbill
 	if !emptyHolidayPreview(current) {
 		return parentbilling.BillingRunDetail{}, parentbilling.ErrBillingRunNotEmpty
 	}
-	discarded, err := b.store.MarkRunDiscarded(ctx, reviewer.OrganizationID, run.ID)
+	discarded, err := b.store.MarkRunDiscarded(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventDiscard,
-		map[string]any{"holiday_period_id": run.HolidayPeriodID}); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventDiscard,
+		map[string]any{"holiday_period_id": run.HolidayPeriodID.Int64()}); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: record billing run discard: %w", err)
 	}
 	return b.detail(ctx, reviewer, discarded)

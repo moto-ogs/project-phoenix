@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // FamilyStore reads the issued documents of the families of a Träger in its
@@ -134,8 +135,8 @@ func (f *BillingFamilies) nameContractFamilies(ctx context.Context, organization
 	var ids []int64
 	for _, row := range rows {
 		if parentbilling.IsContractFamily(row.FamilyEmail) && row.ContractID > 0 {
-			contractOf[row.FamilyEmail] = row.ContractID
-			ids = append(ids, row.ContractID)
+			contractOf[row.FamilyEmail] = row.ContractID.Int64()
+			ids = append(ids, row.ContractID.Int64())
 		}
 	}
 	if len(ids) == 0 {
@@ -176,7 +177,7 @@ func (f *BillingFamilies) BillingFamily(ctx context.Context, reviewer parentbill
 	if len(families) != 1 {
 		return parentbilling.BillingFamilyDetail{}, parentbilling.ErrFamilyNotFound
 	}
-	if err := f.recordRead(ctx, reviewer, documents, map[string]any{"view": "family", "family_id": families[0].ID}); err != nil {
+	if err := f.recordRead(ctx, reviewer, documents, map[string]any{"view": "family", "family_id": families[0].ID.Int64()}); err != nil {
 		return parentbilling.BillingFamilyDetail{}, err
 	}
 	family := families[0]
@@ -216,7 +217,7 @@ func readEvents(documents []parentbilling.BillingFamilyDocument, details map[str
 	byRun := map[bool]map[int64][]int64{false: {}, true: {}}
 	for _, document := range documents {
 		care := document.Service == parentbilling.ServiceCare
-		byRun[care][document.RunID] = append(byRun[care][document.RunID], document.ID)
+		byRun[care][document.RunID.Int64()] = append(byRun[care][document.RunID.Int64()], document.ID.Int64())
 	}
 	events := func(runs map[int64][]int64) map[int64]map[string]any {
 		result := make(map[int64]map[string]any, len(runs))
@@ -242,7 +243,7 @@ func familiesOf(documents []parentbilling.BillingFamilyDocument) []parentbilling
 		if document.ReferenceDocumentID == nil {
 			continue
 		}
-		reference := documentKey{service: document.Service, id: *document.ReferenceDocumentID}
+		reference := documentKey{service: document.Service, id: (*document.ReferenceDocumentID).Int64()}
 		switch document.Kind {
 		case parentbilling.DocumentCancellation:
 			cancelled[reference] = true
@@ -258,7 +259,7 @@ func familiesOf(documents []parentbilling.BillingFamilyDocument) []parentbilling
 			at = len(families)
 			index[document.FamilyKey] = at
 			families = append(families, parentbilling.BillingFamilyDetail{
-				BillingFamily: parentbilling.BillingFamily{ID: familyID(document), DebtorNumbers: []string{}, Payments: []parentbilling.BillingPayment{},
+				BillingFamily: parentbilling.BillingFamily{ID: ident.ID(familyID(document)), DebtorNumbers: []string{}, Payments: []parentbilling.BillingPayment{},
 					PaymentMethods: []string{}, FamilyEmail: document.FamilyKey},
 				Documents: []parentbilling.BillingFamilyDocument{},
 			})
@@ -267,7 +268,7 @@ func familiesOf(documents []parentbilling.BillingFamilyDocument) []parentbilling
 			document.PeriodName = "Monatsbeitrag " + careMonthName(document.ServiceFrom)
 		}
 		if document.Kind == parentbilling.DocumentInvoice {
-			key := documentKey{service: document.Service, id: document.ID}
+			key := documentKey{service: document.Service, id: document.ID.Int64()}
 			document = invoiceState(document, cancelled[key], credited[key])
 		}
 		families[at].Documents = append(families[at].Documents, document)
@@ -290,9 +291,9 @@ type documentKey struct {
 // family by either.
 func familyID(document parentbilling.BillingFamilyDocument) int64 {
 	if document.Service == parentbilling.ServiceCare {
-		return -document.ID
+		return (-document.ID).Int64()
 	}
-	return document.ID
+	return document.ID.Int64()
 }
 
 // invoiceState sets who pays an invoice, its state and what it still asks

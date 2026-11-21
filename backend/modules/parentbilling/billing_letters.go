@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The confirmation letter of a holiday registration that is its invoice
@@ -89,7 +90,7 @@ type BillingLetters struct {
 	Notes              string                    `json:"notes"`
 	EmergencyContacts  []BillingEmergencyContact `json:"emergency_contacts"`
 	CreatedAt          time.Time                 `json:"created_at"`
-	CreatedByAccountID *int64                    `json:"created_by_account_id"`
+	CreatedByAccountID *ident.ID                 `json:"created_by_account_id"`
 	// TemplateVersion is the version of the Träger's template for the
 	// confirmation letter the letters were written with; 0 is the standard
 	// template (#4677).

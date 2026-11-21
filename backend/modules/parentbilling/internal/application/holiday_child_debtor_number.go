@@ -9,6 +9,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The debtor numbers of the children of a holiday registration (#7007).
@@ -47,7 +48,7 @@ func (h *HolidayContributions) holidayChildDebtorNumbers(ctx context.Context, re
 	}
 	var read []parentbilling.ChildDebtorNumber
 	for _, child := range registration.Children {
-		shown := parentbilling.HolidayChildDebtorNumber{ChildID: child.ID, FirstName: child.FirstName, LastName: child.LastName}
+		shown := parentbilling.HolidayChildDebtorNumber{ChildID: ident.ID(child.ID), FirstName: child.FirstName, LastName: child.LastName}
 		if number, ok := byKey[holidayChildKey(registration, child)]; ok {
 			shown.DebtorNumber = number.DebtorNumber
 			read = append(read, number)
@@ -144,7 +145,7 @@ func (h *HolidayContributions) keepChildNumbers(ctx context.Context, reviewer pa
 			// A child the office did not name keeps its number.
 			continue
 		}
-		result.Children = append(result.Children, parentbilling.HolidayChildDebtorNumber{ChildID: child.ID, FirstName: child.FirstName,
+		result.Children = append(result.Children, parentbilling.HolidayChildDebtorNumber{ChildID: ident.ID(child.ID), FirstName: child.FirstName,
 			LastName: child.LastName, DebtorNumber: number})
 		if number == "" {
 			birth := child.BirthDate
@@ -197,7 +198,7 @@ func (h *HolidayContributions) enteredChildNumbers(ctx context.Context, organiza
 	entered := make(map[int64]string, len(inputs))
 	errs := validation.Errors{}
 	for _, input := range inputs {
-		previous, known := stored[input.ChildID]
+		previous, known := stored[input.ChildID.Int64()]
 		if !known {
 			return nil, parentbilling.ErrChildNotFound
 		}
@@ -205,12 +206,12 @@ func (h *HolidayContributions) enteredChildNumbers(ctx context.Context, organiza
 		if number != previous {
 			checked, err := debtorNumberOf(input.DebtorNumber, format)
 			if err != nil {
-				errs[childDebtorNumberField(input.ChildID)] = fieldError(err)
+				errs[childDebtorNumberField(input.ChildID.Int64())] = fieldError(err)
 				continue
 			}
 			number = checked
 		}
-		entered[input.ChildID] = number
+		entered[input.ChildID.Int64()] = number
 	}
 	if required {
 		requireChildNumbers(stored, entered, errs)

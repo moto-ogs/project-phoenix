@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The preview of a calculated run (ADR 0119): one draft invoice per
@@ -85,11 +86,11 @@ func (p preview) total() int64 {
 // child finds the child of a registration in the preview.
 func (p preview) child(registrationID, childID int64) (parentbilling.BillingChild, bool) {
 	for _, document := range p.documents {
-		if document.RegistrationID != registrationID {
+		if document.RegistrationID != ident.ID(registrationID) {
 			continue
 		}
 		for _, child := range document.Children {
-			if child.ChildID == childID {
+			if child.ChildID == ident.ID(childID) {
 				return child, true
 			}
 		}
@@ -102,7 +103,7 @@ func buildPreview(in previewInput) preview {
 	sort.Slice(registrations, func(i, j int) bool { return registrations[i].ID < registrations[j].ID })
 	byChild := map[int64][]parentbilling.BillingCorrection{}
 	for _, correction := range in.corrections {
-		byChild[correction.ChildID] = append(byChild[correction.ChildID], correction)
+		byChild[correction.ChildID.Int64()] = append(byChild[correction.ChildID.Int64()], correction)
 	}
 	result := preview{documents: []parentbilling.BillingDocument{}}
 	shapes := in.invoiceShapes()
@@ -163,13 +164,13 @@ func draftDocument(run parentbilling.BillingRun, registration parentbilling.Holi
 ) parentbilling.BillingDocument {
 	frozen := map[int64]parentbilling.HolidayChildContribution{}
 	for _, child := range contribution.Children {
-		frozen[child.ChildID] = child
+		frozen[child.ChildID.Int64()] = child
 	}
 	document := parentbilling.BillingDocument{
-		Kind: parentbilling.DocumentInvoice, RegistrationID: registration.ID, RecipientFirstName: registration.GuardianFirstName,
+		Kind: parentbilling.DocumentInvoice, RegistrationID: ident.ID(registration.ID), RecipientFirstName: registration.GuardianFirstName,
 		RecipientLastName: registration.GuardianLastName, RecipientEmail: registration.GuardianEmail,
 		RecipientAddress: registration.GuardianAddress, DebtorNumber: draftDebtorNumber(registration, childID),
-		RegistrationChildID: childID, Children: []parentbilling.BillingChild{},
+		RegistrationChildID: ident.ID(childID), Children: []parentbilling.BillingChild{},
 	}
 	carriedByChild := map[int64][]parentbilling.BillingCarriedCorrection{}
 	for _, correction := range carried {
@@ -182,7 +183,7 @@ func draftDocument(run parentbilling.BillingRun, registration parentbilling.Holi
 			continue
 		}
 		billed := parentbilling.BillingChild{
-			ChildID: child.ID, FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
+			ChildID: ident.ID(child.ID), FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
 			Positions: make([]parentbilling.BillingPosition, 0, len(lines.Lines)), Corrections: corrections[child.ID],
 			TotalCents: lines.TotalCents,
 		}

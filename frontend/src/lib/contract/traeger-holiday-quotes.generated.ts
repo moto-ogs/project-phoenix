@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -21,8 +21,8 @@ import {
 
 /** Go: parentbillinghttp.holidayQuoteBookingRequest */
 export interface holidayQuoteBookingRequest {
-  week_id?: number;
-  time_model_id?: number;
+  week_id?: string;
+  time_model_id?: string;
   days?: (string | null)[] | null;
   lunch?: boolean;
 }
@@ -65,7 +65,7 @@ export const HolidayContributionLineSchema: z.ZodType<HolidayContributionLine, u
   discount_basis_points: nullable(safeInt),
   discount_cents: nullable(safeInt),
   note: str,
-  cost_bearer_id: nullable(int64StringOrNumber),
+  cost_bearer_id: nullable(int64String),
   cost_bearer_name: str,
   booked_days: nullable(safeInt),
 });
@@ -79,7 +79,7 @@ export interface HolidayChildContribution {
 }
 
 export const HolidayChildContributionSchema: z.ZodType<HolidayChildContribution, unknown> = object<HolidayChildContribution>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   position: safeInt,
   lines: nullable(arr(HolidayContributionLineSchema)),
   total_cents: safeInt,
@@ -107,7 +107,7 @@ export const HolidayContributionSchema: z.ZodType<HolidayContribution, unknown> 
   total_cents: safeInt,
   exemption_available: bool,
   benefits_exemption: bool,
-  cost_bearer_id: nullable(int64StringOrNumber),
+  cost_bearer_id: nullable(int64String),
   cost_bearer_name: str,
   frozen: bool,
   confirmed_at: nullable(instant),

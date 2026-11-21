@@ -788,7 +788,7 @@ export async function saveRevenueAccount(
         method: "PUT",
         body: {
           scope,
-          scope_id: Number(scopeId),
+          scope_id: scopeId,
           account,
         } satisfies RevenueAccountRequest,
       },
@@ -810,7 +810,7 @@ export async function addCostCenter(center: {
         method: "POST",
         body: {
           scope: center.scope,
-          scope_id: Number(center.scopeId),
+          scope_id: center.scopeId,
           valid_from: center.validFrom,
           code: center.code,
         } satisfies CostCenterRequest,

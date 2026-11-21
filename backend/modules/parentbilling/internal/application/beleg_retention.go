@@ -250,12 +250,12 @@ func decideBelegRecords(facts []parentbilling.BelegFact, instructions []parentbi
 ) []parentbilling.BelegRecord {
 	byType := make(map[belegKey]*parentbilling.RetentionInstruction, len(instructions))
 	for i := range instructions {
-		byType[belegKey{instructions[i].OrganizationID, instructions[i].BelegType}] = &instructions[i]
+		byType[belegKey{instructions[i].OrganizationID.Int64(), instructions[i].BelegType}] = &instructions[i]
 	}
 	typeHolds := map[belegKey]*parentbilling.RetentionSuspension{}
 	belegHolds := map[belegKey]map[int64]*parentbilling.RetentionSuspension{}
 	for i := range suspensions {
-		key := belegKey{suspensions[i].OrganizationID, suspensions[i].BelegType}
+		key := belegKey{suspensions[i].OrganizationID.Int64(), suspensions[i].BelegType}
 		if suspensions[i].BelegID == 0 {
 			if typeHolds[key] == nil {
 				typeHolds[key] = &suspensions[i]
@@ -265,7 +265,7 @@ func decideBelegRecords(facts []parentbilling.BelegFact, instructions []parentbi
 		if belegHolds[key] == nil {
 			belegHolds[key] = map[int64]*parentbilling.RetentionSuspension{}
 		}
-		belegHolds[key][suspensions[i].BelegID] = &suspensions[i]
+		belegHolds[key][suspensions[i].BelegID.Int64()] = &suspensions[i]
 	}
 	records := make([]parentbilling.BelegRecord, 0, len(facts))
 	for _, fact := range facts {

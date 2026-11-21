@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayStore persists the rules and the frozen contributions and knows
@@ -257,8 +258,8 @@ func (h *HolidayContributions) confirmingSiblings(ctx context.Context, reviewer 
 	if !grouped {
 		return nil, issued, debtorNumber, nil
 	}
-	ids := slices.DeleteFunc(slices.Clone(group.RegistrationIDs), func(id int64) bool { return id == registrationID })
-	others, err := h.readSiblings(ctx, reviewer, periodID, ids, nil)
+	ids := slices.DeleteFunc(slices.Clone(group.RegistrationIDs), func(id ident.ID) bool { return id == ident.ID(registrationID) })
+	others, err := h.readSiblings(ctx, reviewer, periodID, ident.Int64s(ids), nil)
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -377,12 +378,12 @@ func quotedChildren(weeks []parentbilling.HolidayWeek, children []parentbilling.
 		priced[i] = parentbilling.HolidayChild{Position: i + 1, AgeRank: child.AgeRank, Bookings: make([]parentbilling.HolidayBooking, 0, len(child.Bookings))}
 		booked := map[int64]bool{}
 		for _, booking := range child.Bookings {
-			known, found := models[booking.TimeModelID]
+			known, found := models[booking.TimeModelID.Int64()]
 			quoted, offered := quotedBooking(known.week, known.model, booking.Days, booking.Lunch)
-			if !found || known.week.ID != booking.WeekID || booked[booking.WeekID] || !offered {
+			if !found || ident.ID(known.week.ID) != booking.WeekID || booked[booking.WeekID.Int64()] || !offered {
 				return nil, fmt.Errorf("%w: child %d books a time model the period does not offer", parentbilling.ErrInvalidHolidayQuote, i+1)
 			}
-			booked[booking.WeekID] = true
+			booked[booking.WeekID.Int64()] = true
 			priced[i].Bookings = append(priced[i].Bookings, quoted)
 		}
 	}
@@ -451,7 +452,7 @@ func billedBy(contribution parentbilling.HolidayContribution, children []int64) 
 	billed := make([]parentbilling.HolidayChildContribution, 0, len(children))
 	var total int64
 	for _, child := range contribution.Children {
-		if slices.Contains(children, child.ChildID) {
+		if slices.Contains(children, child.ChildID.Int64()) {
 			billed = append(billed, child)
 			total += child.TotalCents
 		}

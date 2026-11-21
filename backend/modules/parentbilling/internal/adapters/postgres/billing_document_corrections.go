@@ -6,6 +6,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The cancellations, credits and invoices issued again (#4690). They are
@@ -72,7 +73,7 @@ func (s *Store) CancelledInvoices(ctx context.Context, organizationID int64, ser
 	cancelled := make(map[parentbilling.HolidayInvoiceKey]parentbilling.BillingDocumentLink, len(rows))
 	for _, row := range rows {
 		cancelled[row.key()] = parentbilling.BillingDocumentLink{
-			ID: row.ID, Kind: parentbilling.DocumentInvoice, Number: row.Number,
+			ID: ident.ID(row.ID), Kind: parentbilling.DocumentInvoice, Number: row.Number,
 		}
 	}
 	return cancelled, nil

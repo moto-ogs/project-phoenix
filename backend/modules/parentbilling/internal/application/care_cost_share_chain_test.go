@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The cost bearer shares after the rule chain (#4687, ADR 0169), computed by
@@ -22,7 +23,7 @@ const (
 
 func costShare(t *testing.T, contract int64, kind string, bearer int64, from, until string, set func(*parentbilling.CareCostShare)) parentbilling.CareCostShare {
 	t.Helper()
-	share := parentbilling.CareCostShare{ContractID: contract, Kind: kind, CostBearerID: bearer,
+	share := parentbilling.CareCostShare{ContractID: ident.ID(contract), Kind: kind, CostBearerID: ident.ID(bearer),
 		CostBearerName: map[int64]string{bearerJobcenter: "Jobcenter Enzkreis", bearerYouthOffice: "Jugendamt Enzkreis", bearerFoundation: "Stiftung Kinderglück"}[bearer],
 		ValidFrom:      day(t, from), ValidUntil: day(t, until), Reference: "Bescheid 2026/17", CheckedOn: day(t, "2026-12-01")}
 	set(&share)
@@ -269,7 +270,7 @@ func TestCareCostSharesFollowTheRuleChain(t *testing.T) {
 				require.NoError(t, err)
 				for _, invoice := range prior.invoices {
 					for _, contract := range tc.invoiced {
-						if invoice.ContractID == contract {
+						if invoice.ContractID == ident.ID(contract) {
 							in.invoiced[contract] = invoice
 						}
 					}
@@ -285,9 +286,9 @@ func TestCareCostSharesFollowTheRuleChain(t *testing.T) {
 				}
 				shares := []shareOf{}
 				for _, share := range invoice.CostShares {
-					shares = append(shares, shareOf{share.CostBearerID, share.AmountCents})
+					shares = append(shares, shareOf{share.CostBearerID.Int64(), share.AmountCents})
 				}
-				got[invoice.ContractID] = splitOf{invoice.ContributionCents(), shares, invoice.TotalCents}
+				got[invoice.ContractID.Int64()] = splitOf{invoice.ContributionCents(), shares, invoice.TotalCents}
 				assert.Equal(t, payable, invoice.ContributionCents(), "the shares leave the payable cents of the positions alone")
 				assert.GreaterOrEqual(t, invoice.TotalCents, int64(0), "the family never pays less than nothing")
 			}
@@ -318,15 +319,15 @@ func TestCareCostShareStatusWarnsBeforeTheEnd(t *testing.T) {
 func TestCareCostBearerTotalsCountInvoicesAndKeepCancellations(t *testing.T) {
 	t.Parallel()
 	shares := []parentbilling.CareInvoiceCostShare{
-		{Kind: parentbilling.CostShareEducationParticipation, CostBearerID: bearerJobcenter, CostBearerName: "Jobcenter Enzkreis", AmountCents: 2000},
-		{Kind: parentbilling.CostShareOtherSubsidy, CostBearerID: bearerJobcenter, CostBearerName: "Jobcenter Enzkreis", AmountCents: 1000},
-		{Kind: parentbilling.CostShareYouthOffice, CostBearerID: bearerYouthOffice, CostBearerName: "Jugendamt Enzkreis", AmountCents: 500},
+		{Kind: parentbilling.CostShareEducationParticipation, CostBearerID: ident.ID(bearerJobcenter), CostBearerName: "Jobcenter Enzkreis", AmountCents: 2000},
+		{Kind: parentbilling.CostShareOtherSubsidy, CostBearerID: ident.ID(bearerJobcenter), CostBearerName: "Jobcenter Enzkreis", AmountCents: 1000},
+		{Kind: parentbilling.CostShareYouthOffice, CostBearerID: ident.ID(bearerYouthOffice), CostBearerName: "Jugendamt Enzkreis", AmountCents: 500},
 	}
 	invoices := []parentbilling.CareInvoice{
-		{ID: contractMia, CostShares: shares},
-		{ID: contractNoah, CostShares: shares[:1]},
+		{ID: ident.ID(contractMia), CostShares: shares},
+		{ID: ident.ID(contractNoah), CostShares: shares[:1]},
 		{Exclusion: &parentbilling.CareExclusion{}, CostShares: []parentbilling.CareInvoiceCostShare{
-			{CostBearerID: bearerFoundation, AmountCents: 9000},
+			{CostBearerID: ident.ID(bearerFoundation), AmountCents: 9000},
 		}},
 	}
 	for _, tc := range []struct {
@@ -342,8 +343,8 @@ func TestCareCostBearerTotalsCountInvoicesAndKeepCancellations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			totals := careCostBearerTotals(invoices, tc.cancelled)
 			require.Len(t, totals, 2)
-			assert.Equal(t, parentbilling.CareCostBearerTotal{CostBearerID: bearerJobcenter, CostBearerName: "Jobcenter Enzkreis", InvoiceCount: tc.counts[0], AmountCents: tc.amounts[0]}, totals[0])
-			assert.Equal(t, parentbilling.CareCostBearerTotal{CostBearerID: bearerYouthOffice, CostBearerName: "Jugendamt Enzkreis", InvoiceCount: tc.counts[1], AmountCents: tc.amounts[1]}, totals[1])
+			assert.Equal(t, parentbilling.CareCostBearerTotal{CostBearerID: ident.ID(bearerJobcenter), CostBearerName: "Jobcenter Enzkreis", InvoiceCount: tc.counts[0], AmountCents: tc.amounts[0]}, totals[0])
+			assert.Equal(t, parentbilling.CareCostBearerTotal{CostBearerID: ident.ID(bearerYouthOffice), CostBearerName: "Jugendamt Enzkreis", InvoiceCount: tc.counts[1], AmountCents: tc.amounts[1]}, totals[1])
 		})
 	}
 }
@@ -377,7 +378,7 @@ func TestCareCostShareSuccessorMustCoverNextMonth(t *testing.T) {
 		"a successor ending this month leaves the next month uncovered")
 	next.ValidUntil = day(t, "2027-02-01")
 	assert.Equal(t, parentbilling.CostShareActive, costShareStatus(ending, []parentbilling.CareCostShare{ending, next}, today))
-	next.ContractID = contractNoah
+	next.ContractID = ident.ID(contractNoah)
 	assert.Equal(t, parentbilling.CostShareExpiring, costShareStatus(ending, []parentbilling.CareCostShare{ending, next}, today),
 		"a successor for another contract does not cover this one")
 }

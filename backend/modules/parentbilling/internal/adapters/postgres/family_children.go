@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The children of a family (#5918, 1.15.815): one row per family of the
@@ -46,7 +47,7 @@ type familyChildCountRow struct {
 
 func (r familyChildCountRow) count() parentbilling.FamilyChildCount {
 	return parentbilling.FamilyChildCount{
-		ID: r.ID, ContractID: r.ContractID, StatedChildren: r.StatedChildren, StatedAt: r.StatedAt,
+		ID: ident.ID(r.ID), ContractID: ident.ID(r.ContractID), StatedChildren: r.StatedChildren, StatedAt: r.StatedAt,
 		ConfirmedChildren: r.ConfirmedChildren, ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil,
 		ConfirmedAt: r.ConfirmedAt, UpdatedAt: r.UpdatedAt, FamilyEmail: r.FamilyEmail, Confirmations: r.Confirmations,
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Beleg types of a Träger (#4720 slice 2, ADR 0184). Each Beleg of the Träger
@@ -154,8 +155,8 @@ var (
 // apply" carries the structured confirmation of the Träger and when the
 // moto team recorded it.
 type RetentionInstruction struct {
-	ID                   int64         `json:"id"`
-	OrganizationID       int64         `json:"organization_id"`
+	ID                   ident.ID      `json:"id"`
+	OrganizationID       ident.ID      `json:"organization_id"`
 	BelegType            string        `json:"beleg_type"`
 	TriggerEvent         string        `json:"trigger_event"`
 	Period               int           `json:"period"`
@@ -176,10 +177,10 @@ type RetentionInstruction struct {
 // Beleg of a type, with reason, scope, responsible person and next review.
 // A zero BelegID covers the whole type.
 type RetentionSuspension struct {
-	ID             int64         `json:"id"`
-	OrganizationID int64         `json:"organization_id"`
+	ID             ident.ID      `json:"id"`
+	OrganizationID ident.ID      `json:"organization_id"`
 	BelegType      string        `json:"beleg_type"`
-	BelegID        int64         `json:"beleg_id,omitempty"`
+	BelegID        ident.ID      `json:"beleg_id,omitempty"`
 	Reason         string        `json:"reason"`
 	Scope          string        `json:"scope"`
 	Responsible    string        `json:"responsible"`
@@ -215,7 +216,7 @@ type BelegClarification struct {
 // (Löschkonzept section 3): what was clarified with the Träger, whether it
 // went to Florian and why, and the next review.
 type BelegClarificationReview struct {
-	ID               int64         `json:"id"`
+	ID               ident.ID      `json:"id"`
 	BelegType        string        `json:"beleg_type"`
 	Reason           string        `json:"reason"`
 	Note             string        `json:"note"`
