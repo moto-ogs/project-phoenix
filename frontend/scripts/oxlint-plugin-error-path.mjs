@@ -78,7 +78,8 @@
 //                               a string search method (see MATCH_METHODS)
 //                               on it, a RegExp `.test` / `.exec` with it
 //                               as argument, or an equality comparison with
-//                               a string. Branch on `ApiError.code` or the
+//                               a string. Text and pattern are followed
+//                               through variables, whatever their names. Branch on `ApiError.code` or the
 //                               HTTP status instead.
 
 // The modules that implement the display path. They render the error Alert
@@ -452,10 +453,19 @@ function traceDisplay(start, sourceCode, onDisplay) {
 
 /** Values copied from an error's text, so `const msg = err.message;
  *  msg.includes(…)` is seen as a match on the error text. */
-function isErrorText(node, sourceCode, depth = 0) {
+function isErrorText(node, sourceCode, depth = 0, search = false) {
   const target = unwrap(node);
   if (!target || depth > 4) return false;
   if (isErrorMessageMember(target, sourceCode)) return true;
+  // For a search, an error-named field is the error's text too:
+  // `typeof context.error === "string" ? context.error : ""`. An equality
+  // check on such a field compares a code (`session.error === "…"`).
+  if (
+    search &&
+    target.type === "MemberExpression" &&
+    isErrorObject(target, sourceCode)
+  )
+    return true;
   if (target.type === "Identifier") {
     if (ERROR_TEXT_NAME_RE.test(target.name)) return true;
     const variable = findVariable(sourceCode, target);
@@ -465,7 +475,7 @@ function isErrorText(node, sourceCode, depth = 0) {
           def.type === "Variable" &&
           def.node.type === "VariableDeclarator" &&
           def.node.init &&
-          containsErrorText(def.node.init, sourceCode, depth + 1),
+          containsErrorText(def.node.init, sourceCode, depth + 1, search),
       ),
     );
   }
@@ -476,28 +486,28 @@ function isErrorText(node, sourceCode, depth = 0) {
       callee?.type === "MemberExpression" &&
       STRING_PASS_THROUGH.has(propertyName(callee) ?? "")
     ) {
-      return isErrorText(callee.object, sourceCode, depth + 1);
+      return isErrorText(callee.object, sourceCode, depth + 1, search);
     }
   }
   return false;
 }
 
-function containsErrorText(node, sourceCode, depth) {
+function containsErrorText(node, sourceCode, depth, search) {
   const target = unwrap(node);
   if (!target) return false;
   if (target.type === "ConditionalExpression") {
     return (
-      containsErrorText(target.consequent, sourceCode, depth) ||
-      containsErrorText(target.alternate, sourceCode, depth)
+      containsErrorText(target.consequent, sourceCode, depth, search) ||
+      containsErrorText(target.alternate, sourceCode, depth, search)
     );
   }
   if (target.type === "LogicalExpression") {
     return (
-      containsErrorText(target.left, sourceCode, depth) ||
-      containsErrorText(target.right, sourceCode, depth)
+      containsErrorText(target.left, sourceCode, depth, search) ||
+      containsErrorText(target.right, sourceCode, depth, search)
     );
   }
-  return isErrorText(target, sourceCode, depth);
+  return isErrorText(target, sourceCode, depth, search);
 }
 
 // --- error-path/no-error-alert ----------------------------------------------
@@ -876,15 +886,31 @@ const noRawErrorToast = {
 
 // --- error-path/no-error-text-match -----------------------------------------
 
-function isRegExpReceiver(node) {
+/** A RegExp literal, `new RegExp(…)`/`RegExp(…)`, or a variable bound to one,
+ *  whatever its name (`CHUNK_LOAD_MESSAGE.test(err.message)`). */
+function isRegExpReceiver(node, sourceCode, depth = 0) {
   const target = unwrap(node);
-  if (!target) return false;
+  if (!target || depth > 4) return false;
   if (target.type === "Literal" && target.regex) return true;
-  if (target.type === "NewExpression" && target.callee.type === "Identifier") {
+  if (
+    (target.type === "NewExpression" || target.type === "CallExpression") &&
+    target.callee.type === "Identifier"
+  ) {
     return target.callee.name === "RegExp";
   }
-  if (target.type === "Identifier")
-    return /(?:re|regex|pattern)$/i.test(target.name);
+  if (target.type === "Identifier") {
+    if (/(?:re|regex|pattern)$/i.test(target.name)) return true;
+    const variable = findVariable(sourceCode, target);
+    return Boolean(
+      variable?.defs.some(
+        (def) =>
+          def.type === "Variable" &&
+          def.node.type === "VariableDeclarator" &&
+          def.node.init &&
+          isRegExpReceiver(def.node.init, sourceCode, depth + 1),
+      ),
+    );
+  }
   return false;
 }
 
@@ -912,7 +938,7 @@ const noErrorTextMatch = {
         const method = propertyName(callee);
         if (
           MATCH_METHODS.has(method) &&
-          isErrorText(callee.object, sourceCode)
+          isErrorText(callee.object, sourceCode, 0, true)
         ) {
           context.report({
             node,
@@ -923,9 +949,9 @@ const noErrorTextMatch = {
         }
         if (
           (method === "test" || method === "exec") &&
-          isRegExpReceiver(callee.object) &&
+          isRegExpReceiver(callee.object, sourceCode) &&
           node.arguments[0] &&
-          isErrorText(node.arguments[0], sourceCode)
+          isErrorText(node.arguments[0], sourceCode, 0, true)
         ) {
           context.report({
             node,

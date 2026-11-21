@@ -254,6 +254,20 @@ or write a `Backend*` interface for a registered route.
 - Regenerate with `scripts/run-go-toolchain.sh go -C backend run . gencontract`.
   `TestTheCommittedContractIsCurrent` (`backend/cmd`) and the backend quality
   job fail on a stale file.
+- A portal forwards its backend routes through one catalog proxy, so a new
+  backend route needs no pass-through `route.ts`:
+  1. Add a `common.RouteContract` to the `RouteContracts` function of the
+     owner's `http` package (method, pattern below the mount, portal, query,
+     request and response type).
+  2. Mount it in `contractRegistrations` (`backend/api/route_contracts.go`)
+     if the owner is new there.
+  3. Run `scripts/run-go-toolchain.sh go -C backend run . gencontract`.
+  4. Delete the `route.ts`; `app/api/<portal>/[...path]/route.ts` answers
+     the path.
+
+  A route with behavior of its own (session, upload, file answer, stream) is
+  no pass-through. `app/api/proxy-routes.test.ts` fails on a `route.ts` whose
+  only code is `proxyGet(...)` and its siblings.
 - Read a registered route with `contractGet` (`lib/contract/client.server.ts`).
   It returns the decoded value or a typed failure with status, registry code
   and request ID; rethrow `error.cause` so the handler boundary forwards the
@@ -347,8 +361,7 @@ The key is the scope claim of the portal's session token
   are present. A subscription address that predates its backend path is a
   `beforeFiles` rewrite in `next.config.js`, never a route file.
 - To move a pure proxy route: register its Go route for the portal,
-  regenerate, delete the route file and its row in
-  `src/test/proxy-routes/**`. A file is deleted only when every method it
+  regenerate and delete the route file. A file is deleted only when every method it
   exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
   (`backend/api`) fails when the route does not run behind that portal's
   scope middleware.

@@ -163,7 +163,6 @@ const guards = [
   "src/proxy.test.ts",
   "src/sentry.config.test.ts",
   "src/test/phosphor-imports-plugin.test.ts",
-  "src/test/proxy-routes.table.test.ts",
   "src/test/session-cookie-writers.test.ts",
   "src/lib/moto-concepts.test.ts",
   "src/lib/hooks/chat-viewport-lock-consumers.test.ts",
