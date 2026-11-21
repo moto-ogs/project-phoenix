@@ -7,14 +7,13 @@
  */
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import type { HolidayFormEditor as WireHolidayFormEditor } from "./contract/traeger-holiday-periods.generated";
 import type { FormLegalBlock } from "./enrollment-form-schema-api";
 import {
-  holidayAddressRequirement,
-  holidayHealthRequirement,
-  holidayLegalBlocks,
+  holidayFormFieldsFromContract,
+  holidayFormVersionFromContract,
   type HolidayAddressRequirement,
   type HolidayHealthRequirement,
-  type HolidayLegalBlockWire,
   type HolidayFormField,
 } from "./holiday-form-field";
 import { traegerRequest } from "./traeger-api";
@@ -40,25 +39,19 @@ export interface HolidayForm {
   readonly template: readonly HolidayFormField[];
 }
 
-interface BackendHolidayForm {
-  legal_blocks?: HolidayLegalBlockWire[];
-  version: number;
-  fields?: HolidayFormField[] | null;
-  address_requirement?: string | null;
-  health_requirement?: string | null;
-  created_at: string;
-  template?: HolidayFormField[] | null;
-}
-
-function formFromBackend(form: BackendHolidayForm): HolidayForm {
+/**
+ * The editor saves the whole form back as a new version, so every open
+ * enum of a question or legal block fails the read when this build does
+ * not know it; the page shows its load error instead of saving a guess.
+ */
+function formFromBackend(form: WireHolidayFormEditor): HolidayForm {
   return {
-    legalBlocks: holidayLegalBlocks(form.legal_blocks),
-    version: form.version,
-    fields: form.fields ?? [],
-    addressRequirement: holidayAddressRequirement(form.address_requirement),
-    healthRequirement: holidayHealthRequirement(form.health_requirement),
+    ...holidayFormVersionFromContract(form, "HolidayFormEditor"),
     createdAt: form.created_at,
-    template: form.template ?? [],
+    template: holidayFormFieldsFromContract(
+      form.template,
+      "HolidayFormEditor.template",
+    ),
   };
 }
 
@@ -69,7 +62,7 @@ function formPath(periodId: string): string {
 /** The current version of the form of a holiday period. */
 export async function fetchHolidayForm(periodId: string): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<BackendHolidayForm>(formPath(periodId)),
+    await traegerRequest<WireHolidayFormEditor>(formPath(periodId)),
   );
 }
 
@@ -82,7 +75,7 @@ export async function saveHolidayForm(
   healthRequirement: HolidayHealthRequirement = "optional",
 ): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<BackendHolidayForm>(formPath(periodId), {
+    await traegerRequest<WireHolidayFormEditor>(formPath(periodId), {
       method: "PUT",
       body: {
         fields,
