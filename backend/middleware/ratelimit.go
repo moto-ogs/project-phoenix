@@ -38,6 +38,7 @@ type RateLimiter struct {
 	exemptPrefixes    []string
 	exemptRequests    []func(*http.Request) bool
 	exemptLoopback    bool
+	Now               func() time.Time // token clock; nil is the wall clock
 	refusalsOnly      bool
 	alwaysSpends      func(*http.Request) bool
 }
@@ -76,6 +77,13 @@ func NewSharedRateLimiter(store RateLimitStore, requestsPerMinute, burst int) *R
 		store: store, requestsPerMinute: requestsPerMinute,
 		r: rate.Limit(float64(requestsPerMinute) / 60), b: burst,
 	}
+}
+
+func (rl *RateLimiter) clock() time.Time {
+	if rl.Now == nil {
+		return time.Now()
+	}
+	return rl.Now()
 }
 
 // SetLogger sets the security logger for the rate limiter
@@ -268,7 +276,7 @@ func (rl *RateLimiter) admitPending(key string) (*visitor, bool) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 	v := rl.visitorLocked(key)
-	if v.limiter.Tokens() < float64(v.pending+1) {
+	if v.limiter.TokensAt(rl.clock()) < float64(v.pending+1) {
 		return nil, false
 	}
 	v.pending++
@@ -282,7 +290,7 @@ func (rl *RateLimiter) settlePending(v *visitor, spend bool) {
 	v.pending--
 	v.lastSeen = time.Now()
 	if spend {
-		v.limiter.Allow()
+		v.limiter.AllowN(rl.clock(), 1)
 	}
 }
 
@@ -298,7 +306,7 @@ func (rl *RateLimiter) admit(r *http.Request, bucket string) (func(bool) error, 
 		}
 		return func(spend bool) error { rl.settlePending(visitor, spend); return nil }, nil
 	}
-	if !rl.getVisitor(key).Allow() {
+	if !rl.getVisitor(key).AllowN(rl.clock(), 1) {
 		return nil, nil
 	}
 	return func(bool) error { return nil }, nil

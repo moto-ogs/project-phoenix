@@ -2,6 +2,6 @@
   "scenario": "api.day_changes.today",
   "max": 19,
   "exact": false,
-  "description": "GET /day-changes/today (#7659): the caller's staff record and groups, the group teachers, the day's absences and group substitutions, the staff names and the group names, each in one batched read, inside one savepoint per source (SAVEPOINT and RELEASE count), plus the transaction frame. TestDayChangesQueryBudget compares one with four absences and substitutions.",
+  "description": "GET /day-changes/today (#7659, #7667): the caller's staff record and groups, the group teachers, the day's absences and group substitutions, the staff and group names, and today's staff notices with the caller's acknowledgements where applicable, each in one batched read, inside a shared savepoint for consecutive read sources (SAVEPOINT and RELEASE count), plus the transaction frame. TestDayChangesQueryBudget compares one with four absences and substitutions.",
   "route": "GET /api/day-changes/today"
 }

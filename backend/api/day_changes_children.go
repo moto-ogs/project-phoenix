@@ -40,9 +40,9 @@ type dayChangesStudents interface {
 // dayChangesChildren is the Kinder source.
 type dayChangesChildren struct{ sources DayChangesSources }
 
-// ChildrenVisible is the rule of the child detail page: the status of a
+// childrenVisible is the rule of the child detail page: the status of a
 // child needs users:read. It reads the session only, no statement.
-func (dayChangesChildren) ChildrenVisible(ctx context.Context) bool {
+func (dayChangesChildren) childrenVisible(ctx context.Context) bool {
 	granted := sessiontoken.PermissionsFromCtx(ctx)
 	return securityruntime.HasAdminWildcard(granted) || securityruntime.HasPermission(permissions.UsersRead, granted)
 }
@@ -54,7 +54,7 @@ type childChange struct {
 }
 
 func (s dayChangesChildren) ChildChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
-	if !s.ChildrenVisible(ctx) {
+	if !s.childrenVisible(ctx) {
 		return nil, nil
 	}
 	changes, err := s.changes(ctx, day)

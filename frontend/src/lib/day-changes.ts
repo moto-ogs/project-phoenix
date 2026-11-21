@@ -7,6 +7,7 @@ import { bffJson } from "~/lib/bff-fetch";
 import type {
   Child,
   ChildStatus,
+  DayNotice,
   Entry,
   Kind,
   LinkTarget,
@@ -58,6 +59,17 @@ export interface DayChangeChildSummary {
   }[];
 }
 
+/** Ein Hinweis der Leitung (#7667); Titel und Text schreibt die Leitung. */
+export interface DayChangeNotice {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  readonly important: boolean;
+  readonly requiresAcknowledgement: boolean;
+  /** Die eigene Kenntnisnahme ist gespeichert. */
+  readonly acknowledged: boolean;
+}
+
 export interface DayChange {
   readonly kind: Kind | (string & {});
   readonly section: Section | (string & {});
@@ -66,12 +78,20 @@ export interface DayChange {
   readonly since: string | null;
   /** Letzter Tag einer Änderung, die über heute hinausgeht („bis“). */
   readonly until: string | null;
+  /**
+   * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (#7660),
+   * sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
+   */
+  readonly startsAt: string | null;
+  readonly endsAt: string | null;
   readonly people: readonly DayChangePerson[];
   readonly groupName: string | null;
   readonly link: DayChangeLink | null;
   readonly count: number | null;
   readonly child?: DayChangeChild | null;
   readonly childSummary?: DayChangeChildSummary | null;
+  /** Nur bei der Art `staff_notice`. */
+  readonly notice?: DayChangeNotice | null;
 }
 
 export interface DayChangesOverview {
@@ -121,6 +141,18 @@ function mapChildSummary(
   };
 }
 
+function mapNotice(notice: DayNotice | null): DayChangeNotice | null {
+  if (!notice) return null;
+  return {
+    id: notice.id,
+    title: notice.title,
+    body: notice.body,
+    important: notice.priority === "important",
+    requiresAcknowledgement: notice.requires_acknowledgement,
+    acknowledged: notice.acknowledged,
+  };
+}
+
 function mapEntry(entry: Entry): DayChange {
   return {
     kind: entry.kind,
@@ -128,6 +160,8 @@ function mapEntry(entry: Entry): DayChange {
     halfDay: entry.half_day,
     since: entry.since,
     until: entry.until,
+    startsAt: entry.starts_at,
+    endsAt: entry.ends_at,
     people: (entry.people ?? []).map((person) => ({
       staffId: person.staff_id,
       name: person.name,
@@ -141,6 +175,7 @@ function mapEntry(entry: Entry): DayChange {
     childSummary: entry.child_summary
       ? mapChildSummary(entry.child_summary)
       : null,
+    notice: mapNotice(entry.notice ?? null),
   };
 }
 

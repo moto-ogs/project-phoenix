@@ -107,15 +107,6 @@ func childText(child wireChild) string {
 	return text
 }
 
-func sourceStatus(overview wireOverview, source string) string {
-	for _, status := range overview.Sources {
-		if status.Source == source {
-			return status.Status
-		}
-	}
-	return ""
-}
-
 // TestDayChangesChildrenSource is Seam 1 for the Kinder source (#7665): one
 // school with a group of the care staff, another group, a child without a
 // group, a lead without a group, an account without users:read and a second

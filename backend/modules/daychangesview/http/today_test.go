@@ -182,10 +182,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 	t.Run("account without the rights gets no entries and no failure", func(t *testing.T) {
 		overview, _ := read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, overview.Entries)
-		require.NotEmpty(t, overview.Sources)
-		for _, source := range overview.Sources {
-			assert.Equal(t, "loaded", source.Status, source.Source)
-		}
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("the day before shows that day only", func(t *testing.T) {
@@ -260,8 +257,8 @@ func TestDayChangesQueryBudget(t *testing.T) {
 		}
 		baseline = n
 		counter.Reset()
-		// Without users:read the Kinder source is not read (#7665); its
-		// statements have their own scenario in children_test.go.
+		// Without users:read neither the Kinder source (#7665) nor the
+		// notices read; children_test.go measures both with users:read.
 		overview, _ := read(t, router, account.ID, tenantID, "vacation:approve")
 		require.Len(t, overview.Entries, 2*n)
 		measured := counter.Measurement(counter.Queries())

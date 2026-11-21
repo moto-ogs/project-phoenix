@@ -588,7 +588,8 @@ while IFS= read -r path; do
     # Read only by the architecture ratchet job (backend-architecture filter);
     # its tests build their own repositories.
     backend/architecture/query-budget-non-http.json | \
-      backend/architecture/query-budget-retirements.json) continue ;;
+      backend/architecture/query-budget-retirements.json | \
+      backend/architecture/route-golden-retirements.json) continue ;;
   esac
   workflow_filter_matches backend-tests "$path" ||
     { echo "backend JSON input missing from the backend-tests filter: $path" >&2; exit 1; }

@@ -6,6 +6,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
+	importHTTP "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
+
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
@@ -237,4 +240,10 @@ func wrapPersonBatches(batches importPorts.PersonBatches, wrap func(importPorts.
 		return batches
 	}
 	return wrap(batches)
+}
+
+// ImportHTTPResponsesForTests binds the import adapter's real wire renderer.
+// Owner tests supply their own identity, transaction and application ports.
+func ImportHTTPResponsesForTests() importHTTP.Runtime {
+	return importHTTP.Runtime{Success: common.Respond, Failure: renderDataImportFailure}
 }
