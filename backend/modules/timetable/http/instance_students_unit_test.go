@@ -85,7 +85,7 @@ func unitAttendanceData(repo *fakeRepo) timetable.TimetableDataCapability {
 		PatchSlotAttendanceFn:  repo.PatchSlotAttendance,
 		LockBlockAttendanceFn:  repo.LockBlockAttendance,
 		FindScheduledInstanceFn: func(_ context.Context, id int64) (timetable.ScheduledInstance, error) {
-			return timetable.ScheduledInstance{ID: id, Status: timetable.InstanceStatusPlanned}, nil
+			return timetable.ScheduledInstance{ID: ident.ID(id), Status: timetable.InstanceStatusPlanned}, nil
 		},
 	}
 }

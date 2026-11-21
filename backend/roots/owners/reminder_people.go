@@ -6,6 +6,7 @@ import (
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/workflows/reminderdelivery/ports"
@@ -70,7 +71,7 @@ func (r ReminderSupervisionReader) GetStaffActiveSupervisions(ctx context.Contex
 	// before it and ending after it.
 	result := make([]*ports.GroupSupervisor, 0, len(values))
 	for _, value := range values {
-		result = append(result, &ports.GroupSupervisor{StaffID: value.StaffID, GroupID: value.GroupID})
+		result = append(result, &ports.GroupSupervisor{StaffID: ident.ID(value.StaffID).Int64(), GroupID: ident.ID(value.GroupID).Int64()})
 	}
 	return result, nil
 }

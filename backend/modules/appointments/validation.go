@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ValidateRecipientFields checks one resolved audience member: its type, the
@@ -97,7 +99,7 @@ func ValidSchoolEventType(value string) bool {
 
 func fieldsFromAppointment(value *Appointment) AppointmentFields {
 	return AppointmentFields{
-		OrganizerStaffID: value.OrganizerStaffID, Title: value.Title, Description: value.Description,
+		OrganizerStaffID: value.OrganizerStaffID.Int64(), Title: value.Title, Description: value.Description,
 		Location: value.Location, StartDate: value.StartDate, EndDate: value.EndDate,
 		StartTime: value.StartTime, EndTime: value.EndTime, AllDay: value.AllDay,
 		DeliveryMode: value.DeliveryMode, OverviewVisibility: value.OverviewVisibility,
@@ -106,7 +108,7 @@ func fieldsFromAppointment(value *Appointment) AppointmentFields {
 }
 
 func applyFields(value *Appointment, fields AppointmentFields) {
-	value.OrganizerStaffID = fields.OrganizerStaffID
+	value.OrganizerStaffID = ident.ID(fields.OrganizerStaffID)
 	value.Title = fields.Title
 	value.Description = fields.Description
 	value.Location = fields.Location

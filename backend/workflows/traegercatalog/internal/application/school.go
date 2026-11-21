@@ -76,7 +76,7 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 	}
 	for _, offering := range snap.offerings {
 		row := bySource[offering.ID.Int64()]
-		offeringPlan := traegercatalog.OfferingPlan{TraegerOfferingID: offering.ID.Int64(), Name: offering.Draft.Fields.Name, Fields: row.Fields, Action: traegercatalog.ActionUpdate}
+		offeringPlan := traegercatalog.OfferingPlan{TraegerOfferingID: offering.ID, Name: offering.Draft.Fields.Name, Fields: row.Fields, Action: traegercatalog.ActionUpdate}
 		if offering.WithdrawnAt != nil {
 			offeringPlan.Action = traegercatalog.ActionWithdraw
 		} else if row.Created {
@@ -99,7 +99,7 @@ func (c *Catalog) withdrawSchool(ctx context.Context, snap snapshot, plan *traeg
 	}
 	for _, offering := range snap.offerings {
 		plan.Offerings = append(plan.Offerings, traegercatalog.OfferingPlan{
-			TraegerOfferingID: offering.ID.Int64(), Name: offering.Draft.Fields.Name, Action: traegercatalog.ActionWithdraw,
+			TraegerOfferingID: offering.ID, Name: offering.Draft.Fields.Name, Action: traegercatalog.ActionWithdraw,
 			Fields: []careplan.TraegerOfferingFieldChange{},
 		})
 	}

@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) ListMyStaffEvents(ctx context.Context, from, to appointmentcap.Date) ([]Event, error) {
@@ -72,7 +73,7 @@ func (s *service) recipientsByAppointment(ctx context.Context, appointmentIDs []
 	}
 	byAppointment := make(map[int64][]*appointmentcap.AppointmentRecipient, len(appointmentIDs))
 	for _, recipient := range recipients {
-		byAppointment[recipient.AppointmentID] = append(byAppointment[recipient.AppointmentID], recipient)
+		byAppointment[recipient.AppointmentID.Int64()] = append(byAppointment[recipient.AppointmentID.Int64()], recipient)
 	}
 	return byAppointment, nil
 }
@@ -84,7 +85,7 @@ func (s *service) expandAppointmentEvents(ctx context.Context, appointments []*a
 	}
 	events := make([]Event, 0, len(appointments))
 	for _, appointment := range appointments {
-		recipient := staffRecipient(expansion.recipientsByAppointment[appointment.ID], staffID)
+		recipient := staffRecipient(expansion.recipientsByAppointment[appointment.ID.Int64()], staffID)
 		events = append(events, expansion.events(appointment, from, to, func(occurrence appointmentcap.Date) Event {
 			return answeredAppointmentEvent(appointment, occurrence, recipient, staffID)
 		})...)
@@ -99,7 +100,7 @@ func (s *service) expandGuardianAppointmentEvents(ctx context.Context, appointme
 	}
 	events := make([]Event, 0, len(appointments))
 	for _, appointment := range appointments {
-		recipient := guardianRecipientForStudents(expansion.recipientsByAppointment[appointment.ID], guardianProfileIDs, studentIDs)
+		recipient := guardianRecipientForStudents(expansion.recipientsByAppointment[appointment.ID.Int64()], guardianProfileIDs, studentIDs)
 		events = append(events, expansion.events(appointment, from, to, func(occurrence appointmentcap.Date) Event {
 			event := answeredAppointmentEvent(appointment, occurrence, recipient, 0)
 			event.CanViewOverview = canParentViewOverview(appointment, recipient != nil)
@@ -149,7 +150,7 @@ func (s *service) loadAppointmentExpansion(ctx context.Context, appointments []*
 // that is not cancelled, with its override applied. build creates the event of
 // an occurrence date.
 func (e appointmentExpansion) events(appointment *appointmentcap.Appointment, from, to appointmentcap.Date, build func(appointmentcap.Date) Event) []Event {
-	recurrence := e.recurrenceByAppointment[appointment.ID]
+	recurrence := e.recurrenceByAppointment[appointment.ID.Int64()]
 	if recurrence == nil {
 		if !dateRangesOverlap(toTimezoneDate(appointment.StartDate), toTimezoneDate(appointment.EndDate), from, to) {
 			return nil
@@ -158,7 +159,7 @@ func (e appointmentExpansion) events(appointment *appointmentcap.Appointment, fr
 	}
 	var events []Event
 	for _, occurrence := range expandOccurrences(appointment, recurrence, from, to) {
-		override := e.overrideByAppointmentDate[occurrenceKey(appointment.ID, occurrence)]
+		override := e.overrideByAppointmentDate[occurrenceKey(appointment.ID.Int64(), occurrence)]
 		if override != nil && override.Cancelled {
 			continue
 		}
@@ -177,7 +178,7 @@ func occurrenceKey(appointmentID int64, occurrenceDate appointmentcap.Date) stri
 func appointmentIDs(appointments []*appointmentcap.Appointment) []int64 {
 	ids := make([]int64, 0, len(appointments))
 	for _, appointment := range appointments {
-		ids = append(ids, appointment.ID)
+		ids = append(ids, appointment.ID.Int64())
 	}
 	return ids
 }
@@ -191,7 +192,7 @@ func (s *service) recurrenceRulesByAppointment(ctx context.Context, ids []int64)
 	}
 	byAppointment := make(map[int64]*appointmentcap.RecurrenceRule, len(recurrences))
 	for _, recurrence := range recurrences {
-		byAppointment[recurrence.AppointmentID] = recurrence
+		byAppointment[recurrence.AppointmentID.Int64()] = recurrence
 	}
 	return byAppointment, nil
 }
@@ -205,7 +206,7 @@ func answeredAppointmentEvent(appointment *appointmentcap.Appointment, occurrenc
 	}
 	status := recipient.StatusOn(toCalendarDate(occurrenceDate))
 	recipientID := recipient.ID
-	event := appointmentEvent(appointment, occurrenceDate, &status, &recipientID, staffID)
+	event := appointmentEvent(appointment, occurrenceDate, &status, (*int64)(&recipientID), staffID)
 	seriesStatus := recipient.Status
 	event.SeriesResponseStatus = &seriesStatus
 	event.HasOccurrenceAnswers = len(recipient.OccurrenceResponses) > 0
@@ -213,7 +214,7 @@ func answeredAppointmentEvent(appointment *appointmentcap.Appointment, occurrenc
 }
 
 func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate appointmentcap.Date, responseStatus *string, recipientID *int64, staffID int64) Event {
-	appointmentID := formatID(appointment.ID)
+	appointmentID := formatID(appointment.ID.Int64())
 	deliveryMode := appointment.DeliveryMode
 	occurrence := occurrenceDate.String()
 	endDate := occurrenceDate.AddDays(appointment.StartDate.DaysUntil(appointment.EndDate))
@@ -223,7 +224,7 @@ func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate ap
 		value := formatID(*recipientID)
 		recipientIDString = &value
 	}
-	organizerStaffID := formatID(appointment.OrganizerStaffID)
+	organizerStaffID := formatID(appointment.OrganizerStaffID.Int64())
 	return Event{
 		ID:               fmt.Sprintf("appointment:%d:%s", appointment.ID, occurrence),
 		Source:           EventSourceAppointment,
@@ -249,7 +250,7 @@ func appointmentEvent(appointment *appointmentcap.Appointment, occurrenceDate ap
 		// cancelled appointment freezes RSVP entirely (matching the server-side
 		// rejection in RespondTo*Invitation).
 		CanRespond:      appointment.CancelledAt == nil && recipientID != nil && responseStatus != nil && *responseStatus != appointmentcap.ResponseStatusInfo,
-		CanEdit:         appointment.OrganizerStaffID == staffID && !isParentConferenceAppointment(appointment),
+		CanEdit:         appointment.OrganizerStaffID == ident.ID(staffID) && !isParentConferenceAppointment(appointment),
 		CanViewOverview: canStaffViewOverview(appointment, staffID, isStaffRecipient),
 		SchoolEventType: appointment.SchoolEventType,
 	}
@@ -289,7 +290,7 @@ func occurrenceDatesForAppointments(appointments []*appointmentcap.Appointment, 
 	seen := map[string]struct{}{}
 	dates := []appointmentcap.Date{}
 	for _, appointment := range appointments {
-		recurrence := recurrenceByAppointment[appointment.ID]
+		recurrence := recurrenceByAppointment[appointment.ID.Int64()]
 		if recurrence == nil {
 			continue
 		}

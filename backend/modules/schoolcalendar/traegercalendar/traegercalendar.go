@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Closing days of a Träger (#4702). The Träger-Büro plans a closing day,
@@ -40,11 +41,11 @@ var (
 // ClosingDay is one closing day range of a Träger with the schools it
 // applies to. A single day has StartDate == EndDate.
 type ClosingDay struct {
-	ID        int64         `json:"id"`
+	ID        ident.ID      `json:"id"`
 	StartDate calendar.Date `json:"start_date"`
 	EndDate   calendar.Date `json:"end_date"`
 	Reason    string        `json:"reason"`
-	SchoolIDs []int64       `json:"school_ids"`
+	SchoolIDs []ident.ID    `json:"school_ids"`
 	UpdatedAt time.Time     `json:"updated_at"`
 	// NotifiedFamilies counts the families a save told about the closing
 	// day in their booked holiday weeks (#6434); zero on a read.
@@ -84,7 +85,7 @@ type ClosingDaySpan struct {
 // CalendarSchool is a school of the Träger with the federal state its
 // statutory holidays come from.
 type CalendarSchool struct {
-	ID           int64                        `json:"id"`
+	ID           ident.ID                     `json:"id"`
 	Name         string                       `json:"name"`
 	FederalState schoolcalendar.HolidayRegion `json:"federal_state"`
 }

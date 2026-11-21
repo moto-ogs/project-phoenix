@@ -106,7 +106,7 @@ func (s *attendanceMirror) MirrorCheckInForVisit(
 		return nil, err
 	}
 	if row == nil {
-		return s.createUnplannedAttendance(ctx, instance.ID, visit)
+		return s.createUnplannedAttendance(ctx, instance.ID.Int64(), visit)
 	}
 
 	// B6: respect manual states and already-open presence. A checked-out
@@ -118,13 +118,13 @@ func (s *attendanceMirror) MirrorCheckInForVisit(
 	// Return the snapshot we already read so SSE reflects the true state.
 	if shouldPreserveAttendanceOnCheckin(row) {
 		s.getLogger().Debug("attendance mirror: row already past expected, not clobbering",
-			slog.Int64("instance_id", instance.ID),
+			slog.Int64("instance_id", instance.ID.Int64()),
 			slog.Int64("student_id", visit.StudentID),
 			slog.String("current_status", row.Status),
 		)
-		return s.finishVisitInterval(ctx, instance.ID, visit, row)
+		return s.finishVisitInterval(ctx, instance.ID.Int64(), visit, row)
 	}
-	return s.openVisitPresence(ctx, instance.ID, visit, row)
+	return s.openVisitPresence(ctx, instance.ID.Int64(), visit, row)
 }
 
 // loadVisitSlot resolves the block bridged to the visit's session and the
@@ -144,10 +144,10 @@ func (s *attendanceMirror) loadVisitSlot(
 	if instance == nil {
 		return nil, nil, nil
 	}
-	row, err := s.instanceStudentRepo.FindByInstanceAndStudent(ctx, instance.ID, visit.StudentID)
+	row, err := s.instanceStudentRepo.FindByInstanceAndStudent(ctx, instance.ID.Int64(), visit.StudentID)
 	if err != nil {
 		s.getLogger().Warn(logPrefix+": find instance_student failed",
-			slog.Int64("instance_id", instance.ID),
+			slog.Int64("instance_id", instance.ID.Int64()),
 			slog.Int64("student_id", visit.StudentID),
 			slog.String("error", err.Error()),
 		)
@@ -348,10 +348,10 @@ func (s *attendanceMirror) MirrorCheckOutForVisit(
 	}
 	if closesPresentInterval(visit.ExitTime, row) {
 		if err := s.instanceStudentRepo.UpdateAttendanceCheckout(
-			ctx, instance.ID, visit.StudentID, *visit.ExitTime,
+			ctx, instance.ID.Int64(), visit.StudentID, *visit.ExitTime,
 		); err != nil {
 			s.getLogger().Error("attendance mirror: persist slot checkout failed",
-				slog.Int64("instance_id", instance.ID),
+				slog.Int64("instance_id", instance.ID.Int64()),
 				slog.Int64("student_id", visit.StudentID),
 				slog.String("error", err.Error()),
 			)

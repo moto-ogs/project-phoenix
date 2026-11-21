@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StaffAssignment is one Betreuungsplan block a staff member is planned into on
@@ -111,7 +112,7 @@ func (s *staffAssignmentService) ListAssignmentsForStaff(ctx context.Context, st
 	}
 	instanceByID := make(map[int64]*timetable.ScheduledInstance, len(instances))
 	for _, inst := range instances {
-		instanceByID[inst.ID] = inst
+		instanceByID[inst.ID.Int64()] = inst
 	}
 
 	roomNames, err := s.resolveRoomNames(ctx, mine, instanceByID)
@@ -148,13 +149,13 @@ func staffAssignmentFor(row *timetable.InstanceStaff, inst *timetable.ScheduledI
 	}
 	roomID := inst.RoomID
 	if row.RoomID != nil {
-		roomID = *row.RoomID
+		roomID = ident.ID(*row.RoomID)
 	}
 	return &StaffAssignment{
-		InstanceID:      inst.ID,
+		InstanceID:      inst.ID.Int64(),
 		Title:           inst.Title,
-		GroupName:       groupNameFor(inst.ActivityGroupID, groupNames),
-		RoomName:        roomNames[roomID],
+		GroupName:       groupNameFor((*int64)(inst.ActivityGroupID), groupNames),
+		RoomName:        roomNames[roomID.Int64()],
 		Date:            inst.Date,
 		StartTime:       calendar.NormalizeWallClock(inst.StartTime),
 		EndTime:         calendar.NormalizeWallClock(inst.EndTime),
@@ -203,7 +204,7 @@ func (s *staffAssignmentService) resolveGroupNames(ctx context.Context, rows []*
 		if inst == nil || inst.ActivityGroupID == nil {
 			continue
 		}
-		idSet[*inst.ActivityGroupID] = struct{}{}
+		idSet[(*inst.ActivityGroupID).Int64()] = struct{}{}
 	}
 	names := make(map[int64]string, len(idSet))
 	if len(idSet) == 0 {

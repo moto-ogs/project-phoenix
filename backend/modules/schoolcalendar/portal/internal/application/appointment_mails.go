@@ -37,7 +37,7 @@ func (s *service) StaffAppointmentMails(ctx context.Context, appointmentID int64
 	if s.cfg.Mails == nil {
 		return result, nil
 	}
-	mails, err := s.cfg.Mails.AppointmentMails(ctx, appointment.ID)
+	mails, err := s.cfg.Mails.AppointmentMails(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, fmt.Errorf("calendar: read appointment mails: %w", err)
 	}
@@ -45,7 +45,7 @@ func (s *service) StaffAppointmentMails(ctx context.Context, appointmentID int64
 	if len(notArrived) == 0 {
 		return result, nil
 	}
-	names, err := s.recipientGuardianNamesByAddress(ctx, appointment.ID)
+	names, err := s.recipientGuardianNamesByAddress(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, err
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // TraegerClosingDayResource serves the closing days of a Träger in the
@@ -66,7 +67,7 @@ type TraegerClosingDayRequest struct {
 	StartDate calendar.Date `json:"start_date"`
 	EndDate   calendar.Date `json:"end_date"`
 	Reason    string        `json:"reason"`
-	SchoolIDs []int64       `json:"school_ids"`
+	SchoolIDs []common.ID   `json:"school_ids"`
 	// HolidayBookingsToken confirms the preview of the affected holiday
 	// bookings (#6434), empty when the preview showed none.
 	HolidayBookingsToken string `json:"holiday_bookings_token"`
@@ -76,7 +77,7 @@ type TraegerClosingDayRequest struct {
 func (req *TraegerClosingDayRequest) Bind(*http.Request) error { return nil }
 
 func (req *TraegerClosingDayRequest) input() traegercalendar.ClosingDayInput {
-	return traegercalendar.ClosingDayInput{StartDate: req.StartDate, EndDate: req.EndDate, Reason: req.Reason, SchoolIDs: req.SchoolIDs, HolidayBookingsToken: req.HolidayBookingsToken}
+	return traegercalendar.ClosingDayInput{StartDate: req.StartDate, EndDate: req.EndDate, Reason: req.Reason, SchoolIDs: ident.Int64s(req.SchoolIDs), HolidayBookingsToken: req.HolidayBookingsToken}
 }
 
 func traegerOf(w http.ResponseWriter, r *http.Request) (int64, bool) {

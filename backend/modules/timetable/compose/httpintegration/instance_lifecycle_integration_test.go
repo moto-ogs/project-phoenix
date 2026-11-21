@@ -30,6 +30,7 @@ import (
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -1598,7 +1599,7 @@ func TestInstance_Start_StaffBridgedOverrideDifferentRoom_Conflict(t *testing.T)
 
 	hasStaffWarning := false
 	for _, w := range result.Warnings {
-		if w.Kind == timetable.ConflictKindStaff && w.ResourceID == s.staffID {
+		if w.Kind == timetable.ConflictKindStaff && w.ResourceID == ident.ID(s.staffID) {
 			hasStaffWarning = true
 			assert.Contains(t, w.Message, "anderen Raum")
 		}
@@ -1632,7 +1633,7 @@ func TestInstance_Start_StaffBridgedWithoutRosterRow_Conflict(t *testing.T) {
 
 	hasStaffWarning := false
 	for _, w := range result.Warnings {
-		if w.Kind == timetable.ConflictKindStaff && w.ResourceID == s.staffID {
+		if w.Kind == timetable.ConflictKindStaff && w.ResourceID == ident.ID(s.staffID) {
 			hasStaffWarning = true
 			assert.Contains(t, w.Message, "nicht eindeutig bestimmbar")
 		}
@@ -1664,7 +1665,7 @@ func TestInstance_Start_ConflictWarning_Staff(t *testing.T) {
 
 	hasStaffWarning := false
 	for _, w := range result.Warnings {
-		if w.Kind == timetable.ConflictKindStaff && w.ResourceID == s.staffID {
+		if w.Kind == timetable.ConflictKindStaff && w.ResourceID == ident.ID(s.staffID) {
 			hasStaffWarning = true
 		}
 	}
@@ -1693,7 +1694,7 @@ func TestInstance_Start_ConflictWarning_Student(t *testing.T) {
 
 	hasStudentWarning := false
 	for _, w := range result.Warnings {
-		if w.Kind == timetable.ConflictKindStudent && w.ResourceID == s.student1 {
+		if w.Kind == timetable.ConflictKindStudent && w.ResourceID == ident.ID(s.student1) {
 			hasStudentWarning = true
 		}
 	}

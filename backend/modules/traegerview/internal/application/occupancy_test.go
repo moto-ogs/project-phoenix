@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestGroupOccupancyCountsOnlyTheRosterByMembershipGroup(t *testing.T) {
@@ -23,9 +24,9 @@ func TestGroupOccupancyCountsOnlyTheRosterByMembershipGroup(t *testing.T) {
 	groups, without := groupOccupancy(roster, memberships, names)
 
 	assert.Equal(t, []traegerview.OccupancyGroup{
-		{ID: bears, Name: "Bären", Children: 2},
-		{ID: empty, Name: "Eulen", Children: 0},
-		{ID: foxes, Name: "Füchse", Children: 0},
+		{ID: ident.ID(bears), Name: "Bären", Children: 2},
+		{ID: ident.ID(empty), Name: "Eulen", Children: 0},
+		{ID: ident.ID(foxes), Name: "Füchse", Children: 0},
 	}, groups, "a leaver's membership does not count, every named group is listed")
 	assert.Equal(t, 2, without, "a child without a group and a child in a group of another school count as without a group")
 }

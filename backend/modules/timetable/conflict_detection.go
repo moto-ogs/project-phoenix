@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Conflict kinds — stable string values exported to clients so the frontend
@@ -22,21 +23,21 @@ const (
 // response and on the calendar's instance list. One entry per (kind,
 // resource) pair; several warnings per kind are possible.
 type InstanceConflictWarning struct {
-	Kind        string `json:"kind"`         // "staff" | "student"
-	ResourceID  int64  `json:"resource_id"`  // staff_id / student_id
-	Message     string `json:"message"`      // German user-facing copy
-	CanOverride bool   `json:"can_override"` // always true in v1
+	Kind        string   `json:"kind"`         // "staff" | "student"
+	ResourceID  ident.ID `json:"resource_id"`  // staff_id / student_id
+	Message     string   `json:"message"`      // German user-facing copy
+	CanOverride bool     `json:"can_override"` // always true in v1
 
 	// The fields below are set by the planning-window detection (#2139) so
 	// the calendar can link the two involved blocks and persist a per-user
 	// acknowledgement. Start-time warnings (planned vs. live layer) leave
 	// them empty — they are transient toast content, not acknowledgeable
 	// calendar state.
-	Fingerprint           string `json:"fingerprint,omitempty"`
-	ConflictingInstanceID int64  `json:"conflicting_instance_id,omitempty"`
-	ConflictingTitle      string `json:"conflicting_title,omitempty"`
-	OverlapStart          string `json:"overlap_start,omitempty"` // "HH:MM"
-	OverlapEnd            string `json:"overlap_end,omitempty"`   // "HH:MM"
+	Fingerprint           string   `json:"fingerprint,omitempty"`
+	ConflictingInstanceID ident.ID `json:"conflicting_instance_id,omitempty"`
+	ConflictingTitle      string   `json:"conflicting_title,omitempty"`
+	OverlapStart          string   `json:"overlap_start,omitempty"` // "HH:MM"
+	OverlapEnd            string   `json:"overlap_end,omitempty"`   // "HH:MM"
 }
 
 // StartConflictSubject names the planned block whose start is checked and
@@ -73,11 +74,11 @@ type PlannedConflictProbe struct {
 // planner can link to it; there is no can_override flag because the probe
 // never blocks anything.
 type PlannedConflictWarning struct {
-	Kind                  string `json:"kind"` // "staff" | "student"
-	ResourceID            int64  `json:"resource_id"`
-	Message               string `json:"message"` // German user-facing copy
-	ConflictingInstanceID int64  `json:"conflicting_instance_id"`
-	ConflictingTitle      string `json:"conflicting_title"`
+	Kind                  string   `json:"kind"` // "staff" | "student"
+	ResourceID            ident.ID `json:"resource_id"`
+	Message               string   `json:"message"` // German user-facing copy
+	ConflictingInstanceID ident.ID `json:"conflicting_instance_id"`
+	ConflictingTitle      string   `json:"conflicting_title"`
 }
 
 // WindowConflictBlock is one block of the calendar window together with its

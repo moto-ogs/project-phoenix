@@ -111,7 +111,7 @@ func TestTenantIsolation_EducationGroupVisibility(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, g := range groups {
-		assert.Equal(t, tenantA, g.TenantID,
+		assert.Equal(t, tenantA, int64(g.TenantID),
 			"cross-tenant leak: tenant B group visible to tenant A (List)")
 	}
 
@@ -126,7 +126,7 @@ func TestTenantIsolation_EducationGroupVisibility(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, g := range groups {
-		assert.Equal(t, tenantB, g.TenantID,
+		assert.Equal(t, tenantB, int64(g.TenantID),
 			"cross-tenant leak: tenant A group visible to tenant B (List)")
 	}
 

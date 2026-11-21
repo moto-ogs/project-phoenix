@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog/ports"
 )
@@ -65,7 +66,7 @@ func (c *Catalog) Preview(ctx context.Context, actor traegercatalog.Actor, traeg
 	targets := snap.targets()
 	next := snap.prospective()
 	print := fingerprint{Draft: c.draftHash(snap, targets), Schools: map[int64]string{}}
-	preview := traegercatalog.Preview{TraegerPhaseID: traegerPhaseID, Version: next.phaseVersion, Schools: []traegercatalog.SchoolPlan{}}
+	preview := traegercatalog.Preview{TraegerPhaseID: ident.ID(traegerPhaseID), Version: next.phaseVersion, Schools: []traegercatalog.SchoolPlan{}}
 	for _, t := range targets {
 		plan, state, err := c.previewSchool(ctx, actor, snap, next, t)
 		if err != nil {
@@ -101,7 +102,7 @@ func (c *Catalog) previewSchool(ctx context.Context, actor traegercatalog.Actor,
 	if errors.Is(err, errPreviewDiscard) && t.action != traegercatalog.ActionWithdraw {
 		err = c.previewBilling(ctx, actor, run)
 	}
-	plan.SchoolID = t.schoolID
+	plan.SchoolID = ident.ID(t.schoolID)
 	switch code, refused := rejectionCode(err); {
 	case errors.Is(err, errPreviewDiscard):
 		plan.Outcome = traegercatalog.PreviewReady
@@ -127,7 +128,7 @@ func (c *Catalog) planBilling(snap snapshot, next release, schoolID int64, plan 
 		byID[offering.ID.Int64()] = offering
 	}
 	for index, offeringPlan := range plan.Offerings {
-		offering, ok := byID[offeringPlan.TraegerOfferingID]
+		offering, ok := byID[offeringPlan.TraegerOfferingID.Int64()]
 		if !ok || offering.WithdrawnAt != nil {
 			continue
 		}

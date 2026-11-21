@@ -15,7 +15,7 @@ import (
 // staff portal's feed (#7148), so both bells read it alike.
 
 type notificationFeedEntryResponse struct {
-	ID        int64      `json:"id"`
+	ID        common.ID  `json:"id"`
 	Type      string     `json:"type"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`

@@ -213,7 +213,7 @@ func (e *sickCascadeEnv) updateInstanceOn(t *testing.T, instanceID, templateID i
 			StartTime:       instance.StartTime,
 			EndTime:         instance.EndTime,
 			Title:           instance.Title + " (bearbeitet)",
-			RoomID:          instance.RoomID,
+			RoomID:          instance.RoomID.Int64(),
 			ActivityGroupID: &templateID,
 			StaffIDs:        staffIDs,
 		}, nil)

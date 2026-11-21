@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/render"
 	feedbackModule "github.com/moto-ogs/project-phoenix/modules/feedback"
 	feedbackHTTP "github.com/moto-ogs/project-phoenix/modules/feedback/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,8 +76,14 @@ func testResourceRuntime() feedbackHTTP.Runtime {
 			return func(next http.Handler) http.Handler { return next }
 		},
 		Success: func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-			render.Status(r, status)
-			require.NoError(testingT(r.Context()), render.Render(w, r, &response{Status: "success", Data: data, Message: message}))
+			// Production answers through api/common, whose encoder writes
+			// identifiers as strings; the double encodes the same way.
+			body, err := wire.Marshal(&response{Status: "success", Data: data, Message: message})
+			require.NoError(testingT(r.Context()), err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_, err = w.Write(append(body, '\n'))
+			require.NoError(testingT(r.Context()), err)
 		},
 		Failure: func(w http.ResponseWriter, r *http.Request, failure feedbackHTTP.Failure) {
 			render.Status(r, failure.Status)
@@ -150,7 +157,7 @@ func execute(t *testing.T, resource *feedbackHTTP.Resource, method, target strin
 func TestStaffWireContractsStayStable(t *testing.T) {
 	t.Parallel()
 	entry := feedbackModule.Entry{ID: 7, Value: feedbackModule.ValuePositive, Day: "2026-08-31", Time: "12:34:56", StudentID: 42}
-	entryJSON := `{"id":7,"value":"positive","day":"2026-08-31","time":"12:34:56","student_id":42,"is_mensa_feedback":false,"created_at":"0001-01-01T00:00:00Z","updated_at":"0001-01-01T00:00:00Z"}`
+	entryJSON := `{"id":"7","value":"positive","day":"2026-08-31","time":"12:34:56","student_id":"42","is_mensa_feedback":false,"created_at":"0001-01-01T00:00:00Z","updated_at":"0001-01-01T00:00:00Z"}`
 	tests := []struct {
 		name, method, target, want string
 		body                       any

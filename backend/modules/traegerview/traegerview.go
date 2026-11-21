@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var (
@@ -40,11 +41,11 @@ var ErrTraegerUnavailable = errors.New("traeger view: the Träger is deactivated
 // TraegerSchool is one school of the Träger in the school list (#4649). It carries
 // no personal data.
 type TraegerSchool struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Slug      string `json:"slug"`
-	Subdomain string `json:"subdomain"`
-	City      string `json:"city"`
+	ID        ident.ID `json:"id"`
+	Name      string   `json:"name"`
+	Slug      string   `json:"slug"`
+	Subdomain string   `json:"subdomain"`
+	City      string   `json:"city"`
 }
 
 // SchoolContact is one school with the contact data it is reachable under. It
@@ -170,9 +171,9 @@ type OnSiteStaff interface {
 // Traeger is the Träger of the session as the portal shows it in its frame.
 // TestSystem marks a test Träger with invented sample data (#4658).
 type Traeger struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	TestSystem bool   `json:"test_system"`
+	ID         ident.ID `json:"id"`
+	Name       string   `json:"name"`
+	TestSystem bool     `json:"test_system"`
 }
 
 // SchoolIDs resolves the schools of a Träger at Organisation & Tenancy: the
@@ -320,9 +321,9 @@ type AccessLogFilter struct {
 type AccessLogEntry struct {
 	ID         string    `json:"id"`
 	OccurredAt time.Time `json:"occurred_at"`
-	SchoolID   int64     `json:"school_id"`
+	SchoolID   ident.ID  `json:"school_id"`
 	SchoolName string    `json:"school_name"`
-	AccountID  *int64    `json:"account_id"`
+	AccountID  *ident.ID `json:"account_id"`
 	Person     string    `json:"person"`
 	Kind       string    `json:"kind"`
 	Data       string    `json:"data"`
@@ -339,8 +340,8 @@ type AccessLogPage struct {
 
 // AccessLogPerson is a person the access log can be filtered by.
 type AccessLogPerson struct {
-	AccountID int64  `json:"account_id"`
-	Name      string `json:"name"`
+	AccountID ident.ID `json:"account_id"`
+	Name      string   `json:"name"`
 }
 
 // AccessTrail reads the reads and changes of personal data at a school set.

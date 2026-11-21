@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -125,14 +126,14 @@ func TestHolidayRegistrationEntriesShowTheAccountsOwnRegistrations(t *testing.T)
 	require.Len(t, entries, 2)
 	first, last := calendar.NewDate(2029, time.October, 15), calendar.NewDate(2029, time.October, 19)
 	week := parentHTTP.HolidayRegistrationEntryWeekResponse{FirstDay: first, LastDay: last, TimeModelName: "bis 16 Uhr", Placement: "placed"}
-	assert.Equal(t, winter.RegistrationID, entries[0].ID, "newest first")
+	assert.Equal(t, ident.ID(winter.RegistrationID), entries[0].ID, "newest first")
 	assert.Equal(t, "Träger Süd Ferien", entries[0].TraegerName)
 	assert.Equal(t, "Winterferien 2029", entries[0].PeriodName)
 	assert.Equal(t, &first, entries[0].FirstDay)
 	assert.Equal(t, &last, entries[0].LastDay)
 	assert.Equal(t, "received", entries[0].Status)
 	assert.Equal(t, []parentHTTP.HolidayRegistrationEntryChildResponse{{FirstName: "Lia", Weeks: []parentHTTP.HolidayRegistrationEntryWeekResponse{week}}}, entries[0].Children)
-	assert.Equal(t, autumn.RegistrationID, entries[1].ID)
+	assert.Equal(t, ident.ID(autumn.RegistrationID), entries[1].ID)
 	assert.Equal(t, "Träger Nord Ferien", entries[1].TraegerName)
 	assert.Equal(t, []string{"Lia", "Ben"}, []string{entries[1].Children[0].FirstName, entries[1].Children[1].FirstName})
 	for _, withheld := range []string{"Muster", "2019-03-01", "Grundschule Melle", "0151 2345678", "Mia", "Tim", "Osterferien", "Sommerferien"} {
@@ -142,7 +143,7 @@ func TestHolidayRegistrationEntriesShowTheAccountsOwnRegistrations(t *testing.T)
 	tomBody, _ := list(tom)
 	tomEntries := decode(tomBody)
 	require.Len(t, tomEntries, 1, "another account sees only its own registration")
-	assert.Equal(t, taken.RegistrationID, tomEntries[0].ID)
+	assert.Equal(t, ident.ID(taken.RegistrationID), tomEntries[0].ID)
 
 	for i := range 4 {
 		more := testpkg.CreateTestHolidayRegistration(t, db, south, southSchool, fmt.Sprintf("Ferien %d", i), eva.Email, "Lia", "Ben", "Ida")

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +33,7 @@ func TestDashboardAbsenceStatusFollowsStudentRead(t *testing.T) {
 		}
 		f.fullStudentAccess = func(context.Context) (bool, error) { return true, nil }
 		f.yard = func(context.Context, int64) (*SchulhofStatus, error) {
-			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: &yardGroupID}, nil
+			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, nil
 		}
 		f.groupVisits = func(context.Context, int64) ([]VisitRecord, error) {
 			return []VisitRecord{absent(1, yardGroupID)}, nil

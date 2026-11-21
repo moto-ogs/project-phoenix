@@ -312,7 +312,7 @@ func (s *Service) CreateAppointment(ctx context.Context, input appointments.Crea
 		if len(input.Targets) == 0 {
 			return nil
 		}
-		targetRows, queryStats, err = s.store.InsertAppointmentTargets(ctx, result.ID, input.Targets)
+		targetRows, queryStats, err = s.store.InsertAppointmentTargets(ctx, result.ID.Int64(), input.Targets)
 		stats.Add(queryStats)
 		return err
 	})
@@ -593,7 +593,7 @@ type recipientSubject struct {
 func recipientStudentLinks(fields []appointments.AppointmentRecipientFields, recipients []*appointments.AppointmentRecipient) ([]appointments.AppointmentRecipientStudent, error) {
 	recipientBySubject := make(map[recipientSubject]int64, len(recipients))
 	for _, recipient := range recipients {
-		recipientBySubject[subjectForRecipient(recipient.RecipientType, recipient.StaffID, recipient.GuardianProfileID)] = recipient.ID
+		recipientBySubject[subjectForRecipient(recipient.RecipientType, (*int64)(recipient.StaffID), (*int64)(recipient.GuardianProfileID))] = recipient.ID.Int64()
 	}
 	links := make([]appointments.AppointmentRecipientStudent, 0)
 	for _, field := range fields {

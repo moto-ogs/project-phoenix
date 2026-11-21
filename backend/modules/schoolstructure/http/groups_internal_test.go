@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // =============================================================================
@@ -23,12 +24,12 @@ func TestGroupRequest_Fields(t *testing.T) {
 	roomID := int64(5)
 	req := GroupRequest{
 		Name:       "Test Group",
-		RoomID:     &roomID,
-		TeacherIDs: []int64{10, 20},
+		RoomID:     (*ident.ID)(&roomID),
+		TeacherIDs: []ident.ID{10, 20},
 	}
 
 	assert.Equal(t, "Test Group", req.Name)
-	assert.Equal(t, int64(5), *req.RoomID)
+	assert.Equal(t, ident.ID(int64(5)), *req.RoomID)
 	assert.Len(t, req.TeacherIDs, 2)
 }
 
@@ -63,17 +64,17 @@ func TestGroupResponse_Fields(t *testing.T) {
 	resp := GroupResponse{
 		ID:               1,
 		Name:             "Response Group",
-		RoomID:           &roomID,
-		RepresentativeID: &repID,
+		RoomID:           (*ident.ID)(&roomID),
+		RepresentativeID: (*ident.ID)(&repID),
 		StudentCount:     25,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
 
-	assert.Equal(t, int64(1), resp.ID)
+	assert.Equal(t, ident.ID(int64(1)), resp.ID)
 	assert.Equal(t, "Response Group", resp.Name)
-	assert.Equal(t, int64(100), *resp.RoomID)
-	assert.Equal(t, int64(200), *resp.RepresentativeID)
+	assert.Equal(t, ident.ID(int64(100)), *resp.RoomID)
+	assert.Equal(t, ident.ID(int64(200)), *resp.RepresentativeID)
 	assert.Equal(t, 25, resp.StudentCount)
 }
 
@@ -90,8 +91,8 @@ func TestTeacherResponse_Fields(t *testing.T) {
 		FullName:       "John Doe",
 	}
 
-	assert.Equal(t, int64(1), resp.ID)
-	assert.Equal(t, int64(2), resp.StaffID)
+	assert.Equal(t, ident.ID(int64(1)), resp.ID)
+	assert.Equal(t, ident.ID(int64(2)), resp.StaffID)
 	assert.Equal(t, "John", resp.FirstName)
 	assert.Equal(t, "Doe", resp.LastName)
 	assert.Equal(t, "Math", resp.Specialization)

@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   num,
   object,
@@ -26,7 +26,7 @@ export interface TraegerSchool {
 }
 
 export const TraegerSchoolSchema: z.ZodType<TraegerSchool, unknown> = object<TraegerSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -80,7 +80,7 @@ export interface SchoolAlerts {
 }
 
 export const SchoolAlertsSchema: z.ZodType<SchoolAlerts, unknown> = object<SchoolAlerts>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -150,7 +150,7 @@ export interface SchoolArrivalPickupTimes {
 }
 
 export const SchoolArrivalPickupTimesSchema: z.ZodType<SchoolArrivalPickupTimes, unknown> = object<SchoolArrivalPickupTimes>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -191,7 +191,7 @@ export interface ComparedSchool {
 }
 
 export const ComparedSchoolSchema: z.ZodType<ComparedSchool, unknown> = object<ComparedSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -290,7 +290,7 @@ export interface SchoolDailyAttendance {
 }
 
 export const SchoolDailyAttendanceSchema: z.ZodType<SchoolDailyAttendance, unknown> = object<SchoolDailyAttendance>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -328,7 +328,7 @@ export interface OccupancyGroup {
 }
 
 export const OccupancyGroupSchema: z.ZodType<OccupancyGroup, unknown> = object<OccupancyGroup>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   children: safeInt,
 });
@@ -343,7 +343,7 @@ export interface OccupancyCareForm {
 }
 
 export const OccupancyCareFormSchema: z.ZodType<OccupancyCareForm, unknown> = object<OccupancyCareForm>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   children: safeInt,
   capacity: nullable(safeInt),
@@ -365,7 +365,7 @@ export interface SchoolOccupancy {
 }
 
 export const SchoolOccupancySchema: z.ZodType<SchoolOccupancy, unknown> = object<SchoolOccupancy>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -400,7 +400,7 @@ export interface UtilizationOffering {
 }
 
 export const UtilizationOfferingSchema: z.ZodType<UtilizationOffering, unknown> = object<UtilizationOffering>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   capacity: nullable(safeInt),
   active: bool,
@@ -417,7 +417,7 @@ export interface UtilizationRoom {
 }
 
 export const UtilizationRoomSchema: z.ZodType<UtilizationRoom, unknown> = object<UtilizationRoom>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   capacity: nullable(safeInt),
   children: nullable(arr(nullable(safeInt))),
@@ -442,7 +442,7 @@ export interface SchoolUtilization {
 }
 
 export const SchoolUtilizationSchema: z.ZodType<SchoolUtilization, unknown> = object<SchoolUtilization>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -489,7 +489,7 @@ export interface SchoolView {
 }
 
 export const SchoolViewSchema: z.ZodType<SchoolView, unknown> = object<SchoolView>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -517,7 +517,7 @@ export interface ChildAttendance {
 }
 
 export const ChildAttendanceSchema: z.ZodType<ChildAttendance, unknown> = object<ChildAttendance>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,

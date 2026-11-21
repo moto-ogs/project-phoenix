@@ -4,7 +4,7 @@ import {
   arr,
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -30,14 +30,14 @@ export interface TraegerTransferEntry {
 }
 
 export const TraegerTransferEntrySchema: z.ZodType<TraegerTransferEntry, unknown> = object<TraegerTransferEntry>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   format: str,
   filename: str,
   byte_size: safeInt,
   target_host: str,
   target_directory: str,
-  recipient_id: nullable(int64StringOrNumber),
+  recipient_id: nullable(int64String),
   recipient_name: str,
   state: str,
   reason: optional(str),
@@ -62,7 +62,7 @@ export interface TraegerRecipient {
 }
 
 export const TraegerRecipientSchema: z.ZodType<TraegerRecipient, unknown> = object<TraegerRecipient>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   enabled: bool,
   ready: bool,
@@ -86,7 +86,7 @@ export interface TraegerAssignment {
 
 export const TraegerAssignmentSchema: z.ZodType<TraegerAssignment, unknown> = object<TraegerAssignment>({
   format: str,
-  recipient_id: nullable(int64StringOrNumber),
+  recipient_id: nullable(int64String),
 });
 
 /** Go: exporttransfer.TraegerRecipientsPage */
@@ -128,7 +128,7 @@ export interface RecipientRequest {
 /** Go: exporttransferhttp.AssignmentRequest */
 export interface AssignmentRequest {
   format?: string;
-  recipient_id?: number | null;
+  recipient_id?: string | null;
 }
 
 /** Go: exporttransferhttp.FormatsRequest */

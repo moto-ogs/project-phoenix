@@ -60,10 +60,10 @@ func indexGuardianRecipientRows(recipients []*appointmentcap.AppointmentRecipien
 	}
 	guardianIDs := make([]int64, 0, len(recipients))
 	for _, recipient := range recipients {
-		readSet.recipientsByAppointment[recipient.AppointmentID] = append(readSet.recipientsByAppointment[recipient.AppointmentID], recipient)
+		readSet.recipientsByAppointment[recipient.AppointmentID.Int64()] = append(readSet.recipientsByAppointment[recipient.AppointmentID.Int64()], recipient)
 		if recipient.RecipientType == appointmentcap.RecipientTypeGuardianProfile && recipient.GuardianProfileID != nil {
-			guardianIDs = append(guardianIDs, *recipient.GuardianProfileID)
-			readSet.studentsByRecipient[recipient.ID] = recipient.StudentIDs
+			guardianIDs = append(guardianIDs, (*recipient.GuardianProfileID).Int64())
+			readSet.studentsByRecipient[recipient.ID.Int64()] = recipient.StudentIDs
 		}
 	}
 	return readSet, guardianIDs
@@ -86,20 +86,20 @@ func buildGuardianRecipients(recipients []*appointmentcap.AppointmentRecipient, 
 			continue
 		}
 		guardianID := *recipient.GuardianProfileID
-		profile := readSet.profiles[guardianID]
+		profile := readSet.profiles[guardianID.Int64()]
 		if profile == nil || profile.AccountID == nil || *profile.AccountID <= 0 {
 			continue
 		}
-		allowedStudents := make([]int64, 0, len(readSet.studentsByRecipient[recipient.ID]))
-		for _, studentID := range readSet.studentsByRecipient[recipient.ID] {
-			if readSet.allowed[[2]int64{guardianID, studentID}] {
+		allowedStudents := make([]int64, 0, len(readSet.studentsByRecipient[recipient.ID.Int64()]))
+		for _, studentID := range readSet.studentsByRecipient[recipient.ID.Int64()] {
+			if readSet.allowed[[2]int64{guardianID.Int64(), studentID}] {
 				allowedStudents = append(allowedStudents, studentID)
 			}
 		}
 		if len(allowedStudents) > 0 {
-			result.guardianIDs = append(result.guardianIDs, guardianID)
-			result.studentsByGuardian[guardianID] = append(result.studentsByGuardian[guardianID], allowedStudents...)
-			result.answers[guardianID] = GuardianNotificationAnswer{Status: recipient.Status, OccurrenceResponses: recipient.OccurrenceResponses}
+			result.guardianIDs = append(result.guardianIDs, guardianID.Int64())
+			result.studentsByGuardian[guardianID.Int64()] = append(result.studentsByGuardian[guardianID.Int64()], allowedStudents...)
+			result.answers[guardianID.Int64()] = GuardianNotificationAnswer{Status: recipient.Status, OccurrenceResponses: recipient.OccurrenceResponses}
 		}
 	}
 	return result

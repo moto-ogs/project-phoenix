@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AnnouncementsResource handles user-facing announcements endpoints
@@ -24,13 +26,13 @@ func NewAnnouncementsResource(announcementService communication.Capability, runt
 
 // PlatformAnnouncementResponse represents an announcement in the user-facing response
 type PlatformAnnouncementResponse struct {
-	ID          int64   `json:"id"`
-	Title       string  `json:"title"`
-	Content     string  `json:"content"`
-	Type        string  `json:"type"`
-	Severity    string  `json:"severity"`
-	Version     *string `json:"version,omitempty"`
-	PublishedAt string  `json:"published_at"`
+	ID          common.ID `json:"id"`
+	Title       string    `json:"title"`
+	Content     string    `json:"content"`
+	Type        string    `json:"type"`
+	Severity    string    `json:"severity"`
+	Version     *string   `json:"version,omitempty"`
+	PublishedAt string    `json:"published_at"`
 }
 
 func (rs *AnnouncementsResource) internalError(w http.ResponseWriter, r *http.Request, message string, err error) {
@@ -62,7 +64,7 @@ func (rs *AnnouncementsResource) GetUnread(w http.ResponseWriter, r *http.Reques
 			publishedAt = a.PublishedAt.Format(time.RFC3339)
 		}
 		responses = append(responses, PlatformAnnouncementResponse{
-			ID:          a.ID,
+			ID:          ident.ID(a.ID),
 			Title:       a.Title,
 			Content:     a.Content,
 			Type:        a.Type,

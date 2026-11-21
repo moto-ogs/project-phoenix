@@ -244,7 +244,7 @@ func buildStudentDayFromPreload(pre *timetable.StudentWeek, studentID int64, dat
 	instances := make([]InstanceDayResponse, 0, len(enrolledRows)+len(dayInstances))
 	for _, row := range enrolledRows {
 		instances = append(instances, mapEnrolledInstance(row))
-		enrolledInstanceIDs[row.Instance.ID] = true
+		enrolledInstanceIDs[row.Instance.ID.Int64()] = true
 	}
 
 	instances = appendUnplannedInstances(instances, pre, dayInstances, enrolledInstanceIDs)
@@ -274,14 +274,14 @@ func appendUnplannedInstances(
 	enrolledInstanceIDs map[int64]bool,
 ) []InstanceDayResponse {
 	for _, inst := range dayInstances {
-		if inst.ActiveGroupID == nil || enrolledInstanceIDs[inst.ID] {
+		if inst.ActiveGroupID == nil || enrolledInstanceIDs[inst.ID.Int64()] {
 			continue
 		}
 		if inst.Status != timetable.InstanceStatusActive &&
 			inst.Status != timetable.InstanceStatusCompleted {
 			continue
 		}
-		if visits := pre.VisitsByActiveGroup[*inst.ActiveGroupID]; len(visits) > 0 {
+		if visits := pre.VisitsByActiveGroup[(*inst.ActiveGroupID).Int64()]; len(visits) > 0 {
 			instances = append(instances, mapUnplannedInstance(inst, visits[0]))
 		}
 	}

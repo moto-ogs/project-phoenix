@@ -50,8 +50,8 @@ func (r fleetInstanceReader) ListPlannedActivities(ctx context.Context, today ti
 	planned := make([]devicefleetCompose.PlannedActivity, 0, len(instances))
 	for _, instance := range instances {
 		planned = append(planned, devicefleetCompose.PlannedActivity{
-			ID: instance.ID, Title: instance.Title, RoomID: instance.RoomID,
-			ActivityGroupID: instance.ActivityGroupID, ActiveGroupID: instance.ActiveGroupID,
+			ID: instance.ID.Int64(), Title: instance.Title, RoomID: instance.RoomID.Int64(),
+			ActivityGroupID: (*int64)(instance.ActivityGroupID), ActiveGroupID: (*int64)(instance.ActiveGroupID),
 			Planned:        timetable.IsPlannedInstanceStatus(instance.Status),
 			StartWallClock: calendar.NormalizeWallClock(instance.StartTime),
 		})

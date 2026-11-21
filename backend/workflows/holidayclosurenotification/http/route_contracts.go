@@ -23,10 +23,10 @@ func TraegerRouteContracts() []common.RouteContract {
 // notification.ClosureNotice, with the revision as the count it is.
 type NoticeResponse struct {
 	Token        string              `json:"token"`
-	ID           int64               `json:"id"`
-	SchoolID     int64               `json:"school_id"`
+	ID           common.ID           `json:"id"`
+	SchoolID     common.ID           `json:"school_id"`
 	SchoolName   string              `json:"school_name,omitempty"`
-	ClosingDayID int64               `json:"closing_day_id"`
+	ClosingDayID common.ID           `json:"closing_day_id"`
 	Reason       string              `json:"reason"`
 	Previous     *notification.Range `json:"previous"`
 	Current      *notification.Range `json:"current"`

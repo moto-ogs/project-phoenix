@@ -9,7 +9,7 @@ import (
 )
 
 func (s *preparation) prepareReminderPushInTx(ctx context.Context, delivery reminderPushDelivery) (*appointments.Appointment, []int64, []int64, error) {
-	current, err := s.deps.Appointments.FindReminderCandidateForUpdate(ctx, delivery.appointment.ID)
+	current, err := s.deps.Appointments.FindReminderCandidateForUpdate(ctx, delivery.appointment.ID.Int64())
 	if err != nil || current == nil {
 		return nil, nil, nil, err
 	}
@@ -29,7 +29,7 @@ func (s *preparation) prepareReminderPushInTx(ctx context.Context, delivery remi
 	if err != nil || !due {
 		return nil, nil, nil, err
 	}
-	recipients, optedIn, err := s.reminderDispatchAudience(ctx, current.ID, delivery.accountID)
+	recipients, optedIn, err := s.reminderDispatchAudience(ctx, current.ID.Int64(), delivery.accountID)
 	if err != nil || !optedIn {
 		return nil, nil, nil, err
 	}
@@ -41,7 +41,7 @@ func (s *preparation) prepareReminderPushInTx(ctx context.Context, delivery remi
 }
 
 func (s *preparation) reminderOccurrenceDueForDispatch(ctx context.Context, current *appointments.Appointment, delivery reminderPushDelivery) (bool, error) {
-	rule, err := s.deps.Appointments.FindRecurrenceRule(ctx, current.ID)
+	rule, err := s.deps.Appointments.FindRecurrenceRule(ctx, current.ID.Int64())
 	if err != nil {
 		return false, fmt.Errorf("reload reminder recurrence: %w", err)
 	}
@@ -49,7 +49,7 @@ func (s *preparation) reminderOccurrenceDueForDispatch(ctx context.Context, curr
 		(rule != nil && !appointments.OccurrenceExists(current, rule, delivery.occurrence)) {
 		return false, nil
 	}
-	overrides, err := s.deps.Appointments.FindOccurrenceOverrides(ctx, []int64{current.ID}, []appointments.Date{delivery.occurrence})
+	overrides, err := s.deps.Appointments.FindOccurrenceOverrides(ctx, []int64{current.ID.Int64()}, []appointments.Date{delivery.occurrence})
 	if err != nil {
 		return false, fmt.Errorf("reload reminder override: %w", err)
 	}
@@ -112,7 +112,7 @@ func (s *preparation) claimReminderDispatchProfiles(ctx context.Context, current
 		// The claim released above has to be replaced before the push goes out,
 		// or a re-scan of this window could send the reminder a second time.
 		if revised {
-			claimed, err := s.deps.Appointments.ClaimReminderPushDelivery(ctx, current.ID, current.Revision, delivery.occurrence, profileID)
+			claimed, err := s.deps.Appointments.ClaimReminderPushDelivery(ctx, current.ID.Int64(), current.Revision, delivery.occurrence, profileID)
 			if err != nil {
 				return nil, fmt.Errorf("claim revised reminder push delivery: %w", err)
 			}

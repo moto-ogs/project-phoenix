@@ -77,8 +77,8 @@ type FormatsRequest struct {
 // AssignmentRequest is one format of the body and its recipient, null for
 // the download.
 type AssignmentRequest struct {
-	Format      string `json:"format"`
-	RecipientID *int64 `json:"recipient_id"`
+	Format      string     `json:"format"`
+	RecipientID *common.ID `json:"recipient_id"`
 }
 
 func (req *FormatsRequest) assignments() []exporttransfer.TraegerAssignment {

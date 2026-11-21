@@ -64,7 +64,7 @@ export interface GroupRoom {
 }
 
 export const GroupRoomSchema: z.ZodType<GroupRoom, unknown> = object<GroupRoom>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -88,12 +88,12 @@ export interface CallerGroupRow {
 }
 
 export const CallerGroupRowSchema: z.ZodType<CallerGroupRow, unknown> = object<CallerGroupRow>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   name: str,
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room: optional(GroupRoomSchema),
   via_substitution: bool,
 });

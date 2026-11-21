@@ -27,7 +27,7 @@ func TestConfirmedNoticeWithoutRemainingBookingsNeedsNoMail(t *testing.T) {
 			n := w.schoolNotices(t)[0]
 			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: n.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID.Int64(), int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: n.Token})
 				return err
 			}))
 			statement := `UPDATE enrollment.holiday_registrations SET status='cancelled' WHERE organization_id=?`
@@ -52,7 +52,7 @@ func TestHolidayClosureMailExpiresWithAnyIncludedRegistration(t *testing.T) {
 	bookHolidayWeek(t, w.db, w.organization, w.school, "familie.eins@example.org")
 	w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	n := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID, n.Revision, n.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 	require.NoError(t, err)
 	_, err = w.db.ExecContext(w.ctx, `UPDATE enrollment.holiday_registrations SET retention_days=365 WHERE organization_id=?`, w.organization)
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestDemoErasureResolvesBundledMailOfRemainingHostSchool(t *testing.T) {
 			require.NoError(t, err)
 			w.createClosingDay(t, "2030-07-08", "2030-07-08")
 			n := w.schoolNotices(t)[0]
-			_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID, n.Revision, n.Token)
+			_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 			require.NoError(t, err)
 			require.Len(t, w.mails(t), remaining+1)
 			_, err = w.db.ExecContext(w.ctx, `UPDATE platform.email_outbox SET status=?, sent_at=CASE WHEN ?='sent' THEN NOW() END WHERE organization_id=? AND payload->>'recipient_email'='familie.eins@example.org'`, scenario.state, scenario.state, w.organization)
@@ -129,7 +129,7 @@ func TestDemoErasureResolvesBundledMailOfRemainingHostSchool(t *testing.T) {
 			assert.Equal(t, []string{expectedWaiting}, w.events(t), "only mail not intentionally erased still needs transport work")
 			_, err = w.db.ExecContext(w.ctx, `UPDATE calendar.holiday_closure_events SET state='failed' WHERE organization_id=?`, w.organization)
 			require.NoError(t, err)
-			_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID, n.Revision, n.Token)
+			_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 			require.NoError(t, err)
 			require.Len(t, w.mails(t), remaining, "recovery must never recreate erased content")
 			_, err = w.db.ExecContext(w.ctx, `UPDATE platform.email_outbox SET status='sent', sent_at=NOW() WHERE organization_id=?`, w.organization)
@@ -150,7 +150,7 @@ func TestHolidayMailErasureFailureRollsBackRegistrationRetention(t *testing.T) {
 	w := newClosureWorldIn(t, "Träger Löschung fehlgeschlagen", testpkg.SetupIsolatedTestDB(t))
 	w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	n := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID, n.Revision, n.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 	require.NoError(t, err)
 	_, err = w.db.ExecContext(w.ctx, `CREATE FUNCTION public.refuse_mail_erasure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'erasure refused'; END $$;
   CREATE TRIGGER refuse_mail_erasure BEFORE DELETE ON platform.email_outbox FOR EACH ROW EXECUTE FUNCTION public.refuse_mail_erasure()`)

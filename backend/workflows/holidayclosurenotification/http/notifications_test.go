@@ -177,14 +177,14 @@ func TestSchoolClosingDayTellsParentsOnlyAfterOneClick(t *testing.T) {
 		"can_notify", "families", "token", "confirmed_at", "updated_at"}, keysOf(fields), "the school gets no contact, name or child of the Träger")
 	assert.NotContains(t, string(raw), "example.org")
 
-	confirmed, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+	confirmed, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.NoError(t, err)
 	assert.NotEqual(t, string(schoolcalendar.HolidayClosureSuggested), confirmed.Status)
 	mails := w.mails(t)
 	require.Len(t, mails, 2, "one mail per family")
 	assert.Equal(t, notice.Families, len(mails), "the count the school saw is the number of mails")
 
-	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, notice.ID, notice.Revision, notice.Token)
+	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.NoError(t, err)
 	require.NoError(t, w.notices.ProcessDue(w.ctx))
 	assert.Len(t, w.mails(t), 2, "a second click of the other place sends nothing twice")
@@ -199,7 +199,7 @@ func TestSchoolClosingDayTellsParentsOnlyAfterOneClick(t *testing.T) {
 		}
 	}
 	require.NotZero(t, overlap.ID)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, overlap.ID, overlap.Revision, overlap.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, overlap.ID.Int64(), overlap.Revision, overlap.Token)
 	require.NoError(t, err)
 	mails = w.mails(t)
 	require.Len(t, mails, 4)
@@ -221,9 +221,9 @@ func TestConcurrentClicksOfSchoolAndBueroSendOneMailPerFamily(t *testing.T) {
 	for i := range 4 {
 		wg.Go(func() {
 			if i%2 == 0 {
-				_, errs[i] = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+				_, errs[i] = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 			} else {
-				_, errs[i] = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, notice.ID, notice.Revision, notice.Token)
+				_, errs[i] = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 			}
 		})
 	}
@@ -244,7 +244,7 @@ func TestFailedNoticeIsTakenUpAgainWithoutASecondMail(t *testing.T) {
 	w := newClosureWorldIn(t, "Träger Hinweis nachholen", testpkg.SetupIsolatedTestDB(t)) // ProcessDue sweeps every Träger
 	w.createClosingDay(t, "2030-07-11", "2030-07-11")
 	notice := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.NoError(t, err)
 	mails := w.mails(t)
 	require.Len(t, mails, 2)
@@ -266,7 +266,7 @@ func TestFailedNoticeIsTakenUpAgainWithoutASecondMail(t *testing.T) {
 	require.Len(t, pending.Notices, 1)
 	assert.Equal(t, string(schoolcalendar.HolidayClosureFailed), pending.Notices[0].Status, "so does the Büro")
 
-	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, notice.ID, notice.Revision, notice.Token)
+	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.NoError(t, err)
 	after := w.mails(t)
 	require.Len(t, after, 2, "the repetition is the same mail, not a new one")
@@ -293,7 +293,7 @@ func TestMovedAndDeletedClosingDayTellOnceWithBothSections(t *testing.T) {
 	w := newClosureWorld(t, "Träger Hinweis verschoben")
 	day := w.createClosingDay(t, "2030-07-10", "2030-07-10")
 	first := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, first.ID, first.Revision, first.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, first.ID.Int64(), first.Revision, first.Token)
 	require.NoError(t, err)
 	require.Len(t, w.mails(t), 2)
 
@@ -314,7 +314,7 @@ func TestMovedAndDeletedClosingDayTellOnceWithBothSections(t *testing.T) {
 	assert.Equal(t, "2030-07-10", moved.Previous.StartDate.String())
 	assert.Equal(t, "2030-07-11", moved.Current.StartDate.String())
 	assert.Equal(t, 2, moved.Families)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, moved.ID, moved.Revision, moved.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, moved.ID.Int64(), moved.Revision, moved.Token)
 	require.NoError(t, err)
 	mails := w.mails(t)
 	require.Len(t, mails, 4, "one more mail per family, not two")
@@ -334,7 +334,7 @@ func TestMovedAndDeletedClosingDayTellOnceWithBothSections(t *testing.T) {
 	}
 	require.NotZero(t, deleted.ID, "a deleted closing day keeps its proposal")
 	assert.Nil(t, deleted.Current)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, deleted.ID, deleted.Revision, deleted.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, deleted.ID.Int64(), deleted.Revision, deleted.Token)
 	require.NoError(t, err)
 	mails = w.mails(t)
 	require.Len(t, mails, 6)
@@ -366,7 +366,7 @@ func TestStaleClickConfirmsNothing(t *testing.T) {
 		StartDate: "2030-07-09", EndDate: "2030-07-10", Reason: "Pädagogische Tage",
 	}})
 	require.NoError(t, err)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, seen.ID, seen.Revision, seen.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, seen.ID.Int64(), seen.Revision, seen.Token)
 	require.ErrorIs(t, err, notification.ErrNoticeChanged)
 	assert.Empty(t, w.events(t))
 	assert.Empty(t, w.mails(t))
@@ -382,7 +382,7 @@ func TestForeignBueroCannotConfirmANotice(t *testing.T) {
 	pending, err := other.notices.PendingHolidayClosures(other.ctx, other.organization)
 	require.NoError(t, err)
 	assert.Empty(t, pending.Notices)
-	_, err = w.notices.NotifyFromTraeger(w.ctx, other.organization, 0, notice.ID, notice.Revision, notice.Token)
+	_, err = w.notices.NotifyFromTraeger(w.ctx, other.organization, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.ErrorIs(t, err, notification.ErrNoticeNotFound)
 	assert.Empty(t, w.events(t))
 }
@@ -398,7 +398,7 @@ func TestHolidayClosureNoticesKeepTheirFiltersBeneathRLS(t *testing.T) {
 	own.createClosingDay(t, "2030-07-10", "2030-07-10")
 	foreign.createClosingDay(t, "2030-07-10", "2030-07-10")
 	foreignNotice := foreign.schoolNotices(t)[0]
-	_, err := foreign.notices.NotifyFromSchool(foreign.ctx, foreign.school, 0, foreignNotice.ID, foreignNotice.Revision, foreignNotice.Token)
+	_, err := foreign.notices.NotifyFromSchool(foreign.ctx, foreign.school, 0, foreignNotice.ID.Int64(), foreignNotice.Revision, foreignNotice.Token)
 	require.NoError(t, err)
 	require.NotEmpty(t, foreign.mails(t))
 	_, err = foreign.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'dead_letter', dead_letter_at = NOW(),
@@ -424,7 +424,7 @@ func TestHolidayClosureNoticesKeepTheirFiltersBeneathRLS(t *testing.T) {
 		for _, notice := range notices {
 			assert.Equal(t, own.school, notice.SchoolID, "the school reads no notice of another school")
 		}
-		_, err = events.ConfirmHolidayClosureNotice(ctx, foreignNotice.ID, int64(foreignNotice.Revision),
+		_, err = events.ConfirmHolidayClosureNotice(ctx, foreignNotice.ID.Int64(), int64(foreignNotice.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool})
 		require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeNotFound, "nor confirms one")
 		return nil
@@ -489,7 +489,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	seen := w.schoolNotices(t)[0]
 	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, seen.ID, int64(seen.Revision),
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, seen.ID.Int64(), int64(seen.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: seen.Token})
 		return err
 	}))
@@ -514,14 +514,14 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	_, err = w.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, other.ID, w.school)
 	require.NoError(t, err)
 	err = tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, renewed.ID, int64(renewed.Revision),
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, renewed.ID.Int64(), int64(renewed.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: w.organization, ImpactToken: renewed.Token})
 		return err
 	})
 	require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeNotFound, "the old Büro must not confirm a replacement stamped for the new Träger")
 	_, err = w.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, w.organization, w.school)
 	require.NoError(t, err)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, renewed.ID, renewed.Revision, renewed.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, renewed.ID.Int64(), renewed.Revision, renewed.Token)
 	require.NoError(t, err)
 	require.Len(t, w.mails(t), 2, "renewed confirmation can prepare the current calendar")
 }
@@ -534,9 +534,9 @@ func TestIndividualNoticeRejectsChangedRecipients(t *testing.T) {
 	_, err := w.db.ExecContext(context.Background(), `UPDATE enrollment.holiday_registrations
   SET guardian_email = 'andere.familie@example.org' WHERE organization_id = ? AND guardian_email = 'familie.eins@example.org'`, w.organization)
 	require.NoError(t, err)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, seen.ID, seen.Revision, seen.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, seen.ID.Int64(), seen.Revision, seen.Token)
 	require.ErrorIs(t, err, notification.ErrNoticeChanged)
-	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, seen.ID, seen.Revision, seen.Token)
+	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, seen.ID.Int64(), seen.Revision, seen.Token)
 	require.ErrorIs(t, err, notification.ErrNoticeChanged)
 	assert.Empty(t, w.events(t), "neither click confirms changed recipients")
 	assert.Empty(t, w.mails(t))
@@ -617,7 +617,7 @@ func TestWaitingHolidayClosureDeliveryIsBatched(t *testing.T) {
 		w.createClosingDay(t, date, date)
 		for _, notice := range w.schoolNotices(t) {
 			if notice.Status == "suggested" {
-				_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+				_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 				require.NoError(t, err)
 			}
 		}
@@ -642,7 +642,7 @@ func TestUnresolvedHolidayClosureSurvivesRetirement(t *testing.T) {
 	notice := w.schoolNotices(t)[0]
 	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := proposals.ConfirmHolidayClosureNotice(ctx, notice.ID, int64(notice.Revision),
+		_, err := proposals.ConfirmHolidayClosureNotice(ctx, notice.ID.Int64(), int64(notice.Revision),
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
 		return err
 	}))
@@ -686,7 +686,7 @@ func TestRenewedHolidayClosureConfirmationKeepsElapsedSpan(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, office.Notices, 1, "the office sees the same renewed approval")
 	assert.Equal(t, school[0].Families, office.Notices[0].Families)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, school[0].ID, school[0].Revision, school[0].Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, school[0].ID.Int64(), school[0].Revision, school[0].Token)
 	require.NoError(t, err)
 	require.Len(t, w.mails(t), 2)
 	assert.Equal(t, []string{"prepared"}, w.events(t))

@@ -5,7 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   str,
@@ -28,9 +28,9 @@ export interface AccessLogEntry {
 export const AccessLogEntrySchema: z.ZodType<AccessLogEntry, unknown> = object<AccessLogEntry>({
   id: str,
   occurred_at: instant,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   person: str,
   kind: str,
   data: str,
@@ -57,7 +57,7 @@ export interface AccessLogPerson {
 }
 
 export const AccessLogPersonSchema: z.ZodType<AccessLogPerson, unknown> = object<AccessLogPerson>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   name: str,
 });
 

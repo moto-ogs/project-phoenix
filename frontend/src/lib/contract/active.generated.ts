@@ -5,7 +5,6 @@ import {
   bool,
   instant,
   int64String,
-  int64StringOrNumber,
   nullable,
   num,
   object,
@@ -214,8 +213,8 @@ export interface SupervisorInfoResponse {
 }
 
 export const SupervisorInfoResponseSchema: z.ZodType<SupervisorInfoResponse, unknown> = object<SupervisorInfoResponse>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
   name: str,
   is_current_user: bool,
 });
@@ -236,12 +235,12 @@ export interface SchulhofStatusResponse {
 
 export const SchulhofStatusResponseSchema: z.ZodType<SchulhofStatusResponse, unknown> = object<SchulhofStatusResponse>({
   exists: bool,
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room_name: str,
-  activity_group_id: optional(int64StringOrNumber),
-  active_group_id: optional(int64StringOrNumber),
+  activity_group_id: optional(int64String),
+  active_group_id: optional(int64String),
   is_user_supervising: bool,
-  supervision_id: optional(int64StringOrNumber),
+  supervision_id: optional(int64String),
   supervisor_count: safeInt,
   student_count: safeInt,
   supervisors: nullable(arr(SupervisorInfoResponseSchema)),
@@ -327,8 +326,8 @@ export interface Supervisor {
 }
 
 export const SupervisorSchema: z.ZodType<Supervisor, unknown> = object<Supervisor>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
   name: str,
   is_current_user: bool,
 });
@@ -349,12 +348,12 @@ export interface SchulhofStatus {
 
 export const SchulhofStatusSchema: z.ZodType<SchulhofStatus, unknown> = object<SchulhofStatus>({
   exists: bool,
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room_name: str,
-  activity_group_id: optional(int64StringOrNumber),
-  active_group_id: optional(int64StringOrNumber),
+  activity_group_id: optional(int64String),
+  active_group_id: optional(int64String),
   is_user_supervising: bool,
-  supervision_id: optional(int64StringOrNumber),
+  supervision_id: optional(int64String),
   supervisor_count: safeInt,
   student_count: safeInt,
   supervisors: nullable(arr(SupervisorSchema)),
@@ -500,8 +499,8 @@ export interface ActiveSession {
 }
 
 export const ActiveSessionSchema: z.ZodType<ActiveSession, unknown> = object<ActiveSession>({
-  active_group_id: int64StringOrNumber,
-  instance_id: int64StringOrNumber,
+  active_group_id: int64String,
+  instance_id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -523,9 +522,9 @@ export const RosterWarningSchema: z.ZodType<RosterWarning, unknown> = object<Ros
   message: str,
   expected_arrival: optional(str),
   slot_start: optional(str),
-  expected_group_id: optional(int64StringOrNumber),
+  expected_group_id: optional(int64String),
   expected_group_name: optional(str),
-  current_education_group_id: optional(int64StringOrNumber),
+  current_education_group_id: optional(int64String),
 });
 
 /** Go: supervisiondashboard.ParallelPresence */
@@ -537,7 +536,7 @@ export interface ParallelPresence {
 }
 
 export const ParallelPresenceSchema: z.ZodType<ParallelPresence, unknown> = object<ParallelPresence>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -567,14 +566,14 @@ export interface RosterRow {
 }
 
 export const RosterRowSchema: z.ZodType<RosterRow, unknown> = object<RosterRow>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   student_name: str,
   school_class: str,
   group_name: str,
   planned: bool,
   is_unplanned: bool,
   currently_present: bool,
-  visit_id: optional(int64StringOrNumber),
+  visit_id: optional(int64String),
   status: str,
   substatus: optional(str),
   note: optional(str),
@@ -603,11 +602,11 @@ export interface ConflictWarning {
 
 export const ConflictWarningSchema: z.ZodType<ConflictWarning, unknown> = object<ConflictWarning>({
   kind: str,
-  resource_id: int64StringOrNumber,
+  resource_id: int64String,
   message: str,
   can_override: bool,
   fingerprint: optional(str),
-  conflicting_instance_id: optional(int64StringOrNumber),
+  conflicting_instance_id: optional(int64String),
   conflicting_title: optional(str),
   overlap_start: optional(str),
   overlap_end: optional(str),
@@ -621,7 +620,7 @@ export interface StaffName {
 }
 
 export const StaffNameSchema: z.ZodType<StaffName, unknown> = object<StaffName>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   display_name: str,
   is_substitute: bool,
 });
@@ -665,12 +664,12 @@ export interface PlannedInstance {
 }
 
 export const PlannedInstanceSchema: z.ZodType<PlannedInstance, unknown> = object<PlannedInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   date: str,
   start_time: str,
   end_time: str,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   room_name: optional(str),
   status: str,
   is_overdue: bool,
@@ -681,7 +680,7 @@ export const PlannedInstanceSchema: z.ZodType<PlannedInstance, unknown> = object
   current_students_count: safeInt,
   planned_students_count: safeInt,
   is_spontaneous: bool,
-  assigned_staff_ids: nullable(arr(int64StringOrNumber)),
+  assigned_staff_ids: nullable(arr(int64String)),
   is_assigned: bool,
   is_primary: bool,
   is_substitute: bool,
@@ -693,7 +692,7 @@ export const PlannedInstanceSchema: z.ZodType<PlannedInstance, unknown> = object
   can_start: bool,
   start_available_at: str,
   start_expires_at: str,
-  active_group_id: optional(int64StringOrNumber),
+  active_group_id: optional(int64String),
   cancel_reason: optional(str),
   planning_track_name: optional(str),
   planning_track_color: optional(str),

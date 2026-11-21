@@ -96,7 +96,7 @@ func germanNamesMonth() mealplan.BillingMonth {
 func childIDs(children []mealplan.BillingMonthChild) []int64 {
 	ids := make([]int64, len(children))
 	for i, child := range children {
-		ids[i] = child.StudentID
+		ids[i] = child.StudentID.Int64()
 	}
 	return ids
 }

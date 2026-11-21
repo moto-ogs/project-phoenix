@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,7 +63,7 @@ func (f *fakeInstanceRepo) FindByActiveGroups(_ context.Context, groupIDs []int6
 	}
 	instance := *f.instance
 	if instance.ActiveGroupID == nil && len(groupIDs) > 0 {
-		instance.ActiveGroupID = &groupIDs[0]
+		instance.ActiveGroupID = (*ident.ID)(&groupIDs[0])
 	}
 	return []*timetable.ScheduledInstance{&instance}, nil
 }
@@ -187,7 +188,7 @@ func validVisit() timetable.AttendanceVisit {
 
 func instanceWithID(id int64) *timetable.ScheduledInstance {
 	inst := &timetable.ScheduledInstance{}
-	inst.ID = id
+	inst.ID = ident.ID(id)
 	return inst
 }
 

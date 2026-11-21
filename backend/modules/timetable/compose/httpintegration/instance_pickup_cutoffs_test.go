@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,7 +64,7 @@ func TestInstancePickupCutoffsKeepSelectedPairs(t *testing.T) {
 
 	counter := testpkg.CaptureQueries(t, db)
 	rows, err := module.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{
-		{ID: first.ID, Date: day}, {ID: last.ID, Date: day.AddDays(2)},
+		{ID: ident.ID(first.ID), Date: day}, {ID: ident.ID(last.ID), Date: day.AddDays(2)},
 	})
 	require.NoError(t, err)
 	assert.Len(t, counter.Selects("schedule.student_pickup_exceptions"), 1, "one pickup read for the complete window")
@@ -73,7 +74,7 @@ func TestInstancePickupCutoffsKeepSelectedPairs(t *testing.T) {
 
 	empty := testpkg.CreateTestActivityInstance(t, db, day.AddDays(4), room.ID, testpkg.ActivityInstanceOpts{})
 	counter.Reset()
-	rows, err = module.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{{ID: empty.ID, Date: day.AddDays(4)}})
+	rows, err = module.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{{ID: ident.ID(empty.ID), Date: day.AddDays(4)}})
 	require.NoError(t, err)
 	assert.Empty(t, rows.Cutoffs)
 	rows, err = module.TimetableData.Data.ListScheduledInstanceRows(ctx, nil)

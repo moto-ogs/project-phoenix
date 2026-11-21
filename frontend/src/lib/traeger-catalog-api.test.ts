@@ -208,7 +208,7 @@ describe("Träger catalog requests (#4704)", () => {
     expect(offering?.draft.contractTemplate?.termMonths).toBeNull();
   });
 
-  it("sends school IDs as numbers and none with „Alle Schulen“", async () => {
+  it("sends school IDs as strings and none with „Alle Schulen“", async () => {
     request.mockResolvedValue(backendPhase);
     const input = {
       name: " Schuljahr ",
@@ -230,7 +230,7 @@ describe("Träger catalog requests (#4704)", () => {
     expect(first).toMatchObject({
       name: "Schuljahr",
       all_schools: false,
-      school_ids: [11, 12],
+      school_ids: ["11", "12"],
     });
     expect(second).toMatchObject({ all_schools: true, school_ids: [] });
   });

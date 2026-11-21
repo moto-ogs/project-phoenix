@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The access log of the Träger-Portal (#4655, ADR 0109). It reads the access
@@ -194,7 +195,7 @@ func distinctPeople(actors []traegerview.AccessTrailActor, names actorIndex) ([]
 	}
 	people := make([]traegerview.AccessLogPerson, 0, len(byAccount))
 	for accountID, name := range byAccount {
-		people = append(people, traegerview.AccessLogPerson{AccountID: accountID, Name: name})
+		people = append(people, traegerview.AccessLogPerson{AccountID: ident.ID(accountID), Name: name})
 	}
 	slices.SortFunc(people, func(a, b traegerview.AccessLogPerson) int {
 		switch {
@@ -237,8 +238,8 @@ func (o *Overview) entries(adminCtx context.Context, viewer traegerview.Viewer, 
 	for i, row := range rows {
 		resolved := names.resolve(refs[i])
 		entries = append(entries, traegerview.AccessLogEntry{
-			ID: fmt.Sprintf("%s-%s-%d", row.Kind, row.Data, row.ID), OccurredAt: row.OccurredAt, SchoolID: row.SchoolID, SchoolName: schoolName(schoolNames, row.SchoolID),
-			AccountID: resolved.account, Person: resolved.name, Kind: row.Kind, Data: row.Data, DataLabel: dataLabel(row.Data),
+			ID: fmt.Sprintf("%s-%s-%d", row.Kind, row.Data, row.ID), OccurredAt: row.OccurredAt, SchoolID: ident.ID(row.SchoolID), SchoolName: schoolName(schoolNames, row.SchoolID),
+			AccountID: (*ident.ID)(resolved.account), Person: resolved.name, Kind: row.Kind, Data: row.Data, DataLabel: dataLabel(row.Data),
 		})
 	}
 	return entries, asOf, nil
@@ -316,7 +317,7 @@ func (o *Overview) schoolNames(adminCtx context.Context, schools []int64) (map[i
 	}
 	names := make(map[int64]string, len(rows))
 	for _, school := range rows {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 	}
 	return names, nil
 }
@@ -324,7 +325,7 @@ func (o *Overview) schoolNames(adminCtx context.Context, schools []int64) (map[i
 func entrySchools(entries []traegerview.AccessLogEntry) map[int64]int {
 	counts := map[int64]int{}
 	for _, entry := range entries {
-		counts[entry.SchoolID]++
+		counts[entry.SchoolID.Int64()]++
 	}
 	return counts
 }

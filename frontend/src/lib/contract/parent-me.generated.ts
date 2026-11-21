@@ -7,7 +7,6 @@ import {
   fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
   multipart,
   noData,
@@ -1123,8 +1122,8 @@ export interface ContractNoticeOptions {
 }
 
 export const ContractNoticeOptionsSchema: z.ZodType<ContractNoticeOptions, unknown> = object<ContractNoticeOptions>({
-  contract_id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  contract_id: int64String,
+  organization_id: int64String,
   traeger_name: str,
   status: str,
   child_name: str,
@@ -1309,7 +1308,7 @@ export interface HolidayRegistrationEntryResponse {
 }
 
 export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrationEntryResponse, unknown> = object<HolidayRegistrationEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   traeger_name: str,
   period_name: str,
   first_day: nullable(calendarDate),
@@ -2066,7 +2065,7 @@ export interface notificationFeedEntryResponse {
 }
 
 export const notificationFeedEntryResponseSchema: z.ZodType<notificationFeedEntryResponse, unknown> = object<notificationFeedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,

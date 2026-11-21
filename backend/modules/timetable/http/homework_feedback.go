@@ -117,7 +117,7 @@ func homeworkFeedbackRow(roster *timetable.OperationRoster, studentID int64) (ti
 		return timetable.OperationRosterRow{}, errHomeworkFeedbackNotAllowed
 	}
 	for _, row := range roster.Rows {
-		if row.StudentID == studentID {
+		if row.StudentID == ident.ID(studentID) {
 			return row, nil
 		}
 	}

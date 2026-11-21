@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type GroupStore interface {
@@ -232,10 +233,10 @@ func (s *substitutionModule) listAssignableGroups(ctx context.Context, tenantID 
 	}
 	groups := make([]GroupRef, 0, len(rows))
 	for _, row := range rows {
-		if row.TenantID != tenantID {
+		if row.TenantID != ident.ID(tenantID) {
 			return nil, ErrForbidden
 		}
-		groups = append(groups, GroupRef{ID: row.ID, Name: row.Name})
+		groups = append(groups, GroupRef{ID: row.ID.Int64(), Name: row.Name})
 	}
 	sort.Slice(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name })
 	return groups, nil
@@ -292,7 +293,7 @@ func (s *substitutionModule) assignLocked(ctx context.Context, caller Substituti
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := s.recheckOwnership(ctx, access, group.ID, caller.TenantID); err != nil {
+	if err := s.recheckOwnership(ctx, access, group.ID.Int64(), caller.TenantID); err != nil {
 		return nil, nil, nil, err
 	}
 	target, err := s.findAndLockTarget(ctx, request.TargetStaffID)
@@ -415,7 +416,7 @@ func (s *substitutionModule) lockTenantGroup(ctx context.Context, groupID, tenan
 	if err != nil {
 		return nil, notFoundError(err)
 	}
-	if group.TenantID != tenantID {
+	if group.TenantID != ident.ID(tenantID) {
 		return nil, ErrNotFound
 	}
 	return group, nil
@@ -433,7 +434,7 @@ func (s *substitutionModule) recheckOwnership(ctx context.Context, access substi
 		return err
 	}
 	for _, group := range groups {
-		if group.ID == groupID && group.TenantID == tenantID {
+		if group.ID == ident.ID(groupID) && group.TenantID == ident.ID(tenantID) {
 			return nil
 		}
 	}
@@ -475,10 +476,10 @@ func (s *substitutionModule) resolveAccess(ctx context.Context, caller Substitut
 	}
 	ids := make([]int64, len(groups))
 	for i, group := range groups {
-		if group.TenantID != caller.TenantID {
+		if group.TenantID != ident.ID(caller.TenantID) {
 			return substitutionAccess{}, ErrForbidden
 		}
-		ids[i] = group.ID
+		ids[i] = group.ID.Int64()
 	}
 	return substitutionAccess{actor: actor, ownedGroupIDs: ids}, nil
 }
@@ -589,7 +590,7 @@ func projectAssignment(row *domain.GroupSubstitution, group *domain.Group, targe
 	return AssignmentResult{
 		ID: row.ID, Type: TargetGroupHandover, CanEnd: true,
 		Period: period,
-		Group:  &GroupRef{ID: group.ID, Name: group.Name},
+		Group:  &GroupRef{ID: group.ID.Int64(), Name: group.Name},
 		Target: StaffRef{ID: target.StaffID, FullName: target.FullName},
 	}
 }

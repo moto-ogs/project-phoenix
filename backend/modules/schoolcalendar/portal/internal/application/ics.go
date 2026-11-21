@@ -7,6 +7,7 @@ import (
 
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StaffAppointmentICS renders an appointment the current staff member can see
@@ -29,11 +30,11 @@ func (s *service) StaffAppointmentICS(ctx context.Context, appointmentID int64) 
 	if appointment == nil || appointment.DeletedAt != nil {
 		return "", "", ErrNotFound
 	}
-	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID)
+	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID.Int64())
 	if err != nil {
 		return "", "", err
 	}
-	if appointment.OrganizerStaffID != staff.ID && staffRecipient(recipients, staff.ID) == nil {
+	if appointment.OrganizerStaffID != ident.ID(staff.ID) && staffRecipient(recipients, staff.ID) == nil {
 		return "", "", ErrNotFound
 	}
 	return s.renderAppointmentICS(ctx, appointment)
@@ -78,13 +79,13 @@ func (s *service) parentTenantAppointmentICS(ctx context.Context, appointmentID 
 }
 
 func (s *service) renderAppointmentICS(ctx context.Context, appointment *appointmentcap.Appointment) (string, string, error) {
-	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID)
+	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID.Int64())
 	if err != nil {
 		return "", "", err
 	}
 	var cancelled []*appointmentcap.AppointmentOccurrenceOverride
 	if recurrence != nil {
-		cancelled, err = s.cfg.Appointments.FindCancelledOccurrenceOverrides(ctx, []int64{appointment.ID})
+		cancelled, err = s.cfg.Appointments.FindCancelledOccurrenceOverrides(ctx, []int64{appointment.ID.Int64()})
 		if err != nil {
 			return "", "", err
 		}

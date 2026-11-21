@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   str,
@@ -19,7 +19,7 @@ export interface TraegerFrame {
 }
 
 export const TraegerFrameSchema: z.ZodType<TraegerFrame, unknown> = object<TraegerFrame>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   test_system: bool,
   federal_states: nullable(arr(str)),

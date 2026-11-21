@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +18,7 @@ func TestCanReopenInstance(t *testing.T) {
 
 	base := timetable.ScheduledInstance{
 		Status:                timetable.InstanceStatusCompleted,
-		CompletedBy:           &completedBy,
+		CompletedBy:           (*ident.ID)(&completedBy),
 		ReopenUntil:           &until,
 		HasCompletionSnapshot: true,
 	}
@@ -26,9 +27,9 @@ func TestCanReopenInstance(t *testing.T) {
 	assert.True(t, timetable.CanReopenInstance(base, 41, true, now))
 	assert.False(t, timetable.CanReopenInstance(base, 40, false, now))
 	assert.False(t, timetable.CanReopenInstance(base, 42, false, until.Add(time.Second)))
-	assert.True(t, timetable.CanReopenAsActor(true, base.CompletedBy, 42, false))
-	assert.False(t, timetable.CanReopenAsActor(true, base.CompletedBy, 40, false))
-	assert.False(t, timetable.CanReopenAsActor(false, base.CompletedBy, 42, true))
+	assert.True(t, timetable.CanReopenAsActor(true, (*int64)(base.CompletedBy), 42, false))
+	assert.False(t, timetable.CanReopenAsActor(true, (*int64)(base.CompletedBy), 40, false))
+	assert.False(t, timetable.CanReopenAsActor(false, (*int64)(base.CompletedBy), 42, true))
 	completedAt := now
 	base.CompletedAt = &completedAt
 	changed := timetable.ScheduledParticipant{UpdatedAt: now.Add(time.Minute)}
@@ -37,12 +38,12 @@ func TestCanReopenInstance(t *testing.T) {
 	assert.True(t, timetable.AttendanceUnchangedSinceCompletion(base, []timetable.ScheduledParticipant{unchanged}))
 	assert.False(t, timetable.CanReopenInstance(timetable.ScheduledInstance{
 		Status:      timetable.InstanceStatusCompleted,
-		CompletedBy: &completedBy,
+		CompletedBy: (*ident.ID)(&completedBy),
 		ReopenUntil: &until,
 	}, 42, true, now))
 	assert.False(t, timetable.CanReopenInstance(timetable.ScheduledInstance{
 		Status:                timetable.InstanceStatusActive,
-		CompletedBy:           &completedBy,
+		CompletedBy:           (*ident.ID)(&completedBy),
 		ReopenUntil:           &until,
 		HasCompletionSnapshot: true,
 	}, 42, true, now))

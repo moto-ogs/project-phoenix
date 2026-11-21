@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -158,7 +159,7 @@ func TestIdentityTrustedDevicesGrowthQueryBudget(t *testing.T) {
 			agent := fmt.Sprintf("Budget browser %d", len(want))
 			var id int64
 			require.NoError(t, f.db.NewRaw("INSERT INTO auth.mfa_trusted_devices (account_id, tenant_id, token_hash, user_agent, ip_address, created_at, expires_at) VALUES (?, ?, ?, ?, '127.0.0.1', ?, ?) RETURNING id", f.actor, testpkg.Tenant(t), fmt.Sprintf("example-token-hash-fixture-%d", len(want)), agent, created, expires).Scan(context.Background(), &id))
-			want = append(want, map[string]any{"id": float64(id), "user_agent": agent, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
+			want = append(want, map[string]any{"id": strconv.FormatInt(id, 10), "user_agent": agent, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
 		}
 		rr, queries := f.get(t, "/auth/mfa/trusted-devices", f.token)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())

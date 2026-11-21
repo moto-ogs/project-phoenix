@@ -127,7 +127,7 @@ func mergeSubstitutionWarnings(
 			foreigns = append(foreigns, toConflictInstance(foreignByID[row.InstanceID]))
 		}
 		for _, conflict := range timetable.DetectSubstituteTimeConflicts(probe.targets, foreigns) {
-			key := [3]int64{probe.staffID, conflict.InstanceID, conflict.OtherID}
+			key := [3]int64{probe.staffID, conflict.InstanceID.Int64(), conflict.OtherID.Int64()}
 			if seenConflict[key] {
 				continue
 			}

@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
   str,
@@ -18,7 +18,7 @@ export interface FeedbackStudentResponse {
 }
 
 export const FeedbackStudentResponseSchema: z.ZodType<FeedbackStudentResponse, unknown> = object<FeedbackStudentResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -37,11 +37,11 @@ export interface FeedbackResponse {
 }
 
 export const FeedbackResponseSchema: z.ZodType<FeedbackResponse, unknown> = object<FeedbackResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   value: str,
   day: str,
   time: str,
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   is_mensa_feedback: bool,
   created_at: instant,
   updated_at: instant,

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Withdrawal and termination of a care contract in the parents portal
@@ -67,8 +68,8 @@ type ContractNotice struct {
 // ContractNoticeOptions is what the parents can declare today, or the
 // declaration made.
 type ContractNoticeOptions struct {
-	ContractID      int64           `json:"contract_id"`
-	OrganizationID  int64           `json:"organization_id"`
+	ContractID      ident.ID        `json:"contract_id"`
+	OrganizationID  ident.ID        `json:"organization_id"`
 	TraegerName     string          `json:"traeger_name"`
 	Status          string          `json:"status"`
 	ChildName       string          `json:"child_name"`
@@ -148,7 +149,7 @@ func (s *Service) contractNotice(ctx context.Context, accountID, organizationID,
 	if err != nil {
 		return ContractNoticeOptions{}, err
 	}
-	options.OrganizationID, options.TraegerName = organizationID, access.traeger[index].Name
+	options.OrganizationID, options.TraegerName = ident.ID(organizationID), access.traeger[index].Name
 	return options, nil
 }
 

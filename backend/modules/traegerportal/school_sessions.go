@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Absprung into a school of the Träger (ADR 0084 section 5, #4654). The
@@ -33,7 +34,7 @@ func (rs *Resource) schoolSessionRouter(protectedTraegerRoutes func(chi.Router, 
 
 // SchoolSessionRequest is the body of POST /traeger/school-sessions.
 type SchoolSessionRequest struct {
-	SchoolID int64 `json:"school_id"`
+	SchoolID ident.ID `json:"school_id"`
 }
 
 // Bind validates the request.
@@ -62,7 +63,7 @@ func (rs *Resource) startSchoolSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, err := rs.schoolSessions.StartTraegerSchoolSession(r.Context(), identityaccess.TraegerSchoolSessionRequest{
-		AccountID: int64(claims.ID), OrganizationID: claims.OrgID, TraegerFamilyID: claims.FamilyID, SchoolID: req.SchoolID,
+		AccountID: int64(claims.ID), OrganizationID: claims.OrgID, TraegerFamilyID: claims.FamilyID, SchoolID: req.SchoolID.Int64(),
 		IPAddress: common.GetClientIPString(r), UserAgent: r.UserAgent(),
 	})
 	if err != nil {

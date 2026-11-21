@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -66,7 +67,7 @@ func (s *operations) rosterRowOf(ctx context.Context, instanceID, studentID int6
 		return nil, err
 	}
 	for i := range roster.Rows {
-		if roster.Rows[i].StudentID == studentID {
+		if roster.Rows[i].StudentID == ident.ID(studentID) {
 			return &roster.Rows[i], nil
 		}
 	}

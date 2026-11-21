@@ -29,6 +29,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -139,8 +140,8 @@ func TestDetectPlannedConflicts_Staff_IncludingAbsentExclusion(t *testing.T) {
 
 	require.Len(t, warnings, 1, "is_absent staff must not be flagged")
 	assert.Equal(t, timetable.ConflictKindStaff, warnings[0].Kind)
-	assert.Equal(t, s.staffID, warnings[0].ResourceID)
-	assert.Equal(t, inst.ID, warnings[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(s.staffID), warnings[0].ResourceID)
+	assert.Equal(t, ident.ID(inst.ID), warnings[0].ConflictingInstanceID)
 	assert.Contains(t, warnings[0].Message, "PC-Personal")
 }
 
@@ -176,7 +177,7 @@ func TestDetectPlannedConflicts_StaffDifferentRoomWarns(t *testing.T) {
 
 	require.Len(t, warnings, 1)
 	assert.Equal(t, timetable.ConflictKindStaff, warnings[0].Kind)
-	assert.Equal(t, s.staffID, warnings[0].ResourceID)
+	assert.Equal(t, ident.ID(s.staffID), warnings[0].ResourceID)
 	assert.Contains(t, warnings[0].Message, "anderer Raum")
 }
 
@@ -213,8 +214,8 @@ func TestDetectPlannedConflicts_Student(t *testing.T) {
 
 	require.Len(t, warnings, 1)
 	assert.Equal(t, timetable.ConflictKindStudent, warnings[0].Kind)
-	assert.Equal(t, s.studentID, warnings[0].ResourceID)
-	assert.Equal(t, inst.ID, warnings[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(s.studentID), warnings[0].ResourceID)
+	assert.Equal(t, ident.ID(inst.ID), warnings[0].ConflictingInstanceID)
 	assert.Contains(t, warnings[0].Message, "PC-Kind")
 }
 
@@ -271,7 +272,7 @@ func TestDetectPlannedConflicts_ExcludeEditedSeries(t *testing.T) {
 	}))
 
 	require.Len(t, warnings, 1)
-	assert.Equal(t, foreign.ID, warnings[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(foreign.ID), warnings[0].ConflictingInstanceID)
 }
 
 func TestDetectPlannedConflicts_CancelledIgnored(t *testing.T) {

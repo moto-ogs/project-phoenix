@@ -199,7 +199,7 @@ func (n holidaySchoolNames) HolidaySchoolNames(ctx context.Context, organization
 	}
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 	}
 	return names, nil
 }

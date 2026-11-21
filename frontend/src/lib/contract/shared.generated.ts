@@ -123,7 +123,7 @@ export interface TrustedDeviceDTO {
 }
 
 export const TrustedDeviceDTOSchema: z.ZodType<TrustedDeviceDTO, unknown> = object<TrustedDeviceDTO>({
-  id: int64StringOrNumber,
+  id: int64String,
   user_agent: optional(str),
   ip_address: optional(str),
   created_at: str,
@@ -248,11 +248,11 @@ export interface Appointment {
 }
 
 export const AppointmentSchema: z.ZodType<Appointment, unknown> = object<Appointment>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  organizer_staff_id: int64StringOrNumber,
+  organizer_staff_id: int64String,
   title: str,
   description: optional(str),
   location: optional(str),
@@ -286,11 +286,11 @@ export interface RecurrenceRule {
 }
 
 export const RecurrenceRuleSchema: z.ZodType<RecurrenceRule, unknown> = object<RecurrenceRule>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   frequency: str,
   interval_count: safeInt,
   weekdays: optional(arr(str)),
@@ -315,14 +315,14 @@ export interface AppointmentRecipient {
 }
 
 export const AppointmentRecipientSchema: z.ZodType<AppointmentRecipient, unknown> = object<AppointmentRecipient>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   recipient_type: str,
-  staff_id: optional(int64StringOrNumber),
-  guardian_profile_id: optional(int64StringOrNumber),
+  staff_id: optional(int64String),
+  guardian_profile_id: optional(int64String),
   status: str,
   responded_at: optional(instant),
   occurrence_responses: optional(rec(str)),
@@ -341,13 +341,13 @@ export interface AppointmentTarget {
 }
 
 export const AppointmentTargetSchema: z.ZodType<AppointmentTarget, unknown> = object<AppointmentTarget>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   target_type: str,
-  target_id: optional(int64StringOrNumber),
+  target_id: optional(int64String),
   target_value: optional(str),
 });
 
@@ -508,7 +508,7 @@ export interface schoolFeedEntryResponse {
 }
 
 export const schoolFeedEntryResponseSchema: z.ZodType<schoolFeedEntryResponse, unknown> = object<schoolFeedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -1179,7 +1179,7 @@ export interface feedEntryResponse {
 }
 
 export const feedEntryResponseSchema: z.ZodType<feedEntryResponse, unknown> = object<feedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -2455,9 +2455,9 @@ export const OperationRosterWarningSchema: z.ZodType<OperationRosterWarning, unk
   message: str,
   expected_arrival: optional(str),
   slot_start: optional(str),
-  expected_group_id: optional(int64StringOrNumber),
+  expected_group_id: optional(int64String),
   expected_group_name: optional(str),
-  current_education_group_id: optional(int64StringOrNumber),
+  current_education_group_id: optional(int64String),
 });
 
 /** Go: timetable.OperationParallelPresence */
@@ -2469,7 +2469,7 @@ export interface OperationParallelPresence {
 }
 
 export const OperationParallelPresenceSchema: z.ZodType<OperationParallelPresence, unknown> = object<OperationParallelPresence>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -2536,14 +2536,14 @@ export interface OperationRosterRow {
 }
 
 export const OperationRosterRowSchema: z.ZodType<OperationRosterRow, unknown> = object<OperationRosterRow>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   student_name: str,
   school_class: str,
   group_name: str,
   planned: bool,
   is_unplanned: bool,
   currently_present: bool,
-  visit_id: optional(int64StringOrNumber),
+  visit_id: optional(int64String),
   status: str,
   substatus: optional(str),
   note: optional(str),
@@ -2574,11 +2574,11 @@ export interface InstanceConflictWarning {
 
 export const InstanceConflictWarningSchema: z.ZodType<InstanceConflictWarning, unknown> = object<InstanceConflictWarning>({
   kind: str,
-  resource_id: int64StringOrNumber,
+  resource_id: int64String,
   message: str,
   can_override: bool,
   fingerprint: optional(str),
-  conflicting_instance_id: optional(int64StringOrNumber),
+  conflicting_instance_id: optional(int64String),
   conflicting_title: optional(str),
   overlap_start: optional(str),
   overlap_end: optional(str),
@@ -2592,7 +2592,7 @@ export interface OperationStaffName {
 }
 
 export const OperationStaffNameSchema: z.ZodType<OperationStaffName, unknown> = object<OperationStaffName>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   display_name: str,
   is_substitute: bool,
 });
@@ -2639,12 +2639,12 @@ export interface OperationPlannedInstance {
 }
 
 export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance, unknown> = object<OperationPlannedInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   date: str,
   start_time: str,
   end_time: str,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   room_name: optional(str),
   activity_type: optional(str),
   status: str,
@@ -2656,7 +2656,7 @@ export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance,
   current_students_count: safeInt,
   planned_students_count: safeInt,
   is_spontaneous: bool,
-  assigned_staff_ids: nullable(arr(int64StringOrNumber)),
+  assigned_staff_ids: nullable(arr(int64String)),
   is_assigned: bool,
   is_primary: bool,
   is_substitute: bool,
@@ -2670,7 +2670,7 @@ export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance,
   start_expires_at: str,
   can_reopen: optional(bool),
   reopen_until: optional(str),
-  active_group_id: optional(int64StringOrNumber),
+  active_group_id: optional(int64String),
   cancel_reason: optional(str),
   planning_track_name: optional(str),
   planning_track_color: optional(str),
@@ -2697,12 +2697,12 @@ export interface OperationRosterInstance {
 }
 
 export const OperationRosterInstanceSchema: z.ZodType<OperationRosterInstance, unknown> = object<OperationRosterInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   status: str,
   is_spontaneous: bool,
-  active_group_id: optional(int64StringOrNumber),
-  room_id: int64StringOrNumber,
+  active_group_id: optional(int64String),
+  room_id: int64String,
   room_name: optional(str),
   date: str,
   start_time: str,
@@ -2786,32 +2786,32 @@ export interface ScheduledInstance {
 }
 
 export const ScheduledInstanceSchema: z.ZodType<ScheduledInstance, unknown> = object<ScheduledInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   date: nullable(calendarDate),
-  activity_group_id: optional(int64StringOrNumber),
-  calendar_period_id: optional(int64StringOrNumber),
+  activity_group_id: optional(int64String),
+  calendar_period_id: optional(int64String),
   title: str,
   description: optional(str),
   start_time: instant,
   end_time: instant,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   required_staff: optional(safeInt),
   status: str,
-  active_group_id: optional(int64StringOrNumber),
+  active_group_id: optional(int64String),
   list_kind: optional(str),
   is_spontaneous: bool,
   understaffed_ack: bool,
   understaffed_note: optional(str),
   cancel_reason: optional(str),
   notes: optional(str),
-  created_by: optional(int64StringOrNumber),
-  started_by: optional(int64StringOrNumber),
+  created_by: optional(int64String),
+  started_by: optional(int64String),
   started_at: optional(instant),
   completed_at: optional(instant),
-  completed_by: optional(int64StringOrNumber),
+  completed_by: optional(int64String),
   reopen_until: optional(instant),
 });
 
