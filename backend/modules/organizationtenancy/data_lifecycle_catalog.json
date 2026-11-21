@@ -17,6 +17,7 @@
     {"name": "active.payroll_wage_types", "scope": "tenant", "export": "include"},
     {"name": "active.presence_backfill_batches", "scope": "tenant", "export": "excludeInternal", "exportReason": "Administrative migration progress counters, not presence records."},
     {"name": "active.presence_backfill_checkpoints", "scope": "tenant", "export": "excludeInternal", "exportReason": "Administrative migration progress checkpoints, not presence records."},
+    {"name": "active.room_history_stops", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id"}},
     {"name": "active.scheduled_checkouts", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id", "scheduled_by": "users.staff_school_memberships.id", "cancelled_by": "users.staff_school_memberships.id"}},
     {"name": "active.staff_absence_audit", "scope": "tenant", "export": "include", "personKeys": {"actor_id": "auth.accounts.id"}},
     {"name": "active.staff_absence_type_allowance_changes", "scope": "tenant", "export": "include", "personKeys": {"staff_id": "users.staff_school_memberships.id", "changed_by": "users.staff_school_memberships.id"}},

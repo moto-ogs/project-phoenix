@@ -116,6 +116,7 @@ var tableRetentions = map[string]tableRetention{
 	"active.morning_attendance":                             own("nightly retention step morning_attendance_retention (roots/owners/worker_retention.go), Student Presence DeleteExpiredMorningAttendance (school window gdpr.morning_attendance_retention_days after the school day, #4790)"),
 	"active.presence_backfill_batches":                      notPersonal("progress of a data migration, counters and positions only"),
 	"active.presence_backfill_checkpoints":                  notPersonal("progress of a data migration, counters and positions only"),
+	"active.room_history_stops":                             parent("users.student_profiles"),
 	"active.scheduled_checkouts":                            parent("users.student_profiles"),
 	"active.staff_absence_audit":                            parent("active.staff_absences"),
 	"active.staff_absence_type_allowance_changes":           staffRetention("Workforce SQL users.erase_retired_staff_records"),

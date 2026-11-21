@@ -61,7 +61,12 @@ func NewCheckinWorkflowClockTestModule(db transactionruntime.Database, unit tena
 	}
 	logger := slog.Default()
 	rosters := owners.MustNewUnobservedTimetable(db)
+	moodStops, err := owners.NewRoomHistoryStopReads(db)
+	if err != nil {
+		return CheckinTestModule{}, err
+	}
 	scan := scanBindings.New(devicescanCompose.Dependencies{Principal: DeviceScanPrincipal,
+		MoodStops:  moodStops,
 		Fleet:      moduleDevices.IoT.Fleet(),
 		Presence:   owners.NewLoggedStudentPresence(db, logger),
 		Rooms:      rooms,

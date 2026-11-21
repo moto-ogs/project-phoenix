@@ -82,6 +82,9 @@ var (
 	ErrStudentNotFound   = errors.New("student not found")
 	ErrInvalidDateRange  = errors.New("invalid date range")
 	ErrInvalidParameters = errors.New("invalid parameters")
+	// ErrMoodCaptureStopped refuses a rating for a child whose room history
+	// and mood capture are stopped (#3844).
+	ErrMoodCaptureStopped = errors.New("mood capture stopped for student")
 )
 
 type InvalidEntryDataError struct{ Err error }
@@ -122,6 +125,8 @@ func ErrorCode(err error) string {
 		return "invalid_date_range"
 	case errors.Is(err, ErrInvalidParameters):
 		return "invalid_parameters"
+	case errors.Is(err, ErrMoodCaptureStopped):
+		return "mood_capture_stopped"
 	default:
 		return "internal_error"
 	}

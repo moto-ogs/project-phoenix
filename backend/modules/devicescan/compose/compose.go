@@ -79,6 +79,9 @@ type Dependencies struct {
 	OpenRooms devicescan.OpenRoomMover
 	// Settings resolves tenant settings and is required.
 	Settings ScanSettings
+	// MoodStops tells which children's mood capture is stopped (#3844). The
+	// kiosk offers such a child no mood prompt; without it no child gets one.
+	MoodStops MoodCaptureStops
 	// Now is the workflow clock; nil means the wall clock.
 	Now    func() time.Time
 	Logger *slog.Logger
@@ -117,7 +120,7 @@ func New(deps Dependencies, bindings Bindings) DeviceScan {
 		Groups:     bindings.Groups,
 		Pickups:    bindings.Pickups,
 		OpenRooms:  deps.OpenRooms,
-		Settings:   settings{settings: deps.Settings, presenceModes: deps.Active},
+		Settings:   settings{settings: deps.Settings, presenceModes: deps.Active, stops: deps.MoodStops},
 		UnitOfWork: unitOfWork{},
 		Clock:      bindings.Clock,
 		Logger:     logger,

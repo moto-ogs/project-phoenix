@@ -187,6 +187,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			PeopleDirectory:         peopleServices.PeopleDirectory,
 			Persons:                 peopleCompose.NewStudentRoutePersons(livePeople.Users),
 			PrivacyConsents:         presence,
+			RoomHistoryStops:        owners.MustNewRoomHistoryStops(store),
 			SettingsService:         liveSettings.Settings,
 			StudentStatusDayService: presenceservice.NewStatusDays(repoFactoryCare.StudentStatusDay, svc.ManualPartialAbsences(students.CarePlan), store.Pool(), students.CarePlan.LockExceptionDay, clock),
 			UserContextService:      caller,

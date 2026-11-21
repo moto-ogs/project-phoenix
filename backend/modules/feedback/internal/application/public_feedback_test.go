@@ -99,3 +99,20 @@ func TestErrorCodeIsStable(t *testing.T) {
 }
 
 func datePtr(value feedback.Date) *feedback.Date { return &value }
+
+// TestModuleRefusesARatingForAStoppedChild pins the per-child stop of #3844:
+// the stopped child's rating never reaches persistence, another child's does.
+func TestModuleRefusesARatingForAStoppedChild(t *testing.T) {
+	t.Parallel()
+	engine := &recordingEngine{}
+	module := newTestModuleWithStops(engine, seamStops{7: true})
+
+	_, err := module.Submit(context.Background(), feedback.CreateEntry{Value: "positive", Day: "2026-08-31", Time: "09:07:05", StudentID: 7})
+	require.ErrorIs(t, err, feedback.ErrMoodCaptureStopped)
+	assert.Equal(t, "mood_capture_stopped", feedback.ErrorCode(err))
+	assert.Empty(t, engine.created, "a stopped child's rating is not stored")
+
+	_, err = module.Submit(context.Background(), feedback.CreateEntry{Value: "positive", Day: "2026-08-31", Time: "09:07:05", StudentID: 8})
+	require.NoError(t, err)
+	assert.Len(t, engine.created, 1)
+}

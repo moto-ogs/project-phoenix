@@ -27,18 +27,23 @@ type Dependencies struct {
 		FeedbackEnabled(context.Context) (bool, error)
 		FeedbackRetentionDays(context.Context) (int, error)
 	}
+	// Stops tells whether a child's mood capture is stopped (#3844); a rating
+	// for such a child is refused. Required: without it no rating is taken.
+	Stops interface {
+		MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
+	}
 	Today   func() feedback.Date
 	Observe func(Observation)
 }
 
 func New(dependencies Dependencies) (feedback.Capability, error) {
-	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Today == nil || dependencies.Observe == nil {
+	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Stops == nil || dependencies.Today == nil || dependencies.Observe == nil {
 		return nil, errors.New("feedback compose: all dependencies are required")
 	}
 	store := postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
 	today := application.NewCurrentDate(dependencies.Today)
 	observe := ports.Observer(dependencies.Observe)
-	service := application.New(store, dependencies.Settings, TransactionFunc(tenant.NewTransactionRunner().RunInTx), observe, today)
+	service := application.New(store, dependencies.Settings, dependencies.Stops, TransactionFunc(tenant.NewTransactionRunner().RunInTx), observe, today)
 	return service, nil
 }
 

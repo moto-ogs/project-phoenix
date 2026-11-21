@@ -129,7 +129,12 @@ func newIoTResource(
 	if !ok {
 		return nil, errors.New("iot routes: the device fleet carries no device history")
 	}
+	moodStops, err := owners.NewRoomHistoryStopReads(db)
+	if err != nil {
+		return nil, err
+	}
 	deviceScan := scanBindings.New(devicescanCompose.Dependencies{Principal: DeviceScanPrincipal,
+		MoodStops:  moodStops,
 		Fleet:      iot.Fleet(),
 		Presence:   presence,
 		Rooms:      facilities,
