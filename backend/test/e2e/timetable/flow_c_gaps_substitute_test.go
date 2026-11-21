@@ -76,7 +76,7 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, "start body=%s", rr.Body.String())
 
 	var startResp struct {
-		ActiveGroupID int64 `json:"active_group_id"`
+		ActiveGroupID testpkg.ID `json:"active_group_id"`
 		Status        string
 	}
 	decodeResponse(t, rr, &startResp)
@@ -92,7 +92,7 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 
 	var gapsResp1 struct {
 		Gaps []struct {
-			InstanceID int64 `json:"instance_id"`
+			InstanceID testpkg.ID `json:"instance_id"`
 		}
 	}
 	decodeResponse(t, rr, &gapsResp1)
@@ -113,8 +113,8 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 
 	var subResp struct {
 		AffectedInstances []struct {
-			InstanceID int64  `json:"instance_id"`
-			Action     string `json:"action"`
+			InstanceID testpkg.ID `json:"instance_id"`
+			Action     string     `json:"action"`
 		} `json:"affected_instances"`
 	}
 	decodeResponse(t, rr, &subResp)
@@ -146,7 +146,7 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 	}
 
 	// For inst1 (active): active.group_supervisors was rotated.
-	supervisors := fetchGroupSupervisors(t, s, startResp.ActiveGroupID)
+	supervisors := fetchGroupSupervisors(t, s, int64(startResp.ActiveGroupID))
 	var supS1, supS3 *sessionrecordstest.GroupSupervisorRow
 	for i := range supervisors {
 		switch supervisors[i].StaffID {
@@ -225,17 +225,17 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 
 	var gapsResp2 struct {
 		Gaps []struct {
-			InstanceID         int64  `json:"instance_id"`
-			Title              string `json:"title"`
-			AssignedStaffCount int    `json:"assigned_staff_count"`
-			AbsentStaffCount   int    `json:"absent_staff_count"`
-			Status             string `json:"status"`
+			InstanceID         testpkg.ID `json:"instance_id"`
+			Title              string     `json:"title"`
+			AssignedStaffCount int        `json:"assigned_staff_count"`
+			AbsentStaffCount   int        `json:"absent_staff_count"`
+			Status             string     `json:"status"`
 		}
 	}
 	decodeResponse(t, rr, &gapsResp2)
 	require.Len(t, gapsResp2.Gaps, 1, "exactly one gap expected")
 	g := gapsResp2.Gaps[0]
-	assert.Equal(t, gapInstance.ID, g.InstanceID)
+	assert.Equal(t, gapInstance.ID, int64(g.InstanceID))
 	// BUG-FINDING (E2E-C1): per PR #1303 docs the response should carry
 	// `assigned_staff_count=2, absent_staff_count=2` for this input. The
 	// handler hardcodes assigned_staff_count=0 (gaps.go:168) — the comment

@@ -129,12 +129,12 @@ func uploadedDocument(t *testing.T, body []byte) (id int64, filename string) {
 	t.Helper()
 	var resp struct {
 		Data struct {
-			ID       int64  `json:"id"`
-			Filename string `json:"filename"`
+			ID       testpkg.ID `json:"id"`
+			Filename string     `json:"filename"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(body, &resp))
-	return resp.Data.ID, resp.Data.Filename
+	return int64(resp.Data.ID), resp.Data.Filename
 }
 
 func TestStaffDocumentsAPI_UploadListDownloadDelete(t *testing.T) {

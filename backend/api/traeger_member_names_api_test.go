@@ -47,7 +47,7 @@ func assertNameRefused(t *testing.T, rec *httptest.ResponseRecorder) {
 func traegerMemberName(t *testing.T, buero traegerBueroAnswer, accountID int64) string {
 	t.Helper()
 	for _, member := range buero.Members {
-		if member.AccountID == accountID {
+		if int64(member.AccountID) == accountID {
 			return member.Name
 		}
 	}
@@ -112,10 +112,10 @@ func TestTraegerMemberNameNeedsTheAccountsRightAndAnActiveMember(t *testing.T) {
 	rec = traegerCall(t, router, http.MethodPut, path(billing.ID), admin.AccessToken, map[string]any{"name": "Tobias Engel"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	member := decodeSchoolPortalData[struct {
-		AccountID int64  `json:"account_id"`
+		AccountID wireID `json:"account_id"`
 		Name      string `json:"name"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, billing.ID, member.AccountID)
+	assert.Equal(t, billing.ID, int64(member.AccountID))
 	assert.Equal(t, "Tobias Engel", member.Name)
 	assert.Equal(t, "Tobias Engel", traegerMemberName(t, traegerBueroList(t, router, admin.AccessToken), billing.ID))
 
@@ -152,7 +152,7 @@ func TestTraegerMembersNameThemselvesWithoutTheAccountsRight(t *testing.T) {
 	organizationID := traegerBuero(t, db, "Träger Eigener Name")
 	clerk, session := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleBilling)
 	type profile struct {
-		AccountID int64  `json:"account_id"`
+		AccountID wireID `json:"account_id"`
 		Email     string `json:"email"`
 		Name      string `json:"name"`
 	}
@@ -162,13 +162,13 @@ func TestTraegerMembersNameThemselvesWithoutTheAccountsRight(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return decodeSchoolPortalData[profile](t, rec.Body.Bytes())
 	}
-	assert.Equal(t, profile{AccountID: clerk.ID, Email: clerk.Email}, read(), "no name yet")
+	assert.Equal(t, profile{AccountID: wireID(clerk.ID), Email: clerk.Email}, read(), "no name yet")
 
 	rec := traegerCall(t, router, http.MethodPut, "/traeger/profile/name", session.AccessToken, map[string]any{"name": "Jana\nKrause"})
 	assertNameRefused(t, rec)
 	rec = traegerCall(t, router, http.MethodPut, "/traeger/profile/name", session.AccessToken, map[string]any{"name": "Jana Krause"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, profile{AccountID: clerk.ID, Email: clerk.Email, Name: "Jana Krause"}, decodeSchoolPortalData[profile](t, rec.Body.Bytes()))
+	assert.Equal(t, profile{AccountID: wireID(clerk.ID), Email: clerk.Email, Name: "Jana Krause"}, decodeSchoolPortalData[profile](t, rec.Body.Bytes()))
 	assert.Equal(t, "Jana Krause", read().Name)
 	rec = traegerCall(t, router, http.MethodGet, "/traeger/accounts/", session.AccessToken, nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, "naming oneself opens no member list")

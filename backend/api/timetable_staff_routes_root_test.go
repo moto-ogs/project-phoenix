@@ -43,7 +43,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 
 	t.Run("calendar period removal", func(t *testing.T) {
 		var period struct {
-			ID int64 `json:"id"`
+			ID wireID `json:"id"`
 		}
 		request(t, http.MethodPost, "/api/timetable/periods/",
 			fmt.Sprintf(`{"name":"Entfernen-%d","period_type":"custom","start_date":"2041-08-01","end_date":"2041-08-31","is_active":false}`, time.Now().UnixNano()), &period)
@@ -55,7 +55,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 
 	t.Run("planning track administration", func(t *testing.T) {
 		type track struct {
-			ID         int64   `json:"id"`
+			ID         wireID  `json:"id"`
 			Name       string  `json:"name"`
 			SortOrder  int     `json:"sort_order"`
 			ArchivedAt *string `json:"archived_at"`
@@ -86,17 +86,17 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		offering := testpkg.CreateTestCareOffering(t, db, phase.ID, "Randstunde")
 		var sources struct {
 			Offerings []struct {
-				ID         int64 `json:"id"`
-				PhaseID    int64 `json:"phase_id"`
-				TotalCount int   `json:"total_count"`
+				ID         wireID `json:"id"`
+				PhaseID    wireID `json:"phase_id"`
+				TotalCount int    `json:"total_count"`
 			} `json:"offerings"`
 		}
 		request(t, http.MethodGet, "/api/timetable/offering-sources", "", &sources)
 		var listed bool
 		for _, option := range sources.Offerings {
-			if option.ID == offering.ID {
+			if int64(option.ID) == offering.ID {
 				listed = true
-				assert.Equal(t, phase.ID, option.PhaseID)
+				assert.Equal(t, phase.ID, int64(option.PhaseID))
 			}
 		}
 		assert.True(t, listed, "the active care offering is a selectable source")
@@ -138,11 +138,11 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		require.NoError(t, err)
 
 		var saved struct {
-			StudentID int64  `json:"student_id"`
+			StudentID wireID `json:"student_id"`
 			Status    string `json:"status"`
 		}
 		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/operations/instances/%d/students/%d/homework-feedback", block.ID, child.ID), `{"status":"done"}`, &saved)
-		assert.Equal(t, child.ID, saved.StudentID)
+		assert.Equal(t, child.ID, int64(saved.StudentID))
 		assert.Equal(t, "done", saved.Status)
 		var stored string
 		require.NoError(t, db.NewRaw(`SELECT status FROM education.homework_feedback WHERE tenant_id = ? AND student_id = ?`, tenantID, child.ID).Scan(testpkg.Ctx(t), &stored))

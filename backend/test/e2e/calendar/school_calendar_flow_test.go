@@ -76,7 +76,7 @@ func TestSchoolCalendarHTTPFlow(t *testing.T) {
 	}
 	createRR := doJSON(t, router, http.MethodPost, "/school/calendar/appointments", token, appointment)
 	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
-	appointmentID := strconv.FormatInt(decodeE2E[createAppointmentE2EResponse](t, createRR.Body.Bytes()).Data.Appointment.ID, 10)
+	appointmentID := strconv.FormatInt(int64(decodeE2E[createAppointmentE2EResponse](t, createRR.Body.Bytes()).Data.Appointment.ID), 10)
 
 	listRR := doJSON(t, router, http.MethodGet, "/school/calendar/my"+days, token, nil)
 	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
@@ -101,7 +101,7 @@ func TestSchoolCalendarHTTPFlow(t *testing.T) {
 	require.Equal(t, http.StatusCreated, inviteRR.Code, inviteRR.Body.String())
 	invited := decodeE2E[createAppointmentE2EResponse](t, inviteRR.Body.Bytes())
 	require.Len(t, invited.Data.Recipients, 1)
-	respondPath := "/school/calendar/recipients/" + strconv.FormatInt(invited.Data.Recipients[0].ID, 10) + "/response"
+	respondPath := "/school/calendar/recipients/" + strconv.FormatInt(int64(invited.Data.Recipients[0].ID), 10) + "/response"
 	respondRR := doJSON(t, router, http.MethodPost, respondPath, token, map[string]any{"status": "accepted"})
 	require.Equal(t, http.StatusOK, respondRR.Code, respondRR.Body.String())
 	assert.Equal(t, "accepted", decodeE2E[statusE2EResponse](t, respondRR.Body.Bytes()).Data.Status)

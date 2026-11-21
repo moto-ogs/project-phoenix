@@ -19,7 +19,7 @@ const shiftLead = 5 * time.Minute
 
 // plannedShift is the part of a planned shift the clock-in needs.
 type plannedShift struct {
-	StaffID   int64  `json:"staff_id"`
+	StaffID   apiID  `json:"staff_id"`
 	StartTime string `json:"start_time"`
 	EndTime   string `json:"end_time"`
 	Cancelled bool   `json:"cancelled"`
@@ -41,15 +41,15 @@ func (staffClockInAction) Run(_ context.Context, rt *Runtime) error {
 	}
 	now := rt.Options.now().In(simulationBerlin)
 	for _, shift := range rt.Today.Shifts {
-		account, ok := accounts[shift.StaffID]
-		if !ok || shift.Cancelled || rt.ClockedInStaff[shift.StaffID] || !shiftDue(shift, now) {
+		account, ok := accounts[int64(shift.StaffID)]
+		if !ok || shift.Cancelled || rt.ClockedInStaff[int64(shift.StaffID)] || !shiftDue(shift, now) {
 			continue
 		}
 		clocked, err := rt.clockIn(account)
 		if err != nil {
 			return err
 		}
-		rt.ClockedInStaff[shift.StaffID] = true
+		rt.ClockedInStaff[int64(shift.StaffID)] = true
 		if clocked {
 			rt.Counts.StaffClockedIn++
 		} else {
@@ -181,7 +181,7 @@ func (rt *Runtime) onShiftAt(staffID int64, c wallClock) bool {
 		return true
 	}
 	return slices.ContainsFunc(rt.Today.Shifts, func(shift plannedShift) bool {
-		return shift.StaffID == staffID && shiftCovers(shift, c)
+		return int64(shift.StaffID) == staffID && shiftCovers(shift, c)
 	})
 }
 

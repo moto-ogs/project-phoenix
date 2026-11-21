@@ -66,8 +66,8 @@ func findOperatorSchool(rt *Runtime, schoolID int64) (map[string]any, error) {
 	}
 	var payload struct {
 		Data []struct {
-			ID             int64  `json:"id"`
-			OrganizationID int64  `json:"organization_id"`
+			ID             apiID  `json:"id"`
+			OrganizationID apiID  `json:"organization_id"`
 			Name           string `json:"name"`
 			Slug           string `json:"slug"`
 			Subdomain      string `json:"subdomain"`
@@ -84,7 +84,7 @@ func findOperatorSchool(rt *Runtime, schoolID int64) (map[string]any, error) {
 		return nil, fmt.Errorf("parse schools response: %w", err)
 	}
 	for _, school := range payload.Data {
-		if school.ID != schoolID {
+		if int64(school.ID) != schoolID {
 			continue
 		}
 		return map[string]any{

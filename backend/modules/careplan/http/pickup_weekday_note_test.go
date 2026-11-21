@@ -36,9 +36,9 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 
 	var created struct {
 		Data struct {
-			ID       int64  `json:"id"`
-			Weekday  int    `json:"weekday"`
-			NoteDate string `json:"note_date"`
+			ID       testpkg.ID `json:"id"`
+			Weekday  int        `json:"weekday"`
+			NoteDate string     `json:"note_date"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))

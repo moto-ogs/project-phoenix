@@ -38,14 +38,14 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 	var groups []int64
 	expectedGroups := map[int64]schoolHTTP.GroupResponse{group.ID: {ID: group.ID, Name: group.Name, CreatedAt: group.CreatedAt.UTC(), UpdatedAt: group.UpdatedAt.UTC()}}
 	type supervisorDTO struct {
-		ID             int64     `json:"id"`
-		StaffID        int64     `json:"staff_id"`
-		Specialization string    `json:"specialization"`
-		Role           string    `json:"role,omitempty"`
-		Qualifications string    `json:"qualifications,omitempty"`
-		FullName       string    `json:"full_name"`
-		CreatedAt      time.Time `json:"created_at"`
-		UpdatedAt      time.Time `json:"updated_at"`
+		ID             testpkg.ID `json:"id"`
+		StaffID        testpkg.ID `json:"staff_id"`
+		Specialization string     `json:"specialization"`
+		Role           string     `json:"role,omitempty"`
+		Qualifications string     `json:"qualifications,omitempty"`
+		FullName       string     `json:"full_name"`
+		CreatedAt      time.Time  `json:"created_at"`
+		UpdatedAt      time.Time  `json:"updated_at"`
 	}
 	var expectedSupervisors []supervisorDTO
 	groups = append(groups, group.ID)
@@ -65,7 +65,7 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 			students = append(students, schoolHTTP.GroupStudentResponse{ID: child.ID, PersonID: child.PersonID, FirstName: "Groups20", LastName: fmt.Sprintf("Child%02d", i), SchoolClass: "G20", GroupID: group.ID, GroupName: group.Name, Location: "Abwesend"})
 			teacher := testpkg.CreateTestTeacher(t, db, "Groups20", fmt.Sprintf("Teacher%02d", i))
 			testpkg.CreateTestGroupTeacher(t, db, group.ID, teacher.ID)
-			expectedSupervisors = append(expectedSupervisors, supervisorDTO{ID: teacher.ID, StaffID: teacher.StaffID, FullName: fmt.Sprintf("Groups20 Teacher%02d", i), CreatedAt: teacher.CreatedAt.UTC(), UpdatedAt: teacher.UpdatedAt.UTC()})
+			expectedSupervisors = append(expectedSupervisors, supervisorDTO{ID: testpkg.ID(teacher.ID), StaffID: testpkg.ID(teacher.StaffID), FullName: fmt.Sprintf("Groups20 Teacher%02d", i), CreatedAt: teacher.CreatedAt.UTC(), UpdatedAt: teacher.UpdatedAt.UTC()})
 			teachers = append(teachers, schoolHTTP.TeacherResponse{ID: teacher.ID, StaffID: teacher.StaffID, FirstName: "Groups20", LastName: fmt.Sprintf("Teacher%02d", i), FullName: fmt.Sprintf("Groups20 Teacher%02d", i)})
 		}
 		for len(groups) < n {

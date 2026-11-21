@@ -135,7 +135,7 @@ func TestLoginTimesUseWallClock(t *testing.T) {
 		{"caregiver", func(rt *Runtime) (time.Time, error) {
 			block := dayBlock{}
 			block.Staff = append(block.Staff, struct {
-				StaffID  int64 `json:"staff_id"`
+				StaffID  apiID `json:"staff_id"`
 				IsAbsent bool  `json:"is_absent"`
 			}{StaffID: 10})
 			_, err := rt.blockClient(block)

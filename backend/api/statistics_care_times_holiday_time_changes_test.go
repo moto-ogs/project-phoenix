@@ -33,8 +33,8 @@ func editHolidayTimesOn(t *testing.T, db *bun.DB, org, account int64, booking ow
 	require.NoError(t, db.NewRaw(`SELECT holiday_week_time_model_id FROM enrollment.holiday_registration_bookings
   WHERE organization_id = ? AND holiday_registration_child_id = ?`, org, booking.child).Scan(ctx, &model))
 	body := holidayPeriodBody{Name: "Sommerferien", RegistrationOpensOn: "2026-01-01", RegistrationClosesOn: "2026-06-01",
-		Weeks: []holidayWeekBody{{ID: booking.week, StartsOn: "2026-06-08", EndsOn: "2026-06-12", HostSchoolID: testpkg.Tenant(t),
-			TimeModels: []holidayTimeModelBody{{ID: model, Name: "Ganztag", StartsAt: start, EndsAt: end, PriceCents: 4500}}}}}
+		Weeks: []holidayWeekBody{{ID: wireID(booking.week), StartsOn: "2026-06-08", EndsOn: "2026-06-12", HostSchoolID: wireID(testpkg.Tenant(t)),
+			TimeModels: []holidayTimeModelBody{{ID: wireID(model), Name: "Ganztag", StartsAt: start, EndsAt: end, PriceCents: 4500}}}}}
 	principal, err := permissions.NewPrincipal(permissions.PrincipalInput{AccountID: account, OrganizationID: org, Scope: tenant.ScopeOrg, Permissions: []string{identityaccess.TraegerRightEnrollmentManage}})
 	require.NoError(t, err)
 	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil, func() time.Time { return on.BerlinMidnight().Add(10 * time.Hour) })

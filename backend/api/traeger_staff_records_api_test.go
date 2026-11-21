@@ -195,40 +195,40 @@ type staffOverviewBody struct {
 		Representation string `json:"representation"`
 	} `json:"release"`
 	Schools []struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"schools"`
 	Records     []staffRecordBody `json:"records"`
 	Suggestions []struct {
-		Reason   string `json:"reason"`
-		RecordID *int64 `json:"staff_record_id"`
+		Reason   string  `json:"reason"`
+		RecordID *wireID `json:"staff_record_id"`
 		Members  []struct {
-			SchoolID int64  `json:"school_id"`
-			StaffID  int64  `json:"staff_id"`
+			SchoolID wireID `json:"school_id"`
+			StaffID  wireID `json:"staff_id"`
 			LastName string `json:"last_name"`
 		} `json:"members"`
 	} `json:"suggestions"`
 }
 
 type staffRecordBody struct {
-	ID              int64   `json:"id"`
+	ID              wireID  `json:"id"`
 	FirstName       string  `json:"first_name"`
 	LastName        string  `json:"last_name"`
 	Birthday        string  `json:"birthday"`
 	PersonnelNumber *string `json:"personnel_number"`
 	HasFinancial    bool    `json:"has_financial"`
 	Employments     []struct {
-		SchoolID int64 `json:"school_id"`
-		StaffID  int64 `json:"staff_id"`
-		Active   bool  `json:"active"`
+		SchoolID wireID `json:"school_id"`
+		StaffID  wireID `json:"staff_id"`
+		Active   bool   `json:"active"`
 	} `json:"employments"`
 	Financial struct {
 		IBAN *string `json:"iban"`
 	} `json:"financial"`
 	Changes []struct {
-		Kind     string `json:"kind"`
-		Field    string `json:"field"`
-		Value    string `json:"value"`
-		SchoolID *int64 `json:"school_id"`
+		Kind     string  `json:"kind"`
+		Field    string  `json:"field"`
+		Value    string  `json:"value"`
+		SchoolID *wireID `json:"school_id"`
 	} `json:"changes"`
 }
 
@@ -273,7 +273,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		first := overview.Suggestions[0]
 		assert.Equal(t, workforce.TraegerStaffMatchAccount, first.Reason)
 		require.Len(t, first.Members, 2)
-		assert.ElementsMatch(t, []int64{miraNorth.ID, miraSouth.ID}, []int64{first.Members[0].StaffID, first.Members[1].StaffID})
+		assert.ElementsMatch(t, []int64{miraNorth.ID, miraSouth.ID}, []int64{int64(first.Members[0].StaffID), int64(first.Members[1].StaffID)})
 		assert.Equal(t, map[int64]int{north: 1, south: 1}, staffAccessEntries(t, db, office.organization, "traeger_staff_records"),
 			"each school whose people the overview shows logs the read")
 	})
@@ -339,7 +339,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 				assert.Equal(t, "last_name", change.Field)
 				assert.Equal(t, "Sommer", change.Value)
 				require.NotNil(t, change.SchoolID)
-				assert.Equal(t, north, *change.SchoolID, "the value not taken keeps its school")
+				assert.Equal(t, north, int64(*change.SchoolID), "the value not taken keeps its school")
 			}
 		}
 		assert.Equal(t, 1, notChosen)
@@ -374,7 +374,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"iban": "DE89 3704 0044 0532 0130 00"})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, record.ID, decode[struct {
-			ID int64 `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec).ID)
 		rec = traegerJSON(t, router, office.token, http.MethodGet, path, nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

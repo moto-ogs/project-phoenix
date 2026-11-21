@@ -62,7 +62,7 @@ func TestWorkforce20StaffSessionGrowth(t *testing.T) {
 					}
 				case "month-summary":
 					data := staffGrowthData(t, rec).(map[string]any)
-					require.Equal(t, float64(f.staff), data["staff_id"])
+					require.Equal(t, int64(f.staff), testpkg.JSONID(t, data["staff_id"]))
 					require.Equal(t, float64(n*480), data["actual_minutes"])
 				case "schedule-targets":
 					rows := staffGrowthData(t, rec).([]any)
@@ -81,7 +81,7 @@ func TestWorkforce20StaffSessionGrowth(t *testing.T) {
 					require.Len(t, rows, n)
 					for i, row := range rows {
 						data := row.(map[string]any)
-						require.Equal(t, float64(edits[n-1-i]), data["id"])
+						require.Equal(t, int64(edits[n-1-i]), testpkg.JSONID(t, data["id"]))
 						require.Equal(t, fmt.Sprintf("Edit %02d", n-1-i), data["new_value"])
 						require.Equal(t, "Growth Reader", data["editor_name"])
 						require.Equal(t, true, data["is_self_edit"])

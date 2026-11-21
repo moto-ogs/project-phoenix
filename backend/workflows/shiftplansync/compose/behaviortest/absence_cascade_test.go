@@ -116,12 +116,12 @@ func TestAbsenceCascade_ApprovedVacationLeavesThePlansUntilWithdrawn(t *testing.
 	marked := e.eventsFor(t, requester.staffID, vacationDay, "absence")
 	require.Len(t, marked, 1, "the history logs an ordinary absence")
 	var cause struct {
-		Cause     string `json:"cause"`
-		AbsenceID int64  `json:"absence_id"`
+		Cause     string     `json:"cause"`
+		AbsenceID testpkg.ID `json:"absence_id"`
 	}
 	require.NoError(t, json.Unmarshal(marked[0].NewValue, &cause))
 	assert.Equal(t, "absence", cause.Cause)
-	assert.Equal(t, absenceID, cause.AbsenceID)
+	assert.Equal(t, absenceID, int64(cause.AbsenceID))
 
 	e.inTx(t, func(ctx context.Context) error {
 		return e.absences.SickReports.CancelAbsence(ctx, requester.staffID, requester.accountID, absenceID)

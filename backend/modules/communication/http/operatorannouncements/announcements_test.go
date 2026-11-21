@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // Test constants used in mock assertions (not DB-dependent)
@@ -412,7 +413,7 @@ func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 	var response map[string]any
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	data := response["data"].(map[string]any)
-	assert.Equal(t, float64(3), data["target_org_ids"].([]any)[0])
+	assert.Equal(t, []int64{3}, testpkg.JSONIDs(t, data["target_org_ids"]))
 	tenantIDs := data["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
 	assert.Equal(t, float64(7), tenantIDs[0])
@@ -921,7 +922,7 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	require.Len(t, data, 2)
 
 	first := data[0].(map[string]any)
-	assert.Equal(t, float64(10), first["user_id"])
+	assert.Equal(t, int64(10), testpkg.JSONID(t, first["user_id"]))
 	assert.Equal(t, "Max Mustermann", first["user_name"])
 	assert.NotEmpty(t, first["seen_at"])
 	assert.Equal(t, shownAt.Format(time.RFC3339), first["shown_at"])

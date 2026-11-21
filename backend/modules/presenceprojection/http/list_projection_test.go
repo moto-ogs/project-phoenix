@@ -22,14 +22,14 @@ func listStudentIDs(t *testing.T, body []byte) []int64 {
 
 	var envelope struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(body, &envelope))
 
 	ids := make([]int64, 0, len(envelope.Data))
 	for _, row := range envelope.Data {
-		ids = append(ids, row.ID)
+		ids = append(ids, int64(row.ID))
 	}
 	return ids
 }

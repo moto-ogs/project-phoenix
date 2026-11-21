@@ -13,6 +13,7 @@ import (
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 func setupEditedInWindowRouter(rs *Resource) chi.Router {
@@ -72,7 +73,7 @@ func TestEditedInWindow_Success(t *testing.T) {
 
 	first, ok := occ[0].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, float64(101), first["instance_id"])
+	assert.Equal(t, int64(101), testpkg.JSONID(t, first["instance_id"]))
 	assert.Equal(t, "2026-04-20", first["date"])
 	assert.Equal(t, "15:00:00", first["start_time"])
 	assert.Equal(t, "Fußball AG", first["title"])

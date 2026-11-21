@@ -67,12 +67,12 @@ func decodeShiftTypeID(t *testing.T, response *http.Response) int64 {
 	defer func() { _ = response.Body.Close() }()
 	var envelope struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.NewDecoder(response.Body).Decode(&envelope))
 	require.NotZero(t, envelope.Data.ID)
-	return envelope.Data.ID
+	return int64(envelope.Data.ID)
 }
 
 func TestShiftTypesRouteCreatesWithCategoryLinks(t *testing.T) {
@@ -156,13 +156,13 @@ func TestShiftTypesRouteRejectsUnknownCategoryIDsAndRollsBack(t *testing.T) {
 	require.Equal(t, http.StatusOK, listed.StatusCode)
 	var envelope struct {
 		Data []struct {
-			ID   int64  `json:"id"`
+			ID   wireID `json:"id"`
 			Name string `json:"name"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.NewDecoder(listed.Body).Decode(&envelope))
 	for _, entry := range envelope.Data {
-		if entry.ID == typeID {
+		if int64(entry.ID) == typeID {
 			assert.Equal(t, name, entry.Name, "the rejected rename must roll back with the mapping")
 		}
 	}
