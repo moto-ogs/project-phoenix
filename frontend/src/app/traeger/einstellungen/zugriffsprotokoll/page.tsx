@@ -41,6 +41,7 @@ import {
   type TraegerAccessLogFilter,
   type TraegerAccessLogPage,
 } from "~/lib/traeger-api";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerAccessLogPage" });
 
@@ -103,7 +104,7 @@ const COLUMNS: DataTableColumn<TraegerAccessLogEntry>[] = [
     render: (entry) => (
       <StatusBadge
         tone={entry.kind === "change" ? "orange" : "blue"}
-        label={KIND_LABELS[entry.kind]}
+        label={labelOf(KIND_LABELS, entry.kind, "–")}
       />
     ),
     stacked: "field",
@@ -124,7 +125,7 @@ const COLUMNS: DataTableColumn<TraegerAccessLogEntry>[] = [
         </span>
         <StatusBadge
           tone={entry.kind === "change" ? "orange" : "blue"}
-          label={KIND_LABELS[entry.kind]}
+          label={labelOf(KIND_LABELS, entry.kind, "–")}
         />
         {entry.schoolName ? (
           <span className="basis-full">

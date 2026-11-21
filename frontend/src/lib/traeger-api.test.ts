@@ -19,6 +19,7 @@ import {
   fetchHolidayPeriods,
   fetchTraegerBuero,
   fetchTraegerSchools,
+  fetchTraegerSchoolsAlerts,
   publishHolidayPeriod,
   traegerLogin,
   updateHolidayPeriod,
@@ -349,11 +350,11 @@ describe("traeger-api", () => {
         status: "success",
         data: [
           {
-            id: 2,
+            id: "2",
             name: "OGS Am Bach",
             slug: "am-bach",
             subdomain: "am-bach",
-            city: null,
+            city: "",
           },
         ],
       }),
@@ -371,18 +372,63 @@ describe("traeger-api", () => {
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/traeger/schools");
   });
 
+  // ADR 0270 point 6: a hint kind a newer backend adds is left out instead
+  // of reaching the dashboard as a known kind (#2353).
+  it("keeps only the dashboard hints this build knows", async () => {
+    const figures = {
+      children_total: 10,
+      children_present: 8,
+      children_sick: 2,
+      staff_total: 2,
+      staff_present: 1,
+      care_ratio: 8,
+      as_of: "2026-09-09T10:00:00+02:00",
+    };
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          thresholds: {
+            children_per_staff: 6,
+            sick_percent: 20,
+            open_enrollments: 5,
+          },
+          schools: [
+            {
+              id: "2",
+              name: "OGS Am Bach",
+              slug: "am-bach",
+              subdomain: "am-bach",
+              city: "",
+              figures,
+              open_enrollments: 0,
+              alerts: ["staff_shortage", "heat_warning"],
+            },
+          ],
+          as_of: "2026-09-09T10:00:00+02:00",
+        },
+      }),
+    );
+    const alerts = await fetchTraegerSchoolsAlerts();
+    expect(alerts.schools[0]?.alerts).toEqual(["staff_shortage"]);
+  });
+
   it("maps the Träger-Büro and keeps only known roles (#4650)", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
         data: {
           members: [
-            { account_id: 3, email: "a@b.de", roles: ["billing", "unknown"] },
-            { account_id: 4, email: "e@f.de", name: "Eva Müller", roles: [] },
+            {
+              account_id: "3",
+              email: "a@b.de",
+              name: "",
+              roles: ["billing", "unknown"],
+            },
+            { account_id: "4", email: "e@f.de", name: "Eva Müller", roles: [] },
           ],
           invitations: [
             {
-              id: 9,
+              id: "9",
               email: "c@d.de",
               roles: ["read_only"],
               expires_at: "2026-09-11T10:00:00Z",
@@ -432,7 +478,7 @@ describe("traeger-api", () => {
       jsonResponse(200, {
         status: "success",
         data: {
-          account_id: 4,
+          account_id: "4",
           email: "e@f.de",
           name: "Eva Müller",
           roles: ["billing"],
@@ -458,13 +504,13 @@ describe("traeger-api", () => {
       .mockResolvedValueOnce(
         jsonResponse(200, {
           status: "success",
-          data: { account_id: 4, email: "e@f.de", name: "" },
+          data: { account_id: "4", email: "e@f.de", name: "" },
         }),
       )
       .mockResolvedValueOnce(
         jsonResponse(200, {
           status: "success",
-          data: { account_id: 4, email: "e@f.de", name: "Eva" },
+          data: { account_id: "4", email: "e@f.de", name: "Eva" },
         }),
       );
 
@@ -499,7 +545,7 @@ describe("traeger-api holiday periods", () => {
   });
 
   const backendPeriod = {
-    id: 5,
+    id: "5",
     name: "Osterferien",
     registration_opens_on: "2027-01-11",
     registration_closes_on: "2027-02-26",
@@ -509,13 +555,13 @@ describe("traeger-api holiday periods", () => {
     published_at: null,
     weeks: [
       {
-        id: 7,
+        id: "7",
         starts_on: "2027-03-22",
         ends_on: "2027-03-26",
-        host_school_id: 31,
+        host_school_id: "31",
         time_models: [
           {
-            id: 9,
+            id: "9",
             name: "bis 13 Uhr",
             starts_at: "08:00",
             ends_at: "13:00",
@@ -656,7 +702,7 @@ describe("traeger-api holiday periods", () => {
           },
           bank_accounts: [
             {
-              id: 7,
+              id: "7",
               label: "Elternbeiträge",
               account_holder: "Träger e.V.",
               iban: "DE89370400440532013000",
@@ -697,7 +743,7 @@ describe("traeger-api holiday periods", () => {
       jsonResponse(201, {
         status: "success",
         data: {
-          id: 9,
+          id: "9",
           label: "Mensa",
           account_holder: "Träger e.V.",
           iban: "GB82WEST12345698765432",
