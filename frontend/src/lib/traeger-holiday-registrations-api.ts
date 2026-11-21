@@ -12,11 +12,8 @@ import {
   debtorNumberFormatOf,
 } from "~/lib/debtor-number-format";
 import {
-  holidayAddressRequirement,
-  holidayLegalBlocks,
-  type HolidayFormField,
+  holidayFormVersionFromContract,
   type HolidayFormVersion,
-  type HolidayLegalBlockWire,
 } from "~/lib/holiday-form-field";
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum, requiredEnum } from "./contract/known-enum";
@@ -24,7 +21,6 @@ import { requiredDay } from "./contract/required-day";
 import type {
   HolidayBookingChange as WireBookingChange,
   HolidayCriterionCheck as WireCheck,
-  HolidayPeriodForm as WireForm,
   HolidayRegistrationBooking as WireBooking,
   HolidayRegistrationChild as WireChild,
   HolidayRegistrationDetail as WireDetail,
@@ -431,20 +427,6 @@ export interface HolidayRegistrationDetail extends HolidayRegistrationSummary {
   readonly mails?: readonly HolidayRegistrationMail[];
 }
 
-/**
- * The detail as the contract decodes it, with the form questions and legal
- * blocks in the shape of the online registration's form schema: their open
- * enums follow with the form schema client, not here.
- */
-type DetailWire = Omit<WireDetail, "form"> & {
-  form:
-    | (Omit<WireForm, "fields" | "legal_blocks"> & {
-        fields: HolidayFormField[] | null;
-        legal_blocks: HolidayLegalBlockWire[] | null;
-      })
-    | null;
-};
-
 /** The days of a list the decoder may leave null, without the empty ones. */
 function presentDays(days: readonly (string | null)[] | null | undefined) {
   return (days ?? []).filter((day): day is string => day !== null);
@@ -586,7 +568,7 @@ function changesFromBackend(
  * unknown action, a decision or a wish it would have to guess.
  */
 function historyFromBackend(
-  history: DetailWire["history"],
+  history: WireDetail["history"],
 ): HolidayRegistrationEvent[] {
   return (history ?? []).flatMap((event) => {
     const action = knownEnum(EVENT_ACTIONS, event.action);
@@ -630,7 +612,7 @@ function historyFromBackend(
 
 /** A criterion with a scope or answer this build does not know drops out. */
 function criteriaFromBackend(
-  criteria: DetailWire["criteria"],
+  criteria: WireDetail["criteria"],
 ): HolidayRegistrationCriterion[] {
   return (criteria ?? []).flatMap((criterion) => {
     const scope = knownEnum(CRITERION_SCOPES, criterion.scope);
@@ -662,7 +644,7 @@ function criteriaFromBackend(
  * value this build does not know fails the read instead of being guessed.
  */
 function detailFromBackend(
-  registration: DetailWire,
+  registration: WireDetail,
 ): HolidayRegistrationDetail {
   return {
     ...summaryFromBackend(registration),
@@ -709,14 +691,14 @@ function detailFromBackend(
     })),
     history: historyFromBackend(registration.history),
     legalAcceptances: registration.legal_acceptances ?? {},
-    form: {
-      legalBlocks: holidayLegalBlocks(registration.form?.legal_blocks),
-      version: registration.form?.version ?? 0,
-      fields: registration.form?.fields ?? [],
-      addressRequirement: holidayAddressRequirement(
-        registration.form?.address_requirement,
-      ),
-    },
+    // The answers render along the pinned version; a question this build
+    // does not know fails the read rather than hiding its answer.
+    form: registration.form
+      ? holidayFormVersionFromContract(
+          registration.form,
+          "HolidayRegistrationDetail.form",
+        )
+      : { legalBlocks: [], version: 0, fields: [], addressRequirement: "off" },
     answers: registration.custom_data ?? {},
     childAnswers: Object.fromEntries(
       (registration.child_custom_data ?? []).map((entry) => [
@@ -767,7 +749,7 @@ export async function uploadHolidayProof(
     { method: "POST", body, credentials: "include" },
   );
   const payload = (await response.json().catch(() => null)) as {
-    data?: DetailWire;
+    data?: WireDetail;
   } | null;
   if (!response.ok || !payload?.data) {
     throw apiErrorFromBody(
@@ -822,7 +804,7 @@ export async function fetchHolidayRegistration(
   registrationId: string,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<DetailWire>(
+    await traegerRequest<WireDetail>(
       registrationPath(periodId, registrationId),
     ),
   );
@@ -925,7 +907,7 @@ export async function changeHolidayRegistration(
   action: HolidayRegistrationAction,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<DetailWire>(
+    await traegerRequest<WireDetail>(
       `${registrationPath(periodId, registrationId)}/${action}`,
       { method: "POST", body: {} },
     ),
@@ -942,7 +924,7 @@ export async function checkHolidayRegistrationCriteria(
   checks: readonly HolidayCriterionCheck[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<DetailWire>(
+    await traegerRequest<WireDetail>(
       `${registrationPath(periodId, registrationId)}/criteria`,
       {
         method: "PUT",
@@ -969,7 +951,7 @@ export async function setHolidayChildWish(
   wish: "yes" | "no",
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<DetailWire>(
+    await traegerRequest<WireDetail>(
       `${registrationPath(periodId, registrationId)}/children/${encodeURIComponent(childId)}/holiday-wish`,
       { method: "PUT", body: { wish } satisfies HolidayWishRequest },
     ),
@@ -984,7 +966,7 @@ export async function rebookHolidayChild(
   bookings: readonly HolidayBookingChange[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<DetailWire>(
+    await traegerRequest<WireDetail>(
       `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}/children/${encodeURIComponent(childId)}/bookings`,
       {
         method: "PUT",
@@ -1123,7 +1105,7 @@ export async function editHolidayRegistration(
   edit: HolidayRegistrationEdit,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<DetailWire>(
+    await traegerRequest<WireDetail>(
       `${registrationPath(periodId, registrationId)}/details`,
       { method: "PUT", body: holidayRegistrationEditBody(edit) },
     ),
