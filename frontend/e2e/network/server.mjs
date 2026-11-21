@@ -149,7 +149,7 @@ const api = createServer(async (req, res) => {
     data = envelope({
       entries: [
         {
-          id: 7,
+          id: "7",
           type: "test",
           title: "Hinweis",
           body: "Text",
