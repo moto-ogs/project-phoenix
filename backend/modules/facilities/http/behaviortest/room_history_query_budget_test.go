@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	httpadapter "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -155,7 +156,7 @@ func TestRoomHistoryQueryBudget(t *testing.T) {
 			require.False(t, seen[entry.SessionID.Int64()], "duplicate session")
 			seen[entry.SessionID.Int64()] = true
 			// Starts are distinct, so the SQL's start_time DESC ordering is exact.
-			require.Equal(t, createdSessionIDs[n-1-index], entry.SessionID)
+			require.Equal(t, ident.ID(createdSessionIDs[n-1-index]), entry.SessionID)
 			require.True(t, entry.StartedAt.Equal(want.startedAt))
 			require.Equal(t, want.activityName, entry.ActivityName)
 			require.Equal(t, want.supervisorName, entry.SupervisorName)

@@ -61,7 +61,7 @@ func TestGroupRepository_Create(t *testing.T) {
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(group.ID))
 		require.NoError(t, err)
 		require.NotNil(t, found.RoomID)
-		assert.Equal(t, room.ID, *found.RoomID)
+		assert.Equal(t, ident.ID(room.ID), *found.RoomID)
 
 	})
 }
@@ -79,7 +79,7 @@ func TestGroupRepository_FindByID(t *testing.T) {
 
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(group.ID))
 		require.NoError(t, err)
-		assert.Equal(t, group.ID, found.ID)
+		assert.Equal(t, ident.ID(group.ID), found.ID)
 		assert.Contains(t, found.Name, "FindByID")
 	})
 
@@ -210,7 +210,7 @@ func TestGroupRepository_FindByName(t *testing.T) {
 
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByName, group.Name)
 		require.NoError(t, err)
-		assert.Equal(t, group.ID, found.ID)
+		assert.Equal(t, ident.ID(group.ID), found.ID)
 	})
 
 	t.Run("returns error for non-existent name", func(t *testing.T) {
@@ -453,7 +453,7 @@ func TestGroupRepository_ListWithRooms_Advanced(t *testing.T) {
 		groups, err := testpkg.TenantQuery1(t, ctx, db, repo.ListWithRooms, &schoolStructureCompose.GroupListQuery{NameContains: "CombinedTest", Limit: 5})
 		require.NoError(t, err)
 		require.Len(t, groups, 1)
-		assert.Equal(t, combined.ID, groups[0].ID)
+		assert.Equal(t, ident.ID(combined.ID), groups[0].ID)
 	})
 
 	t.Run("counts the filtered groups without pagination", func(t *testing.T) {
@@ -528,7 +528,7 @@ func TestGroupWritesStayInsideTheCallerTenant(t *testing.T) {
 		kept, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(foreign.ID))
 		require.NoError(t, err)
 		assert.Equal(t, foreign.Name, kept.Name)
-		assert.Equal(t, foreignTenant, kept.TenantID)
+		assert.Equal(t, ident.ID(foreignTenant), kept.TenantID)
 		return nil
 	}))
 }

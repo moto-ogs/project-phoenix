@@ -10,6 +10,7 @@ import (
 	portal "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	calendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -69,7 +70,7 @@ func TestGuardianRecipientReadStatements(t *testing.T) {
 						detail, err := service.CancelStaffAppointment(txCtx, id)
 						require.NoError(t, err)
 						require.NotNil(t, detail.Appointment.CancelledAt)
-						require.Equal(t, id, detail.Appointment.ID)
+						require.Equal(t, ident.ID(id), detail.Appointment.ID)
 						require.Len(t, detail.Recipients, 1)
 					}
 					return nil

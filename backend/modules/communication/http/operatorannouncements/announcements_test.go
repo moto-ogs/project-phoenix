@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -871,7 +872,7 @@ func TestGetStats_ResponseStructure(t *testing.T) {
 	mock := &mockAnnouncementService{
 		getStatsFn: func(_ context.Context, id int64) (*platform.AnnouncementStats, error) {
 			return &platform.AnnouncementStats{
-				AnnouncementID: id,
+				AnnouncementID: ident.ID(id),
 				TargetCount:    42,
 				SeenCount:      10,
 				DismissedCount: 3,

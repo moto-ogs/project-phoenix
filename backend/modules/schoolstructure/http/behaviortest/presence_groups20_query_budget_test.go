@@ -11,6 +11,7 @@ import (
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	schoolHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,7 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 	var students []schoolHTTP.GroupStudentResponse
 	var teachers []schoolHTTP.TeacherResponse
 	var groups []int64
-	expectedGroups := map[int64]schoolHTTP.GroupResponse{group.ID: {ID: group.ID, Name: group.Name, CreatedAt: group.CreatedAt.UTC(), UpdatedAt: group.UpdatedAt.UTC()}}
+	expectedGroups := map[int64]schoolHTTP.GroupResponse{group.ID: {ID: ident.ID(group.ID), Name: group.Name, CreatedAt: group.CreatedAt.UTC(), UpdatedAt: group.UpdatedAt.UTC()}}
 	type supervisorDTO struct {
 		ID             testpkg.ID `json:"id"`
 		StaffID        testpkg.ID `json:"staff_id"`
@@ -66,12 +67,12 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 			teacher := testpkg.CreateTestTeacher(t, db, "Groups20", fmt.Sprintf("Teacher%02d", i))
 			testpkg.CreateTestGroupTeacher(t, db, group.ID, teacher.ID)
 			expectedSupervisors = append(expectedSupervisors, supervisorDTO{ID: testpkg.ID(teacher.ID), StaffID: testpkg.ID(teacher.StaffID), FullName: fmt.Sprintf("Groups20 Teacher%02d", i), CreatedAt: teacher.CreatedAt.UTC(), UpdatedAt: teacher.UpdatedAt.UTC()})
-			teachers = append(teachers, schoolHTTP.TeacherResponse{ID: teacher.ID, StaffID: teacher.StaffID, FirstName: "Groups20", LastName: fmt.Sprintf("Teacher%02d", i), FullName: fmt.Sprintf("Groups20 Teacher%02d", i)})
+			teachers = append(teachers, schoolHTTP.TeacherResponse{ID: ident.ID(teacher.ID), StaffID: ident.ID(teacher.StaffID), FirstName: "Groups20", LastName: fmt.Sprintf("Teacher%02d", i), FullName: fmt.Sprintf("Groups20 Teacher%02d", i)})
 		}
 		for len(groups) < n {
 			g := testpkg.CreateTestEducationGroup(t, db, fmt.Sprintf("Groups20List%02d", len(groups)))
 			groups = append(groups, g.ID)
-			expectedGroups[g.ID] = schoolHTTP.GroupResponse{ID: g.ID, Name: g.Name, CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC()}
+			expectedGroups[g.ID] = schoolHTTP.GroupResponse{ID: ident.ID(g.ID), Name: g.Name, CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC()}
 		}
 		target := expectedGroups[group.ID]
 		target.StudentCount = n
@@ -101,12 +102,12 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				var ids []int64
 				for _, row := range rows {
-					ids = append(ids, row.ID)
+					ids = append(ids, row.ID.Int64())
 					row.CreatedAt = row.CreatedAt.UTC()
 					row.UpdatedAt = row.UpdatedAt.UTC()
-					require.Equal(t, expectedGroups[row.ID], row)
+					require.Equal(t, expectedGroups[row.ID.Int64()], row)
 					require.NotEqual(t, hidden.ID, row.ID)
-					if row.ID == group.ID {
+					if row.ID == ident.ID(group.ID) {
 						require.Equal(t, n, row.StudentCount)
 						require.Equal(t, teachers, row.Teachers)
 					}

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -35,7 +36,7 @@ func TestGroupRecordCompositionPreservesEqualityFilterValues(t *testing.T) {
 	rows, err := testpkg.TenantQuery1(t, ctx, db, repo.List, map[string]any{"created_at": stored.CreatedAt.Format(time.RFC3339Nano)})
 	require.NoError(t, err)
 	require.Len(t, rows, 1, "a timestamp string stays a SQL equality predicate")
-	require.Equal(t, group.ID, rows[0].ID)
+	require.Equal(t, ident.ID(group.ID), rows[0].ID)
 	err = testpkg.WithTenantTx(t, context.Background(), db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
 		_, err := testpkg.TenantQuery1(t, ctx, db, repo.List, map[string]any{"name": 42})
 		return err

@@ -668,10 +668,10 @@ func TestListInstances_IncludesWindowConflictWarnings(t *testing.T) {
 	require.Len(t, warningsA, 1)
 	require.Len(t, warningsB, 1)
 	assert.Equal(t, timetable.ConflictKindStudent, warningsA[0].Kind)
-	assert.Equal(t, student.ID, warningsA[0].ResourceID)
+	assert.Equal(t, ident.ID(student.ID), warningsA[0].ResourceID)
 	assert.True(t, warningsA[0].CanOverride)
-	assert.Equal(t, instB.ID, warningsA[0].ConflictingInstanceID)
-	assert.Equal(t, instA.ID, warningsB[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(instB.ID), warningsA[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(instA.ID), warningsB[0].ConflictingInstanceID)
 	assert.NotEmpty(t, warningsA[0].Fingerprint)
 	assert.Equal(t, warningsA[0].Fingerprint, warningsB[0].Fingerprint,
 		"mirrored warnings must share one fingerprint")

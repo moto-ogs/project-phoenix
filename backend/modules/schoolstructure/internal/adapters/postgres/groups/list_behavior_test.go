@@ -30,7 +30,7 @@ func TestGroupRepositoryListWithRoomsPreservesJoinSortPaginationAndEmptySlice(t 
 	require.Len(t, rows, 1)
 	assert.Equal(t, beta.ID, rows[0].ID)
 	require.NotNil(t, rows[0].Room)
-	assert.Equal(t, room.ID, rows[0].Room.ID)
+	assert.Equal(t, ident.ID(room.ID), rows[0].Room.ID)
 	assert.Equal(t, room.Name, rows[0].Room.Name)
 	total, err := testpkg.TenantQuery1(t, ctx, db, repo.CountGroups, query)
 	require.NoError(t, err)
@@ -55,10 +55,10 @@ func TestGroupNameSearchIgnoresAccents(t *testing.T) {
 	listed, err := testpkg.TenantQuery1(t, ctx, db, repo.ListWithRooms, &schoolStructureCompose.GroupListQuery{NameContains: "gruppe ciric"})
 	require.NoError(t, err)
 	require.Len(t, listed, 1)
-	assert.Equal(t, wanted.ID, listed[0].ID)
+	assert.Equal(t, ident.ID(wanted.ID), listed[0].ID)
 
 	filtered, err := testpkg.TenantQuery1(t, ctx, db, repo.List, map[string]any{"name_like": "gruppe ciric"})
 	require.NoError(t, err)
 	require.Len(t, filtered, 1)
-	assert.Equal(t, wanted.ID, filtered[0].ID)
+	assert.Equal(t, ident.ID(wanted.ID), filtered[0].ID)
 }

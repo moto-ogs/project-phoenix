@@ -141,7 +141,7 @@ func TestStaffRecipientStatus(t *testing.T) {
 	recipient := staffRecipient(recipients, staffID)
 	require.NotNil(t, recipient)
 	assert.Equal(t, appointmentcap.ResponseStatusAccepted, recipient.Status)
-	assert.Equal(t, int64(101), recipient.ID)
+	assert.Equal(t, ident.ID(int64(101)), recipient.ID)
 
 	assert.Nil(t, staffRecipient(recipients, 99))
 }

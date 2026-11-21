@@ -19,6 +19,7 @@ import (
 	organizationTenancyCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -49,7 +50,7 @@ func statusDay(t *testing.T, db *bun.DB, school, student int64, day calendar.Dat
 func keyDateSchoolOf(t *testing.T, report traegerview.KeyDateReport, school int64) traegerview.KeyDateSchool {
 	t.Helper()
 	for _, row := range report.Schools {
-		if row.ID == school {
+		if row.ID == ident.ID(school) {
 			return row
 		}
 	}
@@ -139,7 +140,7 @@ func TestTraegerKeyDateReportCountsChildrenStaffAbsencesAndDemand(t *testing.T) 
 	assert.Equal(t, traegerview.ReportWindow{From: calendar.NewDate(2026, time.August, 1), To: reportKeyDate}, *report.AbsenceWindow)
 	assert.Empty(t, report.Districts, "the standard report has no Sozialraum")
 	require.Len(t, report.Schools, 2)
-	assert.Equal(t, []int64{fixture.park, fixture.linden}, []int64{report.Schools[0].ID, report.Schools[1].ID}, "ordered by name")
+	assert.Equal(t, []int64{fixture.park, fixture.linden}, []int64{report.Schools[0].ID.Int64(), report.Schools[1].ID.Int64()}, "ordered by name")
 
 	park := keyDateSchoolOf(t, report, fixture.park)
 	assert.Nil(t, park.District)
@@ -181,7 +182,7 @@ func TestTraegerKeyDateReportFollowsItsTemplate(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	report := decodeSchoolPortalData[traegerview.KeyDateReport](t, rec.Body.Bytes())
 	require.NotNil(t, report.Template)
-	assert.Equal(t, traegerview.KeyDateReportTemplate{ID: int64(template.ID), Name: "Jugendamt Stichtag"}, *report.Template)
+	assert.Equal(t, traegerview.KeyDateReportTemplate{ID: ident.ID(int64(template.ID)), Name: "Jugendamt Stichtag"}, *report.Template)
 	assert.Equal(t, []string{"children", "demand"}, report.Sections)
 	assert.Nil(t, report.AbsenceWindow, "the template shows no absences")
 	park := keyDateSchoolOf(t, report, fixture.park)

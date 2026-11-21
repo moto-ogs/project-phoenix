@@ -821,8 +821,8 @@ func TestTemplateSplitKeepsArchivedPlanningTrackAssignment(t *testing.T) {
 	successor := reloadSplitGroup(t, s, result.NewTemplateID)
 	require.NotNil(t, predecessor.PlanningTrackID)
 	require.NotNil(t, successor.PlanningTrackID)
-	assert.Equal(t, track.ID, *predecessor.PlanningTrackID)
-	assert.Equal(t, track.ID, *successor.PlanningTrackID)
+	assert.Equal(t, track.ID.Int64(), *predecessor.PlanningTrackID)
+	assert.Equal(t, track.ID.Int64(), *successor.PlanningTrackID)
 }
 
 func TestTemplateSplitPlanningTrackPresence(t *testing.T) {
@@ -861,7 +861,7 @@ func TestTemplateSplitPlanningTrackPresence(t *testing.T) {
 			successor := reloadSplitGroup(t, s, result.NewTemplateID)
 			if tt.wantTrack {
 				require.NotNil(t, successor.PlanningTrackID)
-				assert.Equal(t, track.ID, *successor.PlanningTrackID)
+				assert.Equal(t, track.ID.Int64(), *successor.PlanningTrackID)
 			} else {
 				assert.Nil(t, successor.PlanningTrackID)
 			}

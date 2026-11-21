@@ -126,7 +126,7 @@ func TestCalendarServiceIntegration_AppointmentReminders(t *testing.T) {
 		last := outbox.enqueued[len(outbox.enqueued)-1]
 		assert.Equal(t, emailKindAppointmentReminder, last.Kind)
 		assert.Equal(t, emailRelatedTypeAppointment, last.RelatedEntityType)
-		assert.Equal(t, detail.Appointment.ID, last.RelatedEntityID)
+		assert.Equal(t, detail.Appointment.ID.Int64(), last.RelatedEntityID)
 		assert.NotEmpty(t, last.IdempotencyKey,
 			"without a key a second tick would mail the same occurrence again")
 		assert.Contains(t, last.Payload, "recipient_email")

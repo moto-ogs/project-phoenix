@@ -20,6 +20,6 @@ func TestGuardianRecipientStatusRequiresBothGuardianAndVisibleStudent(t *testing
 	}
 	recipient := guardianRecipientForStudents(recipients, []int64{guardianID}, []int64{51})
 	require.NotNil(t, recipient)
-	assert.Equal(t, int64(12), recipient.ID, "the first matching recipient keeps its RSVP")
+	assert.Equal(t, ident.ID(int64(12)), recipient.ID, "the first matching recipient keeps its RSVP")
 	assert.Equal(t, appointmentcap.ResponseStatusAccepted, recipient.Status)
 }

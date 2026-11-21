@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -89,7 +90,7 @@ func TestTraegerClosingDaysStayWithTheirTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, view.ClosingDays, 1, "only the Träger's own closing day")
 		assert.Equal(t, "Brückentag", view.ClosingDays[0].Reason)
-		assert.Equal(t, []int64{own.schools[0]}, view.ClosingDays[0].SchoolIDs)
+		assert.Equal(t, []ident.ID{ident.ID(own.schools[0])}, view.ClosingDays[0].SchoolIDs)
 		require.Len(t, view.Holidays, 1, "the holidays of the schools' one federal state")
 		assert.Equal(t, "DE-BW", view.Holidays[0].Region.Code)
 

@@ -235,7 +235,7 @@ func TestCalendarServiceIntegration_CreateRecurringAppointmentAndResponses(t *te
 	require.NoError(t, err)
 	require.NotNil(t, detail)
 
-	assert.Equal(t, organizer.ID, detail.Appointment.OrganizerStaffID)
+	assert.Equal(t, ident.ID(organizer.ID), detail.Appointment.OrganizerStaffID)
 	require.Len(t, detail.Recipients, 2)
 	require.Len(t, detail.Targets, 2)
 	require.NotNil(t, detail.Recurrence)
@@ -422,7 +422,7 @@ func TestCalendarServiceIntegration_GuardianNotifications(t *testing.T) {
 	published := outbox.enqueued[0]
 	assert.Equal(t, emailKindAppointmentPublished, published.Kind)
 	assert.Equal(t, emailRelatedTypeAppointment, published.RelatedEntityType)
-	assert.Equal(t, detail.Appointment.ID, published.RelatedEntityID)
+	assert.Equal(t, detail.Appointment.ID.Int64(), published.RelatedEntityID)
 	assert.Equal(t, "Elternabend", published.Payload["title"])
 	assert.NotEmpty(t, published.Payload["recipient_email"])
 

@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +50,7 @@ func TestTimetableOperationsRosterCombinesPlannedStudentsAndLiveDropIns(t *testi
 	assert.Equal(t, "Anna Anlauf", roster.Rows[0].StudentName)
 	assert.True(t, roster.Rows[0].IsUnplanned)
 	assert.True(t, roster.Rows[0].CurrentlyPresent)
-	assert.Equal(t, &visitID, roster.Rows[0].VisitID)
+	assert.Equal(t, (*ident.ID)(&visitID), roster.Rows[0].VisitID)
 	assert.Equal(t, "Zoe Zimmer", roster.Rows[1].StudentName)
 	assert.True(t, roster.Rows[1].Planned)
 	assert.Equal(t, "OGS Blau", roster.Rows[1].GroupName)
@@ -100,7 +101,7 @@ func TestTimetableOperationsRosterFlagsParallelPresence(t *testing.T) {
 	}
 	flagged := rowsByStudent[540]
 	require.NotNil(t, flagged.ParallelPresentIn)
-	assert.Equal(t, otherInstanceID, flagged.ParallelPresentIn.InstanceID)
+	assert.Equal(t, ident.ID(otherInstanceID), flagged.ParallelPresentIn.InstanceID)
 	assert.Equal(t, "GT 1", flagged.ParallelPresentIn.Title)
 	assert.Equal(t, "12:45", flagged.ParallelPresentIn.StartTime)
 	assert.Equal(t, "13:45", flagged.ParallelPresentIn.EndTime)
@@ -181,7 +182,7 @@ func TestTimetableOperationsRosterKeepsAttendanceUsableWhenPickupTimesFail(t *te
 	require.NoError(t, err, "pickup data must not take down attendance control")
 	assert.False(t, roster.PickupTimesLoaded)
 	require.Len(t, roster.Rows, 1)
-	assert.Equal(t, int64(551), roster.Rows[0].StudentID)
+	assert.Equal(t, ident.ID(int64(551)), roster.Rows[0].StudentID)
 	assert.Nil(t, roster.Rows[0].PickupTime)
 }
 
@@ -417,9 +418,9 @@ func TestTimetableOperationsRosterFlagsArrivalAndClassMismatch(t *testing.T) {
 	assert.Equal(t, "14:30", *roster.Rows[0].Warnings[0].ExpectedArrival)
 	assert.Equal(t, "14:00", *roster.Rows[0].Warnings[0].SlotStart)
 	assert.Equal(t, "template_class_mismatch", roster.Rows[0].Warnings[1].Kind)
-	assert.Equal(t, expectedGroupID, *roster.Rows[0].Warnings[1].ExpectedGroupID)
+	assert.Equal(t, ident.ID(expectedGroupID), *roster.Rows[0].Warnings[1].ExpectedGroupID)
 	assert.Equal(t, "Klasse 2a", *roster.Rows[0].Warnings[1].ExpectedGroupName)
-	assert.Equal(t, actualGroupID, *roster.Rows[0].Warnings[1].CurrentEducationGroup)
+	assert.Equal(t, ident.ID(actualGroupID), *roster.Rows[0].Warnings[1].CurrentEducationGroup)
 }
 
 func TestTimetableOperationsRosterChecksAllGroupTargets(t *testing.T) {
@@ -477,7 +478,7 @@ func TestTimetableOperationsRosterChecksAllGroupTargets(t *testing.T) {
 	require.NotNil(t, mismatch)
 	assert.Nil(t, mismatch.ExpectedGroupID)
 	assert.Nil(t, mismatch.ExpectedGroupName)
-	assert.Equal(t, outsideGroupID, *mismatch.CurrentEducationGroup)
+	assert.Equal(t, ident.ID(outsideGroupID), *mismatch.CurrentEducationGroup)
 }
 
 func TestTimetableOperationsRosterWarningsBranches(t *testing.T) {
@@ -552,5 +553,5 @@ func TestTimetableOperationsRosterByActiveGroupSuccess(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, roster)
-	assert.Equal(t, instanceID, roster.Instance.ID)
+	assert.Equal(t, ident.ID(instanceID), roster.Instance.ID)
 }
