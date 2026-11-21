@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayGuestGroup is a group of the hosting school that is the
@@ -13,8 +14,8 @@ import (
 // stands empty until then; the school's lists name the week and the guests
 // instead of showing an unexplained empty group.
 type HolidayGuestGroup struct {
-	GroupID  int64         `json:"group_id"`
-	WeekID   int64         `json:"week_id"`
+	GroupID  ident.ID      `json:"group_id"`
+	WeekID   ident.ID      `json:"week_id"`
 	StartsOn calendar.Date `json:"starts_on"`
 	EndsOn   calendar.Date `json:"ends_on"`
 	// Guests counts the guests of the week whose access has not ended.

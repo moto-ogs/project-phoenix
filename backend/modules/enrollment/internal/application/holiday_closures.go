@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Closing days in booked holiday weeks (#6434, ADR 0196); the rules are on
@@ -475,8 +476,8 @@ func holidayClosureImpact(bookings []changedBooking) enrollment.HolidayClosureIm
 			weeks[booking.WeekID] = i
 			weekFamilies[booking.WeekID] = map[string]bool{}
 			impact.Weeks = append(impact.Weeks, enrollment.HolidayClosureWeek{
-				WeekID: booking.WeekID, PeriodID: booking.PeriodID, PeriodName: booking.PeriodName, StartsOn: booking.StartsOn,
-				EndsOn: booking.EndsOn, HostSchoolID: booking.HostSchoolID, ClosedDays: []enrollment.HolidayClosedDay{},
+				WeekID: ident.ID(booking.WeekID), PeriodID: ident.ID(booking.PeriodID), PeriodName: booking.PeriodName, StartsOn: booking.StartsOn,
+				EndsOn: booking.EndsOn, HostSchoolID: ident.ID(booking.HostSchoolID), ClosedDays: []enrollment.HolidayClosedDay{},
 				ReopenedDays: []enrollment.HolidayClosedDay{},
 			})
 		}
@@ -615,7 +616,7 @@ func dayNotices(booking changedBooking, days []enrollment.HolidayClosedDay, stat
 func (h *HolidayClosures) enqueue(ctx context.Context, organizationID int64, traeger enrollment.HolidayTraeger, key string, bookings []changedBooking) error {
 	schools := map[int64]string{}
 	for _, school := range traeger.Schools {
-		schools[school.ID] = school.Name
+		schools[school.ID.Int64()] = school.Name
 	}
 	first := bookings[0]
 	related := first.RegistrationID

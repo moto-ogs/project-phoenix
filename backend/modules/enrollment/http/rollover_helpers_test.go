@@ -9,6 +9,7 @@ import (
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // --- parseDateField -------------------------------------------------------
@@ -201,7 +202,7 @@ func TestParseRolloverCreateRequest_FormSchemaIDPassesThrough(t *testing.T) {
 
 	body := validBody()
 	id := int64(7777)
-	body.FormSchemaID = &id
+	body.FormSchemaID = (*ident.ID)(&id)
 	req, err := parseRolloverCreateRequest(42, body, 99)
 	require.NoError(t, err)
 	require.NotNil(t, req.FormSchemaID)

@@ -13,6 +13,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger phases (#4704, ADR 0195). Like the holiday periods their tables
@@ -151,7 +152,7 @@ func (s *TraegerPhaseStore) withSchools(ctx context.Context, db bun.IDB, organiz
 
 func (row traegerPhaseRow) value() (enrollment.TraegerPhase, error) {
 	phase := enrollment.TraegerPhase{
-		ID: row.ID, OrganizationID: row.OrganizationID, AllSchools: row.AllSchools,
+		ID: ident.ID(row.ID), OrganizationID: ident.ID(row.OrganizationID), AllSchools: row.AllSchools,
 		ReleasedVersion: row.ReleasedVersion, WithdrawnAt: row.WithdrawnAt, UpdatedAt: row.UpdatedAt,
 	}
 	if err := json.Unmarshal(row.Draft, &phase.Draft); err != nil {
@@ -171,7 +172,7 @@ func traegerSchoolsByParent(rows []traegerCatalogSchoolRow) map[int64][]enrollme
 	byParent := make(map[int64][]enrollment.TraegerCatalogSchool)
 	for _, row := range rows {
 		school := enrollment.TraegerCatalogSchool{
-			SchoolID: row.SchoolID, Selected: row.Selected, AppliedVersion: row.AppliedVersion, RecordedAt: row.RecordedAt,
+			SchoolID: ident.ID(row.SchoolID), Selected: row.Selected, AppliedVersion: row.AppliedVersion, RecordedAt: row.RecordedAt,
 		}
 		if row.Outcome != nil {
 			school.Outcome = *row.Outcome

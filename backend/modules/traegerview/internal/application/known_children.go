@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // KnownHolidayChildren returns the registered children of a holiday period of
@@ -70,7 +71,7 @@ func knownChildren(children []traegerview.RegisteredChild, namesakes []traegervi
 	known := []traegerview.KnownChild{}
 	for i, child := range children {
 		if len(matches[i]) == 1 {
-			known = append(known, traegerview.KnownChild{RegistrationID: child.RegistrationID, ChildID: child.ChildID, SchoolID: matches[i][0].SchoolID})
+			known = append(known, traegerview.KnownChild{RegistrationID: ident.ID(child.RegistrationID), ChildID: ident.ID(child.ChildID), SchoolID: ident.ID(matches[i][0].SchoolID)})
 		}
 	}
 	return known

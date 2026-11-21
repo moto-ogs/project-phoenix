@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Children of the hosting school itself in a holiday week it hosts (#6678,
@@ -96,7 +97,7 @@ type HolidayOwnChildCareDays interface {
 // the child's file as "Angaben aus der Ferienanmeldung", beside the school's
 // master data, until the last day of the week.
 type HolidayStudentRegistration struct {
-	WeekID     int64         `json:"week_id"`
+	WeekID     ident.ID      `json:"week_id"`
 	PeriodName string        `json:"period_name"`
 	StartsOn   calendar.Date `json:"starts_on"`
 	EndsOn     calendar.Date `json:"ends_on"`
@@ -117,9 +118,9 @@ type HolidayStudentRegistration struct {
 // HolidayOwnChildMatched with StudentID, HolidayOwnChildNotFound or
 // HolidayOwnChildAmbiguous. ChildID is the child of the participant list.
 type HolidayOwnChildAssignment struct {
-	ChildID    int64  `json:"child_id"`
-	Assignment string `json:"assignment"`
-	StudentID  *int64 `json:"student_id"`
+	ChildID    ident.ID  `json:"child_id"`
+	Assignment string    `json:"assignment"`
+	StudentID  *ident.ID `json:"student_id"`
 }
 
 // HolidayOwnChildren serves the school's own children of its hosted weeks.
@@ -152,15 +153,15 @@ type HolidayOwnChildren interface {
 // which student of the school the registration fits, as for the school's
 // own children of a hosted week (#6678).
 type HolidayHomeSchoolBooking struct {
-	ChildID         int64         `json:"child_id"`
+	ChildID         ident.ID      `json:"child_id"`
 	FirstName       string        `json:"first_name"`
 	LastName        string        `json:"last_name"`
 	BirthDate       calendar.Date `json:"birth_date"`
-	WeekID          int64         `json:"week_id"`
+	WeekID          ident.ID      `json:"week_id"`
 	PeriodName      string        `json:"period_name"`
 	StartsOn        calendar.Date `json:"starts_on"`
 	EndsOn          calendar.Date `json:"ends_on"`
-	HostSchoolID    int64         `json:"host_school_id"`
+	HostSchoolID    ident.ID      `json:"host_school_id"`
 	HostSchoolName  string        `json:"host_school_name"`
 	TimeModelName   string        `json:"time_model_name"`
 	TimeModelStarts string        `json:"time_model_starts_at"`
@@ -168,7 +169,7 @@ type HolidayHomeSchoolBooking struct {
 	// Days are the booked days of a week by days, empty for the whole week.
 	Days []calendar.Date `json:"days"`
 	// Lunch says the child eats lunch at the hosting school (#5631).
-	Lunch      bool   `json:"lunch"`
-	Assignment string `json:"assignment"`
-	StudentID  *int64 `json:"student_id"`
+	Lunch      bool      `json:"lunch"`
+	Assignment string    `json:"assignment"`
+	StudentID  *ident.ID `json:"student_id"`
 }

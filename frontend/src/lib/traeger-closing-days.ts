@@ -191,9 +191,9 @@ function backendChange(
 > {
   if (!change) return {};
   return {
-    closing_day_id: Number(change.closingDay.id),
+    closing_day_id: change.closingDay.id,
     previous: {
-      school_ids: change.closingDay.schoolIds.map(Number),
+      school_ids: [...change.closingDay.schoolIds],
       start_date: change.closingDay.startDate,
       end_date: change.closingDay.endDate,
     },
@@ -266,6 +266,8 @@ export async function previewTraegerClosingDayHolidayBookings(
       method: "POST",
       body: {
         ...backendInput(input),
+        // The preview of Enrollment names the schools as strings (#2342).
+        school_ids: [...input.schoolIds],
         ...backendChange(change),
       } satisfies HolidayClosurePreviewRequest,
     }),

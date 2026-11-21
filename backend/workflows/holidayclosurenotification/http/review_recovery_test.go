@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -670,7 +671,7 @@ func TestTraegerClosureChangesExcludeTransferredHistoricalSchools(t *testing.T) 
 	_, err := w.db.ExecContext(w.ctx, `UPDATE platform.schools SET organization_id=? WHERE id=?`, next.ID, transferred)
 	require.NoError(t, err)
 	day := calendar.Date("2030-07-08")
-	previous := &enrollment.HolidayClosureSpan{SchoolIDs: []int64{w.school, transferred}, StartsOn: day, EndsOn: day}
+	previous := &enrollment.HolidayClosureSpan{SchoolIDs: []ident.ID{ident.ID(w.school), ident.ID(transferred)}, StartsOn: day, EndsOn: day}
 	for _, deleted := range []bool{false, true} {
 		require.NoError(t, testpkg.WithinTraeger(w.ctx, w.organization, func(ctx context.Context) error {
 			closure := enrollment.HolidayClosure{SchoolIDs: []int64{w.school}, StartsOn: day, EndsOn: day, Previous: previous, Deleted: deleted}

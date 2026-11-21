@@ -29,6 +29,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -248,7 +249,7 @@ func TestHolidayGuestsJoinTheGroupOfTheHostingSchoolOnlyFromAConfirmedBooking(t 
 
 	rec := f.assign(t, lead, int64(week), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, enrollment.HolidayGuestTransfer{WeekID: int64(week), GroupID: f.group, Guests: 0},
+	assert.Equal(t, enrollment.HolidayGuestTransfer{WeekID: ident.ID(int64(week)), GroupID: ident.ID(f.group), Guests: 0},
 		decodeSchoolPortalData[enrollment.HolidayGuestTransfer](t, rec.Body.Bytes()), "without a confirmed booking no child comes")
 	assert.Empty(t, f.roster(t, weekDay))
 

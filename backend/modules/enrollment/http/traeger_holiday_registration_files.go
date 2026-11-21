@@ -53,7 +53,7 @@ func (rs *HolidayPeriodResource) recordNamesOf(r *http.Request) holidayRecordNam
 // holidayRecordFile renders the file of one registration. Its name carries
 // the number of the registration and the family name of the parent.
 func holidayRecordFile(period capability.HolidayPeriod, record capability.HolidayRegistrationRecord, names holidayRecordNames) (lists.File, error) {
-	base := "ferienanmeldung-" + strconv.FormatInt(record.Detail.ID, 10) + "-" + record.Detail.GuardianLastName
+	base := "ferienanmeldung-" + strconv.FormatInt(record.Detail.ID.Int64(), 10) + "-" + record.Detail.GuardianLastName
 	return lists.NewRecordRenderer().RenderRecords(holidayRegistrationRecordDocument(period, record, names), base)
 }
 
@@ -158,14 +158,14 @@ func (rs *HolidayPeriodResource) downloadRegistrationPDFs(withTx common.Middlewa
 			// The status is sent; the connection is cut so the browser reports
 			// a failed download instead of saving half an archive.
 			slog.ErrorContext(r.Context(), "holiday registration archive failed",
-				slog.Int64("holiday_period_id", set.Period.ID),
+				slog.Int64("holiday_period_id", set.Period.ID.Int64()),
 				slog.String("error", err.Error()))
 			panic(http.ErrAbortHandler)
 		}
 		if err != nil {
 			// The person closed the download; nothing is left to answer.
 			slog.InfoContext(r.Context(), "holiday registration archive not delivered",
-				slog.Int64("holiday_period_id", set.Period.ID),
+				slog.Int64("holiday_period_id", set.Period.ID.Int64()),
 				slog.String("error", err.Error()))
 		}
 	}

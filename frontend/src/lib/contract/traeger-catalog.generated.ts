@@ -6,6 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
+  int64String,
   int64StringOrNumber,
   json,
   nullable,
@@ -56,7 +57,7 @@ export interface TraegerCatalogSchool {
 }
 
 export const TraegerCatalogSchoolSchema: z.ZodType<TraegerCatalogSchool, unknown> = object<TraegerCatalogSchool>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   selected: bool,
   applied_version: optional(safeInt),
   outcome: optional(str),
@@ -78,8 +79,8 @@ export interface TraegerPhase {
 }
 
 export const TraegerPhaseSchema: z.ZodType<TraegerPhase, unknown> = object<TraegerPhase>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   draft: TraegerPhaseFieldsSchema,
   all_schools: bool,
   released_version: optional(safeInt),
@@ -240,8 +241,8 @@ export interface PhaseDetail {
 }
 
 export const PhaseDetailSchema: z.ZodType<PhaseDetail, unknown> = object<PhaseDetail>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   draft: TraegerPhaseFieldsSchema,
   all_schools: bool,
   released_version: optional(safeInt),

@@ -9,6 +9,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -117,7 +118,7 @@ func (s *HolidayRegistrationStore) ReadHolidayProofs(ctx context.Context, organi
 	proofs := make([]enrollment.HolidayRegistrationProof, len(rows))
 	for i, row := range rows {
 		proofs[i] = enrollment.HolidayRegistrationProof{
-			ID: row.ID, Filename: row.Filename, SizeBytes: row.SizeBytes, ContentType: row.ContentType, UploadedAt: row.CreatedAt,
+			ID: ident.ID(row.ID), Filename: row.Filename, SizeBytes: row.SizeBytes, ContentType: row.ContentType, UploadedAt: row.CreatedAt,
 		}
 	}
 	return proofs, nil

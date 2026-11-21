@@ -597,7 +597,7 @@ describe("traeger-api holiday periods", () => {
     });
   });
 
-  it("sends kept IDs as numbers, leaves them out for new rows and archives (#5994)", async () => {
+  it("sends kept IDs as strings, leaves them out for new rows and archives (#5994)", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, { status: "success", data: backendPeriod }),
     );
@@ -650,10 +650,10 @@ describe("traeger-api holiday periods", () => {
       allocation_mode: "arrival",
       weeks: [
         {
-          id: 7,
+          id: "7",
           starts_on: "2027-03-22",
           ends_on: "2027-03-26",
-          host_school_id: 31,
+          host_school_id: "31",
           booking_unit: "week",
           time_models: [
             {
@@ -664,7 +664,7 @@ describe("traeger-api holiday periods", () => {
               archived: false,
             },
             {
-              id: 9,
+              id: "9",
               name: "bis 13 Uhr",
               starts_at: "08:00",
               ends_at: "13:00",
