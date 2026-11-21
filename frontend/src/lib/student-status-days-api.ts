@@ -6,8 +6,22 @@ import {
 import { bffJson } from "~/lib/bff-fetch";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { sessionFetch } from "~/lib/session-cache";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
+  BulkCreateStudentStatusDaysRequest,
+  CreateStudentStatusDaysRequest,
+  StatusDaysBulkCreatedResponse,
+  StudentStatusDayResponse,
+  statusDayOverviewResponse,
+} from "~/lib/contract/students.generated";
 
 export type StudentStatusKind = "sick" | "excused" | "class_trip";
+
+const STATUS_KINDS: readonly StudentStatusKind[] = [
+  "sick",
+  "excused",
+  "class_trip",
+];
 
 export interface StudentStatusDay {
   id: string;
@@ -24,9 +38,21 @@ export interface StudentStatusDay {
   updated_at: string;
 }
 
+/**
+ * One existing day in the 409 body of a status-day write. Error bodies do not
+ * pass the response decoder, so its IDs may still be JSON numbers.
+ */
+interface ConflictStatusDay extends Omit<
+  StudentStatusDayResponse,
+  "id" | "student_id"
+> {
+  id: number | string;
+  student_id: number | string;
+}
+
 /** The 409 body of a status-day write that would overwrite existing days. */
 interface ConflictBody {
-  conflicts?: BackendStudentStatusDay[];
+  conflicts?: ConflictStatusDay[];
   /** Full conflict count when `conflicts` is a capped sample. */
   conflict_count?: number;
   code?: string;
@@ -37,26 +63,27 @@ interface ConflictBody {
 const PARTIAL_ABSENCE_CONFLICT_CODE: ErrorCode =
   "students.partial_absence_conflict";
 
-interface BackendStudentStatusDay {
-  id: number | string;
-  student_id: number | string;
-  date: string;
-  status: StudentStatusKind;
-  label: string;
-  reported_at: string;
-  cleared_at?: string | null;
-  source: string;
-  note?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-function mapStatusDay(row: BackendStudentStatusDay): StudentStatusDay {
+/** null: a status this build does not know; lists leave the day out. */
+function mapStatusDay(
+  row: StudentStatusDayResponse | ConflictStatusDay,
+): StudentStatusDay | null {
+  const status = knownEnum(STATUS_KINDS, row.status);
+  if (!status) return null;
   return {
     ...row,
-    id: row.id.toString(),
-    student_id: row.student_id.toString(),
+    id: String(row.id),
+    student_id: String(row.student_id),
+    status,
   };
+}
+
+function mapStatusDays(
+  rows: readonly (StudentStatusDayResponse | ConflictStatusDay)[],
+): StudentStatusDay[] {
+  return rows.flatMap((row) => {
+    const day = mapStatusDay(row);
+    return day ? [day] : [];
+  });
 }
 
 export class StudentStatusDayConflictError extends ApiError {
@@ -87,7 +114,7 @@ function parseConflictError(result: ConflictBody): Error {
   ) {
     return apiErrorFromBody("status day write refused", 409, result);
   }
-  const conflicts = (result.conflicts ?? []).map(mapStatusDay);
+  const conflicts = mapStatusDays(result.conflicts ?? []);
   const totalCount =
     typeof result.conflict_count === "number" &&
     Number.isFinite(result.conflict_count)
@@ -124,16 +151,13 @@ export async function fetchStudentStatusDays(
   from: string,
   to: string,
 ): Promise<StudentStatusDay[]> {
-  const rows = await bffJson<BackendStudentStatusDay[]>(
+  const rows = await bffJson<StudentStatusDayResponse[]>(
     `/api/students/${encodeURIComponent(studentId)}/status-days?from=${from}&to=${to}`,
   );
-  return rows.map(mapStatusDay);
+  return mapStatusDays(rows);
 }
 
-/**
- * One row of the tenant-wide absence overview (#2288). IDs arrive as strings
- * from the backend already; no mapping needed.
- */
+/** One row of the tenant-wide absence overview (#2288). */
 export interface StatusDayOverviewEntry {
   id: string;
   student_id: string;
@@ -173,7 +197,18 @@ export async function fetchStatusDayOverview(
   if (filters.query.trim()) params.set("q", filters.query.trim());
   if (filters.status !== "all") params.set("status", filters.status);
   if (filters.groupId !== "all") params.set("group_id", filters.groupId);
-  return bffJson<StatusDayOverview>(`/api/students/status-days?${params}`);
+  const overview = await bffJson<statusDayOverviewResponse>(
+    `/api/students/status-days?${params}`,
+  );
+  return {
+    ...overview,
+    groups: overview.groups ?? [],
+    // A status this build does not know leaves its row out.
+    entries: (overview.entries ?? []).flatMap((entry) => {
+      const status = knownEnum(STATUS_KINDS, entry.status);
+      return status ? [{ ...entry, status }] : [];
+    }),
+  };
 }
 
 export async function createStudentStatusDays(
@@ -184,19 +219,20 @@ export async function createStudentStatusDays(
   /** Days whose partial excusal the person chose to replace (#5698). */
   replacePartialAbsenceDates?: readonly string[],
 ): Promise<StudentStatusDay[]> {
-  const rows = await writeStatusDays<BackendStudentStatusDay[]>(
+  const body: CreateStudentStatusDaysRequest = {
+    status,
+    dates,
+    ...(reason ? { reason } : {}),
+    ...(replacePartialAbsenceDates?.length
+      ? { replace_partial_absence_dates: [...replacePartialAbsenceDates] }
+      : {}),
+  };
+  const rows = await writeStatusDays<StudentStatusDayResponse[]>(
     `/api/students/${encodeURIComponent(studentId)}/status-days`,
-    {
-      status,
-      dates,
-      ...(reason ? { reason } : {}),
-      ...(replacePartialAbsenceDates?.length
-        ? { replace_partial_absence_dates: replacePartialAbsenceDates }
-        : {}),
-    },
+    body,
     "Geplante Einträge konnten nicht gespeichert werden",
   );
-  return rows.map(mapStatusDay);
+  return mapStatusDays(rows);
 }
 
 export async function bulkCreateStudentStatusDays(
@@ -205,13 +241,14 @@ export async function bulkCreateStudentStatusDays(
   from: string,
   to: string,
   reason?: string,
-): Promise<{ student_count: number; date_count: number }> {
+): Promise<StatusDaysBulkCreatedResponse> {
   const student_ids = studentIds.map(Number);
-  return writeStatusDays<{ student_count: number; date_count: number }>(
+  const body: BulkCreateStudentStatusDaysRequest = reason
+    ? { student_ids, status, from, to, reason }
+    : { student_ids, status, from, to };
+  return writeStatusDays<StatusDaysBulkCreatedResponse>(
     "/api/students/status-days/bulk",
-    reason
-      ? { student_ids, status, from, to, reason }
-      : { student_ids, status, from, to },
+    body,
     "Klassenfahrt konnte nicht gespeichert werden",
   );
 }

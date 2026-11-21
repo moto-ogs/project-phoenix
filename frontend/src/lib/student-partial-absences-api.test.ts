@@ -12,14 +12,16 @@ import {
   saveStudentPartialAbsence,
 } from "./student-partial-absences-api";
 
+// The decoded answer of the catalog proxy: string IDs, `auto` always sent.
 const backendRow = {
-  id: 9,
-  student_id: 42,
+  id: "9",
+  student_id: "42",
   date: "2026-05-27",
   from_time: "13:30",
   reason: "Arzttermin",
   pickup_time: "13:30",
-  created_by: 5,
+  auto: false,
+  created_by: "5",
   created_at: "2026-05-20T08:00:00Z",
   updated_at: "2026-05-20T08:00:00Z",
 };
