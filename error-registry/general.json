@@ -41,6 +41,12 @@
       "class": "unavailable",
       "parameters": [],
       "legacy": "general.unavailable"
+    },
+    {
+      "code": "general.write_answer_unreadable",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "general.write_answer_unreadable"
     }
   ]
 }

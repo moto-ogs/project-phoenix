@@ -4,6 +4,7 @@
  * Eine neue Quelle ergänzt ihre Arten in `DAY_CHANGE_TEXTS`, ihren Namen in
  * `SOURCE_FAILURE_TEXTS` und ihre Link-Ziele in `dayChangeHref`.
  */
+import { formatTime } from "~/lib/date-helpers";
 import type { DayChange, DayChangePerson } from "~/lib/day-changes";
 
 function personWith(
@@ -66,15 +67,11 @@ function groupSubstitutionCountText(change: DayChange): string {
     : `In ${count} weiteren Gruppen vertritt heute jemand.`;
 }
 
-/** Der Termin in Anführungszeichen, „Ein Termin“ ohne Titel (#7662). */
-function activityName(change: DayChange): string {
+/** Der Termin in Anführungszeichen (#7662). */
+function activityName(change: DayChange, sentenceStart: boolean): string {
   const title = change.activity?.title.trim();
-  return title ? `„${title}“` : "Ein Termin";
-}
-
-function activityNameInSentence(change: DayChange): string {
-  const title = change.activity?.title.trim();
-  return title ? `„${title}“` : "einen Termin";
+  if (title) return `„${title}“`;
+  return sentenceStart ? "Ein Termin" : "einen Termin";
 }
 
 /** „Anna“, „Anna und Ben“, „Anna, Ben und Clara“. */
@@ -84,33 +81,20 @@ function namesOf(people: readonly DayChangePerson[]): string {
   return `${names.slice(0, -1).join(", ")} und ${names[names.length - 1]}`;
 }
 
-function activityCancelledText(change: DayChange): string {
-  return `${activityName(change)} fällt heute aus.`;
-}
-
-function activityReinstatedText(change: DayChange): string {
-  return `${activityName(change)} findet doch statt.`;
-}
-
-function activityRoomChangedText(change: DayChange): string {
-  return `${activityName(change)} ist heute in einem anderen Raum.`;
-}
-
 function activityLeadChangedText(change: DayChange): string {
-  const substitutes = change.people.filter(
-    (person) => person.role === "substitute",
-  );
-  const absent = change.people.filter((person) => person.role === "absent");
-  const name = activityNameInSentence(change);
+  const name = activityName(change, false);
   // Ohne Namen: der Termin gehört anderen, und nur die Leitung sieht, wer
   // fehlt und wer übernimmt (#7662).
   if (change.people.length === 0) {
     return `Bei ${name} ändert sich heute, wer betreut.`;
   }
-  const meSubstitute = substitutes.some((person) => person.isSelf);
+  const substitutes = change.people.filter(
+    (person) => person.role === "substitute",
+  );
+  const absent = change.people.filter((person) => person.role === "absent");
   const meAbsent = absent.some((person) => person.isSelf);
   const others = absent.filter((person) => !person.isSelf);
-  if (meSubstitute) {
+  if (substitutes.some((person) => person.isSelf)) {
     return others.length > 0
       ? `Du übernimmst heute ${name} für ${namesOf(others)}.`
       : `Du übernimmst heute ${name}.`;
@@ -137,14 +121,21 @@ const DAY_CHANGE_TEXTS: Readonly<
   staff_absent_count: staffAbsentCountText,
   group_substitution: groupSubstitutionText,
   group_substitution_count: groupSubstitutionCountText,
-  activity_cancelled: activityCancelledText,
-  activity_reinstated: activityReinstatedText,
-  activity_room_changed: activityRoomChangedText,
+  // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
+  staff_notice: (change) => change.notice?.title ?? "",
+  // Termine aus dem Stundenplan (#7662).
+  activity_cancelled: (change) =>
+    `${activityName(change, true)} fällt heute aus.`,
+  activity_reinstated: (change) =>
+    `${activityName(change, true)} findet doch statt.`,
+  activity_room_changed: (change) =>
+    `${activityName(change, true)} ist heute in einem anderen Raum.`,
   activity_lead_changed: activityLeadChangedText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
-  return DAY_CHANGE_TEXTS[change.kind]?.(change) ?? null;
+  // Ein leerer Satz (ein Hinweis ohne Titel) zählt wie eine unbekannte Art.
+  return DAY_CHANGE_TEXTS[change.kind]?.(change) || null;
 }
 
 /** „3.11.“ aus „2026-11-03“. */
@@ -153,32 +144,46 @@ function shortDay(iso: string): string {
   return `${Number(day)}.${Number(month)}.`;
 }
 
-/** „seit 3.11.“, „bis 21.11.“ oder beides, sonst null. */
+/**
+ * Die Uhrzeit in der Zeitzone der Schule: „08:00 bis 09:30 Uhr“ oder
+ * „ab 14:00 Uhr“, ohne Uhrzeit null.
+ */
+function timeOfDay(change: DayChange): string | null {
+  if (!change.startsAt) return null;
+  const start = formatTime(change.startsAt);
+  return change.endsAt
+    ? `${start} bis ${formatTime(change.endsAt)} Uhr`
+    : `ab ${start} Uhr`;
+}
+
+/** Der Raum eines Termins, bei einem Wechsel „Turnhalle statt Werkraum“. */
+function roomOf(change: DayChange): string | null {
+  if (!change.roomName) return null;
+  return change.previousRoomName
+    ? `${change.roomName} statt ${change.previousRoomName}`
+    : change.roomName;
+}
+
+/**
+ * Wann: die Uhrzeit und „seit 3.11.“, „bis 21.11.“ oder beides, sonst null.
+ * „Seit“ und „bis“ kommen aus der Antwort des Backends, nie aus einer
+ * Rechnung hier (#7660).
+ */
 export function dayChangeSpan(change: DayChange): string | null {
   const parts: string[] = [];
+  const time = timeOfDay(change);
+  if (time) parts.push(time);
+  const where = roomOf(change);
+  if (where) parts.push(`· ${where}`);
   if (change.since) parts.push(`seit ${shortDay(change.since)}`);
   if (change.until) parts.push(`bis ${shortDay(change.until)}`);
   return parts.length > 0 ? parts.join(" ") : null;
 }
 
-/**
- * Uhrzeit und Raum eines Termins (#7662): „13:00–14:00 · Aula“, bei einem
- * Raumwechsel „14:00–15:00 · Turnhalle statt Werkraum“. Sonst null.
- */
-export function dayChangeWhenWhere(change: DayChange): string | null {
-  if (!change.activity) return null;
-  const parts = [`${change.activity.startTime}–${change.activity.endTime}`];
-  if (change.roomName && change.previousRoomName) {
-    parts.push(`${change.roomName} statt ${change.previousRoomName}`);
-  } else if (change.roomName) {
-    parts.push(change.roomName);
-  }
-  return parts.join(" · ");
-}
-
 /** Der Hinweis, wenn eine Quelle gerade nicht geladen werden konnte. */
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+  notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
   activities:
     "Änderungen an Angeboten und AGs konnten gerade nicht geladen werden.",
 };
@@ -205,6 +210,8 @@ export function dayChangeHref(change: DayChange): string | null {
       return "/staff";
     case "group_handovers":
       return "/substitutions";
+    case "staff_notices":
+      return "/tagesinformationen";
     case "day_plan":
       // Die Zeile ersetzt den Weg durch den Tagesplan der Person
       // (useDayPlanHref); das hier ist der Weg der Betreuung.

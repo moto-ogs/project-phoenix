@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	schoolstructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -46,6 +47,33 @@ type dayChangesStaffNames interface {
 	StaffNames(ctx context.Context, staffIDs []int64) (map[int64]string, error)
 }
 
+// newDayChangesStaffNames names staff members from their membership and
+// person only: the overview needs no employment profile, which the full staff
+// read loads in a statement of its own (#7667, the query budget of the route).
+func newDayChangesStaffNames(persons peoplePorts.PersonDirectory) dayChangesStaffNames {
+	staff := owners.NewTimetableStaff(persons.StaffRows())
+	return dayChangesStaffNameFunc(func(ctx context.Context, staffIDs []int64) (map[int64]string, error) {
+		members, err := staff.FindWithPersonByIDs(ctx, staffIDs)
+		if err != nil {
+			return nil, err
+		}
+		names := make(map[int64]string, len(members))
+		for id, member := range members {
+			if name := member.DisplayName(); name != "" {
+				names[id] = name
+			}
+		}
+		return names, nil
+	})
+}
+
+// dayChangesStaffNameFunc lets a function serve as dayChangesStaffNames.
+type dayChangesStaffNameFunc func(ctx context.Context, staffIDs []int64) (map[int64]string, error)
+
+func (f dayChangesStaffNameFunc) StaffNames(ctx context.Context, staffIDs []int64) (map[int64]string, error) {
+	return f(ctx, staffIDs)
+}
+
 // dayChangesGroups reads the groups by id in one read.
 type dayChangesGroups interface {
 	FindByIDs(ctx context.Context, ids []int64) (map[int64]*schoolstructureCompose.Group, error)
@@ -58,6 +86,8 @@ type DayChangesSources struct {
 	Teachers  owners.GroupTeacherStaff
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
+	// Notices is Timetable's read of the Hinweise der Leitung (#7667).
+	Notices dayChangesNoticeReads
 	// Blocks is Timetable's read of the day's changed blocks (#7662).
 	Blocks dayChangesBlocks
 	Today  func() calendar.Date
@@ -69,6 +99,9 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
+	if sources.Notices == nil {
+		return nil, fmt.Errorf("%w: notice source", daychangesview.ErrDependencies)
+	}
 	if sources.Blocks == nil {
 		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
 	}
@@ -76,6 +109,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 		Today:      sources.Today,
 		Isolation:  dayChangesSavepoints{},
 		Staff:      dayChangesStaff{sources: sources},
+		Notices:    dayChangesNotices{reads: sources.Notices},
 		Activities: dayChangesActivities{sources: sources},
 		Logger:     sources.Logger,
 	})

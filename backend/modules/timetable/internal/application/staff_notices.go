@@ -43,19 +43,36 @@ type StaffNoticePeriodLookup interface {
 // Benachrichtigungs-Feed von einem neuen Hinweis (#7143). Der Feed-Eintrag
 // entsteht in der Einheit, die der Aufrufer mitbringt: die Routen öffnen die
 // Tenant-Transaktion der Anfrage, Speichern und Eintrag fallen gemeinsam.
+//
+// Changes ist optional: ohne sie erfahren offene Ansichten („Heute anders“,
+// #7667) erst beim nächsten Abgleich von einem neuen, geänderten oder
+// gelöschten Hinweis. Die Wurzel bindet daran ein Realtime-Signal ohne
+// Inhalt, das nach dem Commit läuft.
 type StaffNoticeDependencies struct {
 	Periods      StaffNoticePeriodLookup
 	Names        func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
 	Publications ports.StaffNoticePublications
+	Changes      ports.StaffingAnnouncer
 	Logger       *slog.Logger
 	CurrentDate  func() calendar.Date
 }
+
+// The sources of the change signal of a Hinweis (#7667). The signal runs
+// through the timetable's after-commit announcer; the root binds the notice
+// announcer to its own event, not to the staffing one.
+const (
+	staffNoticeChangeCreate      = "staff_notice_create"
+	staffNoticeChangeUpdate      = "staff_notice_update"
+	staffNoticeChangeDelete      = "staff_notice_delete"
+	staffNoticeChangeAcknowledge = "staff_notice_acknowledge"
+)
 
 type staffNoticeService struct {
 	repo         ports.StaffNoticeRecords
 	periods      StaffNoticePeriodLookup
 	names        func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
 	publications ports.StaffNoticePublications
+	changes      ports.StaffingAnnouncer
 	logger       *slog.Logger
 	currentDate  func() calendar.Date
 }
@@ -77,7 +94,7 @@ func newStaffNotices(repo ports.StaffNoticeRecords, deps StaffNoticeDependencies
 	}
 	return &staffNoticeService{
 		repo: repo, periods: deps.Periods, names: deps.Names, publications: deps.Publications,
-		logger: logger, currentDate: deps.CurrentDate,
+		changes: deps.Changes, logger: logger, currentDate: deps.CurrentDate,
 	}
 }
 
@@ -257,6 +274,7 @@ func (s *staffNoticeService) CreateStaffNotice(ctx context.Context, createdBy in
 	if err := s.acknowledgeAuthorAndPublish(ctx, notice, false, createdBy); err != nil {
 		return timetable.StaffNotice{}, err
 	}
+	announceStaffingChanged(ctx, s.changes, s.logger, staffNoticeChangeCreate)
 	s.logger.Info("staff_notice_created",
 		slog.Int64("notice_id", notice.ID),
 		slog.Int64("created_by", createdBy),
@@ -288,6 +306,7 @@ func (s *staffNoticeService) UpdateStaffNotice(ctx context.Context, id, updatedB
 	if err := s.acknowledgeAuthorAndPublish(ctx, notice, reachedStaff, updatedBy); err != nil {
 		return timetable.StaffNotice{}, err
 	}
+	announceStaffingChanged(ctx, s.changes, s.logger, staffNoticeChangeUpdate)
 	s.logger.Info("staff_notice_updated", slog.Int64("notice_id", notice.ID))
 	return staffNoticeContract(notice), nil
 }
@@ -299,6 +318,7 @@ func (s *staffNoticeService) DeleteStaffNotice(ctx context.Context, id int64) er
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("staffnotice: delete: %w", err)
 	}
+	announceStaffingChanged(ctx, s.changes, s.logger, staffNoticeChangeDelete)
 	s.logger.Info("staff_notice_deleted", slog.Int64("notice_id", id))
 	return nil
 }
@@ -333,6 +353,7 @@ func (s *staffNoticeService) AcknowledgeStaffNotice(ctx context.Context, id, acc
 	if err := s.repo.Acknowledge(ctx, id, accountID); err != nil {
 		return fmt.Errorf("staffnotice: acknowledge: %w", err)
 	}
+	announceStaffingChanged(ctx, s.changes, s.logger, staffNoticeChangeAcknowledge)
 	return nil
 }
 

@@ -357,6 +357,15 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.PublicFile != "" {
 		fmt.Fprintf(out, "    publicFile: %q,\n", route.PublicFile)
 	}
+	if route.PublicUpload != "" {
+		fmt.Fprintf(out, "    publicUpload: %q,\n", route.PublicUpload)
+	}
+	if route.FileCache != "" {
+		fmt.Fprintf(out, "    fileCache: %q,\n", route.FileCache)
+	}
+	if route.ConditionalGet {
+		out.WriteString("    conditionalGet: true,\n")
+	}
 	if route.PrivateCache {
 		out.WriteString("    privateCache: true,\n")
 	}

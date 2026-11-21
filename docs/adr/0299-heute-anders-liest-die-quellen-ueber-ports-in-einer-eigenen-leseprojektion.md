@@ -169,3 +169,30 @@ Projektion nutzt „change“.
   bekommt ein Konto mit `users:read`.
 - Terminbezogene Abwesenheit und Vertretung einzelner Termine
   (`schedule.instance_staff`) kommen als eigenes Folge-Ticket hinzu.
+
+## Nachtrag 2026-11-20: Quelle Hinweise der Leitung und gemeinsamer Savepoint (#7667)
+
+- Die Quelle Hinweise der Leitung liest Timetables bestehende Lesefähigkeit
+  der heute geltenden Hinweise (`StaffNoticesOn`, Leserart Betreuung). Ihre
+  Rechte-Regel ist die des bestehenden Lesewegs `GET /api/staff-notices/today`:
+  `users:read`. Ohne dieses Recht liefert die Quelle nichts und bleibt
+  „geladen“. Ein Hinweis, dessen Kenntnisnahme verlangt ist und fehlt, steht
+  unter „Betrifft dich“ ganz oben; alle anderen stehen unter „Schule“.
+  Bestätigt wird über `POST /api/staff-notices/{id}/acknowledge`.
+- Timetable meldet neue, geänderte und gelöschte Hinweise nach dem Commit mit
+  dem Event `staff_notices_changed` ohne Inhalt. Es läuft über Timetables
+  bestehende After-Commit-Stelle `announceStaffingChanged`; die Wurzel bindet
+  den Port für die Hinweise an das eigene Event.
+- **Punkt 7 wird präzisiert.** Statt eines eigenen Savepoints je Quelle teilen
+  sich aufeinanderfolgende Quellen einen Savepoint, solange sie gelingen.
+  Schlägt eine fehl, rollt der Savepoint auch die Lesungen der Quellen davor
+  zurück. Das ändert nichts, denn die Quellen lesen nur, und ihre Einträge
+  liegen schon vor. Die übrigen Quellen bekommen danach einen neuen
+  Savepoint. Damit ist jede Quelle weiter vor einem fehlgeschlagenen Statement
+  einer anderen geschützt. Grund: Das Query-Budget eines Endpunkts darf nach
+  der Architektur-Prüfung nicht wachsen. Ein Savepoint je Quelle hätte jede
+  neue Quelle zwei Statements mehr gekostet als ihre eigenen Lesungen. Jetzt
+  kostet der Rahmen zwei Statements je Anfrage, eine fehlgeschlagene Quelle
+  zwei weitere (`ROLLBACK TO`, `RELEASE`) und einen neuen `SAVEPOINT`.
+- Die Namen der Quelle Personal liest die Wurzel jetzt ohne das
+  Beschäftigungsprofil: Die Übersicht braucht nur Mitgliedschaft und Person.

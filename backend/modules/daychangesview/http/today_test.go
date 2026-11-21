@@ -147,7 +147,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 	t.Run("care staff sees names for its group and numbers for the school", func(t *testing.T) {
 		overview, body := read(t, router, carerAccount.ID, tenantID, "users:read")
 		assert.Equal(t, day.String(), overview.Date)
-		assert.Equal(t, "loaded", sourceStatus(t, overview, "staff"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 		assert.Equal(t, []string{
 			"you group_substitution Tom Hilfe/substitute @Igel bis 2026-09-10 ->group_handovers",
 			"you staff_absent Ben Kollege/absent bis 2026-09-11 ->staff_member",
@@ -163,7 +163,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 			"you group_substitution Tom Hilfe/substitute @Igel bis 2026-09-10 ->group_handovers",
 			"you staff_absent Ben Kollege/absent bis 2026-09-11",
 		}, summary(overview.Entries))
-		assert.Equal(t, "loaded", sourceStatus(t, overview, "staff"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("lead sees every name of the school and no other school", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestDayChangesStaffSource(t *testing.T) {
 	t.Run("account without the rights gets no entries and no failure", func(t *testing.T) {
 		overview, _ := read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, overview.Entries)
-		assert.Equal(t, "loaded", sourceStatus(t, overview, "staff"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
 	t.Run("the day before shows that day only", func(t *testing.T) {
@@ -206,18 +206,6 @@ func TestDayChangesStaffSource(t *testing.T) {
 		require.NotNil(t, ownWithPermission.Link)
 		assert.Equal(t, "own_absences", ownWithPermission.Link.Target)
 	})
-}
-
-// sourceStatus is the status the answer reports for one source.
-func sourceStatus(t *testing.T, overview wireOverview, source string) string {
-	t.Helper()
-	for _, status := range overview.Sources {
-		if status.Source == source {
-			return status.Status
-		}
-	}
-	require.Fail(t, "source missing", source)
-	return ""
 }
 
 func ownAbsence(t *testing.T, entries []wireEntry) wireEntry {

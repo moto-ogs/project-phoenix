@@ -20,13 +20,13 @@ import (
 
 // activityWire is the part of an entry the Stundenplan source fills.
 type activityWire struct {
-	Kind     string `json:"kind"`
-	Section  string `json:"section"`
-	AllDay   bool   `json:"all_day"`
+	Kind     string     `json:"kind"`
+	Section  string     `json:"section"`
+	AllDay   bool       `json:"all_day"`
+	StartsAt *time.Time `json:"starts_at"`
+	EndsAt   *time.Time `json:"ends_at"`
 	Activity *struct {
-		Title     string `json:"title"`
-		StartTime string `json:"start_time"`
-		EndTime   string `json:"end_time"`
+		Title string `json:"title"`
 	} `json:"activity"`
 	Room *struct {
 		Name string `json:"name"`
@@ -56,7 +56,10 @@ func activityLines(t *testing.T, body string) []string {
 			continue
 		}
 		assert.False(t, entry.AllDay, "an activity has a time of day")
-		line := fmt.Sprintf("%s %s %s %s-%s", entry.Section, entry.Kind, entry.Activity.Title, entry.Activity.StartTime, entry.Activity.EndTime)
+		require.NotNil(t, entry.StartsAt)
+		require.NotNil(t, entry.EndsAt)
+		line := fmt.Sprintf("%s %s %s %s-%s", entry.Section, entry.Kind, entry.Activity.Title,
+			entry.StartsAt.In(calendar.Berlin).Format("15:04"), entry.EndsAt.In(calendar.Berlin).Format("15:04"))
 		if entry.Room != nil {
 			line += " @" + entry.Room.Name
 		}
@@ -170,7 +173,7 @@ func TestDayChangesActivitySource(t *testing.T) {
 
 	t.Run("the supervisor finds its blocks under you, the rest under school", func(t *testing.T) {
 		overview, body := read(t, router, carerAccount.ID, tenantID, "schedules:read")
-		assert.Equal(t, "loaded", sourceStatus(t, overview, "activities"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "activities"))
 		assert.Equal(t, []string{
 			"you activity_lead_changed Chor 13:00-14:00 " + room3 + " Anna Betreuung/substitute(du) Ben Krank/absent ->day_plan",
 			"you activity_room_changed Fussball 14:00-15:00 " + room2 + " <-Werkraum ->day_plan",
@@ -190,7 +193,7 @@ func TestDayChangesActivitySource(t *testing.T) {
 	t.Run("an account without the day plan gets no entries and no failure", func(t *testing.T) {
 		overview, body := read(t, router, plainAccount.ID, tenantID, "users:read")
 		assert.Empty(t, activityLines(t, body))
-		assert.Equal(t, "loaded", sourceStatus(t, overview, "activities"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "activities"))
 	})
 
 	t.Run("the day before shows that day only", func(t *testing.T) {

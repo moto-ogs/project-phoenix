@@ -151,12 +151,14 @@ func TestDeclarationProofDownloadsTheMotoPDF(t *testing.T) {
 	assert.Equal(t, enrollmentTestNow(), renderer.doc.GeneratedAt, "the proof is issued on the resource clock")
 }
 
+// The JSON path answers JSON, also with the former ?format=pdf: the PDF
+// has only its own path (#7644).
 func TestDeclarationProofWithoutFormatStaysJSON(t *testing.T) {
 	t.Parallel()
 	rs := &Resource{ParentService: &fakeParentService{declarationProof: declarationProofFixture(true)}, Now: enrollmentTestNow}
 	w := httptest.NewRecorder()
 
-	rs.declarationProof(w, declarationProofRequest("student_id=7"))
+	rs.declarationProof(w, declarationProofRequest("student_id=7&format=pdf"))
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), `"child_name":"Lina Richter"`)

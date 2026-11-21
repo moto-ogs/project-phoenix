@@ -280,6 +280,16 @@ const api = createServer(async (req, res) => {
         timetable_day_end_time: "16:00",
       },
     });
+  // The school picker of the main domain (#7563).
+  else if (path === "/auth/tenants")
+    data = envelope(
+      schools.map(({ slug, name, subdomain, organization_name }) => ({
+        slug,
+        name,
+        subdomain,
+        organization_name,
+      })),
+    );
   else if (path === "/auth/account/tenants")
     data = envelope(sharedTenantCookie ? schools : []);
   else {

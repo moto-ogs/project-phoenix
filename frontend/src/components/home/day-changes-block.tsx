@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import {
@@ -12,9 +13,9 @@ import {
   dayChangeHref,
   dayChangeSpan,
   dayChangeText,
-  dayChangeWhenWhere,
   sourceFailureText,
 } from "~/components/home/day-changes-text";
+import { DayNoticeRow } from "~/components/home/day-notice-row";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -28,12 +29,14 @@ import {
   type DayChange,
   type DayChangesOverview,
 } from "~/lib/day-changes";
+import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+import { cn } from "~/lib/utils";
 
 /** So viele Einträge von „Schule“ zeigt das Telefon, bevor es zählt. */
 const PHONE_SCHOOL_ROWS = 3;
@@ -44,6 +47,12 @@ const PHONE_SCHOOL_ROWS = 3;
  * führt zur Detailseite. Ein Ereignis, das eine Quelle ändert, lädt den
  * Baustein neu (`useGlobalSSE`). Ist eine Quelle ausgefallen, steht ein
  * Hinweis da und nie die Entwarnung.
+ *
+ * Innerhalb eines Abschnitts (#7660): neue ganztägige Änderungen, dann die
+ * mit Uhrzeit nach Beginn, dann kompakt die langen („seit 3.11.“); diese
+ * Reihenfolge liefert das Backend. Was schon vorbei ist, steht eingeklappt
+ * am Ende („3 erledigt“). Ein Bildschirmleser hört nur, was sich bei einem
+ * Neuladen geändert hat, nie die ganze Liste.
  *
  * Die Karte wächst mit ihrem Inhalt (`data-home-card-fit`): eine Übersicht,
  * die bei vielen Einträgen die Hälfte abschneidet, wäre keine.
@@ -73,9 +82,10 @@ export function DayChangesBlock() {
           if (!data) {
             return isLoading || error ? <DayChangesSkeleton /> : null;
           }
-          return <DayChangesContent overview={data} />;
+          return <DayChangesContent overview={data} onChanged={mutate} />;
         })()}
       </div>
+      <DayChangesAnnouncer overview={data} />
     </HomeCard>
   );
 }
@@ -90,14 +100,110 @@ function DayChangesSkeleton() {
   );
 }
 
-function DayChangesContent({
+/** Was die Übersicht zeigt: nur Arten, für die das Frontend einen Satz hat. */
+function shownEntries(overview: DayChangesOverview): DayChange[] {
+  return overview.entries.filter((entry) => dayChangeText(entry) !== null);
+}
+
+/** Eine Änderung mit Uhrzeit, deren Ende vorbei ist. */
+function isDone(entry: DayChange, now: number): boolean {
+  if (!entry.endsAt || now === 0) return false;
+  const end = Date.parse(entry.endsAt);
+  return !Number.isNaN(end) && end <= now;
+}
+
+/**
+ * Sagt einem Bildschirmleser an, was ein Neuladen geändert hat (#7660): beim
+ * ersten Laden nichts, danach „1 neue Änderung“ oder dass sich die Übersicht
+ * geändert hat. Ein Neuladen ohne Änderung bleibt still.
+ */
+function DayChangesAnnouncer({
   overview,
 }: {
-  readonly overview: DayChangesOverview;
+  readonly overview: DayChangesOverview | undefined;
 }) {
-  const shown = overview.entries.filter(
-    (entry) => dayChangeText(entry) !== null,
+  const keys = overview ? dayChangeKeys(shownEntries(overview)) : null;
+  // Der Schlüssel hält die Identität einer Zeile; die Signatur enthält jeden
+  // Wert, den ihre Darstellung verwendet. So wird auch ein geänderter
+  // Zeitraum angesagt, ohne die Zeile als neue Änderung zu zählen.
+  const signature = overview
+    ? shownEntries(overview)
+        .map((entry, index) =>
+          JSON.stringify([
+            keys?.[index],
+            entry.halfDay,
+            entry.since,
+            entry.until,
+            entry.startsAt,
+            entry.endsAt,
+            entry.people.map((person) => [
+              person.name,
+              person.role,
+              person.isSelf,
+            ]),
+            entry.groupName,
+            entry.count,
+            entry.notice
+              ? [
+                  entry.notice.id,
+                  entry.notice.title,
+                  entry.notice.body,
+                  entry.notice.important,
+                  entry.notice.requiresAcknowledgement,
+                  entry.notice.acknowledged,
+                ]
+              : null,
+          ]),
+        )
+        .join("|")
+    : null;
+  const [last, setLast] = useState<{
+    keys: readonly string[] | null;
+    signature: string | null;
+    message: string;
+  }>({ keys: null, signature: null, message: "" });
+  if (keys && signature !== last.signature) {
+    // Abgeleiteter Zustand während des Renderns statt eines Effekts.
+    const message = last.keys ? changeMessage(last.keys, keys) : "";
+    setLast({
+      keys,
+      signature,
+      // Derselbe Satz zweimal hintereinander würde nicht noch einmal
+      // angesagt; ein geschütztes Leerzeichen macht ihn neu.
+      message:
+        message !== "" && message === last.message
+          ? `${message}\u00a0`
+          : message,
+    });
+  }
+  return (
+    <p className="sr-only" aria-live="polite">
+      {last.message}
+    </p>
   );
+}
+
+function changeMessage(
+  before: readonly string[],
+  after: readonly string[],
+): string {
+  const previous = new Set(before);
+  const added = after.filter((key) => !previous.has(key)).length;
+  if (added === 1) return "„Heute anders“: 1 neue Änderung.";
+  if (added > 1) return `„Heute anders“: ${added} neue Änderungen.`;
+  return "„Heute anders“ hat sich geändert.";
+}
+
+function DayChangesContent({
+  overview,
+  onChanged,
+}: {
+  readonly overview: DayChangesOverview;
+  /** Lädt die Übersicht neu, etwa nach einer Kenntnisnahme (#7667). */
+  readonly onChanged: () => Promise<unknown>;
+}) {
+  const now = useCurrentTimestamp();
+  const shown = shownEntries(overview);
   const mine = shown.filter((entry) => entry.section === "you");
   const school = shown.filter((entry) => entry.section !== "you");
   const failures = overview.failedSources.map((source) => (
@@ -115,12 +221,6 @@ function DayChangesContent({
   return (
     <div className="space-y-4">
       {failures.length > 0 ? <div className="space-y-2">{failures}</div> : null}
-      {/* Ein Bildschirmleser hört, wenn sich die Zahl der Einträge ändert. */}
-      <p className="sr-only" aria-live="polite">
-        {shown.length === 1
-          ? "1 Änderung heute"
-          : `${shown.length} Änderungen heute`}
-      </p>
       <div
         className={
           mine.length > 0 && school.length > 0
@@ -129,10 +229,21 @@ function DayChangesContent({
         }
       >
         {mine.length > 0 ? (
-          <DayChangesSection title="Betrifft dich" entries={mine} />
+          <DayChangesSection
+            title="Betrifft dich"
+            entries={mine}
+            now={now}
+            onChanged={onChanged}
+          />
         ) : null}
         {school.length > 0 ? (
-          <DayChangesSection title="Schule" entries={school} capOnPhone />
+          <DayChangesSection
+            title="Schule"
+            entries={school}
+            now={now}
+            onChanged={onChanged}
+            capOnPhone
+          />
         ) : null}
       </div>
     </div>
@@ -142,10 +253,15 @@ function DayChangesContent({
 function DayChangesSection({
   title,
   entries,
+  now,
+  onChanged,
   capOnPhone = false,
 }: {
   readonly title: string;
   readonly entries: readonly DayChange[];
+  /** Die Uhr des Browsers in Minuten-Schritten; 0 vor dem ersten Rendern. */
+  readonly now: number;
+  readonly onChanged: () => Promise<unknown>;
   /** Auf dem Telefon nur die ersten Einträge, damit „Mein Tag“ sichtbar bleibt. */
   readonly capOnPhone?: boolean;
 }) {
@@ -153,20 +269,34 @@ function DayChangesSection({
   const [expanded, setExpanded] = useState(false);
   const headingId = useId();
   const listRef = useRef<HTMLUListElement>(null);
-  const capped = capOnPhone && isPhone && !expanded;
-  const visible = capped ? entries.slice(0, PHONE_SCHOOL_ROWS) : entries;
+  const open = entries.filter((entry) => !isDone(entry, now));
+  const done = entries.filter((entry) => isDone(entry, now));
+  const capped =
+    capOnPhone && isPhone && !expanded && open.length > PHONE_SCHOOL_ROWS;
+  const visible = capped ? open.slice(0, PHONE_SCHOOL_ROWS) : open;
 
   return (
     <section aria-labelledby={headingId} className="min-w-0">
       <SectionLabel id={headingId} as="h3" className="mb-2">
         {title}
       </SectionLabel>
-      <ul ref={listRef} className="space-y-2">
-        {visible.map((entry, index) => (
-          <DayChangeRow key={dayChangeKey(entry, index)} entry={entry} />
-        ))}
-      </ul>
-      {capped && entries.length > PHONE_SCHOOL_ROWS ? (
+      {visible.length > 0 ? (
+        <ul ref={listRef} className="space-y-2">
+          {withKeys(visible).map(([key, entry]) =>
+            entry.notice ? (
+              <DayNoticeRow
+                key={key}
+                entry={entry}
+                notice={entry.notice}
+                onChanged={onChanged}
+              />
+            ) : (
+              <DayChangeRow key={key} entry={entry} />
+            ),
+          )}
+        </ul>
+      ) : null}
+      {capped ? (
         <Button
           type="button"
           variant="link"
@@ -186,26 +316,96 @@ function DayChangesSection({
             });
           }}
         >
-          Alle anzeigen ({entries.length})
+          Alle anzeigen ({open.length})
         </Button>
       ) : null}
+      {done.length > 0 ? <DoneChanges entries={done} /> : null}
     </section>
   );
 }
 
-/** Stabil über ein Neuladen hinweg: Art, Personen, Gruppe und Termin. */
-function dayChangeKey(entry: DayChange, index: number): string {
-  const people = entry.people.map((person) => person.staffId).join(",");
-  const activity = entry.activity?.id ?? "";
-  return `${entry.kind}:${people}:${entry.groupName ?? ""}:${activity}:${people || entry.groupName || activity ? "" : index}`;
+/** „3 erledigt“: was heute schon vorbei ist, eingeklappt am Ende. */
+function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  return (
+    <div className="mt-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="compact"
+        className="-ml-2"
+        aria-expanded={open}
+        aria-controls={listId}
+        tooltip={
+          open
+            ? "Blendet die Änderungen aus, die heute schon vorbei sind."
+            : "Zeigt die Änderungen, die heute schon vorbei sind."
+        }
+        onClick={() => {
+          if (!open) trackEvent("day_changes_done_expanded");
+          setOpen(!open);
+        }}
+      >
+        <ChevronRight
+          aria-hidden
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
+            open && "rotate-90",
+          )}
+        />
+        {entries.length} erledigt
+      </Button>
+      <ul id={listId} hidden={!open} className="mt-1 space-y-2">
+        {open
+          ? withKeys(entries).map(([key, entry]) => (
+              <DayChangeRow key={key} entry={entry} muted />
+            ))
+          : null}
+      </ul>
+    </div>
+  );
 }
 
-function DayChangeRow({ entry }: { readonly entry: DayChange }) {
+/**
+ * Stabil über ein Neuladen hinweg: Abschnitt, Art, Personen, Gruppe und
+ * Beginn. Eine Zusammenfassung trägt nur ihre Art, ihre Zahl ändert den
+ * Schlüssel nicht. Gleiche Einträge zählen hoch („#2“), damit jeder
+ * Schlüssel eindeutig bleibt.
+ */
+function dayChangeKeys(entries: readonly DayChange[]): string[] {
+  const seen = new Map<string, number>();
+  return entries.map((entry) => {
+    if (entry.notice) {
+      return `${entry.section}:${entry.kind}:${entry.notice.id}`;
+    }
+    const people = entry.people.map((person) => person.staffId).join(",");
+    const base = `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}:${entry.activity?.id ?? ""}`;
+    const count = (seen.get(base) ?? 0) + 1;
+    seen.set(base, count);
+    return count === 1 ? base : `${base}#${count}`;
+  });
+}
+
+function withKeys(
+  entries: readonly DayChange[],
+): (readonly [string, DayChange])[] {
+  const keys = dayChangeKeys(entries);
+  return entries.map((entry, index) => [keys[index] ?? "", entry] as const);
+}
+
+function DayChangeRow({
+  entry,
+  muted = false,
+}: {
+  readonly entry: DayChange;
+  /** Erledigt: grau, damit das Aktuelle vorne bleibt. */
+  readonly muted?: boolean;
+}) {
   const tenantPath = useTenantAwarePath();
   const dayPlanHref = useDayPlanHref();
   const text = dayChangeText(entry) ?? "";
   const span = dayChangeSpan(entry);
-  const whenWhere = dayChangeWhenWhere(entry);
   const path = dayChangeHref(entry);
   // Der Tagesplan heißt je Rolle anders (#7662): die Leitung ohne Gruppe
   // plant im Betreuungsplan.
@@ -215,12 +415,23 @@ function DayChangeRow({ entry }: { readonly entry: DayChange }) {
       : entry.link?.target === "day_plan"
         ? dayPlanHref
         : tenantPath(path);
-  const body = (
-    <span className="min-w-0 flex-1">
-      <span className="block text-sm text-gray-900">{text}</span>
-      {whenWhere ? (
-        <span className="block text-xs text-gray-500">{whenWhere}</span>
+  // Eine lange Änderung, die vor heute begann, steht kompakt in einer Zeile
+  // („… · seit 3.11.“), damit sie nicht jeden Tag die neuen verdrängt.
+  const compact = entry.since !== null;
+  const textClass = muted || compact ? "text-gray-600" : "text-gray-900";
+  const body = compact ? (
+    <span className="min-w-0 flex-1 text-sm">
+      <span className={textClass}>{text}</span>
+      {span ? (
+        <span className="text-xs text-gray-500">
+          {/* Die Leerzeichen bleiben im Namen des Links, der Punkt nicht. */}{" "}
+          <span aria-hidden="true">·</span> <span>{span}</span>
+        </span>
       ) : null}
+    </span>
+  ) : (
+    <span className="min-w-0 flex-1">
+      <span className={cn("block text-sm", textClass)}>{text}</span>
       {span ? (
         <span className="block text-xs text-gray-500">{span}</span>
       ) : null}

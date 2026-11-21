@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SchoolRealtimeBridge } from "./school-realtime-bridge";
 import { CLASS_DAY_REFRESH_EVENT } from "~/components/class-day/use-class-day-refresh";
+import { STAFF_NOTICES_REFRESH_EVENT } from "~/lib/staff-notices-api";
 import type { SSEHookOptions } from "~/lib/sse-types";
 
 const useSSE = vi.hoisted(() => vi.fn());
@@ -73,6 +74,26 @@ describe("SchoolRealtimeBridge", () => {
     } finally {
       window.removeEventListener("notification-feed-refresh", feed);
       window.removeEventListener(CLASS_DAY_REFRESH_EVENT, refresh);
+    }
+  });
+
+  it("reloads today's notices after a staff notice changed (#7667)", () => {
+    render(<SchoolRealtimeBridge />);
+
+    const refresh = vi.fn();
+    window.addEventListener(STAFF_NOTICES_REFRESH_EVENT, refresh);
+
+    try {
+      registeredHandler()({
+        type: "staff_notices_changed",
+        active_group_id: "",
+        data: {},
+        timestamp: new Date().toISOString(),
+      });
+
+      expect(refresh).toHaveBeenCalledOnce();
+    } finally {
+      window.removeEventListener(STAFF_NOTICES_REFRESH_EVENT, refresh);
     }
   });
 

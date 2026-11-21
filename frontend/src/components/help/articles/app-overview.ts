@@ -68,13 +68,21 @@ export function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Angebote und AGs, die heute ausfallen, doch stattfinden, in einem anderen Raum sind oder jemand anderes übernimmt.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Dazu kommen die Hinweise der Leitung für heute. Sie zeigt auch Angebote und AGs, die heute ausfallen, doch stattfinden, in einem anderen Raum sind oder bei denen jemand anderes betreut.",
         ordered: false,
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen, deine Termine und ob du selbst heute fehlst.",
-          // Quelle Stundenplan (#7662): Uhrzeit und Raum unter dem Satz.
-          "Bei Angeboten und AGs steht unter dem Satz die Uhrzeit und der Raum.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
+          // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
+          // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
+          "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          // Quelle Stundenplan (#7662): Uhrzeit und Raum, eingeklapptes „erledigt“.
+          "Bei Angeboten und AGs stehen Uhrzeit und Raum unter dem Satz. Sie stehen nach Beginn geordnet.",
+          "Was heute schon vorbei ist, steht eingeklappt am Ende, zum Beispiel `3 erledigt`. Tippe darauf, um es zu sehen.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
+          "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",

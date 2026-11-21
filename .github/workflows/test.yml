@@ -382,6 +382,19 @@ jobs:
           fi
           echo "Running ${#packages[@]} selected Go packages"
 
+          # Every registered route a test answers through a router, for
+          # "Check every registered route is answered" below (#7563). It
+          # holds them only when this run tested ./api, which links every
+          # owner's handlers. The race run checks nothing.
+          if [ "$BACKEND_RACE" != true ]; then
+            export CONTRACT_ANSWERS_FILE="$RUNNER_TEMP/contract-answers.txt"
+            for package in "${packages[@]}"; do
+              if [ "$package" = github.com/moto-ogs/project-phoenix/api ]; then
+                echo "$FULL_SUITE" > "$RUNNER_TEMP/contract-answers-full-suite"
+              fi
+            done
+          fi
+
           # Six package binaries keep eight vCPUs busy, four the small
           # runner, twelve the sixteen vCPUs.
           PACKAGE_WORKERS=6
@@ -486,6 +499,26 @@ jobs:
       - name: Check backend package time budgets
         if: ${{ !cancelled() && !inputs.backend-race && hashFiles('backend/go-test.json') != '' }}
         run: node scripts/backend-package-budgets.mjs check backend/go-test.json
+
+      # A route no test answers through its router can leave the contract
+      # unseen: the BFF then answers 502 (#7563). A full suite holds every
+      # registered route, a selection the routes this branch adds; both fail
+      # on a line of routesNoRouterTestAnswers a test answers now. Locally
+      # 3 s once the step above built the api test binary.
+      - name: Check every registered route is answered
+        if: ${{ success() && !inputs.backend-race && hashFiles('backend/go-test.json') != '' }}
+        working-directory: backend
+        env:
+          BASE_REF: ${{ inputs.base_ref }}
+        run: |
+          [ -f "$RUNNER_TEMP/contract-answers-full-suite" ] || { echo "./api was not tested"; exit 0; }
+          export CONTRACT_ANSWERS_FILE="$RUNNER_TEMP/contract-answers.txt" CONTRACT_ANSWERS_CHECK=1
+          touch "$CONTRACT_ANSWERS_FILE"
+          if [ "$(cat "$RUNNER_TEMP/contract-answers-full-suite")" != true ]; then
+            git show "origin/$BASE_REF:backend/api/contract/contract.json" > "$RUNNER_TEMP/base-contract.json"
+            export CONTRACT_ANSWERS_BASE="$RUNNER_TEMP/base-contract.json"
+          fi
+          go test -count=1 -vet=off -run '^TestEveryRegisteredRouteIsAnsweredInATest$' ./api
 
       - name: Save backend build cache
         if: ${{ !cancelled() && github.event_name != 'pull_request' && steps.build-cache.outputs.cache-hit != 'true' }}

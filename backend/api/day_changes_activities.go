@@ -12,6 +12,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
@@ -29,14 +30,14 @@ type dayChangesBlocks interface {
 // dayChangesActivities is the Stundenplan source.
 type dayChangesActivities struct{ sources DayChangesSources }
 
-// Readable is the source's gate: the day plan needs schedules:read.
-func (dayChangesActivities) Readable(ctx context.Context) bool {
+// readsDayPlan reports the day plan's right, schedules:read.
+func readsDayPlan(ctx context.Context) bool {
 	granted := sessiontoken.PermissionsFromCtx(ctx)
 	return securityruntime.HasAdminWildcard(granted) || securityruntime.HasPermission(permissions.SchedulesRead, granted)
 }
 
 func (s dayChangesActivities) ActivityChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
-	if !s.Readable(ctx) {
+	if !readsDayPlan(ctx) {
 		// The day plan is closed to the account; nothing of it is visible.
 		return nil, nil
 	}
@@ -60,7 +61,7 @@ func (s dayChangesActivities) ActivityChanges(ctx context.Context, day calendar.
 	}
 	entries := make([]daychangesview.SourceEntry, 0, len(changes))
 	for _, change := range changes {
-		entries = append(entries, activityEntries(change, names, selfID, named(change))...)
+		entries = append(entries, activityEntries(day, change, names, selfID, named(change))...)
 	}
 	return entries, nil
 }
@@ -101,14 +102,13 @@ func (s dayChangesActivities) staffNames(ctx context.Context, changes []timetabl
 // is only its cancellation; a block that takes place may at once be
 // reinstated, moved and covered. Without named, a covered block says only
 // that somebody else takes it over.
-func activityEntries(change timetable.BlockDayChange, names map[int64]string, selfID int64, named bool) []daychangesview.SourceEntry {
+func activityEntries(day calendar.Date, change timetable.BlockDayChange, names map[int64]string, selfID int64, named bool) []daychangesview.SourceEntry {
+	startsAt, endsAt := blockInstants(day, change)
 	entry := func(kind daychangesview.Kind) daychangesview.SourceEntry {
 		result := daychangesview.SourceEntry{
-			Kind: kind, Involved: change.Involved,
-			Activity: &daychangesview.BlockActivity{
-				ID: change.InstanceID, Title: change.Title, StartTime: change.StartTime, EndTime: change.EndTime,
-			},
-			Link: &daychangesview.Link{Target: daychangesview.LinkDayPlan},
+			Kind: kind, Involved: change.Involved, StartsAt: startsAt, EndsAt: endsAt,
+			Activity: &daychangesview.BlockActivity{ID: change.InstanceID, Title: change.Title},
+			Link:     &daychangesview.Link{Target: daychangesview.LinkDayPlan},
 		}
 		if change.RoomID > 0 {
 			result.Room = &daychangesview.BlockRoom{ID: change.RoomID, Name: change.RoomName}
@@ -141,4 +141,19 @@ func activityEntries(change timetable.BlockDayChange, names map[int64]string, se
 		entries = append(entries, covered)
 	}
 	return entries
+}
+
+// blockInstants turns the block's wall clock of the day into instants in the
+// school's time zone. A block whose end is not after its start ends with the
+// day, as the lifecycle treats it.
+func blockInstants(day calendar.Date, change timetable.BlockDayChange) (*time.Time, *time.Time) {
+	start, err := time.ParseInLocation("2006-01-02 15:04", day.String()+" "+change.StartTime, calendar.Berlin)
+	if err != nil {
+		return nil, nil
+	}
+	end, err := time.ParseInLocation("2006-01-02 15:04", day.String()+" "+change.EndTime, calendar.Berlin)
+	if err != nil || !end.After(start) {
+		end = day.EndOfDay()
+	}
+	return &start, &end
 }

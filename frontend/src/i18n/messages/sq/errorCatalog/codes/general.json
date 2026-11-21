@@ -5,5 +5,6 @@
   "request_too_large": "Nuk u përpunua: {object}. Fshini në shfletues cookies e kësaj faqeje. Pastaj hyni përsëri.",
   "route_not_found": "Nuk u përpunua: {object}. Ka një version të ri të moto. Rifreskoni faqen.",
   "server": "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
-  "unavailable": "{object} nuk është i disponueshëm tani. Provoni përsëri."
+  "unavailable": "{object} nuk është i disponueshëm tani. Provoni përsëri.",
+  "write_answer_unreadable": "Ndryshimi u pranua: {object}. Nuk u shfaq dot. Rifreskoni faqen para se të provoni përsëri."
 }

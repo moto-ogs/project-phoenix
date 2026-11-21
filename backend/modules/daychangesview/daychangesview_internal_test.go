@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,10 +14,17 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// fakeIsolation runs the read in place; fatal marks its own failure.
-type fakeIsolation struct{ fatal error }
+// fakeIsolation runs the read in place and counts its runs; fatal marks
+// its own failure.
+type fakeIsolation struct {
+	fatal error
+	runs  *int
+}
 
 func (f fakeIsolation) Run(ctx context.Context, read func(context.Context) error) error {
+	if f.runs != nil {
+		*f.runs++
+	}
 	if f.fatal != nil {
 		return f.fatal
 	}
@@ -44,6 +52,9 @@ func TestTodayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 			today: func() calendar.Date { return day }, isolation: isolation,
 			logger: slog.New(slog.NewTextHandler(&logs, nil)),
 			sources: []sourceRead{
+				{source: SourceNotices, read: entriesOf(SourceEntry{
+					Kind: KindStaffNotice, Notice: &DayNotice{ID: 3, Title: "Elternabend"},
+				})},
 				{source: "first", read: failing},
 				{source: SourceStaff, read: entriesOf(SourceEntry{
 					Kind: KindStaffAbsent, Involved: true,
@@ -53,12 +64,27 @@ func TestTodayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 		}
 	}
 
-	overview, err := build(fakeIsolation{}).Today(context.Background())
+	runs := 0
+	overview, err := build(fakeIsolation{runs: &runs}).Today(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, day, overview.Date)
-	assert.Equal(t, []SourceStatus{{Source: "first", Status: SourceFailed}, {Source: SourceStaff, Status: SourceLoaded}}, overview.Sources)
-	require.Len(t, overview.Entries, 1)
+	assert.Equal(t, []SourceStatus{
+		{Source: SourceNotices, Status: SourceLoaded},
+		{Source: "first", Status: SourceFailed},
+		{Source: SourceStaff, Status: SourceLoaded},
+	}, overview.Sources)
+	require.Len(t, overview.Entries, 2, "the entries read before the failure are kept")
 	assert.Equal(t, SectionYou, overview.Entries[0].Section)
+	assert.Equal(t, KindStaffNotice, overview.Entries[1].Kind)
+	assert.Equal(t, 2, runs, "the sources share one isolation until one fails; the rest get a fresh one")
+
+	runs = 0
+	_, err = (&view{
+		today: func() calendar.Date { return day }, isolation: fakeIsolation{runs: &runs}, logger: slog.Default(),
+		sources: []sourceRead{{source: SourceStaff, read: entriesOf()}, {source: SourceNotices, read: entriesOf()}},
+	}).Today(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, runs, "succeeding sources share one isolation")
 	assert.Contains(t, logs.String(), "source=first")
 	assert.NotContains(t, logs.String(), "Ben", "the log names no person")
 
@@ -67,39 +93,53 @@ func TestTodayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 	require.ErrorIs(t, err, fatal)
 }
 
+// TestTodayOrdersEachSection composes fake sources (#7660): no source of
+// the staff ticket has a time of day yet, so the order of the four kinds of
+// rows is fixed here. Inside a section: new full-day changes, timed changes
+// by start, long changes since an earlier day, summaries.
+func TestTodayOrdersEachSection(t *testing.T) {
+	t.Parallel()
+	day := calendar.NewDate(2026, 9, 9)
+	at := func(hour int) *time.Time {
+		instant := day.BerlinMidnight().Add(time.Duration(hour) * time.Hour)
+		return &instant
+	}
+	since := day.AddDays(-5)
+	count := 2
+	named := func(name string, extra SourceEntry) SourceEntry {
+		extra.Kind = KindStaffAbsent
+		extra.People = []Person{{StaffID: 1, Name: name, Role: RoleAbsent}}
+		return extra
+	}
+	v := &view{
+		today: func() calendar.Date { return day }, isolation: fakeIsolation{},
+		logger: slog.New(slog.DiscardHandler),
+		sources: []sourceRead{{source: SourceStaff, read: entriesOf(
+			SourceEntry{Kind: KindStaffAbsentCount, Count: &count},
+			named("Long", SourceEntry{Since: &since}),
+			named("Late", SourceEntry{StartsAt: at(15), EndsAt: at(16)}),
+			named("Early", SourceEntry{StartsAt: at(8), EndsAt: at(9)}),
+			named("New", SourceEntry{}),
+			named("Mine", SourceEntry{Involved: true, StartsAt: at(7)}),
+		)}},
+	}
+
+	overview, err := v.Today(context.Background())
+	require.NoError(t, err)
+	got := make([]string, 0, len(overview.Entries))
+	for _, entry := range overview.Entries {
+		got = append(got, string(entry.Section)+":"+firstName(entry))
+	}
+	assert.Equal(t, []string{"you:Mine", "school:New", "school:Early", "school:Late", "school:Long", "school:"}, got)
+	assert.False(t, overview.Entries[0].AllDay, "a change with a start has a time of day")
+	assert.Equal(t, at(8), overview.Entries[2].StartsAt)
+	assert.Equal(t, at(9), overview.Entries[2].EndsAt)
+	assert.True(t, overview.Entries[1].AllDay)
+}
+
 // TestNewRequiresEveryPort keeps missing wiring a configuration error.
 func TestNewRequiresEveryPort(t *testing.T) {
 	t.Parallel()
 	_, err := New(Dependencies{})
 	require.ErrorIs(t, err, ErrDependencies)
 }
-
-// gateDenied is a source port whose Gate closes it to the caller.
-type gateDenied struct{}
-
-func (gateDenied) Readable(context.Context) bool { return false }
-
-// TestClosedGateSkipsTheSource proves a source the caller may not read is
-// loaded without entries and opens no savepoint.
-func TestClosedGateSkipsTheSource(t *testing.T) {
-	t.Parallel()
-	isolation := &countingIsolation{}
-	v := &view{
-		today: func() calendar.Date { return calendar.NewDate(2026, 9, 9) }, isolation: isolation, logger: slog.Default(),
-		sources: []sourceRead{gated(sourceRead{source: SourceActivities, read: entriesOf(SourceEntry{Kind: KindActivityCancelled})}, gateDenied{})},
-	}
-	overview, err := v.Today(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, []SourceStatus{{Source: SourceActivities, Status: SourceLoaded}}, overview.Sources)
-	assert.Empty(t, overview.Entries)
-	assert.Zero(t, isolation.runs)
-}
-
-type countingIsolation struct{ runs int }
-
-func (c *countingIsolation) Run(ctx context.Context, read func(context.Context) error) error {
-	c.runs++
-	return read(ctx)
-}
-
-func (*countingIsolation) IsFatal(error) bool { return false }

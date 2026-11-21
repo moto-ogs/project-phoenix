@@ -386,8 +386,7 @@ func (rs *Resource) serveDeclarationProof(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	// ?format=pdf stays for callers of the JSON path.
-	if pdf || r.URL.Query().Get("format") == "pdf" {
+	if pdf {
 		rs.writeDeclarationProofPDF(w, r, proof)
 		return
 	}

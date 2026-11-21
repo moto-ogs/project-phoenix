@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -187,4 +188,26 @@ func TestRateLimiterSpendOnRefusalsSpendsAlwaysOnMarkedRequests(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, status("/auth/password-reset"))
 	assert.Equal(t, http.StatusTooManyRequests, status("/auth/password-reset"))
 	assert.Equal(t, http.StatusTooManyRequests, status("/auth/login"), "the address has no token left")
+}
+
+// The buckets refill by the limiter's clock: a stopped clock refills
+// nothing, and a second on it refills the token of a limit of 60 a minute.
+func TestRateLimiterRefillsByItsClock(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, time.November, 20, 12, 0, 0, 0, time.UTC)
+	limiter := NewRateLimiter(60, 1)
+	limiter.Now = func() time.Time { return now }
+	handler := limiter.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	send := func() int {
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/groups", nil))
+		return rr.Code
+	}
+
+	assert.Equal(t, http.StatusNoContent, send(), "the burst")
+	assert.Equal(t, http.StatusTooManyRequests, send(), "a stopped clock refills nothing")
+	now = now.Add(time.Second)
+	assert.Equal(t, http.StatusNoContent, send(), "one second refills one token")
 }

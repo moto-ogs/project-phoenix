@@ -5,5 +5,6 @@
   "request_too_large": "Nie udało się przetworzyć: {object}. Usuń w przeglądarce pliki cookie tej strony. Następnie zaloguj się ponownie.",
   "route_not_found": "Nie udało się przetworzyć: {object}. Jest nowa wersja moto. Odśwież stronę.",
   "server": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
-  "unavailable": "{object} jest teraz niedostępne. Spróbuj ponownie."
+  "unavailable": "{object} jest teraz niedostępne. Spróbuj ponownie.",
+  "write_answer_unreadable": "Zmiana została przyjęta: {object}. Nie udało się jej wyświetlić. Odśwież stronę, zanim spróbujesz ponownie."
 }

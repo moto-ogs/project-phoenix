@@ -12,8 +12,9 @@ import (
 
 // Today has a real substitution case: the third staff member reports sick,
 // the Leitung covers her Frühbetreuung and Essensausgabe with the colleague
-// in the Frühdienst and leaves her afternoon block open, and the seventh
-// takes a vacation day.
+// in the Frühdienst and leaves her afternoon block open. The seventh
+// is on vacation until Saturday, the eighth on a training since
+// Sunday.
 func TestSeedTodaysAbsencesCoversTheSickColleaguesMorning(t *testing.T) {
 	t.Parallel()
 
@@ -25,7 +26,7 @@ func TestSeedTodaysAbsencesCoversTheSickColleaguesMorning(t *testing.T) {
 		paths = append(paths, r.Method+" "+r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/api/staff/37/absences", "/api/staff/33/absences":
+		case "/api/staff/37/absences", "/api/staff/38/absences", "/api/staff/33/absences":
 			var body map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 			absences = append(absences, body)
@@ -45,7 +46,7 @@ func TestSeedTodaysAbsencesCoversTheSickColleaguesMorning(t *testing.T) {
 	defer srv.Close()
 
 	fs := NewFixedSeeder(newTestClient(srv.URL, false), false, "")
-	for index, staff := range DemoStaff[:7] {
+	for index, staff := range DemoStaff[:8] {
 		fs.staffIDs[staff.FirstName+" "+staff.LastName] = int64(31 + index)
 	}
 	rt := &Runtime{Client: fs.client, FixedSeeder: fs, TenantAuth: AuthRef{Token: "admin"}}
@@ -54,16 +55,21 @@ func TestSeedTodaysAbsencesCoversTheSickColleaguesMorning(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"POST /api/staff/37/absences",
+		"POST /api/staff/38/absences",
 		"POST /api/staff/33/absences",
 		"GET /api/timetable/instances",
 		"POST /api/timetable/instances/61/deviations",
 	}, paths)
 	assert.Equal(t, "from=2026-10-20&to=2026-10-20", instancesQuery)
-	require.Len(t, absences, 2)
+	require.Len(t, absences, 3)
 	assert.Equal(t, "vacation", absences[0]["absence_type"])
 	assert.Equal(t, "2026-10-20", absences[0]["date_start"])
-	assert.Equal(t, "sick", absences[1]["absence_type"], "the sick report cancels her Dienst and marks her blocks (#1843)")
+	assert.Equal(t, "2026-10-24", absences[0]["date_end"], "the vacation lasts beyond today: „bis“ (#7660)")
+	assert.Equal(t, "training", absences[1]["absence_type"])
+	assert.Equal(t, "2026-10-18", absences[1]["date_start"], "the training began before today: „seit“ (#7660)")
 	assert.Equal(t, "2026-10-20", absences[1]["date_end"])
+	assert.Equal(t, "sick", absences[2]["absence_type"], "the sick report cancels her Dienst and marks her blocks (#1843)")
+	assert.Equal(t, "2026-10-20", absences[2]["date_end"])
 	substitution := deviation["substitutions"].([]any)[0].(map[string]any)
 	assert.EqualValues(t, 33, substitution["absent_staff_id"])
 	assert.EqualValues(t, 35, substitution["substitute_staff_id"])
@@ -79,19 +85,19 @@ func TestSeedTodaysAbsencesSkipsTheWeekend(t *testing.T) {
 	})
 	defer srv.Close()
 	fs := NewFixedSeeder(newTestClient(srv.URL, false), false, "")
-	for index, staff := range DemoStaff[:7] {
+	for index, staff := range DemoStaff[:8] {
 		fs.staffIDs[staff.FirstName+" "+staff.LastName] = int64(31 + index)
 	}
 	saturday := seedDate{Time: time.Date(2026, time.October, 24, 0, 0, 0, 0, time.UTC)}
 	require.NoError(t, seedTodaysAbsences(&Runtime{Client: fs.client, FixedSeeder: fs}, saturday))
 }
 
-func TestSeedTodaysAbsencesRequiresSevenStaff(t *testing.T) {
+func TestSeedTodaysAbsencesRequiresEightStaff(t *testing.T) {
 	t.Parallel()
 
 	fs := NewFixedSeeder(newTestClient("http://127.0.0.1", false), false, "")
 	tuesday := seedDate{Time: time.Date(2026, time.October, 20, 0, 0, 0, 0, time.UTC)}
-	require.ErrorContains(t, seedTodaysAbsences(&Runtime{Client: fs.client, FixedSeeder: fs}, tuesday), "need 7 staff members")
+	require.ErrorContains(t, seedTodaysAbsences(&Runtime{Client: fs.client, FixedSeeder: fs}, tuesday), "need 8 staff members")
 }
 
 // A demo school seeds its day after its first tick, which has completed the
@@ -106,7 +112,7 @@ func TestSeedTodaysAbsencesCoversOnlyBlocksNotOver(t *testing.T) {
 		paths = append(paths, r.Method+" "+r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/api/staff/37/absences", "/api/staff/33/absences":
+		case "/api/staff/37/absences", "/api/staff/38/absences", "/api/staff/33/absences":
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"id":1}}`)
 		case "/api/timetable/instances":
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"instances":[`+
@@ -120,7 +126,7 @@ func TestSeedTodaysAbsencesCoversOnlyBlocksNotOver(t *testing.T) {
 	defer srv.Close()
 
 	fs := NewFixedSeeder(newTestClient(srv.URL, false), false, "")
-	for index, staff := range DemoStaff[:7] {
+	for index, staff := range DemoStaff[:8] {
 		fs.staffIDs[staff.FirstName+" "+staff.LastName] = int64(31 + index)
 	}
 	tuesday := seedDate{Time: time.Date(2026, time.October, 20, 0, 0, 0, 0, time.UTC)}
@@ -151,7 +157,7 @@ func TestSeedTodaysAbsencesLeavesADayThatIsOver(t *testing.T) {
 	defer srv.Close()
 
 	fs := NewFixedSeeder(newTestClient(srv.URL, false), false, "")
-	for index, staff := range DemoStaff[:7] {
+	for index, staff := range DemoStaff[:8] {
 		fs.staffIDs[staff.FirstName+" "+staff.LastName] = int64(31 + index)
 	}
 	tuesday := seedDate{Time: time.Date(2026, time.October, 20, 0, 0, 0, 0, time.UTC)}
@@ -159,6 +165,7 @@ func TestSeedTodaysAbsencesLeavesADayThatIsOver(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"POST /api/staff/37/absences",
+		"POST /api/staff/38/absences",
 		"POST /api/staff/33/absences",
 		"GET /api/timetable/instances",
 	}, paths)

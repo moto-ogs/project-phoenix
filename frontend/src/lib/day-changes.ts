@@ -5,6 +5,7 @@
  */
 import { bffJson } from "~/lib/bff-fetch";
 import type {
+  DayNotice,
   Entry,
   Kind,
   LinkTarget,
@@ -21,6 +22,17 @@ export interface DayChangePerson {
   readonly isSelf: boolean;
 }
 
+/** Ein Hinweis der Leitung (#7667); Titel und Text schreibt die Leitung. */
+export interface DayChangeNotice {
+  readonly id: string;
+  readonly title: string;
+  readonly body: string;
+  readonly important: boolean;
+  readonly requiresAcknowledgement: boolean;
+  /** Die eigene Kenntnisnahme ist gespeichert. */
+  readonly acknowledged: boolean;
+}
+
 export interface DayChange {
   readonly kind: Kind | (string & {});
   readonly section: Section | (string & {});
@@ -29,6 +41,12 @@ export interface DayChange {
   readonly since: string | null;
   /** Letzter Tag einer Änderung, die über heute hinausgeht („bis“). */
   readonly until: string | null;
+  /**
+   * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (#7660),
+   * sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
+   */
+  readonly startsAt: string | null;
+  readonly endsAt: string | null;
   readonly people: readonly DayChangePerson[];
   readonly groupName: string | null;
   readonly link: {
@@ -36,18 +54,14 @@ export interface DayChange {
     readonly staffId: string | null;
   } | null;
   readonly count: number | null;
-  /** Der Termin eines Eintrags der Quelle Stundenplan (#7662), sonst null. */
-  readonly activity: {
-    readonly id: string;
-    readonly title: string;
-    /** „HH:MM“ */
-    readonly startTime: string;
-    readonly endTime: string;
-  } | null;
+  /** Nur bei der Art `staff_notice`. */
+  readonly notice?: DayChangeNotice | null;
+  /** Der Termin eines Eintrags der Quelle Stundenplan (#7662). */
+  readonly activity?: { readonly id: string; readonly title: string } | null;
   /** Wo der Termin heute ist. */
-  readonly roomName: string | null;
+  readonly roomName?: string | null;
   /** Wo der Termin sonst ist, wenn er heute in einem anderen Raum liegt. */
-  readonly previousRoomName: string | null;
+  readonly previousRoomName?: string | null;
 }
 
 export interface DayChangesOverview {
@@ -57,6 +71,18 @@ export interface DayChangesOverview {
   readonly entries: readonly DayChange[];
 }
 
+function mapNotice(notice: DayNotice | null): DayChangeNotice | null {
+  if (!notice) return null;
+  return {
+    id: notice.id,
+    title: notice.title,
+    body: notice.body,
+    important: notice.priority === "important",
+    requiresAcknowledgement: notice.requires_acknowledgement,
+    acknowledged: notice.acknowledged,
+  };
+}
+
 function mapEntry(entry: Entry): DayChange {
   return {
     kind: entry.kind,
@@ -64,6 +90,8 @@ function mapEntry(entry: Entry): DayChange {
     halfDay: entry.half_day,
     since: entry.since,
     until: entry.until,
+    startsAt: entry.starts_at,
+    endsAt: entry.ends_at,
     people: (entry.people ?? []).map((person) => ({
       staffId: person.staff_id,
       name: person.name,
@@ -75,13 +103,9 @@ function mapEntry(entry: Entry): DayChange {
       ? { target: entry.link.target, staffId: entry.link.staff_id ?? null }
       : null,
     count: entry.count,
+    notice: mapNotice(entry.notice ?? null),
     activity: entry.activity
-      ? {
-          id: entry.activity.id,
-          title: entry.activity.title,
-          startTime: entry.activity.start_time,
-          endTime: entry.activity.end_time,
-        }
+      ? { id: entry.activity.id, title: entry.activity.title }
       : null,
     roomName: entry.room?.name ?? null,
     previousRoomName: entry.previous_room?.name ?? null,

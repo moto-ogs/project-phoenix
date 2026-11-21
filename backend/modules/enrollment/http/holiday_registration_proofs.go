@@ -58,6 +58,10 @@ func parseHolidayProof(w http.ResponseWriter, r *http.Request) (capability.Holid
 		return capability.HolidayProofUpload{}, err
 	}
 	defer common.CloseFile(uploaded.File)
+	// The link names the Träger and the period; the body carries the file only.
+	if err := onlyFormParts(r); err != nil {
+		return capability.HolidayProofUpload{}, err
+	}
 	if !extensionMatchesContent(uploaded.Filename, uploaded.ContentType) {
 		return capability.HolidayProofUpload{}, enrollmentUploadContentError(uploaded.Filename)
 	}
