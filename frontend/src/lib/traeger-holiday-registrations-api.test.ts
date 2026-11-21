@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
 import type {
+  HolidayRegistrationBooking as WireBooking,
+  HolidayRegistrationDetail as WireDetail,
+  HolidayRegistrationEvent as WireEvent,
+} from "./contract/shared.generated";
+import type {
   HolidayMailProblemsResponse,
   HolidayRegistrationHealthDetail as WireHealthDetail,
+  HolidayRegistrationSummary as WireSummary,
   HolidayWeekPlaces as WireWeekPlaces,
 } from "./contract/traeger-holiday-periods.generated";
 import {
@@ -28,36 +34,73 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-const BACKEND_DETAIL = {
-  id: 7,
-  status: "confirmed",
-  frozen: true,
-  submitted_at: "2026-11-03T08:00:00Z",
+// Answers in the shape the catalog proxy hands on: decoded by the route's
+// contract, IDs as strings, every required field present.
+const BACKEND_BOOKING = {
+  week_id: "51",
+  week_starts_on: "2027-01-04",
+  week_ends_on: "2027-01-08",
+  host_school_id: "31",
+  time_model_id: "61",
+  time_model_name: "bis 13 Uhr",
+  price_cents: 4500,
+  lunch: false,
+  lunch_days: 0,
+  lunch_price_cents: 0,
+  placement: "placed",
+} satisfies WireBooking;
+
+const BACKEND_SUMMARY = {
+  id: "7",
+  status: "received",
+  frozen: false,
+  submitted_at: "2026-09-03T08:00:00Z",
   guardian_first_name: "Eva",
   guardian_last_name: "Muster",
   guardian_email: "eva@example.org",
+  guardian_phone: "0151",
+  children: [],
+  benefits_declared: false,
+  debtor_number: "",
+  retention_days: 60,
+  deletes_on: null,
+  health_deletes_on: null,
+} satisfies WireSummary;
+
+function event(
+  action: string,
+  occurredAt: string,
+  details: WireEvent["details"],
+): WireEvent {
+  return { action, occurred_at: occurredAt, actor_account_id: null, details };
+}
+
+const BACKEND_DETAIL = {
+  ...BACKEND_SUMMARY,
+  status: "confirmed",
+  frozen: true,
+  submitted_at: "2026-11-03T08:00:00Z",
   guardian_phone: "0151 2345678",
   children: [
     {
-      id: 9,
+      id: "9",
       first_name: "Ben",
       last_name: "Muster",
       birth_date: "2016-09-12",
       home_school_id: null,
       guest_school_name: "Grundschule Melle",
-      bookings: [
-        {
-          week_id: 51,
-          week_starts_on: "2027-01-04",
-          week_ends_on: "2027-01-08",
-          host_school_id: 31,
-          time_model_id: 61,
-          time_model_name: "bis 13 Uhr",
-        },
-      ],
-      duplicate_registration_ids: [8],
+      bookings: [BACKEND_BOOKING],
+      duplicate_registration_ids: ["8"],
+      holiday_wish: "",
+      holiday_wish_source: "",
+      holiday_wish_check: false,
     },
   ],
+  guardian_address: null,
+  legal_acceptances: null,
+  form: null,
+  custom_data: null,
+  child_custom_data: null,
   contacts: [
     {
       kind: "emergency",
@@ -68,24 +111,22 @@ const BACKEND_DETAIL = {
   ],
   privacy_consent_at: "2026-11-03T08:00:00Z",
   health_consent_at: null,
+  consent_version: 0,
+  consent_texts: null,
   binding_confirmed_at: "2026-11-03T08:00:00Z",
+  custody_confirmed_at: null,
+  declaration_name: "",
+  benefits_proofs: null,
   history: [
-    {
-      action: "rebook",
-      occurred_at: "2026-11-04T09:00:00Z",
-      details: {
-        child_id: 9,
-        before: [{ week_id: 52, time_model_id: 63 }],
-        after: [{ week_id: 51, time_model_id: 61 }],
-      },
-    },
-    {
-      action: "confirm",
-      occurred_at: "2026-11-05T09:00:00Z",
-      details: { from: "received" },
-    },
+    event("rebook", "2026-11-04T09:00:00Z", {
+      child_id: "9",
+      before: [{ week_id: "52", time_model_id: "63" }],
+      after: [{ week_id: "51", time_model_id: "61" }],
+    }),
+    event("confirm", "2026-11-05T09:00:00Z", { from: "received" }),
   ],
-};
+  criteria: null,
+} satisfies WireDetail;
 
 describe("traeger-holiday-registrations-api", () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -238,21 +279,13 @@ describe("traeger-holiday-registrations-api", () => {
           ...BACKEND_DETAIL,
           debtor_number: "10 4711",
           history: [
-            {
-              action: "confirm",
-              occurred_at: "2026-11-05T09:00:00Z",
-              details: {
-                from: "received",
-                debtor_number: { before: "", after: "10 4710" },
-              },
-            },
-            {
-              action: "debtor_number",
-              occurred_at: "2026-11-06T09:00:00Z",
-              details: {
-                debtor_number: { before: "10 4710", after: "10 4711" },
-              },
-            },
+            event("confirm", "2026-11-05T09:00:00Z", {
+              from: "received",
+              debtor_number: { before: "", after: "10 4710" },
+            }),
+            event("debtor_number", "2026-11-06T09:00:00Z", {
+              debtor_number: { before: "10 4710", after: "10 4711" },
+            }),
           ],
         },
       }),
@@ -276,13 +309,26 @@ describe("traeger-holiday-registrations-api", () => {
         data: {
           ...BACKEND_DETAIL,
           form: {
+            legal_blocks: null,
             version: 4,
             fields: [
-              { key: "quelle", label: "Quelle", type: "text", sort_order: 0 },
+              {
+                key: "quelle",
+                label: "Quelle",
+                type: "text",
+                sort_order: 0,
+                health: false,
+                share_with_host: false,
+              },
             ],
+            address_requirement: "off",
+            health_requirement: "optional",
+            created_at: "2026-08-20T10:00:00Z",
           },
           custom_data: { quelle: "Elternbrief" },
-          child_custom_data: [{ child_id: 9, custom_data: { tetanus: "ja" } }],
+          child_custom_data: [
+            { child_id: "9", custom_data: { tetanus: "ja" } },
+          ],
         },
       }),
     );
@@ -377,11 +423,9 @@ describe("traeger-holiday-registrations-api", () => {
           data: {
             ...BACKEND_DETAIL,
             history: [
-              {
-                action: "edit",
-                occurred_at: "2026-11-06T09:00:00Z",
-                details: { fields: ["guardian.phone", "second_guardian"] },
-              },
+              event("edit", "2026-11-06T09:00:00Z", {
+                fields: ["guardian.phone", "second_guardian"],
+              }),
             ],
           },
         }),
@@ -558,17 +602,9 @@ describe("traeger-holiday-registrations-api", () => {
         data: {
           registrations: [
             {
-              id: 7,
-              status: "received",
-              frozen: false,
-              submitted_at: "2026-09-03T08:00:00Z",
-              guardian_first_name: "Eva",
-              guardian_last_name: "Muster",
-              guardian_email: "eva@example.org",
-              guardian_phone: "0151",
+              ...BACKEND_SUMMARY,
               deletes_on: "2028-01-09",
               health_deletes_on: "2027-04-11",
-              children: [],
             },
           ],
           total: 1,
@@ -587,17 +623,7 @@ describe("traeger-holiday-registrations-api", () => {
   });
 
   it("names the mails that did not reach the parents, none when the backend omits them (#6737)", async () => {
-    const registration = {
-      id: 7,
-      status: "received",
-      frozen: false,
-      submitted_at: "2026-09-03T08:00:00Z",
-      guardian_first_name: "Eva",
-      guardian_last_name: "Muster",
-      guardian_email: "eva@example.org",
-      guardian_phone: "0151",
-      children: [],
-    };
+    const registration = BACKEND_SUMMARY;
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         data: {
@@ -608,7 +634,7 @@ describe("traeger-holiday-registrations-api", () => {
                 { kind: "holiday_registration_received", state: "failed" },
               ],
             },
-            { ...registration, id: 8 },
+            { ...registration, id: "8" },
           ],
           total: 2,
           status_counts: { received: 2 },
@@ -718,7 +744,6 @@ describe("traeger-holiday-registrations-api", () => {
     expect(merged.answers).toMatchObject({ krankenkasse: "AOK" });
     expect(merged.childAnswers["9"]).toMatchObject({ tetanus: "ja" });
   });
-
   it("reads the places of a week with an unknown waiting status as unknown", async () => {
     const week = {
       week_id: "51",
