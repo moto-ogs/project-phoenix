@@ -183,10 +183,10 @@ describe("mapAnnouncement with values this build does not know (#2353)", () => {
     status: "scheduled",
   };
 
-  it("falls back to the type and severity Go stores for an empty value", () => {
+  it("preserves unknown type and severity values for editing", () => {
     const result = mapAnnouncement(announcement);
-    expect(result.type).toBe("announcement");
-    expect(result.severity).toBe("info");
+    expect(result.type).toBe("newsletter");
+    expect(result.severity).toBe("urgent");
   });
 
   it("leaves an unknown status unknown and keeps every target role", () => {

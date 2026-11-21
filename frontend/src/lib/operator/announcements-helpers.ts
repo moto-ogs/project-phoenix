@@ -26,6 +26,17 @@ export type AnnouncementSeverity =
 type AnnouncementStatus = (typeof ANNOUNCEMENT_STATUS_VALUES)[number];
 export type SystemRole = (typeof SYSTEM_ROLE_VALUES)[number];
 
+/** Display defaults must not replace the wire values sent back on save. */
+export function announcementTypeForDisplay(value: string): AnnouncementType {
+  return knownEnum(ANNOUNCEMENT_TYPE_VALUES, value) ?? "announcement";
+}
+
+export function announcementSeverityForDisplay(
+  value: string,
+): AnnouncementSeverity {
+  return knownEnum(ANNOUNCEMENT_SEVERITY_VALUES, value) ?? "info";
+}
+
 export const SYSTEM_ROLE_LABELS: Record<SystemRole, string> = {
   admin: ROLE_LABELS.admin.name,
   user: ROLE_LABELS.user.name,
@@ -41,8 +52,8 @@ export interface Announcement {
   id: string;
   title: string;
   content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
+  type: string;
+  severity: string;
   version: string | null;
   active: boolean;
   publishedAt: string | null;
@@ -86,15 +97,15 @@ export function mapViewDetail(
 export type CreateAnnouncementRequest = WireCreateAnnouncementRequest & {
   title: string;
   content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
+  type: string;
+  severity: string;
 };
 
 export type UpdateAnnouncementRequest = WireUpdateAnnouncementRequest & {
   title: string;
   content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
+  type: string;
+  severity: string;
 };
 
 export function mapAnnouncement(data: WireAnnouncement): Announcement {
@@ -102,10 +113,8 @@ export function mapAnnouncement(data: WireAnnouncement): Announcement {
     id: data.id,
     title: data.title,
     content: data.content,
-    // Go itself stores an empty type as "announcement" and an empty
-    // severity as "info"; both only pick the badge.
-    type: knownEnum(ANNOUNCEMENT_TYPE_VALUES, data.type) ?? "announcement",
-    severity: knownEnum(ANNOUNCEMENT_SEVERITY_VALUES, data.severity) ?? "info",
+    type: data.type,
+    severity: data.severity,
     version: data.version ?? null,
     active: data.active,
     publishedAt: data.published_at ?? null,
