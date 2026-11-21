@@ -257,9 +257,9 @@ func TestDayChangesQueryBudget(t *testing.T) {
 		}
 		baseline = n
 		counter.Reset()
-		// time_tracking:own reads the closing days too (#7664), while the
-		// Stundenplan source has its own query-budget scenario.
-		overview, _ := read(t, router, account.ID, tenantID, "users:read", "vacation:approve", "time_tracking:own")
+		// time_tracking:own reads the closing days too (#7664). The Kinder and
+		// Stundenplan sources have their own query-budget scenarios.
+		overview, _ := read(t, router, account.ID, tenantID, "vacation:approve", "time_tracking:own")
 		require.Len(t, overview.Entries, 2*n)
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {
