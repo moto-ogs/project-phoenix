@@ -117,6 +117,8 @@ function CountWithChanges({
 /** Where one day stands, as one badge; an open day names its deadline. */
 function DayState({ day }: Readonly<{ day: CatererOrderDay }>) {
   if (day.closed) return <StatusBadge label="Schule geschlossen" tone="gray" />;
+  // A status this build does not know is no order the caterer can rely on.
+  if (day.status === undefined) return <StatusBadge label="–" tone="gray" />;
   if (day.status === "unordered")
     return <StatusBadge label="Nicht bestellt" tone="gray" />;
   if (day.status === "open")

@@ -13,6 +13,18 @@ import type {
   ClassArrivalExceptionList,
 } from "./student-arrival-api";
 import type { ApiResponse } from "./api-envelope";
+import { requiredDay } from "./contract/required-day";
+import type {
+  AbsenceListCounts as WireAbsenceListCounts,
+  AbsenceListReport as WireAbsenceList,
+  AbsenceReportRequest,
+  ArrivalExceptionRequest,
+  ClassHandoverRequest,
+  ClassTripRequest,
+  DayHintRequest,
+  HomeworkRequest,
+  MorningAttendanceRequest,
+} from "./contract/school-class-day.generated";
 
 /** Antwort von GET /school/class-day/classes. */
 export interface ClassDayClasses {
@@ -172,7 +184,7 @@ export async function upsertClassArrivalExceptionSchool(
 ): Promise<ClassArrivalException> {
   const response = await authFetch<ApiResponse<ClassArrivalException>>(
     arrivalExceptionPath(schoolClass, date),
-    { method: "PUT", body: input },
+    { method: "PUT", body: input satisfies ArrivalExceptionRequest },
   );
   return response.data;
 }
@@ -283,7 +295,7 @@ export async function reportClassTripSchool(
         student_ids: input.studentIds.map(Number),
         ...(input.reason ? { reason: input.reason } : {}),
         ...(input.returnTime ? { return_time: input.returnTime } : {}),
-      },
+      } satisfies ClassTripRequest,
     },
   );
   return response.data;
@@ -312,7 +324,7 @@ export async function saveDayHintSchool(
 ): Promise<void> {
   await authFetch<unknown>(dayHintPath(schoolClass, date, studentId), {
     method: "PUT",
-    body: { body },
+    body: { body } satisfies DayHintRequest,
   });
 }
 
@@ -343,7 +355,10 @@ export async function recordMorningAttendanceSchool(
 ): Promise<void> {
   await authFetch<unknown>(
     `/api/school/class-day/morning-attendance/${encodeURIComponent(schoolClass)}/${encodeURIComponent(date)}`,
-    { method: "PUT", body: { marks } },
+    {
+      method: "PUT",
+      body: { marks: [...marks] } satisfies MorningAttendanceRequest,
+    },
   );
 }
 
@@ -361,7 +376,7 @@ export async function addHomeworkSchool(
 ): Promise<void> {
   await authFetch<unknown>(
     `/api/school/class-day/homework/${encodeURIComponent(schoolClass)}`,
-    { method: "POST", body: { date, ...input } },
+    { method: "POST", body: { date, ...input } satisfies HomeworkRequest },
   );
 }
 
@@ -373,7 +388,7 @@ export async function changeHomeworkSchool(
 ): Promise<void> {
   await authFetch<unknown>(
     `/api/school/class-day/homework/${encodeURIComponent(schoolClass)}/${encodeURIComponent(homeworkId)}`,
-    { method: "PUT", body: input },
+    { method: "PUT", body: input satisfies HomeworkRequest },
   );
 }
 
@@ -407,9 +422,9 @@ export async function handOverClassSchool(
   await authFetch<unknown>(classHandoverPath(schoolClass, date), {
     method: "PUT",
     body: {
-      present_student_ids: children.present,
-      absent_student_ids: children.absent,
-    },
+      present_student_ids: [...children.present],
+      absent_student_ids: [...children.absent],
+    } satisfies ClassHandoverRequest,
   });
 }
 
@@ -486,7 +501,7 @@ export async function reportAbsenceSchool(
 ): Promise<void> {
   await authFetch<unknown>(absenceReportPath(schoolClass, date, studentId), {
     method: "PUT",
-    body: { status },
+    body: { status } satisfies AbsenceReportRequest,
   });
 }
 
@@ -539,33 +554,7 @@ export interface AbsenceList {
   readonly totals: AbsenceListCounts;
 }
 
-interface BackendAbsenceListCounts {
-  absent_days: number;
-  excused_days: number;
-  unexcused_days: number;
-  not_recorded_days: number;
-}
-
-interface BackendAbsenceList {
-  available_from: string;
-  incomplete: boolean;
-  school_class: string;
-  from: string;
-  to: string;
-  period_name?: string;
-  counted_until?: string | null;
-  school_days: number;
-  children?: Array<
-    BackendAbsenceListCounts & {
-      student_id: string | number;
-      first_name: string;
-      last_name: string;
-    }
-  > | null;
-  totals: BackendAbsenceListCounts;
-}
-
-function absenceListCounts(raw: BackendAbsenceListCounts): AbsenceListCounts {
+function absenceListCounts(raw: WireAbsenceListCounts): AbsenceListCounts {
   return {
     absentDays: raw.absent_days,
     excusedDays: raw.excused_days,
@@ -574,18 +563,23 @@ function absenceListCounts(raw: BackendAbsenceListCounts): AbsenceListCounts {
   };
 }
 
-function mapAbsenceList(raw: BackendAbsenceList): AbsenceList {
+function mapAbsenceList(raw: WireAbsenceList): AbsenceList {
   return {
-    availableFrom: raw.available_from,
+    // Go always sets these days: the retention start and the counted period
+    // (backend/modules/classday/internal/application/absence_list.go:133).
+    availableFrom: requiredDay(
+      raw.available_from,
+      "absence_list.available_from",
+    ),
     incomplete: raw.incomplete,
     schoolClass: raw.school_class,
-    from: raw.from,
-    to: raw.to,
-    periodName: raw.period_name ?? "",
+    from: requiredDay(raw.from, "absence_list.from"),
+    to: requiredDay(raw.to, "absence_list.to"),
+    periodName: raw.period_name,
     countedUntil: raw.counted_until ?? "",
     schoolDays: raw.school_days,
     children: (raw.children ?? []).map((child) => ({
-      studentId: String(child.student_id),
+      studentId: child.student_id,
       firstName: child.first_name,
       lastName: child.last_name,
       ...absenceListCounts(child),
@@ -613,7 +607,7 @@ function absenceListParams(query: AbsenceListQuery): URLSearchParams {
 export async function fetchAbsenceListSchool(
   query: AbsenceListQuery,
 ): Promise<AbsenceList> {
-  const response = await authFetch<ApiResponse<BackendAbsenceList>>(
+  const response = await authFetch<ApiResponse<WireAbsenceList>>(
     `/api/school/class-day/absence-list?${absenceListParams(query).toString()}`,
   );
   return mapAbsenceList(response.data);
