@@ -89,7 +89,7 @@ type GuardianSubmitEntry = {
   phoneNumbers: Array<{
     id?: string;
     phoneNumber: string;
-    phoneType: PhoneType;
+    phoneType: PhoneType | undefined;
     label?: string;
     isPrimary: boolean;
   }>;
