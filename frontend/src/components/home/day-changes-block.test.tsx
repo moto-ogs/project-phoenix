@@ -183,6 +183,8 @@ describe("DayChangesBlock", () => {
   });
 
   it("zeigt geänderte, abgesagte und vertretene Dienste mit Uhrzeit und ohne Grund", () => {
+    // Vor Beginn aller Dienste: keiner steht schon unter „erledigt“ (#7660).
+    setTestClock("2026-09-09T09:00:00+02:00");
     serve({
       entries: [
         change({
