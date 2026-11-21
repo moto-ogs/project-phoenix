@@ -10,7 +10,6 @@ import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 const basePeriods: CalendarPeriod[] = [
   {
     id: "1",
-    tenantId: "1",
     name: "Schuljahr 2026/2027",
     periodType: "school_year",
     startDate: "2026-08-01",
@@ -23,7 +22,6 @@ const basePeriods: CalendarPeriod[] = [
   },
   {
     id: "2",
-    tenantId: "1",
     name: "Sommerferien",
     periodType: "holiday",
     startDate: "2026-07-01",

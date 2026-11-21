@@ -6,7 +6,6 @@ import {
 } from "./api-error";
 import { clearSessionCache, getCachedSession } from "./session-cache";
 import { createLogger } from "~/lib/logger";
-import api from "./api-transport";
 import { fetchWithRetry } from "./api-helpers";
 import { mapGroupsResponse } from "./group-helpers";
 
@@ -144,35 +143,23 @@ export const groupService = {
     if (filters?.pageSize !== undefined)
       params.set("page_size", String(filters.pageSize));
 
-    const useProxyApi = globalThis.window !== undefined;
     const queryString = params.toString();
     const baseUrl = "/api/groups";
     const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
     try {
-      if (useProxyApi) {
-        // Browser environment: use fetchWithRetry for automatic 401 handling
-        const { response, data, accessDeniedStatus, accessDeniedBody } =
-          await fetchWithRetry<unknown>(url, {
-            onAuthFailure: handleAuthFailure,
-            beforeRetry: reloadSession,
-          });
+      const { response, data, accessDeniedStatus, accessDeniedBody } =
+        await fetchWithRetry<unknown>(url, {
+          onAuthFailure: handleAuthFailure,
+          beforeRetry: reloadSession,
+        });
 
-        // A refused read is an error, not a school without groups (#2353).
-        if (response === null) {
-          throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
-        }
-
-        return mapGroupsResponse(
-          parseListResponse<BackendGroup>(data, "groups"),
-        );
+      // A refused read is an error, not a school without groups (#2353).
+      if (response === null) {
+        throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
       }
 
-      // Server-side: use axios with the API URL directly
-      const response = await api.get(url, { params });
-      return mapGroupsResponse(
-        parseListResponse<BackendGroup>(response.data, "groups"),
-      );
+      return mapGroupsResponse(parseListResponse<BackendGroup>(data, "groups"));
     } catch (error) {
       logger.error("failed to fetch groups", {
         error: error instanceof Error ? error.message : String(error),
@@ -198,32 +185,22 @@ export const roomService = {
     const params = buildRoomQueryParams(filters);
     const queryString = params.toString();
 
-    const useProxyApi = globalThis.window !== undefined;
     const baseUrl = "/api/rooms";
     const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
     try {
-      if (useProxyApi) {
-        // Browser environment: use fetchWithRetry for automatic 401 handling
-        const { response, data, accessDeniedStatus, accessDeniedBody } =
-          await fetchWithRetry<unknown>(url, {
-            onAuthFailure: handleAuthFailure,
-            beforeRetry: reloadSession,
-          });
+      const { response, data, accessDeniedStatus, accessDeniedBody } =
+        await fetchWithRetry<unknown>(url, {
+          onAuthFailure: handleAuthFailure,
+          beforeRetry: reloadSession,
+        });
 
-        // A refused read is an error, not a school without rooms (#2353).
-        if (response === null) {
-          throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
-        }
-
-        return mapRoomsResponse(parseListResponse<RoomResponse>(data, "rooms"));
+      // A refused read is an error, not a school without rooms (#2353).
+      if (response === null) {
+        throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
       }
 
-      // Server-side: use axios with the API URL directly
-      const response = await api.get(url, { params });
-      return mapRoomsResponse(
-        parseListResponse<RoomResponse>(response.data, "rooms"),
-      );
+      return mapRoomsResponse(parseListResponse<RoomResponse>(data, "rooms"));
     } catch (error) {
       logger.error("failed to fetch rooms", {
         error: error instanceof Error ? error.message : String(error),
@@ -234,37 +211,27 @@ export const roomService = {
 
   // Delete a room
   deleteRoom: async (id: string): Promise<void> => {
-    const useProxyApi = globalThis.window !== undefined;
     const url = `/api/rooms/${id}`;
 
     try {
-      if (useProxyApi) {
-        // Browser environment: use fetch with our Next.js API route
-        const response = await transportFetch(url, {
-          method: "DELETE",
-          credentials: "include",
-          headers: JSON_HEADERS,
+      const response = await transportFetch(url, {
+        method: "DELETE",
+        credentials: "include",
+        headers: JSON_HEADERS,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error("api error during fetch", {
+          status: response.status,
+          error_text: errorText.substring(0, 200), // Truncate long errors
         });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error("api error during fetch", {
-            status: response.status,
-            error_text: errorText.substring(0, 200), // Truncate long errors
-          });
-          // Code, Feldfehler und Vorgangskennung bleiben erhalten (#2517).
-          throw apiErrorFromText(
-            `API error: ${response.status}`,
-            response.status,
-            errorText,
-          );
-        }
-
-        return;
-      } else {
-        // Server-side: use axios with the API URL directly
-        await api.delete(url);
-        return;
+        // Code, Feldfehler und Vorgangskennung bleiben erhalten (#2517).
+        throw apiErrorFromText(
+          `API error: ${response.status}`,
+          response.status,
+          errorText,
+        );
       }
     } catch (error) {
       logger.error("failed to delete room", {
@@ -275,5 +242,3 @@ export const roomService = {
     }
   },
 };
-
-export default api;

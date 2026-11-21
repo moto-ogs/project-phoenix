@@ -20,7 +20,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 const backendDay = {
-  id: 7,
+  id: "7",
   start_date: "2026-12-24",
   end_date: "2026-12-31",
   reason: "Weihnachtsschließung",
