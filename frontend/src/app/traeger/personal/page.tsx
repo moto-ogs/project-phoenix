@@ -39,6 +39,7 @@ import type {
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
+import { labelOf } from "~/lib/label-of";
 import { formatDate } from "~/lib/date-helpers";
 import { foldForSearch } from "~/lib/search-fold";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -206,8 +207,8 @@ function suggestionColumns(
       render: (suggestion) => (
         <span className="flex flex-wrap gap-1.5">
           <StatusBadge
-            label={STAFF_MATCH_LABELS[suggestion.reason]}
-            tone={STAFF_MATCH_TONES[suggestion.reason]}
+            label={labelOf(STAFF_MATCH_LABELS, suggestion.reason, "–")}
+            tone={labelOf(STAFF_MATCH_TONES, suggestion.reason, "gray")}
           />
           {suggestion.recordId ? (
             <StatusBadge label="Passt zu einer Akte" tone="purple" />

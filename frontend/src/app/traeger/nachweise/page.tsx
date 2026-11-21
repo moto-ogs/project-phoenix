@@ -216,13 +216,19 @@ function useProofListView(loaded: StaffProofList | null) {
       key: "status",
       header: "Stand",
       stacked: "meta",
-      sortValue: (entry) => STATUS_ORDER.indexOf(entry.status),
-      render: (entry) => (
-        <StatusBadge
-          label={STAFF_PROOF_STATUS[entry.status].label}
-          tone={STAFF_PROOF_STATUS[entry.status].tone}
-        />
-      ),
+      sortValue: (entry) =>
+        entry.status === undefined
+          ? STATUS_ORDER.length
+          : STATUS_ORDER.indexOf(entry.status),
+      render: (entry) =>
+        entry.status === undefined ? (
+          <span className="text-sm text-gray-700">–</span>
+        ) : (
+          <StatusBadge
+            label={STAFF_PROOF_STATUS[entry.status].label}
+            tone={STAFF_PROOF_STATUS[entry.status].tone}
+          />
+        ),
     },
   ];
 

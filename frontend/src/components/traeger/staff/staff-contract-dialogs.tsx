@@ -234,15 +234,19 @@ function DialogFooter({
 export function KindChoice({
   value,
   onChange,
+  error,
 }: Readonly<{
-  value: StaffContractKind;
+  /** undefined: die gespeicherte Art kennt dieser Build nicht. */
+  value: StaffContractKind | undefined;
   onChange: (kind: StaffContractKind) => void;
+  error?: string;
 }>) {
   const name = useId();
   return (
     <FormFieldset
       legend="Art des Vertrags"
       hint="Jede Art rechnet der Lohnexport mit eigenen Lohnarten ab."
+      error={error}
     >
       <div className="grid gap-2 sm:grid-cols-3">
         {CONTRACT_KINDS.map((kind) => {
@@ -725,13 +729,21 @@ export function ContractTermsDialog({
   onClose,
   onSaved,
 }: DialogProps & Readonly<{ contract: StaffContract }>) {
-  const [kind, setKind] = useState<StaffContractKind>(contract.kind);
+  const [kind, setKind] = useState<StaffContractKind | undefined>(
+    contract.kind,
+  );
   const [endsOn, setEndsOn] = useState(contract.endsOn ?? "");
   const [pool, setPool] = useState(contract.pool);
   const earliest = changeableFrom(contract.sites);
   const { save, errors, run } = useContractSave(true, "den Arbeitsvertrag");
 
   const submit = () => {
+    if (kind === undefined) {
+      errors.invalid("Bitte prüfe die markierten Felder.", {
+        kind: "Wähle die Art des Vertrags.",
+      });
+      return;
+    }
     if (endsOn && endsOn < contract.startsOn) {
       errors.invalid("Bitte prüfe die markierten Felder.", {
         ends_on: "Der letzte Tag liegt vor dem ersten Tag.",
@@ -770,7 +782,11 @@ export function ContractTermsDialog({
       }
     >
       <div className="space-y-5">
-        <KindChoice value={kind} onChange={setKind} />
+        <KindChoice
+          value={kind}
+          onChange={setKind}
+          error={errors.fieldError("kind")}
+        />
         <ISODatePicker
           controlSize="compact"
           id="contract-terms-ends-on"
