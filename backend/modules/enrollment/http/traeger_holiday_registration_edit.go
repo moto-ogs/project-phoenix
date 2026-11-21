@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayRegistrationEditRequest is the body of PUT
@@ -32,11 +33,11 @@ type HolidayRegistrationEditRequest struct {
 }
 
 type holidayChildEditRequest struct {
-	ID              int64                     `json:"id"`
+	ID              common.ID                 `json:"id"`
 	FirstName       string                    `json:"first_name"`
 	LastName        string                    `json:"last_name"`
 	BirthDate       calendar.Date             `json:"birth_date"`
-	HomeSchoolID    int64                     `json:"home_school_id"`
+	HomeSchoolID    common.ID                 `json:"home_school_id"`
 	GuestSchoolName string                    `json:"guest_school_name"`
 	CustomData      capability.HolidayAnswers `json:"custom_data"`
 }
@@ -69,8 +70,8 @@ func (req *HolidayRegistrationEditRequest) edit() capability.HolidayRegistration
 	}
 	for _, child := range req.Children {
 		edit.Children = append(edit.Children, capability.HolidayChildEdit{
-			ChildID: child.ID, FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
-			HomeSchoolID: child.HomeSchoolID, GuestSchoolName: child.GuestSchoolName, CustomData: child.CustomData,
+			ChildID: child.ID.Int64(), FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
+			HomeSchoolID: child.HomeSchoolID.Int64(), GuestSchoolName: child.GuestSchoolName, CustomData: child.CustomData,
 		})
 	}
 	return edit
@@ -92,7 +93,7 @@ func (rs *HolidayPeriodResource) editRegistration(w http.ResponseWriter, r *http
 	names, _ := r.Context().Value(holidaySchoolNamesKey{}).(map[int64]string)
 	schools := make([]capability.HolidaySchool, 0, len(names))
 	for id, name := range names {
-		schools = append(schools, capability.HolidaySchool{ID: id, Name: name})
+		schools = append(schools, capability.HolidaySchool{ID: ident.ID(id), Name: name})
 	}
 	slices.SortFunc(schools, func(a, b capability.HolidaySchool) int { return int(a.ID - b.ID) })
 	detail, err := rs.review.EditHolidayRegistration(r.Context(), reviewer, periodID, registrationID, req.edit(), schools)

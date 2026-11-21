@@ -34,7 +34,7 @@ func (h *HolidayRegistrationReview) enqueueAcceptance(ctx context.Context, organ
 	if h.placement.mail == nil || h.placement.traeger == nil {
 		return errHolidayAcceptanceMailRequired
 	}
-	read, _, err := h.store.ReadHolidayReview(ctx, organizationID, period.ID, registrationID)
+	read, _, err := h.store.ReadHolidayReview(ctx, organizationID, period.ID.Int64(), registrationID)
 	if err != nil {
 		return fmt.Errorf("enrollment: read holiday registration: %w", err)
 	}
@@ -76,7 +76,7 @@ func holidayAcceptanceChildren(registration enrollment.HolidayRegistrationDetail
 			Name: child.FirstName + " " + child.LastName, Guest: child.HomeSchoolID == nil, Weeks: []string{},
 		}
 		for _, booking := range child.Bookings {
-			week := line(booking.WeekID, booking.TimeModelID, booking.Days, booking.Lunch)
+			week := line(booking.WeekID.Int64(), booking.TimeModelID.Int64(), booking.Days, booking.Lunch)
 			switch booking.Placement {
 			case enrollment.HolidayPlacementWaitlisted:
 				mailChild.WaitlistWeeks = append(mailChild.WaitlistWeeks, week)

@@ -152,8 +152,8 @@ func (w *Workflow) run(ctx context.Context, reviewer enrollment.HolidayReviewer,
 func promoted(promotions []enrollment.HolidayPromotion) []int64 {
 	ids := make([]int64, 0, len(promotions))
 	for _, promotion := range promotions {
-		if !slices.Contains(ids, promotion.RegistrationID) {
-			ids = append(ids, promotion.RegistrationID)
+		if !slices.Contains(ids, promotion.RegistrationID.Int64()) {
+			ids = append(ids, promotion.RegistrationID.Int64())
 		}
 	}
 	return ids

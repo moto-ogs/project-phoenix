@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Participant list of the school that hosts a holiday week (spec #4611 user
@@ -37,7 +38,7 @@ type HolidayHost struct {
 // HostedHolidayWeek is a week the school hosts whose last day has not passed,
 // with the number of confirmed children.
 type HostedHolidayWeek struct {
-	ID           int64         `json:"id"`
+	ID           ident.ID      `json:"id"`
 	PeriodName   string        `json:"period_name"`
 	StartsOn     calendar.Date `json:"starts_on"`
 	EndsOn       calendar.Date `json:"ends_on"`
@@ -58,8 +59,8 @@ type HostedHolidayWeek struct {
 	// GuestGroupID is the group the school picked for the week's holiday
 	// guests (#4666), nil before it picked one; Guests counts the guests in
 	// it whose access has not ended.
-	GuestGroupID *int64 `json:"guest_group_id"`
-	Guests       int    `json:"guests"`
+	GuestGroupID *ident.ID `json:"guest_group_id"`
+	Guests       int       `json:"guests"`
 	// LunchOffered says the week offers lunch (#5631). Lunches then counts
 	// the lunches of the confirmed children per care day of the week, in
 	// calendar order, so the school can order them; only the participant
@@ -83,13 +84,13 @@ type HolidayDayCount struct {
 // phone, nil without one, and the answers to the shared questions of the
 // form version of the child's registration, empty without such questions.
 type HolidayParticipant struct {
-	ChildID         int64         `json:"child_id"`
+	ChildID         ident.ID      `json:"child_id"`
 	FirstName       string        `json:"first_name"`
 	LastName        string        `json:"last_name"`
 	BirthDate       calendar.Date `json:"birth_date"`
-	HomeSchoolID    *int64        `json:"home_school_id"`
+	HomeSchoolID    *ident.ID     `json:"home_school_id"`
 	GuestSchoolName string        `json:"guest_school_name"`
-	TimeModelID     int64         `json:"time_model_id"`
+	TimeModelID     ident.ID      `json:"time_model_id"`
 	// Days are the booked days in a week by days, empty for the whole week
 	// (#4701).
 	Days []calendar.Date `json:"days,omitempty"`
@@ -138,11 +139,11 @@ type HolidayHostQuestion struct {
 // HolidayTimeModelCount is a time model of the week with the number of
 // confirmed children who booked it.
 type HolidayTimeModelCount struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	StartsAt string `json:"starts_at"`
-	EndsAt   string `json:"ends_at"`
-	Count    int    `json:"count"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	StartsAt string   `json:"starts_at"`
+	EndsAt   string   `json:"ends_at"`
+	Count    int      `json:"count"`
 }
 
 // HolidayHomeSchoolCount is the number of confirmed children of one home
@@ -215,7 +216,7 @@ type HolidayHostParticipants interface {
 // names and date of birth. The school keeps its own health field; this
 // stands beside it as "Angaben aus der Ferienanmeldung".
 type HolidayStudentHealth struct {
-	WeekID     int64             `json:"week_id"`
+	WeekID     ident.ID          `json:"week_id"`
 	PeriodName string            `json:"period_name"`
 	StartsOn   calendar.Date     `json:"starts_on"`
 	EndsOn     calendar.Date     `json:"ends_on"`

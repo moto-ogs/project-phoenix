@@ -20,7 +20,7 @@ func holidayReceiptMail(traeger enrollment.HolidayTraeger, period enrollment.Hol
 	line := holidayWeekLines(traeger, period)
 	waiting := map[[2]int64]string{}
 	for _, placement := range placements {
-		waiting[[2]int64{int64(placement.ChildPosition), placement.WeekID}] = placement.Placement
+		waiting[[2]int64{int64(placement.ChildPosition), placement.WeekID.Int64()}] = placement.Placement
 	}
 	children := make([]enrollment.HolidayRegistrationMailChild, 0, len(input.Children))
 	for i, child := range input.Children {
@@ -74,18 +74,18 @@ func holidayReceiptChild(child enrollment.HolidayChildInput, period enrollment.H
 	}
 	booked := map[int64]enrollment.HolidayBookingInput{}
 	for _, booking := range child.Bookings {
-		booked[booking.WeekID] = booking
+		booked[booking.WeekID.Int64()] = booking
 	}
 	for _, week := range period.Weeks {
-		booking, ok := booked[week.ID]
+		booking, ok := booked[week.ID.Int64()]
 		switch {
 		case !ok:
-		case placement(week.ID) == enrollment.HolidayPlacementWaitlisted:
-			mailChild.WaitlistWeeks = append(mailChild.WaitlistWeeks, line(week.ID, booking.TimeModelID, booking.Days, booking.Lunch))
-		case placement(week.ID) == enrollment.HolidayPlacementPending:
-			mailChild.PendingWeeks = append(mailChild.PendingWeeks, line(week.ID, booking.TimeModelID, booking.Days, booking.Lunch))
+		case placement(week.ID.Int64()) == enrollment.HolidayPlacementWaitlisted:
+			mailChild.WaitlistWeeks = append(mailChild.WaitlistWeeks, line(week.ID.Int64(), booking.TimeModelID.Int64(), booking.Days, booking.Lunch))
+		case placement(week.ID.Int64()) == enrollment.HolidayPlacementPending:
+			mailChild.PendingWeeks = append(mailChild.PendingWeeks, line(week.ID.Int64(), booking.TimeModelID.Int64(), booking.Days, booking.Lunch))
 		default:
-			mailChild.Weeks = append(mailChild.Weeks, line(week.ID, booking.TimeModelID, booking.Days, booking.Lunch))
+			mailChild.Weeks = append(mailChild.Weeks, line(week.ID.Int64(), booking.TimeModelID.Int64(), booking.Days, booking.Lunch))
 		}
 	}
 	return mailChild

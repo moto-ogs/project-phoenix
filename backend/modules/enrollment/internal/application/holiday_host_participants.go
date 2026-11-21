@@ -115,7 +115,7 @@ func (h *HolidayHostParticipants) read(ctx context.Context, host enrollment.Holi
 	// The read is recorded once the week is known to be hosted and open;
 	// the entry commits with the answer in the same transaction.
 	if err := h.log.RecordHolidayParticipantAccess(ctx, enrollment.HolidayParticipantAccess{
-		ActorAccountID: host.AccountID, ActorRole: host.Role, WeekID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn,
+		ActorAccountID: host.AccountID, ActorRole: host.Role, WeekID: week.ID.Int64(), StartsOn: week.StartsOn, EndsOn: week.EndsOn,
 		Participants: len(list.Participants), HealthParticipants: healthParticipants, Format: format,
 	}); err != nil {
 		return enrollment.HolidayParticipantList{}, fmt.Errorf("record holiday participant access: %w", err)
@@ -177,16 +177,16 @@ func holidayParticipantList(week enrollment.HostedHolidayWeek, models []enrollme
 	perSchool := map[int64]int{}
 	guests := 0
 	for _, participant := range participants {
-		perModel[participant.TimeModelID]++
+		perModel[participant.TimeModelID.Int64()]++
 		if participant.HomeSchoolID == nil {
 			guests++
 			continue
 		}
-		perSchool[*participant.HomeSchoolID]++
+		perSchool[(*participant.HomeSchoolID).Int64()]++
 	}
 	counted := make([]enrollment.HolidayTimeModelCount, len(models))
 	for i, model := range models {
-		model.Count = perModel[model.ID]
+		model.Count = perModel[model.ID.Int64()]
 		counted[i] = model
 	}
 	schools := make([]enrollment.HolidayHomeSchoolCount, 0, len(perSchool)+1)
@@ -283,7 +283,7 @@ func (h *HolidayHostParticipants) openStudentHealth(found []enrollment.HolidaySt
 func holidayStudentHealthAccess(host enrollment.HolidayHost, studentID int64, entries []enrollment.HolidayStudentHealth) enrollment.HolidayStudentHealthAccess {
 	access := enrollment.HolidayStudentHealthAccess{ActorAccountID: host.AccountID, ActorRole: host.Role, StudentID: studentID}
 	for _, entry := range entries {
-		access.WeekIDs = append(access.WeekIDs, entry.WeekID)
+		access.WeekIDs = append(access.WeekIDs, entry.WeekID.Int64())
 		if access.StartsOn == "" || entry.StartsOn.Before(access.StartsOn) {
 			access.StartsOn = entry.StartsOn
 		}

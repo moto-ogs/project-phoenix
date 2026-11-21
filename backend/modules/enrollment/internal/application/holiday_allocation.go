@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Allocation of holiday places by criteria (#4700); the rules are on
@@ -133,7 +134,7 @@ func normalizeHolidayCriteria(criteria []enrollment.HolidayCriterionInput) ([]en
 		criterion.Name = strings.TrimSpace(criterion.Name)
 		criterion.Question = strings.TrimSpace(criterion.Question)
 		validateHolidayCriterion(errs, i, criterion, seen)
-		seen[criterion.ID] = true
+		seen[criterion.ID.Int64()] = true
 		normalized[i] = criterion
 	}
 	if len(errs) > 0 {
@@ -154,7 +155,7 @@ func validateHolidayCriterion(errs validation.Errors, index int, criterion enrol
 	if criterion.Scope != enrollment.HolidayCriterionFamily && criterion.Scope != enrollment.HolidayCriterionChild {
 		errs[field("scope")] = errors.New("must be family or child")
 	}
-	if criterion.ID < 0 || (criterion.ID > 0 && seen[criterion.ID]) {
+	if criterion.ID < 0 || (criterion.ID > 0 && seen[criterion.ID.Int64()]) {
 		errs[field("id")] = errors.New("names a criterion twice")
 	}
 }
@@ -205,19 +206,19 @@ func (a *HolidayAllocation) board(ctx context.Context, organizationID int64, per
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
 	}
-	places, err := store.ReadHolidayWeekPlaces(ctx, organizationID, period.ID)
+	places, err := store.ReadHolidayWeekPlaces(ctx, organizationID, period.ID.Int64())
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read holiday week places: %w", err)
 	}
-	pending, err := store.ReadHolidayPendingBookings(ctx, organizationID, period.ID)
+	pending, err := store.ReadHolidayPendingBookings(ctx, organizationID, period.ID.Int64())
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read pending holiday bookings: %w", err)
 	}
-	answers, err := store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID, 0)
+	answers, err := store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID.Int64(), 0)
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read holiday criterion answers: %w", err)
 	}
-	decisions, err := store.ReadHolidayAllocationDecisions(ctx, organizationID, period.ID)
+	decisions, err := store.ReadHolidayAllocationDecisions(ctx, organizationID, period.ID.Int64())
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read holiday allocation decisions: %w", err)
 	}
@@ -229,7 +230,7 @@ func (a *HolidayAllocation) board(ctx context.Context, organizationID int64, per
 	}
 	if period.HolidayWishRule {
 		board.Criteria = append(board.Criteria, enrollment.HolidayCriterionRef{
-			ID: enrollment.HolidayWishCriterionID, Name: enrollment.HolidayWishCriterionName, Scope: enrollment.HolidayCriterionChild, Position: 1,
+			ID: ident.ID(enrollment.HolidayWishCriterionID), Name: enrollment.HolidayWishCriterionName, Scope: enrollment.HolidayCriterionChild, Position: 1,
 		})
 	}
 	for _, criterion := range active {
@@ -262,13 +263,13 @@ func holidayAllocationWeek(week enrollment.HolidayWeekPlaces, pending []enrollme
 	}
 	var days [][]calendar.Date
 	for _, booking := range pending {
-		if booking.WeekID != week.WeekID {
+		if ident.ID(booking.WeekID) != week.WeekID {
 			continue
 		}
 		days = append(days, booking.Days)
 		allocation.Pending = append(allocation.Pending, enrollment.HolidayAllocationCandidate{
-			BookingID: booking.BookingID, Rank: booking.Rank, RegistrationID: booking.RegistrationID, SubmittedAt: booking.SubmittedAt,
-			ChildID: booking.ChildID, ChildFirstName: booking.ChildFirstName, ChildLastName: booking.ChildLastName,
+			BookingID: ident.ID(booking.BookingID), Rank: booking.Rank, RegistrationID: ident.ID(booking.RegistrationID), SubmittedAt: booking.SubmittedAt,
+			ChildID: ident.ID(booking.ChildID), ChildFirstName: booking.ChildFirstName, ChildLastName: booking.ChildLastName,
 			TimeModelName: booking.TimeModelName, Days: booking.Days, Criteria: values(booking),
 		})
 	}
@@ -360,7 +361,7 @@ func holidayCriterionValues(active []enrollment.HolidayCriterion, answers []enro
 			if criterion.Scope == enrollment.HolidayCriterionChild {
 				child = childID
 			}
-			answer, found := byKey[key{registrationID, child, criterion.ID}]
+			answer, found := byKey[key{registrationID, child, criterion.ID.Int64()}]
 			values[i] = enrollment.HolidayCriterionValue{CriterionID: criterion.ID, Value: enrollment.HolidayCriterionUnknown, Source: enrollment.HolidayCriterionByParent}
 			if !found {
 				continue
@@ -403,7 +404,7 @@ func holidayAllocationValues(period enrollment.HolidayPeriod, active []enrollmen
 		if !period.HolidayWishRule {
 			return criteria
 		}
-		wish := enrollment.HolidayCriterionValue{CriterionID: enrollment.HolidayWishCriterionID, Value: enrollment.HolidayCriterionUnknown, Source: enrollment.HolidayCriterionByParent}
+		wish := enrollment.HolidayCriterionValue{CriterionID: ident.ID(enrollment.HolidayWishCriterionID), Value: enrollment.HolidayCriterionUnknown, Source: enrollment.HolidayCriterionByParent}
 		if booking.HolidayWish == enrollment.HolidayWishYes || booking.HolidayWish == enrollment.HolidayWishNo {
 			wish.Value = booking.HolidayWish
 		}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Siblings from separate holiday registrations (#5628): the Elternabrechnung
@@ -32,7 +33,7 @@ func (h *HolidayRegistrationReview) RecordHolidaySiblings(ctx context.Context, r
 		return fmt.Errorf("enrollment: unknown sibling action %q", action)
 	}
 	_, err := h.change(ctx, reviewer, periodID, registrationID, func(enrollment.HolidayPeriod, holidayRegistrationState) (string, any, error) {
-		return action, enrollment.HolidayRegistrationEventDetails{Siblings: siblingIDs}, nil
+		return action, enrollment.HolidayRegistrationEventDetails{Siblings: ident.IDs(siblingIDs)}, nil
 	})
 	return err
 }

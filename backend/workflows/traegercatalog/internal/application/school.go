@@ -17,7 +17,7 @@ import (
 // offering copies of the Träger phase. lock takes their row locks first,
 // phase copy before offering copies in ID order (ADR 0195 section 5).
 func (c *Catalog) schoolState(ctx context.Context, snap snapshot, lock bool) (string, error) {
-	phase, err := c.deps.SchoolPhases.TraegerPhaseCopyState(ctx, snap.phase.ID, lock)
+	phase, err := c.deps.SchoolPhases.TraegerPhaseCopyState(ctx, snap.phase.ID.Int64(), lock)
 	if err != nil {
 		return "", err
 	}
@@ -46,7 +46,7 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 		return plan, nil, c.withdrawSchool(ctx, snap, &plan)
 	}
 	applied, err := c.deps.SchoolPhases.ApplyTraegerPhase(ctx, enrollment.TraegerPhaseCopy{
-		SourceID: snap.phase.ID, Version: next.phaseVersion, Fields: next.phase,
+		SourceID: snap.phase.ID.Int64(), Version: next.phaseVersion, Fields: next.phase,
 	})
 	if err != nil {
 		return plan, nil, err
@@ -103,7 +103,7 @@ func (c *Catalog) withdrawSchool(ctx context.Context, snap snapshot, plan *traeg
 			Fields: []careplan.TraegerOfferingFieldChange{},
 		})
 	}
-	_, err := c.deps.SchoolPhases.WithdrawTraegerPhase(ctx, snap.phase.ID)
+	_, err := c.deps.SchoolPhases.WithdrawTraegerPhase(ctx, snap.phase.ID.Int64())
 	return err
 }
 

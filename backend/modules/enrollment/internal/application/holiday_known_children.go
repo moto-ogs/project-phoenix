@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The trail of the hint on a known child (#6683, ADR 0214). The Träger
@@ -55,11 +56,11 @@ func (t *HolidayKnownChildTrail) RecordKnownHolidayChildren(ctx context.Context,
 	answer := []enrollment.HolidayKnownChild{}
 	children := []int64{}
 	for _, child := range known {
-		if registrationID > 0 && child.RegistrationID != registrationID {
+		if registrationID > 0 && child.RegistrationID != ident.ID(registrationID) {
 			continue
 		}
 		answer = append(answer, child)
-		children = append(children, child.ChildID)
+		children = append(children, child.ChildID.Int64())
 	}
 	details := map[string]any{"children": children}
 	if registrationID > 0 {

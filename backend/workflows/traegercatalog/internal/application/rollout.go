@@ -87,7 +87,7 @@ func (c *Catalog) release(ctx context.Context, actor traegercatalog.Actor, id in
 		for _, t := range snap.targets() {
 			pending = append(pending, enrollment.TraegerCopyOutcome{SchoolID: t.schoolID, Outcome: enrollment.TraegerOutcomeStale})
 		}
-		return c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID, pending)
+		return c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID.Int64(), pending)
 	})
 	return snap, next, err
 }
@@ -106,11 +106,11 @@ func (c *Catalog) samePlan(snap snapshot, print fingerprint) bool {
 }
 
 func (c *Catalog) writeVersions(ctx context.Context, actor traegercatalog.Actor, snap snapshot) (release, error) {
-	version, err := c.deps.Phases.ReleaseTraegerPhase(ctx, actor.OrganizationID, snap.phase.ID, actor.AccountID)
+	version, err := c.deps.Phases.ReleaseTraegerPhase(ctx, actor.OrganizationID, snap.phase.ID.Int64(), actor.AccountID)
 	if err != nil {
 		return release{}, err
 	}
-	released, err := c.deps.Offerings.ReleaseTraegerOfferings(ctx, actor.OrganizationID, snap.phase.ID, actor.AccountID)
+	released, err := c.deps.Offerings.ReleaseTraegerOfferings(ctx, actor.OrganizationID, snap.phase.ID.Int64(), actor.AccountID)
 	if err != nil {
 		return release{}, err
 	}
@@ -248,7 +248,7 @@ func (c *Catalog) recordOutcomes(ctx context.Context, actor traegercatalog.Actor
 			}
 		}
 	}
-	if err := c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID, phaseOutcomes); err != nil {
+	if err := c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID.Int64(), phaseOutcomes); err != nil {
 		return err
 	}
 	return c.deps.Offerings.RecordTraegerOfferingOutcomes(ctx, actor.OrganizationID, offeringOutcomes)

@@ -64,7 +64,7 @@ func (h *HolidayRegistrations) HolidayRegistrationStatus(ctx context.Context, li
 	}
 	schools := make(map[int64]string, len(link.Traeger.Schools))
 	for _, school := range link.Traeger.Schools {
-		schools[school.ID] = school.Name
+		schools[school.ID.Int64()] = school.Name
 	}
 	status, found, err := h.deps.Registrations.HolidayRegistrationStatus(ctx, link.Reference, schools)
 	if err != nil {

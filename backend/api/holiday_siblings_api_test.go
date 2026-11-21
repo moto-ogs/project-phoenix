@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -190,7 +191,7 @@ func TestMergeWithAConfirmedRegistrationAddsAVersionAndSplitRestoresIt(t *testin
 	require.NotEmpty(t, history)
 	merged := history[len(history)-1]
 	assert.Equal(t, "sibling_merge", merged.Action)
-	assert.Equal(t, []any{float64(second)}, merged.Details["siblings"], "the history names the other registration")
+	assert.Equal(t, []any{strconv.FormatInt(int64(second), 10)}, merged.Details["siblings"], "the history names the other registration")
 
 	rec := f.split(t, f.office.token, second)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())

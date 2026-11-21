@@ -978,7 +978,7 @@ export interface SubmitGuardianRequest {
 
 /** Go: enrollmenthttp.SubmitOfferingDaysRow */
 export interface SubmitOfferingDaysRow {
-  offering_id?: number;
+  offering_id?: string;
   selected_days?: string[] | null;
 }
 
@@ -992,7 +992,7 @@ export interface SubmitChildRequest {
   target_school_class?: string | null;
   holiday_care_wish?: boolean | null;
   custom_data?: Record<string, unknown | null> | null;
-  offering_ids?: number[] | null;
+  offering_ids?: string[] | null;
   offering_days?: SubmitOfferingDaysRow[] | null;
 }
 
@@ -1005,14 +1005,14 @@ export interface SubmitSignatureRequest {
 
 /** Go: enrollmenthttp.SubmitEnrollmentRequest */
 export interface SubmitEnrollmentRequest {
-  phase_id?: number;
+  phase_id?: string;
   guardian_first_name?: string;
   guardian_last_name?: string;
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
+  form_schema_id?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -3720,11 +3720,11 @@ export interface HolidayRegistrationBooking {
 }
 
 export const HolidayRegistrationBookingSchema: z.ZodType<HolidayRegistrationBooking, unknown> = object<HolidayRegistrationBooking>({
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   week_starts_on: nullable(calendarDate),
   week_ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
-  time_model_id: int64StringOrNumber,
+  host_school_id: int64String,
+  time_model_id: int64String,
   time_model_name: str,
   price_cents: safeInt,
   days: optional(arr(nullable(calendarDate))),
@@ -3752,14 +3752,14 @@ export interface HolidayRegistrationChild {
 }
 
 export const HolidayRegistrationChildSchema: z.ZodType<HolidayRegistrationChild, unknown> = object<HolidayRegistrationChild>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   birth_date: nullable(calendarDate),
-  home_school_id: nullable(int64StringOrNumber),
+  home_school_id: nullable(int64String),
   guest_school_name: str,
   bookings: nullable(arr(HolidayRegistrationBookingSchema)),
-  duplicate_registration_ids: nullable(arr(int64StringOrNumber)),
+  duplicate_registration_ids: nullable(arr(int64String)),
   holiday_wish: str,
   holiday_wish_source: str,
   holiday_wish_check: bool,
@@ -3875,7 +3875,7 @@ export interface HolidayChildAnswers {
 }
 
 export const HolidayChildAnswersSchema: z.ZodType<HolidayChildAnswers, unknown> = object<HolidayChildAnswers>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   custom_data: nullable(rec(nullable(json))),
 });
 
@@ -3925,7 +3925,7 @@ export interface HolidayRegistrationProof {
 }
 
 export const HolidayRegistrationProofSchema: z.ZodType<HolidayRegistrationProof, unknown> = object<HolidayRegistrationProof>({
-  id: int64StringOrNumber,
+  id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,
@@ -3943,8 +3943,8 @@ export interface HolidayBookingChange {
 }
 
 export const HolidayBookingChangeSchema: z.ZodType<HolidayBookingChange, unknown> = object<HolidayBookingChange>({
-  week_id: int64StringOrNumber,
-  time_model_id: int64StringOrNumber,
+  week_id: int64String,
+  time_model_id: int64String,
   waitlisted: optional(bool),
   promoted_at: optional(instant),
   days: optional(arr(nullable(calendarDate))),
@@ -3970,8 +3970,8 @@ export interface HolidayCriterionCheck {
 }
 
 export const HolidayCriterionCheckSchema: z.ZodType<HolidayCriterionCheck, unknown> = object<HolidayCriterionCheck>({
-  criterion_id: int64StringOrNumber,
-  child_id: nullable(int64StringOrNumber),
+  criterion_id: int64String,
+  child_id: nullable(int64String),
   checked: nullable(str),
 });
 
@@ -3994,13 +3994,13 @@ export interface HolidayRegistrationEventDetails {
 
 export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistrationEventDetails, unknown> = object<HolidayRegistrationEventDetails>({
   from: optional(str),
-  child_id: optional(int64StringOrNumber),
+  child_id: optional(int64String),
   before: optional(arr(HolidayBookingChangeSchema)),
   after: optional(arr(HolidayBookingChangeSchema)),
   debtor_number: optional(HolidayDebtorNumberChangeSchema),
   fields: optional(arr(str)),
-  siblings: optional(arr(int64StringOrNumber)),
-  week_ids: optional(arr(int64StringOrNumber)),
+  siblings: optional(arr(int64String)),
+  week_ids: optional(arr(int64String)),
   placement: optional(str),
   proposal: optional(str),
   reason: optional(str),
@@ -4019,7 +4019,7 @@ export interface HolidayRegistrationEvent {
 export const HolidayRegistrationEventSchema: z.ZodType<HolidayRegistrationEvent, unknown> = object<HolidayRegistrationEvent>({
   action: str,
   occurred_at: instant,
-  actor_account_id: nullable(int64StringOrNumber),
+  actor_account_id: nullable(int64String),
   details: HolidayRegistrationEventDetailsSchema,
 });
 
@@ -4036,11 +4036,11 @@ export interface HolidayRegistrationCriterion {
 }
 
 export const HolidayRegistrationCriterionSchema: z.ZodType<HolidayRegistrationCriterion, unknown> = object<HolidayRegistrationCriterion>({
-  criterion_id: int64StringOrNumber,
+  criterion_id: int64String,
   name: str,
   question: str,
   scope: str,
-  child_id: nullable(int64StringOrNumber),
+  child_id: nullable(int64String),
   stated: str,
   checked: nullable(str),
   checked_at: nullable(instant),
@@ -4054,9 +4054,9 @@ export interface HolidayPromotion {
 }
 
 export const HolidayPromotionSchema: z.ZodType<HolidayPromotion, unknown> = object<HolidayPromotion>({
-  registration_id: int64StringOrNumber,
-  child_id: int64StringOrNumber,
-  week_id: int64StringOrNumber,
+  registration_id: int64String,
+  child_id: int64String,
+  week_id: int64String,
 });
 
 /** Go: enrollment.HolidayRegistrationDetail */
@@ -4098,7 +4098,7 @@ export interface HolidayRegistrationDetail {
 }
 
 export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetail, unknown> = object<HolidayRegistrationDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   status: str,
   frozen: bool,
   submitted_at: instant,
