@@ -473,7 +473,7 @@ export async function startBillingRun(periodId: string): Promise<BillingRun> {
   return runFromBackend(
     await traegerRequest<WireRun>(RUNS_PATH, {
       method: "POST",
-      body: { holiday_period_id: Number(periodId) } satisfies BillingRunRequest,
+      body: { holiday_period_id: periodId } satisfies BillingRunRequest,
     }),
   );
 }
@@ -497,8 +497,8 @@ export async function correctBillingRun(
     await traegerRequest<WireRunDetail>(`${runPath(id)}/corrections`, {
       method: "POST",
       body: {
-        registration_id: Number(correction.registrationId),
-        child_id: Number(correction.childId),
+        registration_id: correction.registrationId,
+        child_id: correction.childId,
         total_cents: correction.totalCents,
         reason: correction.reason,
       } satisfies BillingCorrectionRequest,
@@ -578,7 +578,7 @@ export async function creditBillingDocument(
       {
         method: "POST",
         body: {
-          child_id: Number(credit.childId),
+          child_id: credit.childId,
           amount_cents: credit.amountCents,
           reason: credit.reason,
         } satisfies BillingCreditRequest,

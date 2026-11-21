@@ -1021,10 +1021,11 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Dazu kommen die Hinweise der Leitung für heute. Sie zeigt auch Angebote und AGs, die heute ausfallen, doch stattfinden, in einem anderen Raum sind oder bei denen jemand anderes betreut.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
-          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen, deine Termine und ob du selbst heute fehlst.",
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, Vertretungen, Termine und Dienste.",
+          "Dort steht auch, ob du heute fehlst oder dein Dienst anders ist oder ausfällt.",
           "Unter `Schule` steht der Rest der Schule.",
           // Kinder in „Heute anders" (#7665): einzeln in den eigenen Gruppen,
           // sonst eine aufklappbare Zeile pro Gruppe oder Klasse.
@@ -1034,10 +1035,10 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
           // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
           "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
-          // Quelle Stundenplan (#7662): Uhrzeit und Raum, eingeklapptes „erledigt“.
+          // Quelle Stundenplan (#7662): Uhrzeit und Raum.
           "Bei Angeboten und AGs stehen Uhrzeit und Raum unter dem Satz. Sie stehen nach Beginn geordnet.",
-          "Was heute schon vorbei ist, steht eingeklappt am Ende, zum Beispiel `3 erledigt`. Tippe darauf, um es zu sehen.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          "Dienste, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
@@ -1079,6 +1080,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       // Kinder nur mit users:read, wie auf der Seite eines Kindes (#7665).
       "In `Heute anders` fehlen die Kinder? Die Kinder siehst du nur, wenn du auch ihre Krankmeldungen auf der Seite eines Kindes sehen darfst.",
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
+      // Dienste in „Heute anders" (#7661): die Betreuung sieht nur den
+      // eigenen, wer den Dienstplan der Schule öffnen darf, sieht alle.
+      "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",
       // Sichtregel der Quelle Stundenplan (#7662): wie im Tagesplan.
       "In `Heute anders` fehlen Angebote anderer Leute? Die Karte zeigt die Termine, die du auch im Tagesplan siehst. Je nach Einstellung deiner Schule sind das nur deine eigenen.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
@@ -1230,6 +1234,8 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
           "Richtet deine OGS in dieser Zeit Ferienbetreuung für den Träger aus, zeigt der Dialog die Woche und wie viele Kinder gebucht haben. Die Buchungen bleiben.",
           "Wähle `Speichern`.",
           "Stehen an diesen Tagen schon Termine, fragt moto nach. Sage sie ab wie im nächsten Abschnitt.",
+          // „Heute anders“ (#7664) zeigt den Schließtag mit seinem Grund.
+          "Am Schließtag steht auf der `Startseite` unter `Heute anders`, dass die OGS geschlossen ist. Dort steht auch der `Grund`.",
         ],
       },
       {
@@ -11709,7 +11715,7 @@ export const traegerBillingTermsTopic =
             "Wähle bei der Rechnung des Kindes das Menü mit den drei Punkten und dann `Empfänger und Zahlung`. Es öffnet sich eine eigene Seite.",
             "Wähle bei `Rechnung an`: `Person im Vertrag`, `Beide Eltern` oder `Andere Person`.",
             "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
-            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person.",
+            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen und spricht sie mit „du“ an. Eine eigene Vorlage behält ihren Wortlaut.",
             "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
             "Wähle bei Bedarf einen `Eigenen Zahltag`, zum Beispiel den 15. des Monats.",
             "Wähle `Speichern`.",

@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -55,7 +55,7 @@ export interface SEPADebitRun {
 
 export const SEPADebitRunSchema: z.ZodType<SEPADebitRun, unknown> = object<SEPADebitRun>({
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   creditor_id: str,
   creditor_name: str,
   creditor_iban_masked: str,

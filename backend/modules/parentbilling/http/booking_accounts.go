@@ -20,9 +20,9 @@ import (
 // RevenueAccountRequest is the body of PUT …/booking-accounts/revenue-accounts:
 // the scope and its account, empty to remove it.
 type RevenueAccountRequest struct {
-	Scope   string `json:"scope"`
-	ScopeID int64  `json:"scope_id"`
-	Account string `json:"account"`
+	Scope   string    `json:"scope"`
+	ScopeID common.ID `json:"scope_id"`
+	Account string    `json:"account"`
 }
 
 // Bind accepts the body; the owner validates it.
@@ -30,10 +30,10 @@ func (req *RevenueAccountRequest) Bind(*http.Request) error { return nil }
 
 // CostCenterRequest is the body of POST …/booking-accounts/cost-centers.
 type CostCenterRequest struct {
-	Scope     string `json:"scope"`
-	ScopeID   int64  `json:"scope_id"`
-	ValidFrom string `json:"valid_from"`
-	Code      string `json:"code"`
+	Scope     string    `json:"scope"`
+	ScopeID   common.ID `json:"scope_id"`
+	ValidFrom string    `json:"valid_from"`
+	Code      string    `json:"code"`
 }
 
 // Bind reads the day; the owner validates the rest.
@@ -67,7 +67,7 @@ func (rs *FinanceExportResource) setRevenueAccount(w http.ResponseWriter, r *htt
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	accounts, err := rs.accounts.SetRevenueAccount(r.Context(), reviewer, req.Scope, req.ScopeID, req.Account)
+	accounts, err := rs.accounts.SetRevenueAccount(r.Context(), reviewer, req.Scope, req.ScopeID.Int64(), req.Account)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderBookingAccountError(w, r, err)

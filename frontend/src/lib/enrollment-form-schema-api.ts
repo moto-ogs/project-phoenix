@@ -12,21 +12,24 @@ import {
 const logger = createLogger({ component: "EnrollmentFormSchemaAPI" });
 
 /** Field types accepted by the backend FormFieldType enum. */
-export type FormFieldType =
-  | "boolean"
-  | "number"
-  | "text"
-  | "textarea"
-  | "date"
-  | "select"
-  | "information"
-  | "phone_list"
-  | "weekday_schedule"
-  | "weekday_boolean"
-  | "weekday_mode"
-  | "weekday_multi_mode"
-  | "contact_list"
-  | "file";
+export const FORM_FIELD_TYPES = [
+  "boolean",
+  "number",
+  "text",
+  "textarea",
+  "date",
+  "select",
+  "information",
+  "phone_list",
+  "weekday_schedule",
+  "weekday_boolean",
+  "weekday_mode",
+  "weekday_multi_mode",
+  "contact_list",
+  "file",
+] as const;
+
+export type FormFieldType = (typeof FORM_FIELD_TYPES)[number];
 
 /**
  * Source of a field's visibility condition. Mirrors the backend
@@ -36,10 +39,23 @@ export type FormFieldType =
  * - "grade_level": the per-child core field target_grade_level
  * - "care_offering": the child's selected care offering IDs
  */
-export type ConditionSource = "field" | "grade_level" | "care_offering";
+export const CONDITION_SOURCES = [
+  "field",
+  "grade_level",
+  "care_offering",
+] as const;
+
+export type ConditionSource = (typeof CONDITION_SOURCES)[number];
 
 /** Visibility operators (backend ConditionOp* constants). */
-export type ConditionOperator = "eq" | "neq" | "not_empty" | "includes";
+export const CONDITION_OPERATORS = [
+  "eq",
+  "neq",
+  "not_empty",
+  "includes",
+] as const;
+
+export type ConditionOperator = (typeof CONDITION_OPERATORS)[number];
 
 /**
  * Makes a field appear only when a controlling value matches. Mirrors
@@ -65,22 +81,25 @@ export interface VisibilityCondition {
  * checkbox + guardian_phone input). The decision service writes
  * them onto the Student / guardian_phone_numbers automatically.
  */
-export type FormFieldTarget =
-  | ""
-  | "student.health_info"
-  | "student.extra_info"
+export const FORM_FIELD_TARGETS = [
+  "",
+  "student.health_info",
+  "student.extra_info",
   // student.departure is the canonical unified target (#1610): per weekday how
   // the child leaves (alone/bus/pickup). student.bus_days / student.bus /
   // student.pickup_status are legacy aliases kept so older saved schemas still
   // resolve; they are not offered in the picker for new fields.
-  | "student.allowed_departure_modes"
-  | "student.departure"
-  | "student.bus_days"
-  | "student.bus"
-  | "student.pickup_status"
-  | "schedule.pickup"
-  | "schedule.arrival"
-  | "student.contacts";
+  "student.allowed_departure_modes",
+  "student.departure",
+  "student.bus_days",
+  "student.bus",
+  "student.pickup_status",
+  "schedule.pickup",
+  "schedule.arrival",
+  "student.contacts",
+] as const;
+
+export type FormFieldTarget = (typeof FORM_FIELD_TARGETS)[number];
 
 export interface ReservedTargetSpec {
   type: FormFieldType;
@@ -145,7 +164,7 @@ export const RESERVED_TARGETS: Record<
   },
 };
 
-interface FormFieldOption {
+export interface FormFieldOption {
   label: string;
   value: string;
   /** School-written translations of `label` (#3377). */
@@ -261,11 +280,22 @@ export function holidayCareWishAsked(
 
 export type CoreRequirements = Partial<Record<CoreRequirementKey, boolean>>;
 
-type LegalBlockKind = "terms" | "privacy_notice" | "notice" | "consent";
+export const LEGAL_BLOCK_KINDS = [
+  "terms",
+  "privacy_notice",
+  "notice",
+  "consent",
+] as const;
 
-type LegalBlockSource = "standard" | "custom";
+type LegalBlockKind = (typeof LEGAL_BLOCK_KINDS)[number];
 
-export type LegalBlockDisplayMode = "text" | "pdf";
+export const LEGAL_BLOCK_SOURCES = ["standard", "custom"] as const;
+
+type LegalBlockSource = (typeof LEGAL_BLOCK_SOURCES)[number];
+
+export const LEGAL_BLOCK_DISPLAY_MODES = ["text", "pdf"] as const;
+
+export type LegalBlockDisplayMode = (typeof LEGAL_BLOCK_DISPLAY_MODES)[number];
 
 export interface FormLegalBlock {
   attachments?: FormAttachment[];

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The holiday contribution (spec #4611 user stories 29, 61, 63 and 69, #4664,
@@ -142,7 +143,7 @@ type HolidayContributionLine struct {
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
 	DiscountCents       *int64         `json:"discount_cents"`
 	Note                string         `json:"note"`
-	CostBearerID        *int64         `json:"cost_bearer_id"`
+	CostBearerID        *ident.ID      `json:"cost_bearer_id"`
 	CostBearerName      string         `json:"cost_bearer_name"`
 	// BookedDays is the number of days a base line of a week by days prices,
 	// nil for a whole week (#4701); on a meal line the number of lunches it
@@ -158,7 +159,7 @@ type HolidayContributionLine struct {
 // the child of a registration; a quote names the child by its Position in
 // the form (1 to 3).
 type HolidayChildContribution struct {
-	ChildID    int64                     `json:"child_id"`
+	ChildID    ident.ID                  `json:"child_id"`
 	Position   int                       `json:"position"`
 	Lines      []HolidayContributionLine `json:"lines"`
 	TotalCents int64                     `json:"total_cents"`
@@ -175,7 +176,7 @@ type HolidayContribution struct {
 	TotalCents         int64                      `json:"total_cents"`
 	ExemptionAvailable bool                       `json:"exemption_available"`
 	BenefitsExemption  bool                       `json:"benefits_exemption"`
-	CostBearerID       *int64                     `json:"cost_bearer_id"`
+	CostBearerID       *ident.ID                  `json:"cost_bearer_id"`
 	CostBearerName     string                     `json:"cost_bearer_name"`
 	Frozen             bool                       `json:"frozen"`
 	ConfirmedAt        *time.Time                 `json:"confirmed_at"`
@@ -214,11 +215,11 @@ type IssuedContribution struct {
 
 // HolidayCancellation is a cancelled registration (#5662).
 type HolidayCancellation struct {
-	RegistrationID int64  `json:"id"`
-	Status         string `json:"status"`
+	RegistrationID ident.ID `json:"id"`
+	Status         string   `json:"status"`
 	// MovedUp names the registrations whose bookings got the freed places
 	// (#4699).
-	MovedUp []int64 `json:"moved_up"`
+	MovedUp []ident.ID `json:"moved_up"`
 }
 
 // HolidayConfirmation is a confirmed registration with the contribution its
@@ -312,8 +313,8 @@ type HolidayRegistration struct {
 // HolidayBookingChoice is one week and time model a rebooking gives a
 // child (#4699).
 type HolidayBookingChoice struct {
-	WeekID      int64 `json:"week_id"`
-	TimeModelID int64 `json:"time_model_id"`
+	WeekID      ident.ID `json:"week_id"`
+	TimeModelID ident.ID `json:"time_model_id"`
 	// Days are the days of a week by days (#4701).
 	Days []calendar.Date `json:"days"`
 	// Lunch books lunch on the care days of the booking (#5631).
@@ -325,11 +326,11 @@ type HolidayBookingChoice struct {
 // list and got their contribution computed again.
 type HolidayPlaceChange struct {
 	// Registration is the rebooked registration as Enrollment shows it.
-	Registration   any     `json:"-"`
-	RegistrationID int64   `json:"registration_id,omitempty"`
-	WeekID         int64   `json:"week_id,omitempty"`
-	Capacity       *int    `json:"capacity"`
-	MovedUp        []int64 `json:"moved_up"`
+	Registration   any        `json:"-"`
+	RegistrationID ident.ID   `json:"registration_id,omitempty"`
+	WeekID         ident.ID   `json:"week_id,omitempty"`
+	Capacity       *int       `json:"capacity"`
+	MovedUp        []ident.ID `json:"moved_up"`
 }
 
 // HolidayTimeModel is a bookable time model of a week with its price.
@@ -442,21 +443,21 @@ type HolidayConfirmationSettings struct {
 
 // CostBearerChoice is a cost bearer as the confirmation offers it (#5627).
 type CostBearerChoice struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // HolidayDebtorNumber is the debtor number of a registration after a
 // change; empty means none.
 type HolidayDebtorNumber struct {
-	RegistrationID int64  `json:"id"`
-	DebtorNumber   string `json:"debtor_number"`
+	RegistrationID ident.ID `json:"id"`
+	DebtorNumber   string   `json:"debtor_number"`
 }
 
 // HolidayQuoteBooking is a booking of the public form.
 type HolidayQuoteBooking struct {
-	WeekID      int64
-	TimeModelID int64
+	WeekID      ident.ID
+	TimeModelID ident.ID
 	// Days are the chosen days of a week by days (#4701).
 	Days []calendar.Date
 	// Lunch books lunch on the care days of the booking (#5631).

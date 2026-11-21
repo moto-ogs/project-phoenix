@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // familyRecipientContracts includes contracts outside the billing or import
@@ -18,11 +19,11 @@ func familyRecipientContracts(ids []int64, counts []parentbilling.FamilyChildCou
 	for _, count := range counts {
 		id := count.ContractID
 		if contractID, ok := parentbilling.ContractOfFamily(count.FamilyEmail); ok {
-			id = contractID
+			id = ident.ID(contractID)
 		}
-		if !seen[id] {
-			ids = append(ids, id)
-			seen[id] = true
+		if !seen[id.Int64()] {
+			ids = append(ids, id.Int64())
+			seen[id.Int64()] = true
 		}
 	}
 	return ids
@@ -85,9 +86,9 @@ func numbersByFamily(counts []parentbilling.FamilyChildCount, recipients map[int
 // contractID is a contract the family's numbers hang on.
 func (n *familyNumbers) contractID() int64 {
 	if n.own != nil {
-		return n.own.ContractID
+		return n.own.ContractID.Int64()
 	}
-	return n.brought[0].ContractID
+	return n.brought[0].ContractID.Int64()
 }
 
 // confirmed is the number the Abrechnung confirmed for the family, nil

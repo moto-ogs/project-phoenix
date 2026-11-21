@@ -80,6 +80,11 @@ func (s *Scheduler) runOutboxOnce(ctx context.Context, task *ScheduledTask) {
 	const batchSize = 25
 	_, recoveryErr := s.settleExpiredTransfers(ctx, batchSize)
 	processed, err := s.outboxWorker.RunOnce(ctx, batchSize, maxAttempts)
+	if s.demoCRMWorker != nil {
+		crmProcessed, crmErr := s.demoCRMWorker.RunOnce(ctx, batchSize, maxAttempts)
+		processed += crmProcessed
+		err = errors.Join(err, crmErr)
+	}
 	err = errors.Join(recoveryErr, err)
 	if err != nil {
 		recordJobCommandFailure(ctx, err)

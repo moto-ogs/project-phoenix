@@ -164,7 +164,7 @@ func (r *SEPAReturn) submittedFile(organizationID int64, messageID string, entri
 	collectOn := make(map[int64]calendar.Date, len(entries))
 	var submittedAt time.Time
 	for _, entry := range entries {
-		collectOn[entry.Debit.ID] = entry.Debit.CollectOn
+		collectOn[entry.Debit.ID.Int64()] = entry.Debit.CollectOn
 		if entry.Debit.SubmittedAt != nil && entry.Debit.SubmittedAt.After(submittedAt) {
 			submittedAt = *entry.Debit.SubmittedAt
 		}

@@ -451,7 +451,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -461,7 +461,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -471,7 +471,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: skips a deleted school.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: skips a deleted school. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -999,24 +999,24 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0235",
+      "approval_adr": "0301",
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.RebookHolidayChild",
       "classification": "workflow",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.RebookHolidayChild",
-      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's rebooking (registration, affected weeks ascending, day limits, waiting-list promotions, audit, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.RebookHolidayChild and its HolidayRegistrations.RebookHolidayChild binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity. Since #5631 (ADR 0235) the translation also hands on the lunch of each booking; lock order, transaction, placement and refreeze are unchanged, a lunch takes no place. Evidence: TestHolidayLunchShowsOnTheParticipantListOfTheHostingSchool.",
+      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's rebooking (registration, affected weeks ascending, day limits, waiting-list promotions, audit, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.RebookHolidayChild and its HolidayRegistrations.RebookHolidayChild binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity. Since #5631 (ADR 0235) the translation also hands on the lunch of each booking; lock order, transaction, placement and refreeze are unchanged, a lunch takes no place. Evidence: TestHolidayLunchShowsOnTheParticipantListOfTheHostingSchool. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.RebookHolidayChild",
       "target_owner": "holiday-allocation"
     },
     {
       "adr": "0067",
-      "approval_adr": "0206",
+      "approval_adr": "0301",
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.SetHolidayWeekCapacity",
       "classification": "workflow",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.SetHolidayWeekCapacity",
-      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's capacity change (week lock, capacity, audit, promotions, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.SetHolidayWeekCapacity and its HolidayRegistrations.SetHolidayWeekCapacity binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity.",
+      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's capacity change (week lock, capacity, audit, promotions, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.SetHolidayWeekCapacity and its HolidayRegistrations.SetHolidayWeekCapacity binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.SetHolidayWeekCapacity",
       "target_owner": "holiday-allocation"

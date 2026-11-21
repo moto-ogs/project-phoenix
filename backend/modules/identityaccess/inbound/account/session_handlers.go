@@ -289,7 +289,7 @@ func (rs *Resource) refreshToken(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.RenewalRules)
 		return
 	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 func (rs *Resource) logout(w http.ResponseWriter, r *http.Request) {

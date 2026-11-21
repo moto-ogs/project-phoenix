@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The letters, the mail, the print and the Storno of the monthly invoices
@@ -164,7 +165,7 @@ func (l *CareLetters) CreateCareLetters(ctx context.Context, reviewer parentbill
 	if err != nil {
 		return parentbilling.CareLetters{}, err
 	}
-	set, err := l.store.InsertCareRunLetters(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, input)
+	set, err := l.store.InsertCareRunLetters(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID, input)
 	if err != nil {
 		return parentbilling.CareLetters{}, err
 	}
@@ -174,9 +175,9 @@ func (l *CareLetters) CreateCareLetters(ctx context.Context, reviewer parentbill
 		if err := l.storeLetter(ctx, reviewer, &current, content); err != nil {
 			return parentbilling.CareLetters{}, err
 		}
-		addHolderSnapshotRead(details, content.invoice.ID, content.invoice.TotalCents, content.invoice.Payment)
+		addHolderSnapshotRead(details, content.invoice.ID.Int64(), content.invoice.TotalCents, content.invoice.Payment)
 	}
-	if err := l.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, careEventLetters, details); err != nil {
+	if err := l.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID, careEventLetters, details); err != nil {
 		return parentbilling.CareLetters{}, fmt.Errorf("parent billing: record care letters: %w", err)
 	}
 	return l.overview(ctx, reviewer, current)
@@ -210,9 +211,9 @@ func (l *CareLetters) PreviewCareLetter(ctx context.Context, reviewer parentbill
 		return parentbilling.BillingLetterFile{}, err
 	}
 	invoice := invoices[0]
-	details := map[string]any{"letter": "preview", "invoice_id": invoice.ID}
-	addHolderSnapshotRead(details, invoice.ID, invoice.TotalCents, invoice.Payment)
-	if err := l.recordRead(ctx, reviewer, current.run.ID, details); err != nil {
+	details := map[string]any{"letter": "preview", "invoice_id": invoice.ID.Int64()}
+	addHolderSnapshotRead(details, invoice.ID.Int64(), invoice.TotalCents, invoice.Payment)
+	if err := l.recordRead(ctx, reviewer, current.run.ID.Int64(), details); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -240,18 +241,18 @@ func (l *CareLetters) CareLetter(ctx context.Context, reviewer parentbilling.Hol
 		return parentbilling.BillingLetterFile{}, parentbilling.ErrBillingRunNotReleased
 	}
 	if kind == parentbilling.CareLetterInvoice {
-		if err := l.refuseCancelledUnsharedInvoice(ctx, reviewer.OrganizationID, run.ID, invoiceID); err != nil {
+		if err := l.refuseCancelledUnsharedInvoice(ctx, reviewer.OrganizationID, run.ID.Int64(), invoiceID); err != nil {
 			return parentbilling.BillingLetterFile{}, err
 		}
 	}
-	record, err := l.store.CareLetterRecord(ctx, reviewer.OrganizationID, run.ID, invoiceID, kind)
+	record, err := l.store.CareLetterRecord(ctx, reviewer.OrganizationID, run.ID.Int64(), invoiceID, kind)
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, fmt.Errorf("parent billing: read care letter: %w", err)
 	}
 	if record.File == nil {
 		return parentbilling.BillingLetterFile{}, parentbilling.ErrBillingLetterNotFound
 	}
-	if err := l.recordRead(ctx, reviewer, run.ID, map[string]any{"letter": "download", "invoice_id": invoiceID,
+	if err := l.recordRead(ctx, reviewer, run.ID.Int64(), map[string]any{"letter": "download", "invoice_id": invoiceID,
 		"letter_id": record.ID}); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -310,20 +311,20 @@ func (l *CareLetters) CancelCareInvoice(ctx context.Context, reviewer parentbill
 	if !ok {
 		return parentbilling.CareLetters{}, parentbilling.ErrCareInvoiceNotFound
 	}
-	if _, cancelled := current.cancellations[invoice.ID]; cancelled {
+	if _, cancelled := current.cancellations[invoice.ID.Int64()]; cancelled {
 		return parentbilling.CareLetters{}, parentbilling.ErrCareInvoiceCancelled
 	}
 	cancellation, err := l.issueCancellation(ctx, reviewer, current.run, invoice, reason)
 	if err != nil {
 		return parentbilling.CareLetters{}, err
 	}
-	current.cancellations[invoice.ID] = cancellation
+	current.cancellations[invoice.ID.Int64()] = cancellation
 	sent, printed, err := l.cancellationLetter(ctx, reviewer, &current, invoice, cancellation)
 	if err != nil {
 		return parentbilling.CareLetters{}, err
 	}
-	if err := l.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, careEventCancel,
-		map[string]any{"invoice_id": invoice.ID, "cancellation_id": cancellation.ID, "invoice_was_sent": sent, "invoice_was_printed": printed}); err != nil {
+	if err := l.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID, careEventCancel,
+		map[string]any{"invoice_id": invoice.ID.Int64(), "cancellation_id": cancellation.ID, "invoice_was_sent": sent, "invoice_was_printed": printed}); err != nil {
 		return parentbilling.CareLetters{}, fmt.Errorf("parent billing: record care cancellation: %w", err)
 	}
 	return l.overview(ctx, reviewer, current)
@@ -335,8 +336,8 @@ func (l *CareLetters) CancelCareInvoice(ctx context.Context, reviewer parentbill
 func (l *CareLetters) cancellationLetter(ctx context.Context, reviewer parentbilling.HolidayReviewer, current *careLetterRun,
 	invoice parentbilling.CareInvoice, cancellation parentbilling.CareCancellation,
 ) (sent, printed bool, err error) {
-	sent = current.wasSent(invoice.ID)
-	record, _ := current.record(invoice.ID, parentbilling.CareLetterInvoice)
+	sent = current.wasSent(invoice.ID.Int64())
+	record, _ := current.record(invoice.ID.Int64(), parentbilling.CareLetterInvoice)
 	printed = record.Printed
 	if (!sent && !printed) || current.letters == nil {
 		return sent, printed, nil
@@ -368,9 +369,9 @@ func (l *CareLetters) issueCancellation(ctx context.Context, reviewer parentbill
 	if err != nil {
 		return parentbilling.CareCancellation{}, fmt.Errorf("parent billing: reserve the number of the Storno: %w", err)
 	}
-	return l.store.InsertCareCancellation(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, year, sequence,
+	return l.store.InsertCareCancellation(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, year, sequence,
 		parentbilling.CareCancellation{
-			InvoiceID: invoice.ID, Number: formatInvoiceNumber(pattern, issuedOn.Year(), sequence), IssuedOn: issuedOn,
+			InvoiceID: invoice.ID.Int64(), Number: formatInvoiceNumber(pattern, issuedOn.Year(), sequence), IssuedOn: issuedOn,
 			Reason: reason, TotalCents: -invoice.TotalCents,
 		})
 }
@@ -385,12 +386,12 @@ func (l *CareLetters) storeLetter(ctx context.Context, reviewer parentbilling.Ho
 	if content.cancellation != nil {
 		kind = parentbilling.CareLetterCancellation
 	}
-	id, err := l.store.InsertCareLetter(ctx, reviewer.OrganizationID, current.run.ID, content.invoice.ID, kind, file)
+	id, err := l.store.InsertCareLetter(ctx, reviewer.OrganizationID, current.run.ID.Int64(), content.invoice.ID.Int64(), kind, file)
 	if err != nil {
 		return fmt.Errorf("parent billing: store care letter: %w", err)
 	}
-	current.records[careLetterKey{invoiceID: content.invoice.ID, kind: kind}] = parentbilling.CareLetterRecord{
-		ID: id, InvoiceID: content.invoice.ID, Kind: kind,
+	current.records[careLetterKey{invoiceID: content.invoice.ID.Int64(), kind: kind}] = parentbilling.CareLetterRecord{
+		ID: id, InvoiceID: content.invoice.ID.Int64(), Kind: kind,
 	}
 	return nil
 }
@@ -500,13 +501,13 @@ func (l *CareLetters) letterRun(ctx context.Context, reviewer parentbilling.Holi
 	}
 	current := careLetterRun{run: run, cancellations: map[int64]parentbilling.CareCancellation{},
 		records: map[careLetterKey]parentbilling.CareLetterRecord{}, sends: map[int64][]parentbilling.CareLetterSend{}}
-	if current.letters, err = l.store.CareRunLetters(ctx, organizationID, run.ID); err != nil {
+	if current.letters, err = l.store.CareRunLetters(ctx, organizationID, run.ID.Int64()); err != nil {
 		return careLetterRun{}, fmt.Errorf("parent billing: read care letters: %w", err)
 	}
-	if current.invoices, err = l.store.CareRunInvoices(ctx, organizationID, run.ID); err != nil {
+	if current.invoices, err = l.store.CareRunInvoices(ctx, organizationID, run.ID.Int64()); err != nil {
 		return careLetterRun{}, err
 	}
-	cancellations, err := l.store.CareRunCancellations(ctx, organizationID, run.ID)
+	cancellations, err := l.store.CareRunCancellations(ctx, organizationID, run.ID.Int64())
 	if err != nil {
 		return careLetterRun{}, fmt.Errorf("parent billing: read care cancellations: %w", err)
 	}
@@ -516,14 +517,14 @@ func (l *CareLetters) letterRun(ctx context.Context, reviewer parentbilling.Holi
 	if current.letters == nil {
 		return current, nil
 	}
-	records, err := l.store.CareRunLetterRecords(ctx, organizationID, run.ID, withFiles)
+	records, err := l.store.CareRunLetterRecords(ctx, organizationID, run.ID.Int64(), withFiles)
 	if err != nil {
 		return careLetterRun{}, fmt.Errorf("parent billing: read care letters: %w", err)
 	}
 	for _, record := range records {
 		current.records[careLetterKey{invoiceID: record.InvoiceID, kind: record.Kind}] = record
 	}
-	sends, err := l.store.CareRunMailings(ctx, organizationID, run.ID)
+	sends, err := l.store.CareRunMailings(ctx, organizationID, run.ID.Int64())
 	if err != nil {
 		return careLetterRun{}, fmt.Errorf("parent billing: read care mails: %w", err)
 	}
@@ -537,7 +538,7 @@ func (l *CareLetters) letterRun(ctx context.Context, reviewer parentbilling.Holi
 func (c careLetterRun) open() []parentbilling.CareInvoice {
 	open := make([]parentbilling.CareInvoice, 0, len(c.invoices))
 	for _, invoice := range c.invoices {
-		if _, cancelled := c.cancellations[invoice.ID]; !cancelled {
+		if _, cancelled := c.cancellations[invoice.ID.Int64()]; !cancelled {
 			open = append(open, invoice)
 		}
 	}
@@ -546,7 +547,7 @@ func (c careLetterRun) open() []parentbilling.CareInvoice {
 
 func (c careLetterRun) invoice(invoiceID int64) (parentbilling.CareInvoice, bool) {
 	for _, invoice := range c.invoices {
-		if invoice.ID == invoiceID {
+		if invoice.ID == ident.ID(invoiceID) {
 			return invoice, true
 		}
 	}
@@ -570,7 +571,7 @@ func validLetterKind(kind string) error {
 func invoiceIDs(invoices []parentbilling.CareInvoice) []int64 {
 	ids := make([]int64, len(invoices))
 	for i, invoice := range invoices {
-		ids[i] = invoice.ID
+		ids[i] = invoice.ID.Int64()
 	}
 	return ids
 }

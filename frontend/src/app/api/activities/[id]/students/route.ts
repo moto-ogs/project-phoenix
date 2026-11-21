@@ -7,7 +7,7 @@ const logger = createLogger({ component: "ActivityStudentsRoute" });
 import { createGetHandler, createPutHandler } from "~/lib/route-wrapper.server";
 import {
   mapStudentEnrollmentsResponse,
-  type BackendStudentEnrollment,
+  type StudentEnrollmentBody,
 } from "~/lib/activity-helpers";
 import { int64StringOrNumber } from "~/lib/contract/runtime";
 
@@ -144,7 +144,7 @@ export const GET = createGetHandler(
 
         // The roster and paginated candidate list are independent reads.
         const [enrolledResponse, allStudents] = await Promise.all([
-          apiGet<{ data: BackendStudentEnrollment[] }>(
+          apiGet<{ data: StudentEnrollmentBody[] }>(
             `/api/activities/${encodeURIComponent(id)}/students`,
             token,
           ),
@@ -175,7 +175,7 @@ export const GET = createGetHandler(
     // Otherwise return enrolled students - call backend directly
     try {
       const endpoint = `/api/activities/${encodeURIComponent(id)}/students`;
-      const response = await apiGet<{ data: BackendStudentEnrollment[] }>(
+      const response = await apiGet<{ data: StudentEnrollmentBody[] }>(
         endpoint,
         token,
       );
@@ -212,7 +212,7 @@ export const PUT = createPutHandler(
     await apiPut(endpoint, token, { student_ids: body.student_ids });
 
     // Return updated enrolled students - call backend directly with token
-    const response = await apiGet<{ data: BackendStudentEnrollment[] }>(
+    const response = await apiGet<{ data: StudentEnrollmentBody[] }>(
       endpoint,
       token,
     );

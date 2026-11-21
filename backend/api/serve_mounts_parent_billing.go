@@ -30,6 +30,7 @@ import (
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mountParentBillingRoutes serves the Elternabrechnung (ADR 0088, #4664, ADR
@@ -206,7 +207,7 @@ func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizati
 	result := make([]parentbilling.CareSchool, 0, len(schools))
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			result = append(result, parentbilling.CareSchool{ID: school.ID, Name: school.Name})
+			result = append(result, parentbilling.CareSchool{ID: ident.ID(school.ID), Name: school.Name})
 		}
 	}
 	slices.SortFunc(result, func(a, b parentbilling.CareSchool) int { return strings.Compare(a.Name, b.Name) })
@@ -626,7 +627,7 @@ func (b parentBillingBillingRegistrations) HolidayBillingPeriod(ctx context.Cont
 // and last week.
 func parentBillingPeriod(period enrollmentOwner.HolidayPeriod) parentbilling.HolidayBillingPeriod {
 	billing := parentbilling.HolidayBillingPeriod{
-		ID: period.ID, Name: period.Name, Published: period.Status == enrollmentOwner.HolidayPeriodPublished,
+		ID: ident.ID(period.ID), Name: period.Name, Published: period.Status == enrollmentOwner.HolidayPeriodPublished,
 	}
 	for _, week := range period.Weeks {
 		if billing.StartsOn.IsZero() || week.StartsOn.Before(billing.StartsOn) {

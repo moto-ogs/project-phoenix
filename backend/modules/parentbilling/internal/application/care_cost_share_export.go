@@ -71,7 +71,7 @@ func (c *CareBilling) ExportCareCostShares(ctx context.Context, reviewer parentb
 	}
 	cancelled := map[int64]bool{}
 	if detail.Status == parentbilling.RunReleased {
-		cancellations, err := c.store.CareRunCancellations(ctx, reviewer.OrganizationID, detail.ID)
+		cancellations, err := c.store.CareRunCancellations(ctx, reviewer.OrganizationID, detail.ID.Int64())
 		if err != nil {
 			return parentbilling.ExportFile{}, err
 		}
@@ -79,12 +79,12 @@ func (c *CareBilling) ExportCareCostShares(ctx context.Context, reviewer parentb
 	}
 	table, contracts := careCostShareTable(detail, bearer, cancelled)
 	file, err := c.renderer.RenderTable(table, format,
-		"kostentraeger-"+strconv.FormatInt(bearer.ID, 10)+"-"+detail.BillingMonth.Format("2006-01"))
+		"kostentraeger-"+strconv.FormatInt(bearer.ID.Int64(), 10)+"-"+detail.BillingMonth.Format("2006-01"))
 	if err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: render the cost bearer list: %w", err)
 	}
-	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, detail.ID, reviewer.AccountID, runEventExport,
-		map[string]any{"format": format, "list": "cost_share", "cost_bearer_id": bearer.ID, "contract_ids": contracts}); err != nil {
+	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, detail.ID.Int64(), reviewer.AccountID, runEventExport,
+		map[string]any{"format": format, "list": "cost_share", "cost_bearer_id": bearer.ID.Int64(), "contract_ids": contracts}); err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: record the cost bearer list: %w", err)
 	}
 	return file, nil
@@ -109,12 +109,12 @@ func careCostShareTable(detail parentbilling.CareRunDetail, bearer parentbilling
 			case detail.Status != parentbilling.RunReleased:
 				status = "Vorschau"
 				total += share.AmountCents
-			case cancelled[invoice.ID]:
+			case cancelled[invoice.ID.Int64()]:
 				status = "Storniert, nicht in der Summe"
 			default:
 				total += share.AmountCents
 			}
-			contracts = append(contracts, invoice.ContractID)
+			contracts = append(contracts, invoice.ContractID.Int64())
 			rows = append(rows, map[string]string{
 				"number": invoice.Number, "school": invoice.SchoolName,
 				"child": strings.TrimSpace(invoice.ChildFirstName + " " + invoice.ChildLastName),

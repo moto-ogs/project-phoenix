@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The rule chain of the monthly contribution (#4685, 1.15.807): the care
@@ -32,8 +33,8 @@ const (
 func newCareRuleRow(organizationID int64, input parentbilling.CareRuleInput) *ruleRow {
 	return &ruleRow{
 		OrganizationID: organizationID, Service: parentbilling.ServiceCare, Kind: input.Kind, Name: input.Name,
-		ValidFrom: input.ValidFrom, ValidUntil: input.ValidUntil, SchoolIDs: idsOrEmpty(input.SchoolIDs),
-		CareOfferingIDs: idsOrEmpty(input.CareOfferingIDs), CountSchoolIDs: idsOrEmpty(input.CountSchoolIDs),
+		ValidFrom: input.ValidFrom, ValidUntil: input.ValidUntil, SchoolIDs: idsOrEmpty(ident.Int64s(input.SchoolIDs)),
+		CareOfferingIDs: idsOrEmpty(ident.Int64s(input.CareOfferingIDs)), CountSchoolIDs: idsOrEmpty(ident.Int64s(input.CountSchoolIDs)),
 		SiblingFromChild: input.SiblingFromChild, DiscountBasisPoints: input.DiscountBasisPoints,
 		DiscountCents: input.DiscountCents, PriceCents: input.PriceCents, CapCents: input.CapCents,
 		TariffSiblingPrice:   input.TariffSiblingPrice,
@@ -139,14 +140,14 @@ type careEvidenceRow struct {
 
 func (r careEvidenceRow) evidence() parentbilling.CareEvidence {
 	return parentbilling.CareEvidence{
-		ID: r.ID, ContractID: r.CareContractID, Kind: r.Kind, RuleID: r.RuleID, ValidFrom: r.ValidFrom,
+		ID: ident.ID(r.ID), ContractID: ident.ID(r.CareContractID), Kind: r.Kind, RuleID: (*ident.ID)(r.RuleID), ValidFrom: r.ValidFrom,
 		ValidUntil: r.ValidUntil, Evidence: r.Evidence, CheckedOn: r.CheckedOn, UpdatedAt: r.UpdatedAt,
 	}
 }
 
 func newCareEvidenceRow(organizationID, accountID int64, input parentbilling.CareEvidenceInput) *careEvidenceRow {
 	return &careEvidenceRow{
-		OrganizationID: organizationID, CareContractID: input.ContractID, Kind: input.Kind, RuleID: input.RuleID,
+		OrganizationID: organizationID, CareContractID: input.ContractID.Int64(), Kind: input.Kind, RuleID: (*int64)(input.RuleID),
 		ValidFrom: input.ValidFrom, ValidUntil: input.ValidUntil, Evidence: input.Evidence, CheckedOn: input.CheckedOn,
 		RecordedByAccountID: &accountID,
 	}
@@ -305,10 +306,10 @@ func insertCareReductions(ctx context.Context, db bun.IDB, organizationID int64,
 		for j, reduction := range invoice.Reductions {
 			reductions = append(reductions, careInvoiceReductionRow{
 				OrganizationID: organizationID, InvoiceID: rows[i].ID, Position: j + 1, Kind: reduction.Kind,
-				RuleID: reduction.RuleID, Name: reduction.Name, ChildRank: reduction.ChildRank,
+				RuleID: reduction.RuleID.Int64(), Name: reduction.Name, ChildRank: reduction.ChildRank,
 				FamilyChildren: reduction.FamilyChildren, DiscountBasisPoints: reduction.DiscountBasisPoints,
 				DiscountCents: reduction.DiscountCents, PriceCents: reduction.PriceCents, CapCents: reduction.CapCents,
-				TariffSiblingPrice: reduction.TariffSiblingPrice, CareOfferingIDs: idsOrEmpty(reduction.CareOfferingIDs), AmountCents: reduction.AmountCents,
+				TariffSiblingPrice: reduction.TariffSiblingPrice, CareOfferingIDs: idsOrEmpty(ident.Int64s(reduction.CareOfferingIDs)), AmountCents: reduction.AmountCents,
 			})
 		}
 	}
@@ -332,9 +333,9 @@ func careReductionsOf(ctx context.Context, db bun.IDB, organizationID int64, inv
 	byInvoice := map[int64][]parentbilling.CareReduction{}
 	for _, row := range rows {
 		byInvoice[row.InvoiceID] = append(byInvoice[row.InvoiceID], parentbilling.CareReduction{
-			Kind: row.Kind, RuleID: row.RuleID, Name: row.Name, ChildRank: row.ChildRank, FamilyChildren: row.FamilyChildren,
+			Kind: row.Kind, RuleID: ident.ID(row.RuleID), Name: row.Name, ChildRank: row.ChildRank, FamilyChildren: row.FamilyChildren,
 			DiscountBasisPoints: row.DiscountBasisPoints, DiscountCents: row.DiscountCents, PriceCents: row.PriceCents,
-			CapCents: row.CapCents, TariffSiblingPrice: row.TariffSiblingPrice, CareOfferingIDs: idsOrEmpty(row.CareOfferingIDs), AmountCents: row.AmountCents,
+			CapCents: row.CapCents, TariffSiblingPrice: row.TariffSiblingPrice, CareOfferingIDs: ident.IDs(idsOrEmpty(row.CareOfferingIDs)), AmountCents: row.AmountCents,
 		})
 	}
 	return byInvoice, nil

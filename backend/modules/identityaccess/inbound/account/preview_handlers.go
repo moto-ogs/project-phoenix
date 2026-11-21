@@ -77,7 +77,7 @@ func (rs *Resource) startStaffPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.JSON(w, r, StaffPreviewStartResponse{
+	common.RenderJSON(w, r, StaffPreviewStartResponse{
 		AccessToken:     session.AccessToken,
 		ExpiresIn:       session.ExpiresIn,
 		TargetAccountID: session.TargetAccountID,

@@ -33164,6 +33164,17 @@
       "target_owner": "school-calendar"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingAnnouncer.AnnounceStaffingChanged",
+      "classification": "platform",
+      "effect": "notice",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.StaffingAnnouncer.AnnounceStaffingChanged",
+      "reason": "Platform protocol participation (notice): timetable-activities reaches realtime.Broadcaster.BroadcastToTenant (delivery-platform) through modules/timetable/http.StaffingAnnouncer.AnnounceStaffingChanged. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.TimetableSupervisionSheets.SupervisionStudentSheet",
       "classification": "query",
       "effect": "query",

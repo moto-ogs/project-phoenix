@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The invoices and amounts of a family (spec #4611 user story 81, #4691).
@@ -78,7 +79,7 @@ type BillingPayment struct {
 // latest document, the debtor numbers its documents carry, who pays its
 // invoices, and its sums.
 type BillingFamily struct {
-	ID                 int64            `json:"id"`
+	ID                 ident.ID         `json:"id"`
 	RecipientFirstName string           `json:"recipient_first_name"`
 	RecipientLastName  string           `json:"recipient_last_name"`
 	RecipientEmail     string           `json:"recipient_email"`
@@ -117,15 +118,15 @@ type BillingFamilyDocument struct {
 	// RecipientKind and RecipientSecondName say who got the invoice (#4689).
 	RecipientKind       string          `json:"recipient_kind"`
 	RecipientSecondName string          `json:"recipient_second_name"`
-	ID                  int64           `json:"id"`
-	RunID               int64           `json:"run_id"`
+	ID                  ident.ID        `json:"id"`
+	RunID               ident.ID        `json:"run_id"`
 	Kind                string          `json:"kind"`
 	Number              string          `json:"number"`
 	IssuedOn            calendar.Date   `json:"issued_on"`
 	PeriodName          string          `json:"period_name"`
 	ServiceFrom         calendar.Date   `json:"service_from"`
 	ServiceUntil        calendar.Date   `json:"service_until"`
-	ReferenceDocumentID *int64          `json:"reference_document_id"`
+	ReferenceDocumentID *ident.ID       `json:"reference_document_id"`
 	ReferenceNumber     string          `json:"reference_number"`
 	Reason              string          `json:"reason"`
 	ChildNames          []string        `json:"child_names"`

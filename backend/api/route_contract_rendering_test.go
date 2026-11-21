@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,12 +30,12 @@ const (
 var renderShapes = map[string]renderShape{"nil": shapeNil, "empty": shapeEmpty, "filled": shapeFilled}
 
 // The contract is derived from the Go types by reflection, the answer by
-// encoding/json. This test renders every registered response type in three
+// package wire (encoding/json with identifiers as strings, ADR 0300). This test renders every registered response type in three
 // shapes, as a handler would write them, and holds the bytes against the
 // contract: a null or an absent key the decoder refuses shows here and not
 // as a 502 in the BFF.
 //
-// It proves that the generator and encoding/json agree. That a handler
+// It proves that the generator and the answer encoding agree. That a handler
 // answers with the registered type is the answer check's part
 // (common.ObserveAnswers).
 func TestRegisteredResponseTypesRenderWithinTheContract(t *testing.T) {
@@ -83,7 +84,7 @@ func renderedAnswer(t *testing.T, route contract.Route, responseType reflect.Typ
 	if route.Paginated {
 		envelope = common.NewPaginatedResponse(data.Interface(), 1, 50, 1, "ok")
 	}
-	body, err := json.Marshal(envelope)
+	body, err := wire.Marshal(envelope)
 	require.NoError(t, err)
 	return body
 }

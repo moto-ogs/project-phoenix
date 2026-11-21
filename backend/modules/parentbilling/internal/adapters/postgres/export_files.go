@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The export protocol, the file numbers and the field mapping of the finance
@@ -169,9 +170,9 @@ func (r exportFileRow) entry() parentbilling.ExportProtocolEntry {
 	if fallbacks == nil {
 		fallbacks = []parentbilling.CostCenterFallback{}
 	}
-	return parentbilling.ExportProtocolEntry{ID: r.ID, FileNumber: r.FileNumber, Format: r.Format, RunKind: r.RunKind, RunID: r.RunID,
+	return parentbilling.ExportProtocolEntry{ID: ident.ID(r.ID), FileNumber: r.FileNumber, Format: r.Format, RunKind: r.RunKind, RunID: ident.ID(r.RunID),
 		FileName: r.FileName, Fingerprint: r.ContentSHA256, InvoiceCount: r.InvoiceCount, TotalCents: r.TotalCents,
-		Reference: textOf(r.Reference), ExportedBy: r.ExportedByAccountID, ExportedAt: r.ExportedAt, SubmittedAt: r.SubmittedAt,
+		Reference: textOf(r.Reference), ExportedBy: (*ident.ID)(r.ExportedByAccountID), ExportedAt: r.ExportedAt, SubmittedAt: r.SubmittedAt,
 		DatevAll: r.DatevAll, ResolvedPositions: r.ResolvedPositions, CostCenterFallbacks: fallbacks}
 }
 

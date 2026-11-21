@@ -10,6 +10,7 @@ import (
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/holidayallocation"
 	holidayAllocationCompose "github.com/moto-ogs/project-phoenix/workflows/holidayallocation/compose"
 )
@@ -42,13 +43,13 @@ type holidayAllocationPlaces struct {
 func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID, childID int64, bookings []parentbilling.HolidayBookingChoice) (parentbilling.HolidayPlaceChange, error) {
 	choices := make([]enrollmentOwner.HolidayBookingInput, len(bookings))
 	for i, booking := range bookings {
-		choices[i] = enrollmentOwner.HolidayBookingInput{WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Days: booking.Days, Lunch: booking.Lunch}
+		choices[i] = enrollmentOwner.HolidayBookingInput{WeekID: booking.WeekID.Int64(), TimeModelID: booking.TimeModelID.Int64(), Days: booking.Days, Lunch: booking.Lunch}
 	}
 	detail, err := c.workflow.RebookHolidayChild(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, childID, choices)
 	if err != nil {
 		return parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)
 	}
-	return parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: detail.ID, MovedUp: sortedMovedUp(detail.Promotions)}, nil
+	return parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: ident.ID(detail.ID), MovedUp: ident.IDs(sortedMovedUp(detail.Promotions))}, nil
 }
 
 // SetHolidayWeekCapacity sets the places of a week, nil for unlimited
@@ -58,7 +59,7 @@ func (c parentBillingPlaceChanges) SetHolidayWeekCapacity(ctx context.Context, r
 	if err != nil {
 		return parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)
 	}
-	return parentbilling.HolidayPlaceChange{WeekID: weekID, Capacity: capacity, MovedUp: sortedMovedUp(change.Promotions)}, nil
+	return parentbilling.HolidayPlaceChange{WeekID: ident.ID(weekID), Capacity: capacity, MovedUp: ident.IDs(sortedMovedUp(change.Promotions))}, nil
 }
 
 // sortedMovedUp names each registration that moved up once, in ascending

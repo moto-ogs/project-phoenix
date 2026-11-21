@@ -177,6 +177,7 @@ var tableRetentions = map[string]tableRetention{
 	"auth.account_roles":                                    parent("auth.accounts"),
 	"auth.account_tenants":                                  parent("auth.accounts"),
 	"auth.accounts":                                         own("anonymized, not deleted, so messages, protocols and records of other people keep their reference: hourly token-cleanup, EraseUnusedAccounts -> SQL auth.erase_unused_accounts once no school needs the account (#4043)"),
+	"auth.demo_crm_jobs":                                    parent("auth.demo_accesses"),
 	"auth.demo_accesses":                                    own("demo process only: hourly demoExpiry -> ExpireDemoAccesses -> DeleteExpiredDemoAccesses"),
 	"auth.caterer_accounts":                                 parent("auth.caterers"),
 	"auth.caterer_schools":                                  notPersonal("supply of a school: caterer, the school's delivery address, period; the accounts are cleared with the account"),

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Jahresbescheid of the monthly care contribution (#6219, ADR 0182,
@@ -67,12 +68,12 @@ type CareNoticeRunStart struct {
 // CareNoticeRun is a notice run as the list shows it. NoticeCount and
 // TotalCents are set once it is released.
 type CareNoticeRun struct {
-	ID          int64          `json:"id"`
+	ID          ident.ID       `json:"id"`
 	Year        int            `json:"year"`
 	PeriodFrom  calendar.Date  `json:"period_from"`
 	PeriodUntil calendar.Date  `json:"period_until"`
 	Status      string         `json:"status"`
-	SchoolIDs   []int64        `json:"school_ids"`
+	SchoolIDs   []ident.ID     `json:"school_ids"`
 	NoticeDate  *calendar.Date `json:"notice_date"`
 	CreatedAt   time.Time      `json:"created_at"`
 	ReleasedAt  *time.Time     `json:"released_at"`
@@ -100,7 +101,7 @@ type CareNoticeLine struct {
 	Kind                 string        `json:"kind"`
 	Label                string        `json:"label"`
 	Detail               string        `json:"detail"`
-	CareOfferingID       *int64        `json:"care_offering_id,omitempty"`
+	CareOfferingID       *ident.ID     `json:"care_offering_id,omitempty"`
 	PeriodFrom           calendar.Date `json:"period_from"`
 	PeriodUntil          calendar.Date `json:"period_until"`
 	Months               int           `json:"months"`
@@ -125,7 +126,7 @@ type CareNoticeInstallment struct {
 
 // CareNoticeReference names another notice of the same contract.
 type CareNoticeReference struct {
-	ID       int64          `json:"id"`
+	ID       ident.ID       `json:"id"`
 	Number   string         `json:"number"`
 	IssuedOn *calendar.Date `json:"issued_on"`
 }
@@ -135,12 +136,12 @@ type CareNoticeReference struct {
 // annual amount the family pays, PreviousCents what the amended notice
 // assessed, DeltaCents the difference.
 type CareNotice struct {
-	ID             int64          `json:"id"`
+	ID             ident.ID       `json:"id"`
 	Number         string         `json:"number"`
 	IssuedOn       *calendar.Date `json:"issued_on"`
 	Kind           string         `json:"kind"`
-	ContractID     int64          `json:"contract_id"`
-	SchoolID       int64          `json:"school_id"`
+	ContractID     ident.ID       `json:"contract_id"`
+	SchoolID       ident.ID       `json:"school_id"`
 	SchoolName     string         `json:"school_name"`
 	ChildFirstName string         `json:"child_first_name"`
 	ChildLastName  string         `json:"child_last_name"`
@@ -242,11 +243,11 @@ type CareFeeNotices interface {
 // assessed, so no monthly invoice bills it. A new notice of the year bills
 // it again.
 type CareFeeNoticeHold struct {
-	ContractID     int64  `json:"contract_id"`
-	SchoolID       int64  `json:"school_id"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
-	NoticeNumber   string `json:"notice_number"`
+	ContractID     ident.ID `json:"contract_id"`
+	SchoolID       ident.ID `json:"school_id"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
+	NoticeNumber   string   `json:"notice_number"`
 }
 
 // CareNoticeDue is the installment of a month that the effective notice of

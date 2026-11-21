@@ -142,7 +142,7 @@ func NewWorker(
 		TimetableBridge:              days.Bridge,
 		StudentLifecycleAudit:        schedulerStudentAudit(studentAudit),
 		CareExitEffector:             schedules.Lifecycle,
-		OutboxWorker:                 outbox, EmailReconciliation: outbox,
+		OutboxWorker:                 outbox, EmailReconciliation: outbox, DemoCRMWorker: identity.DemoAccess().CRMJobs(),
 		SettleExpiredTransfers: exportTransferCompose.NewDispatchRecovery(),
 		AppointmentReminders:   reminders,
 		RolloverDeadlineRunner: rolloverDeadlines{rollovers: flows.Rollovers},

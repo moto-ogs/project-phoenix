@@ -81,7 +81,7 @@ func (rs *Resource) passkeyLoginOptions(w http.ResponseWriter, r *http.Request) 
 		mapPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, options)
+	common.RenderJSON(w, r, options)
 }
 
 func (rs *Resource) passkeyLoginVerify(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +103,7 @@ func (rs *Resource) passkeyLoginVerify(w http.ResponseWriter, r *http.Request) {
 		mapPasskeyLoginError(w, r, err)
 		return
 	}
-	render.JSON(w, r, portalauth.LoginBody(identityaccess.LoginResult{
+	common.RenderJSON(w, r, portalauth.LoginBody(identityaccess.LoginResult{
 		Status: identityaccess.LoginStatusAuthenticated, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 	}))
 }

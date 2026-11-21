@@ -55,3 +55,40 @@ describe("care beyond a shortened phase", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+// #2353: an action or outcome this build does not know shows „–“ instead of
+// breaking the preview.
+describe("unknown values in the preview", () => {
+  it("shows a school plan with an unknown action", () => {
+    render(
+      <SchoolPlanCard
+        plan={{ ...plan, action: undefined, outcome: undefined }}
+        schools={schools}
+      />,
+    );
+    expect(screen.getByText("Grundschule Nord")).toBeInTheDocument();
+    expect(screen.getByText("–")).toBeInTheDocument();
+  });
+
+  it("shows a rollout result with an unknown outcome", () => {
+    render(
+      <RolloutResultCard
+        rollout={{
+          traegerPhaseId: "7",
+          version: 2,
+          schools: [
+            {
+              schoolId: "11",
+              outcome: undefined,
+              errorCode: null,
+              careBeyondEnd: 0,
+            },
+          ],
+        }}
+        schools={schools}
+      />,
+    );
+    expect(screen.getAllByText("Grundschule Nord").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Noch nicht übertragen")).not.toBeInTheDocument();
+  });
+});

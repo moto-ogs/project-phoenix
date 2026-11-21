@@ -19,6 +19,7 @@ import (
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type placementBody struct {
@@ -44,7 +45,7 @@ type weekPlacesBody struct {
 }
 
 type placeChangeBody struct {
-	MovedUp []int64 `json:"moved_up"`
+	MovedUp []wireID `json:"moved_up"`
 }
 
 func holidayPlacesPath(periodID int64) string {
@@ -215,7 +216,7 @@ func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 	// Cancelling Lia and Ben frees both places: Tom and Ida move up in order.
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(int64(f.period.ID), f.siblings), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []int64{int64(tom.ID), int64(family.ID)}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
+	assert.Equal(t, []int64{int64(tom.ID), int64(family.ID)}, testpkg.IDs(decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp))
 	weeks = f.places(t)
 	assert.Equal(t, 2, weeks[int64(first.ID)].Placed)
 	assert.Empty(t, weeks[int64(first.ID)].Waitlist)
@@ -251,7 +252,7 @@ func TestHolidayPlacesMoveUpOnRebookingAndCapacity(t *testing.T) {
 
 	ole := f.submitPlaces(t, "ole.kapazitaet@example.org", map[string][]int{"Ole": {0}})
 	require.Equal(t, "waitlisted", ole.Placements[0].Placement)
-	assert.Equal(t, []int64{int64(ole.ID)}, f.setCapacity(t, int64(first.ID), 3).MovedUp, "a higher capacity moves the waiting list up")
+	assert.Equal(t, []int64{int64(ole.ID)}, testpkg.IDs(f.setCapacity(t, int64(first.ID), 3).MovedUp), "a higher capacity moves the waiting list up")
 	assert.Empty(t, f.setCapacity(t, int64(first.ID), 1).MovedUp)
 	assert.Equal(t, 3, f.places(t)[int64(first.ID)].Placed, "a lower capacity takes no place away")
 	assert.Empty(t, f.setCapacity(t, int64(first.ID), nil).MovedUp)
@@ -308,7 +309,7 @@ func TestHolidayPlaceMailAfterAnOfficeChangeNamesTheTraegerAndTheHostSchool(t *t
 	}
 	require.Equal(t, "Träger Plätze Absender", f.offer.TraegerName)
 
-	assert.Equal(t, []int64{int64(tom.ID)}, f.setCapacity(t, int64(second.ID), 3).MovedUp)
+	assert.Equal(t, []int64{int64(tom.ID)}, testpkg.IDs(f.setCapacity(t, int64(second.ID), 3).MovedUp))
 	assert.Equal(t, want("tom.absender@example.org", "Tom", 1), f.placeMail(t, int64(tom.ID)), "a higher capacity names the south school")
 
 	ben := f.list(t, "").Registrations[0].Children[1]

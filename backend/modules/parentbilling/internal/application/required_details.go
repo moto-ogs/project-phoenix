@@ -86,7 +86,7 @@ func (r *RequiredDetails) modules(ctx context.Context, organizationID int64) (pa
 	}
 	ids := make([]int64, len(schools))
 	for i, school := range schools {
-		ids[i] = school.ID
+		ids[i] = school.ID.Int64()
 	}
 	modules, err := r.sources.Modules.BookedModules(ctx, ids)
 	if err != nil {

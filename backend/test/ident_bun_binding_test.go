@@ -20,8 +20,9 @@ type identBindingRow struct {
 
 // TestIdentIDBindsAsBigint holds that bun binds and scans ident.ID as the
 // bigint it is (ADR 0300). bun writes a value whose pointer implements
-// json.Marshaler as JSON text ('"42"'), so the type renders its JSON string
-// through MarshalText. The row lives in a temporary table of one transaction.
+// json.Marshaler as JSON text ('"42"'), so the type has no MarshalJSON; the
+// string form is only package wire's. The row lives in a temporary table of one
+// transaction.
 func TestIdentIDBindsAsBigint(t *testing.T) {
 	t.Parallel()
 	db := SetupTestDB(t)

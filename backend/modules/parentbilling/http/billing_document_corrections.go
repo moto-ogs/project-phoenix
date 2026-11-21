@@ -26,9 +26,9 @@ func (req *BillingCancellationRequest) Bind(*http.Request) error { return nil }
 // /traeger/billing-runs/{id}/documents/{documentID}/credits: the child, the
 // amount in whole cent and the reason of the Gutschrift (#4690).
 type BillingCreditRequest struct {
-	ChildID     int64  `json:"child_id"`
-	AmountCents int64  `json:"amount_cents"`
-	Reason      string `json:"reason"`
+	ChildID     common.ID `json:"child_id"`
+	AmountCents int64     `json:"amount_cents"`
+	Reason      string    `json:"reason"`
 }
 
 // Bind accepts the body; the Owner validates the credit.

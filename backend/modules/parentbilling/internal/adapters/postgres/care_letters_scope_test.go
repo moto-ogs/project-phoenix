@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -151,7 +152,7 @@ func TestCareLettersFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 			parentbilling.ErrInvoiceNumberTaken, "the own Storno number is taken")
 
 		replaced, err := cancelledInvoicesToReplace(ctx, tx, own.organization, september,
-			[]parentbilling.CareInvoice{{ContractID: sharedLetterContract}})
+			[]parentbilling.CareInvoice{{ContractID: ident.ID(sharedLetterContract)}})
 		require.NoError(t, err)
 		ownKey := replacedKey{sharedLetterContract, parentbilling.ServiceCare}
 		require.Contains(t, replaced, ownKey)

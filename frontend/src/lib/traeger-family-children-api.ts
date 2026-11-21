@@ -131,7 +131,7 @@ export async function confirmFamilyChildren(
     await traegerRequest<WireSet>(PATH, {
       method: "PUT",
       body: {
-        contract_id: Number(input.contractId),
+        contract_id: input.contractId,
         children: input.children,
         valid_from: input.validFrom,
         valid_until: input.validUntil,

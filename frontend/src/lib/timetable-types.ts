@@ -32,7 +32,8 @@ type ConflictKind = "staff" | "student";
  * keys on it.
  */
 interface ConflictWarning {
-  kind: ConflictKind;
+  /** "other": a kind of conflict this build does not know; it stays shown. */
+  kind: ConflictKind | "other";
   resourceId: string;
   message: string;
   canOverride: boolean;
@@ -105,7 +106,9 @@ export function isNotScheduledRow(
 
 export interface InstanceStudentSummary {
   studentId: string;
-  status: InstanceAttendanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceAttendanceStatus | undefined;
+  /** null: none; undefined: none or a substatus this build does not know. */
   substatus?: InstanceAttendanceSubstatus | null;
   note?: string | null;
   checkedInAt?: string | null;
@@ -153,7 +156,8 @@ export interface EnrichedInstance {
    * Regeltermin. Shown on every occurrence, survives Re-Plan/Split.
    */
   seriesNotes?: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   isSpontaneous: boolean;
   isLive: boolean;
   activityGroupId?: string;
@@ -164,7 +168,10 @@ export interface EnrichedInstance {
   planningTrackColor?: string;
   planningTrackSortOrder?: number;
   listKind?: TimetableListKind;
-  activityType: ActivityType;
+  /** Original wire value, preserved on edits until the list kind is changed. */
+  rawListKind?: string;
+  /** undefined: a block type this build does not know. */
+  activityType: ActivityType | undefined;
   roomId: string;
   roomName: string;
   /**
@@ -228,7 +235,8 @@ export interface EnrichedInstance {
 }
 
 interface EmptyRosterReason {
-  kind: "before_offering_start" | "offering_source_empty";
+  /** undefined: a reason this build does not know; the block shows the plain hint. */
+  kind: "before_offering_start" | "offering_source_empty" | undefined;
   phaseName?: string;
   serviceStartDate?: string;
 }
@@ -239,99 +247,6 @@ export interface WeeklyInstancesResponse {
   instances: EnrichedInstance[];
 }
 
-/**
- * Backend GET /api/timetable/instances response shape (snake_case).
- * Used internally by the mapper; consumers should rely on
- * WeeklyInstancesResponse.
- */
-interface BackendInstanceStaffSummary {
-  staff_id: number | string;
-  is_primary: boolean;
-  is_absent: boolean;
-  is_substitute: boolean;
-  is_sick_absence?: boolean;
-  absence_reason?: string | null;
-}
-
-interface BackendInstanceStudentSummary {
-  student_id: number | string;
-  status: InstanceAttendanceStatus;
-  substatus?: InstanceAttendanceSubstatus | null;
-  note?: string | null;
-  checked_in_at?: string | null;
-  care_day_status?: CareDayStatus;
-  early_pickup_time?: string | null;
-}
-
-export interface BackendEnrichedInstance {
-  id: number | string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  title: string;
-  description?: string;
-  notes?: string;
-  series_notes?: string;
-  status: InstanceStatus;
-  is_spontaneous: boolean;
-  is_live: boolean;
-  activity_group_id?: number | string;
-  calendar_period_id?: number | string;
-  planning_track_id?: number | string;
-  planning_track_name?: string;
-  planning_track_color?: string;
-  planning_track_sort_order?: number;
-  list_kind?: TimetableListKind;
-  activity_type: ActivityType;
-  room_id: number | string;
-  room_name: string;
-  group_name?: string;
-  staff: BackendInstanceStaffSummary[];
-  student_ids?: (number | string)[];
-  students?: BackendInstanceStudentSummary[];
-  staff_count: number;
-  absent_staff_count: number;
-  understaffed_ack?: boolean;
-  understaffed_note?: string | null;
-  cancel_reason?: string | null;
-  expected_students_count: number;
-  present_students_count: number;
-  current_students_count?: number;
-  occupancy?: {
-    participant_limit: number;
-    current_students_count: number;
-  } | null;
-  empty_roster_reason?: {
-    kind: "before_offering_start" | "offering_source_empty";
-    phase_name?: string;
-    service_start_date?: string;
-  };
-  not_scheduled_students_count?: number;
-  required_staff_count: number;
-  assigned_staff_count: number;
-  required_staff_override?: number | null;
-  conflict_warnings?: Array<{
-    kind: ConflictKind;
-    resource_id: number | string;
-    message: string;
-    can_override: boolean;
-    fingerprint?: string;
-    conflicting_instance_id?: number | string;
-    conflicting_title?: string;
-    overlap_start?: string;
-    overlap_end?: string;
-  }>;
-  can_reopen?: boolean;
-  can_complete?: boolean;
-  complete_available_at?: string;
-}
-
-export interface BackendWeeklyInstancesResponse {
-  from: string;
-  to: string;
-  instances: BackendEnrichedInstance[];
-}
-
 export interface GapInstance {
   instanceId: string;
   date: string;
@@ -339,7 +254,8 @@ export interface GapInstance {
   startTime: string;
   endTime: string;
   roomId: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   assignedStaffCount: number;
   absentStaffCount: number;
   /** Non-absent count: planned people still there plus any covering substitute. */
@@ -356,28 +272,6 @@ export interface GapsResponse {
   gaps: GapInstance[];
   /** #1840: zero-staff blocks an admin deliberately left open — still a shortfall, no longer nagging. */
   acknowledged: GapInstance[];
-}
-
-export interface BackendGapInstance {
-  instance_id: number | string;
-  date: string;
-  title: string;
-  start_time: string;
-  end_time: string;
-  room_id: number | string;
-  status: InstanceStatus;
-  assigned_staff_count: number;
-  absent_staff_count: number;
-  present_staff_count?: number;
-  planned_staff_count?: number;
-  understaffed_note?: string | null;
-}
-
-export interface BackendGapsResponse {
-  from: string;
-  to: string;
-  gaps: BackendGapInstance[];
-  acknowledged?: BackendGapInstance[];
 }
 
 /** Ereignistypen des Änderungsprotokolls (#1886) — offenes Vokabular, das
@@ -425,30 +319,6 @@ export interface DeviationHistoryResponse {
   events: DeviationHistoryEvent[];
 }
 
-interface BackendDeviationHistoryEvent {
-  id: number | string;
-  activity_group_id?: number | string;
-  occurrence_date: string;
-  start_time: string;
-  instance_id?: number | string;
-  event_type: string;
-  subject_staff_id?: number | string;
-  subject_staff_name?: string;
-  related_staff_id?: number | string;
-  related_staff_name?: string;
-  actor_account_id?: number | string;
-  actor_name?: string;
-  // json.RawMessage im Backend (beliebiges JSON oder fehlend, omitempty).
-  old_value?: unknown;
-  new_value?: unknown;
-  reason?: string;
-  occurred_at: string;
-}
-
-export interface BackendDeviationHistoryResponse {
-  events: BackendDeviationHistoryEvent[] | null;
-}
-
 interface TemplateSchedule {
   id: string;
   weekday: number;
@@ -479,7 +349,8 @@ interface TimetableTarget {
 export interface TimetableTemplate {
   id: string;
   name: string;
-  type: ActivityType;
+  /** undefined: a block type this build does not know. */
+  type: ActivityType | undefined;
   listKind?: TimetableListKind;
   categoryId: string;
   categoryName: string;
@@ -504,7 +375,8 @@ export interface TimetableTemplate {
   shiftTypeColor?: string;
   /** The template's own calendar-period pin (distinct from each schedule's). */
   calendarPeriodId?: string;
-  targetGroupType: TargetGroupType;
+  /** undefined: a target group this build does not know. */
+  targetGroupType: TargetGroupType | undefined;
   targetGradeLevel?: number;
   targetSchoolClass?: string;
   targets?: TimetableTarget[];
@@ -572,17 +444,6 @@ export interface TemplateRosterMaintenance {
   careOfferingsDisabled: boolean;
 }
 
-interface BackendTemplateRosterMaintenance {
-  mode: RosterMaintenanceMode;
-  offerings?: Array<{ id: number; name: string }> | null;
-  grade_levels?: number[] | null;
-  school_classes?: string[] | null;
-  inactive_offerings?: Array<{ id: number; name: string }> | null;
-  invalid_offerings?: Array<{ id: number; name: string }> | null;
-  dynamic_targets: boolean;
-  care_offerings_disabled: boolean;
-}
-
 /** One weekday's staff and child roster of a Regeltermin (#2129). */
 interface TemplateWeekdayAssignment {
   weekday: number; // ISO 8601: 1 = Mo … 7 = So
@@ -598,87 +459,6 @@ export interface TemplateProtectedStudentAssignment {
 
 export interface TemplatesResponse {
   templates: TimetableTemplate[];
-}
-
-interface BackendTemplateSchedule {
-  id: number | string;
-  weekday: number;
-  start_time: string;
-  end_time: string;
-  week_pattern: number;
-  calendar_period_id?: number | string;
-  valid_from?: string;
-  valid_until?: string;
-}
-
-export interface BackendTimetableTemplate {
-  id: number | string;
-  name: string;
-  type: ActivityType;
-  list_kind?: TimetableListKind;
-  category_id: number | string;
-  category_name: string;
-  planning_track_id?: number | string;
-  planning_track_name?: string;
-  planning_track_color?: string;
-  planning_track_sort_order?: number;
-  room_id?: number | string;
-  room_name?: string;
-  education_group_id?: number | string;
-  education_group_name?: string;
-  is_open: boolean;
-  max_participants: number | null;
-  notes?: string;
-  include_closing_days?: boolean;
-  end_date?: string | null;
-  shift_type_name?: string;
-  shift_type_color?: string;
-  calendar_period_id?: number | string;
-  target_group_type: TargetGroupType;
-  target_grade_level?: number;
-  target_school_class?: string;
-  targets?: Array<{
-    type: "jahrgang" | "klasse" | "gruppe";
-    grade_level?: number;
-    school_class?: string;
-    education_group_id?: number | string;
-    education_group_name?: string;
-  }>;
-  source_care_offering_ids?: (number | string)[];
-  source_grade_levels?: number[];
-  source_school_classes?: string[];
-  enrollment_count: number;
-  supervisor_count: number;
-  required_staff_count: number;
-  assigned_staff_count: number;
-  required_staff_override?: number | null;
-  student_ids?: (number | string)[];
-  staff_ids?: (number | string)[];
-  primary_staff_id?: number | string;
-  schedules: BackendTemplateSchedule[];
-  weekday_assignments?: BackendTemplateWeekdayAssignment[] | null;
-  protected_student_assignments?:
-    BackendTemplateProtectedStudentAssignment[] | null;
-  resolved_from_template_id?: number | string | null;
-  roster_maintenance?: BackendTemplateRosterMaintenance | null;
-  /** „Liste so lassen“ for the whole series (#5103). */
-  manual_roster_confirmed?: boolean;
-}
-
-interface BackendTemplateWeekdayAssignment {
-  weekday: number;
-  staff_ids?: (number | string)[];
-  student_ids?: (number | string)[];
-  primary_staff_id?: number | string;
-}
-
-interface BackendTemplateProtectedStudentAssignment {
-  weekday: number;
-  student_ids?: (number | string)[];
-}
-
-export interface BackendTemplatesResponse {
-  templates: BackendTimetableTemplate[];
 }
 
 /**
@@ -714,16 +494,6 @@ export interface BulkCancelResult {
   keptSeries: { name: string; count: number }[];
 }
 
-export interface BackendBulkCancelResult {
-  from: string;
-  to: string;
-  dry_run: boolean;
-  count: number;
-  days?: { date: string; count: number }[] | null;
-  kept?: number;
-  kept_series?: { name: string; count: number }[] | null;
-}
-
 /**
  * Typed soft-precondition warning — keep `code` in sync with the backend
  * MaterializationWarning constants (services/schedule/materialization_service.go).
@@ -731,17 +501,6 @@ export interface BackendBulkCancelResult {
 export interface MaterializeWarning {
   code: "no_active_period" | "no_templates" | (string & {});
   message: string;
-}
-
-export interface BackendMaterializeResult {
-  from: string;
-  to: string;
-  instances_created: number;
-  candidates_skipped_existing: number;
-  skipped_holidays?: number;
-  skipped_closing_days?: number;
-  warnings?: { code: string; message: string }[];
-  duration_ms: number;
 }
 
 export interface ReplanWeekResult {
@@ -752,20 +511,7 @@ export interface ReplanWeekResult {
   instancesCreated: number;
   instanceStudentsCreated: number;
   instanceStaffCreated: number;
-  warnings: MaterializeWarning[];
   durationMs: number;
-}
-
-export interface BackendReplanWeekResult {
-  from: string;
-  to: string;
-  deleted_instances: number;
-  candidates_skipped_existing: number;
-  instances_created: number;
-  instance_students_created: number;
-  instance_staff_created: number;
-  warnings?: { code: string; message: string }[];
-  duration_ms: number;
 }
 
 /**
@@ -801,24 +547,14 @@ export interface EditedInWindowResult {
   occurrences: EditedOccurrence[];
 }
 
-export interface BackendEditedInWindowResult {
-  count: number;
-  occurrences: {
-    instance_id: number | string;
-    date: string;
-    start_time: string;
-    title: string;
-    changes: string[];
-  }[];
-}
-
 /**
  * Result of the lifecycle endpoints. Start returns warnings; complete and
  * cancel return only the new status.
  */
 export interface StartInstanceResult {
   instanceId: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   activeGroupId: string;
   startedAt: string;
   warnings: ConflictWarning[];
@@ -826,7 +562,8 @@ export interface StartInstanceResult {
 
 export interface InstanceStatusResult {
   instanceId: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   completedAt?: string;
   reopenUntil?: string;
   /** Set when a cancellation informed the families (#2601). */
@@ -854,38 +591,6 @@ export interface GuardianNoticeReach {
   familyCount: number;
 }
 
-export interface BackendGuardianNoticeResult {
-  announcement_id: number | string;
-  child_count: number;
-  family_count: number;
-}
-
-export interface BackendGuardianNoticeReach {
-  child_count: number;
-  family_count: number;
-}
-
-export interface BackendStartInstanceResult {
-  instance_id: number | string;
-  status: InstanceStatus;
-  active_group_id: number | string;
-  started_at: string;
-  warnings: Array<{
-    kind: ConflictKind;
-    resource_id: number | string;
-    message: string;
-    can_override: boolean;
-  }>;
-}
-
-export interface BackendInstanceStatusResult {
-  instance_id: number | string;
-  status: InstanceStatus;
-  completed_at?: string;
-  reopen_until?: string;
-  guardian_notice?: BackendGuardianNoticeResult;
-}
-
 export interface AttendancePatchBody {
   status?: InstanceAttendanceStatus;
   substatus?: InstanceAttendanceSubstatus | null;
@@ -896,31 +601,23 @@ export interface AttendanceResponse {
   id: string;
   instanceId: string;
   studentId: string;
-  status: InstanceAttendanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceAttendanceStatus | undefined;
   substatus?: InstanceAttendanceSubstatus | null;
   note?: string | null;
   checkedInAt?: string | null;
 }
 
-export interface BackendAttendanceResponse {
-  id: number | string;
-  instance_id: number | string;
-  student_id: number | string;
-  status: InstanceAttendanceStatus;
-  substatus?: InstanceAttendanceSubstatus | null;
-  note?: string | null;
-  checked_in_at?: string | null;
-}
-
+/**
+ * A block the person is also planned in at the same time. Go names the two
+ * blocks and writes a message; it sends no title or times.
+ */
 interface SubstituteTimeConflict {
   instanceId: string;
-  kind?: string;
-  otherInstanceId?: string;
-  message?: string;
-  title?: string;
-  date?: string;
-  startTime?: string;
-  endTime?: string;
+  /** Go's kind of the warning, today always "substitute_time_conflict". */
+  kind: string;
+  otherInstanceId: string;
+  message: string;
 }
 
 type SubstituteAction =
@@ -937,25 +634,8 @@ interface SubstituteAffectedInstance {
   instanceId: string;
   title: string;
   startTime: string;
-  action: SubstituteAction;
-}
-
-interface BackendSubstituteTimeConflict {
-  instance_id: number | string;
-  kind?: string;
-  other_instance_id?: number | string;
-  message?: string;
-  title?: string;
-  date?: string;
-  start_time?: string;
-  end_time?: string;
-}
-
-interface BackendSubstituteAffectedInstance {
-  instance_id: number | string;
-  title: string;
-  start_time: string;
-  action: SubstituteAction;
+  /** undefined: an action this build does not know. */
+  action: SubstituteAction | undefined;
 }
 
 /**
@@ -995,15 +675,6 @@ export interface ApplyDeviationsResponse {
   guardianNotice?: GuardianNoticeResult;
 }
 
-export interface BackendApplyDeviationsResponse {
-  instance_id: number | string;
-  cancelled: boolean;
-  understaffed_ack: boolean;
-  affected_instances: BackendSubstituteAffectedInstance[];
-  warnings: BackendSubstituteTimeConflict[];
-  guardian_notice?: BackendGuardianNoticeResult;
-}
-
 /**
  * #2284 Sammel-Vertretung: one person's day-wide absence — optionally covered
  * by one substitute — applied to several selected days in ONE atomic save via
@@ -1027,17 +698,6 @@ export interface BulkSubstitutionResponse {
   days: BulkSubstitutionDayResult[];
   totalAffected: number;
   warningCount: number;
-}
-
-interface BackendBulkSubstitutionDay {
-  date: string;
-  affected_instances: BackendSubstituteAffectedInstance[];
-  warnings: unknown[];
-}
-
-export interface BackendBulkSubstitutionResponse {
-  days: BackendBulkSubstitutionDay[];
-  total_affected: number;
 }
 
 /**
@@ -1081,31 +741,6 @@ export interface StaffPoolResponse {
   entries: StaffPoolEntry[];
 }
 
-export interface BackendStaffPoolResponse {
-  instance_id: number | string;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  dienstplan_in_use: boolean;
-  entries: Array<{
-    staff_id: number | string;
-    display_name: string;
-    category: StaffPoolCategory;
-    on_shift: boolean;
-    covers_window: boolean;
-    shift_windows: string[] | null;
-    absence_reason?: string | null;
-    assignments: Array<{
-      instance_id: number | string;
-      title: string;
-      start_time: string;
-      end_time: string;
-      is_substitute: boolean;
-    }> | null;
-  }> | null;
-}
-
 /**
  * #1884: atomic staff move onto a target block. Without `sourceInstanceId`
  * a free on-shift person is assigned instead of moved.
@@ -1118,26 +753,10 @@ export interface MoveStaffInput {
 export interface MoveStaffResponse {
   targetInstanceId: string;
   sourceInstanceId?: string;
-  action: "moved" | "assigned" | "already_applied";
+  /** undefined: an action this build does not know. */
+  action: "moved" | "assigned" | "already_applied" | undefined;
   timeConflicts: SubstituteTimeConflict[];
   coverageWarnings: ShiftCoverageWarningItem[];
-}
-
-export interface BackendMoveStaffResponse {
-  target_instance_id: number | string;
-  source_instance_id?: number | string | null;
-  action: "moved" | "assigned" | "already_applied";
-  time_conflicts: BackendSubstituteTimeConflict[] | null;
-  coverage_warnings: Array<{
-    staff_id: number | string;
-    staff_name: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-    uncovered_start_time: string;
-    uncovered_end_time: string;
-    message: string;
-  }> | null;
 }
 
 /**
@@ -1150,13 +769,15 @@ export interface CreateInstanceBody {
   start_time: string; // HH:MM
   end_time: string; // HH:MM
   title: string;
-  room_id: number;
+  /** Identifiers travel as decimal strings since #2342. */
+  room_id: string;
   description?: string;
   notes?: string;
-  activity_group_id?: number;
-  list_kind?: TimetableListKind;
-  staff_ids?: number[];
-  student_ids?: number[];
+  activity_group_id?: string;
+  /** May echo a stored value from a newer backend unchanged. */
+  list_kind?: string;
+  staff_ids?: string[];
+  student_ids?: string[];
   /** Manual Personalbedarf override (#1839); null/omitted = derive. */
   required_staff?: number | null;
 }
@@ -1171,26 +792,31 @@ export interface CreateInstanceBody {
  */
 export interface CreateTemplateBody {
   name: string;
-  type: ActivityType;
+  /**
+   * undefined: the stored block has a type this build does not know; the
+   * backend refuses the save instead of the form guessing a type.
+   */
+  type: ActivityType | undefined;
   list_kind?: TimetableListKind;
   weekdays: number[];
   start_time: string; // HH:MM
   end_time: string; // HH:MM
-  room_id: number;
-  category_id: number;
-  planning_track_id?: number | null;
+  /** Identifiers travel as decimal strings since #2342. */
+  room_id: string;
+  category_id: string;
+  planning_track_id?: string | null;
   /** Durable Wochennotiz for the series (#1837 follow-up); omitted = none. */
   notes?: string;
   /** Also plan the series on closing days (#3594); the update keeps the
    * stored value when omitted. */
   include_closing_days?: boolean;
   end_date?: string | null;
-  education_group_id?: number;
+  education_group_id?: string;
   max_participants?: number | null;
   /** Manual Personalbedarf override (#1839); null/omitted = derive. */
   required_staff?: number | null;
   week_pattern?: number;
-  calendar_period_id?: number;
+  calendar_period_id?: string;
   target_group_type?: TargetGroupType;
   target_grade_level?: number;
   target_school_class?: string;
@@ -1201,7 +827,7 @@ export interface CreateTemplateBody {
    * value, only an explicit null clears it — so always send null, never
    * undefined, to mean "no source". All offerings must belong to the same
    * enrollment phase. */
-  source_care_offering_ids?: number[] | null;
+  source_care_offering_ids?: string[] | null;
   source_grade_levels?: number[] | null;
   /** Klassenfilter (#2482), gleiche Presence-Semantik. Schließt
    * source_grade_levels aus: beide gesetzt ist ein 400. */
@@ -1216,13 +842,13 @@ export interface CreateTemplateBody {
     type: "jahrgang" | "klasse" | "gruppe";
     grade_level?: number;
     school_class?: string;
-    education_group_id?: number;
+    education_group_id?: string;
   }>;
   materialize_from?: string;
   materialize_to?: string;
-  student_ids?: number[];
-  staff_ids?: number[];
-  primary_staff_id?: number;
+  student_ids?: string[];
+  staff_ids?: string[];
+  primary_staff_id?: string;
   /**
    * Per-weekday roster deviations (#2129). Each entry fully replaces the
    * shared `staff_ids` / `student_ids` / `primary_staff_id` above for that
@@ -1234,9 +860,9 @@ export interface CreateTemplateBody {
 
 export interface WeekdayAssignmentBody {
   weekday: number;
-  staff_ids: number[];
-  student_ids: number[];
-  primary_staff_id?: number;
+  staff_ids: string[];
+  student_ids: string[];
+  primary_staff_id?: string;
 }
 
 export type UpdateTemplateBody = Omit<
@@ -1271,8 +897,8 @@ export type UpdateTemplateBody = Omit<
    * describe the living segment, whose roster may legitimately differ from a
    * predecessor's, so they are not the predecessor's target set (#2187).
    */
-  series_roster_scope_student_ids?: number[];
-  series_roster_scope_staff_ids?: number[];
+  series_roster_scope_student_ids?: string[];
+  series_roster_scope_staff_ids?: string[];
   /**
    * The ISO weekdays this edit describes. Sent only for a series that staffs
    * each weekday separately (#2129), where the occurrence editor shows one
@@ -1324,27 +950,6 @@ interface OfferingSourcedTemplate {
   schoolClasses: string[];
 }
 
-interface BackendOfferingSourceOption {
-  id: number | string;
-  name: string;
-  phase_id: number | string;
-  phase_name: string;
-  phase_service_start?: string;
-  total_count: number;
-  grade_counts: Record<string, number>;
-  sourced_templates: {
-    id: number | string;
-    name: string;
-    grade_levels?: number[];
-    school_classes?: string[];
-  }[];
-  legacy_linked_template_id?: number | string;
-}
-
-export interface BackendOfferingSourcesResponse {
-  offerings: BackendOfferingSourceOption[];
-}
-
 /**
  * Deduplizierte Kinderzahl über eine Auswahl mehrerer Angebote
  * (Mehrfach-Quelle): ein Kind in zwei gewählten Angeboten zählt einmal.
@@ -1366,15 +971,6 @@ interface OfferingSourceStudent {
   schoolClass: string;
 }
 
-export interface BackendCombinedOfferingCountsResponse {
-  total_count: number;
-  grade_counts: Record<string, number>;
-  students?: {
-    student_id: number | string;
-    school_class?: string;
-  }[];
-}
-
 export interface CreateTemplateResult {
   templateId: string;
   timeframeId: string;
@@ -1382,15 +978,6 @@ export interface CreateTemplateResult {
   instancesCreated?: number;
   materializedFrom?: string;
   materializedTo?: string;
-}
-
-export interface BackendCreateTemplateResult {
-  template_id: number | string;
-  timeframe_id: number | string;
-  schedule_ids: (number | string)[];
-  instances_created?: number;
-  materialized_from?: string;
-  materialized_to?: string;
 }
 
 /** Atomic one-off occurrence → recurring series conversion. */
@@ -1408,13 +995,6 @@ export interface ConvertInstanceToSeriesResult {
   timeframeId: string;
   scheduleIds: string[];
   linkedInstanceId: string;
-}
-
-export interface BackendConvertInstanceToSeriesResult {
-  template_id: number | string;
-  timeframe_id: number | string;
-  schedule_ids: (number | string)[];
-  linked_instance_id: number | string;
 }
 
 /**
@@ -1439,14 +1019,6 @@ export interface SplitTemplateResult {
   instancesCreated: number;
 }
 
-export interface BackendSplitTemplateResult {
-  old_template_id: number | string;
-  new_template_id: number | string;
-  schedule_ids: (number | string)[];
-  deleted_instances: number;
-  instances_created: number;
-}
-
 export interface EndTemplateBody {
   effective_date: string; // YYYY-MM-DD
 }
@@ -1455,12 +1027,6 @@ export interface EndTemplateResult {
   templateId: string;
   effectiveDate: string;
   deletedInstances: number;
-}
-
-export interface BackendEndTemplateResult {
-  template_id: number | string;
-  effective_date: string;
-  deleted_instances: number;
 }
 
 /**
@@ -1485,7 +1051,8 @@ export interface ConflictCheckParams {
  * caller surfaces it as a hint and the user can always proceed.
  */
 export interface ConflictWarningItem {
-  kind: ConflictKind;
+  /** "other": a kind of conflict this build does not know; it stays shown. */
+  kind: ConflictKind | "other";
   resourceId: string;
   message: string;
   conflictingInstanceId: string;
@@ -1535,31 +1102,4 @@ export interface ShiftCoverageCheckParams {
 export interface ShiftCoverageCheckResult {
   coverageWarnings: ShiftCoverageWarningItem[];
   coverageWarningCount: number;
-}
-
-export interface BackendShiftCoverageCheckResult {
-  coverage_warning_count?: number;
-  coverage_warnings?: Array<{
-    staff_id: number | string;
-    staff_name: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-    uncovered_start_time: string;
-    uncovered_end_time: string;
-    message: string;
-  }>;
-}
-
-export interface BackendConflictCheckResult {
-  date: string;
-  start_time: string;
-  end_time: string;
-  warnings?: Array<{
-    kind: ConflictKind;
-    resource_id: number | string;
-    message: string;
-    conflicting_instance_id: number | string;
-    conflicting_title: string;
-  }>;
 }

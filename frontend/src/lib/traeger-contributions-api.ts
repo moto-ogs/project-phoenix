@@ -6,8 +6,8 @@
  * IDs leave here as strings.
  */
 
+import type { HolidayContributionResponse as WireHolidayContribution } from "./contract/traeger-holiday-contributions.generated";
 import {
-  type BackendContribution,
   contributionFromBackend,
   type HolidayContribution,
 } from "./holiday-contribution";
@@ -213,7 +213,7 @@ export async function fetchHolidayContribution(
   if (costBearerId) params.set("cost_bearer_id", costBearerId);
   const query = params.size > 0 ? `?${params.toString()}` : "";
   return contributionFromBackend(
-    await traegerRequest<BackendContribution>(
+    await traegerRequest<WireHolidayContribution>(
       `${registrationPath(periodId, registrationId)}${query}`,
     ),
   );
@@ -236,7 +236,7 @@ export async function confirmHolidayRegistration(
   childDebtorNumbers?: readonly HolidayChildDebtorNumberInput[],
 ): Promise<HolidayContribution> {
   const confirmation = await traegerRequest<{
-    contribution: BackendContribution;
+    contribution: WireHolidayContribution;
   }>(`${registrationPath(periodId, registrationId)}/confirm`, {
     method: "POST",
     body: {
@@ -342,7 +342,7 @@ function childNumbersToBackend(
   numbers: readonly HolidayChildDebtorNumberInput[],
 ): NonNullable<HolidayChildDebtorNumbersRequest["children"]> {
   return numbers.map((number) => ({
-    child_id: Number(number.childId),
+    child_id: number.childId,
     debtor_number: number.debtorNumber,
   }));
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type {
-  BackendStudentEnrollment,
+  StudentEnrollmentBody,
   Activity,
   ActivitySupervisor,
 } from "./activity-helpers";
@@ -276,7 +276,7 @@ describe("mapActivityResponse schedules", () => {
 
 describe("mapStudentEnrollmentResponse", () => {
   it("maps enrollment with direct person fields", () => {
-    const enrollment: BackendStudentEnrollment = {
+    const enrollment: StudentEnrollmentBody = {
       id: 100,
       first_name: "Anna",
       last_name: "Schmidt",
@@ -298,7 +298,7 @@ describe("mapStudentEnrollmentResponse", () => {
   });
 
   it("falls back to flattened fields when direct fields missing", () => {
-    const enrollment: BackendStudentEnrollment = {
+    const enrollment: StudentEnrollmentBody = {
       id: 100,
       person__first_name: "Peter",
       person__last_name: "Mueller",
@@ -314,7 +314,7 @@ describe("mapStudentEnrollmentResponse", () => {
   });
 
   it("returns 'Unnamed Student' when no name info available", () => {
-    const enrollment: BackendStudentEnrollment = {
+    const enrollment: StudentEnrollmentBody = {
       id: 100,
     };
 
@@ -324,7 +324,7 @@ describe("mapStudentEnrollmentResponse", () => {
   });
 
   it("generates dates when not provided", () => {
-    const enrollment: BackendStudentEnrollment = {
+    const enrollment: StudentEnrollmentBody = {
       id: 100,
     };
 
@@ -337,7 +337,7 @@ describe("mapStudentEnrollmentResponse", () => {
 
 describe("mapStudentEnrollmentsResponse", () => {
   it("maps array of enrollments", () => {
-    const enrollments: BackendStudentEnrollment[] = [
+    const enrollments: StudentEnrollmentBody[] = [
       { id: 1, first_name: "Max", last_name: "Test" },
       { id: 2, first_name: "Anna", last_name: "Schmidt" },
     ];

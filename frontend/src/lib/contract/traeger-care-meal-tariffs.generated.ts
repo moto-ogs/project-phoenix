@@ -4,7 +4,7 @@ import {
   arr,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   rec,
@@ -30,8 +30,8 @@ export interface CareMealTariff {
 }
 
 export const CareMealTariffSchema: z.ZodType<CareMealTariff, unknown> = object<CareMealTariff>({
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   valid_from: nullable(calendarDate),
   valid_until: nullable(calendarDate),
   mode: str,
@@ -54,7 +54,7 @@ export const CareMealTariffsSchema: z.ZodType<CareMealTariffs, unknown> = object
 
 /** Go: parentbillinghttp.CareMealPriceRequest */
 export interface CareMealPriceRequest {
-  school_id?: number;
+  school_id?: string;
   valid_from?: string | null;
   mode?: string;
   amount_cents?: number;

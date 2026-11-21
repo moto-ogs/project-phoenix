@@ -24,6 +24,7 @@ type DemoAccess struct {
 	mail     ports.DemoAccessMail
 	adminTx  ports.DemoAdminTx
 	now      func() time.Time
+	crm      ports.DemoCRMQueue
 	// perIP and perAddress limit the public request (#3466).
 	perIP      *demoRequestWindow
 	perAddress *demoRequestWindow
@@ -31,6 +32,7 @@ type DemoAccess struct {
 
 // DemoAccessDependencies are the ports the flows consume.
 type DemoAccessDependencies struct {
+	CRM      ports.DemoCRMQueue
 	Sessions ports.DemoSessions
 	Store    ports.DemoAccessStore
 	Schools  ports.DemoSchools
@@ -46,7 +48,7 @@ func NewDemoAccess(deps DemoAccessDependencies) (*DemoAccess, error) {
 		return nil, fmt.Errorf("identity access demo access: every dependency is required")
 	}
 	return &DemoAccess{
-		sessions: deps.Sessions, store: deps.Store, schools: deps.Schools, tokens: deps.Tokens, mail: deps.Mail, adminTx: deps.AdminTx, now: deps.Now,
+		crm: deps.CRM, sessions: deps.Sessions, store: deps.Store, schools: deps.Schools, tokens: deps.Tokens, mail: deps.Mail, adminTx: deps.AdminTx, now: deps.Now,
 		perIP: newDemoRequestWindow(domain.DemoRequestsPerIPAddress), perAddress: newDemoRequestWindow(domain.DemoRequestsPerAddress),
 	}, nil
 }
@@ -92,6 +94,7 @@ func (d *DemoAccess) request(ctx context.Context, access domain.DemoAccess, entr
 	if err != nil {
 		return fmt.Errorf("mint demo access token: %w", err)
 	}
+	access.CreatedAt = d.now()
 	access.TokenHash = fingerprint
 	access.ExpiresAt = d.now().Add(domain.DemoAccessLifetime)
 	entryURL := entryURLPrefix + raw
@@ -114,10 +117,7 @@ func (d *DemoAccess) request(ctx context.Context, access domain.DemoAccess, entr
 		if err := d.mail.SendDemoAccessLink(txCtx, access, entryURL); err != nil {
 			return err
 		}
-		if !found || known.ContactOptIn != access.ContactOptIn || access.Phone != "" {
-			return d.mail.SendDemoLead(txCtx, access)
-		}
-		return nil
+		return d.notifyDemoRequest(txCtx, access, known, found)
 	})
 	if err != nil {
 		return fmt.Errorf("store demo access: %w", err)
@@ -199,7 +199,7 @@ func (d *DemoAccess) Redeem(ctx context.Context, token string, role domain.DemoR
 		// the parent it signs in is noted next to it, so the tenant lock and
 		// the session cap of the demo hold for that account too (#3462).
 		usedAt := d.now()
-		return d.store.RecordDemoAccessUse(txCtx, access.ID, entry.AccountID, signedInParent(entry, role), usedAt, usedAt.Add(domain.DemoAccessLifetime))
+		return d.recordDemoUse(txCtx, access, entry, role, usedAt)
 	})
 	if err != nil {
 		return domain.DemoEntry{}, err

@@ -221,7 +221,7 @@ func TestBelegRetentionSuspensionHoldsTheDeletion(t *testing.T) {
 	assert.Equal(t, 1, invoices, "and keeps the invoice it would take along")
 
 	admin(func(adminCtx context.Context) error {
-		return retention.LiftSuspension(adminCtx, f.organization, hold.ID, 0)
+		return retention.LiftSuspension(adminCtx, f.organization, hold.ID.Int64(), 0)
 	})
 	today = calendar.NewDate(2035, time.January, 3)
 	admin(func(adminCtx context.Context) error { _, err := retention.ApplyBelegRetention(adminCtx); return err })
