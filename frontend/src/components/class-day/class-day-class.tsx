@@ -643,10 +643,10 @@ export function ClassDayClass({
         await handOverClass(schoolClass, dateISO, {
           present: ogsRows
             .filter((row) => !handoverAbsent.has(row.student_id))
-            .map((row) => row.student_id),
+            .map((row) => String(row.student_id)),
           absent: ogsRows
             .filter((row) => handoverAbsent.has(row.student_id))
-            .map((row) => row.student_id),
+            .map((row) => String(row.student_id)),
         });
         await reportAfterWrite.refresh();
         if (op.isCurrent()) setHandoverOpen(false);

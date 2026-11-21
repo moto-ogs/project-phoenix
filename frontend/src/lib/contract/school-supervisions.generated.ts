@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -64,7 +64,7 @@ export interface SupervisionStudentSheet {
 }
 
 export const SupervisionStudentSheetSchema: z.ZodType<SupervisionStudentSheet, unknown> = object<SupervisionStudentSheet>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: optional(str),

@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (rs *Resource) presenceSupervisionResponses(ctx context.Context, filter studentpresence.GroupSupervisionFilter, operation string) ([]SupervisorResponse, error) {
@@ -51,7 +52,7 @@ func presenceSupervisionResponse(row studentpresence.GroupSupervision, today cal
 		isActive = isActive && today.Before(end)
 	}
 	return SupervisorResponse{
-		ID: row.ID, StaffID: row.StaffID, ActiveGroupID: row.GroupID,
+		ID: ident.ID(row.ID), StaffID: ident.ID(row.StaffID), ActiveGroupID: ident.ID(row.GroupID),
 		StartTime: start.UTCMidnight(), EndTime: endTime, IsActive: isActive,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}, nil

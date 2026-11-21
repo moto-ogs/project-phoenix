@@ -36,7 +36,7 @@ func TestRecordSupervisionSheetAuditStoresStudentID(t *testing.T) {
 	assert.Empty(t, log.views)
 	entry := log.sheets[0]
 	if assert.NotNil(t, entry.StudentID) {
-		assert.Equal(t, sheet.StudentID, *entry.StudentID)
+		assert.Equal(t, sheet.StudentID.Int64(), *entry.StudentID)
 	}
 }
 

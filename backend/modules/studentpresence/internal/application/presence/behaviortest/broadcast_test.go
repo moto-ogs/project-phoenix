@@ -235,7 +235,7 @@ func TestBroadcast_StartActivitySessionSendsOneCombinedRefresh(t *testing.T) {
 
 	refreshes := tenantCallsOfType(broadcaster, presenceevents.EventDashboardCountsChanged)
 	require.Len(t, refreshes, 1, "session start must emit one combined tenant refresh")
-	assert.Equal(t, strconv.FormatInt(session.ID, 10), refreshes[0].Event.ActiveGroupID)
+	assert.Equal(t, strconv.FormatInt(session.ID.Int64(), 10), refreshes[0].Event.ActiveGroupID)
 	require.NotNil(t, refreshes[0].Event.Data.Reason)
 	assert.Equal(t, "activity_started", *refreshes[0].Event.Data.Reason)
 	assert.Nil(t, refreshes[0].Event.Data.GroupIDs)

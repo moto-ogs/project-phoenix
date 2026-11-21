@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/stretchr/testify/assert"
@@ -27,9 +28,9 @@ func TestAssignTransitStudents(t *testing.T) {
 					capturedStudentIDs = studentIDs
 					capturedActiveGroupID = activeGroupID
 					return studentpresence.TransitAssignResult{
-						Assigned:      []int64{42, 84},
+						Assigned:      []ident.ID{42, 84},
 						Skipped:       []studentpresence.TransitAssignSkipped{},
-						ActiveGroupID: activeGroupID,
+						ActiveGroupID: ident.ID(activeGroupID),
 						RoomID:        77,
 					}, nil
 				},
@@ -147,9 +148,9 @@ func TestAssignTransitStudents(t *testing.T) {
 					require.Equal(t, int64(20), auth.StaffID)
 					require.False(t, auth.BypassResourceChecks)
 					return studentpresence.TransitAssignResult{
-						Assigned:      studentIDs,
+						Assigned:      ident.IDs(studentIDs),
 						Skipped:       []studentpresence.TransitAssignSkipped{},
-						ActiveGroupID: activeGroupID,
+						ActiveGroupID: ident.ID(activeGroupID),
 						RoomID:        77,
 					}, nil
 				},

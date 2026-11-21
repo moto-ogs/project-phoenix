@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -62,10 +63,10 @@ func (s *service) CreateActiveGroup(ctx context.Context, group *ports.ActiveGrou
 func (s *service) createActiveGroupLocked(ctx context.Context, group *ports.ActiveGroup) error {
 	// Check for room conflicts if room is assigned
 	if group.RoomID > 0 {
-		if err := s.SchoolPresence.LockRoomSessionWrites(ctx, group.RoomID); err != nil {
+		if err := s.SchoolPresence.LockRoomSessionWrites(ctx, group.RoomID.Int64()); err != nil {
 			return &ActiveError{Op: "CreateActiveGroup", Err: ErrDatabaseOperation}
 		}
-		hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, group.RoomID, 0)
+		hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, group.RoomID.Int64(), 0)
 		if err != nil {
 			return &ActiveError{Op: "CreateActiveGroup", Err: fmt.Errorf("check room conflict: %w", err)}
 		}
@@ -78,7 +79,7 @@ func (s *service) createActiveGroupLocked(ctx context.Context, group *ports.Acti
 	if err := s.GroupRepo.Create(ctx, group); err != nil {
 		return &ActiveError{Op: "CreateActiveGroup", Err: fmt.Errorf("create failed: %w", err)}
 	}
-	s.queueSupervisionRefresh(ctx, group.ID, activeSupervisionReasonActivityStarted)
+	s.queueSupervisionRefresh(ctx, group.ID.Int64(), activeSupervisionReasonActivityStarted)
 
 	return nil
 }
@@ -147,7 +148,7 @@ func (s *service) EnsureOpenRoomSession(ctx context.Context, roomID, activityID 
 			return nil
 		}
 		now := s.now()
-		created := &ports.ActiveGroup{StartTime: now, LastActivity: now, GroupID: &activityID, RoomID: roomID}
+		created := &ports.ActiveGroup{StartTime: now, LastActivity: now, GroupID: (*ident.ID)(&activityID), RoomID: ident.ID(roomID)}
 		created.SetTenantID(tenant.FromContext(txCtx))
 		if err := s.GroupRepo.Create(txCtx, created); err != nil {
 			return &ActiveError{Op: op, Err: fmt.Errorf("create room session: %w", err)}

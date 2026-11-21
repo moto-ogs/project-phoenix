@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -315,8 +316,8 @@ func TestClaimActiveGroupUsesPresenceOwner(t *testing.T) {
 	}}
 	row, err := svc.ClaimActiveGroup(ctx, 42, 84, "")
 	require.NoError(t, err)
-	require.Equal(t, int64(42), row.GroupID)
-	require.Equal(t, int64(84), row.StaffID)
+	require.Equal(t, ident.ID(int64(42)), row.GroupID)
+	require.Equal(t, ident.ID(int64(84)), row.StaffID)
 	require.Equal(t, "supervisor", owner.claim.Role)
 	owner.err = errors.New("insert supervision: internal database detail")
 	_, err = svc.ClaimActiveGroup(ctx, 42, 84, "supervisor")

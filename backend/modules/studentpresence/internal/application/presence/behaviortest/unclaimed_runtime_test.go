@@ -44,7 +44,7 @@ func TestUnclaimedClaimRuntime(t *testing.T) {
 			require.Equal(t, group.ID, rows[0].ID)
 			claim, err := service.ClaimActiveGroup(txCtx, group.ID, staff.ID, "supervisor")
 			require.NoError(t, err)
-			supervisionID = claim.ID
+			supervisionID = claim.ID.Int64()
 			rows, err = service.GetUnclaimedActiveGroups(txCtx)
 			require.NoError(t, err)
 			require.Empty(t, rows)

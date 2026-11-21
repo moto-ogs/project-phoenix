@@ -186,7 +186,7 @@ func responseRowSources(students []StudentResponse, weekly map[int64]weeklySched
 			schoolClass: student.SchoolClass,
 			lastName:    student.LastName,
 			firstName:   student.FirstName,
-			row:         buildExportRow(student, weekly[student.ID], enrollmentSummaries, onDate, isToday),
+			row:         buildExportRow(student, weekly[student.ID.Int64()], enrollmentSummaries, onDate, isToday),
 		})
 	}
 	return sources
@@ -230,7 +230,7 @@ func buildExportRow(student StudentResponse, plan weeklySchedule, enrollmentSumm
 		lists.ColumnName:              strings.TrimSpace(student.FirstName + " " + student.LastName),
 		lists.ColumnSchoolClass:       student.SchoolClass,
 		lists.ColumnGroup:             student.GroupName,
-		lists.ColumnEnrollmentSummary: enrollmentSummaries[student.ID],
+		lists.ColumnEnrollmentSummary: enrollmentSummaries[student.ID.Int64()],
 		lists.ColumnCareDays:          careDays(plan),
 		lists.ColumnWeeklyMonday:      weeklyCell(plan, weekdayMonday),
 		lists.ColumnWeeklyTuesday:     weeklyCell(plan, weekdayTuesday),
@@ -433,7 +433,7 @@ func collectResponseIDs(students []StudentResponse) []int64 {
 	ids := make([]int64, 0, len(students))
 	for _, student := range students {
 		if student.HasFullAccess {
-			ids = append(ids, student.ID)
+			ids = append(ids, student.ID.Int64())
 		}
 	}
 	return ids

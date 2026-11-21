@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) FindVisitsByStudentID(ctx context.Context, studentID int64) ([]studentpresence.Visit, error) {
@@ -54,8 +55,8 @@ func (s *service) GetStudentCurrentVisitWithRoom(ctx context.Context, studentID 
 		return nil, &ActiveError{Op: "GetStudentCurrentVisitWithRoom", Err: ErrDatabaseOperation}
 	}
 	for _, room := range rooms {
-		if room.ID == group.RoomID {
-			visit.ActiveGroup.Room = &VisitRoom{ID: room.ID, CreatedAt: room.CreatedAt, UpdatedAt: room.UpdatedAt, Name: room.Name}
+		if room.ID == ident.ID(group.RoomID) {
+			visit.ActiveGroup.Room = &VisitRoom{ID: room.ID.Int64(), CreatedAt: room.CreatedAt, UpdatedAt: room.UpdatedAt, Name: room.Name}
 			break
 		}
 	}

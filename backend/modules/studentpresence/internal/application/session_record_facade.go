@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type sessionRepository interface {
@@ -180,9 +181,9 @@ func livePointer(group *ports.ActiveGroup) *studentpresence.LiveGroup {
 		return nil
 	}
 	return &studentpresence.LiveGroup{
-		ID: group.ID, TenantID: group.TenantID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+		ID: group.ID.Int64(), TenantID: group.TenantID.Int64(), CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 		StartTime: group.StartTime, LastActivity: group.LastActivity, EndTime: group.EndTime,
-		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: group.GroupID, DeviceID: group.DeviceID, RoomID: group.RoomID,
+		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: (*int64)(group.GroupID), DeviceID: (*int64)(group.DeviceID), RoomID: group.RoomID.Int64(),
 	}
 }
 
@@ -199,9 +200,9 @@ func livePointers(groups []*ports.ActiveGroup) []*studentpresence.LiveGroup {
 
 func activeGroupRow(group studentpresence.LiveGroup) *ports.ActiveGroup {
 	return &ports.ActiveGroup{
-		ID: group.ID, TenantID: group.TenantID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+		ID: ident.ID(group.ID), TenantID: ident.ID(group.TenantID), CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 		StartTime: group.StartTime, EndTime: group.EndTime, LastActivity: group.LastActivity,
-		TimeoutMinutes: group.TimeoutMinutes, GroupID: group.ActivityGroupID, DeviceID: group.DeviceID, RoomID: group.RoomID,
+		TimeoutMinutes: group.TimeoutMinutes, GroupID: (*ident.ID)(group.ActivityGroupID), DeviceID: (*ident.ID)(group.DeviceID), RoomID: ident.ID(group.RoomID),
 	}
 }
 
@@ -210,17 +211,17 @@ func sessionDetailOf(group *ports.ActiveGroup) *studentpresence.SessionDetail {
 		return nil
 	}
 	detail := &studentpresence.SessionDetail{
-		ID: group.ID, TenantID: group.TenantID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+		ID: group.ID.Int64(), TenantID: group.TenantID.Int64(), CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 		StartTime: group.StartTime, LastActivity: group.LastActivity, EndTime: group.EndTime,
-		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: group.GroupID, DeviceID: group.DeviceID, RoomID: group.RoomID,
+		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: (*int64)(group.GroupID), DeviceID: (*int64)(group.DeviceID), RoomID: group.RoomID.Int64(),
 	}
 	if room := group.Room; room != nil {
-		detail.Room = &studentpresence.SessionRoomSummary{ID: room.ID, Name: room.Name, Building: room.Building, Category: room.Category, Color: room.Color}
+		detail.Room = &studentpresence.SessionRoomSummary{ID: room.ID.Int64(), Name: room.Name, Building: room.Building, Category: room.Category, Color: room.Color}
 	}
 	if activity := group.ActualGroup; activity != nil {
 		detail.Activity = &studentpresence.SessionActivitySummary{
-			ID: activity.ID, Name: activity.Name, MaxParticipants: activity.MaxParticipants,
-			PlannedRoomID: activity.PlannedRoomID, IsSystem: activity.IsSystem, IsOpen: activity.IsOpen,
+			ID: activity.ID.Int64(), Name: activity.Name, MaxParticipants: activity.MaxParticipants,
+			PlannedRoomID: (*int64)(activity.PlannedRoomID), IsSystem: activity.IsSystem, IsOpen: activity.IsOpen,
 		}
 	}
 	for _, supervisor := range group.Supervisors {
@@ -233,7 +234,7 @@ func sessionDetailOf(group *ports.ActiveGroup) *studentpresence.SessionDetail {
 
 func supervisionOf(row *ports.GroupSupervisor) studentpresence.GroupSupervision {
 	result := studentpresence.GroupSupervision{
-		ID: row.ID, TenantID: row.TenantID, GroupID: row.GroupID, StaffID: row.StaffID,
+		ID: row.ID.Int64(), TenantID: row.TenantID.Int64(), GroupID: row.GroupID.Int64(), StaffID: row.StaffID.Int64(),
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Role: row.Role, StartDate: row.StartDate.String(),
 	}
 	if row.EndDate != nil {
@@ -266,7 +267,7 @@ func supervisorRow(row studentpresence.GroupSupervision) (*ports.GroupSupervisor
 		return nil, &studentpresence.OperationError{Op: "ParseSupervisionDate", Err: studentpresence.ErrInvalidData}
 	}
 	return &ports.GroupSupervisor{
-		ID: record.ID, TenantID: row.TenantID, CreatedAt: record.CreatedAt, UpdatedAt: record.UpdatedAt,
-		StaffID: record.StaffID, GroupID: record.GroupID, Role: record.Role, StartDate: record.StartDate, EndDate: record.EndDate,
+		ID: ident.ID(record.ID), TenantID: ident.ID(row.TenantID), CreatedAt: record.CreatedAt, UpdatedAt: record.UpdatedAt,
+		StaffID: ident.ID(record.StaffID), GroupID: ident.ID(record.GroupID), Role: record.Role, StartDate: record.StartDate, EndDate: record.EndDate,
 	}, nil
 }

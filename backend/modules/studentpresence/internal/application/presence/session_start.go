@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -33,9 +34,9 @@ func (s *service) broadcastActivityStartEvent(ctx context.Context, group *ports.
 
 	s.Broadcaster.SessionStarted(ctx, studentpresence.LiveSessionChange{
 		ActiveGroupID: activeGroupID,
-		ActivityName:  s.getActivityName(ctx, group.GroupID),
+		ActivityName:  s.getActivityName(ctx, (*int64)(group.GroupID)),
 		RoomID:        roomIDStr,
-		RoomName:      s.getRoomName(ctx, group.RoomID),
+		RoomName:      s.getRoomName(ctx, group.RoomID.Int64()),
 		SupervisorIDs: supervisorIDStrs,
 	})
 
@@ -201,7 +202,7 @@ func (s *service) checkSessionStartConflicts(ctx context.Context, activityID, de
 		return &ActiveError{Op: operation, Err: err}
 	}
 	joinable := joinableOpenSession(groups, activityID, activityIsSystem)
-	if joinable != nil && joinable.DeviceID != nil && *joinable.DeviceID != deviceID {
+	if joinable != nil && joinable.DeviceID != nil && *joinable.DeviceID != ident.ID(deviceID) {
 		return &ActiveError{Op: operation, Err: ErrSessionConflict}
 	}
 
@@ -215,7 +216,7 @@ func (s *service) checkSessionStartConflicts(ctx context.Context, activityID, de
 
 	excludeID := int64(0)
 	if joinable != nil {
-		excludeID = joinable.ID
+		excludeID = joinable.ID.Int64()
 	}
 	hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, finalRoomID, excludeID)
 	if err != nil {
@@ -244,12 +245,12 @@ func (s *service) createSessionWithMultipleSupervisors(ctx context.Context, acti
 		return nil, err
 	}
 
-	s.assignMultipleSupervisorsNonCritical(ctx, newGroup.ID, supervisorIDs, newGroup.StartTime)
+	s.assignMultipleSupervisorsNonCritical(ctx, newGroup.ID.Int64(), supervisorIDs, newGroup.StartTime)
 
 	if transferredCount > 0 {
 		s.getLogger().InfoContext(ctx, "visits transferred to new session",
 			slog.Int("count", transferredCount),
-			slog.Int64("session_id", newGroup.ID),
+			slog.Int64("session_id", newGroup.ID.Int64()),
 		)
 	}
 
@@ -282,7 +283,7 @@ func (s *service) assignMultipleSupervisorsNonCritical(ctx context.Context, grou
 
 func (s *service) assignSupervisorNonCritical(ctx context.Context, groupID, staffID int64, startDate time.Time) {
 	supervisor := &ports.GroupSupervisor{
-		StaffID: staffID, GroupID: groupID, Role: "supervisor",
+		StaffID: ident.ID(staffID), GroupID: ident.ID(groupID), Role: "supervisor",
 		StartDate: calendar.DateFromTime(startDate),
 	}
 	supervisor.SetTenantID(tenant.FromContext(ctx))
@@ -351,7 +352,7 @@ func (s *service) createSessionBase(ctx context.Context, activityID, deviceID, r
 		return nil, 0, err
 	}
 	if existing := joinableOpenSession(groups, activityID, activityIsSystem); existing != nil {
-		if existing.DeviceID != nil && *existing.DeviceID != deviceID {
+		if existing.DeviceID != nil && *existing.DeviceID != ident.ID(deviceID) {
 			return nil, 0, ErrSessionConflict
 		}
 		return s.joinOpenSession(ctx, existing, deviceID, roomID)
@@ -362,16 +363,16 @@ func (s *service) createSessionBase(ctx context.Context, activityID, deviceID, r
 		StartTime:      now,
 		LastActivity:   now,
 		TimeoutMinutes: 30,
-		GroupID:        &activityID,
-		DeviceID:       &deviceID,
-		RoomID:         roomID,
+		GroupID:        (*ident.ID)(&activityID),
+		DeviceID:       (*ident.ID)(&deviceID),
+		RoomID:         ident.ID(roomID),
 	}
 
 	newGroup.SetTenantID(tenant.FromContext(ctx))
 	if err := s.GroupRepo.Create(ctx, newGroup); err != nil {
 		return nil, 0, err
 	}
-	transferredCount, err := s.SchoolPresence.TransferRecentDeviceVisits(ctx, newGroup.ID, deviceID)
+	transferredCount, err := s.SchoolPresence.TransferRecentDeviceVisits(ctx, newGroup.ID.Int64(), deviceID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -389,25 +390,25 @@ func (s *service) createSessionBase(ctx context.Context, activityID, deviceID, r
 // no longer matches. The device's room, whose foreign key shares the room
 // row, follows in finishSessionStart.
 func (s *service) joinOpenSession(ctx context.Context, existing *ports.ActiveGroup, deviceID, roomID int64) (*ports.ActiveGroup, int, error) {
-	transferredCount, err := s.SchoolPresence.TransferRecentDeviceVisits(ctx, existing.ID, deviceID)
+	transferredCount, err := s.SchoolPresence.TransferRecentDeviceVisits(ctx, existing.ID.Int64(), deviceID)
 	if err != nil {
 		return nil, 0, err
 	}
-	group, err := s.lockActiveGroupOpenForUpdate(ctx, existing.ID)
+	group, err := s.lockActiveGroupOpenForUpdate(ctx, existing.ID.Int64())
 	if errors.Is(err, ErrActiveGroupNotFound) {
 		return nil, 0, errJoinedSessionChanged
 	}
 	if err != nil {
 		return nil, 0, err
 	}
-	if group.RoomID != roomID || !sameActivity(group, existing) {
+	if group.RoomID != ident.ID(roomID) || !sameActivity(group, existing) {
 		return nil, 0, errJoinedSessionChanged
 	}
-	if group.DeviceID != nil && *group.DeviceID != deviceID {
+	if group.DeviceID != nil && *group.DeviceID != ident.ID(deviceID) {
 		return nil, 0, ErrSessionConflict
 	}
 	if group.DeviceID == nil && deviceID > 0 {
-		group.DeviceID = &deviceID
+		group.DeviceID = (*ident.ID)(&deviceID)
 		if err := s.GroupRepo.Update(ctx, group); err != nil {
 			return nil, 0, err
 		}
@@ -439,8 +440,8 @@ func activityRunningElsewhere(sessions []*ports.ActiveGroup, roomID, deviceID in
 		if session == nil {
 			continue
 		}
-		sameDevice := session.DeviceID != nil && *session.DeviceID == deviceID
-		if session.RoomID == roomID && (sameDevice || session.IsIndependentRoomSession(activityIsSystem)) {
+		sameDevice := session.DeviceID != nil && *session.DeviceID == ident.ID(deviceID)
+		if session.RoomID == ident.ID(roomID) && (sameDevice || session.IsIndependentRoomSession(activityIsSystem)) {
 			continue
 		}
 		return true
@@ -461,10 +462,10 @@ func activityConflictDestination(sessions []*ports.ActiveGroup, plannedRoomID in
 			continue
 		}
 		if roomID == 0 {
-			roomID = session.RoomID
+			roomID = session.RoomID.Int64()
 			continue
 		}
-		if session.RoomID != roomID {
+		if session.RoomID != ident.ID(roomID) {
 			return 0
 		}
 	}

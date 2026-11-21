@@ -63,7 +63,7 @@ func (s *service) roomNamesByID(ctx context.Context, roomIDs []int64) (map[int64
 		return nil, err
 	}
 	for _, room := range rooms {
-		roomNames[room.ID] = room.Name
+		roomNames[room.ID.Int64()] = room.Name
 	}
 	return roomNames, nil
 }
@@ -78,7 +78,7 @@ func (s *service) activityNamesByID(ctx context.Context, groupIDs []int64) (map[
 		return nil, err
 	}
 	for _, group := range groups {
-		groupNames[group.ID] = group.Name
+		groupNames[group.ID.Int64()] = group.Name
 	}
 	return groupNames, nil
 }

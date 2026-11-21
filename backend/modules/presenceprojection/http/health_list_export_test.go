@@ -19,7 +19,7 @@ func healthListStudents() []StudentResponse {
 func responseIDs(students []StudentResponse) []int64 {
 	ids := make([]int64, 0, len(students))
 	for _, student := range students {
-		ids = append(ids, student.ID)
+		ids = append(ids, student.ID.Int64())
 	}
 	return ids
 }
