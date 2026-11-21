@@ -37,6 +37,7 @@ export type TraegerCatalogAction = "create" | "update" | "withdraw";
 type TraegerFieldState = "new" | "changes" | "keeps" | "unchanged";
 
 export interface TraegerPhaseFields {
+  readonly isActive?: boolean;
   readonly name: string;
   readonly kind: PhaseKind;
   /** YYYY-MM-DD */
@@ -69,6 +70,7 @@ export interface TraegerCatalogSchool {
 }
 
 export interface TraegerOfferingFields {
+  readonly isActive?: boolean;
   readonly name: string;
   readonly description: string | null;
   readonly daysOfWeekMode: DaysOfWeekMode;
@@ -188,6 +190,7 @@ export interface TraegerRollout {
 // --- Backend shapes ----------------------------------------------------------
 
 interface BackendPhaseFields {
+  is_active?: boolean;
   name: string;
   kind: PhaseKind;
   service_start_date: string;
@@ -209,6 +212,7 @@ interface BackendCatalogSchool {
 }
 
 interface BackendOfferingFields {
+  is_active?: boolean;
   name: string;
   description?: string | null;
   days_of_week_mode: DaysOfWeekMode;
@@ -330,6 +334,7 @@ function phaseFieldsFromBackend(
   fields: BackendPhaseFields,
 ): TraegerPhaseFields {
   return {
+    isActive: fields.is_active,
     name: fields.name,
     kind: fields.kind,
     serviceStartDate: fields.service_start_date,
@@ -347,6 +352,7 @@ function offeringFieldsFromBackend(
   fields: BackendOfferingFields,
 ): TraegerOfferingFields {
   return {
+    isActive: fields.is_active,
     name: fields.name,
     description: fields.description ?? null,
     daysOfWeekMode: fields.days_of_week_mode,
@@ -445,6 +451,7 @@ function fieldChangesFromBackend(
 /** The body the backend reads; IDs travel as numbers. */
 function phaseInputToBackend(input: TraegerPhaseInput) {
   return {
+    is_active: input.isActive,
     name: input.name.trim(),
     kind: input.kind,
     service_start_date: input.serviceStartDate,
@@ -463,6 +470,7 @@ function offeringDraftToBackend(draft: TraegerOfferingDraft) {
   const { fields } = draft;
   return {
     fields: {
+      is_active: fields.isActive,
       name: fields.name.trim(),
       description: fields.description?.trim()
         ? fields.description.trim()

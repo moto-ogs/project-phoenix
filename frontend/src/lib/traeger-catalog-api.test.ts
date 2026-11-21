@@ -4,6 +4,7 @@ import {
   fetchTraegerPhase,
   previewTraegerPhase,
   rolloutTraegerPhase,
+  updateTraegerOffering,
   updateTraegerPhase,
 } from "./traeger-catalog-api";
 
@@ -79,6 +80,70 @@ const backendPhase = {
 };
 
 describe("Träger catalog requests (#4704)", () => {
+  it.each([false, true, undefined])(
+    "preserves a phase's active flag (%s) when renaming it",
+    async (isActive) => {
+      const fields = { ...backendPhase.draft, is_active: isActive };
+      request.mockResolvedValue({
+        ...backendPhase,
+        draft: fields,
+        released: fields,
+      });
+      const phase = await fetchTraegerPhase("7");
+
+      expect(phase.draft.isActive).toBe(isActive);
+      expect(phase.released?.isActive).toBe(isActive);
+
+      await updateTraegerPhase(phase.id, {
+        ...phase.draft,
+        name: "Umbenannt",
+        allSchools: phase.allSchools,
+        schoolIds: ["11", "12"],
+      });
+
+      const [path, init] = request.mock.lastCall!;
+      expect(path).toBe("/api/traeger/catalog/phases/7");
+      expect(init.method).toBe("PUT");
+      const body = JSON.parse(JSON.stringify(init.body));
+      expect(body.name).toBe("Umbenannt");
+      expect(body.is_active).toBe(isActive);
+    },
+  );
+
+  it.each([false, true, undefined])(
+    "preserves an offering's active flag (%s) when renaming it",
+    async (isActive) => {
+      const original = backendPhase.offerings[0]!;
+      const draft = {
+        ...original.draft,
+        fields: { ...original.draft.fields, is_active: isActive },
+      };
+      const rawOffering = { ...original, draft, released: draft };
+      request.mockResolvedValueOnce({
+        ...backendPhase,
+        offerings: [rawOffering],
+      });
+      const phase = await fetchTraegerPhase("7");
+      const offering = phase.offerings[0]!;
+
+      expect(offering.draft.fields.isActive).toBe(isActive);
+      expect(offering.released?.fields.isActive).toBe(isActive);
+
+      request.mockResolvedValueOnce(rawOffering);
+      await updateTraegerOffering(offering.id, {
+        ...offering.draft,
+        fields: { ...offering.draft.fields, name: "Umbenannt" },
+      });
+
+      const [path, init] = request.mock.lastCall!;
+      expect(path).toBe("/api/traeger/catalog/offerings/31");
+      expect(init.method).toBe("PUT");
+      const body = JSON.parse(JSON.stringify(init.body));
+      expect(body.fields.name).toBe("Umbenannt");
+      expect(body.fields.is_active).toBe(isActive);
+    },
+  );
+
   it("maps IDs to strings, fills defaults and keeps a school's refusal code", async () => {
     request.mockResolvedValue(backendPhase);
     const phase = await fetchTraegerPhase("7");
