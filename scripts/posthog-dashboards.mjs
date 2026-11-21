@@ -232,10 +232,10 @@ const series = (event, name, extra = {}) => ({
  * `<deployment>:<school_id>` and the property `name`; a school without one
  * reads „Schule 6“.
  */
-export function schoolLabel(deployment, schoolID = 'properties.school_id') {
+export function schoolLabel(deployment) {
   const prefix = `${DEPLOYMENTS[deploymentOf(deployment)]}:`;
   const groups = `from groups where index = 0 and startsWith(key, ${sqlString(prefix)}) and notEmpty(toString(properties.name))`;
-  return `transform(toString(${schoolID}), (select groupArray(replaceOne(key, ${sqlString(prefix)}, '')) ${groups}), (select groupArray(toString(properties.name)) ${groups}), concat('Schule ', toString(${schoolID})))`;
+  return `transform(toString(properties.school_id), (select groupArray(replaceOne(key, ${sqlString(prefix)}, '')) ${groups}), (select groupArray(toString(properties.name)) ${groups}), concat('Schule ', toString(properties.school_id)))`;
 }
 
 /** Breakdown by school name (`schoolLabel`) for charts of real schools. */
@@ -874,20 +874,10 @@ order by Woche, Standort`, 'ActionsLineGraph', {
           ...hogql('production', (where) => `
 select Standort, Ablauf, uniq(Tag) as Tage
 from (
-  select ${schoolLabel('production', 'Schule')} as Standort, Ablauf, Tag
-  from (
-    select Schule, multiIf(Funktion in ${sqlList(KEY_FLOWS)}, Funktion, 'Weitere') as Ablauf, Tag
-    from (
-      select toString(properties.school_id) as Schule, toDate(timestamp) as Tag, ${featureExpression()} as Funktion
-      from events
-      where ${where}
-        and ${SCHOOL_EVENT}
-        and timestamp > now() - interval 60 day
-    )
-    where Funktion not in ('', 'Startseite')
-    group by Schule, Ablauf, Tag
-  )
+  select Standort, Tag, multiIf(Funktion in ${sqlList(KEY_FLOWS)}, Funktion, Funktion in ('', 'Startseite'), '', 'Weitere') as Ablauf
+  from (${schoolDays(where, 60)})
 )
+where Ablauf != ''
 group by Standort, Ablauf
 order by Standort, Ablauf`, 'ActionsStackedBar', {
             xAxis: { column: 'Standort' },

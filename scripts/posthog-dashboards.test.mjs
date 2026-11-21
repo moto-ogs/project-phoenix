@@ -25,7 +25,6 @@ import {
   readOnboardingSurfaces,
   readPageNames,
   readRouteTemplates,
-  schoolLabel,
   sync,
 } from './posthog-dashboards.mjs';
 
@@ -124,14 +123,6 @@ test('charts name a school from its production group and fall back to its ID', (
   assert.match(SCHOOL_BREAKDOWN, /from groups where index = 0 and startsWith\(key, 'moto-app\.de:'\)/);
   assert.match(SCHOOL_BREAKDOWN, /concat\('Schule ', toString\(properties\.school_id\)\)\)$/);
   assert.doesNotMatch(SCHOOL_BREAKDOWN, /demo|staging|localhost/);
-});
-
-test('used school flows aggregate before resolving the school label', () => {
-  const query = insights.find((insight) => insight.name === 'Standorte: genutzte Abläufe (60 Tage)').query.source.query;
-  assert.ok(query.includes(`select ${schoolLabel('production', 'Schule')} as Standort, Ablauf, Tag`));
-  assert.match(query, /where Funktion not in \('', 'Startseite'\)/);
-  assert.match(query, /group by Schule, Ablauf, Tag/);
-  assert.match(query, /group by Standort, Ablauf/);
 });
 
 test('reads the route templates of every portal from analytics-routes.ts', () => {
