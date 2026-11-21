@@ -195,8 +195,8 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
     );
     const namedGroups = listOf(groups.data).map((group) => {
       const name = group.groupId ? activityNames.get(group.groupId) : undefined;
-      return name && !group.actualGroup
-        ? { ...group, actualGroup: { id: Number(group.groupId), name } }
+      return name && group.groupId && !group.actualGroup
+        ? { ...group, actualGroup: { id: group.groupId, name } }
         : group;
     });
     const own = new Set(
