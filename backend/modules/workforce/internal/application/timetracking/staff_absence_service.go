@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrManagerControlledAbsence marks absence mutations that staff may view but
@@ -181,12 +182,12 @@ type StaffAbsenceListFilter struct {
 // StartHalfDay/EndHalfDay are Personio-style boundary half-days: 0.5 day
 // off the first / last day of the range, full days for everything between.
 type RequestVacationRequest struct {
-	DateStart         string `json:"date_start"`
-	DateEnd           string `json:"date_end"`
-	StartHalfDay      bool   `json:"start_half_day"`
-	EndHalfDay        bool   `json:"end_half_day"`
-	Note              string `json:"note"`
-	SubstituteStaffID *int64 `json:"substitute_staff_id,omitempty"`
+	DateStart         string    `json:"date_start"`
+	DateEnd           string    `json:"date_end"`
+	StartHalfDay      bool      `json:"start_half_day"`
+	EndHalfDay        bool      `json:"end_half_day"`
+	Note              string    `json:"note"`
+	SubstituteStaffID *ident.ID `json:"substitute_staff_id,omitempty"`
 }
 
 // VacationDecisionRequest is the admin's approve/deny payload

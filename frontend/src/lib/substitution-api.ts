@@ -91,29 +91,7 @@ class SubstitutionService {
         type: "schedule_substitution",
         schedule_substitution: {
           ...body,
-          // Unlike timetable writes, this endpoint still reads plain int64 IDs.
-          instance_id: Number(instanceId),
-          absences: body.absences?.map((item) => ({
-            ...item,
-            staff_id: Number(item.staff_id),
-            instance_ids: item.instance_ids?.map(Number),
-          })),
-          substitutions: body.substitutions?.map((item) => ({
-            ...item,
-            absent_staff_id: Number(item.absent_staff_id),
-            substitute_staff_id: Number(item.substitute_staff_id),
-            instance_ids: item.instance_ids?.map(Number),
-          })),
-          substitution_removals: body.substitution_removals?.map((item) => ({
-            ...item,
-            staff_id: Number(item.staff_id),
-            instance_ids: item.instance_ids?.map(Number),
-          })),
-          presences: body.presences?.map((item) => ({
-            ...item,
-            staff_id: Number(item.staff_id),
-            instance_ids: item.instance_ids?.map(Number),
-          })),
+          instance_id: instanceId,
         },
       } satisfies assignmentRequest),
     });
@@ -138,13 +116,7 @@ class SubstitutionService {
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          whole_days: {
-            ...body,
-            absent_staff_id: Number(body.absent_staff_id),
-            substitute_staff_id: body.substitute_staff_id
-              ? Number(body.substitute_staff_id)
-              : undefined,
-          },
+          whole_days: body,
         },
       } satisfies assignmentRequest),
     });

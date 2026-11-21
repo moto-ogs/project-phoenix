@@ -40858,7 +40858,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SickReportReader.OpenSickReports",
-      "reason": "Pure value helper: the absence binding takes the statuses with plan effect (reported, approved) from modules/workforce.PlanEffectiveAbsenceStatuses (modules/workforce/shiftplansync.go), a constant list shared with the shift-series materializer (#6847). No database access, mutation or lock.",
+      "reason": "Pure value helper: the absence binding takes the statuses with plan effect (reported, approved) from modules/workforce.PlanEffectiveAbsenceStatuses (modules/workforce/shiftplansync.go), a constant list shared with the shift-series materializer (#6847). No database access, mutation or lock. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce.PlanEffectiveAbsenceStatuses",
       "target_owner": "workforce"
@@ -40868,7 +40868,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SickReportReader.OpenSickReports",
-      "reason": "Pure value helper: modules/workforce.StaffAbsence.HalfBoundaryDays (modules/workforce/absence.go) derives the half boundary days from the row's own fields (#6847). No database access, mutation or lock.",
+      "reason": "Pure value helper: modules/workforce.StaffAbsence.HalfBoundaryDays (modules/workforce/absence.go) derives the half boundary days from the row's own fields (#6847). No database access, mutation or lock. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffAbsence.HalfBoundaryDays",
       "target_owner": "workforce"
@@ -40878,7 +40878,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SickReportReader.OpenSickReports",
-      "reason": "Reviewed read: the materializer lists the absences in force of its window through modules/workforce/compose.WorkTime.ListStaffAbsences (modules/workforce/internal/application/absence.go:34), a plain filtered select in the caller's tenant transaction. No owned-row mutation or locking read (#6292). Since #6847 every type with plan effect counts, filtered by modules/workforce.PlanEffectiveAbsenceStatuses; the read is unchanged.",
+      "reason": "Reviewed read: the materializer lists the absences in force of its window through modules/workforce/compose.WorkTime.ListStaffAbsences (modules/workforce/internal/application/absence.go:34), a plain filtered select in the caller's tenant transaction. No owned-row mutation or locking read (#6292). Since #6847 every type with plan effect counts, filtered by modules/workforce.PlanEffectiveAbsenceStatuses; the read is unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListStaffAbsences",
       "target_owner": "workforce"

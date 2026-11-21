@@ -235,7 +235,7 @@ func TestSickReport_EditTakesSickStateOfTheBlocksDate(t *testing.T) {
 			AbsenceType: "sick", DateStart: stampWeekOne.String(), DateEnd: stampWeekOne.String(),
 		})
 		if err == nil {
-			substituteSickID = created.ID
+			substituteSickID = created.ID.Int64()
 		}
 		return err
 	})
@@ -313,7 +313,7 @@ func TestSickReport_SeriesRosterChangeAddsSickPersonAbsent(t *testing.T) {
 			AbsenceType: "sick", DateStart: stampWeekTwo.String(), DateEnd: stampWeekTwo.String(),
 		})
 		if err == nil {
-			absenceID = created.ID
+			absenceID = created.ID.Int64()
 		}
 		return err
 	})

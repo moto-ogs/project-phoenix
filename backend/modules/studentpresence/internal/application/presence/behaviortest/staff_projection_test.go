@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,13 +68,13 @@ func createAbsence(tb testing.TB, ctx context.Context, factory *api.StaffAbsence
 	tb.Helper()
 	today := calendar.TodayDate()
 	absence := &workforce.StaffAbsence{
-		StaffID:     staffID,
+		StaffID:     ident.ID(staffID),
 		AbsenceType: workforce.AbsenceTypeVacation,
 		DateStart:   today.String(),
 		DateEnd:     today.String(),
 		Status:      workforce.AbsenceStatusRequested,
-		ApprovedBy:  approvedBy,
-		CreatedBy:   staffID,
+		ApprovedBy:  (*ident.ID)(approvedBy),
+		CreatedBy:   ident.ID(staffID),
 		RequestedAt: time.Now(),
 	}
 	_, err := factory.StaffAbsence.CreateStaffAbsence(ctx, absence)

@@ -79,14 +79,16 @@ describe("substitutionService", () => {
     ).rejects.toMatchObject({ name: "ApiError", code: "general.server" });
   });
 
-  it("assigns an appointment-scoped schedule substitution", async () => {
+  it("preserves string IDs in every appointment-scoped change", async () => {
+    const instanceId = "9007199254740993";
+    const staffId = "9007199254740995";
     sessionFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
           type: "schedule_substitution",
           schedule_substitution: {
-            instance_id: 42,
+            instance_id: instanceId,
             cancelled: false,
             understaffed_ack: false,
             affected_instances: [],
@@ -96,20 +98,20 @@ describe("substitutionService", () => {
       }),
     });
 
-    await substitutionService.applyScheduleSubstitution("42", {
+    await substitutionService.applyScheduleSubstitution(instanceId, {
       understaffedAck: true,
       understaffedNote: "Vertretung offen",
-      absences: [{ staffId: "9", reason: "Krank", instanceIds: ["42"] }],
+      absences: [{ staffId, reason: "Krank", instanceIds: [instanceId] }],
       substitutions: [
         {
-          absentStaffId: "7",
+          absentStaffId: staffId,
           substituteStaffId: "8",
-          instanceIds: ["42", "43"],
+          instanceIds: [instanceId, "43"],
         },
       ],
-      substitutionRemovals: [{ staffId: "10", instanceIds: ["43"] }],
+      substitutionRemovals: [{ staffId, instanceIds: ["43"] }],
       presences: [
-        { staffId: "11", instanceIds: ["42"] },
+        { staffId, instanceIds: [instanceId] },
         { staffId: "12", instanceIds: [] },
         { staffId: "13" },
       ],
@@ -119,22 +121,24 @@ describe("substitutionService", () => {
       {
         type: "schedule_substitution",
         schedule_substitution: {
-          instance_id: 42,
+          instance_id: instanceId,
           understaffed_ack: true,
           understaffed_note: "Vertretung offen",
-          absences: [{ staff_id: 9, reason: "Krank", instance_ids: [42] }],
+          absences: [
+            { staff_id: staffId, reason: "Krank", instance_ids: [instanceId] },
+          ],
           substitutions: [
             {
-              absent_staff_id: 7,
-              substitute_staff_id: 8,
-              instance_ids: [42, 43],
+              absent_staff_id: staffId,
+              substitute_staff_id: "8",
+              instance_ids: [instanceId, "43"],
             },
           ],
-          substitution_removals: [{ staff_id: 10, instance_ids: [43] }],
+          substitution_removals: [{ staff_id: staffId, instance_ids: ["43"] }],
           presences: [
-            { staff_id: 11, instance_ids: [42] },
-            { staff_id: 12, instance_ids: [] },
-            { staff_id: 13 },
+            { staff_id: staffId, instance_ids: [instanceId] },
+            { staff_id: "12", instance_ids: [] },
+            { staff_id: "13" },
           ],
         },
       },
@@ -142,10 +146,13 @@ describe("substitutionService", () => {
   });
 
   it.each([
-    { substituteStaffId: "8", expectedTarget: { substitute_staff_id: 8 } },
+    {
+      substituteStaffId: "9007199254740995",
+      expectedTarget: { substitute_staff_id: "9007199254740995" },
+    },
     { substituteStaffId: undefined, expectedTarget: {} },
   ])(
-    "assigns day-wide substitutions with target $substituteStaffId",
+    "preserves day-wide string IDs with target $substituteStaffId",
     async ({ substituteStaffId, expectedTarget }) => {
       sessionFetch.mockResolvedValue({
         ok: true,
@@ -158,7 +165,7 @@ describe("substitutionService", () => {
       });
 
       await substitutionService.applyBulkSubstitution({
-        absentStaffId: "7",
+        absentStaffId: "9007199254740993",
         substituteStaffId,
         dates: ["2026-08-31", "2026-09-01"],
       });
@@ -169,7 +176,7 @@ describe("substitutionService", () => {
         type: "schedule_substitution",
         schedule_substitution: {
           whole_days: {
-            absent_staff_id: 7,
+            absent_staff_id: "9007199254740993",
             ...expectedTarget,
             dates: ["2026-08-31", "2026-09-01"],
           },

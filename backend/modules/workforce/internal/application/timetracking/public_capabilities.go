@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The adapters in this file and in public_work_sessions.go,
@@ -134,7 +135,7 @@ func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64
 		return nil, nil
 	}
 	result := &workforce.MonthSummary{
-		StaffID: summary.StaffID, Year: summary.Year, Month: summary.Month, CarryInMinutes: summary.CarryInMinutes,
+		StaffID: ident.ID(summary.StaffID), Year: summary.Year, Month: summary.Month, CarryInMinutes: summary.CarryInMinutes,
 		TargetMinutes: summary.TargetMinutes, TargetMinutesToDate: summary.TargetMinutesToDate, HasTarget: summary.HasTarget, ActualMinutes: summary.ActualMinutes,
 		CreditedSickMinutes: summary.CreditedSickMinutes, CreditedVacationMinutes: summary.CreditedVacationMinutes,
 		CreditedTrainingMinutes: summary.CreditedTrainingMinutes, CreditedOtherMinutes: summary.CreditedOtherMinutes,
@@ -143,7 +144,7 @@ func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64
 		TrainingDaysWithoutTarget: summary.TrainingDaysWithoutTarget, OtherDaysWithoutTarget: summary.OtherDaysWithoutTarget,
 		PlannedShiftMinutes: summary.PlannedShiftMinutes, AdjustmentMinutes: summary.AdjustmentMinutes,
 		BalanceMinutes: summary.BalanceMinutes, ClosingBalanceMinutes: summary.ClosingBalanceMinutes, IsClosed: summary.IsClosed,
-		ClosedAt: summary.ClosedAt, ClosedBy: summary.ClosedBy, ClosedByTraeger: summary.ClosedByTraeger, CloseReason: summary.CloseReason,
+		ClosedAt: summary.ClosedAt, ClosedBy: (*ident.ID)(summary.ClosedBy), ClosedByTraeger: summary.ClosedByTraeger, CloseReason: summary.CloseReason,
 		FrozenClosingBalanceMinutes: summary.FrozenClosingBalanceMinutes, DriftMinutes: summary.DriftMinutes,
 		CarryInFrozen: summary.CarryInFrozen, CarryInFrozenFromMonth: summary.CarryInFrozenFromMonth,
 	}
@@ -151,8 +152,8 @@ func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64
 		result.Adjustments = make([]workforce.AdjustmentView, 0, len(summary.Adjustments))
 		for _, adjustment := range summary.Adjustments {
 			result.Adjustments = append(result.Adjustments, workforce.AdjustmentView{
-				ID: adjustment.ID, Type: adjustment.Type, MinutesDelta: adjustment.MinutesDelta, EffectiveDate: adjustment.EffectiveDate.String(),
-				Note: adjustment.Note, DecidedBy: adjustment.DecidedBy, DecidedAt: adjustment.DecidedAt,
+				ID: ident.ID(adjustment.ID), Type: adjustment.Type, MinutesDelta: adjustment.MinutesDelta, EffectiveDate: adjustment.EffectiveDate.String(),
+				Note: adjustment.Note, DecidedBy: ident.ID(adjustment.DecidedBy), DecidedAt: adjustment.DecidedAt,
 			})
 		}
 	}
@@ -218,8 +219,8 @@ func publicBalanceAdjustment(entity *StaffBalanceAdjustment) *workforce.StaffBal
 		return nil
 	}
 	return &workforce.StaffBalanceAdjustment{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, Type: entity.Type, MinutesDelta: entity.MinutesDelta,
-		EffectiveDate: entity.EffectiveDate.String(), Note: entity.Note, DecidedBy: entity.DecidedBy, DecidedAt: entity.DecidedAt,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), Type: entity.Type, MinutesDelta: entity.MinutesDelta,
+		EffectiveDate: entity.EffectiveDate.String(), Note: entity.Note, DecidedBy: ident.ID(entity.DecidedBy), DecidedAt: entity.DecidedAt,
 		CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
@@ -435,7 +436,7 @@ func (c timeTrackingAuditLogCapability) ListAuditLog(ctx context.Context, reques
 				continue
 			}
 			public := &workforce.AuditLogEvent{
-				OccurredAt: event.OccurredAt, Source: event.Source, EntryID: event.EntryID, Actor: workforce.AuditLogActor(event.Actor),
+				OccurredAt: event.OccurredAt, Source: event.Source, EntryID: ident.ID(event.EntryID), Actor: workforce.AuditLogActor(event.Actor),
 				Reason: event.Reason, Detail: event.Detail,
 			}
 			if event.Staff != nil {

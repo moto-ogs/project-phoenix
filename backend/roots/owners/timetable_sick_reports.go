@@ -52,7 +52,7 @@ func (r timetableSickReports) OpenSickReports(ctx context.Context, from, to cale
 		}
 		skipStart, skipEnd := row.HalfBoundaryDays()
 		reports = append(reports, timetable.SickReport{
-			AbsenceID: row.ID, StaffID: row.StaffID, Sick: row.AbsenceType == workforce.AbsenceTypeSick,
+			AbsenceID: row.ID.Int64(), StaffID: row.StaffID.Int64(), Sick: row.AbsenceType == workforce.AbsenceTypeSick,
 			DateStart: start, DateEnd: end, SkipStartDay: skipStart, SkipEndDay: skipEnd,
 		})
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/shiftplansync"
 )
 
@@ -126,7 +127,7 @@ func TestSickReportsApplyThePlanInOrderAfterTheWrite(t *testing.T) {
 
 	created, err := reports.CreateAbsenceFor(inSickReportTx(), 11, 12, nil, workforce.CreateAbsenceRequest{DateStart: "2026-02-10", DateEnd: "2026-02-12"})
 	require.NoError(t, err)
-	assert.Equal(t, int64(42), created.ID)
+	assert.Equal(t, ident.ID(int64(42)), created.ID)
 	assert.Equal(t, []string{"tx", "lock", "11/0 2026-02-10..2026-02-12", "create for", "reassign", "mark", "2026-02-10"}, calls.calls,
 		"the locks, the write and its plan run in one unit of work, the locks first (#6232)")
 
@@ -161,7 +162,7 @@ func TestSickReportsApplyTheApprovalAndTheWithdrawalPlans(t *testing.T) {
 
 	approved, err := reports.ApproveAbsence(inSickReportTx(), 42, 7, 12, "ok")
 	require.NoError(t, err)
-	assert.Equal(t, int64(42), approved.ID)
+	assert.Equal(t, ident.ID(int64(42)), approved.ID)
 
 	calls.plan = workforce.SickCascadePlan{{Kind: workforce.SickCascadeClear, Report: workforce.SickCascadeInput{DateStart: "2026-03-02"}}}
 	require.NoError(t, reports.CancelAbsence(inSickReportTx(), 11, 7, 42))

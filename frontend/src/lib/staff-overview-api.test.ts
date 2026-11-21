@@ -50,7 +50,7 @@ describe("mapDashboardSummary", () => {
 
 describe("mapTimeAccountRow", () => {
   it("reads the int64 staff id the proxy decoded as a string", () => {
-    // Go sends the id as a number; the catalog proxy's decoder hands on a string.
+    // Go sends the id as a string; the catalog proxy hands it on unchanged.
     const decoded = routes[
       "GET /api/staff/time-tracking/overview"
     ].response.parse({
@@ -60,7 +60,7 @@ describe("mapTimeAccountRow", () => {
         month: 9,
         rows: [
           {
-            staff_id: 42,
+            staff_id: "42",
             first_name: "Anna",
             last_name: "Müller",
             name: "Anna Müller",

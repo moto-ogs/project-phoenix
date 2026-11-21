@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Period values for the dashboard summary (#1417).
@@ -61,10 +62,10 @@ type DashboardSummary struct {
 // Gated behind time_tracking:manage, not users:read — it exposes per-person
 // working-time data.
 type TimeTrackingOverviewRow struct {
-	StaffID   int64  `json:"staff_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Name      string `json:"name"`
+	StaffID   ident.ID `json:"staff_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Name      string   `json:"name"`
 	// EmploymentType is "" when the staff member has none recorded.
 	EmploymentType string `json:"employment_type"`
 	SollMinutes    int    `json:"soll_minutes"`
@@ -416,7 +417,7 @@ func (s *staffOverviewService) overviewRow(ctx context.Context, monthSvc WorkTim
 		balanceMinutes = *summary.FrozenClosingBalanceMinutes
 	}
 	row := TimeTrackingOverviewRow{
-		StaffID:        staff.ID,
+		StaffID:        ident.ID(staff.ID),
 		SollMinutes:    summary.TargetMinutesToDate,
 		HasTarget:      summary.HasTarget,
 		IstMinutes:     summary.ActualMinutes,

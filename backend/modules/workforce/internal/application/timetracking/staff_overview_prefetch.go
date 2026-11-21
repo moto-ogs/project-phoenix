@@ -217,7 +217,7 @@ func (s *staffOverviewService) prefetchSnapshots(
 		return nil, fmt.Errorf("failed to prefetch month balance snapshots: %w", err)
 	}
 	for _, snapshot := range snapshots {
-		result[snapshot.StaffID] = append(result[snapshot.StaffID], snapshot)
+		result[snapshot.StaffID.Int64()] = append(result[snapshot.StaffID.Int64()], snapshot)
 	}
 	return result, nil
 }

@@ -20,5 +20,5 @@ func NewOffboardingAbsenceDeletion(absence StaffAbsence, actorID int64) (Offboar
 	if err != nil {
 		return OffboardingAbsenceDeletion{}, err
 	}
-	return OffboardingAbsenceDeletion{StaffID: absence.StaffID, AbsenceID: absence.ID, DeletedBy: actorID, Payload: payload, Note: "Personal-Offboarding"}, nil
+	return OffboardingAbsenceDeletion{StaffID: absence.StaffID.Int64(), AbsenceID: absence.ID.Int64(), DeletedBy: actorID, Payload: payload, Note: "Personal-Offboarding"}, nil
 }

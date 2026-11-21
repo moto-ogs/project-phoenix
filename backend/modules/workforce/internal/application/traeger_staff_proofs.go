@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Nachweise of the Personalstamm (#4707, ADR 0089 section 7). Kinds,
@@ -59,7 +60,7 @@ func proofStates(kinds []domain.TraegerProofType, proofs []domain.TraegerProof, 
 			continue
 		}
 		state := workforce.TraegerStaffProof{
-			TypeID: kind.ID, TypeName: kind.Name, Mandatory: kind.Mandatory, PoliceCertificate: kind.PoliceCertificate(), Held: ok,
+			TypeID: ident.ID(kind.ID), TypeName: kind.Name, Mandatory: kind.Mandatory, PoliceCertificate: kind.PoliceCertificate(), Held: ok,
 		}
 		if ok {
 			state.PresentedOn, state.IssuedOn, state.NoRelevantEntry, state.ExpiresOn = proof.PresentedOn, proof.IssuedOn, proof.NoRelevantEntry, proof.ExpiresOn
@@ -266,7 +267,7 @@ func (t *TraegerStaff) ProofList(ctx context.Context, actor workforce.TraegerSta
 				continue
 			}
 			list.Entries = append(list.Entries, workforce.TraegerStaffProofEntry{
-				RecordID: record.ID, FirstName: record.FirstName, LastName: record.LastName, PersonnelNumber: record.PersonnelNumber,
+				RecordID: ident.ID(record.ID), FirstName: record.FirstName, LastName: record.LastName, PersonnelNumber: record.PersonnelNumber,
 				Schools: recordSchoolNames(record, names), TypeID: state.TypeID, TypeName: state.TypeName, Status: state.Status,
 				PresentedOn: state.PresentedOn, ExpiresOn: state.ExpiresOn,
 			})
@@ -358,15 +359,15 @@ func (t *TraegerStaff) SchoolProofKinds(ctx context.Context, actor workforce.Tra
 	}
 	result := make([]workforce.TraegerSchoolProofKinds, 0, len(schools))
 	for _, school := range schools {
-		kinds, err := t.schoolKinds(ctx, school.ID)
+		kinds, err := t.schoolKinds(ctx, school.ID.Int64())
 		if err != nil {
 			return nil, err
 		}
 		entry := workforce.TraegerSchoolProofKinds{SchoolID: school.ID, SchoolName: school.Name, Kinds: make([]workforce.TraegerSchoolProofKind, 0, len(kinds))}
 		for _, kind := range kinds {
-			public := workforce.TraegerSchoolProofKind{SchoolTypeID: kind.ID, Name: kind.Name}
-			if proofType, ok := mapped[[2]int64{school.ID, kind.ID}]; ok {
-				public.ProofTypeID = new(proofType)
+			public := workforce.TraegerSchoolProofKind{SchoolTypeID: ident.ID(kind.ID), Name: kind.Name}
+			if proofType, ok := mapped[[2]int64{school.ID.Int64(), kind.ID}]; ok {
+				public.ProofTypeID = (*ident.ID)(new(proofType))
 			}
 			entry.Kinds = append(entry.Kinds, public)
 		}
@@ -392,7 +393,7 @@ func (t *TraegerStaff) MapProofKind(ctx context.Context, actor workforce.Traeger
 	if err != nil {
 		return nil, err
 	}
-	if !slices.ContainsFunc(schools, func(school workforce.TraegerStaffSchool) bool { return school.ID == input.SchoolID }) {
+	if !slices.ContainsFunc(schools, func(school workforce.TraegerStaffSchool) bool { return school.ID == ident.ID(input.SchoolID) }) {
 		return nil, workforce.ErrTraegerProofMappingInvalid
 	}
 	kinds, err := t.schoolKinds(ctx, input.SchoolID)
@@ -433,7 +434,7 @@ func liveProofKind(kinds []domain.TraegerProofType, id int64) (domain.TraegerPro
 
 func publicProofType(kind domain.TraegerProofType) workforce.TraegerStaffProofType {
 	return workforce.TraegerStaffProofType{
-		ID: kind.ID, StandardKey: kind.StandardKey, Name: kind.Name, ValidityMonths: kind.ValidityMonths,
+		ID: ident.ID(kind.ID), StandardKey: kind.StandardKey, Name: kind.Name, ValidityMonths: kind.ValidityMonths,
 		ReminderLeadWeeks: kind.ReminderLeadWeeks, Mandatory: kind.Mandatory, Archived: kind.Archived(),
 		PoliceCertificate: kind.PoliceCertificate(),
 	}

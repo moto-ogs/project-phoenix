@@ -3,15 +3,17 @@ package timetracking
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // MonthSnapshot is the frozen carry balance consumed by month-close and overview.
 type MonthSnapshot struct {
-	ID                    int64      `json:"id"`
+	ID                    ident.ID   `json:"id"`
 	CreatedAt             time.Time  `json:"created_at"`
 	UpdatedAt             time.Time  `json:"updated_at"`
-	TenantID              int64      `json:"tenant_id"`
-	StaffID               int64      `json:"staff_id"`
+	TenantID              ident.ID   `json:"tenant_id"`
+	StaffID               ident.ID   `json:"staff_id"`
 	Year                  int        `json:"year"`
 	Month                 int        `json:"month"`
 	ClosingBalanceMinutes int        `json:"closing_balance_minutes"`
@@ -21,12 +23,12 @@ type MonthSnapshot struct {
 	CreditedMinutes       int        `json:"credited_minutes"`
 	AdjustmentMinutes     int        `json:"adjustment_minutes"`
 	ClosedAt              time.Time  `json:"closed_at"`
-	ClosedBy              int64      `json:"closed_by"`
+	ClosedBy              ident.ID   `json:"closed_by"`
 	ClosedByAccountID     int64      `json:"-"`
 	CloseReason           string     `json:"close_reason,omitempty"`
 	Source                string     `json:"source"`
 	ReopenedAt            *time.Time `json:"reopened_at,omitempty"`
-	ReopenedBy            *int64     `json:"reopened_by,omitempty"`
+	ReopenedBy            *ident.ID  `json:"reopened_by,omitempty"`
 	ReopenedByAccountID   *int64     `json:"-"`
 	ReopenReason          string     `json:"reopen_reason,omitempty"`
 	// PayrollRules is the JSON of the wage types, rules and absence type

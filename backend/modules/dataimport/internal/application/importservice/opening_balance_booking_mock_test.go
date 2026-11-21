@@ -9,6 +9,7 @@ import (
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	"github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,11 +45,11 @@ func (b *recordingOpeningBooker) CreateOpeningBalance(_ context.Context, staffID
 		return nil, b.createErr
 	}
 	return &ports.StaffBalanceAdjustment{
-		StaffID:       staffID,
+		StaffID:       ident.ID(staffID),
 		Type:          ports.BalanceAdjustmentTypeOpening,
 		MinutesDelta:  balanceMinutes,
 		EffectiveDate: effectiveDate,
-		DecidedBy:     decidedBy,
+		DecidedBy:     ident.ID(decidedBy),
 		Note:          note,
 	}, nil
 }
@@ -75,7 +76,7 @@ func (b *recordingVacationBooker) VacationQuotaSummary(_ context.Context, staffI
 	if b.summary != nil {
 		return b.summary, nil
 	}
-	return &ports.VacationQuotaSummary{StaffID: staffID, Year: year, EntitledDays: 30, CarryoverDays: 0}, nil
+	return &ports.VacationQuotaSummary{StaffID: ident.ID(staffID), Year: year, EntitledDays: 30, CarryoverDays: 0}, nil
 }
 
 func (b *recordingVacationBooker) UpsertVacationQuota(_ context.Context, _ int64, _ int, entitled, carryover float64) error {
@@ -97,11 +98,11 @@ func (b *recordingVacationBooker) SetVacationOpening(_ context.Context, staffID,
 		return nil, err
 	}
 	return &ports.StaffVacationOpening{
-		StaffID:              staffID,
+		StaffID:              ident.ID(staffID),
 		Year:                 effective.Year(),
 		EffectiveDate:        req.EffectiveDate,
 		EnteredRemainingDays: req.RemainingDays,
-		DecidedBy:            decidedBy,
+		DecidedBy:            ident.ID(decidedBy),
 	}, nil
 }
 

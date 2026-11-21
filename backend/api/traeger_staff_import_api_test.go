@@ -23,6 +23,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -122,7 +123,7 @@ func TestTraegerStaffImportTakesOverStaffWithoutDuplicates(t *testing.T) {
 		assert.True(t, result.Applied)
 		assert.Equal(t, 2, result.Counts.Imported)
 		assert.Equal(t, 3, result.Counts.Invalid+result.Counts.Conflict, "invalid and contradicting rows stay out")
-		mira = result.Rows[0].RecordID
+		mira = result.Rows[0].RecordID.Int64()
 		require.NotZero(t, mira)
 		rec = traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", mira), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -154,7 +155,7 @@ func TestTraegerStaffImportTakesOverStaffWithoutDuplicates(t *testing.T) {
 		rec, result := staffImport(t, router, office.token, "Personalnummer;Vorname;Nachname\n070031;Mira;Sommer\n", false)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, map[int]string{2: "duplicate"}, staffImportStatuses(result), "a spreadsheet adds or drops leading zeros")
-		assert.Equal(t, mira, result.Rows[0].RecordID)
+		assert.Equal(t, ident.ID(mira), result.Rows[0].RecordID)
 	})
 
 	t.Run("a row fills empty bank values of its record and never changes a contradicted one", func(t *testing.T) {
