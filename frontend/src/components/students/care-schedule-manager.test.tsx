@@ -1198,6 +1198,43 @@ describe("CareScheduleManager", () => {
     expect(screen.getAllByText("von Hand").length).toBeGreaterThan(0);
   });
 
+  // #7707: closing the banner in the Kinderakte loses nothing; every changed
+  // pickup day stands out here, also in a later week.
+  it("highlights a changed pickup day, also in a later week", async () => {
+    mockFetchStudentPickupData.mockResolvedValue({
+      ...pickupData,
+      exceptions: [
+        ...pickupData.exceptions,
+        {
+          ...pickupData.exceptions[0]!,
+          id: "21",
+          exceptionDate: "2026-06-01",
+          pickupTime: "13:00",
+        },
+      ],
+    });
+
+    render(<CareScheduleManager studentId="42" />);
+    await screen.findByText("Betreuungszeiten");
+
+    // Montag: 15:15 gilt statt der regulären 15:00.
+    expect(screen.getAllByText("15:15").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("15:00", { selector: "s" }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("Ausnahme", { selector: "[data-status-pill]" })
+        .length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByLabelText("Nächste Woche")[0]!);
+    // Next Monday: 13:00 replaces 15:00 and carries the warning in one line.
+    const later = await screen.findAllByText("13:00");
+    expect(later[0]!.parentElement).toHaveTextContent(
+      "13:00statt 15:00Ausnahme",
+    );
+  });
+
   it("passes booking care days to the weekly editor", async () => {
     mockFetchArrivalSettings.mockResolvedValueOnce({
       careDaysSource: "bookings",
