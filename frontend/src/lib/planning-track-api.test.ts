@@ -4,6 +4,7 @@ const { sessionFetch } = vi.hoisted(() => ({ sessionFetch: vi.fn() }));
 
 vi.mock("./session-cache", () => ({ sessionFetch }));
 
+import { routes } from "./contract/timetable.generated";
 import { planningTrackService } from "./planning-track-api";
 
 function response(data: unknown, status = 200): Response {
@@ -20,9 +21,9 @@ describe("planningTrackService", () => {
     sessionFetch.mockResolvedValueOnce(
       response({
         data: [
-          { id: 4, name: "Früh", color: "#5080D8", sort_order: 0 },
+          { id: "4", name: "Früh", color: "#5080D8", sort_order: 0 },
           {
-            id: 5,
+            id: "5",
             name: "Alt",
             color: "#83CD2D",
             sort_order: 1,
@@ -50,10 +51,15 @@ describe("planningTrackService", () => {
     ]);
   });
 
-  it("returns an empty list for a null payload", async () => {
-    sessionFetch.mockResolvedValueOnce(response({ data: null }));
-
-    await expect(planningTrackService.list()).resolves.toEqual([]);
+  it("never sees a null list: the catalog proxy refuses it as a 502", () => {
+    for (const route of [
+      routes["GET /api/timetable/planning-tracks/"],
+      routes["PUT /api/timetable/planning-tracks/order"],
+    ]) {
+      expect(
+        route.response.safeParse({ status: "success", data: null }).success,
+      ).toBe(false);
+    }
   });
 
   it("keeps the backend diagnostic separate when loading fails", async () => {
@@ -72,7 +78,7 @@ describe("planningTrackService", () => {
   it("creates and maps a planning track", async () => {
     sessionFetch.mockResolvedValueOnce(
       response({
-        data: { id: 8, name: "Nord", color: "#5080D8", sort_order: 3 },
+        data: { id: "8", name: "Nord", color: "#5080D8", sort_order: 3 },
       }),
     );
 
@@ -106,7 +112,7 @@ describe("planningTrackService", () => {
     sessionFetch
       .mockResolvedValueOnce(
         response({
-          data: { id: 8, name: "Süd", color: "#83CD2D", sort_order: 4 },
+          data: { id: "8", name: "Süd", color: "#83CD2D", sort_order: 4 },
         }),
       )
       .mockResolvedValueOnce(new Response("invalid", { status: 500 }));
@@ -133,7 +139,7 @@ describe("planningTrackService", () => {
   it("serializes the complete order as numeric ids", async () => {
     sessionFetch.mockResolvedValueOnce(
       response({
-        data: [{ id: 12, name: "Spät", color: "#5080D8", sort_order: 0 }],
+        data: [{ id: "12", name: "Spät", color: "#5080D8", sort_order: 0 }],
       }),
     );
 
@@ -165,12 +171,6 @@ describe("planningTrackService", () => {
     });
   });
 
-  it("returns an empty order when the backend returns null", async () => {
-    sessionFetch.mockResolvedValueOnce(response({ data: null }));
-
-    await expect(planningTrackService.reorder([])).resolves.toEqual([]);
-  });
-
   it("accepts an empty successful archive response from the delete proxy", async () => {
     sessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
@@ -195,7 +195,7 @@ describe("planningTrackService", () => {
   it("restores and maps an archived planning track", async () => {
     sessionFetch.mockResolvedValueOnce(
       response({
-        data: { id: 5, name: "Alt", color: "#83CD2D", sort_order: 1 },
+        data: { id: "5", name: "Alt", color: "#83CD2D", sort_order: 1 },
       }),
     );
 
