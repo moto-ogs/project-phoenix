@@ -143,6 +143,28 @@ func (s *studentDirectoryReads) ListNamesByIDs(ctx context.Context, ids []int64)
 	return rows, stats, nil
 }
 
+func (s *studentDirectoryReads) ListPlacementsByIDs(ctx context.Context, ids []int64) ([]directory.StudentPlacement, directoryStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return nil, directoryStats{}, err
+	}
+	rows := []directory.StudentPlacement{}
+	query := withStudentTenant(s.studentRows(db, scope).
+		ColumnExpr(`"student".id AS student_id, "person".first_name, "person".last_name, "student".school_class, "student".group_id`).
+		Join(`LEFT JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id AND "person".deleted_at IS NULL`).
+		Where(`"student".id IN (?)`, bun.List(ids)), scope).
+		OrderExpr(`"student".id ASC`)
+	stats := directoryStats{Queries: 1}
+	started := time.Now()
+	err = query.Scan(ctx, &rows)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return nil, stats, fmt.Errorf("student directory projection: list student placements by id: %w", err)
+	}
+	stats.Rows = int64(len(rows))
+	return rows, stats, nil
+}
+
 // ListNamesByClass reads the names of every child of one class, alumni
 // included, in one statement: the class matches trimmed and case-insensitive,
 // like the class roster.

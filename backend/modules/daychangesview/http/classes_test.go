@@ -1,6 +1,7 @@
 package daychangesviewhttp_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -79,6 +80,13 @@ func TestDayChangesClassSource(t *testing.T) {
 		testpkg.AssignStudentToGroup(t, db, child.ID, groupID)
 		testpkg.CreateTestStudentStatusDay(t, db, child.ID, day, "class_trip")
 	}
+	deleted := testpkg.CreateTestStudent(t, db, "Gelöschtes", "Kind", "3a")
+	testpkg.CreateTestStudentStatusDay(t, db, deleted.ID, day, "class_trip")
+	_, err = db.NewUpdate().TableExpr(`users.persons`).
+		Set(`deleted_at = NOW()`).
+		Where(`id = ?`, deleted.PersonID).
+		Exec(context.Background())
+	require.NoError(t, err)
 	outing := testpkg.CreateTestStudent(t, db, "Zoo", "Kind", "4b")
 	testpkg.AssignStudentToGroup(t, db, outing.ID, fuchs.ID)
 	testpkg.CreateTestArrivalException(t, db, outing.ID, day, classStaff.ID, "13:00", "Ausflug: Tierpark")
@@ -102,11 +110,11 @@ func TestDayChangesClassSource(t *testing.T) {
 		overview, body := read(t, router, classAccount.ID, tenantID, "users:read")
 		assert.Equal(t, []string{
 			"you class_dismissal_changed 2c 11:30",
-			"you class_trip 3a n=2",
+			"you class_trip 3a n=3",
 			"school class_trip 4b 13:00 n=1",
 		}, classLines(t, body))
 		assert.Equal(t, "loaded", sourceStatus(overview, "classes"))
-		for _, leak := range []string{"Tierpark", "Lehrerkonferenz", "Arzttermin", "Reise", "Zoo", "9x", "9y", "Morgen", "10:00"} {
+		for _, leak := range []string{"Tierpark", "Lehrerkonferenz", "Arzttermin", "Reise", "Gelöschtes", "Zoo", "9x", "9y", "Morgen", "10:00"} {
 			assert.NotContains(t, body, leak, "no reason, child name, other day or other school")
 		}
 	})
@@ -114,7 +122,7 @@ func TestDayChangesClassSource(t *testing.T) {
 	t.Run("care staff of a child on the trip sees the trip under Betrifft dich", func(t *testing.T) {
 		_, body := read(t, router, carerAccount.ID, tenantID, "users:read")
 		assert.Equal(t, []string{
-			"you class_trip 3a n=2",
+			"you class_trip 3a n=3",
 			"school class_dismissal_changed 2c 11:30",
 			"school class_trip 4b 13:00 n=1",
 		}, classLines(t, body))
@@ -124,7 +132,7 @@ func TestDayChangesClassSource(t *testing.T) {
 		_, body := read(t, router, plainAccount.ID, tenantID, "users:read", "class_day:all_classes")
 		assert.Equal(t, []string{
 			"school class_dismissal_changed 2c 11:30",
-			"school class_trip 3a n=2",
+			"school class_trip 3a n=3",
 			"school class_trip 4b 13:00 n=1",
 		}, classLines(t, body))
 	})

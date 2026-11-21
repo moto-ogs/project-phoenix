@@ -188,6 +188,12 @@ func TestStudentNamesExcludeSoftDeletedPeople(t *testing.T) {
 	names, err := module.ListStudentNamesByID(testpkg.Ctx(t), []int64{student.ID})
 	require.NoError(t, err)
 	assert.Empty(t, names)
+
+	placements, err := module.ListStudentPlacementsByID(testpkg.Ctx(t), []int64{student.ID})
+	require.NoError(t, err)
+	assert.Equal(t, []peopledirectory.StudentPlacement{{
+		StudentID: student.ID, SchoolClass: "2c",
+	}}, placements)
 }
 
 // The absence list reads a class and its names in one statement (#6165):
