@@ -52,7 +52,8 @@ export interface FamilyBillingTarget {
 }
 
 export interface FamilyBillingDraft {
-  recipientKind: RecipientKind;
+  /** undefined: a stored kind this build does not know; the office picks one. */
+  recipientKind: RecipientKind | undefined;
   secondFirstName: string;
   secondLastName: string;
   payerFirstName: string;
@@ -61,7 +62,8 @@ export interface FamilyBillingDraft {
   street: string;
   postalCode: string;
   city: string;
-  paymentMethod: PaymentMethod | "";
+  /** undefined: a stored method this build does not know. */
+  paymentMethod: PaymentMethod | "" | undefined;
   dueDay: string;
   debtorNumber: string;
 }
@@ -119,6 +121,12 @@ export function familyBillingErrors(
   const need = (field: string, value: string, hint: string) => {
     if (!value.trim()) errors[field] = hint;
   };
+  if (draft.recipientKind === undefined) {
+    errors.recipient_kind = "Bitte wähle aus, wer die Rechnung bekommt.";
+  }
+  if (draft.paymentMethod === undefined) {
+    errors.payment_method = "Bitte wähle aus, wie die Familie zahlt.";
+  }
   if (draft.recipientKind === "both") {
     need(
       "second_first_name",
@@ -160,14 +168,17 @@ export function familyBillingErrors(
   return errors;
 }
 
-/** The request of a draft for the contract. */
+/**
+ * The request of a draft for the contract. familyBillingErrors refuses a
+ * draft without a recipient kind or payment method before it is sent.
+ */
 export function familyBillingInput(
   contractId: string,
   draft: FamilyBillingDraft,
 ): FamilyBillingInput {
   return {
     contractId,
-    recipientKind: draft.recipientKind,
+    recipientKind: draft.recipientKind ?? "applicant",
     secondFirstName: draft.secondFirstName,
     secondLastName: draft.secondLastName,
     payerFirstName: draft.payerFirstName,
@@ -181,7 +192,7 @@ export function familyBillingInput(
             city: draft.city,
           }
         : null,
-    paymentMethod: draft.paymentMethod,
+    paymentMethod: draft.paymentMethod ?? "",
     dueDay: draft.dueDay === "" ? null : Number(draft.dueDay),
     debtorNumber: draft.debtorNumber,
   };

@@ -37,7 +37,7 @@ const NO_DEBIT_ITEMS: readonly DebitItem[] = [];
 
 function draftOf(dates: readonly RunDueDate[]): Draft {
   const draft: Draft = { transfer: "", direct_debit: "" };
-  for (const due of dates) draft[due.paymentMethod] = due.dueOn;
+  for (const due of dates) draft[due.paymentMethod] = due.dueOn ?? "";
   return draft;
 }
 
