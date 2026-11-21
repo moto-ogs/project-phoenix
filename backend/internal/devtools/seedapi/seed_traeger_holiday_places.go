@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedHolidayWaitlist gives the week of the third sibling as many places as
@@ -72,6 +74,9 @@ func seedFirstBookedWeek(registration map[string]any) (int64, bool) {
 	bookings, _ := children[0]["bookings"].([]map[string]any)
 	if len(bookings) == 0 {
 		return 0, false
+	}
+	if typed, ok := bookings[0]["week_id"].(ident.ID); ok {
+		bookings[0]["week_id"] = typed.Int64()
 	}
 	switch id := bookings[0]["week_id"].(type) {
 	case int64:
