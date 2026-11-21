@@ -57,6 +57,21 @@ describe("student-status-days-api", () => {
     ]);
   });
 
+  // The contract sends the status as an open string (#2353): a day with a
+  // status this build does not know is left out of the list.
+  it("leaves out a day with an unknown status", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({
+        status: "success",
+        data: [backendDay, { ...backendDay, id: "8", status: "quarantine" }],
+      }),
+    );
+
+    const days = await fetchStudentStatusDays("42", "2026-05-25", "2026-05-29");
+
+    expect(days.map((day) => day.id)).toEqual(["7"]);
+  });
+
   it("posts status and dates when creating planned days", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

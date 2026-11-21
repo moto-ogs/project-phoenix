@@ -7,6 +7,14 @@
 // never computes its own.
 
 import { bffJson } from "./bff-fetch";
+import type {
+  noteSubjectsResponse,
+  studentNoteRequestBody,
+  studentNoteResponse,
+  studentNoteTeamInformedResponse,
+  studentNoteTeamNoticeResponse,
+  studentNoteTeamReadRequest,
+} from "./contract/students.generated";
 
 /** Note lifetimes. A permanent note is the durable hint shown with the master data. */
 export const NOTE_KIND_PERMANENT = "permanent";
@@ -63,31 +71,7 @@ export interface StudentNoteActivity {
   name: string;
 }
 
-interface BackendNoteSubjects {
-  activities?: { id: string; name: string }[];
-}
-
-interface BackendStudentNote {
-  id: string;
-  student_id: string;
-  kind: string;
-  visibility: string;
-  category?: string;
-  body: string;
-  origin: string;
-  author_name?: string;
-  subject_date?: string;
-  activity_group_id?: string;
-  education_group_id?: string;
-  shared_with_school?: boolean;
-  can_edit: boolean;
-  can_delete: boolean;
-  edited?: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-function mapNote(data: BackendStudentNote): StudentNote {
+function mapNote(data: studentNoteResponse): StudentNote {
   return {
     id: data.id,
     studentId: data.student_id,
@@ -100,10 +84,10 @@ function mapNote(data: BackendStudentNote): StudentNote {
     subjectDate: data.subject_date ?? "",
     activityGroupId: data.activity_group_id ?? "",
     educationGroupId: data.education_group_id ?? "",
-    sharedWithSchool: data.shared_with_school ?? false,
+    sharedWithSchool: data.shared_with_school,
     canEdit: data.can_edit,
     canDelete: data.can_delete,
-    edited: data.edited ?? false,
+    edited: data.edited,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -124,16 +108,9 @@ export type StudentNoteTeamNoticeRevision = Pick<
   "noteId" | "informedAt"
 >;
 
-interface BackendTeamNotice {
-  note_id: string;
-  student_id: string;
-  student_first_name: string;
-  student_last_name: string;
-  author_name?: string;
-  informed_at: string;
-}
-
-function mapTeamNotice(data: BackendTeamNotice): StudentNoteTeamNotice {
+function mapTeamNotice(
+  data: studentNoteTeamNoticeResponse,
+): StudentNoteTeamNotice {
   return {
     noteId: data.note_id,
     studentId: data.student_id,
@@ -144,7 +121,7 @@ function mapTeamNotice(data: BackendTeamNotice): StudentNoteTeamNotice {
   };
 }
 
-function toPayload(draft: StudentNoteDraft): Record<string, unknown> {
+function toPayload(draft: StudentNoteDraft): studentNoteRequestBody {
   return {
     kind: draft.kind,
     visibility: draft.visibility,
@@ -166,7 +143,7 @@ class StudentNotesService {
   /** kind narrows the read to one lifetime; omit it for the whole card. */
   async list(studentId: string, kind?: string): Promise<StudentNote[]> {
     const query = kind ? `?kind=${encodeURIComponent(kind)}` : "";
-    const notes = await bffJson<BackendStudentNote[] | null>(
+    const notes = await bffJson<studentNoteResponse[]>(
       `${notesPath(studentId)}${query}`,
     );
     return (notes ?? []).map(mapNote);
@@ -177,10 +154,10 @@ class StudentNotesService {
    * against the same read, so the form never offers one it would refuse.
    */
   async listActivities(studentId: string): Promise<StudentNoteActivity[]> {
-    const subjects = await bffJson<BackendNoteSubjects | null>(
+    const subjects = await bffJson<noteSubjectsResponse>(
       `/api/students/${encodeURIComponent(studentId)}/note-subjects`,
     );
-    return (subjects?.activities ?? []).map((activity) => ({
+    return (subjects.activities ?? []).map((activity) => ({
       id: activity.id,
       name: activity.name,
     }));
@@ -191,7 +168,7 @@ class StudentNotesService {
     studentId: string,
     draft: StudentNoteDraft,
   ): Promise<StudentNote> {
-    const note = await bffJson<BackendStudentNote>(notesPath(studentId), {
+    const note = await bffJson<studentNoteResponse>(notesPath(studentId), {
       method: "POST",
       body: toPayload(draft),
     });
@@ -203,7 +180,7 @@ class StudentNotesService {
     noteId: string,
     draft: StudentNoteDraft,
   ): Promise<StudentNote> {
-    const note = await bffJson<BackendStudentNote>(
+    const note = await bffJson<studentNoteResponse>(
       notesPath(studentId, noteId),
       { method: "PUT", body: toPayload(draft) },
     );
@@ -216,7 +193,7 @@ class StudentNotesService {
    * zero means nobody else in the team may read the notes.
    */
   async informTeam(studentId: string, noteId: string): Promise<number> {
-    const result = await bffJson<{ informed: number }>(
+    const result = await bffJson<studentNoteTeamInformedResponse>(
       `${notesPath(studentId, noteId)}/team-notices`,
       { method: "POST", body: {} },
     );
@@ -225,7 +202,7 @@ class StudentNotesService {
 
   /** The reader's notes shared by the team and not yet read, newest first. */
   async listTeamNotices(): Promise<StudentNoteTeamNotice[]> {
-    const notices = await bffJson<BackendTeamNotice[] | null>(
+    const notices = await bffJson<studentNoteTeamNoticeResponse[]>(
       "/api/students/team-notices",
     );
     return (notices ?? []).map(mapTeamNotice);
@@ -239,7 +216,7 @@ class StudentNotesService {
     studentId: string,
     observed: readonly StudentNoteTeamNoticeRevision[],
   ): Promise<StudentNoteTeamNotice[]> {
-    const notices = await bffJson<BackendTeamNotice[] | null>(
+    const notices = await bffJson<studentNoteTeamNoticeResponse[]>(
       `/api/students/${encodeURIComponent(studentId)}/team-notices/read`,
       {
         method: "POST",
@@ -248,7 +225,7 @@ class StudentNotesService {
             note_id: notice.noteId,
             informed_at: notice.informedAt,
           })),
-        },
+        } satisfies studentNoteTeamReadRequest,
       },
     );
     return (notices ?? []).map(mapTeamNotice);
