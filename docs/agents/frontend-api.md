@@ -50,6 +50,9 @@ or write a `Backend*` interface for a registered route.
 - Registering, mounting and regenerating: [new API route](new-route.md).
   `TestTheCommittedContractIsCurrent` (`backend/cmd`) and the backend quality
   job fail on a stale file.
+- A portal forwards its backend routes through one catalog proxy, so a new
+  backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
+  fails on a `route.ts` whose only code is `proxyGet(...)` and its siblings.
 - Read a registered route with `contractGet` (`lib/contract/client.server.ts`).
   It returns the decoded value or a typed failure with status, registry code
   and request ID; rethrow `error.cause` so the handler boundary forwards the
@@ -144,8 +147,8 @@ The key is the scope claim of the portal's session token
   are present. A subscription address that predates its backend path is a
   `beforeFiles` rewrite in `next.config.js`, never a route file.
 - To move an old route file onto the proxy: register its Go route for the
-  portal, regenerate and delete the route file. A file is deleted only when every method it
-  exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
+  portal, regenerate and delete the route file. A file is deleted only when
+  every method it exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
   (`backend/api`) fails when the route does not run behind that portal's
   scope middleware.
 - A route file with a dynamic segment wins over the proxy too:
