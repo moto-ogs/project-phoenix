@@ -231,9 +231,9 @@ passes `retry: { off: "<reason>" }`, whichever helper sends it;
 `src/app/api/credential-retry.test.ts` proves each sends it once after a 401.
 The JSON of a call goes through `backendJson`: the portal handlers' `api`,
 the catalog proxy and `contractGet`/`contractWrite` build on it and run
-inside a portal route handler, whose retry policy applies. Only the SSE stream
-and the cached tenant resolve fetch the backend themselves; they add
-`clientIdentityHeaders(request.headers)` or the headers handed in. A route
+inside a portal route handler, whose retry policy applies. The SSE stream
+and the cached tenant resolve call `sendBackend` without that wrapper; the
+stream keeps its connection open past the header timeout. A route
 param in a backend path is encoded (`requirePathSegmentParam`,
 `encodeURIComponent`); a query key never replaces a route param. Why and
 the full chain:
