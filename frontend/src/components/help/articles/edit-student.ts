@@ -85,8 +85,8 @@ export function editStudentTopic(): HelpTopic {
     notes: [
       // #6855, #7707: pickup-change-alert.tsx über den Bereichen der Kinderakte,
       // die Markierung in care-schedule-manager.tsx.
-      "Hat sich die Abholzeit an einem Tag geändert und du hast es noch nicht gesehen, steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert` mit Tag, Uhrzeit und `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück. Mit dem X schließt du den Hinweis. Beim nächsten Öffnen kommt er nur wieder, wenn es eine neue Änderung gibt.",
-      "Jeden Tag mit geänderter Abholzeit findest du unter `Betreuungszeiten`: Bei `Abholung` steht die neue Uhrzeit, die reguläre Zeit ist durchgestrichen, daneben steht `Ausnahme`. Ein Tag in einer späteren Woche steht dort unter `Nächste Woche`.",
+      "Gibt es eine neue Abholzeit, die du noch nicht kennst? Dann steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück. Mit dem X schließt du den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
+      "Jeden geänderten Tag findest du unter `Betreuungszeiten`. Bei `Abholung` steht die neue Uhrzeit. Die normale Zeit ist durchgestrichen. Daneben steht `Ausnahme`. Liegt der Tag in einer späteren Woche, blättere mit `Nächste Woche` dorthin.",
       "Nach einem Widerruf löscht moto das Foto des Kindes. Nach dem letzten Betreuungstag löscht moto Foto und Foto-Einwilligung in der Nacht danach von selbst.",
       "Steht unter dem Feld `Ankunft` die Auswahl `Nach Schulstunde`? Wähle zum Beispiel `5. Stunde`. moto trägt die passende Uhrzeit ein.",
       // #3371: Knopf erscheint nur mit gepflegter Vorgabe unter einem leeren

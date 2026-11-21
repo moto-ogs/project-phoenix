@@ -1761,10 +1761,6 @@ function getArrivalMarker(day: ArrivalDayData): string | null {
   return arrivalScheduleSourceLabel(day.baseSchedule);
 }
 
-function getPickupMarker(day: PickupDayData): string | null {
-  return pickupScheduleSourceLabel(day.baseSchedule);
-}
-
 /**
  * Die gebuchte Abholzeit, wenn eine von Hand eingetragene Zeit sie an diesem
  * Tag verdeckt. Die eingetragene Zeit gewinnt, deshalb muss die Abweichung
@@ -1789,7 +1785,7 @@ function hiddenBookedPickup(day: PickupDayData): string | null {
  * geschlossen ist.
  */
 function replacedRegularPickup(day: PickupDayData): string | undefined {
-  if (!day.isException || !day.baseSchedule?.pickupTime) return undefined;
+  if (!day.baseSchedule?.pickupTime) return undefined;
   const regular = formatPickupTime(day.baseSchedule.pickupTime);
   return day.effectiveTime && formatPickupTime(day.effectiveTime) === regular
     ? undefined
@@ -1809,7 +1805,7 @@ function pickupBoundary(day: PickupDayData) {
   if (booked === null || !day.baseSchedule) {
     return {
       description: getPickupDescription(day),
-      marker: getPickupMarker(day),
+      marker: pickupScheduleSourceLabel(day.baseSchedule),
     };
   }
   const offering = day.offeringSchedule?.careOfferingName;
@@ -1880,8 +1876,6 @@ function getCareBoundaries(
       value: getArrivalValue(day.arrival),
       description: getArrivalDescription(day.arrival),
       marker: getArrivalMarker(day.arrival),
-      // Jede Tagesausnahme trägt dieselbe Warnung wie die der Abholzeit.
-      ...(day.arrival.isException ? { markerTone: "warning" as const } : {}),
       icon: <MotoConceptIcon concept={careTimesConcept} size={18} />,
       onEdit: actions.onEditArrival,
     },
@@ -1908,7 +1902,6 @@ function getCareBoundaries(
               ? `Grund: ${day.pickup.departureException.reason}`
               : "Nur an diesem Tag",
             marker: "Ausnahme",
-            markerTone: "warning" as const,
             icon: <MotoConceptIcon concept={pickupConcept} size={18} />,
             onEdit: actions.onEditPickup,
           },

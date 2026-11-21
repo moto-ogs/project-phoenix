@@ -1228,10 +1228,11 @@ describe("CareScheduleManager", () => {
     ).toBeGreaterThan(0);
 
     fireEvent.click(screen.getAllByLabelText("Nächste Woche")[0]!);
-    expect((await screen.findAllByText("13:00")).length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText("15:00", { selector: "s" }).length,
-    ).toBeGreaterThan(0);
+    // Next Monday: 13:00 replaces 15:00 and carries the warning in one line.
+    const later = await screen.findAllByText("13:00");
+    expect(later[0]!.parentElement).toHaveTextContent(
+      "13:00statt 15:00Ausnahme",
+    );
   });
 
   it("passes booking care days to the weekly editor", async () => {

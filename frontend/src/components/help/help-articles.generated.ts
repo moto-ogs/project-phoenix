@@ -2390,8 +2390,8 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
     notes: [
       // #6855, #7707: pickup-change-alert.tsx über den Bereichen der Kinderakte,
       // die Markierung in care-schedule-manager.tsx.
-      "Hat sich die Abholzeit an einem Tag geändert und du hast es noch nicht gesehen, steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert` mit Tag, Uhrzeit und `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück. Mit dem X schließt du den Hinweis. Beim nächsten Öffnen kommt er nur wieder, wenn es eine neue Änderung gibt.",
-      "Jeden Tag mit geänderter Abholzeit findest du unter `Betreuungszeiten`: Bei `Abholung` steht die neue Uhrzeit, die reguläre Zeit ist durchgestrichen, daneben steht `Ausnahme`. Ein Tag in einer späteren Woche steht dort unter `Nächste Woche`.",
+      "Gibt es eine neue Abholzeit, die du noch nicht kennst? Dann steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück. Mit dem X schließt du den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
+      "Jeden geänderten Tag findest du unter `Betreuungszeiten`. Bei `Abholung` steht die neue Uhrzeit. Die normale Zeit ist durchgestrichen. Daneben steht `Ausnahme`. Liegt der Tag in einer späteren Woche, blättere mit `Nächste Woche` dorthin.",
       "Nach einem Widerruf löscht moto das Foto des Kindes. Nach dem letzten Betreuungstag löscht moto Foto und Foto-Einwilligung in der Nacht danach von selbst.",
       "Steht unter dem Feld `Ankunft` die Auswahl `Nach Schulstunde`? Wähle zum Beispiel `5. Stunde`. moto trägt die passende Uhrzeit ein.",
       // #3371: Knopf erscheint nur mit gepflegter Vorgabe unter einem leeren
@@ -7796,7 +7796,8 @@ export const parentRequestsTopic = function parentRequestsTopic(
       "Gibst du eine neue Abholzeit für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
       "Nimmst du die Freigabe mit `Entscheidung korrigieren` zurück, bekommt das Team wieder einen Hinweis: `wieder normale Abholzeit`.",
       // #7707: Banner nur für ungesehene Änderungen, der Stand in den Betreuungszeiten.
-      "Wer die Änderung noch nicht gesehen hat, sieht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert` mit Tag, Uhrzeit und `Neu`. Der Hinweis lässt sich mit dem X schließen und kommt nur bei einer neuen Änderung wieder. Der geänderte Tag bleibt unter `Betreuungszeiten` markiert: neue Uhrzeit, reguläre Zeit durchgestrichen und `Ausnahme`. Die Markierung verschwindet, wenn der Tag vorbei ist oder die Ausnahme gelöscht wird.",
+      "Wer die Änderung noch nicht kennt, sieht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Das X schließt den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
+      "Unter `Betreuungszeiten` bleibt der Tag markiert: neue Uhrzeit, die normale Zeit durchgestrichen und `Ausnahme`. Die Markierung verschwindet, wenn der Tag vorbei ist oder die Ausnahme gelöscht wird.",
       // #5102: von Hand gepflegte Regeltermine nach einer Angebotsanfrage.
       "Planen von Hand gepflegte Regeltermine das Kind nach einer Angebotsanfrage weiter ein? Dann bleibt die Anfrage nach dem Freigeben offen stehen. Sie zeigt `Nicht angepasst, weil von Hand gepflegt`. Wähle `Dort auch entfernen` oder `Fertig`.",
       // Von Hand eingetragene Abholzeiten überdecken eine neue Buchung.

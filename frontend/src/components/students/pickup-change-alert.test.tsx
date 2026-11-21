@@ -218,6 +218,7 @@ describe("PickupChangeAlert with unseen changes", () => {
     expect(
       screen.getByText("Freitag, 11.09.2026: wieder normale Abholzeit"),
     ).toBeInTheDocument();
+    // Anker: the unseen days above stand in the same banner.
     expect(screen.getAllByText("Neu")).toHaveLength(2);
     expect(
       screen.queryByText("Montag, 14.09.2026: 14:30 Uhr"),
@@ -339,6 +340,8 @@ describe("StudentPickupChanges", () => {
       />,
     );
     await waitFor(() => expect(notices.markRead).toHaveBeenCalledOnce());
+    // Anker: the banner stands before it is closed.
+    expect(screen.getByTestId("pickup-change-alert")).toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -368,6 +371,7 @@ describe("StudentPickupChanges", () => {
         />,
       );
     });
+    // Anker: the newer change brings the banner back.
     expect(
       screen.getByText("Freitag, 11.09.2026: 13:00 Uhr"),
     ).toBeInTheDocument();
