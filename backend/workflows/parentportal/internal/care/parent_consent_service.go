@@ -25,6 +25,9 @@ type ChildConsent struct {
 // projection People Directory folds together, and the Audit Platform trail
 // every effective change appends to. The composition root binds both (#3349).
 type StudentConsentService interface {
+	// RoomHistoryStopPort is Student Presence's per-child stop (#3844);
+	// parents set it beside the photo consent.
+	RoomHistoryStopPort
 	CurrentStates(ctx context.Context, student *PortalStudent, canManagePhoto bool) ([]ChildConsent, error)
 	RecordTransitions(
 		ctx context.Context,

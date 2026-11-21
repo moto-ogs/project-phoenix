@@ -1046,6 +1046,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/parent/me/children/{studentId}/room-history-stop",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildRoomHistoryStopResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/parent/me/mfa/trusted-devices/{deviceId}",
       "portals": [
         "parent"
@@ -8981,6 +8992,17 @@
           "kind": "ref",
           "ref": "ParentRequestEventResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/room-history-stop",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildRoomHistoryStopResponse"
       }
     },
     {
@@ -21455,6 +21477,17 @@
       "response": {
         "kind": "ref",
         "ref": "requestSharingResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/children/{studentId}/room-history-stop",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildRoomHistoryStopResponse"
       }
     },
     {
@@ -40347,6 +40380,37 @@
         {
           "name": "without_care_place",
           "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildRoomHistoryStopResponse",
+      "go_type": "parent.ChildRoomHistoryStopResponse",
+      "fields": [
+        {
+          "name": "offered",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stopped",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stopped_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "can_change",
           "schema": {
             "kind": "bool"
           }

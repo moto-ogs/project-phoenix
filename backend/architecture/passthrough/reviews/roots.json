@@ -4871,6 +4871,16 @@
       "reason": "ADR 0126 (#5941): Consumer-port adapter of the parents portal's release push onto Organisation \u0026 Tenancy; it keeps the undeleted schools of the Träger and maps them onto their IDs."
     },
     {
+      "decision": "0090",
+      "id": "roots/owners/parentRoomHistoryStops.ResumeRoomHistory",
+      "reason": "Owner-edge translation: maps the parent portal's stop request onto Student Presence's change with the parent portal as source (#3844); exact evidence, semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/parentRoomHistoryStops.StopRoomHistory",
+      "reason": "Owner-edge translation: maps the parent portal's stop request onto Student Presence's change with the parent portal as source (#3844); exact evidence, semantic form review pending."
+    },
+    {
       "decision": "0171",
       "id": "roots/owners/parentSEPAMandates.GrantSEPAMandate",
       "reason": "Consumer-port adapter of the parents portal (#4696): it stores the confirmed mandate with its proof through the Elternabrechnung and maps validation, text, in-force and creditor refusals into the workflow's errors."

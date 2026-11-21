@@ -64,6 +64,21 @@ export const ParentConferenceCancelledResponseSchema: z.ZodType<ParentConference
   status: str,
 });
 
+/** Go: parent.ChildRoomHistoryStopResponse */
+export interface ChildRoomHistoryStopResponse {
+  offered: boolean;
+  stopped: boolean;
+  stopped_at?: string;
+  can_change: boolean;
+}
+
+export const ChildRoomHistoryStopResponseSchema: z.ZodType<ChildRoomHistoryStopResponse, unknown> = object<ChildRoomHistoryStopResponse>({
+  offered: bool,
+  stopped: bool,
+  stopped_at: optional(instant),
+  can_change: bool,
+});
+
 /** Go: parent.ParentCalendarResponse */
 export interface ParentCalendarResponse {
   from: string | null;
@@ -2708,6 +2723,12 @@ export const routes = {
     portals: ["parent"],
     response: noData,
   },
+  "DELETE /parent/me/children/{studentId}/room-history-stop": {
+    method: "DELETE",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
+  },
   "DELETE /parent/me/mfa/trusted-devices/{deviceId}": {
     method: "DELETE",
     pattern: "/parent/me/mfa/trusted-devices/{deviceId}",
@@ -2888,6 +2909,12 @@ export const routes = {
     pattern: "/parent/me/children/{studentId}/requests/{requestType}/{requestId}/events",
     portals: ["parent"],
     response: success(z.array(ParentRequestEventResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/room-history-stop": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
   },
   "GET /parent/me/children/{studentId}/sick-note": {
     method: "GET",
@@ -3410,6 +3437,12 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<requestSharingBody>(),
     response: success(requestSharingResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/room-history-stop": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
   },
   "PUT /parent/me/documents/{organizationId}/contracts/{contractId}/family-children": {
     method: "PUT",

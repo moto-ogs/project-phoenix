@@ -6820,6 +6820,20 @@
     },
     {
       "build": "production",
+      "evidence": "func (p parentRoomHistoryStops) ResumeRoomHistory(ctx context.Context, request parentportal.RoomHistoryStopRequest) error {\n\t_, err := p.RoomHistoryStops.ResumeRoomHistory(ctx, parentRoomHistoryStopChange(request))\n\treturn err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/parentRoomHistoryStops.ResumeRoomHistory",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (p parentRoomHistoryStops) StopRoomHistory(ctx context.Context, request parentportal.RoomHistoryStopRequest) error {\n\t_, err := p.RoomHistoryStops.StopRoomHistory(ctx, parentRoomHistoryStopChange(request))\n\treturn err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/parentRoomHistoryStops.StopRoomHistory",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (m parentSEPAMandates) GrantSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader, input parentportal.SEPAMandateInput) (parentportal.SEPAMandateView, error) {\n\tview, err := m.mandates.GrantParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader), parentbilling.ParentMandateInput(input))\n\treturn parentMandateView(view), parentMandateError(err)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentSEPAMandates.GrantSEPAMandate",

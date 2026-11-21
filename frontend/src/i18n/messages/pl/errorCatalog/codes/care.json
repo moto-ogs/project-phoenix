@@ -79,6 +79,7 @@
   "request_not_found": "Nie znaleziono: {object}. Odśwież stronę.",
   "request_not_open": "Już nie jest otwarte: {object}. Zapytaj swoją osobę kontaktową.",
   "request_sharing_invalid": "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
+  "room_history_stop_disabled": "Obecnie nie możesz tutaj zmienić: {object}. Zapytaj swoją osobę kontaktową.",
   "sick_note_disabled": "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
   "staff_managed_guardian_protected": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "guardian_invite_unavailable": "Nie udało się teraz wysłać tego zaproszenia. Prosimy o kontakt ze świetlicą."

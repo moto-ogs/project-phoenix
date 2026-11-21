@@ -10,17 +10,24 @@ import (
 type StudentConsentCallbacks struct {
 	Current func(context.Context, *StudentSnapshot, bool) ([]ChildConsent, error)
 	Record  func(context.Context, *StudentSnapshot, *StudentSnapshot, string, *int64, time.Time) error
+	// RoomHistoryStops is Student Presence's per-child stop (#3844).
+	RoomHistoryStops care.RoomHistoryStopPort
 }
 type NativeStudentConsents interface {
 	CurrentStates(context.Context, *care.PortalStudent, bool) ([]care.ChildConsent, error)
 	RecordTransitions(context.Context, *care.PortalStudent, *care.PortalStudent, string, *int64, time.Time) error
+	care.RoomHistoryStopPort
 }
 
 func NewNativeStudentConsents(c StudentConsentCallbacks) NativeStudentConsents {
-	return nativeStudentConsents{c}
+	return nativeStudentConsents{callbacks: c, RoomHistoryStopPort: c.RoomHistoryStops}
 }
 
-type nativeStudentConsents struct{ callbacks StudentConsentCallbacks }
+// nativeStudentConsents promotes the room history stop of its callbacks.
+type nativeStudentConsents struct {
+	callbacks StudentConsentCallbacks
+	care.RoomHistoryStopPort
+}
 
 func (s nativeStudentConsents) CurrentStates(ctx context.Context, value *care.PortalStudent, manage bool) ([]care.ChildConsent, error) {
 	return s.callbacks.Current(ctx, (*StudentSnapshot)(value), manage)

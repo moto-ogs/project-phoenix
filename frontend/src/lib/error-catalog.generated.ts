@@ -216,6 +216,8 @@ export const ERROR_CATALOG = {
         "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
       "care.request_sharing_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+      "care.room_history_stop_disabled":
+        "{object} kannst du hier zurzeit nicht ändern. Bitte frage deine Ansprechperson.",
       "care.sick_note_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "classday.absence_list_invalid_period":
@@ -2355,6 +2357,8 @@ export const ERROR_CATALOG = {
         "{object} is no longer open. Please ask your contact person.",
       "care.request_sharing_invalid":
         "{object} contains invalid details. Please check your entries.",
+      "care.room_history_stop_disabled":
+        "You cannot change {object} here at the moment. Please ask your contact person.",
       "care.sick_note_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "classday.absence_list_invalid_period":
@@ -3128,6 +3132,8 @@ export const ERROR_CATALOG = {
         "Больше не открыто: {object}. Обратитесь к контактному лицу.",
       "care.request_sharing_invalid":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
+      "care.room_history_stop_disabled":
+        "Сейчас здесь нельзя изменить: {object}. Обратитесь к контактному лицу.",
       "care.sick_note_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "classday.absence_list_invalid_period":
@@ -3766,6 +3772,8 @@ export const ERROR_CATALOG = {
         "Nuk është më i hapur: {object}. Pyetni personin tuaj të kontaktit.",
       "care.request_sharing_invalid":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
+      "care.room_history_stop_disabled":
+        "Për momentin nuk mund ta ndryshoni këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.sick_note_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "classday.absence_list_invalid_period":
@@ -4417,6 +4425,8 @@ export const ERROR_CATALOG = {
         "Już nie jest otwarte: {object}. Zapytaj swoją osobę kontaktową.",
       "care.request_sharing_invalid":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
+      "care.room_history_stop_disabled":
+        "Obecnie nie możesz tutaj zmienić: {object}. Zapytaj swoją osobę kontaktową.",
       "care.sick_note_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "classday.absence_list_invalid_period":
@@ -5055,6 +5065,8 @@ export const ERROR_CATALOG = {
         "{object} artık açık değil. Lütfen ilgili kişinize danışın.",
       "care.request_sharing_invalid":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
+      "care.room_history_stop_disabled":
+        "{object} şu anda burada değiştirilemez. Lütfen ilgili kişinize danışın.",
       "care.sick_note_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "classday.absence_list_invalid_period":
@@ -5697,6 +5709,8 @@ export const ERROR_CATALOG = {
         "Уже не відкрито: {object}. Зверніться до контактної особи.",
       "care.request_sharing_invalid":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
+      "care.room_history_stop_disabled":
+        "Зараз тут не можна змінити: {object}. Зверніться до контактної особи.",
       "care.sick_note_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "classday.absence_list_invalid_period":
