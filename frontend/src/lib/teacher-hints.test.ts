@@ -3,6 +3,11 @@ import { mapVisitsToSupervisionStudents } from "~/components/active-supervisions
 import { teacherHintText } from "./student-helpers";
 import { mapStudentListRow } from "./student-wire";
 import { mapRoster } from "./timetable-operations-types";
+import {
+  buildOperationRoster,
+  buildOperationRosterInstance,
+  buildOperationRosterRow,
+} from "~/test/fixtures/timetable-operations";
 
 // Der Hinweis der Lehrkraft (#4795) steht in Aufsicht, Gruppe und Kindersuche
 // am Kind, gekennzeichnet als „Hinweis der Lehrkraft“.
@@ -71,30 +76,30 @@ describe("teacher hints on the child", () => {
   });
 
   it("reaches the block roster row and stays absent without hints", () => {
-    const roster = mapRoster({
-      instance: {
-        id: 1,
-        title: "Lesen",
-        status: "active",
-        room_id: 2,
-        date: "2099-03-02",
-      },
-      rows: [
-        {
-          student_id: 7,
-          student_name: "Ida Hinweis",
-          planned: true,
-          status: "present",
-          teacher_hints: [{ body: "Hat Bauchweh" }],
-        },
-        {
-          student_id: 8,
-          student_name: "Bruno Banknachbar",
-          planned: true,
-          status: "expected",
-        },
-      ],
-    } as Parameters<typeof mapRoster>[0]);
+    const roster = mapRoster(
+      buildOperationRoster({
+        instance: buildOperationRosterInstance({
+          id: "1",
+          title: "Lesen",
+          status: "active",
+          room_id: "2",
+          date: "2099-03-02",
+        }),
+        rows: [
+          buildOperationRosterRow({
+            student_id: "7",
+            student_name: "Ida Hinweis",
+            status: "present",
+            teacher_hints: [{ body: "Hat Bauchweh" }],
+          }),
+          buildOperationRosterRow({
+            student_id: "8",
+            student_name: "Bruno Banknachbar",
+            status: "expected",
+          }),
+        ],
+      }),
+    );
     expect(roster.rows[0]?.teacherHints).toEqual([{ body: "Hat Bauchweh" }]);
     expect(roster.rows[1]).not.toHaveProperty("teacherHints");
   });

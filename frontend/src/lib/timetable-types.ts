@@ -94,7 +94,7 @@ export function isCareDayExpected(
  * the non-bookings rather than shown as a real absence.
  */
 export function isNotScheduledRow(
-  status: InstanceAttendanceStatus,
+  status: InstanceAttendanceStatus | undefined,
   careDayStatus: CareDayStatus | null | undefined,
 ): boolean {
   if (status === "expected") {
