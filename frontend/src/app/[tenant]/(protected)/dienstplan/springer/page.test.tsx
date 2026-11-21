@@ -83,7 +83,7 @@ const WEEK: PoolWeek = {
   springers: [LENA],
 };
 
-const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
+const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 
 function renderPage() {
   return render(

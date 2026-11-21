@@ -5,11 +5,11 @@ import type { TenantSettings } from "~/lib/tenant-api";
 
 /** The backend's answer to `/auth/tenant/resolve?slug=…` (snake_case). */
 export interface TenantResolveResponse {
-  tenant_id: number;
+  tenant_id: string;
   slug: string;
   name: string;
   subdomain: string;
-  organization_id: number;
+  organization_id: string;
   organization_name: string;
   traeger_name?: string;
   hidden?: boolean;

@@ -39,7 +39,7 @@ import { useStaffOnboarding } from "./use-staff-onboarding";
 function Wrapper({ children }: { children: ReactNode }) {
   return (
     <SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
-      <SWRScopeBoundary expectedTenantId={1} />
+      <SWRScopeBoundary expectedTenantId="1" />
       {children}
     </SWRConfig>
   );

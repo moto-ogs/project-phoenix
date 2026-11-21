@@ -339,7 +339,7 @@ export function useGlobalSSE(): SSEHookState {
     hasSessionAccess(session) &&
     // A refused stream would re-read the same wrong-school session forever,
     // and a late lookup could restore its cookie after explicit signout.
-    (!tenant || tenantID === tenant.tenantId) &&
+    (!tenant || String(tenantID) === tenant.tenantId) &&
     (hasStaffRole || hasAdminWildcard);
 
   // Every event acts only for the school and account its stream is bound to

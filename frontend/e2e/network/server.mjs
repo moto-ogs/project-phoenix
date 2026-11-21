@@ -16,11 +16,11 @@ const apiPort = ports.api;
 let switchRequests = 0;
 let logoutRequests = 0;
 const schools = ["school-a", "school-b"].map((subdomain, index) => ({
-  tenant_id: index + 1,
+  tenant_id: String(index + 1),
   slug: subdomain,
   subdomain,
   name: index === 0 ? "School A" : "School B",
-  organization_id: 1,
+  organization_id: "1",
   organization_name: "Fixture",
 }));
 
@@ -98,7 +98,7 @@ const api = createServer(async (req, res) => {
   else if (path === "/auth/tenant/resolve") {
     const slug = url.searchParams.get("slug") ?? "proof-off";
     data = envelope({
-      tenant_id: sharedTenantCookie && slug === "school-b" ? 2 : 1,
+      tenant_id: sharedTenantCookie && slug === "school-b" ? "2" : "1",
       slug,
       subdomain: slug,
       name: sharedTenantCookie
@@ -106,7 +106,7 @@ const api = createServer(async (req, res) => {
           ? "School B"
           : "School A"
         : "Netzwerktest",
-      organization_id: 1,
+      organization_id: "1",
       organization_name: "Fixture",
       settings: {},
       grade_level_max: 4,

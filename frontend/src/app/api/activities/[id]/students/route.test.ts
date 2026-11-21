@@ -61,8 +61,8 @@ describe("GET /api/activities/[id]/students", () => {
 
   it("fetches enrolled students for activity", async () => {
     const mockEnrollments = [
-      { id: 1, first_name: "Alice", last_name: "Smith", school_class: "3A" },
-      { id: 2, first_name: "Bob", last_name: "Jones", school_class: "3B" },
+      { id: "1", first_name: "Alice", last_name: "Smith", school_class: "3A" },
+      { id: "2", first_name: "Bob", last_name: "Jones", school_class: "3B" },
     ];
 
     mockApiGet.mockResolvedValueOnce({ data: mockEnrollments });
@@ -87,11 +87,11 @@ describe("GET /api/activities/[id]/students", () => {
   });
 
   it("fetches available students when available=true query param", async () => {
-    const mockEnrolled = [{ id: 1, first_name: "Alice", last_name: "Smith" }];
+    const mockEnrolled = [{ id: "1", first_name: "Alice", last_name: "Smith" }];
     const mockAllStudents = [
-      { id: 1, first_name: "Alice", last_name: "Smith", school_class: "3A" },
-      { id: 2, first_name: "Bob", last_name: "Jones", school_class: "3B" },
-      { id: 3, first_name: "Carol", last_name: "White", school_class: "3C" },
+      { id: "1", first_name: "Alice", last_name: "Smith", school_class: "3A" },
+      { id: "2", first_name: "Bob", last_name: "Jones", school_class: "3B" },
+      { id: "3", first_name: "Carol", last_name: "White", school_class: "3C" },
     ];
 
     mockApiGet
@@ -127,9 +127,9 @@ describe("GET /api/activities/[id]/students", () => {
   });
 
   it("filters available students by search param", async () => {
-    const mockEnrolled = [{ id: 1, first_name: "Alice", last_name: "Smith" }];
+    const mockEnrolled = [{ id: "1", first_name: "Alice", last_name: "Smith" }];
     const mockAllStudents = [
-      { id: 2, first_name: "Bob", last_name: "Jones", school_class: "3B" },
+      { id: "2", first_name: "Bob", last_name: "Jones", school_class: "3B" },
     ];
 
     mockApiGet
@@ -155,12 +155,12 @@ describe("GET /api/activities/[id]/students", () => {
     "returns all $available available students out of $total across $pages backend pages",
     async ({ total, available, pages }) => {
       const students = Array.from({ length: total }, (_, index) => ({
-        id: index + 1,
+        id: String(index + 1),
         first_name: "Kind",
         last_name: String(index + 1),
         school_class: "3A",
       }));
-      const enrolled = [1, 17, 49, 52, total].map((id) => ({ id }));
+      const enrolled = [1, 17, 49, 52, total].map((id) => ({ id: String(id) }));
 
       mockApiGet.mockImplementation(async (endpoint: string, token: string) => {
         expect(token).toBe("test-token");
@@ -208,13 +208,13 @@ describe("GET /api/activities/[id]/students", () => {
     },
   );
 
-  it("compares student IDs as strings, whether the backend sends numbers or strings", async () => {
+  it("compares student IDs as strings", async () => {
     mockApiGet
-      .mockResolvedValueOnce({ data: [{ id: 1 }, { id: "9007199254740993" }] })
+      .mockResolvedValueOnce({ data: [{ id: "1" }, { id: "9007199254740993" }] })
       .mockResolvedValueOnce(
         studentListResponse([
           { id: "1", first_name: "Kind", last_name: "Eins" },
-          { id: 2, first_name: "Kind", last_name: "Zwei" },
+          { id: "2", first_name: "Kind", last_name: "Zwei" },
           { id: "9007199254740993", first_name: "Kind", last_name: "Groß" },
           { id: "9007199254740995", first_name: "Kind", last_name: "Neu" },
         ]),
@@ -238,9 +238,10 @@ describe("GET /api/activities/[id]/students", () => {
     { scenario: "zero", id: "0" },
     { scenario: "negative", id: "-4" },
     { scenario: "non-decimal", id: "4a" },
+    { scenario: "numeric", id: 4 },
     { scenario: "unsafe number", id: Number.MAX_SAFE_INTEGER + 2 },
     { scenario: "missing", id: undefined },
-    { scenario: "repeated string and number", id: "1", repeat: 1 },
+    { scenario: "repeated", id: "1", repeat: "1" },
   ])(
     "rejects a $scenario student ID instead of returning it",
     async ({ id, repeat }) => {
@@ -274,7 +275,7 @@ describe("GET /api/activities/[id]/students", () => {
   );
 
   it("starts roster and student requests before either response resolves", async () => {
-    const enrolled = deferred<{ data: Array<{ id: number }> }>();
+    const enrolled = deferred<{ data: Array<{ id: string }> }>();
     const students = deferred<ReturnType<typeof studentListResponse>>();
     mockApiGet.mockImplementation((endpoint: string) =>
       endpoint === "/api/activities/5/students"
@@ -296,11 +297,11 @@ describe("GET /api/activities/[id]/students", () => {
         expect(mockApiGet).toHaveBeenCalledWith("/api/students?", "test-token");
       });
     } finally {
-      enrolled.resolve({ data: [{ id: 1 }] });
+      enrolled.resolve({ data: [{ id: "1" }] });
       students.resolve(
         studentListResponse([
-          { id: 1, first_name: "Kind", last_name: "Eins" },
-          { id: 2, first_name: "Kind", last_name: "Zwei" },
+          { id: "1", first_name: "Kind", last_name: "Eins" },
+          { id: "2", first_name: "Kind", last_name: "Zwei" },
         ]),
       );
       await pendingResponse;
@@ -441,7 +442,7 @@ describe("GET /api/activities/[id]/students", () => {
         }
         return {
           data: [
-            { id: isLaterPage ? 2 : 1, first_name: "Kind", last_name: "Eins" },
+            { id: isLaterPage ? "2" : "1", first_name: "Kind", last_name: "Eins" },
           ],
           pagination: {
             current_page: isLaterPage ? 2 : 1,
@@ -513,8 +514,8 @@ describe("PUT /api/activities/[id]/students", () => {
 
   it("replaces enrolled students successfully", async () => {
     const mockUpdatedEnrollments = [
-      { id: 20, first_name: "Grace", last_name: "Lee", school_class: "3F" },
-      { id: 21, first_name: "Henry", last_name: "King", school_class: "3G" },
+      { id: "20", first_name: "Grace", last_name: "Lee", school_class: "3F" },
+      { id: "21", first_name: "Henry", last_name: "King", school_class: "3G" },
     ];
 
     mockApiPut.mockResolvedValueOnce(undefined);

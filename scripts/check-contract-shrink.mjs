@@ -1,19 +1,17 @@
 #!/usr/bin/env node
-// Compares two debts of the contract (ADR 0270) with a base revision and
-// fails when either grows (#2353):
-//   - the numeric identifiers: every field the generator writes as a JSON
-//     number identifier (`numeric_ids` of contract.json, from the register,
-//     a reader or a lax type). A new identifier is a common.ID, so the set
-//     only shrinks;
-//   - the backend routes the contract does not register: every route of the
+// Compares a debt of the contract (ADR 0270) with a base revision and fails
+// when it grows (#2353): the backend routes the contract does not register,
+// every route of the
 //     route catalog (backend/api/testdata/routes) without a registration. A
 //     new route is registered, so its fields are typed and a portal reaches it
 //     through its catalog proxy instead of a route file of its own. A route
 //     the contract cannot carry (a sign-in step that mints a session, a
 //     device or webhook endpoint) needs a decision: an ADR with a number
 //     the base lacks that names its catalog line ("POST /auth/example").
-// Both sets are measured on the base and on the working tree; there is no
-// list to maintain.
+// The set is measured on the base and on the working tree; there is no list
+// to maintain. Numeric identifiers need no comparison since #2342: the
+// generator refuses every identifier of an answer that is not a string
+// (ADR 0300), so the register they had is gone.
 //   node scripts/check-contract-shrink.mjs [base-revision]
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
@@ -44,12 +42,6 @@ export function unregisteredRows(rows, model) {
   return rows.filter((row) => !registered.has(row) && !registered.has(registrationKey(row)));
 }
 
-/** What head adds to base, sorted. */
-export function added(base, head) {
-  const known = new Set(base);
-  return [...new Set(head)].filter((entry) => !known.has(entry)).sort();
-}
-
 /** Unregistered rows of head that base lacks and no new ADR names. */
 export function addedRows(baseRows, headRows, newADRs = []) {
   const known = new Set(baseRows.map(routeKey));
@@ -59,17 +51,8 @@ export function addedRows(baseRows, headRows, newADRs = []) {
     .sort();
 }
 
-export function report({ baseIDs, headIDs, baseRows, headRows, newADRs = [] }) {
+export function report({ baseRows, headRows, newADRs = [] }) {
   const problems = [];
-  const ids = added(baseIDs, headIDs);
-  if (ids.length > 0) {
-    problems.push(`New numeric identifiers (${ids.length}):\n${ids.join("\n")}\n
-A new identifier is a common.ID (string on the wire, ADR 0270): no new entry
-in legacyNumericIDs (backend/api/contract/numeric_ids_*.go), no new
-ReadsLaxIDs reader, no new common.JSONID field. A renamed type takes its
-fields to common.ID as well: check-contract-compat allows the move from a
-numeric to a string identifier.`);
-  }
   const rows = addedRows(baseRows, headRows, newADRs);
   if (rows.length > 0) {
     problems.push(`New backend routes without a contract (${rows.length}):\n${rows.join("\n")}\n
@@ -112,10 +95,7 @@ function main(argv) {
   // An ADR's number is its identity; a renamed one is not new.
   const number = (file) => file.split("/").at(-1).slice(0, 4);
   const baseADRs = new Set(baseFiles(ADR_DIR, adr).map(number));
-  // The base predates numeric_ids (#2353): nothing to compare yet.
   const problems = report({
-    baseIDs: baseModel.numeric_ids ?? headModel.numeric_ids ?? [],
-    headIDs: headModel.numeric_ids ?? [],
     baseRows: unregisteredRows(catalogRows(baseFiles(CATALOG_DIR, golden).map(atBase)), baseModel),
     headRows: unregisteredRows(catalogRows(headFiles(CATALOG_DIR, golden).map(atHead)), headModel),
     newADRs: headFiles(ADR_DIR, adr).filter((file) => !baseADRs.has(number(file))).map(atHead),
@@ -124,7 +104,7 @@ function main(argv) {
     console.error(`${problems.join("\n\n")}\n\nCompared with ${base}. If ${base} already removed an entry, update the branch.`);
     process.exit(1);
   }
-  console.log(`contract registers: no new numeric identifier, no new route without a contract compared with ${base}`);
+  console.log(`contract registers: no new route without a contract compared with ${base}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) main(process.argv.slice(2));

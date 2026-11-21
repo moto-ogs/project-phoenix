@@ -31,8 +31,8 @@ describe("existing-account invitation acceptance", () => {
     vi.mocked(listAllTenants).mockResolvedValue({
       tenants: [
         {
-          tenantId: 1,
-          organizationId: 1,
+          tenantId: "1",
+          organizationId: "1",
           slug: "school",
           name: "School",
           subdomain: "school",
@@ -122,8 +122,8 @@ describe("existing-account invitation acceptance", () => {
     vi.mocked(listAllTenants).mockResolvedValueOnce({
       tenants: [
         {
-          tenantId: 1,
-          organizationId: 1,
+          tenantId: "1",
+          organizationId: "1",
           slug: "school",
           name: "School",
           subdomain: "school",

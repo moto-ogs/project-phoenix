@@ -1,10 +1,10 @@
 /** One row of GET /auth/account/tenants. */
 export interface AccountTenantBackend {
-  tenant_id: number;
+  tenant_id: string;
   slug: string;
   name: string;
   subdomain: string;
-  organization_id: number;
+  organization_id: string;
   organization_name: string;
 }
 

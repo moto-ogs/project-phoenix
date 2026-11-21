@@ -34,7 +34,7 @@ beforeEach(() => {
   vi.stubEnv("TENANT_DOMAIN", "localhost");
   mockResolve.mockReset();
   mockResolve.mockImplementation(async (slug: string) => ({
-    tenant_id: slug === "schule-a" ? 1 : 2,
+    tenant_id: slug === "schule-a" ? "1" : "2",
   }));
 });
 

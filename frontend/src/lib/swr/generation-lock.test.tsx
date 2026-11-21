@@ -131,7 +131,7 @@ function Tools() {
 function Page({ children }: Readonly<{ children?: ReactNode }>) {
   return (
     <>
-      <SWRScopeBoundary expectedTenantId={1} />
+      <SWRScopeBoundary expectedTenantId="1" />
       <Tools />
       {children}
     </>

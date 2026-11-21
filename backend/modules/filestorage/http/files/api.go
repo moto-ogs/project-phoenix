@@ -128,7 +128,7 @@ func idStrings(ids []int64) []string {
 
 // int64IDs unwraps a decoded share list. nil stays nil: "no list sent" and
 // "empty list sent" are different requests to the owner.
-func int64IDs(ids []common.JSONID) []int64 {
+func int64IDs(ids []common.ID) []int64 {
 	if ids == nil {
 		return nil
 	}

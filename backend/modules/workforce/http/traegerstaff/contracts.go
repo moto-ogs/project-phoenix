@@ -28,9 +28,9 @@ func (rs *RecordsResource) contractRoutes(staff chi.Router) {
 
 // SiteSollPayload is the Soll of one Einsatzort, Monday to Friday in minutes.
 type SiteSollPayload struct {
-	SchoolID       common.JSONID `json:"school_id"`
-	StaffID        common.JSONID `json:"staff_id"`
-	WeekdayMinutes []int         `json:"weekday_minutes"`
+	SchoolID       common.ID `json:"school_id"`
+	StaffID        common.ID `json:"staff_id"`
+	WeekdayMinutes []int     `json:"weekday_minutes"`
 }
 
 func sitesInput(sites []SiteSollPayload) []workforce.TraegerContractSiteSoll {
@@ -135,8 +135,8 @@ func (rs *RecordsResource) changeContractSoll(w http.ResponseWriter, r *http.Req
 }
 
 type HolidayWeeksRequest struct {
-	SchoolID       common.JSONID `json:"school_id"`
-	StaffID        common.JSONID `json:"staff_id"`
+	SchoolID       common.ID     `json:"school_id"`
+	StaffID        common.ID     `json:"staff_id"`
 	FromWeek       calendar.Date `json:"from_week"`
 	ToWeek         calendar.Date `json:"to_week"`
 	WeekdayMinutes []int         `json:"weekday_minutes"`

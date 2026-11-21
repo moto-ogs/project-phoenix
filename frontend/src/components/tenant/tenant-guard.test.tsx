@@ -87,31 +87,31 @@ import { TenantGuard } from "./tenant-guard";
 // ============================================================================
 
 const tenantA = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "school-a",
   name: "School A",
   subdomain: "school-a",
-  organizationId: 10,
+  organizationId: "10",
   organizationName: "Org Alpha",
   settings: {},
 };
 
 const tenantB = {
-  tenantId: 2,
+  tenantId: "2",
   slug: "school-b",
   name: "School B",
   subdomain: "school-b",
-  organizationId: 10,
+  organizationId: "10",
   organizationName: "Org Alpha",
   settings: {},
 };
 
 const tenantC = {
-  tenantId: 3,
+  tenantId: "3",
   slug: "school-c",
   name: "School C",
   subdomain: "school-c",
-  organizationId: 10,
+  organizationId: "10",
   organizationName: "Org Alpha",
   settings: {},
 };

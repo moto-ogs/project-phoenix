@@ -57,11 +57,11 @@ type RoleOption struct {
 }
 
 type grantAccountTenantAccessRequest struct {
-	SchoolID  common.ID     `json:"school_id"`
-	RoleID    common.JSONID `json:"role_id"`
-	FirstName string        `json:"first_name,omitempty"`
-	LastName  string        `json:"last_name,omitempty"`
-	Position  string        `json:"position,omitempty"`
+	SchoolID  common.ID `json:"school_id"`
+	RoleID    common.ID `json:"role_id"`
+	FirstName string    `json:"first_name,omitempty"`
+	LastName  string    `json:"last_name,omitempty"`
+	Position  string    `json:"position,omitempty"`
 }
 
 func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
@@ -78,7 +78,7 @@ func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
 }
 
 type updateAccountTenantRoleRequest struct {
-	RoleID common.JSONID `json:"role_id"`
+	RoleID common.ID `json:"role_id"`
 }
 
 func (req *updateAccountTenantRoleRequest) Bind(_ *http.Request) error {

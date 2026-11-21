@@ -230,7 +230,7 @@ async function loadShell(
     !session ||
     session.error ||
     (scope !== "" && scope !== "org") ||
-    session.user.tenantId !== tenant.tenantId
+    String(session.user.tenantId) !== tenant.tenantId
   ) {
     return null;
   }

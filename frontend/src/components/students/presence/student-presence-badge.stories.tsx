@@ -28,11 +28,11 @@ export const Detailed: Story = {
 };
 
 const binaryTenant: TenantInfo = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "storybook",
   name: "Storybook Schule",
   subdomain: "storybook",
-  organizationId: 1,
+  organizationId: "1",
   organizationName: "Storybook Org",
   settings: {},
   presenceMode: "binary",

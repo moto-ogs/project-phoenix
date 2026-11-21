@@ -118,7 +118,7 @@ function Page({ children }: Readonly<{ children?: ReactNode }>) {
         shouldRetryOnError: false,
       }}
     >
-      <SWRScopeBoundary expectedTenantId={1} />
+      <SWRScopeBoundary expectedTenantId="1" />
       {children}
     </SWRConfig>
   );

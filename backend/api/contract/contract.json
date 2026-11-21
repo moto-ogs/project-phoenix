@@ -7774,6 +7774,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/tenant/resolve",
+      "portals": [
+        "public"
+      ],
+      "query": [
+        {
+          "name": "slug",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TenantResolveResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/tenants",
       "portals": [
         "public"
@@ -44689,7 +44706,7 @@
           "name": "role_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -50978,7 +50995,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "lax_id"
+              "kind": "id"
             }
           }
         },
@@ -50989,7 +51006,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "lax_id"
+              "kind": "id"
             }
           }
         }
@@ -53782,7 +53799,7 @@
           "name": "school_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -59912,14 +59929,14 @@
           "name": "school_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -75043,7 +75060,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "lax_id"
+              "kind": "id"
             }
           }
         },
@@ -75058,7 +75075,7 @@
           "name": "absence_type_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -75684,7 +75701,7 @@
           "name": "role_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         }
@@ -75720,7 +75737,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "lax_id"
+              "kind": "id"
             }
           }
         }
@@ -85177,14 +85194,14 @@
           "name": "school_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -87851,7 +87868,7 @@
           "name": "person_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -88611,7 +88628,7 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -88619,7 +88636,7 @@
           "name": "type_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -93418,6 +93435,258 @@
         },
         {
           "name": "legal_remedy",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TenantResolveResponse",
+      "go_type": "account.TenantResolveResponse",
+      "fields": [
+        {
+          "name": "tenant_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "hidden",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "settings",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "presence_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_photos_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "booked_modules",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "parent_messaging_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "parent_message_card_badge_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "staff_messaging_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "display_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "caldav_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "grade_level_max",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "care_offerings_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "attendance_web_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "attendance_log_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "group_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "operational_overview_scope",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "attendance_edit_scope",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "parent_request_reason_policy",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "show_timetable_counts",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "timetable_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "meal_plan_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "meal_registration_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "waitlist_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "analytics_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "analytics_freigabe",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "analytics_recording_sample_percent",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "early_checkout_note_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "early_checkout_note_tolerance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "weekend_follows_friday",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "children_without_care_place",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "child_search_only_navigation",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "simple_staff_navigation",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger_name",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -100999,14 +101268,14 @@
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
           "name": "target_staff_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -101560,7 +101829,7 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -102626,7 +102895,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "lax_id"
+              "kind": "id"
             }
           }
         }
@@ -105437,7 +105706,7 @@
           "name": "role_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -107136,7 +107405,7 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         }
       ]
@@ -107966,7 +108235,7 @@
           "name": "role_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -108015,14 +108284,14 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
           "name": "target_staff_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -115653,7 +115922,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "lax_id"
+              "kind": "id"
             }
           }
         },
@@ -118449,7 +118718,7 @@
           "name": "role_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         }
       ]
@@ -119647,37 +119916,5 @@
         }
       ]
     }
-  ],
-  "numeric_ids": [
-    "account.CreateSchoolInvitationRequest.RoleID",
-    "account.ReplaceAccountRoleRequest.RoleID",
-    "account.ReplaceRolePermissionsRequest.PermissionIDs",
-    "careplanhttp.CompanionEntry.CompanionStudentID",
-    "files.FolderRequest.AccountIDs",
-    "files.FolderRequest.RoleIDs",
-    "operator.createSchoolAccountRequest.RoleID",
-    "operator.grantAccountTenantAccessRequest.RoleID",
-    "operator.updateAccountTenantRoleRequest.RoleID",
-    "staff.StaffRequest.PersonID",
-    "staffcalendarhttp.appointmentTargetRequest.ID",
-    "substitutions.additionalSupervisionRequest.ActiveGroupID",
-    "substitutions.additionalSupervisionRequest.TargetStaffID",
-    "substitutions.endRequest.ID",
-    "substitutions.groupHandoverRequest.GroupID",
-    "substitutions.groupHandoverRequest.TargetStaffID",
-    "timetablehttp.bulkCheckInRequest.StudentIDs",
-    "timetablehttp.spontaneousStartRequest.StaffIDs",
-    "timetracking.RebookAbsencesBody.AbsenceIDs",
-    "timetracking.RebookAbsencesBody.AbsenceTypeID",
-    "timetracking.StammdatenQualificationPayload.ID",
-    "timetracking.StammdatenQualificationPayload.TypeID",
-    "traegerstaff.HireSite.SchoolID",
-    "traegerstaff.HolidayWeeksRequest.SchoolID",
-    "traegerstaff.HolidayWeeksRequest.StaffID",
-    "traegerstaff.SiteSollPayload.SchoolID",
-    "traegerstaff.SiteSollPayload.StaffID",
-    "workforce.BreakDurationUpdate.ID",
-    "workforce.CreateAbsenceRequest.AbsenceTypeID",
-    "workforce.UpdateAbsenceRequest.AbsenceTypeID"
   ]
 }

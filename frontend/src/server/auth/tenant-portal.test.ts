@@ -41,7 +41,7 @@ vi.mock("next-auth", () => ({
 vi.mock("~/lib/tenant-resolve.server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/tenant-resolve.server")>()),
   resolveTenantCached: async (slug: string) => ({
-    tenant_id: slug === "schule-a" ? 1 : 2,
+    tenant_id: slug === "schule-a" ? "1" : "2",
   }),
 }));
 

@@ -20,6 +20,7 @@ import { routes as authPermissions } from "./auth-permissions.generated";
 import { routes as authRegister } from "./auth-register.generated";
 import { routes as authRoles } from "./auth-roles.generated";
 import { routes as authStaffPreview } from "./auth-staff-preview.generated";
+import { routes as authTenant } from "./auth-tenant.generated";
 import { routes as authTenants } from "./auth-tenants.generated";
 import { routes as birthdays } from "./birthdays.generated";
 import { routes as calendar } from "./calendar.generated";
@@ -813,6 +814,7 @@ export const portalRoutes = {
     authInvitations["GET /auth/invitations/{token}"],
     authPasswordReset["POST /auth/password-reset"],
     authPasswordReset["POST /auth/password-reset/confirm"],
+    authTenant["GET /auth/tenant/resolve"],
     authTenants["GET /auth/tenants"],
     catererAuth["POST /caterer/auth/password-reset"],
     catererAuth["POST /caterer/auth/password-reset/confirm"],

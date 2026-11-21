@@ -45,6 +45,8 @@ test("every change that breaks a reader of the base is named", () => {
   assert.ok(breakingChanges(named, base).includes("GET /api/rows/[].name: enum became string"));
   const stringBase = model([field("id", "id")]);
   assert.deepEqual(breakingChanges(stringBase, model([field("id", "legacy_id")])), ["GET /api/rows/[].id: id became legacy_id"]);
+  assert.deepEqual(breakingChanges(model([field("id", "lax_id")]), stringBase), [], "a lax reader may become a strict identifier");
+  assert.deepEqual(breakingChanges(stringBase, model([field("id", "lax_id")])), ["GET /api/rows/[].id: id became lax_id"]);
 });
 
 test("a deprecated route may leave and a variant may not", () => {

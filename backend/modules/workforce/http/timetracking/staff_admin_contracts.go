@@ -70,11 +70,11 @@ type PayrollNumberBody struct {
 // RebookAbsencesBody describes the body workforce.RebookAbsencesRequest
 // reads: the identifiers as JSON numbers or decimal strings.
 type RebookAbsencesBody struct {
-	AbsenceIDs    []common.JSONID `json:"absence_ids"`
-	AbsenceType   string          `json:"absence_type"`
-	AbsenceTypeID *common.JSONID  `json:"absence_type_id"`
-	Reason        string          `json:"reason"`
-	DryRun        bool            `json:"dry_run"`
+	AbsenceIDs    []common.ID `json:"absence_ids"`
+	AbsenceType   string      `json:"absence_type"`
+	AbsenceTypeID *common.ID  `json:"absence_type_id"`
+	Reason        string      `json:"reason"`
+	DryRun        bool        `json:"dry_run"`
 }
 
 // StaffAdminRouteContracts registers the typed contract of the workforce

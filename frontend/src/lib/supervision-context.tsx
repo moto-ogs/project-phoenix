@@ -214,7 +214,10 @@ export function SupervisionProvider({
   // nothing is fetched, and the generation discards answers that were already
   // under way when the school changed.
   const tenantContext = useTenantSafe();
-  const sessionTenantId = session?.user?.tenantId;
+  // The session claim is a number, the page's school a string (#2342).
+  const sessionClaim = session?.user?.tenantId;
+  const sessionTenantId =
+    sessionClaim === undefined ? undefined : String(sessionClaim);
   const urlTenantSlug = tenantContext?.tenantSlug;
   const urlTenantRoutingMode = tenantContext?.routingMode;
   const urlTenantId = tenantContext?.tenant?.tenantId;

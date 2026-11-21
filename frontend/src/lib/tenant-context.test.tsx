@@ -54,13 +54,13 @@ import {
 // ============================================================================
 
 const mockTenant: TenantInfo = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "demo-school",
   name: "Demo School",
   // The provider's tenantSlug prop is the URL segment, which is the
   // school's SUBDOMAIN — keep the fixture consistent with that (#1975).
   subdomain: "demo-school",
-  organizationId: 10,
+  organizationId: "10",
   organizationName: "Org A",
   settings: {},
   presenceMode: "detailed",

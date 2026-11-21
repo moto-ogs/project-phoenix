@@ -22,11 +22,11 @@ function makeTenant(
   groupMode: "fixed_groups" | "open_care" = "fixed_groups",
 ): TenantInfo {
   return {
-    tenantId: 1,
+    tenantId: "1",
     slug: "demo",
     name: "Demo",
     subdomain: "demo",
-    organizationId: 10,
+    organizationId: "10",
     organizationName: "Org",
     settings: {},
     presenceMode: "detailed",

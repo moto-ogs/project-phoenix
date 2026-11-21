@@ -13,7 +13,6 @@ func checkedDocument() (Document, Route) {
 	doc := Document{Types: []Object{
 		{Name: "Row", GoType: "rows.Row", Fields: []Field{
 			{Name: "id", Schema: Schema{Kind: KindID}},
-			{Name: "legacy", Schema: Schema{Kind: KindLegacyID}},
 			{Name: "count", Schema: Schema{Kind: KindInt}},
 			{Name: "day", Schema: Schema{Kind: KindDate, Nullable: true}},
 			{Name: "at", Schema: Schema{Kind: KindInstant}},
@@ -28,7 +27,7 @@ func checkedDocument() (Document, Route) {
 	return doc, Route{Method: "GET", Pattern: "/api/rows/", Response: &response}
 }
 
-const checkedRow = `{"id":"7","legacy":8,"count":2,"day":"2026-09-09","at":"2026-09-09T12:00:00+02:00","pickup":"15:30","tags":["a"],"children":[],"by_day":{"mon":true},"old":{"is_absent":true},"extra":1}`
+const checkedRow = `{"id":"7","count":2,"day":"2026-09-09","at":"2026-09-09T12:00:00+02:00","pickup":"15:30","tags":["a"],"children":[],"by_day":{"mon":true},"old":{"is_absent":true},"extra":1}`
 
 func TestViolationsAcceptsWhatTheDecoderReads(t *testing.T) {
 	t.Parallel()
@@ -36,9 +35,9 @@ func TestViolationsAcceptsWhatTheDecoderReads(t *testing.T) {
 	for name, body := range map[string]string{
 		"a filled row with a key the contract does not name": `{"status":"success","data":[` + checkedRow + `],"message":"ok"}`,
 		"an empty list": `{"status":"success","data":[]}`,
-		"null where nullable, absent where optional":   `{"status":"success","data":[{"id":"7","legacy":"8","count":0,"day":null,"at":"2026-09-09T10:00:00.123456789Z","tags":null,"by_day":null}]}`,
-		"a raw value of any shape":                     `{"status":"success","data":[{"id":"7","legacy":8,"count":0,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{},"old":"text"}]}`,
-		"a legacy identifier that is already a string": `{"status":"success","data":[{"id":"-7","legacy":"9007199254740993","count":0,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{}}]}`,
+		"null where nullable, absent where optional": `{"status":"success","data":[{"id":"7","count":0,"day":null,"at":"2026-09-09T10:00:00.123456789Z","tags":null,"by_day":null}]}`,
+		"a raw value of any shape":                   `{"status":"success","data":[{"id":"7","count":0,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{},"old":"text"}]}`,
+		"an identifier beyond 2^53 as a string":      `{"status":"success","data":[{"id":"9007199254740993","count":0,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{}}]}`,
 	} {
 		assert.Emptyf(t, doc.Violations(route, Answer{Status: 200, Body: []byte(body)}), name)
 	}
@@ -48,7 +47,7 @@ func TestViolationsNamesWhatTheDecoderRefuses(t *testing.T) {
 	t.Parallel()
 	doc, route := checkedDocument()
 	row := func(change string) string {
-		return `{"status":"success","data":[{"id":"7","legacy":8,"count":2,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{}` + change + `}]}`
+		return `{"status":"success","data":[{"id":"7","count":2,"day":null,"at":"2026-09-09T10:00:00Z","tags":[],"by_day":{}` + change + `}]}`
 	}
 	for body, want := range map[string]string{
 		`[]`:                               "the body is not a JSON object",
@@ -57,7 +56,7 @@ func TestViolationsNamesWhatTheDecoderRefuses(t *testing.T) {
 		`{"status":"success","data":null}`: "data: null where the contract names no null",
 		`{"status":"success","data":{}}`:   "data: want an array",
 		row(`,"id":7`):                     "data[0].id: want an identifier as a decimal string",
-		row(`,"legacy":9007199254740993`):  "data[0].legacy: want an identifier as a safe integer or a decimal string",
+		row(`,"id":9007199254740993`):      "data[0].id: want an identifier as a decimal string",
 		row(`,"count":1.5`):                "data[0].count: want a safe integer",
 		row(`,"day":""`):                   "data[0].day: want a day as YYYY-MM-DD",
 		row(`,"day":"2026-02-30"`):         "data[0].day: want a day as YYYY-MM-DD",

@@ -72,18 +72,18 @@ or write a `Backend*` interface for a registered route.
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
-- A new identifier is a `common.ID`, a count an `int`; the generator rejects a
-  bare `int64` and a response shape that depends on a query parameter.
-  The fields that travel as numeric identifiers (`numeric_ids` in
-  `contract.json`: `NumericIDs`, `ReadsLaxIDs` readers, `common.JSONID`) and
-  the backend routes without a contract only shrink:
+- An identifier is a `common.ID` (`ident.ID` outside `http` roles), a count
+  an `int`; the generator rejects a bare `int64` and a response shape that
+  depends on a query parameter. Every answer sends identifiers as strings,
+  and the generated decoder (`int64String`) takes nothing else (ADR 0300).
+  The backend routes without a contract only shrink:
   `scripts/check-contract-shrink.mjs <base>` fails on a new one. A route the contract cannot carry
   (a sign-in step, a device or webhook endpoint) needs a new ADR that names
   its catalog line.
-- In a request type an identifier is a `string`, except a field Go still
-  reads only as a JSON number (`NumericIDs`): that one is a `number`. A
-  request type with its own `UnmarshalJSON` needs an entry in `Readers`
-  (`backend/api/route_contracts.go`), or the generator stops.
+- In a request type an identifier is a `string`; Go still reads a JSON number
+  there. A request type with its own `UnmarshalJSON` needs an entry in
+  `Readers` (`backend/api/route_contracts.go`), or the generator stops;
+  `ReadsLaxIDs` is for a request only.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
   `scripts/check-contract-compat.mjs <base>` fails otherwise.
@@ -178,8 +178,7 @@ The key is the scope claim of the portal's session token
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
   exactly those two answers, and the BFF answers `{ status: "success",
   data: null }` with the backend's message (a DELETE: 204).
-- An identifier in `NumericIDs` leaves the proxy as a string, whatever Go
-  sends. A client type for such a route reads `string`, never `number`.
+- A client type reads an identifier as `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
 

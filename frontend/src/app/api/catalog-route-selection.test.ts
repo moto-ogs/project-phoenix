@@ -41,6 +41,7 @@ const HAND_OFFS: Record<string, SessionPortal> = {
   "/api/auth/guardian-invitations/[...path]": "tenant",
   "/api/auth/holiday-parent-setups/[...path]": "tenant",
   "/api/auth/tenants": "tenant",
+  "/api/auth/tenant/resolve": "tenant",
   "/api/auth/roles/[[...path]]": "tenant",
   "/api/auth/permissions/[[...path]]": "tenant",
   "/api/auth/accounts/[accountId]/[...path]": "tenant",
