@@ -4,8 +4,13 @@
 // period covering a candidate date, materialization silently no-ops. They
 // also drive A/B week resolution via week_cycle_length + week_cycle_anchor.
 //
-// Backend reference: backend/models/schedule/calendar_period.go,
-// backend/api/timetable/api.go (CalendarPeriodRequest / Response).
+// Wire shape: CalendarPeriodResponse in lib/contract/timetable.generated.ts.
+
+import { knownEnum } from "./contract/known-enum";
+import type {
+  CalendarPeriodResponse,
+  PeriodWarning,
+} from "./contract/timetable.generated";
 
 export type PeriodType = "school_year" | "semester" | "holiday" | "custom";
 
@@ -28,13 +33,6 @@ export const PERIOD_TYPE_LABELS: Record<PeriodType, string> = {
  * saved period overlaps other active periods. Advisory only — the save
  * has already succeeded when warnings arrive.
  */
-export interface BackendCalendarPeriodWarning {
-  code: "overlapping_active_periods" | (string & {});
-  message: string;
-  overlapping_period_ids?: (number | string)[];
-  overlapping_period_names?: string[];
-}
-
 export interface CalendarPeriodWarning {
   code: "overlapping_active_periods" | (string & {});
   message: string;
@@ -42,36 +40,9 @@ export interface CalendarPeriodWarning {
   overlappingPeriodNames: string[];
 }
 
-/** Backend wire shape (snake_case, int64 IDs). */
-export interface BackendCalendarPeriod {
-  id: number | string;
-  tenant_id: number | string;
-  name: string;
-  period_type: PeriodType;
-  start_date: string; // YYYY-MM-DD
-  end_date: string; // YYYY-MM-DD
-  week_cycle_length: number;
-  week_cycle_anchor?: string | null; // YYYY-MM-DD
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  /** Only present on create/update responses. */
-  warnings?: BackendCalendarPeriodWarning[] | null;
-  /** Advisory reference counts used for usage and delete-impact copy. */
-  enrollment_phase_count?: number;
-  activity_group_count?: number;
-  schedule_count?: number;
-  student_enrollment_count?: number;
-  supervisor_count?: number;
-  activity_instance_count?: number;
-  /** Dienstplan series planned in the period; they block its deletion. */
-  staff_shift_series_count?: number;
-}
-
 /** Frontend shape (camelCase, string IDs). */
 export interface CalendarPeriod {
   id: string;
-  tenantId: string;
   name: string;
   periodType: PeriodType;
   startDate: string; // YYYY-MM-DD
@@ -115,12 +86,11 @@ export interface CalendarPeriodInput {
   is_active: boolean;
 }
 
-export function mapPeriod(raw: BackendCalendarPeriod): CalendarPeriod {
+export function mapPeriod(raw: CalendarPeriodResponse): CalendarPeriod {
   return {
-    id: String(raw.id),
-    tenantId: String(raw.tenant_id),
+    id: raw.id,
     name: raw.name,
-    periodType: raw.period_type,
+    periodType: knownEnum(PERIOD_TYPES, raw.period_type) ?? "custom",
     startDate: raw.start_date,
     endDate: raw.end_date,
     weekCycleLength: raw.week_cycle_length,
@@ -128,27 +98,27 @@ export function mapPeriod(raw: BackendCalendarPeriod): CalendarPeriod {
     isActive: raw.is_active,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
-    enrollmentPhaseCount: raw.enrollment_phase_count ?? 0,
-    activityGroupCount: raw.activity_group_count ?? 0,
-    scheduleCount: raw.schedule_count ?? 0,
-    studentEnrollmentCount: raw.student_enrollment_count ?? 0,
-    supervisorCount: raw.supervisor_count ?? 0,
-    activityInstanceCount: raw.activity_instance_count ?? 0,
-    staffShiftSeriesCount: raw.staff_shift_series_count ?? 0,
+    enrollmentPhaseCount: raw.enrollment_phase_count,
+    activityGroupCount: raw.activity_group_count,
+    scheduleCount: raw.schedule_count,
+    studentEnrollmentCount: raw.student_enrollment_count,
+    supervisorCount: raw.supervisor_count,
+    activityInstanceCount: raw.activity_instance_count,
+    staffShiftSeriesCount: raw.staff_shift_series_count,
   };
 }
 
-export function mapPeriods(raw: BackendCalendarPeriod[]): CalendarPeriod[] {
+export function mapPeriods(raw: CalendarPeriodResponse[]): CalendarPeriod[] {
   return raw.map(mapPeriod);
 }
 
 export function mapPeriodWarnings(
-  raw: BackendCalendarPeriodWarning[] | null | undefined,
+  raw: PeriodWarning[] | null | undefined,
 ): CalendarPeriodWarning[] {
   return (raw ?? []).map((warning) => ({
     code: warning.code,
     message: warning.message,
-    overlappingPeriodIds: (warning.overlapping_period_ids ?? []).map(String),
+    overlappingPeriodIds: warning.overlapping_period_ids ?? [],
     overlappingPeriodNames: warning.overlapping_period_names ?? [],
   }));
 }
@@ -160,7 +130,7 @@ export interface CalendarPeriodSaveResult {
 }
 
 export function mapPeriodWithWarnings(
-  raw: BackendCalendarPeriod,
+  raw: CalendarPeriodResponse,
 ): CalendarPeriodSaveResult {
   return {
     period: mapPeriod(raw),

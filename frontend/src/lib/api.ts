@@ -6,7 +6,6 @@ import {
 } from "./api-error";
 import { clearSessionCache, getCachedSession } from "./session-cache";
 import { createLogger } from "~/lib/logger";
-import api from "./api-transport";
 import { fetchWithRetry } from "./api-helpers";
 import { mapGroupsResponse } from "./group-helpers";
 
@@ -18,19 +17,6 @@ import { handleAuthFailure } from "./auth-failure";
 
 // Logger instance for API client
 const logger = createLogger({ component: "ApiClient" });
-
-// Paginated response interface for API responses with pagination metadata
-interface PaginatedResponse<T> {
-  status: string;
-  data: T[];
-  pagination: {
-    current_page: number;
-    page_size: number;
-    total_pages: number;
-    total_records: number;
-  };
-  message?: string;
-}
 
 /**
  * Headers for the raw fetch() call sites in the services below. The BFF
@@ -181,36 +167,26 @@ export const groupService = {
     if (filters?.pageSize !== undefined)
       params.set("page_size", String(filters.pageSize));
 
-    const useProxyApi = globalThis.window !== undefined;
     const queryString = params.toString();
     const baseUrl = "/api/groups";
     const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
     try {
-      if (useProxyApi) {
-        // Browser environment: use fetchWithRetry for automatic 401 handling
-        const { response, data, accessDeniedStatus, accessDeniedBody } =
-          await fetchWithRetry<unknown>(url, {
-            onAuthFailure: handleAuthFailure,
-            beforeRetry: reloadSession,
-          });
+      const { response, data, accessDeniedStatus, accessDeniedBody } =
+        await fetchWithRetry<unknown>(url, {
+          onAuthFailure: handleAuthFailure,
+          beforeRetry: reloadSession,
+        });
 
-        // Handle errors: null response means auth failed or permission denied
-        // Return empty array for graceful degradation
-        if (response === null || data === null) {
-          if (options?.strict)
-            throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
-          return [];
-        }
-
-        return mapGroupsResponse(parseGroupsResponse(data));
+      // Handle errors: null response means auth failed or permission denied
+      // Return empty array for graceful degradation
+      if (response === null || data === null) {
+        if (options?.strict)
+          throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
+        return [];
       }
 
-      // Server-side: use axios with the API URL directly
-      const response = await api.get(url, { params });
-      const paginatedResponse =
-        response.data as PaginatedResponse<BackendGroup>;
-      return mapGroupsResponse(paginatedResponse.data);
+      return mapGroupsResponse(parseGroupsResponse(data));
     } catch (error) {
       logger.error("failed to fetch groups", {
         error: error instanceof Error ? error.message : String(error),
@@ -239,31 +215,21 @@ export const roomService = {
     const params = buildRoomQueryParams(filters);
     const queryString = params.toString();
 
-    const useProxyApi = globalThis.window !== undefined;
     const baseUrl = "/api/rooms";
     const url = queryString ? `${baseUrl}?${queryString}` : baseUrl;
 
     try {
-      if (useProxyApi) {
-        // Browser environment: use fetchWithRetry for automatic 401 handling
-        const { response, data, accessDeniedStatus, accessDeniedBody } =
-          await fetchWithRetry<unknown>(url, {
-            onAuthFailure: handleAuthFailure,
-            beforeRetry: reloadSession,
-          });
+      const { response, data, accessDeniedStatus, accessDeniedBody } =
+        await fetchWithRetry<unknown>(url, {
+          onAuthFailure: handleAuthFailure,
+          beforeRetry: reloadSession,
+        });
 
-        if (options?.strict && (response === null || data === null)) {
-          throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
-        }
-
-        const rooms = parseRoomsResponse(data);
-        return mapRoomsResponse(rooms);
+      if (options?.strict && (response === null || data === null)) {
+        throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
       }
 
-      // Server-side: use axios with the API URL directly
-      const response = await api.get(url, { params });
-      const rooms = parseRoomsResponse(response.data);
-      return mapRoomsResponse(rooms);
+      return mapRoomsResponse(parseRoomsResponse(data));
     } catch (error) {
       logger.error("failed to fetch rooms", {
         error: error instanceof Error ? error.message : String(error),
@@ -274,37 +240,27 @@ export const roomService = {
 
   // Delete a room
   deleteRoom: async (id: string): Promise<void> => {
-    const useProxyApi = globalThis.window !== undefined;
     const url = `/api/rooms/${id}`;
 
     try {
-      if (useProxyApi) {
-        // Browser environment: use fetch with our Next.js API route
-        const response = await transportFetch(url, {
-          method: "DELETE",
-          credentials: "include",
-          headers: JSON_HEADERS,
+      const response = await transportFetch(url, {
+        method: "DELETE",
+        credentials: "include",
+        headers: JSON_HEADERS,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error("api error during fetch", {
+          status: response.status,
+          error_text: errorText.substring(0, 200), // Truncate long errors
         });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error("api error during fetch", {
-            status: response.status,
-            error_text: errorText.substring(0, 200), // Truncate long errors
-          });
-          // Code, Feldfehler und Vorgangskennung bleiben erhalten (#2517).
-          throw apiErrorFromText(
-            `API error: ${response.status}`,
-            response.status,
-            errorText,
-          );
-        }
-
-        return;
-      } else {
-        // Server-side: use axios with the API URL directly
-        await api.delete(url);
-        return;
+        // Code, Feldfehler und Vorgangskennung bleiben erhalten (#2517).
+        throw apiErrorFromText(
+          `API error: ${response.status}`,
+          response.status,
+          errorText,
+        );
       }
     } catch (error) {
       logger.error("failed to delete room", {
@@ -315,5 +271,3 @@ export const roomService = {
     }
   },
 };
-
-export default api;

@@ -56,7 +56,7 @@ function SepaCreditorModal({
 }>) {
   const [creditorId, setCreditorId] = useState(creditor.creditorId);
   const [days, setDays] = useState(String(creditor.prenotificationDays));
-  const [missing, setMissing] = useState<MissingMandate>(
+  const [missing, setMissing] = useState<MissingMandate | undefined>(
     creditor.missingMandate,
   );
   const save = useFormModalPending(open);
@@ -90,6 +90,13 @@ function SepaCreditorModal({
     }
     if (Object.keys(fields).length > 0) {
       formErrors.invalid("Bitte prüfe deine Angaben.", fields);
+      return;
+    }
+    if (missing === undefined) {
+      formErrors.invalid(
+        "Bitte wähle aus, was ohne gültiges Mandat passiert.",
+        {},
+      );
       return;
     }
     await save.run(async (op) => {
@@ -269,7 +276,9 @@ export function SepaCreditorCard({
           </span>
         </DataField>
         <DataField label="Ohne gültiges Mandat" fullWidth>
-          {MISSING_MANDATE_LABELS[creditor.missingMandate]}
+          {creditor.missingMandate
+            ? MISSING_MANDATE_LABELS[creditor.missingMandate]
+            : "–"}
         </DataField>
         {onlineMandate === undefined || onlineMandate === null ? null : (
           <DataField label="Mandat in der Eltern-App" fullWidth>

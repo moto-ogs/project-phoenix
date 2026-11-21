@@ -21,12 +21,6 @@ vi.mock("next-auth/react", () => ({
   ),
 }));
 
-vi.mock("./api", () => ({
-  default: {
-    get: vi.fn(),
-  },
-}));
-
 vi.mock("./fetch-with-auth", () => ({
   fetchWithAuth: vi.fn(),
 }));
