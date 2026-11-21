@@ -20,9 +20,12 @@ import (
 // the new menu. Like every realtime event it is lossy; the overview also
 // reconciles on focus and after a reconnect. Without a broadcaster it sends
 // nothing.
-func mealPlanChangeSignal(changes realtime.Broadcaster) mealplanAPI.Middleware {
+func mealPlanChangeSignal(changes realtime.Broadcaster, logger *slog.Logger) mealplanAPI.Middleware {
 	if changes == nil {
 		return nil
+	}
+	if logger == nil {
+		logger = slog.Default()
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +37,7 @@ func mealPlanChangeSignal(changes realtime.Broadcaster) mealplanAPI.Middleware {
 			}
 			event := realtime.NewEvent(realtime.EventMealPlanChanged, "", realtime.EventData{})
 			if err := changes.BroadcastToTenant(tenantID, event); err != nil {
-				slog.WarnContext(r.Context(), "SSE meal plan broadcast failed",
+				logger.WarnContext(r.Context(), "SSE meal plan broadcast failed",
 					slog.Int64("tenant_id", tenantID),
 					slog.String("error", err.Error()),
 				)

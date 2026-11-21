@@ -64,7 +64,8 @@ func TestDayChangesMealPlanSource(t *testing.T) {
 		count, content := rig.Signals()
 		assert.Equal(t, 2, count, "one signal per committed save of a day")
 		assert.False(t, content, "the signal carries nothing")
-		assert.NotEqual(t, http.StatusOK, save(kitchen.ID, tenantID, day.AddDays(3).String(), `{"dish":"Samstag"}`))
+		assert.Equal(t, http.StatusBadRequest, save(kitchen.ID, tenantID, day.AddDays(3).String(), `{"dish":"Samstag"}`),
+			"the meal plan has no Saturday")
 		count, _ = rig.Signals()
 		assert.Zero(t, count, "a refused save sends no signal")
 	})

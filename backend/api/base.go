@@ -25,7 +25,6 @@ import (
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	"github.com/moto-ogs/project-phoenix/observability"
-	"github.com/moto-ogs/project-phoenix/realtime"
 )
 
 // recordHTTPRuntimeEvent turns one runtime event into a metric and, for
@@ -106,7 +105,7 @@ func renderMealPlanFailure(w http.ResponseWriter, r *http.Request, err error, in
 	apiCommon.RenderError(w, r, renderer(err))
 }
 
-func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer, changes realtime.Broadcaster) *mealplanAPI.Resource {
+func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer, menuChanged mealplanAPI.Middleware) *mealplanAPI.Resource {
 	return mealplanAPI.NewResource(module, mealplanAPI.Runtime{
 		Protected: func(router chi.Router, register func(chi.Router, mealplanAPI.Middleware)) {
 			ProtectedTenantRoutes(router, register)
@@ -127,7 +126,7 @@ func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRe
 		},
 		CurrentAccountID: func(ctx context.Context) int64 { return int64(sessiontoken.ClaimsFromCtx(ctx).ID) },
 		Allowed:          mealPlanAllowed,
-		MenuChanged:      mealPlanChangeSignal(changes),
+		MenuChanged:      menuChanged,
 	})
 }
 

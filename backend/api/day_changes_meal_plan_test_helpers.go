@@ -49,7 +49,7 @@ func NewDayChangesMealPlanTestRig(db transactionruntime.Database, unit tenant.Un
 	connection := &realtime.Client{Channel: make(chan realtime.Event, 64), SubscribedGroups: map[string]bool{}}
 	router := chi.NewRouter()
 	router.Use(RequestIdentityCacheMiddleware)
-	router.Mount("/api/meal-plan", newMealPlanResource(meals, newMealPlanExportRenderer(), hub).Router())
+	router.Mount("/api/meal-plan", newMealPlanResource(meals, newMealPlanExportRenderer(), mealPlanChangeSignal(hub, slog.Default())).Router())
 	return DayChangesMealPlanTestRig{
 		Router: router,
 		Enable: func(ctx context.Context) error {
