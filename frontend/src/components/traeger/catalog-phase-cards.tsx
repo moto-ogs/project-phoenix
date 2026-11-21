@@ -94,7 +94,9 @@ export function CatalogSchoolsCard({
       key: "outcome",
       header: "Letztes Übertragen",
       render: (standing) => (
-        <StatusBadge {...outcomeBadge(standing.row?.outcome ?? null)} />
+        <StatusBadge
+          {...outcomeBadge(standing.row ? standing.row.outcome : null)}
+        />
       ),
       stacked: "meta",
     },

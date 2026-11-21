@@ -67,8 +67,17 @@ function formatInstant(instant: string): string {
   return `${formatBerlinDate(instant)}, ${formatBerlinTime(instant)}`;
 }
 
-/** Das letzte Ergebnis einer Schule, für die Spalte „Stand“. */
-export function outcomeBadge(outcome: TraegerCatalogOutcome | null): Badge {
+/** Kein bekannter Wert: ein neuer Wert des Backends, den diese Seite nicht kennt. */
+const UNKNOWN_BADGE: Badge = { label: "–", tone: "gray" };
+
+/**
+ * Das letzte Ergebnis einer Schule, für die Spalte „Stand“. null heißt noch
+ * nicht übertragen, undefined ein unbekannter Wert.
+ */
+export function outcomeBadge(
+  outcome: TraegerCatalogOutcome | null | undefined,
+): Badge {
+  if (outcome === undefined) return UNKNOWN_BADGE;
   switch (outcome) {
     case "applied":
       return { label: "Übernommen", tone: "green" };
@@ -84,7 +93,7 @@ export function outcomeBadge(outcome: TraegerCatalogOutcome | null): Badge {
 }
 
 /** Was das Übertragen an einer Schule tut, für die Vorschau. */
-export function actionBadge(action: TraegerCatalogAction): Badge {
+export function actionBadge(action: TraegerCatalogAction | undefined): Badge {
   switch (action) {
     case "create":
       return { label: "Wird neu angelegt", tone: "blue" };
@@ -92,6 +101,8 @@ export function actionBadge(action: TraegerCatalogAction): Badge {
       return { label: "Wird geändert", tone: "green" };
     case "withdraw":
       return { label: "Wird zurückgezogen", tone: "gray" };
+    default:
+      return UNKNOWN_BADGE;
   }
 }
 
@@ -111,7 +122,7 @@ function sameJSON(left: unknown, right: unknown): boolean {
 /** A school still holds a copy that the next rollout withdraws. */
 function holdsCopy(school: {
   appliedVersion: number | null;
-  outcome: TraegerCatalogOutcome | null;
+  outcome: TraegerCatalogOutcome | null | undefined;
 }): boolean {
   return school.appliedVersion !== null && school.outcome !== "withdrawn";
 }

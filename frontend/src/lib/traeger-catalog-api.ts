@@ -14,8 +14,22 @@ import type {
   PhaseKind,
 } from "./enrollment-phase-api";
 import type { CareSelectionRule, DaysOfWeekMode } from "./care-offering-api";
-import type { CareWeekday } from "./traeger-care-billing-api";
-import type { TemplateInput } from "./contract/traeger-contracts.generated";
+import { knownEnum, requiredEnum } from "./contract/known-enum";
+import type {
+  TraegerFieldChange as FieldChangeWire,
+  OfferingRequest,
+  TraegerOfferingDraft as OfferingDraftWire,
+  TraegerOfferingFields as OfferingFieldsWire,
+  TraegerOffering as OfferingWire,
+  PhaseDetail,
+  PhaseRequest,
+  TraegerPhaseFields as PhaseFieldsWire,
+  TraegerPhase as PhaseWire,
+  Preview,
+  Rollout,
+  RolloutRequest,
+} from "./contract/traeger-catalog.generated";
+import { CARE_WEEKDAYS, type CareWeekday } from "./traeger-care-billing-api";
 import {
   type ContractTerms,
   termsFromBackend,
@@ -36,8 +50,12 @@ export type TraegerCatalogAction = "create" | "update" | "withdraw";
  */
 type TraegerFieldState = "new" | "changes" | "keeps" | "unchanged";
 
+/** Whether a school can take the plan over. */
+type TraegerPlanOutcome = "ready" | "rejected";
+
 export interface TraegerPhaseFields {
-  readonly isActive?: boolean;
+  /** Go reads a missing flag as active; false keeps the draft switched off. */
+  readonly isActive?: boolean | undefined;
   readonly name: string;
   readonly kind: PhaseKind;
   /** YYYY-MM-DD */
@@ -64,13 +82,15 @@ export interface TraegerCatalogSchool {
   /** Gehört zur Auswahl der Phase. */
   readonly selected: boolean;
   readonly appliedVersion: number | null;
-  readonly outcome: TraegerCatalogOutcome | null;
+  /** null: not rolled out yet; undefined: a value this build does not know. */
+  readonly outcome: TraegerCatalogOutcome | null | undefined;
   readonly errorCode: string | null;
   readonly recordedAt: string | null;
 }
 
 export interface TraegerOfferingFields {
-  readonly isActive?: boolean;
+  /** Go reads a missing flag as active; false keeps the draft switched off. */
+  readonly isActive?: boolean | undefined;
   readonly name: string;
   readonly description: string | null;
   readonly daysOfWeekMode: DaysOfWeekMode;
@@ -108,7 +128,7 @@ export interface TraegerOfferingDraft {
 interface TraegerOfferingSchool {
   readonly schoolId: string;
   readonly appliedVersion: number | null;
-  readonly outcome: TraegerCatalogOutcome | null;
+  readonly outcome: TraegerCatalogOutcome | null | undefined;
   readonly errorCode: string | null;
 }
 
@@ -140,7 +160,8 @@ export interface TraegerPhaseDetail extends TraegerPhase {
 export interface TraegerFieldChange {
   /** Spalte der Kopie, etwa "name" oder "is_active". */
   readonly field: string;
-  readonly state: TraegerFieldState;
+  /** undefined: a state this build does not know; the preview hides it. */
+  readonly state: TraegerFieldState | undefined;
   readonly traeger: unknown;
   readonly school: unknown;
 }
@@ -148,7 +169,7 @@ export interface TraegerFieldChange {
 export interface TraegerOfferingPlan {
   readonly traegerOfferingId: string;
   readonly name: string;
-  readonly action: TraegerCatalogAction;
+  readonly action: TraegerCatalogAction | undefined;
   readonly fields: readonly TraegerFieldChange[];
   /** Ab diesem Tag (Monatsbeginn) gelten neue Preise; null = keine neuen. */
   readonly pricesFrom: string | null;
@@ -158,8 +179,9 @@ export interface TraegerOfferingPlan {
 
 export interface TraegerSchoolPlan {
   readonly schoolId: string;
-  readonly action: TraegerCatalogAction;
-  readonly outcome: "ready" | "rejected";
+  readonly action: TraegerCatalogAction | undefined;
+  /** undefined: unknown, so neither ready nor refused. */
+  readonly outcome: TraegerPlanOutcome | undefined;
   readonly errorCode: string | null;
   readonly phase: readonly TraegerFieldChange[];
   readonly offerings: readonly TraegerOfferingPlan[];
@@ -176,7 +198,7 @@ export interface TraegerCatalogPreview {
 
 interface TraegerRolloutSchool {
   readonly schoolId: string;
-  readonly outcome: TraegerCatalogOutcome;
+  readonly outcome: TraegerCatalogOutcome | undefined;
   readonly errorCode: string | null;
   readonly careBeyondEnd: number;
 }
@@ -187,222 +209,179 @@ export interface TraegerRollout {
   readonly schools: readonly TraegerRolloutSchool[];
 }
 
-// --- Backend shapes ----------------------------------------------------------
-
-interface BackendPhaseFields {
-  is_active?: boolean;
-  name: string;
-  kind: PhaseKind;
-  service_start_date: string;
-  service_end_date: string;
-  enrollment_open_at?: string | null;
-  enrollment_close_at?: string | null;
-  audience?: PhaseAudience | "";
-  care_overflow_mode?: PhaseCareOverflowMode | "";
-  care_offering_selection_mode?: CareOfferingSelectionMode | "";
-}
-
-interface BackendCatalogSchool {
-  school_id: number;
-  selected: boolean;
-  applied_version?: number | null;
-  outcome?: TraegerCatalogOutcome | "";
-  error_code?: string;
-  recorded_at?: string | null;
-}
-
-interface BackendOfferingFields {
-  is_active?: boolean;
-  name: string;
-  description?: string | null;
-  days_of_week_mode: DaysOfWeekMode;
-  available_days?: CareWeekday[] | null;
-  includes_holiday_care: boolean;
-  includes_lunch: boolean;
-  capacity?: number | null;
-  price_cents?: number | null;
-  is_required: boolean;
-  counts_as_care: boolean;
-  selection_group?: string;
-  selection_rule?: CareSelectionRule | "";
-  sort_order?: number;
-  pickup_times?: Partial<Record<CareWeekday, string>> | null;
-}
-
-interface BackendPrice {
-  weekday?: CareWeekday | "";
-  days_per_week?: number | null;
-  monthly_cents: number;
-  sibling_cents?: number | null;
-  meal_extra: boolean;
-}
-
-type BackendContractTemplate = Omit<TemplateInput, "term_months"> & {
-  term_months?: number | null;
-};
-
-interface BackendOfferingDraft {
-  fields: BackendOfferingFields;
-  prices?: BackendPrice[] | null;
-  contract_template?: BackendContractTemplate | null;
-}
-
-interface BackendOffering {
-  id: number;
-  traeger_phase_id: number;
-  draft: BackendOfferingDraft;
-  released_version?: number | null;
-  released?: BackendOfferingDraft | null;
-  withdrawn_at?: string | null;
-  schools?:
-    | {
-        school_id: number;
-        applied_version?: number | null;
-        outcome?: TraegerCatalogOutcome | "";
-        error_code?: string;
-      }[]
-    | null;
-}
-
-interface BackendPhase {
-  id: number;
-  draft: BackendPhaseFields;
-  all_schools: boolean;
-  released_version?: number | null;
-  released?: BackendPhaseFields | null;
-  withdrawn_at?: string | null;
-  schools?: BackendCatalogSchool[] | null;
-  updated_at: string;
-  offerings?: BackendOffering[] | null;
-}
-
-interface BackendFieldChange {
-  field: string;
-  state: TraegerFieldState;
-  traeger?: unknown;
-  school?: unknown;
-}
-
-interface BackendPreview {
-  traeger_phase_id: number;
-  version: number;
-  fingerprint: string;
-  schools?:
-    | {
-        school_id: number;
-        action: TraegerCatalogAction;
-        outcome: "ready" | "rejected";
-        error_code?: string;
-        care_beyond_end?: number;
-        phase?: BackendFieldChange[] | null;
-        offerings?:
-          | {
-              traeger_offering_id: number;
-              name: string;
-              action: TraegerCatalogAction;
-              fields?: BackendFieldChange[] | null;
-              prices_from?: string | null;
-              contract_template: boolean;
-            }[]
-          | null;
-      }[]
-    | null;
-}
-
-interface BackendRollout {
-  traeger_phase_id: number;
-  version: number;
-  schools?:
-    | {
-        school_id: number;
-        outcome: TraegerCatalogOutcome;
-        error_code?: string;
-        care_beyond_end?: number;
-      }[]
-    | null;
-}
-
 // --- Mapping -----------------------------------------------------------------
 
-function outcomeOf(
-  value: TraegerCatalogOutcome | "" | undefined,
-): TraegerCatalogOutcome | null {
-  return value ? value : null;
+/** The values of a union, checked complete by the record's keys. */
+function valuesOf<T extends string>(record: Record<T, true>): readonly T[] {
+  return Object.keys(record) as T[];
 }
 
+const PHASE_KINDS = valuesOf<PhaseKind>({
+  school_year: true,
+  holiday: true,
+  custom: true,
+});
+const AUDIENCES = valuesOf<PhaseAudience>({
+  open: true,
+  new_students: true,
+  existing_students: true,
+  linked_parents: true,
+});
+const OVERFLOW_MODES = valuesOf<PhaseCareOverflowMode>({
+  waitlist: true,
+  reject: true,
+  allow: true,
+});
+const PHASE_SELECTION_MODES = valuesOf<CareOfferingSelectionMode>({
+  optional: true,
+  at_least_one: true,
+  exactly_one: true,
+});
+const DAYS_OF_WEEK_MODES = valuesOf<DaysOfWeekMode>({
+  fixed: true,
+  parent_choice: true,
+});
+const SELECTION_RULES = valuesOf<CareSelectionRule>({
+  optional: true,
+  exactly_one: true,
+  at_least_one: true,
+  at_most_one: true,
+  at_most_one_per_day: true,
+});
+const OUTCOMES = valuesOf<TraegerCatalogOutcome>({
+  applied: true,
+  rejected: true,
+  stale: true,
+  withdrawn: true,
+});
+const ACTIONS = valuesOf<TraegerCatalogAction>({
+  create: true,
+  update: true,
+  withdraw: true,
+});
+const PLAN_OUTCOMES = valuesOf<TraegerPlanOutcome>({
+  ready: true,
+  rejected: true,
+});
+const FIELD_STATES = valuesOf<TraegerFieldState>({
+  new: true,
+  changes: true,
+  keeps: true,
+  unchanged: true,
+});
+
+/** No outcome yet is null; one this build does not know is undefined. */
+function outcomeOf(
+  value: string | undefined,
+): TraegerCatalogOutcome | null | undefined {
+  return value ? knownEnum(OUTCOMES, value) : null;
+}
+
+/**
+ * The editor saves a draft back whole, so a draft with a value this build
+ * does not know fails the read instead of saving a guess (#2353). Go writes
+ * every one of these fields normalized, never empty.
+ */
 function phaseFieldsFromBackend(
-  fields: BackendPhaseFields,
+  fields: PhaseFieldsWire,
+  at: string,
 ): TraegerPhaseFields {
   return {
     isActive: fields.is_active,
     name: fields.name,
-    kind: fields.kind,
+    kind: requiredEnum(PHASE_KINDS, fields.kind, `${at}.kind`),
     serviceStartDate: fields.service_start_date,
     serviceEndDate: fields.service_end_date,
-    enrollmentOpenAt: fields.enrollment_open_at ?? null,
-    enrollmentCloseAt: fields.enrollment_close_at ?? null,
-    audience: fields.audience || "open",
-    careOverflowMode: fields.care_overflow_mode || "waitlist",
-    careOfferingSelectionMode:
-      fields.care_offering_selection_mode || "optional",
+    enrollmentOpenAt: fields.enrollment_open_at,
+    enrollmentCloseAt: fields.enrollment_close_at,
+    audience: requiredEnum(AUDIENCES, fields.audience, `${at}.audience`),
+    careOverflowMode: requiredEnum(
+      OVERFLOW_MODES,
+      fields.care_overflow_mode,
+      `${at}.care_overflow_mode`,
+    ),
+    careOfferingSelectionMode: requiredEnum(
+      PHASE_SELECTION_MODES,
+      fields.care_offering_selection_mode,
+      `${at}.care_offering_selection_mode`,
+    ),
   };
 }
 
+function weekdayOf(value: string, field: string): CareWeekday {
+  return requiredEnum(CARE_WEEKDAYS, value, field);
+}
+
 function offeringFieldsFromBackend(
-  fields: BackendOfferingFields,
+  fields: OfferingFieldsWire,
+  at: string,
 ): TraegerOfferingFields {
+  const pickupTimes: Partial<Record<CareWeekday, string>> = {};
+  for (const [day, time] of Object.entries(fields.pickup_times ?? {})) {
+    pickupTimes[weekdayOf(day, `${at}.pickup_times`)] = time;
+  }
   return {
     isActive: fields.is_active,
     name: fields.name,
-    description: fields.description ?? null,
-    daysOfWeekMode: fields.days_of_week_mode,
-    availableDays: fields.available_days ?? [],
+    description: fields.description,
+    daysOfWeekMode: requiredEnum(
+      DAYS_OF_WEEK_MODES,
+      fields.days_of_week_mode,
+      `${at}.days_of_week_mode`,
+    ),
+    availableDays: (fields.available_days ?? []).map((day) =>
+      weekdayOf(day, `${at}.available_days`),
+    ),
     includesHolidayCare: fields.includes_holiday_care,
     includesLunch: fields.includes_lunch,
-    capacity: fields.capacity ?? null,
-    priceCents: fields.price_cents ?? null,
+    capacity: fields.capacity,
+    priceCents: fields.price_cents,
     isRequired: fields.is_required,
     countsAsCare: fields.counts_as_care,
-    selectionGroup: fields.selection_group ?? "",
-    selectionRule: fields.selection_rule || "optional",
-    sortOrder: fields.sort_order ?? 0,
-    pickupTimes: fields.pickup_times ?? {},
+    selectionGroup: fields.selection_group,
+    selectionRule: requiredEnum(
+      SELECTION_RULES,
+      fields.selection_rule,
+      `${at}.selection_rule`,
+    ),
+    sortOrder: fields.sort_order,
+    pickupTimes,
   };
 }
 
 function offeringDraftFromBackend(
-  draft: BackendOfferingDraft,
+  draft: OfferingDraftWire,
+  at: string,
 ): TraegerOfferingDraft {
   return {
-    fields: offeringFieldsFromBackend(draft.fields),
+    fields: offeringFieldsFromBackend(draft.fields, `${at}.fields`),
     prices: (draft.prices ?? []).map((price) => ({
-      weekday: price.weekday ? price.weekday : null,
+      weekday: price.weekday
+        ? weekdayOf(price.weekday, `${at}.prices.weekday`)
+        : null,
       daysPerWeek: price.days_per_week ?? null,
       monthlyCents: price.monthly_cents,
       siblingCents: price.sibling_cents ?? null,
       mealExtra: price.meal_extra,
     })),
     contractTemplate: draft.contract_template
-      ? termsFromBackend({
-          ...draft.contract_template,
-          term_months: draft.contract_template.term_months ?? null,
-        })
+      ? termsFromBackend(draft.contract_template)
       : null,
   };
 }
 
-function offeringFromBackend(offering: BackendOffering): TraegerOffering {
+function offeringFromBackend(offering: OfferingWire): TraegerOffering {
   return {
-    id: String(offering.id),
-    traegerPhaseId: String(offering.traeger_phase_id),
-    draft: offeringDraftFromBackend(offering.draft),
+    id: offering.id,
+    traegerPhaseId: offering.traeger_phase_id,
+    draft: offeringDraftFromBackend(offering.draft, "traeger_offering.draft"),
     releasedVersion: offering.released_version ?? null,
     released: offering.released
-      ? offeringDraftFromBackend(offering.released)
+      ? offeringDraftFromBackend(offering.released, "traeger_offering.released")
       : null,
     withdrawnAt: offering.withdrawn_at ?? null,
     schools: (offering.schools ?? []).map((school) => ({
-      schoolId: String(school.school_id),
+      schoolId: school.school_id,
       appliedVersion: school.applied_version ?? null,
       outcome: outcomeOf(school.outcome),
       errorCode: school.error_code || null,
@@ -410,16 +389,18 @@ function offeringFromBackend(offering: BackendOffering): TraegerOffering {
   };
 }
 
-function phaseFromBackend(phase: BackendPhase): TraegerPhase {
+function phaseFromBackend(phase: PhaseWire): TraegerPhase {
   return {
-    id: String(phase.id),
-    draft: phaseFieldsFromBackend(phase.draft),
+    id: phase.id,
+    draft: phaseFieldsFromBackend(phase.draft, "traeger_phase.draft"),
     allSchools: phase.all_schools,
     releasedVersion: phase.released_version ?? null,
-    released: phase.released ? phaseFieldsFromBackend(phase.released) : null,
+    released: phase.released
+      ? phaseFieldsFromBackend(phase.released, "traeger_phase.released")
+      : null,
     withdrawnAt: phase.withdrawn_at ?? null,
     schools: (phase.schools ?? []).map((school) => ({
-      schoolId: String(school.school_id),
+      schoolId: school.school_id,
       selected: school.selected,
       appliedVersion: school.applied_version ?? null,
       outcome: outcomeOf(school.outcome),
@@ -430,28 +411,30 @@ function phaseFromBackend(phase: BackendPhase): TraegerPhase {
   };
 }
 
-function phaseDetailFromBackend(phase: BackendPhase): TraegerPhaseDetail {
+function phaseDetailFromBackend(phase: PhaseDetail): TraegerPhaseDetail {
   return {
     ...phaseFromBackend(phase),
     offerings: (phase.offerings ?? []).map(offeringFromBackend),
   };
 }
 
+// The preview only shows: an unknown state is left undefined and hidden.
 function fieldChangesFromBackend(
-  changes: BackendFieldChange[] | null | undefined,
+  changes: readonly FieldChangeWire[] | null,
 ): TraegerFieldChange[] {
   return (changes ?? []).map((change) => ({
     field: change.field,
-    state: change.state,
-    traeger: change.traeger ?? null,
-    school: change.school ?? null,
+    state: knownEnum(FIELD_STATES, change.state),
+    traeger: change.traeger,
+    school: change.school,
   }));
 }
 
 /** The body the backend reads; IDs travel as numbers. */
-function phaseInputToBackend(input: TraegerPhaseInput) {
+function phaseInputToBackend(input: TraegerPhaseInput): PhaseRequest {
   return {
-    is_active: input.isActive,
+    // Go reads a missing flag as active: a deactivated draft stays so.
+    is_active: input.isActive ?? null,
     name: input.name.trim(),
     kind: input.kind,
     service_start_date: input.serviceStartDate,
@@ -463,14 +446,14 @@ function phaseInputToBackend(input: TraegerPhaseInput) {
     care_offering_selection_mode: input.careOfferingSelectionMode,
     all_schools: input.allSchools,
     school_ids: input.allSchools ? [] : input.schoolIds.map(Number),
-  };
+  } satisfies PhaseRequest;
 }
 
-function offeringDraftToBackend(draft: TraegerOfferingDraft) {
+function offeringDraftToBackend(draft: TraegerOfferingDraft): OfferingRequest {
   const { fields } = draft;
   return {
     fields: {
-      is_active: fields.isActive,
+      is_active: fields.isActive ?? null,
       name: fields.name.trim(),
       description: fields.description?.trim()
         ? fields.description.trim()
@@ -501,7 +484,7 @@ function offeringDraftToBackend(draft: TraegerOfferingDraft) {
     ...(draft.contractTemplate
       ? { contract_template: termsToBackend(draft.contractTemplate) }
       : {}),
-  };
+  } satisfies OfferingRequest;
 }
 
 // --- Requests ----------------------------------------------------------------
@@ -513,15 +496,15 @@ function phasePath(id: string): string {
 }
 
 export async function fetchTraegerPhases(): Promise<TraegerPhase[]> {
-  const phases = await traegerRequest<BackendPhase[] | null>(`${BASE}/phases`);
-  return (phases ?? []).map(phaseFromBackend);
+  const phases = await traegerRequest<PhaseWire[]>(`${BASE}/phases`);
+  return phases.map(phaseFromBackend);
 }
 
 export async function fetchTraegerPhase(
   id: string,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<BackendPhase>(phasePath(id)),
+    await traegerRequest<PhaseDetail>(phasePath(id)),
   );
 }
 
@@ -529,7 +512,7 @@ export async function createTraegerPhase(
   input: TraegerPhaseInput,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<BackendPhase>(`${BASE}/phases`, {
+    await traegerRequest<PhaseDetail>(`${BASE}/phases`, {
       method: "POST",
       body: phaseInputToBackend(input),
     }),
@@ -541,7 +524,7 @@ export async function updateTraegerPhase(
   input: TraegerPhaseInput,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<BackendPhase>(phasePath(id), {
+    await traegerRequest<PhaseDetail>(phasePath(id), {
       method: "PUT",
       body: phaseInputToBackend(input),
     }),
@@ -552,7 +535,7 @@ export async function withdrawTraegerPhase(
   id: string,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<BackendPhase>(`${phasePath(id)}/withdraw`, {
+    await traegerRequest<PhaseDetail>(`${phasePath(id)}/withdraw`, {
       method: "POST",
     }),
   );
@@ -563,7 +546,7 @@ export async function createTraegerOffering(
   draft: TraegerOfferingDraft,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<BackendOffering>(`${phasePath(phaseId)}/offerings`, {
+    await traegerRequest<OfferingWire>(`${phasePath(phaseId)}/offerings`, {
       method: "POST",
       body: offeringDraftToBackend(draft),
     }),
@@ -575,7 +558,7 @@ export async function updateTraegerOffering(
   draft: TraegerOfferingDraft,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<BackendOffering>(
+    await traegerRequest<OfferingWire>(
       `${BASE}/offerings/${encodeURIComponent(id)}`,
       { method: "PUT", body: offeringDraftToBackend(draft) },
     ),
@@ -586,7 +569,7 @@ export async function withdrawTraegerOffering(
   id: string,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<BackendOffering>(
+    await traegerRequest<OfferingWire>(
       `${BASE}/offerings/${encodeURIComponent(id)}/withdraw`,
       { method: "POST" },
     ),
@@ -596,25 +579,24 @@ export async function withdrawTraegerOffering(
 export async function previewTraegerPhase(
   id: string,
 ): Promise<TraegerCatalogPreview> {
-  const preview = await traegerRequest<BackendPreview>(
-    `${phasePath(id)}/preview`,
-    { method: "POST" },
-  );
+  const preview = await traegerRequest<Preview>(`${phasePath(id)}/preview`, {
+    method: "POST",
+  });
   return {
-    traegerPhaseId: String(preview.traeger_phase_id),
+    traegerPhaseId: preview.traeger_phase_id,
     version: preview.version,
     fingerprint: preview.fingerprint,
     schools: (preview.schools ?? []).map((school) => ({
-      schoolId: String(school.school_id),
-      action: school.action,
-      outcome: school.outcome,
+      schoolId: school.school_id,
+      action: knownEnum(ACTIONS, school.action),
+      outcome: knownEnum(PLAN_OUTCOMES, school.outcome),
       errorCode: school.error_code || null,
-      careBeyondEnd: school.care_beyond_end ?? 0,
+      careBeyondEnd: school.care_beyond_end,
       phase: fieldChangesFromBackend(school.phase),
       offerings: (school.offerings ?? []).map((offering) => ({
-        traegerOfferingId: String(offering.traeger_offering_id),
+        traegerOfferingId: offering.traeger_offering_id,
         name: offering.name,
-        action: offering.action,
+        action: knownEnum(ACTIONS, offering.action),
         fields: fieldChangesFromBackend(offering.fields),
         pricesFrom: offering.prices_from ?? null,
         contractTemplate: offering.contract_template,
@@ -627,18 +609,18 @@ export async function rolloutTraegerPhase(
   id: string,
   fingerprint: string,
 ): Promise<TraegerRollout> {
-  const rollout = await traegerRequest<BackendRollout>(
-    `${phasePath(id)}/rollout`,
-    { method: "POST", body: { fingerprint } },
-  );
+  const rollout = await traegerRequest<Rollout>(`${phasePath(id)}/rollout`, {
+    method: "POST",
+    body: { fingerprint } satisfies RolloutRequest,
+  });
   return {
-    traegerPhaseId: String(rollout.traeger_phase_id),
+    traegerPhaseId: rollout.traeger_phase_id,
     version: rollout.version,
     schools: (rollout.schools ?? []).map((school) => ({
-      schoolId: String(school.school_id),
-      outcome: school.outcome,
+      schoolId: school.school_id,
+      outcome: knownEnum(OUTCOMES, school.outcome),
       errorCode: school.error_code || null,
-      careBeyondEnd: school.care_beyond_end ?? 0,
+      careBeyondEnd: school.care_beyond_end,
     })),
   };
 }
