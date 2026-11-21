@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Träger scope of Export Transfer (#6824, ADR 0218; #6911, ADR 0222):
@@ -77,8 +79,8 @@ func (e *RecipientError) Unwrap() error { return ErrRecipientInvalid }
 // TraegerRecipient is the credential-free view of one recipient of a
 // Träger. It has no password field at all, only whether one is stored.
 type TraegerRecipient struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 	// Enabled mirrors the switch; Ready also needs every value.
 	Enabled            bool   `json:"enabled"`
 	Ready              bool   `json:"ready"`
@@ -114,8 +116,8 @@ type TraegerRecipientInput struct {
 // TraegerAssignment sends one format to one recipient; a nil RecipientID
 // leaves the format to the download.
 type TraegerAssignment struct {
-	Format      string `json:"format"`
-	RecipientID *int64 `json:"recipient_id"`
+	Format      string    `json:"format"`
+	RecipientID *ident.ID `json:"recipient_id"`
 }
 
 // Destination names where a file goes, so the producing domain can record
@@ -144,7 +146,7 @@ type TraegerTransferRequest struct {
 
 // TraegerTransferEntry is one row of the journal of a Träger.
 type TraegerTransferEntry struct {
-	ID              int64     `json:"id"`
+	ID              ident.ID  `json:"id"`
 	CreatedAt       time.Time `json:"created_at"`
 	Format          string    `json:"format"`
 	Filename        string    `json:"filename"`
@@ -153,8 +155,8 @@ type TraegerTransferEntry struct {
 	TargetDirectory string    `json:"target_directory"`
 	// RecipientID is nil once the recipient was removed; RecipientName is
 	// its name at the handover.
-	RecipientID   *int64 `json:"recipient_id"`
-	RecipientName string `json:"recipient_name"`
+	RecipientID   *ident.ID `json:"recipient_id"`
+	RecipientName string    `json:"recipient_name"`
 	// State is transferred, failed, in_progress or unknown.
 	State  string `json:"state"`
 	Reason string `json:"reason,omitempty"`

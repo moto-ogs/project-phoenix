@@ -93,11 +93,11 @@ func TestTraegerClosingDaysStayWithTheirTraegerBelowRLS(t *testing.T) {
 		require.Len(t, view.Holidays, 1, "the holidays of the schools' one federal state")
 		assert.Equal(t, "DE-BW", view.Holidays[0].Region.Code)
 
-		_, err = days.UpdateClosingDay(ctx, own.id, other.ID, traegercalendar.ClosingDayInput{
+		_, err = days.UpdateClosingDay(ctx, own.id, other.ID.Int64(), traegercalendar.ClosingDayInput{
 			StartDate: bridge, EndDate: bridge, Reason: "Übernommen", SchoolIDs: own.schools,
 		})
 		require.ErrorIs(t, err, traegercalendar.ErrClosingDayNotFound, "a foreign closing day is not changed")
-		_, err = days.DeleteClosingDay(ctx, own.id, other.ID, "")
+		_, err = days.DeleteClosingDay(ctx, own.id, other.ID.Int64(), "")
 		require.ErrorIs(t, err, traegercalendar.ErrClosingDayNotFound, "nor deleted")
 		return nil
 	}))

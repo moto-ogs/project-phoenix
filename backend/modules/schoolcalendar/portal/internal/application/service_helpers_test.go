@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/internal/ptrtest"
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -134,7 +135,7 @@ func TestStaffRecipientStatus(t *testing.T) {
 
 	staffID := int64(10)
 	recipients := []*appointmentcap.AppointmentRecipient{
-		{ID: 101, RecipientType: appointmentcap.RecipientTypeStaff, StaffID: &staffID, Status: appointmentcap.ResponseStatusAccepted},
+		{ID: 101, RecipientType: appointmentcap.RecipientTypeStaff, StaffID: (*ident.ID)(&staffID), Status: appointmentcap.ResponseStatusAccepted},
 	}
 
 	recipient := staffRecipient(recipients, staffID)
@@ -154,7 +155,7 @@ func TestAnsweredAppointmentEventTakesTheAnswerOfItsDate(t *testing.T) {
 	appointment := &appointmentcap.Appointment{ID: 7, OrganizerStaffID: 1, Title: "Elterncafé", StartDate: appointmentcap.NewDate(2026, 11, 18), EndDate: appointmentcap.NewDate(2026, 11, 18), DeliveryMode: appointmentcap.DeliveryModeRSVPRequired}
 	declinedDate := appointmentcap.NewDate(2026, 11, 25)
 	recipient := &appointmentcap.AppointmentRecipient{
-		ID: 101, RecipientType: appointmentcap.RecipientTypeStaff, StaffID: &staffID, Status: appointmentcap.ResponseStatusAccepted,
+		ID: 101, RecipientType: appointmentcap.RecipientTypeStaff, StaffID: (*ident.ID)(&staffID), Status: appointmentcap.ResponseStatusAccepted,
 		OccurrenceResponses: map[appointmentcap.Date]string{declinedDate: appointmentcap.ResponseStatusDeclined},
 	}
 
@@ -203,7 +204,7 @@ func TestAppointmentICSEventExportsUnclampedRecurrence(t *testing.T) {
 	tenantID := ptrtest.NewTenantID()
 	appt := &appointmentcap.Appointment{
 		ID:        9,
-		TenantID:  tenantID,
+		TenantID:  ident.ID(tenantID),
 		Title:     "Wöchentlich",
 		StartDate: toCalendarDate(oldMonday),
 		EndDate:   toCalendarDate(oldMonday),
@@ -373,18 +374,18 @@ func TestParentOverviewListsStaffAndOwnEntriesButCountsEveryone(t *testing.T) {
 
 	ownProfile, otherProfile := int64(11), int64(12)
 	recipients := []*appointmentcap.AppointmentRecipient{
-		{ID: 1, RecipientType: appointmentcap.RecipientTypeStaff, StaffID: ptrtest.Ptr(int64(5)), Status: appointmentcap.ResponseStatusAccepted},
-		{ID: 2, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: &ownProfile, StudentIDs: []int64{100}, Status: appointmentcap.ResponseStatusPending},
-		{ID: 3, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: &otherProfile, StudentIDs: []int64{200}, Status: appointmentcap.ResponseStatusDeclined},
+		{ID: 1, RecipientType: appointmentcap.RecipientTypeStaff, StaffID: (*ident.ID)(ptrtest.Ptr(int64(5))), Status: appointmentcap.ResponseStatusAccepted},
+		{ID: 2, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: (*ident.ID)(&ownProfile), StudentIDs: []int64{100}, Status: appointmentcap.ResponseStatusPending},
+		{ID: 3, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: (*ident.ID)(&otherProfile), StudentIDs: []int64{200}, Status: appointmentcap.ResponseStatusDeclined},
 		// Own profile, but through a child this parent cannot see here.
-		{ID: 4, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: &ownProfile, StudentIDs: []int64{300}, Status: appointmentcap.ResponseStatusAccepted},
-		{ID: 5, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: &otherProfile, StudentIDs: []int64{200}, Status: appointmentcap.ResponseStatusInfo},
+		{ID: 4, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: (*ident.ID)(&ownProfile), StudentIDs: []int64{300}, Status: appointmentcap.ResponseStatusAccepted},
+		{ID: 5, RecipientType: appointmentcap.RecipientTypeGuardianProfile, GuardianProfileID: (*ident.ID)(&otherProfile), StudentIDs: []int64{200}, Status: appointmentcap.ResponseStatusInfo},
 	}
 
 	listed := parentListedRecipients(recipients, []int64{ownProfile}, []int64{100})
 	ids := make([]int64, 0, len(listed))
 	for _, recipient := range listed {
-		ids = append(ids, recipient.ID)
+		ids = append(ids, recipient.ID.Int64())
 	}
 	assert.Equal(t, []int64{1, 2}, ids)
 

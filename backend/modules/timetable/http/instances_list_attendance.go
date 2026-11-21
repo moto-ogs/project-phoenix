@@ -41,7 +41,7 @@ func (rs *Resource) resolveCareDays(
 
 	instanceIDs := make([]int64, 0, len(instances))
 	for _, inst := range instances {
-		instanceIDs = append(instanceIDs, inst.ID)
+		instanceIDs = append(instanceIDs, inst.ID.Int64())
 	}
 
 	rows, err := rs.TimetableData.ListCareDayCandidates(ctx, instanceIDs)

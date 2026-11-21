@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog/ports"
 )
@@ -41,7 +42,7 @@ func (c *Catalog) Rollout(ctx context.Context, actor traegercatalog.Actor, traeg
 		if err != nil {
 			return err
 		}
-		result = traegercatalog.Rollout{TraegerPhaseID: traegerPhaseID, Version: next.phaseVersion, Schools: []traegercatalog.SchoolResult{}}
+		result = traegercatalog.Rollout{TraegerPhaseID: ident.ID(traegerPhaseID), Version: next.phaseVersion, Schools: []traegercatalog.SchoolResult{}}
 		runs := make([]schoolRun, 0, len(snap.targets()))
 		for _, target := range snap.targets() {
 			run, err := c.rollOutSchool(ctx, actor, snap, next, target, print.Schools[target.schoolID])
@@ -135,7 +136,7 @@ func (c *Catalog) writeVersions(ctx context.Context, actor traegercatalog.Actor,
 // as stale when it moved; otherwise it writes phase and offerings together
 // or nothing. Its tariffs and templates follow after the commit.
 func (c *Catalog) rollOutSchool(ctx context.Context, actor traegercatalog.Actor, snap snapshot, next release, t target, previewed string) (schoolRun, error) {
-	run := schoolRun{target: t, result: traegercatalog.SchoolResult{SchoolID: t.schoolID}, offeringCodes: map[int64]string{}}
+	run := schoolRun{target: t, result: traegercatalog.SchoolResult{SchoolID: ident.ID(t.schoolID)}, offeringCodes: map[int64]string{}}
 	err := c.deps.Runtime.WithinSchool(ctx, t.schoolID, func(ctx context.Context) error {
 		if err := c.lockSchool(ctx, actor.OrganizationID, t.schoolID); err != nil {
 			run.leftTraeger = errors.Is(err, errStale)

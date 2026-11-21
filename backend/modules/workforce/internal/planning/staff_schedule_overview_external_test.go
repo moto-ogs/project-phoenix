@@ -29,7 +29,7 @@ func TestStaffScheduleOverview_LeavesExternalCaregiversOut(t *testing.T) {
 	service := NewStaffScheduleOverviewService(StaffScheduleOverviewDependencies{
 		Shifts:        &fakeShiftReader{},
 		Instances:     &fakeInstanceReader{rows: []*timetable.ScheduledInstance{instance}},
-		InstanceStaff: &fakeInstanceStaffReader{rows: []*timetable.InstanceStaff{{InstanceID: instance.ID, StaffID: external.ID}}},
+		InstanceStaff: &fakeInstanceStaffReader{rows: []*timetable.InstanceStaff{{InstanceID: instance.ID.Int64(), StaffID: external.ID}}},
 		Rooms:         &fakeRoomReader{},
 		Staff:         &fakeStaffReader{rows: []*workforce.PlanStaff{employee, external}},
 	})
@@ -62,7 +62,7 @@ func TestStaffScheduleOverview_LeavesAccountBackedExternalCaregiversOut(t *testi
 		Shifts:    &fakeShiftReader{},
 		Instances: &fakeInstanceReader{rows: []*timetable.ScheduledInstance{instance}},
 		InstanceStaff: &fakeInstanceStaffReader{rows: []*timetable.InstanceStaff{
-			{InstanceID: instance.ID, StaffID: external.ID}, {InstanceID: instance.ID, StaffID: employee.ID},
+			{InstanceID: instance.ID.Int64(), StaffID: external.ID}, {InstanceID: instance.ID.Int64(), StaffID: employee.ID},
 		}},
 		Rooms: &fakeRoomReader{},
 		Staff: &fakeStaffReader{rows: []*workforce.PlanStaff{employee, external}},

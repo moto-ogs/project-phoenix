@@ -13,8 +13,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Middleware is the chi middleware shape the composition root supplies.
@@ -116,8 +118,8 @@ func (rs *Resource) requireManage(next http.Handler) http.Handler {
 // InfoDisplayResponse is the wire shape of one screen. It is spelled out here
 // so the owner's value can change without moving the public contract.
 type InfoDisplayResponse struct {
-	ID        int64     `json:"id"`
-	TenantID  int64     `json:"tenant_id"`
+	ID        common.ID `json:"id"`
+	TenantID  common.ID `json:"tenant_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Name      string    `json:"name"`
@@ -138,7 +140,7 @@ type InfoDisplayTokenResponse struct {
 
 func newDisplayView(value devicefleet.Display) InfoDisplayResponse {
 	return InfoDisplayResponse{
-		ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt,
+		ID: ident.ID(value.ID), TenantID: ident.ID(value.TenantID), CreatedAt: value.CreatedAt,
 		UpdatedAt: value.UpdatedAt, Name: value.Name, IsActive: value.IsActive,
 	}
 }

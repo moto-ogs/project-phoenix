@@ -32,6 +32,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -264,11 +265,11 @@ func TestAttendancePerCareSlot_MorningPresentAfternoonSickAndClearIndependent(t 
 	afternoonInstance.Title = fmt.Sprintf("AS-Afternoon-%d", time.Now().UnixNano())
 	afternoonInstance.StartTime = time.Date(1, 1, 1, 12, 0, 0, 0, time.UTC)
 	afternoonInstance.EndTime = time.Date(1, 1, 1, 16, 0, 0, 0, time.UTC)
-	afternoonInstance.RoomID = s.roomID
-	afternoonInstance.TenantID = testpkg.Tenant(t)
+	afternoonInstance.RoomID = ident.ID(s.roomID)
+	afternoonInstance.TenantID = ident.ID(testpkg.Tenant(t))
 	require.NoError(t, s.Instances.Create(s.ctx, afternoonInstance))
 	afternoon := api.NewAttendanceMirrorParticipant()
-	afternoon.InstanceID = afternoonInstance.ID
+	afternoon.InstanceID = afternoonInstance.ID.Int64()
 	afternoon.StudentID = student.ID
 	afternoon.Status = studentpresence.SessionAttendanceExpected
 	afternoon.TenantID = testpkg.Tenant(t)

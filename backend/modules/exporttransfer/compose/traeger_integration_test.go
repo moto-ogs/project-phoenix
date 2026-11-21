@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/adapters/sftp"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/adapters/sftp/sftptest"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -94,7 +95,7 @@ func (f traegerFixture) add(t *testing.T, org int64, input exporttransfer.Traege
 	recipient, err := f.transfers.CreateRecipient(f.ctx, org, 0, input)
 	require.NoError(t, err)
 	require.Empty(t, recipient.Formats, "a new recipient receives no format until the Träger assigns one")
-	return recipient.ID
+	return recipient.ID.Int64()
 }
 
 // assign sends each format to its recipient, 0 for the download.
@@ -104,7 +105,7 @@ func (f traegerFixture) assign(t *testing.T, org int64, recipients map[string]in
 	for format, id := range recipients {
 		assignment := exporttransfer.TraegerAssignment{Format: format}
 		if id > 0 {
-			assignment.RecipientID = &id
+			assignment.RecipientID = (*ident.ID)(&id)
 		}
 		assignments = append(assignments, assignment)
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/tenant"
 
@@ -25,10 +26,10 @@ type reminderPushOutbox struct {
 }
 
 func (o reminderPushOutbox) Enqueue(ctx context.Context, key string, snapshot reminderPorts.ReminderPushSnapshot) (int64, error) {
-	related := deliveryContract.RelatedEntity{Type: "appointment", ID: snapshot.Appointment.ID}
+	related := deliveryContract.RelatedEntity{Type: "appointment", ID: snapshot.Appointment.ID.Int64()}
 	// A manual retry reuses the committed request, including its original scan
 	// window and terminal result. Generic outbox conflict detection stays strict.
-	statuses, err := o.module.Statuses(ctx, snapshot.Appointment.TenantID, deliveryContract.TransportPush, related)
+	statuses, err := o.module.Statuses(ctx, snapshot.Appointment.TenantID.Int64(), deliveryContract.TransportPush, related)
 	if err != nil {
 		return 0, err
 	}
@@ -42,7 +43,7 @@ func (o reminderPushOutbox) Enqueue(ctx context.Context, key string, snapshot re
 		return 0, err
 	}
 	queued, err := o.module.EnqueueDeferredPush(ctx, deliveryContract.DeferredPushIntent{
-		TenantID: snapshot.Appointment.TenantID, Template: reminderPushKind, IdempotencyKey: key,
+		TenantID: snapshot.Appointment.TenantID.Int64(), Template: reminderPushKind, IdempotencyKey: key,
 		Related: related, Payload: payload,
 	})
 	return queued.ID, err
@@ -72,7 +73,7 @@ func (p ReminderPushProvider) SendPush(ctx context.Context, intent deliveryContr
 	if err := json.Unmarshal(intent.DeferredPayload, &snapshot); err != nil {
 		return deliveryContract.ProviderResult{}, err
 	}
-	if snapshot.Appointment.TenantID != intent.TenantID || intent.RelatedEntityID == nil || snapshot.Appointment.ID != *intent.RelatedEntityID {
+	if snapshot.Appointment.TenantID != ident.ID(intent.TenantID) || intent.RelatedEntityID == nil || snapshot.Appointment.ID != ident.ID(*intent.RelatedEntityID) {
 		return deliveryContract.ProviderResult{}, fmt.Errorf("%w: reminder scope mismatch", deliveryContract.ErrCancelled)
 	}
 	err := p.Deliver(ctx, intent.DeferredPayload)

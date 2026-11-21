@@ -57,8 +57,8 @@ export interface PlanningTrack {
 }
 
 export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<PlanningTrack>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -117,9 +117,9 @@ export interface PlannedConflictWarning {
 
 export const PlannedConflictWarningSchema: z.ZodType<PlannedConflictWarning, unknown> = object<PlannedConflictWarning>({
   kind: str,
-  resource_id: int64StringOrNumber,
+  resource_id: int64String,
   message: str,
-  conflicting_instance_id: int64StringOrNumber,
+  conflicting_instance_id: int64String,
   conflicting_title: str,
 });
 
@@ -1648,8 +1648,8 @@ export interface SubstituteTimeConflict {
 
 export const SubstituteTimeConflictSchema: z.ZodType<SubstituteTimeConflict, unknown> = object<SubstituteTimeConflict>({
   kind: str,
-  instance_id: int64StringOrNumber,
-  other_instance_id: int64StringOrNumber,
+  instance_id: int64String,
+  other_instance_id: int64String,
   message: str,
 });
 
@@ -1691,7 +1691,7 @@ export interface ShiftCoverageWarning {
 }
 
 export const ShiftCoverageWarningSchema: z.ZodType<ShiftCoverageWarning, unknown> = object<ShiftCoverageWarning>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   staff_name: str,
   date: str,
   start_time: str,

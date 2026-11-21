@@ -392,7 +392,7 @@ export interface SampleSchoolResult {
 }
 
 export const SampleSchoolResultSchema: z.ZodType<SampleSchoolResult, unknown> = object<SampleSchoolResult>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   created_count: safeInt,
   skipped_count: safeInt,
   failed_count: safeInt,

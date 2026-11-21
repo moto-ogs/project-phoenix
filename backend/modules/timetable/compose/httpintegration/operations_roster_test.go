@@ -96,7 +96,7 @@ func TestTimetableOperationsRosterFlagsParallelPresence(t *testing.T) {
 	require.Len(t, roster.Rows, 2)
 	rowsByStudent := map[int64]timetable.OperationRosterRow{}
 	for _, row := range roster.Rows {
-		rowsByStudent[row.StudentID] = row
+		rowsByStudent[row.StudentID.Int64()] = row
 	}
 	flagged := rowsByStudent[540]
 	require.NotNil(t, flagged.ParallelPresentIn)
@@ -151,7 +151,7 @@ func TestTimetableOperationsRosterLoadsEffectivePickupTimesForBlockDate(t *testi
 	assert.ElementsMatch(t, []int64{548, 549, 550}, deps.pickupService.studentIDs)
 	rowsByStudent := make(map[int64]timetable.OperationRosterRow, len(roster.Rows))
 	for _, row := range roster.Rows {
-		rowsByStudent[row.StudentID] = row
+		rowsByStudent[row.StudentID.Int64()] = row
 	}
 	require.NotNil(t, rowsByStudent[548].PickupTime)
 	assert.Equal(t, "15:00", *rowsByStudent[548].PickupTime)
@@ -373,7 +373,7 @@ func TestTimetableOperationsRosterReportsStatusDayAbsenceOnUnbookedDay(t *testin
 	require.Len(t, roster.Rows, 2)
 	byStudent := map[int64]timetable.CareDayStatus{}
 	for _, row := range roster.Rows {
-		byStudent[row.StudentID] = row.CareDayStatus
+		byStudent[row.StudentID.Int64()] = row.CareDayStatus
 	}
 	assert.Equal(t, timetable.CareDayNotScheduled, byStudent[538])
 	assert.Equal(t, timetable.CareDayUnknown, byStudent[539])
@@ -461,7 +461,7 @@ func TestTimetableOperationsRosterChecksAllGroupTargets(t *testing.T) {
 	require.Len(t, roster.Rows, 2)
 	rowsByStudent := make(map[int64]timetable.OperationRosterRow, len(roster.Rows))
 	for _, row := range roster.Rows {
-		rowsByStudent[row.StudentID] = row
+		rowsByStudent[row.StudentID.Int64()] = row
 	}
 	for _, warning := range rowsByStudent[studentID].Warnings {
 		assert.NotEqual(t, "template_class_mismatch", warning.Kind)

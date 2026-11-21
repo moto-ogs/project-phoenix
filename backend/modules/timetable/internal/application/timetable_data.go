@@ -76,7 +76,7 @@ func (d *timetableData) ListScheduledInstanceRows(ctx context.Context, instances
 	}
 	ids := make([]int64, 0, len(instances))
 	for _, instance := range instances {
-		ids = append(ids, instance.ID)
+		ids = append(ids, instance.ID.Int64())
 	}
 	staffRows, err := staffOfInstances(ctx, d.deps.InstanceStaff, ids)
 	if err != nil {
@@ -167,7 +167,7 @@ func studentIDsByDate(instances []timetable.ScheduledInstance, participants map[
 	seen := make(map[calendar.Date]map[int64]struct{})
 	out := make(map[calendar.Date][]int64)
 	for _, instance := range instances {
-		for _, row := range participants[instance.ID] {
+		for _, row := range participants[instance.ID.Int64()] {
 			if seen[instance.Date] == nil {
 				seen[instance.Date] = make(map[int64]struct{})
 			}

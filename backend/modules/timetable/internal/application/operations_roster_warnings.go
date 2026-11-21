@@ -10,6 +10,7 @@ import (
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // rosterWarnings flags the roster's children: a late or missing expected
@@ -67,9 +68,9 @@ func appendClassMismatchWarnings(warnings map[int64][]timetable.OperationRosterW
 		warnings[studentID] = append(warnings[studentID], timetable.OperationRosterWarning{
 			Kind:                  "template_class_mismatch",
 			Message:               "Kind passt nicht zur Klassengruppe der Betreuungsplan-Vorlage.",
-			ExpectedGroupID:       expectedGroupID,
+			ExpectedGroupID:       (*ident.ID)(expectedGroupID),
 			ExpectedGroupName:     expectedGroupName,
-			CurrentEducationGroup: st.GroupID,
+			CurrentEducationGroup: (*ident.ID)(st.GroupID),
 		})
 	}
 }

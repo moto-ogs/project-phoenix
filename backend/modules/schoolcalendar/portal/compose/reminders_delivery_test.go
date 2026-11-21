@@ -93,7 +93,7 @@ func TestCalendarServiceIntegration_ReminderPushSurvivesAnEditBeforeDispatch(t *
 	require.NoError(t, err)
 	assert.Equal(t, 1, queued)
 
-	revised, err := baseRepo.FindAppointment(testpkg.Ctx(t), detail.Appointment.ID)
+	revised, err := baseRepo.FindAppointment(testpkg.Ctx(t), detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, revised)
 	require.Greater(t, revised.Revision, detail.Appointment.Revision,

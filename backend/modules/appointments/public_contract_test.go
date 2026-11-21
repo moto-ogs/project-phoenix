@@ -28,10 +28,10 @@ func TestPublicAppointmentContractPersistsNormalizedFieldsAndTargets(t *testing.
 	require.Equal(t, day, created.StartDate)
 	require.Len(t, targets, 1)
 	require.Equal(t, created.ID, targets[0].AppointmentID)
-	found, err := module.FindAppointment(testpkg.Ctx(t), created.ID)
+	found, err := module.FindAppointment(testpkg.Ctx(t), created.ID.Int64())
 	require.NoError(t, err)
 	require.Equal(t, created, found)
-	actualTargets, err := module.FindAppointmentTargets(testpkg.Ctx(t), created.ID)
+	actualTargets, err := module.FindAppointmentTargets(testpkg.Ctx(t), created.ID.Int64())
 	require.NoError(t, err)
 	require.Equal(t, targets, actualTargets)
 }

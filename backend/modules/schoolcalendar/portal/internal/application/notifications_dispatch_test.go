@@ -269,12 +269,12 @@ func TestDispatchGuardianAccountReminderDevices(t *testing.T) {
 
 	t.Run("without a synchronous notifier or an audience nothing is dispatched", func(t *testing.T) {
 		s := &service{}
-		dispatched, err := s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID, accounts, students, "")
+		dispatched, err := s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID.Int64(), accounts, students, "")
 		require.NoError(t, err)
 		assert.False(t, dispatched)
 
 		s = &service{cfg: Config{NotificationCopy: dispatchCopy(t), ReminderNotifier: &dispatchNotifier{}}}
-		dispatched, err = s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID, nil, students, "")
+		dispatched, err = s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID.Int64(), nil, students, "")
 		require.NoError(t, err)
 		assert.False(t, dispatched)
 	})
@@ -283,7 +283,7 @@ func TestDispatchGuardianAccountReminderDevices(t *testing.T) {
 		notifier := &dispatchNotifier{}
 		s := &service{cfg: Config{NotificationCopy: dispatchCopy(t), ReminderNotifier: notifier}}
 
-		dispatched, err := s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID, accounts, students, "")
+		dispatched, err := s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID.Int64(), accounts, students, "")
 		require.NoError(t, err)
 		assert.True(t, dispatched)
 		require.Len(t, notifier.events, 1)
@@ -297,7 +297,7 @@ func TestDispatchGuardianAccountReminderDevices(t *testing.T) {
 		dispatchErr := errors.New("push service unreachable")
 		s := &service{cfg: Config{NotificationCopy: dispatchCopy(t), ReminderNotifier: &dispatchNotifier{err: dispatchErr}}}
 
-		dispatched, err := s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID, accounts, students, "")
+		dispatched, err := s.dispatchGuardianAccountReminderDevicesLocalized(ctx, helperAppointment().TenantID.Int64(), accounts, students, "")
 		require.ErrorIs(t, err, dispatchErr)
 		assert.False(t, dispatched,
 			"reporting a failed push as delivered would drop the reminder permanently")

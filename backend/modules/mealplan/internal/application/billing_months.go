@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // billingMonthsBack is how many months back the Mensa-Monatsfreigabe goes:
@@ -188,7 +189,7 @@ func releaseDiffers(stored domain.StoredBillingMonth, computed mealplan.BillingM
 		released[child.StudentID] = child
 	}
 	for _, child := range computed.Children {
-		before, ok := released[child.StudentID]
+		before, ok := released[child.StudentID.Int64()]
 		if !ok || before.MealDays != child.MealDays || before.RegisteredDays != child.RegisteredDays {
 			return true
 		}
@@ -272,7 +273,7 @@ func storedMonth(month calendar.Date, computed mealplan.BillingMonth) domain.Sto
 	stored := domain.StoredBillingMonth{Month: month, ChildCount: computed.ChildCount, MealCount: computed.MealCount,
 		Children: make([]domain.BillingChild, len(computed.Children))}
 	for i, child := range computed.Children {
-		stored.Children[i] = domain.BillingChild{StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
+		stored.Children[i] = domain.BillingChild{StudentID: child.StudentID.Int64(), FirstName: child.FirstName, LastName: child.LastName,
 			SchoolClass: child.SchoolClass, RegisteredDays: child.RegisteredDays, MealDays: child.MealDays}
 	}
 	return stored
@@ -288,7 +289,7 @@ func releasedView(stored domain.StoredBillingMonth) mealplan.BillingMonth {
 		view.Releases[i] = mealplan.BillingMonthReleaseEntry(version)
 	}
 	for i, child := range stored.Children {
-		children[i] = mealplan.BillingMonthChild{StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
+		children[i] = mealplan.BillingMonthChild{StudentID: ident.ID(child.StudentID), FirstName: child.FirstName, LastName: child.LastName,
 			SchoolClass: child.SchoolClass, RegisteredDays: child.RegisteredDays, MealDays: child.MealDays, AbsentDates: []mealplan.Date{}}
 		view.AbsenceCount += child.RegisteredDays - child.MealDays
 	}
@@ -396,7 +397,7 @@ func schoolDay(month calendar.Date, day mealplan.DailyList, holidays []mealplan.
 func countDay(children map[int64]*mealplan.BillingMonthChild, participant mealplan.DailyParticipant, date mealplan.Date, present bool) {
 	child, ok := children[participant.StudentID]
 	if !ok {
-		child = &mealplan.BillingMonthChild{StudentID: participant.StudentID, AbsentDates: []mealplan.Date{}}
+		child = &mealplan.BillingMonthChild{StudentID: ident.ID(participant.StudentID), AbsentDates: []mealplan.Date{}}
 		children[participant.StudentID] = child
 	}
 	child.FirstName, child.LastName, child.SchoolClass = participant.FirstName, participant.LastName, participant.SchoolClass
@@ -415,7 +416,7 @@ func compareChildren(a, b mealplan.BillingMonthChild) int {
 	if c := collation.CompareGermanNames(a.LastName, a.FirstName, b.LastName, b.FirstName); c != 0 {
 		return c
 	}
-	return compareIDs(a.StudentID, b.StudentID)
+	return compareIDs(a.StudentID.Int64(), b.StudentID.Int64())
 }
 
 // compareChildrenForFingerprint is the byte order of the lowercased names,
@@ -429,7 +430,7 @@ func compareChildrenForFingerprint(a, b mealplan.BillingMonthChild) int {
 	if c := strings.Compare(strings.ToLower(a.FirstName), strings.ToLower(b.FirstName)); c != 0 {
 		return c
 	}
-	return compareIDs(a.StudentID, b.StudentID)
+	return compareIDs(a.StudentID.Int64(), b.StudentID.Int64())
 }
 
 func compareIDs(a, b int64) int {

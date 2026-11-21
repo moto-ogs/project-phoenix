@@ -166,7 +166,7 @@ func TestTraegerRemembersTheDeviceOnlyWhenAsked(t *testing.T) {
 	assert.NotEmpty(t, devices[0].ExpiresAt)
 	assert.NotNil(t, devices[0].LastUsedAt, "the sign-in on it counts as a use")
 
-	rec = traegerRevokeDevice(t, portal, remembered.AccessToken, devices[0].ID)
+	rec = traegerRevokeDevice(t, portal, remembered.AccessToken, devices[0].ID.Int64())
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	_, devices = traegerDevices(t, portal, remembered.AccessToken, nil)
 	assert.Empty(t, devices)
@@ -214,7 +214,7 @@ func TestTraegerDeviceOpensOnlyItsPortalAndItsTraeger(t *testing.T) {
 	assert.Empty(t, devices, "Träger B lists none of Träger A's devices")
 	_, firstDevices := traegerDevices(t, portal, own.AccessToken, nil)
 	require.Len(t, firstDevices, 1)
-	rec := traegerRevokeDevice(t, portal, secondSession.AccessToken, firstDevices[0].ID)
+	rec := traegerRevokeDevice(t, portal, secondSession.AccessToken, firstDevices[0].ID.Int64())
 	assert.Equal(t, http.StatusForbidden, rec.Code, "a device of another Träger answers like a foreign one: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"code":"general.permission"`)
 	assert.True(t, verified(identityaccess.WithTraegerDevice(ctx, first), 0), "and stays remembered")

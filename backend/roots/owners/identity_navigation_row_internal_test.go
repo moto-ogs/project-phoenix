@@ -94,7 +94,7 @@ func TestCallerNavigationRowSendsTheBytesOfTheFormerMap(t *testing.T) {
 	at := time.Date(2026, 9, 2, 9, 30, 0, 0, time.UTC)
 	roomID := int64(5)
 	groups := navigationGroups{
-		3: {ID: 3, CreatedAt: at, UpdatedAt: at, TenantID: 7, Name: "Rot & <Blau>", RoomID: &roomID},
+		3: {ID: 3, CreatedAt: at, UpdatedAt: at, TenantID: 7, Name: "Rot & <Blau>", RoomID: (*ident.ID)(&roomID)},
 		4: {ID: 4, CreatedAt: at, UpdatedAt: at, TenantID: 7, Name: "Grün"},
 	}
 	sessions := []*presenceCompose.SessionRow{{ID: 9, CreatedAt: at, UpdatedAt: at, TenantID: 7, StartTime: at, LastActivity: at, TimeoutMinutes: 30, RoomID: 5}}

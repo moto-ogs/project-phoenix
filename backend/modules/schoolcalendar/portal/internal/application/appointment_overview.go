@@ -9,6 +9,7 @@ import (
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) GetStaffAppointmentOverview(ctx context.Context, appointmentID int64, occurrenceDate appointmentcap.Date) (*AppointmentOverview, error) {
@@ -28,12 +29,12 @@ func (s *service) GetStaffAppointmentOverview(ctx context.Context, appointmentID
 	if appointment == nil || appointment.DeletedAt != nil {
 		return nil, ErrNotFound
 	}
-	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID)
+	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, err
 	}
 	isRecipient := staffRecipient(recipients, staff.ID) != nil
-	if appointment.OrganizerStaffID != staff.ID && !isRecipient {
+	if appointment.OrganizerStaffID != ident.ID(staff.ID) && !isRecipient {
 		return nil, ErrNotFound
 	}
 	if !canStaffViewOverview(appointment, staff.ID, isRecipient) {
@@ -65,7 +66,7 @@ func (s *service) buildAppointmentOverview(ctx context.Context, appointment *app
 	attendees := make([]AppointmentAttendee, 0, len(listed))
 	for _, recipient := range listed {
 		attendee := AppointmentAttendee{
-			RecipientID:   formatID(recipient.ID),
+			RecipientID:   formatID(recipient.ID.Int64()),
 			RecipientType: recipient.RecipientType,
 			Name:          attendeeName(recipient, staffByID, guardiansByID),
 			Status:        recipient.StatusOn(occurrenceDate),
@@ -83,7 +84,7 @@ func (s *service) buildAppointmentOverview(ctx context.Context, appointment *app
 	})
 
 	return &AppointmentOverview{
-		AppointmentID:      formatID(appointment.ID),
+		AppointmentID:      formatID(appointment.ID.Int64()),
 		DeliveryMode:       appointment.DeliveryMode,
 		OverviewVisibility: appointment.OverviewVisibility,
 		OccurrenceDate:     occurrenceDate,
@@ -133,10 +134,10 @@ func recipientPersonIDs(recipients []*appointmentcap.AppointmentRecipient) ([]in
 	guardianIDs := make([]int64, 0)
 	for _, recipient := range recipients {
 		if recipient.StaffID != nil {
-			staffIDs = append(staffIDs, *recipient.StaffID)
+			staffIDs = append(staffIDs, (*recipient.StaffID).Int64())
 		}
 		if recipient.GuardianProfileID != nil {
-			guardianIDs = append(guardianIDs, *recipient.GuardianProfileID)
+			guardianIDs = append(guardianIDs, (*recipient.GuardianProfileID).Int64())
 		}
 	}
 	return staffIDs, guardianIDs
@@ -147,10 +148,10 @@ func recipientPersonIDs(recipients []*appointmentcap.AppointmentRecipient) ([]in
 func attendeeName(recipient *appointmentcap.AppointmentRecipient, staffByID map[int64]*ports.Staff, guardiansByID map[int64]*ports.GuardianProfile) string {
 	name := ""
 	if recipient.StaffID != nil {
-		name = staffName(staffByID[*recipient.StaffID])
+		name = staffName(staffByID[(*recipient.StaffID).Int64()])
 	}
 	if recipient.GuardianProfileID != nil {
-		name = guardianName(guardiansByID[*recipient.GuardianProfileID])
+		name = guardianName(guardiansByID[(*recipient.GuardianProfileID).Int64()])
 	}
 	if strings.TrimSpace(name) == "" {
 		name = fmt.Sprintf("Empfänger %d", recipient.ID)
@@ -162,7 +163,7 @@ func canStaffViewOverview(appointment *appointmentcap.Appointment, staffID int64
 	if appointment == nil {
 		return false
 	}
-	if appointment.OrganizerStaffID == staffID {
+	if appointment.OrganizerStaffID == ident.ID(staffID) {
 		return true
 	}
 	switch appointment.OverviewVisibility {

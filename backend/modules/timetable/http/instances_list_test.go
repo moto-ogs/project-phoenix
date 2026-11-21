@@ -254,7 +254,7 @@ func TestResolveEmptyRosterReason_ExplainsOfferingDerivedEmptyOccurrence(t *test
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			instance := timetable.ScheduledInstance{Date: tt.date, CalendarPeriodID: &periodID}
+			instance := timetable.ScheduledInstance{Date: tt.date, CalendarPeriodID: (*ident.ID)(&periodID)}
 			reason := resource.resolveEmptyRosterReason(
 				context.Background(), instance, metadata, nil,
 				make(map[int64]timetable.EmptyOfferingRosterExplainer),
@@ -268,7 +268,7 @@ func TestResolveEmptyRosterReason_ExplainsOfferingDerivedEmptyOccurrence(t *test
 
 	populated := resource.resolveEmptyRosterReason(
 		context.Background(),
-		timetable.ScheduledInstance{Date: calendar.NewDate(2026, 8, 10), CalendarPeriodID: &periodID},
+		timetable.ScheduledInstance{Date: calendar.NewDate(2026, 8, 10), CalendarPeriodID: (*ident.ID)(&periodID)},
 		metadata,
 		[]timetable.ScheduledParticipant{{StudentID: sourceID + 2}},
 		make(map[int64]timetable.EmptyOfferingRosterExplainer),

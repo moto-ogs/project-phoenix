@@ -403,7 +403,7 @@ func TestDetectShiftCoverageWarnings_ChangedRosterDropsPriorAbsence(t *testing.T
 	})
 	require.NoError(t, err)
 	require.Len(t, warnings, 2, "changed membership makes both submitted IDs effective")
-	assert.Equal(t, []int64{1, 4}, []int64{warnings[0].StaffID, warnings[1].StaffID})
+	assert.Equal(t, []int64{1, 4}, []int64{warnings[0].StaffID.Int64(), warnings[1].StaffID.Int64()})
 	assert.Equal(t, 1, instanceStaff.calls, "concrete roster must be loaded in one batch")
 	assert.Equal(t, 1, shiftReader.calls, "shifts and tenant week usage share one full-week snapshot")
 	assert.Equal(t, 1, staff.findCalls, "all warning names must be loaded in one batch")

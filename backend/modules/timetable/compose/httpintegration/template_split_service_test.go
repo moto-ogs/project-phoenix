@@ -808,11 +808,11 @@ func TestTemplateSplitKeepsArchivedPlanningTrackAssignment(t *testing.T) {
 		Where("id = ?", s.template.ID).
 		Exec(s.ctx)
 	require.NoError(t, err)
-	_, err = scenarioPlanningTracks(t, s.db).ArchivePlanningTrack(s.ctx, track.ID)
+	_, err = scenarioPlanningTracks(t, s.db).ArchivePlanningTrack(s.ctx, track.ID.Int64())
 	require.NoError(t, err)
 
 	in := baseSplitInput(s, effective, fmt.Sprintf("Split-Track-%d", time.Now().UnixNano()))
-	in.PlanningTrackID = &track.ID
+	in.PlanningTrackID = (*int64)(&track.ID)
 	in.PlanningTrackIDProvided = true
 	result, err := s.timetableData.Templates.SplitTemplate(s.ctx, in)
 	require.NoError(t, err)

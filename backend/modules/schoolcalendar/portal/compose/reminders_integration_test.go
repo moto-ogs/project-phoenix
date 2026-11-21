@@ -455,7 +455,7 @@ func TestCalendarServiceIntegration_CancelledAppointmentIsNotReminded(t *testing
 	})
 	require.NoError(t, err)
 
-	_, err = service.CancelStaffAppointment(ctx, detail.Appointment.ID)
+	_, err = service.CancelStaffAppointment(ctx, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 
 	before := len(outbox.enqueued)
@@ -660,7 +660,7 @@ func TestCalendarServiceIntegration_ReminderForMovedRecurringOccurrence(t *testi
 	movedDate := portalDate(2026, 2, 4)
 	movedModelDate := calModels.Date(movedDate)
 	require.NoError(t, reposAppointments.Appointments().CreateOccurrenceOverride(ctx, &calModels.AppointmentOccurrenceOverride{
-		AppointmentID:  detail.Appointment.ID,
+		AppointmentID:  detail.Appointment.ID.Int64(),
 		OccurrenceDate: calModels.Date(seriesStart),
 		StartDate:      &movedModelDate,
 		EndDate:        &movedModelDate,

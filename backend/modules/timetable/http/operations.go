@@ -587,14 +587,14 @@ func (rs *Resource) attachTeacherHints(ctx context.Context, roster *timetable.Op
 	}
 	studentIDs := make([]int64, 0, len(roster.Rows))
 	for _, row := range roster.Rows {
-		studentIDs = append(studentIDs, row.StudentID)
+		studentIDs = append(studentIDs, row.StudentID.Int64())
 	}
 	hints, err := rs.TeacherHints.TeacherHints(ctx, studentIDs, day)
 	if err != nil {
 		return fmt.Errorf("teacher hints: %w", err)
 	}
 	for i := range roster.Rows {
-		roster.Rows[i].TeacherHints = hints[roster.Rows[i].StudentID]
+		roster.Rows[i].TeacherHints = hints[roster.Rows[i].StudentID.Int64()]
 	}
 	return nil
 }

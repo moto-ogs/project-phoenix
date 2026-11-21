@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -140,7 +141,7 @@ func TestTimetableOperationsPlannedNowIncludesSchulhof(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, result, 2)
-	ids := []int64{result[0].ID, result[1].ID}
+	ids := []int64{result[0].ID.Int64(), result[1].ID.Int64()}
 	assert.ElementsMatch(t, []int64{330, 331}, ids)
 }
 
@@ -362,7 +363,7 @@ func TestTimetableOperationsPlannedNowPastScopeSelectsFinishedBlocks(t *testing.
 
 	require.NoError(t, err)
 	require.Len(t, result, 2)
-	ids := []int64{result[0].ID, result[1].ID}
+	ids := []int64{result[0].ID.Int64(), result[1].ID.Int64()}
 	assert.ElementsMatch(t, []int64{360, 361}, ids)
 	for _, inst := range result {
 		assert.False(t, inst.CanStart)
@@ -402,7 +403,7 @@ func TestTimetableOperationsPlannedNowPastScopeAnnouncesReopen(t *testing.T) {
 	require.NoError(t, err)
 	reopenable := map[int64]bool{}
 	for _, inst := range result {
-		reopenable[inst.ID] = inst.CanReopen
+		reopenable[inst.ID.Int64()] = inst.CanReopen
 		if inst.ID == 380 {
 			assert.Equal(t, now.Add(30*time.Minute).Format(time.RFC3339), inst.ReopenUntil)
 		} else {
@@ -531,7 +532,7 @@ func TestTimetableOperationsPlannedNowPastBlocksOpenAsRoster(t *testing.T) {
 			require.NotEmpty(t, listed)
 
 			for _, inst := range listed {
-				_, err := deps.service.Roster(context.Background(), 636, tc.admin, inst.ID)
+				_, err := deps.service.Roster(context.Background(), 636, tc.admin, inst.ID.Int64())
 				require.NoError(t, err, "listed block %d must open as roster", inst.ID)
 			}
 		})
@@ -570,7 +571,7 @@ func TestTimetableOperationsPlannedNowDayScopeFollowsOperationalOverview(t *test
 		fixtureRow.StaffID = 999
 	})}
 
-	deps.tracks.byID[trackID] = timetable.PlanningTrack{ID: trackID, Name: "Angebote", Color: "#5080D8"}
+	deps.tracks.byID[trackID] = timetable.PlanningTrack{ID: ident.ID(trackID), Name: "Angebote", Color: "#5080D8"}
 	activityGroup := &activityContract.Group{PlanningTrackID: &trackID, EducationGroupID: &educationGroupID}
 	activityGroup.ID = activityGroupID
 	deps.activityGroups.byID[activityGroupID] = activityGroup
@@ -591,7 +592,7 @@ func TestTimetableOperationsPlannedNowDayScopeFollowsOperationalOverview(t *test
 	require.Len(t, result, 3)
 	byID := map[int64]timetable.OperationPlannedInstance{}
 	for _, inst := range result {
-		byID[inst.ID] = inst
+		byID[inst.ID.Int64()] = inst
 	}
 	require.Contains(t, byID, int64(381))
 	require.NotNil(t, byID[381].ActiveGroupID)

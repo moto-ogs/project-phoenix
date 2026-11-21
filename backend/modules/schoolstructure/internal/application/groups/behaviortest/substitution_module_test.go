@@ -710,7 +710,7 @@ func (g *ownershipRevokingGroups) FindByIDForUpdate(ctx context.Context, id any)
 	if err != nil {
 		return nil, err
 	}
-	relations, err := g.links.FindByGroup(ctx, group.ID)
+	relations, err := g.links.FindByGroup(ctx, group.ID.Int64())
 	if err != nil {
 		return nil, err
 	}

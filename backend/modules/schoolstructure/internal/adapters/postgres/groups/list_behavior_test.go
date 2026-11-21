@@ -5,6 +5,7 @@ import (
 
 	schoolStructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -18,8 +19,8 @@ func TestGroupRepositoryListWithRoomsPreservesJoinSortPaginationAndEmptySlice(t 
 	repo := api.NewSchoolStructureSuiteRepositories(testpkg.NewDatabase(t, db)).Group
 	ctx := testpkg.Ctx(t)
 	room := testpkg.CreateTestRoom(t, db, "Group list behavior")
-	alpha := &schoolStructureCompose.Group{Name: "Group list alpha", RoomID: &room.ID}
-	beta := &schoolStructureCompose.Group{Name: "Group list beta", RoomID: &room.ID}
+	alpha := &schoolStructureCompose.Group{Name: "Group list alpha", RoomID: (*ident.ID)(&room.ID)}
+	beta := &schoolStructureCompose.Group{Name: "Group list beta", RoomID: (*ident.ID)(&room.ID)}
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.Create, alpha))
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.Create, beta))
 

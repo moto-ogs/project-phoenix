@@ -5,7 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -27,7 +27,7 @@ export interface TraegerMemberResponse {
 }
 
 export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unknown> = object<TraegerMemberResponse>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   name: str,
   roles: nullable(arr(str)),
@@ -44,7 +44,7 @@ export interface TraegerInvitationResponse {
 }
 
 export const TraegerInvitationResponseSchema: z.ZodType<TraegerInvitationResponse, unknown> = object<TraegerInvitationResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   roles: nullable(arr(str)),
   expires_at: instant,
@@ -75,7 +75,7 @@ export interface TraegerHistoryEntryResponse {
 }
 
 export const TraegerHistoryEntryResponseSchema: z.ZodType<TraegerHistoryEntryResponse, unknown> = object<TraegerHistoryEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   occurred_at: instant,
   action: str,
   actor_email: str,

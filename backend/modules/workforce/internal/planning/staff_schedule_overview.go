@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -331,7 +332,7 @@ func visibleActivityInstances(instances []*timetable.ScheduledInstance) ([]*time
 			continue
 		}
 		visible = append(visible, instance)
-		ids = append(ids, instance.ID)
+		ids = append(ids, instance.ID.Int64())
 	}
 	return visible, ids
 }
@@ -355,7 +356,7 @@ func buildStaffScheduleAssignments(
 ) []StaffScheduleAssignment {
 	assignments := make([]StaffScheduleAssignment, 0)
 	for _, instance := range visibleInstances {
-		for _, row := range rowsByInstance[instance.ID] {
+		for _, row := range rowsByInstance[instance.ID.Int64()] {
 			assignment := newStaffScheduleAssignment(instance, row, roomNames)
 			instanceDate := instance.Date
 			weekFrom, _ := containingCalendarWeek(instanceDate)
@@ -373,18 +374,18 @@ func newStaffScheduleAssignment(
 ) StaffScheduleAssignment {
 	roomID := instance.RoomID
 	if row.RoomID != nil {
-		roomID = *row.RoomID
+		roomID = ident.ID(*row.RoomID)
 	}
 	return StaffScheduleAssignment{
-		InstanceID:         instance.ID,
+		InstanceID:         instance.ID.Int64(),
 		StaffID:            row.StaffID,
 		Date:               instance.Date,
 		StartTime:          calendar.NormalizeWallClock(instance.StartTime),
 		EndTime:            calendar.NormalizeWallClock(instance.EndTime),
 		ActivityTitle:      instance.Title,
-		ActivityGroupID:    instance.ActivityGroupID,
-		RoomID:             roomID,
-		RoomName:           roomNames[roomID],
+		ActivityGroupID:    (*int64)(instance.ActivityGroupID),
+		RoomID:             roomID.Int64(),
+		RoomName:           roomNames[roomID.Int64()],
 		Status:             instance.Status,
 		IsAbsent:           row.IsAbsent,
 		IsSubstitute:       row.IsSubstitute,
@@ -396,7 +397,7 @@ func newStaffScheduleAssignment(
 func effectiveAssignmentRoomIDs(instances []*timetable.ScheduledInstance, rows []*timetable.InstanceStaff) []int64 {
 	roomByInstance := make(map[int64]int64, len(instances))
 	for _, instance := range instances {
-		roomByInstance[instance.ID] = instance.RoomID
+		roomByInstance[instance.ID.Int64()] = instance.RoomID.Int64()
 	}
 	seen := make(map[int64]struct{})
 	roomIDs := make([]int64, 0)

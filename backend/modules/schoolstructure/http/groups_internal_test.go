@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // =============================================================================
@@ -23,8 +24,8 @@ func TestGroupRequest_Fields(t *testing.T) {
 	roomID := int64(5)
 	req := GroupRequest{
 		Name:       "Test Group",
-		RoomID:     &roomID,
-		TeacherIDs: []int64{10, 20},
+		RoomID:     (*ident.ID)(&roomID),
+		TeacherIDs: []ident.ID{10, 20},
 	}
 
 	assert.Equal(t, "Test Group", req.Name)
@@ -63,8 +64,8 @@ func TestGroupResponse_Fields(t *testing.T) {
 	resp := GroupResponse{
 		ID:               1,
 		Name:             "Response Group",
-		RoomID:           &roomID,
-		RepresentativeID: &repID,
+		RoomID:           (*ident.ID)(&roomID),
+		RepresentativeID: (*ident.ID)(&repID),
 		StudentCount:     25,
 		CreatedAt:        now,
 		UpdatedAt:        now,

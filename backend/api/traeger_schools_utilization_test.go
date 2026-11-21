@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -79,7 +80,7 @@ func (p utilizationPresence) visit(student, session int64, day calendar.Date, fr
 func utilizationOf(t *testing.T, got traegerview.Utilization, school int64) traegerview.SchoolUtilization {
 	t.Helper()
 	for _, row := range got.Schools {
-		if row.ID == school {
+		if row.ID == ident.ID(school) {
 			return row
 		}
 	}

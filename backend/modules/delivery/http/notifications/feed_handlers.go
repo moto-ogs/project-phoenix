@@ -8,11 +8,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // FeedEntry is one entry of the caller's notification feed (#7148).
 type FeedEntry struct {
-	ID        int64
+	ID        ident.ID
 	Type      string
 	Title     string
 	Body      string
@@ -41,7 +43,7 @@ type FeedService interface {
 }
 
 type feedEntryResponse struct {
-	ID        int64      `json:"id"`
+	ID        common.ID  `json:"id"`
 	Type      string     `json:"type"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`

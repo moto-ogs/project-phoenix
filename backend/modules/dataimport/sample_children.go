@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Sample children of a test Träger (#4658, spec #4611 user story 125): the
@@ -47,10 +48,10 @@ type TestTraegerSchools interface {
 // SampleSchoolResult is the outcome in one test school: children created,
 // rows skipped because the child already exists, and rows that failed.
 type SampleSchoolResult struct {
-	SchoolID     int64 `json:"school_id"`
-	CreatedCount int   `json:"created_count"`
-	SkippedCount int   `json:"skipped_count"`
-	FailedCount  int   `json:"failed_count"`
+	SchoolID     ident.ID `json:"school_id"`
+	CreatedCount int      `json:"created_count"`
+	SkippedCount int      `json:"skipped_count"`
+	FailedCount  int      `json:"failed_count"`
 }
 
 // SampleChildrenResult is the outcome over every test school of the Träger.
@@ -144,7 +145,7 @@ func (s *sampleChildren) FillTestTraeger(ctx context.Context, organizationID, op
 		}
 		skipped := existingChildRows(imported.Errors)
 		school := SampleSchoolResult{
-			SchoolID: schoolID, CreatedCount: imported.CreatedCount,
+			SchoolID: ident.ID(schoolID), CreatedCount: imported.CreatedCount,
 			SkippedCount: skipped, FailedCount: imported.ErrorCount - skipped,
 		}
 		result.Schools = append(result.Schools, school)

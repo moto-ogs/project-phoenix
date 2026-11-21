@@ -364,7 +364,7 @@ func (s *fakeOpsLifecycle) Start(_ context.Context, instanceID, staffID int64, _
 
 func (s *fakeOpsLifecycle) Complete(_ context.Context, instanceID, _ int64) (*timetable.ScheduledInstance, error) {
 	s.completed = append(s.completed, instanceID)
-	return &timetable.ScheduledInstance{ID: instanceID, Status: fixtures.InstanceStatusCompleted()}, nil
+	return &timetable.ScheduledInstance{ID: ident.ID(instanceID), Status: fixtures.InstanceStatusCompleted()}, nil
 }
 
 func (s *fakeOpsLifecycle) Reopen(_ context.Context, instanceID, _ int64, _ bool) (*timetable.StartedOperation, error) {

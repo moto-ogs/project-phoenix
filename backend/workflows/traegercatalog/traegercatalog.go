@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrPreviewStale rejects a rollout whose preview no longer matches the
@@ -40,7 +41,7 @@ const (
 
 // OfferingPlan is one Träger offering at one school.
 type OfferingPlan struct {
-	TraegerOfferingID int64                                 `json:"traeger_offering_id"`
+	TraegerOfferingID ident.ID                              `json:"traeger_offering_id"`
 	Name              string                                `json:"name"`
 	Action            string                                `json:"action"`
 	Fields            []careplan.TraegerOfferingFieldChange `json:"fields"`
@@ -54,7 +55,7 @@ type OfferingPlan struct {
 
 // SchoolPlan is what a rollout does at one school, or why it refuses.
 type SchoolPlan struct {
-	SchoolID  int64                           `json:"school_id"`
+	SchoolID  ident.ID                        `json:"school_id"`
 	Action    string                          `json:"action"`
 	Outcome   string                          `json:"outcome"`
 	ErrorCode string                          `json:"error_code,omitempty"`
@@ -67,7 +68,7 @@ type SchoolPlan struct {
 
 // Preview is the plan of a rollout per school with its fingerprint.
 type Preview struct {
-	TraegerPhaseID int64        `json:"traeger_phase_id"`
+	TraegerPhaseID ident.ID     `json:"traeger_phase_id"`
 	Version        int          `json:"version"`
 	Fingerprint    string       `json:"fingerprint"`
 	Schools        []SchoolPlan `json:"schools"`
@@ -75,9 +76,9 @@ type Preview struct {
 
 // SchoolResult is the outcome of a rollout at one school.
 type SchoolResult struct {
-	SchoolID  int64  `json:"school_id"`
-	Outcome   string `json:"outcome"`
-	ErrorCode string `json:"error_code,omitempty"`
+	SchoolID  ident.ID `json:"school_id"`
+	Outcome   string   `json:"outcome"`
+	ErrorCode string   `json:"error_code,omitempty"`
 	// CareBeyondEnd counts the children whose care runs past the school's
 	// shortened phase after the rollout (#6813, ADR 0211).
 	CareBeyondEnd int `json:"care_beyond_end"`
@@ -86,7 +87,7 @@ type SchoolResult struct {
 // Rollout is the outcome of a rollout per school. A rollout is atomic per
 // school, not across schools.
 type Rollout struct {
-	TraegerPhaseID int64          `json:"traeger_phase_id"`
+	TraegerPhaseID ident.ID       `json:"traeger_phase_id"`
 	Version        int            `json:"version"`
 	Schools        []SchoolResult `json:"schools"`
 }

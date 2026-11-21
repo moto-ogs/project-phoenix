@@ -84,10 +84,10 @@ export interface TraegerNotice {
 
 export const TraegerNoticeSchema: z.ZodType<TraegerNotice, unknown> = object<TraegerNotice>({
   token: str,
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   school_name: optional(str),
-  closing_day_id: int64StringOrNumber,
+  closing_day_id: int64String,
   reason: str,
   previous: nullable(RangeSchema),
   current: nullable(RangeSchema),
@@ -164,10 +164,10 @@ export interface ClosureNotice {
 
 export const ClosureNoticeSchema: z.ZodType<ClosureNotice, unknown> = object<ClosureNotice>({
   token: str,
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   school_name: optional(str),
-  closing_day_id: int64StringOrNumber,
+  closing_day_id: int64String,
   reason: str,
   previous: nullable(RangeSchema),
   current: nullable(RangeSchema),

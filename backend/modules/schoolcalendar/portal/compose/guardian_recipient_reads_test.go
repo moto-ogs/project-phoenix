@@ -29,7 +29,7 @@ func recipientReadAppointments(t *testing.T, db *bun.DB, cfg calendarCompose.Con
 			SendEmail: true, Targets: []portal.AppointmentTarget{{Type: appointments.TargetTypeGuardianProfile, ID: &family.GuardianProfileID}},
 		})
 		require.NoError(t, err)
-		ids = append(ids, detail.Appointment.ID)
+		ids = append(ids, detail.Appointment.ID.Int64())
 	}
 	return ctx, ids, family
 }

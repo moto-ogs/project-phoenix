@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
@@ -35,7 +36,7 @@ func (s *recordingStore) List(context.Context, int64, int) ([]domain.Group, doma
 func (s *recordingStore) FindByID(_ context.Context, id int64) (domain.Group, bool, domain.OperationStats, error) {
 	s.calls++
 	s.findID = id
-	return domain.Group{ID: id, Name: "Igel"}, true, domain.OperationStats{}, nil
+	return domain.Group{ID: ident.ID(id), Name: "Igel"}, true, domain.OperationStats{}, nil
 }
 
 func (s *recordingStore) ListByIDs(_ context.Context, ids []int64) ([]domain.Group, domain.OperationStats, error) {
@@ -43,7 +44,7 @@ func (s *recordingStore) ListByIDs(_ context.Context, ids []int64) ([]domain.Gro
 	s.listIDs = ids
 	result := make([]domain.Group, 0, len(ids))
 	for _, id := range ids {
-		result = append(result, domain.Group{ID: id, Name: "Igel"})
+		result = append(result, domain.Group{ID: ident.ID(id), Name: "Igel"})
 	}
 	return result, domain.OperationStats{}, nil
 }

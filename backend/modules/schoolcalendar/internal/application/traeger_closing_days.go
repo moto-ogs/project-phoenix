@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Closing days of a Träger (#4702). The caller runs every operation in the
@@ -84,7 +85,7 @@ func (t *TraegerClosingDays) Calendar(ctx context.Context, organizationID int64,
 	seen := map[string]bool{}
 	for _, school := range schools {
 		region := schoolcalendar.HolidayRegion{Code: school.FederalState, Name: HolidayRegionName(school.FederalState)}
-		result.Schools = append(result.Schools, traegercalendar.CalendarSchool{ID: school.ID, Name: school.Name, FederalState: region})
+		result.Schools = append(result.Schools, traegercalendar.CalendarSchool{ID: ident.ID(school.ID), Name: school.Name, FederalState: region})
 		if seen[region.Code] || !ValidHolidayRegion(region.Code) {
 			continue
 		}
@@ -136,7 +137,7 @@ func (t *TraegerClosingDays) save(ctx context.Context, organizationID, id int64,
 		input.ClosingDayID = id
 		input.Previous = &traegercalendar.ClosingDaySpan{StartDate: previous.StartDate, EndDate: previous.EndDate, SchoolIDs: previous.SchoolIDs}
 		day, err = storedTraegerClosingDay(t.store.UpdateTraegerClosingDay(ctx, organizationID, id, fields))
-		day.AffectedSchoolIDs = affectedSchoolIDs(previous.SchoolIDs, day.SchoolIDs)
+		day.AffectedSchoolIDs = affectedSchoolIDs(previous.SchoolIDs, ident.Int64s(day.SchoolIDs))
 	}
 	if err != nil {
 		return traegercalendar.ClosingDay{}, err
@@ -176,7 +177,7 @@ func (t *TraegerClosingDays) DeleteClosingDay(ctx context.Context, organizationI
 }
 
 func traegerClosingDay(day domain.TraegerClosingDay) traegercalendar.ClosingDay {
-	return traegercalendar.ClosingDay{ID: day.ID, StartDate: day.StartDate, EndDate: day.EndDate, Reason: day.Reason, SchoolIDs: day.SchoolIDs, UpdatedAt: day.UpdatedAt, AffectedSchoolIDs: append([]int64(nil), day.SchoolIDs...)}
+	return traegercalendar.ClosingDay{ID: ident.ID(day.ID), StartDate: day.StartDate, EndDate: day.EndDate, Reason: day.Reason, SchoolIDs: ident.IDs(day.SchoolIDs), UpdatedAt: day.UpdatedAt, AffectedSchoolIDs: append([]int64(nil), day.SchoolIDs...)}
 }
 
 func affectedSchoolIDs(schoolIDSets ...[]int64) []int64 {

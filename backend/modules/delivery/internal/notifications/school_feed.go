@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The bells across schools: the Träger-Portal's (#7146) and the caterer
@@ -214,7 +215,7 @@ func schoolFeedPageEntries(entries []domain.SchoolFeedEntry, limit int) ([]contr
 	for _, entry := range entries {
 		page = append(page, contract.TraegerNotificationFeedEntry{
 			NotificationFeedEntry: FeedEntry{
-				ID: entry.ID, Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: entry.DeepLink,
+				ID: ident.ID(entry.ID), Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: entry.DeepLink,
 				CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt, ReadAt: entry.ReadAt,
 			},
 			SchoolID: entry.TenantID, SchoolName: entry.SchoolName,

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -396,8 +397,8 @@ func TestSelectGroup(t *testing.T) {
 	}{
 		{name: "defaults to the first group", want: int64Ptr(10)},
 		{name: "uses a requested group", requested: 20, want: int64Ptr(20)},
-		{name: "permits the supervised yard group", requested: 30, yard: &SchulhofStatus{IsUserSupervising: true, ActiveGroupID: &yardGroupID}, want: int64Ptr(30)},
-		{name: "rejects an unsupervised yard group", requested: 30, yard: &SchulhofStatus{ActiveGroupID: &yardGroupID}, wantErr: ErrForbiddenGroup},
+		{name: "permits the supervised yard group", requested: 30, yard: &SchulhofStatus{IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, want: int64Ptr(30)},
+		{name: "rejects an unsupervised yard group", requested: 30, yard: &SchulhofStatus{ActiveGroupID: (*ident.ID)(&yardGroupID)}, wantErr: ErrForbiddenGroup},
 		{name: "rejects an unsupervised group", requested: 40, wantErr: ErrForbiddenGroup},
 	}
 
@@ -814,7 +815,7 @@ func TestDashboardSelectedGroupSectionsFollowAccess(t *testing.T) {
 		},
 		yard: func(_ context.Context, staffID int64) (*SchulhofStatus, error) {
 			assert.Equal(t, int64(77), staffID)
-			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: &yardGroupID}, nil
+			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, nil
 		},
 		groupVisits: func(_ context.Context, activeGroupID int64) ([]VisitRecord, error) {
 			assert.Equal(t, yardGroupID, activeGroupID)
@@ -913,7 +914,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.Capabilities = Capabilities{WebSpontaneousActivitiesEnabled: true}
 	projection.ActiveSessions = []ActiveSession{{ActiveGroupID: 11, InstanceID: 5, Title: "Malen", StartTime: "14:00", EndTime: "15:00"}}
 	projection.PlannedNow = []PlannedInstance{{ID: 5, Title: "Malen", Date: "2026-08-19", StartTime: "14:00", EndTime: "15:00", RoomID: 21, Status: "planned",
-		AssignedStaffIDs: []int64{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
+		AssignedStaffIDs: []ident.ID{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
 		PickupTimesLoaded: true, Warnings: []ConflictWarning{}, StartAvailableAt: "13:45", StartExpiresAt: "15:00"}}
 	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoURL: "/api/students/1/photo/p.jpg"}}
 	projection.TrackingIndicators = DashboardTrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}

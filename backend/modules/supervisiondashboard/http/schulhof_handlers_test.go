@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/supervisiondashboard"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // =============================================================================
@@ -73,12 +74,12 @@ func TestGetSchulhofStatus_Success(t *testing.T) {
 
 			return &supervisiondashboard.SchulhofStatus{
 				Exists:            true,
-				RoomID:            &roomID,
+				RoomID:            (*ident.ID)(&roomID),
 				RoomName:          "Schulhof",
-				ActivityGroupID:   &activityGroupID,
-				ActiveGroupID:     &activeGroupID,
+				ActivityGroupID:   (*ident.ID)(&activityGroupID),
+				ActiveGroupID:     (*ident.ID)(&activeGroupID),
 				IsUserSupervising: true,
-				SupervisionID:     &supervisionID,
+				SupervisionID:     (*ident.ID)(&supervisionID),
 				SupervisorCount:   2,
 				StudentCount:      15,
 				Supervisors: []supervisiondashboard.Supervisor{

@@ -5,7 +5,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -39,11 +39,11 @@ export interface ClosingDay {
 }
 
 export const ClosingDaySchema: z.ZodType<ClosingDay, unknown> = object<ClosingDay>({
-  id: int64StringOrNumber,
+  id: int64String,
   start_date: nullable(calendarDate),
   end_date: nullable(calendarDate),
   reason: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   updated_at: instant,
   notified_families: safeInt,
 });
@@ -67,7 +67,7 @@ export interface CalendarSchool {
 }
 
 export const CalendarSchoolSchema: z.ZodType<CalendarSchool, unknown> = object<CalendarSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   federal_state: HolidayRegionSchema,
 });
@@ -101,7 +101,7 @@ export interface TraegerClosingDayRequest {
   start_date?: string | null;
   end_date?: string | null;
   reason?: string;
-  school_ids?: number[] | null;
+  school_ids?: string[] | null;
   holiday_bookings_token?: string;
 }
 

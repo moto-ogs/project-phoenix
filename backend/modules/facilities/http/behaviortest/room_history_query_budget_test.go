@@ -149,11 +149,11 @@ func TestRoomHistoryQueryBudget(t *testing.T) {
 		require.Len(t, body.Data, n)
 		seen := make(map[int64]bool, n)
 		for index, entry := range body.Data {
-			want, ok := expected[entry.SessionID]
+			want, ok := expected[entry.SessionID.Int64()]
 			require.True(t, ok, "unexpected or foreign session %d", entry.SessionID)
 			require.NotEqual(t, foreignSession.ID, entry.SessionID)
-			require.False(t, seen[entry.SessionID], "duplicate session")
-			seen[entry.SessionID] = true
+			require.False(t, seen[entry.SessionID.Int64()], "duplicate session")
+			seen[entry.SessionID.Int64()] = true
 			// Starts are distinct, so the SQL's start_time DESC ordering is exact.
 			require.Equal(t, createdSessionIDs[n-1-index], entry.SessionID)
 			require.True(t, entry.StartedAt.Equal(want.startedAt))
