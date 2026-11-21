@@ -4,6 +4,9 @@ status: accepted
 
 # Every role may import the shared kernel
 
+> Amended on 2026-11-21 by [ADR 0300](0300-kennungen-sind-ein-typ-des-shared-kernel.md):
+> the kernel also holds the identifier `ident.ID` (`sharedkernel/ident`).
+
 > Amended on 2026-10-15: the rules for the `internal/timezone` wrapper do not
 > wait for their callers. #4081 replaces the imports with
 > `sharedkernel/calendar` and deletes the wrapper.

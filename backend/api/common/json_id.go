@@ -1,11 +1,9 @@
 package common
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"strconv"
-	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // JSONID is an int64 request field that accepts a JSON number or a decimal
@@ -26,38 +24,9 @@ type JSONID int64
 // Int64 returns the id as the int64 the rest of the code works with.
 func (id JSONID) Int64() int64 { return int64(id) }
 
-// UnmarshalJSON accepts a JSON number or a decimal string. A string is parsed
-// with strconv, so digits beyond float64 precision survive, and anything that
-// is not a plain integer is rejected instead of being coerced to zero.
+// UnmarshalJSON accepts a JSON number or a decimal string, as ident.ID does.
 func (id *JSONID) UnmarshalJSON(data []byte) error {
-	trimmed := strings.TrimSpace(string(data))
-	if trimmed == "null" {
-		return nil
-	}
-
-	if strings.HasPrefix(trimmed, `"`) {
-		var raw string
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return err
-		}
-		raw = strings.TrimSpace(raw)
-		if raw == "" {
-			return errors.New("id must not be empty")
-		}
-		parsed, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid id %q: %w", raw, err)
-		}
-		*id = JSONID(parsed)
-		return nil
-	}
-
-	var parsed int64
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return err
-	}
-	*id = JSONID(parsed)
-	return nil
+	return (*ident.ID)(id).UnmarshalJSON(data)
 }
 
 // MarshalJSON emits a JSON number, so a struct that is decoded and re-encoded
