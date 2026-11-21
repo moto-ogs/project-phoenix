@@ -379,6 +379,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodDelete, "/api/students/{id}/purge"}:                               notCaptured,
 	{http.MethodDelete, "/api/students/{id}/rfid"}:                                notCaptured,
 	{http.MethodPost, "/api/students/{id}/rfid"}:                                  notCaptured,
+	{http.MethodDelete, "/api/students/{id}/room-history-stop"}:                   notCaptured,
+	{http.MethodPut, "/api/students/{id}/room-history-stop"}:                      notCaptured,
 	{http.MethodPost, "/api/students/{id}/school-checkin"}:                        notCaptured,
 	{http.MethodPost, "/api/students/{id}/status-days"}:                           event("absence_reported"),
 	{http.MethodDelete, "/api/students/{id}/status-days/{statusDayId}"}:           notCaptured,

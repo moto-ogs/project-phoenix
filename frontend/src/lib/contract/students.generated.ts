@@ -86,6 +86,21 @@ export const partialAbsenceDeletedResponseSchema: z.ZodType<partialAbsenceDelete
   deleted: bool,
 });
 
+/** Go: studentpresencehttp.RoomHistoryStopResponse */
+export interface RoomHistoryStopResponse {
+  student_id: string;
+  stopped: boolean;
+  stopped_at?: string;
+  deleted_visits: number;
+}
+
+export const RoomHistoryStopResponseSchema: z.ZodType<RoomHistoryStopResponse, unknown> = object<RoomHistoryStopResponse>({
+  student_id: int64String,
+  stopped: bool,
+  stopped_at: optional(instant),
+  deleted_visits: safeInt,
+});
+
 /** Go: studentpresencehttp.StatusDayDeletedResponse */
 export interface StatusDayDeletedResponse {
   deleted: boolean;
@@ -3530,6 +3545,12 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/students/{id}/room-history-stop": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/room-history-stop",
+    portals: ["tenant"],
+    response: success(RoomHistoryStopResponseSchema),
+  },
   "DELETE /api/students/{id}/status-days/{statusDayId}": {
     method: "DELETE",
     pattern: "/api/students/{id}/status-days/{statusDayId}",
@@ -3833,6 +3854,12 @@ export const routes = {
     pattern: "/api/students/{id}/privacy-consent",
     portals: ["tenant"],
     response: success(PrivacyConsentResponseSchema),
+  },
+  "GET /api/students/{id}/room-history-stop": {
+    method: "GET",
+    pattern: "/api/students/{id}/room-history-stop",
+    portals: ["tenant"],
+    response: success(RoomHistoryStopResponseSchema),
   },
   "GET /api/students/{id}/status-days": {
     method: "GET",
@@ -4258,5 +4285,11 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<PrivacyConsentRequest>(),
     response: success(PrivacyConsentResponseSchema),
+  },
+  "PUT /api/students/{id}/room-history-stop": {
+    method: "PUT",
+    pattern: "/api/students/{id}/room-history-stop",
+    portals: ["tenant"],
+    response: success(RoomHistoryStopResponseSchema),
   },
 } as const;

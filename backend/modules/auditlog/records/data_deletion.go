@@ -52,6 +52,10 @@ const (
 	// who recorded it. It names the child and is written by the system; it
 	// is no withdrawal by the parents.
 	DeletionTypeStudentPhotoRetention = "student_photo_retention"
+	// DeletionTypeRoomHistoryStop records the completed room visits deleted
+	// when the OGS or the parents stopped a child's room history (#3844).
+	// It names the child and the acting account, never a room or a time.
+	DeletionTypeRoomHistoryStop = "room_history_stop"
 )
 
 // Retention types that log one data kind of a nightly run without a subject
@@ -223,7 +227,8 @@ func (dd *DataDeletion) Validate() error {
 		dd.DeletionType == DeletionTypeStudentChangeLogRetention,
 		dd.DeletionType == DeletionTypeStudentRetention,
 		dd.DeletionType == DeletionTypeStaffRetention,
-		dd.DeletionType == DeletionTypeStudentPhotoRetention:
+		dd.DeletionType == DeletionTypeStudentPhotoRetention,
+		dd.DeletionType == DeletionTypeRoomHistoryStop:
 		if hasStudent == hasStaff {
 			// Both set or both unset — the DB would reject this too.
 			return errors.New("exactly one of student_id / staff_id must be set")

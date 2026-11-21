@@ -29,6 +29,10 @@ func TestDeviceLifecycleEventsGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status)
 	assert.EqualValues(t, 1, result.RowCounts["audit.device_lifecycle_events"], "the one entry of the school")
 
+	// The room history stops (#3844) follow the device history at the head; they go first.
+
+	require.NoError(t, roomHistoryStopsDown(ctx, db))
+
 	require.NoError(t, deviceLifecycleEventsDown(ctx, db))
 	var exists bool
 	require.NoError(t, db.NewRaw(`SELECT to_regclass('audit.device_lifecycle_events') IS NOT NULL`).Scan(ctx, &exists))

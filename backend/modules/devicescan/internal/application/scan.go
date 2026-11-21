@@ -380,6 +380,19 @@ func buildScanResult(person *ports.Person, checkout currentVisitCheckout, checki
 	return result
 }
 
+// feedbackEnabledFor offers the mood prompt only when the school takes
+// feedback and the child is not stopped (#3844). A stop that cannot be read
+// offers no prompt rather than omitting the flag, which the kiosk reads as
+// on; the submission itself refuses such a child on its own.
+func (s *Service) feedbackEnabledFor(ctx context.Context, studentID int64) (bool, error) {
+	enabled, err := s.settings.FeedbackEnabled(ctx)
+	if err != nil || !enabled {
+		return enabled, err
+	}
+	stopped, err := s.settings.MoodCaptureStopped(ctx, studentID)
+	return err == nil && !stopped, nil
+}
+
 // applyCheckoutFlags sets the daily-checkout-available and feedback flags.
 // Both only mean something when the child just left a room, so they keep
 // their defaults otherwise. Feedback is opt-in (GDPR).
@@ -391,7 +404,7 @@ func (s *Service) applyCheckoutFlags(ctx context.Context, result *devicescan.Sca
 	// lookup fails. Clients render this flag; they must not infer eligibility.
 	result.DailyCheckoutAvailable = result.Action == devicescan.ScanActionCheckedOutDaily ||
 		s.shouldShowDailyCheckoutWithGroup(ctx, student, currentVisit)
-	if enabled, err := s.settings.FeedbackEnabled(ctx); err == nil {
+	if enabled, err := s.feedbackEnabledFor(ctx, student.ID); err == nil {
 		result.FeedbackEnabled = enabled
 	}
 }

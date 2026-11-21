@@ -16,6 +16,7 @@ import type {
   NameStudentResponse,
   PrivacyConsentDefaultsResponse,
   PrivacyConsentResponse,
+  RoomHistoryStopResponse,
   StudentDetailResponse,
   StudentResponse,
   schoolCheckinBatchRequest,
@@ -707,6 +708,65 @@ export async function deleteStudentPhoto(studentId: string): Promise<void> {
   await bffJson<unknown>(
     `/api/students/${encodeURIComponent(studentId)}/photo`,
     { method: "DELETE" },
+  );
+}
+
+// ─── Room history stop (#3844) ──────────────────────────────────────────────
+
+/** Whether a child's room history and mood are stopped, and since when. */
+export interface RoomHistoryStop {
+  stopped: boolean;
+  /** Instant the stop began; null while recording. */
+  stoppedAt: string | null;
+  /** Completed visits a new stop deleted; zero otherwise. */
+  deletedVisits: number;
+}
+
+function mapRoomHistoryStop(
+  response: RoomHistoryStopResponse,
+): RoomHistoryStop {
+  return {
+    stopped: response.stopped,
+    stoppedAt: response.stopped_at ?? null,
+    deletedVisits: response.deleted_visits,
+  };
+}
+
+function roomHistoryStopPath(studentId: string): string {
+  return `/api/students/${encodeURIComponent(studentId)}/room-history-stop`;
+}
+
+/** Reads the stop of a child's room history and mood. */
+export async function fetchRoomHistoryStop(
+  studentId: string,
+): Promise<RoomHistoryStop> {
+  return mapRoomHistoryStop(
+    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId)),
+  );
+}
+
+/**
+ * Stops the child's room history and mood and deletes its completed visits.
+ * Only the OGS administration (config:manage) may.
+ */
+export async function stopRoomHistory(
+  studentId: string,
+): Promise<RoomHistoryStop> {
+  return mapRoomHistoryStop(
+    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId), {
+      method: "PUT",
+    }),
+  );
+}
+
+/** Lifts the stop; moto records again from now on. */
+export async function resumeRoomHistory(
+  studentId: string,
+): Promise<RoomHistoryStop> {
+  return mapRoomHistoryStop(
+    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId), {
+      method: "DELETE",
+    }),
   );
 }
 

@@ -20,6 +20,12 @@ type Settings interface {
 	FeedbackRetentionDays(context.Context) (int, error)
 }
 
+// StudentStops tells whether a child's mood capture is stopped (#3844). The
+// root binds it to Student Presence's per-child stop.
+type StudentStops interface {
+	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
+}
+
 type Transaction interface {
 	Run(context.Context, func(context.Context) error) error
 }

@@ -24,6 +24,13 @@ func (s *Service) Submit(ctx context.Context, input feedback.CreateEntry) (feedb
 	var entry domain.Entry
 
 	err = s.runWhenEnabled(ctx, "submit", func(txCtx context.Context) (domain.OperationStats, error) {
+		stopped, err := s.stops.MoodCaptureStopped(txCtx, value.StudentID)
+		if err != nil {
+			return domain.OperationStats{}, fmt.Errorf("feedback: resolve the child's stop: %w", err)
+		}
+		if stopped {
+			return domain.OperationStats{}, feedback.ErrMoodCaptureStopped
+		}
 		var stats domain.OperationStats
 		entry, stats, err = s.store.Create(txCtx, value)
 		return stats, err

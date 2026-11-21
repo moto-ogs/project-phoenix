@@ -29,6 +29,9 @@ func StudentRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/privacy-consent/defaults", Portals: portals, Response: PrivacyConsentDefaultsResponse{}},
 		{Method: "GET", Pattern: "/{id}/privacy-consent", Portals: portals, Response: PrivacyConsentResponse{}},
 		{Method: "PUT", Pattern: "/{id}/privacy-consent", Portals: portals, Request: PrivacyConsentRequest{}, Response: PrivacyConsentResponse{}},
+		{Method: "GET", Pattern: "/{id}/room-history-stop", Portals: portals, Response: RoomHistoryStopResponse{}},
+		{Method: "PUT", Pattern: "/{id}/room-history-stop", Portals: portals, Response: RoomHistoryStopResponse{}},
+		{Method: "DELETE", Pattern: "/{id}/room-history-stop", Portals: portals, Response: RoomHistoryStopResponse{}},
 		{Method: "POST", Pattern: "/{id}/school-checkin", Portals: portals, Request: schoolCheckinRequest{}, Response: schoolCheckinResponse{}},
 		{
 			Method: "POST", Pattern: "/school-checkin/batch", Portals: portals, MaxBodyBytes: maxSchoolCheckinBatchBytes,

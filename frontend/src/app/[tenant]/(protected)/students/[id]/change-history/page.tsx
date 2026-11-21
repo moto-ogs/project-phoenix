@@ -44,6 +44,8 @@ const FIELD_LABELS: Record<string, string> = {
   // Krank oder entschuldigt, von der Schulverwaltung in moto schule
   // nachgetragen (#4791).
   school_absence_report: "Meldung der Schulverwaltung",
+  // Stopp von Raumverlauf und Stimmung für das Kind (#3844).
+  room_history_stop: "Raumverlauf und Stimmung",
   document: "Dokument",
 };
 

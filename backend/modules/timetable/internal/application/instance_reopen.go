@@ -40,7 +40,7 @@ func (s *InstanceLifecycleService) Reopen(ctx context.Context, instanceID, accou
 	// Check-in locks student then room. Lock the snapshot's children first
 	// so a concurrent check-in of one of them into another group in the
 	// same room cannot deadlock.
-	studentIDs, err := s.lockReopenSnapshotStudents(ctx, snapshot)
+	studentIDs, err := s.lockReopenSnapshotStudents(ctx, &snapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,11 @@ func (s *InstanceLifecycleService) validateReopenState(ctx context.Context, inst
 	return s.validateReopenSupervisorsUnchanged(ctx, instance, snapshot)
 }
 
-func (s *InstanceLifecycleService) lockReopenSnapshotStudents(ctx context.Context, snapshot scheduleModel.ActivityCompletionSnapshot) ([]int64, error) {
+// lockReopenSnapshotStudents locks the children of the snapshot's visits. A
+// visit deleted since the completion leaves the snapshot: a child whose room
+// history is stopped (#3844) keeps no closed visit, so the reopen brings the
+// others back and that child checks in again.
+func (s *InstanceLifecycleService) lockReopenSnapshotStudents(ctx context.Context, snapshot *scheduleModel.ActivityCompletionSnapshot) ([]int64, error) {
 	if len(snapshot.VisitIDs) == 0 {
 		return nil, nil
 	}
@@ -119,12 +123,18 @@ func (s *InstanceLifecycleService) lockReopenSnapshotStudents(ctx context.Contex
 		studentByVisit[visit.ID] = visit.StudentID
 	}
 	studentIDs := make([]int64, 0, len(snapshot.VisitIDs))
+	present := make([]int64, 0, len(snapshot.VisitIDs))
 	for _, visitID := range snapshot.VisitIDs {
 		studentID := studentByVisit[visitID]
 		if studentID <= 0 {
-			return nil, fmt.Errorf("%w: snapshot visit missing", timetable.ErrInvalidInstanceTransition)
+			continue
 		}
+		present = append(present, visitID)
 		studentIDs = append(studentIDs, studentID)
+	}
+	snapshot.VisitIDs = present
+	if len(studentIDs) == 0 {
+		return nil, nil
 	}
 	slices.Sort(studentIDs)
 	studentIDs = slices.Compact(studentIDs)

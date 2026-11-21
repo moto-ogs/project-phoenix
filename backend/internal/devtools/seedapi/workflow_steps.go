@@ -117,6 +117,29 @@ func (seedFamilyProtectionStep) Run(_ context.Context, rt *Runtime) error {
 	return nil
 }
 
+// seedRoomHistoryStopIndex is the demo child whose room history and mood are
+// stopped (#3844), so the child page shows the stop on every dev machine.
+const seedRoomHistoryStopIndex = 4
+
+type seedRoomHistoryStopStep struct{}
+
+func (seedRoomHistoryStopStep) Name() string { return "Seeding a room history stop" }
+
+func (seedRoomHistoryStopStep) Run(_ context.Context, rt *Runtime) error {
+	if rt.FixedSeeder == nil {
+		return fmt.Errorf("fixed seeder not available")
+	}
+	studentID, ok := rt.FixedSeeder.studentIDByIndex[seedRoomHistoryStopIndex]
+	if !ok {
+		return fmt.Errorf("room history stop demo student not available")
+	}
+	if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/room-history-stop", studentID), nil); err != nil {
+		return fmt.Errorf("seed room history stop: %w", err)
+	}
+	fmt.Println("  1 room history stop set")
+	return nil
+}
+
 type buildStateStep struct {
 	seeder *Seeder
 }
@@ -396,6 +419,7 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedPrivacyConsentsStep{},
 		seedAccidentReportsStep{},
 		seedFamilyProtectionStep{},
+		seedRoomHistoryStopStep{},
 		markStudentsSickStep{},
 		seedAnnouncementsStep{},
 		seedStaffMessagingStep{},

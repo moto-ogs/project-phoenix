@@ -1,7 +1,8 @@
 # Externe Einwilligung: Widerruf und Löschweisung umsetzen
 
 Slice 3844-f, Refs #3844, Teil von #3846. Code-Abgleich am 24.10.2026 gegen
-`origin/development`, Commit `cb62e5a7127baad83898848c66db6fd518810021`.
+`origin/development`, Commit `cb62e5a7127baad83898848c66db6fd518810021`;
+Abschnitte 1.1, 2.2, 2.3 und 7 am 21.11.2026 um den Stopp je Kind ergänzt.
 
 **Status: dokumentierter Ablauf auf Basis des Codes, keine Betriebsfreigabe.**
 Die Erprobung durch Schule und Betrieb, die produktiven Nachweise und die
@@ -54,8 +55,8 @@ auf das Backend unter `/api`, nicht auf eine Freigabe für direkte Requests.
 | Funktion | Erklärungen, Änderungen und weitere Erfassungswege |
 |---|---|
 | Kinderfotos | Externer Nachweis; Personal-UI bzw. `PUT /students/{id}` mit `photo_consent_given`; `POST /students/{id}/photo` kann mit `consent_acknowledged=true` zugleich erteilen. Elternportal: `GET /parent/me/children/{studentId}/consents`, `PUT`/`DELETE /parent/me/children/{studentId}/consents/photo`. Hinzu kommen Anmeldeübernahme/-abgleich und Kinderimport (Abschnitt 2.5). |
-| Raumhistorie/Aufbewahrung | Externe Erklärung; Personal-UI und `GET`/`PUT /students/{id}/privacy-consent`; Kinderimport kann die Aufbewahrungseinwilligung initial anlegen, schreibt eine bestehende dabei nicht um. Das ist `users.privacy_consents`, nicht der Schlüssel `data_processing` des Einwilligungsprotokolls. Raumbesuche entstehen über Personal-/Web-Anmeldung und Raumwechsel, Geräte-Anmeldung/-Raumwechsel und Stundenplanabläufe. Kein entsprechender Elternportal-Einwilligungs- oder Widerrufsweg in den geprüften Routen. |
-| Stimmungsabfrage/Feedback | Externe Erklärung; Geräteeingabe `POST /iot/feedback`; Personal-API `POST /feedback/` (die Batch-Route `/feedback/batch` entfiel mit #2352), Löschen `DELETE /feedback/{id}`. Keine kindbezogene Einwilligungs-API und kein entsprechender Elternportal-Weg in den geprüften Routen. |
+| Raumhistorie/Aufbewahrung | Externe Erklärung; Personal-UI und `GET`/`PUT /students/{id}/privacy-consent`; Kinderimport kann die Aufbewahrungseinwilligung initial anlegen, schreibt eine bestehende dabei nicht um. Das ist `users.privacy_consents`, nicht der Schlüssel `data_processing` des Einwilligungsprotokolls. Raumbesuche entstehen über Personal-/Web-Anmeldung und Raumwechsel, Geräte-Anmeldung/-Raumwechsel und Stundenplanabläufe. Stopp je Kind: `GET`/`PUT`/`DELETE /students/{id}/room-history-stop` (Abschnitt 2.2). Kein entsprechender Elternportal-Einwilligungs- oder Widerrufsweg in den geprüften Routen. |
+| Stimmungsabfrage/Feedback | Externe Erklärung; einziger Erfassungsweg ist die Geräteeingabe `POST /iot/feedback`. Die Personal-API kennt nur das Lesen `GET /feedback/student/{id}`; frühere Schreib- und Löschwege gibt es nicht mehr (Stand 21.11.2026). Der Stopp je Kind (Abschnitt 2.2) sperrt auch die Stimmung. Kein entsprechender Elternportal-Weg in den geprüften Routen. |
 | Gesundheitsangaben | Externe Erklärung, soweit diese Grundlage gilt; Personal-UI und Kinderanlage/-änderung (`POST /students/`, `PUT /students/{id}`, Feld `health_info`); direkte Elternbearbeitung `PATCH /parent/me/children/{studentId}/master-data/student/health_info`; Anmeldeübernahme und Kinderimport. Krankmeldungen (`POST /parent/me/children/{studentId}/sick-note`), Personal-Statusänderungen und Gesundheitsdokumente sind gesonderte Bestände, kein Widerruf dieses Feldes. Keine eigene Gesundheits-Einwilligungs-API. |
 | AGB, Datenschutzkenntnisnahme, E-Mail-Kontakt | Anmeldeformular: öffentliche oder angemeldete Einreichung, danach Übernahme/Abgleich; Kinderimport mit Einwilligungsdaten. Eltern-/Personalansicht zeigt die gespeicherten Zustände. `GET /parent/me/children/{studentId}/consents` ist nur lesend; keine `PUT`/`DELETE`-Wege für diese drei Schlüssel. Der reguläre Kinder-Änderungsrequest bietet dafür ebenfalls keine Felder (Abschnitt 2.5). |
 
@@ -175,6 +176,37 @@ Schulweit: **Einstellungen → Datenschutz → Anwesenheitsprotokoll**
 Datenschutz** „Einwilligung zur Datenverarbeitung erteilt“ und eine
 Aufbewahrungsfrist. Diese Werte sind **kein Erfassungsverbot**.
 
+**Stopp je Kind (#3844):** Kind → **Historie** → Bereich **Historien** →
+**Stopp setzen** (Bestätigung mit **LÖSCHEN**), Aufheben mit **Stopp
+aufheben**. Berechtigung: `config:manage` und Schreibzugriff auf das Kind;
+lesen darf jede Person mit vollem Zugriff auf das Kind. Wirkung im Code:
+
+- Beim Setzen löscht moto sofort alle abgeschlossenen Raumbesuche des Kindes
+  (`active.visits` mit Ende), in derselben Transaktion wie der Stopp.
+- Solange der Stopp gilt, bleibt nur der offene Besuch, also der aktuelle
+  Raum, bestehen. Jeder Besuch wird im Moment seines Abschlusses gelöscht,
+  auf allen Wegen (Web, Gerät, Stundenplan, Sitzungsende, Betreuungsende,
+  Nachtragen). Das erzwingt ein Trigger auf `active.visits`
+  (`active.discard_stopped_room_history`). Tagesanwesenheit
+  (`active.attendance`) und Teilnahme an Stundenplanterminen bleiben
+  getrennte Verarbeitungen.
+- Für das Kind nimmt moto keine Stimmung an: Das Tablet bekommt
+  `feedback_enabled: false` und zeigt die Abfrage nicht; ein dennoch
+  gesendeter Eintrag wird ohne Speichern mit der bestehenden Antwort
+  „skipped“ beantwortet (kein neuer PyrePortal-Fehlercode).
+- **Bisherige Stimmungen löscht der Stopp nicht.** Das folgt der bestehenden
+  Logik des schulweiten Schalters (2.3 Punkt 4): Rückmeldungen haben eine
+  eigene Frist (`feedback.data_retention_days`). Eine sofortige Löschweisung
+  für Stimmungen bleibt ein gesonderter Auftrag (offen, siehe 2.3).
+- Aufheben stellt nichts wieder her; ab dann speichert moto wieder.
+- Nachweis: Setzen und Aufheben stehen im **Änderungsverlauf** des Kindes
+  (Feld „Raumverlauf und Stimmung“, mit Person und Zeit). Gelöschte
+  Raumbesuche zählt `audit.data_deletions` mit `deletion_type =
+  room_history_stop`. Weder Räume noch Zeiten noch Stimmungen werden dabei
+  protokolliert.
+- Ein schon beendeter Stundenplantermin, in dem das Kind war, lässt sich
+  wieder öffnen; das gestoppte Kind kommt dabei nicht zurück in den Termin.
+
 Der zugehörige Personal-API-Weg ist `GET`/`PUT /students/{id}/privacy-consent`
 (`users:read` bzw. `users:update` plus Kinderzugriff). Auch der Kinderimport
 kann diesen Aufbewahrungsdatensatz initial anlegen. Er ist von
@@ -191,13 +223,12 @@ für Besuche zu berücksichtigen, auch wenn dieser Datensatz nicht akzeptiert is
    längerfristige Raumhistorie dieses Kindes eine Einwilligung, darf sie nicht
    weiterlaufen. Ein fehlendes Häkchen verhindert Raumbesuche nicht: Ohne
    akzeptierte Einwilligung greift eine schulweite Standard-Aufbewahrungsfrist.
-3. **Widerruf:** Kindbezogen das Häkchen entfernen und speichern, aber damit
-   den Auftrag **nicht** als erledigt melden. Es gibt keinen belegten
-   kindbezogenen Schalter zum Stoppen der Raumerfassung. Als vorhandenen
-   Ersatzweg die Historie schulweit ausschalten. Löschfolgen vorher mit der
-   Schule abstimmen und mit **LÖSCHEN** bestätigen. Fehlender Erfolg oder
-   fehlende Befugnis bleibt ein offener Auftrag mit sofortiger Eskalation.
-4. **Grenze des Ersatzwegs:** Ausschalten löscht abgeschlossene Raumbesuche
+3. **Widerruf:** Kindbezogen den **Stopp setzen** (siehe oben). Das Häkchen
+   der Aufbewahrungseinwilligung zusätzlich entfernen, wenn die Schule es so
+   führt. Fehlender Erfolg oder fehlende Befugnis bleibt ein offener Auftrag
+   mit sofortiger Eskalation. Der schulweite Schalter bleibt der Weg, wenn
+   die Historie für alle Kinder enden soll.
+4. **Grenze des schulweiten Schalters:** Ausschalten löscht abgeschlossene Raumbesuche
    vor dem heutigen Berliner Tag sofort; der Nachtlauf entfernt später die
    weiteren fälligen Abschlüsse. Heutige Abschlüsse und offene Besuche bleiben
    zunächst erhalten. Aktueller Aufenthaltsort und Tagesanwesenheit bleiben
@@ -208,11 +239,10 @@ für Besuche zu berücksichtigen, auch wenn dieser Datensatz nicht akzeptiert is
 oder vollständige Speicherung. Ein kleinerer Wert erfüllt keinen Widerruf.
 Sind auch die verbleibenden Tages-/Ortsdaten nicht rechtmäßig erforderlich,
 den betreffenden raumbasierten Ablauf bis zu einer wirksamen Lösung nicht
-nutzen. **Offen:** kindbezogener Erfassungsstopp und gegebenenfalls sofortige
-selektive Löschung ohne Verlust rechtmäßig benötigter Tagesdaten. Vor einer
-internen Lösung Tenantgrenze, betroffene Lese-/Schreibwege und Fehlerfälle
-lokal testen; dieses Runbook stellt dafür keinen freigegebenen Löschweg bereit.
-Nicht das ganze Kind löschen, nur weil es die optionale Historie ablehnt.
+nutzen. Der Stopp je Kind löscht nur Raumbesuche, keine Tagesdaten. Nicht das ganze
+Kind löschen, nur weil es die optionale Historie ablehnt. **Offen:**
+Rechtsgrundlage und Vertragsfolgen des Stopps (Betreuungsvertrag, AVV,
+gegebenenfalls automatischer Opt-out) klärt das Team gesondert.
 
 Details und Mengenprüfung: [Raumhistorie, Slice 3844-b](raumhistorie-3844-b.md).
 
@@ -234,13 +264,11 @@ ein anderer Vorgang und schaltet diese Erfassung nicht um.
 1. **Erteilung:** Extern für den konkreten Zweck nachweisen. Erst nach Prüfung
    des erfassten Personenkreises einschalten. Einwilligung eines Kindes ist
    keine Freigabe für die ganze Schule.
-2. **Ablehnung/fehlender Nachweis:** Für dieses Kind keine Stimmung erfassen,
-   weder am Terminal noch durch nachträgliche Mitarbeitereingabe. Es gibt
-   keinen kindbezogenen Ausschluss-Schalter. Eine bloße Bitte ans Kind oder
-   eine ungetestete Absprache im Team ist kein verlässlicher Schutz.
-3. **Widerruf:** Erfassung für dieses Kind beenden. Solange ein organisatorischer
-   Ausschluss nicht in allen genutzten Terminal- und Mitarbeiterschritten
-   zuverlässig geprüft ist, **Feedback schulweit ausschalten**. Der Code
+2. **Ablehnung/fehlender Nachweis:** Für dieses Kind den **Stopp setzen**
+   (Abschnitt 2.2). Er sperrt die Stimmung am Tablet und im Backend. Er
+   stoppt zugleich den Raumverlauf; eine Stimmungssperre allein gibt es nicht.
+3. **Widerruf:** Wie 2. Soll Feedback für alle Kinder enden,
+   **Feedback schulweit ausschalten**. Der Code
    sperrt dann neue Einzel-/Sammeleinträge und Feedback-Lesewege. Die
    Betreuung und Abmeldung müssen ohne Stimmungsantwort möglich bleiben.
 4. **Bestand:** Ausschalten löscht vorhandene Rückmeldungen nicht. Diese haben
@@ -248,9 +276,8 @@ ein anderer Vorgang und schaltet diese Erfassung nicht um.
    Besteht eine sofortige Löschweisung, nicht nur auf Fristablauf warten.
    Das moto-Team muss einen getrennten, tenant-sicheren Löschauftrag prüfen.
 
-Die Backend-API kennt Löschen einzelner Feedback-Einträge mit `feedback:delete`
-(auch bei ausgeschalteter Funktion). Das ist kein nachgewiesener schulischer
-Bildschirm und kein geprüftes Sammelverfahren für ein Kind. **Offen:**
+Die Personal-API kennt kein Löschen einzelner Feedback-Einträge mehr. Der
+Stopp je Kind löscht bisherige Stimmungen bewusst nicht (Abschnitt 2.2). **Offen:**
 vollständige Bestandsauswahl, selektive Löschung, Prüfung und Nachweis. Kein
 ungeprüftes SQL und kein erneutes Einschalten nur zum Suchen alter Einträge.
 
@@ -502,7 +529,8 @@ automatischer Konfliktschutz.
   automatischen Widerrufs-Durchgriff aus Elternbriefen zusagen.
 - **Slices 3844-b/d/e:** Historienlöschung beim Ausschalten, Feedback-Sperre
   und neutrale Texte nutzen. Diese schulweiten Mechanismen schließen die
-  kindbezogenen Lücken nicht. Slice 3844-h wird hier nicht implementiert.
+  kindbezogenen Lücken nicht; dafür gibt es seit dem 21.11.2026 den Stopp je
+  Kind (Abschnitt 2.2). Slice 3844-h wird hier nicht implementiert.
 
 ## 7. Abnahme durch Schule und Betrieb, noch offen
 
@@ -528,7 +556,11 @@ danach ein berechtigter Mensch gesondert bestätigen.
    Kontrollkind mit laufender Betreuung unverändert.
 3. Historie ausschalten: ältere Abschlüsse weg, Tagesdaten/offene Besuche
    vorhanden, Nachtlauf nachvollziehbar. Feedback ausschalten: neue Erfassung
-   gesperrt, alte Einträge nicht dadurch gelöscht. Gesundheitsfeld leeren und
+   gesperrt, alte Einträge nicht dadurch gelöscht. Stopp je Kind setzen:
+   Raumverlauf des Kindes weg, aktueller Raum sichtbar, neue Raumwechsel ohne
+   Verlauf, Tablet ohne Stimmungsabfrage, Kontrollkind unverändert, Eintrag
+   im Änderungsverlauf; aufheben und neue Raumwechsel wieder im Verlauf.
+   Gesundheitsfeld leeren und
    mögliche Wiedereingaben prüfen. Lücken nicht als bestandenen Stopp werten.
 4. Einzelnes Dokument und auf gesonderte Weisung ein Testkind löschen:
    Vorschau, Rechte, falsche Schule, Fehler-/Wiederholungsfall, Audit,
@@ -564,6 +596,15 @@ Pfade relativ zur Repository-Wurzel, Stand siehe Kopf:
   API `backend/modules/studentpresence/http/student_resource.go`,
   `backend/modules/studentpresence/inbound/presence/api.go`;
   UI-Bestätigung `frontend/src/components/settings/settings-field.tsx`.
+- Stopp je Kind (#3844): Tabelle und Trigger
+  `backend/database/migrations/20261121090000_room_history_stops.go`; Befehle
+  `backend/modules/studentpresence/internal/application/room_history_stops.go`;
+  Routen `backend/modules/studentpresence/http/room_history_stop_handlers.go`;
+  Audit `backend/roots/owners/room_history_stops.go`; Stimmungssperre
+  `backend/modules/feedback/internal/application/public_operations.go` und
+  `backend/modules/devicescan/compose/settings.go`; UI
+  `frontend/src/components/students/student-detail-components.tsx`
+  (`StudentHistorySection`).
 - Feedback: `backend/modules/feedback/internal/application/service.go`,
   `public_operations.go` daneben, `backend/modules/feedback/http/api.go`.
   Geräteeingang: `backend/modules/devicescan/http/data/feedback_resource.go`.
