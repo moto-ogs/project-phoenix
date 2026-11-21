@@ -14,5 +14,4 @@ var legacyNumericIDsPToZ = []string{
 	"staff.StaffWithRoleResponse.PersonID",
 	"staff.StaffWithRoleResponse.TeacherID",
 	"traeger.ReportDistrictRequest.SchoolID",
-
 }
