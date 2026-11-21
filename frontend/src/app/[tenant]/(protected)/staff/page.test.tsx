@@ -294,10 +294,7 @@ describe("StaffPage", () => {
         key === formerKey
           ? { data: former, isLoading: false, error: null }
           : {
-              data:
-                key === 'staff-directory-list-{"strict":false}'
-                  ? mockStaff
-                  : undefined,
+              data: key === "staff-directory-list-{}" ? mockStaff : undefined,
               isLoading: false,
               error: null,
             }) as never);
@@ -552,7 +549,7 @@ describe("StaffPage", () => {
       status: "authenticated",
     } as never);
     vi.mocked(useSWRAuth).mockImplementation((key) => {
-      if (key === 'staff-directory-list-{"strict":false}') {
+      if (key === "staff-directory-list-{}") {
         return { data: mockStaff, isLoading: false, error: null } as never;
       }
       return {

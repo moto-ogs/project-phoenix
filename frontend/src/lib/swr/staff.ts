@@ -5,8 +5,7 @@ import { staffKeys, type StaffFilters } from "./staff-keys";
 
 export const staff = {
   ...staffKeys,
-  fetcher: (params: StaffFilters = {}, options: { strict?: boolean } = {}) =>
-    staffService.getAllStaff(params, options),
+  fetcher: (params: StaffFilters = {}) => staffService.getAllStaff(params),
   // The UI owns the existing CRUD configuration, including its mapper.
   // Keep that transport without importing a UI module into this library.
   async teachersFetcher(service: Pick<CrudService<Teacher>, "getList">) {

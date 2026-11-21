@@ -4,7 +4,7 @@ import type { RoleForm } from "~/lib/position-title";
 import { sessionFetch } from "./session-cache";
 import { createLogger } from "~/lib/logger";
 import {
-  type ApiError,
+  ApiError,
   apiErrorFromResponse,
   apiErrorFromText,
 } from "~/lib/api-error";
@@ -225,7 +225,7 @@ function extractActiveGroups(data: unknown): ActiveGroupWithId[] {
   }
 
   if (!data || typeof data !== "object" || !("data" in data)) {
-    return [];
+    throw invalidActiveGroupsResponse();
   }
 
   const wrappedData = (data as { data?: unknown }).data;
@@ -242,8 +242,14 @@ function extractActiveGroups(data: unknown): ActiveGroupWithId[] {
   if (Array.isArray(wrappedData)) {
     return wrappedData as ActiveGroupWithId[];
   }
+  // The empty list of a Go nil slice; any other shape is a broken answer.
+  if (wrappedData === null) return [];
 
-  return [];
+  throw invalidActiveGroupsResponse();
+}
+
+function invalidActiveGroupsResponse(): ApiError {
+  return new ApiError("invalid active groups response", 500);
 }
 
 /**
@@ -452,14 +458,18 @@ function applyStaffFilters(staff: Staff[], filters?: StaffFilters): Staff[] {
  * staff list itself must not fail because the location could not be read.
  */
 async function fetchActiveGroups(): Promise<ActiveGroupWithId[]> {
-  try {
-    const response = await sessionFetch("/api/active/groups?active=true");
-    if (!response.ok) return [];
-    const data = (await response.json()) as unknown;
-    return extractActiveGroups(data);
-  } catch {
-    return [];
+  const response = await sessionFetch("/api/active/groups?active=true");
+  // Wer laufende Aufsichten nicht lesen darf, sieht die Liste ohne sie; das
+  // ist eine Verweigerung, kein Ausfall. Jeder andere Fehler bleibt einer,
+  // sonst stünde das ganze Personal ohne Aufsicht da (#2353).
+  if (response.status === 401 || response.status === 403) return [];
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      `Failed to fetch active groups: ${response.statusText}`,
+    );
   }
+  return extractActiveGroups((await response.json()) as unknown);
 }
 
 /** Kopf der Personalakte aus dem Datensatz von GET /api/staff/{id}. */
@@ -523,22 +533,12 @@ class StaffService {
     return json.data.map(mapFormerStaff);
   }
 
-  // Get all staff members with their current supervision status.
-  // `options.strict` opts into the /api/staff route's non-swallowing path so a
-  // backend failure rejects here instead of masquerading as an empty staff list
-  // (the lenient default returns [] on backend errors) — callers that must tell
-  // "fetch failed" from "no staff" apart pass it (#1840).
-  async getAllStaff(
-    filters?: StaffFilters,
-    options?: { strict?: boolean },
-  ): Promise<Staff[]> {
-    // Build staff URL with search filter
-    let staffUrl = filters?.search
+  // Get all staff members with their current supervision status. A failed
+  // read rejects; it never arrives as an empty staff list (#1840, #2353).
+  async getAllStaff(filters?: StaffFilters): Promise<Staff[]> {
+    const staffUrl = filters?.search
       ? `/api/staff?search=${encodeURIComponent(filters.search)}`
       : "/api/staff";
-    if (options?.strict) {
-      staffUrl += `${staffUrl.includes("?") ? "&" : "?"}strict=1`;
-    }
 
     // Fetch staff and active groups in parallel
     const [staffResponse, activeGroups] = await Promise.all([

@@ -322,60 +322,6 @@ describe("staff-api", () => {
       );
     });
 
-    it("appends the strict flag to the base URL (#1840)", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve([]),
-          } as Response);
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
-
-      await staffService.getAllStaff(undefined, { strict: true });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/staff?strict=1",
-        expect.any(Object),
-      );
-    });
-
-    it("appends the strict flag after an existing search query (#1840)", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve([]),
-          } as Response);
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
-
-      await staffService.getAllStaff({ search: "Max" }, { strict: true });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/staff?search=Max&strict=1",
-        expect.any(Object),
-      );
-    });
-
     it("filters staff by supervising status", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
 
@@ -474,7 +420,7 @@ describe("staff-api", () => {
       expect(result[0]?.supervisions).toHaveLength(2);
     });
 
-    it("handles active groups fetch failure gracefully", async () => {
+    it("shows staff without supervisions when active groups are refused", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
 
       mockFetch.mockImplementation((url: string) => {
@@ -485,19 +431,54 @@ describe("staff-api", () => {
           } as Response);
         }
         if (url.includes("/api/active/groups")) {
-          return Promise.resolve({
-            ok: false,
-            statusText: "Not Found",
-          } as Response);
+          return Promise.resolve(
+            new Response(JSON.stringify({ code: "general.permission" }), {
+              status: 403,
+            }),
+          );
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
       });
 
-      // Should not throw, just return staff without supervision info
+      // A refusal means the caller may not see supervisions, not a failure.
       const result = await staffService.getAllStaff();
 
       expect(result).toHaveLength(1);
       expect(result[0]?.isSupervising).toBe(false);
+    });
+
+    // #2353: a failed supervision read must not show everyone as unsupervised.
+    it.each([
+      [
+        "a server error",
+        () =>
+          new Response(JSON.stringify({ code: "general.server" }), {
+            status: 500,
+          }),
+      ],
+      [
+        "an unreadable body",
+        () => new Response(JSON.stringify({ rows: [] }), { status: 200 }),
+      ],
+    ])("rejects when active groups fail with %s", async (_case, answer) => {
+      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes("/api/staff")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
+          } as Response);
+        }
+        if (url.includes("/api/active/groups")) {
+          return Promise.resolve(answer());
+        }
+        return Promise.reject(new Error(`Unexpected URL: ${url}`));
+      });
+
+      await expect(staffService.getAllStaff()).rejects.toMatchObject({
+        status: 500,
+      });
     });
 
     it("handles empty staff list", async () => {
@@ -866,7 +847,8 @@ describe("staff-api", () => {
       expect(result[0]?.supervisions).toHaveLength(2);
     });
 
-    it("handles non-array data gracefully", async () => {
+    // #2353: an unreadable answer is an error, not "nobody supervises".
+    it("rejects non-array data", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
 
       mockFetch.mockImplementation((url: string) => {
@@ -886,11 +868,9 @@ describe("staff-api", () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
       });
 
-      const result = await staffService.getAllStaff();
-
-      // Should fallback to empty array and not throw
-      expect(result[0]?.isSupervising).toBe(false);
-      expect(result[0]?.currentLocation).toBe("Abwesend");
+      await expect(staffService.getAllStaff()).rejects.toMatchObject({
+        status: 500,
+      });
     });
 
     it("handles null data property", async () => {
@@ -1271,7 +1251,8 @@ describe("staff-api", () => {
   });
 
   describe("fetchActiveGroups error handling", () => {
-    it("handles fetch exception and returns empty array", async () => {
+    // #2353: a network failure is an error, not "nobody supervises".
+    it("rejects on a fetch exception", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
 
       mockFetch.mockImplementation((url: string) => {
@@ -1288,12 +1269,7 @@ describe("staff-api", () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
       });
 
-      // Should not throw, just return staff without supervision info
-      const result = await staffService.getAllStaff();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.isSupervising).toBe(false);
-      expect(result[0]?.currentLocation).toBe("Abwesend");
+      await expect(staffService.getAllStaff()).rejects.toThrow();
     });
   });
 
