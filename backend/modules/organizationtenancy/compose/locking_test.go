@@ -26,9 +26,9 @@ func TestOrganizationLifecycleLockingContract(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("lifecycle update blocks behind a school mutation reader", func(t *testing.T) {
-		release, done := holdOrganizationLock(t, ctx, module, created.ID, false)
+		release, done := holdOrganizationLock(t, ctx, module, created.ID.Int64(), false)
 		err := withLockTimeout(ctx, "200ms", func(txCtx context.Context) error {
-			_, commandErr := module.SoftDeleteOrganization(txCtx, created.ID)
+			_, commandErr := module.SoftDeleteOrganization(txCtx, created.ID.Int64())
 			return commandErr
 		})
 		require.Error(t, err)
@@ -38,23 +38,23 @@ func TestOrganizationLifecycleLockingContract(t *testing.T) {
 	})
 
 	t.Run("school mutation reader blocks behind a lifecycle update", func(t *testing.T) {
-		release, done := holdOrganizationLock(t, ctx, module, created.ID, true)
+		release, done := holdOrganizationLock(t, ctx, module, created.ID.Int64(), true)
 		err := withLockTimeout(ctx, "200ms", func(txCtx context.Context) error {
-			_, queryErr := module.FindOrganizationForSchoolMutation(txCtx, created.ID)
+			_, queryErr := module.FindOrganizationForSchoolMutation(txCtx, created.ID.Int64())
 			return queryErr
 		})
 		require.Error(t, err)
 		assert.True(t, isOrganizationLockTimeout(err), "expected lock timeout, got %v", err)
 		close(release)
 		require.NoError(t, <-done)
-		_, err = module.RestoreOrganization(ctx, created.ID)
+		_, err = module.RestoreOrganization(ctx, created.ID.Int64())
 		require.NoError(t, err)
 	})
 
 	t.Run("school mutation readers do not block each other", func(t *testing.T) {
-		release, done := holdOrganizationLock(t, ctx, module, created.ID, false)
+		release, done := holdOrganizationLock(t, ctx, module, created.ID.Int64(), false)
 		err := withLockTimeout(ctx, "500ms", func(txCtx context.Context) error {
-			_, queryErr := module.FindOrganizationForSchoolMutation(txCtx, created.ID)
+			_, queryErr := module.FindOrganizationForSchoolMutation(txCtx, created.ID.Int64())
 			return queryErr
 		})
 		assert.NoError(t, err)

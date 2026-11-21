@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // InvitationsResource handles operator invitation endpoints. Depends on the
@@ -99,10 +100,10 @@ func (req *AcceptInvitationRequest) Bind(r *http.Request) error {
 
 // PendingOperatorInvitationResponse represents a pending invitation in API responses
 type PendingOperatorInvitationResponse struct {
-	ID              int64      `json:"id"`
+	ID              common.ID  `json:"id"`
 	Email           string     `json:"email"`
 	DisplayName     *string    `json:"display_name,omitempty"`
-	CreatedBy       int64      `json:"created_by"`
+	CreatedBy       common.ID  `json:"created_by"`
 	CreatorName     string     `json:"creator_name,omitempty"`
 	ExpiresAt       time.Time  `json:"expires_at"`
 	EmailSentAt     *time.Time `json:"email_sent_at,omitempty"`
@@ -126,7 +127,7 @@ type InvitationsListResponse struct {
 
 // OperatorListItem represents an operator in the list
 type OperatorListItem struct {
-	ID          int64      `json:"id"`
+	ID          common.ID  `json:"id"`
 	Email       string     `json:"email"`
 	DisplayName string     `json:"display_name"`
 	Active      bool       `json:"active"`
@@ -187,10 +188,10 @@ func (rs *InvitationsResource) ListInvitations(w http.ResponseWriter, r *http.Re
 	invitations := make([]*PendingOperatorInvitationResponse, 0, len(pending))
 	for _, t := range pending {
 		inv := &PendingOperatorInvitationResponse{
-			ID:              t.ID,
+			ID:              ident.ID(t.ID),
 			Email:           t.Email,
 			DisplayName:     t.DisplayName,
-			CreatedBy:       t.CreatedBy,
+			CreatedBy:       ident.ID(t.CreatedBy),
 			CreatorName:     operatorNames[t.CreatedBy],
 			ExpiresAt:       t.ExpiresAt,
 			EmailSentAt:     t.Delivery.SentAt,
@@ -293,7 +294,7 @@ func (rs *InvitationsResource) AcceptInvitation(w http.ResponseWriter, r *http.R
 	}
 
 	common.Respond(w, r, http.StatusCreated, &OperatorResponse{
-		ID:          operator.ID,
+		ID:          ident.ID(operator.ID),
 		Email:       operator.Email,
 		DisplayName: operator.DisplayName,
 	}, "Operator account created successfully")

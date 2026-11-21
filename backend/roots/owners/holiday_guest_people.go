@@ -76,13 +76,13 @@ func (n holidayHostSchoolNames) HolidayHostSchoolNames(ctx context.Context, scho
 	if err != nil {
 		return nil, err
 	}
-	schools, err := n.schools.ListSchoolsByOrganization(ctx, school.OrganizationID)
+	schools, err := n.schools.ListSchoolsByOrganization(ctx, school.OrganizationID.Int64())
 	if err != nil {
 		return nil, err
 	}
 	names := make(map[int64]string, len(schools))
 	for _, sibling := range schools {
-		names[sibling.ID] = sibling.Name
+		names[sibling.ID.Int64()] = sibling.Name
 	}
 	return names, nil
 }

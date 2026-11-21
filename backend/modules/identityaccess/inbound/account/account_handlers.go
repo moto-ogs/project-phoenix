@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Role Management Request/Response Types
@@ -169,7 +170,7 @@ func accountResponses(accounts []identityaccess.ManagedAccount) []*AccountRespon
 	responses := make([]*AccountResponse, 0, len(accounts))
 	for _, account := range accounts {
 		responses = append(responses, &AccountResponse{
-			ID:       account.ID,
+			ID:       ident.ID(account.ID),
 			Email:    account.Email,
 			Username: account.Username,
 			Active:   account.Active,

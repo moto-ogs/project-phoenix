@@ -24,6 +24,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	settingsoperator "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // chiWalk traverses all routes in the chi.Router and calls fn for each
@@ -62,7 +63,7 @@ func (s *protectedRouteProvisioningService) CreateSchool(ctx context.Context, sc
 	if s.createSchoolFn != nil {
 		return s.createSchoolFn(ctx, school, operatorID, clientIP)
 	}
-	return &organizationtenancy.School{OrganizationID: school.OrganizationID, Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Email: school.Email}, nil
+	return &organizationtenancy.School{OrganizationID: ident.ID(school.OrganizationID), Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Email: school.Email}, nil
 }
 
 // TestOperatorIdentityRoutes verifies that the Identity & Access routes of
@@ -331,7 +332,7 @@ func TestProtectedOperatorRoutesAllowActiveOperator(t *testing.T) {
 			assert.Equal(t, int64(42), operatorID)
 			assert.Equal(t, int64(organizationID), school.OrganizationID)
 			assert.Equal(t, "school@example.com", school.Email)
-			return &organizationtenancy.School{ID: 88, OrganizationID: school.OrganizationID, Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Email: school.Email}, nil
+			return &organizationtenancy.School{ID: 88, OrganizationID: ident.ID(school.OrganizationID), Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Email: school.Email}, nil
 		},
 	}
 	router := testOperatorRouter(operatorIdentity{access: authService, sessions: operatorTestSessions(t, authService)}, provisioningService)

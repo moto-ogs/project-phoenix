@@ -232,7 +232,7 @@ function templateToBackend(input: ReportTemplateInput): ReportTemplateRequest {
     districts: input.districts
       .filter((entry) => entry.district.trim() !== "")
       .map((entry) => ({
-        school_id: Number(entry.schoolId),
+        school_id: entry.schoolId,
         district: entry.district.trim(),
       })),
   };

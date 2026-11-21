@@ -7,7 +7,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger memberships (ADR 0084, #4649). A membership only counts while the
@@ -34,7 +33,7 @@ func (s *Service) ListAccountTraegerOrganizations(ctx context.Context, accountID
 		}
 		for _, organization := range organizations {
 			if organization.Active && !organization.IsDeleted() {
-				result = append(result, organizationtenancy.TraegerOrganization{ID: ident.ID(organization.ID), Name: organization.Name, TestSystem: organization.TestSystem})
+				result = append(result, organizationtenancy.TraegerOrganization{ID: organization.ID, Name: organization.Name, TestSystem: organization.TestSystem})
 			}
 		}
 		return nil

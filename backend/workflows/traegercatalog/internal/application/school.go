@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 )
 
@@ -129,7 +130,7 @@ func (c *Catalog) lockSchool(ctx context.Context, organizationID, schoolID int64
 	if err != nil {
 		return err
 	}
-	if school.OrganizationID != organizationID || school.IsDeleted() {
+	if school.OrganizationID != ident.ID(organizationID) || school.IsDeleted() {
 		return errStale
 	}
 	return nil

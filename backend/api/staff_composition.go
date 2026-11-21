@@ -7,6 +7,7 @@ import (
 	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -106,9 +107,9 @@ func toStaffHTTPRoleRows(rows []StaffRoleRow) []staffHTTP.StaffWithRoleResponse 
 	result := make([]staffHTTP.StaffWithRoleResponse, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, staffHTTP.StaffWithRoleResponse{
-			ID: row.StaffID, PersonID: row.PersonID, TeacherID: row.TeacherID,
+			ID: ident.ID(row.StaffID), PersonID: ident.ID(row.PersonID), TeacherID: ident.ID(row.TeacherID),
 			FirstName: row.FirstName, LastName: row.LastName, FullName: row.FirstName + " " + row.LastName,
-			AccountID: row.AccountID, Email: row.Email, IsActiveCaregiver: row.IsActiveCaregiver,
+			AccountID: ident.ID(row.AccountID), Email: row.Email, IsActiveCaregiver: row.IsActiveCaregiver,
 			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		})
 	}

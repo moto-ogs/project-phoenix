@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -202,8 +203,8 @@ func TestCreateDevice_Success(t *testing.T) {
 	testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
 	var created struct {
 		Data struct {
-			ID     int64  `json:"id"`
-			APIKey string `json:"api_key"`
+			ID     ident.ID `json:"id"`
+			APIKey string   `json:"api_key"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))

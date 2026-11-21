@@ -129,7 +129,7 @@ type TraegerAccount struct {
 
 // TraegerMember is a person of the Träger-Büro in the operator listing.
 type TraegerMember struct {
-	AccountID   int64      `json:"account_id"`
+	AccountID   ident.ID   `json:"account_id"`
 	Email       string     `json:"email"`
 	Status      string     `json:"status"`
 	Roles       []string   `json:"roles"`
@@ -162,7 +162,7 @@ type InviteTraegerMember struct {
 // sees it. Expired marks a link that can no longer be accepted; the cleanup
 // deletes it later (#5749).
 type TraegerInvitation struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	Email     string    `json:"email"`
 	Roles     []string  `json:"roles"`
 	ExpiresAt time.Time `json:"expires_at"`

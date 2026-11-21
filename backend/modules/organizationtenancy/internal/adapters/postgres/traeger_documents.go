@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -78,8 +79,8 @@ type traegerReleaseRow struct {
 
 func (r traegerReleaseRow) toDomain() organizationtenancy.TraegerDocumentRelease {
 	release := organizationtenancy.TraegerDocumentRelease{
-		ID: r.ID, Audience: organizationtenancy.TraegerDocumentAudience(r.Audience),
-		SchoolID: r.SchoolID, GroupID: r.GroupID, ReleasedAt: r.ReleasedAt,
+		ID: ident.ID(r.ID), Audience: organizationtenancy.TraegerDocumentAudience(r.Audience),
+		SchoolID: (*ident.ID)(r.SchoolID), GroupID: (*ident.ID)(r.GroupID), ReleasedAt: r.ReleasedAt,
 	}
 	if r.GroupName != nil {
 		release.GroupName = *r.GroupName
@@ -142,7 +143,7 @@ func (r traegerDocumentRow) toDomain(releases []organizationtenancy.TraegerDocum
 		releases = []organizationtenancy.TraegerDocumentRelease{}
 	}
 	return organizationtenancy.TraegerDocument{
-		ID: r.ID, Title: r.Title, FileName: r.FileName, ContentType: r.ContentType,
+		ID: ident.ID(r.ID), Title: r.Title, FileName: r.FileName, ContentType: r.ContentType,
 		SizeBytes: r.SizeBytes, CreatedAt: r.CreatedAt, Releases: releases, Reads: r.Reads,
 	}
 }
@@ -523,7 +524,7 @@ func sharedDocuments(rows []sharedReleaseRow) []organizationtenancy.SharedDocume
 			position = len(documents)
 			index[row.DocumentID] = position
 			documents = append(documents, organizationtenancy.SharedDocument{
-				ID: row.DocumentID, Title: row.Title, FileName: row.FileName, ContentType: row.ContentType, SizeBytes: row.SizeBytes,
+				ID: ident.ID(row.DocumentID), Title: row.Title, FileName: row.FileName, ContentType: row.ContentType, SizeBytes: row.SizeBytes,
 			})
 		}
 		document := &documents[position]

@@ -354,7 +354,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareSchools.TraegerSchools",
-      "binding_digest": "ca6c084b5c6328e0740debca266396d1",
+      "binding_digest": "0ea6bc95c95cfd732e5c4b5058fa7d4e",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -362,7 +362,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareSchools.TraegerSchools",
-      "binding_digest": "5d81eb4748a18d0e5a2545e720c9d8cd",
+      "binding_digest": "fd0d2848c7734319ee035a5363a09ae0",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
@@ -370,7 +370,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareSchools.TraegerSchools",
-      "binding_digest": "04eb82ed2d6170b683072b1c4458a899",
+      "binding_digest": "b28a185eb065fb0a5d4ae2f736b577b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",

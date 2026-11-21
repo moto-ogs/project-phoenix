@@ -72,7 +72,7 @@ export function prepareDeviceForBackend(data: Partial<Device>): DeviceRequest {
     device_type: data.device_type!,
     name: data.name,
     registered_by_id: data.registered_by_id
-      ? Number.parseInt(data.registered_by_id)
+      ? data.registered_by_id
       : undefined,
   };
 }

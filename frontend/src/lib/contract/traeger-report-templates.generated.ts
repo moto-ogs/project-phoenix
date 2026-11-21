@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -20,7 +20,7 @@ export interface TraegerReportDistrict {
 }
 
 export const TraegerReportDistrictSchema: z.ZodType<TraegerReportDistrict, unknown> = object<TraegerReportDistrict>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   district: str,
 });
 
@@ -36,7 +36,7 @@ export interface TraegerReportTemplate {
 }
 
 export const TraegerReportTemplateSchema: z.ZodType<TraegerReportTemplate, unknown> = object<TraegerReportTemplate>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   sections: nullable(arr(str)),
   key_date_month: safeInt,
@@ -47,7 +47,7 @@ export const TraegerReportTemplateSchema: z.ZodType<TraegerReportTemplate, unkno
 
 /** Go: traeger.ReportDistrictRequest */
 export interface ReportDistrictRequest {
-  school_id?: number;
+  school_id?: string;
   district?: string;
 }
 

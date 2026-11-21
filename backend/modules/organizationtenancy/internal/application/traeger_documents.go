@@ -156,7 +156,7 @@ func (d *TraegerDocuments) reachedSchools(ctx context.Context, organizationID in
 	}
 	current := make([]int64, 0, len(schools))
 	for _, school := range schools {
-		current = append(current, school.ID)
+		current = append(current, school.ID.Int64())
 	}
 	if everySchool {
 		return current, nil
@@ -193,7 +193,7 @@ func (d *TraegerDocuments) Audiences(ctx context.Context, organizationID int64) 
 		return nil, fmt.Errorf("organization tenancy: list schools of the Träger: %w", err)
 	}
 	for i := range schools {
-		groups, groupErr := d.schoolGroups(ctx, schools[i].ID)
+		groups, groupErr := d.schoolGroups(ctx, schools[i].ID.Int64())
 		if groupErr != nil {
 			return nil, groupErr
 		}
@@ -231,7 +231,7 @@ func (d *TraegerDocuments) Release(ctx context.Context, organizationID, accountI
 	if organizationID <= 0 {
 		return organizationtenancy.TraegerDocumentRelease{}, errTraegerRequired
 	}
-	if !domain.ValidTraegerDocumentRelease(string(input.Audience), input.SchoolID, input.GroupID) {
+	if !domain.ValidTraegerDocumentRelease(string(input.Audience), (*int64)(input.SchoolID), (*int64)(input.GroupID)) {
 		return organizationtenancy.TraegerDocumentRelease{}, organizationtenancy.ErrTraegerDocumentAudienceInvalid
 	}
 	groupName, err := d.audienceGroupName(ctx, organizationID, input)
@@ -266,7 +266,7 @@ func (d *TraegerDocuments) audienceGroupName(ctx context.Context, organizationID
 	if input.GroupID == nil {
 		return "", nil
 	}
-	groups, err := d.schoolGroups(ctx, *input.SchoolID)
+	groups, err := d.schoolGroups(ctx, (*input.SchoolID).Int64())
 	if err != nil {
 		return "", err
 	}

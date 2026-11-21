@@ -71,7 +71,7 @@ func TestIdentityAccountsGrowthQueryBudget(t *testing.T) {
 	require.NoError(t, f.db.NewSelect().TableExpr("auth.accounts").Column("id", "email").Where("id = ? OR id = ?", f.actor, reader).Scan(context.Background(), &baseline))
 	all := []map[string]any{}
 	for _, row := range baseline {
-		all = append(all, map[string]any{"id": float64(row.ID), "email": row.Email, "active": true})
+		all = append(all, map[string]any{"id": strconv.FormatInt(row.ID, 10), "email": row.Email, "active": true})
 	}
 	for _, id := range []int64{f.actor, reader} {
 		_, err := f.db.ExecContext(context.Background(), "INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)", id, role.ID, testpkg.Tenant(t))
@@ -83,7 +83,7 @@ func TestIdentityAccountsGrowthQueryBudget(t *testing.T) {
 			testpkg.EnsureAccountTenant(t, f.db, account.ID, testpkg.Tenant(t))
 			_, err := f.db.ExecContext(context.Background(), "INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)", account.ID, role.ID, testpkg.Tenant(t))
 			require.NoError(t, err)
-			dto := map[string]any{"id": float64(account.ID), "email": account.Email, "active": true}
+			dto := map[string]any{"id": strconv.FormatInt(account.ID, 10), "email": account.Email, "active": true}
 			all = append(all, dto)
 		}
 		for _, tc := range []struct {

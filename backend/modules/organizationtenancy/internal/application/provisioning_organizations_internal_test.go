@@ -71,7 +71,7 @@ func TestProvisioningCreateOrganization(t *testing.T) {
 		assert.Equal(t, "Talent OGS", created.Name)
 		assert.Equal(t, "talent-ogs", created.Slug)
 		assert.True(t, created.Active)
-		entry := h.onlyAudit(t, domain.AuditActionCreate, domain.AuditResourceOrganization, created.ID)
+		entry := h.onlyAudit(t, domain.AuditActionCreate, domain.AuditResourceOrganization, created.ID.Int64())
 		assert.Equal(t, map[string]any{"name": "Talent OGS", "slug": "talent-ogs"}, auditChanges(t, entry))
 		assert.Equal(t, 1, h.tx.adminRuns)
 	})

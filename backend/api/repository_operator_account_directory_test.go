@@ -6,6 +6,7 @@ import (
 	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -54,7 +55,7 @@ func TestOperatorAccountDirectory_ListAccountsByTenantID(t *testing.T) {
 		for _, a := range accounts {
 			if a.Email == account.Email {
 				found = true
-				assert.Equal(t, account.ID, a.AccountID)
+				assert.Equal(t, ident.ID(account.ID), a.AccountID)
 				assert.Equal(t, "Maria", a.FirstName)
 				assert.Equal(t, "Schmidt", a.LastName)
 				break
@@ -94,7 +95,7 @@ func TestOperatorAccountDirectory_ListAccountsByTenantID_IncludesPendingInvitati
 		if a.Email == invitation.Email {
 			found = true
 			assert.Equal(t, "invited", a.Status)
-			assert.Equal(t, int64(0), a.AccountID)
+			assert.Equal(t, ident.ID(int64(0)), a.AccountID)
 			break
 		}
 	}

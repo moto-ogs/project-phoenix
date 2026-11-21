@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -31,13 +31,13 @@ export interface DeviceResponse {
 }
 
 export const DeviceResponseSchema: z.ZodType<DeviceResponse, unknown> = object<DeviceResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   device_id: str,
   device_type: str,
   name: optional(str),
   status: str,
   last_seen: optional(instant),
-  registered_by_id: optional(int64StringOrNumber),
+  registered_by_id: optional(int64String),
   room_name: optional(str),
   is_online: bool,
   created_at: instant,
@@ -98,7 +98,7 @@ export interface DeviceRequest {
   device_type?: string;
   name?: string | null;
   status?: string;
-  registered_by_id?: number | null;
+  registered_by_id?: string | null;
 }
 
 /** Go: devices.DeviceCreationResponse */
@@ -118,13 +118,13 @@ export interface DeviceCreationResponse {
 }
 
 export const DeviceCreationResponseSchema: z.ZodType<DeviceCreationResponse, unknown> = object<DeviceCreationResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   device_id: str,
   device_type: str,
   name: optional(str),
   status: str,
   last_seen: optional(instant),
-  registered_by_id: optional(int64StringOrNumber),
+  registered_by_id: optional(int64String),
   room_name: optional(str),
   is_online: bool,
   created_at: instant,

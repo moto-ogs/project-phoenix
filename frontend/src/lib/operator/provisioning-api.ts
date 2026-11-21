@@ -446,7 +446,7 @@ class OperatorProvisioningService {
       {
         method: "POST",
         body: {
-          target_school_id: Number(targetSchoolId),
+          target_school_id: targetSchoolId,
         } satisfies transferDeviceRequest,
       },
     );

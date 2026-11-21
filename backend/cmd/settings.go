@@ -120,14 +120,14 @@ func collectSettingOverrideRows(ctx context.Context, schools []organizationtenan
 	rows := []settingOverrideRow{}
 	for _, school := range schools {
 		for _, key := range keys {
-			value, found, findErr := values.StoredOverride(ctx, school.ID, key)
+			value, found, findErr := values.StoredOverride(ctx, school.ID.Int64(), key)
 			if findErr != nil {
 				return nil, fmt.Errorf("read override for tenant %d key %s: %w", school.ID, key, findErr)
 			}
 			if !found {
 				continue
 			}
-			rows = append(rows, settingOverrideRow{TenantID: school.ID, TenantSlug: school.Slug, TenantName: school.Name, Key: key, Value: value})
+			rows = append(rows, settingOverrideRow{TenantID: school.ID.Int64(), TenantSlug: school.Slug, TenantName: school.Name, Key: key, Value: value})
 		}
 	}
 	return rows, nil

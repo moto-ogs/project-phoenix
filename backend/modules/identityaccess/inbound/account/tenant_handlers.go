@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Bounds of enrollment.grade_level_max, the same range the settings registry
@@ -371,11 +372,11 @@ func (rs *Resource) listAccountTenants(w http.ResponseWriter, r *http.Request) {
 	responses := make([]AccountTenantResponse, 0, len(schools))
 	for _, school := range schools {
 		responses = append(responses, AccountTenantResponse{
-			TenantID:         school.ID,
+			TenantID:         ident.ID(school.ID),
 			Slug:             school.Slug,
 			Name:             school.Name,
 			Subdomain:        school.Subdomain,
-			OrganizationID:   school.OrganizationID,
+			OrganizationID:   ident.ID(school.OrganizationID),
 			OrganizationName: school.OrganizationName,
 		})
 	}

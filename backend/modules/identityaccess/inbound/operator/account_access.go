@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Operator endpoints for managing which schools an existing account may
@@ -32,11 +33,11 @@ type AccountTenantRole struct {
 // AccountTenantAccessEntry is one school an account has (or had) access to,
 // including the roles it holds there.
 type AccountTenantAccessEntry struct {
-	TenantID         int64               `json:"tenant_id"`
+	TenantID         common.ID           `json:"tenant_id"`
 	SchoolName       string              `json:"school_name"`
 	SchoolSlug       string              `json:"school_slug"`
 	SchoolActive     bool                `json:"school_active"`
-	OrganizationID   int64               `json:"organization_id"`
+	OrganizationID   common.ID           `json:"organization_id"`
 	OrganizationName string              `json:"organization_name"`
 	Status           string              `json:"status"`
 	ActivatedAt      *time.Time          `json:"activated_at,omitempty"`
@@ -56,7 +57,7 @@ type RoleOption struct {
 }
 
 type grantAccountTenantAccessRequest struct {
-	SchoolID  int64         `json:"school_id"`
+	SchoolID  common.ID     `json:"school_id"`
 	RoleID    common.JSONID `json:"role_id"`
 	FirstName string        `json:"first_name,omitempty"`
 	LastName  string        `json:"last_name,omitempty"`
@@ -131,7 +132,7 @@ func (rs *Resource) GrantAccountTenantAccess(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	entries, err := rs.identity.GrantAccountTenantAccess(r.Context(), identityaccess.GrantAccountTenantAccess{
-		AccountID: accountID, SchoolID: req.SchoolID, RoleID: req.RoleID.Int64(),
+		AccountID: accountID, SchoolID: req.SchoolID.Int64(), RoleID: req.RoleID.Int64(),
 		FirstName: req.FirstName, LastName: req.LastName, Position: req.Position,
 		OperatorID: operatorIDFromContext(r), ClientIP: clientIP(r),
 	})
@@ -185,8 +186,8 @@ func accessEntries(entries []identityaccess.AccountTenantAccess) []AccountTenant
 			roles = append(roles, AccountTenantRole{ID: role.ID, Name: role.Name, IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal})
 		}
 		result = append(result, AccountTenantAccessEntry{
-			TenantID: entry.TenantID, SchoolName: entry.SchoolName, SchoolSlug: entry.SchoolSlug, SchoolActive: entry.SchoolActive,
-			OrganizationID: entry.OrganizationID, OrganizationName: entry.OrganizationName, Status: entry.Status,
+			TenantID: ident.ID(entry.TenantID), SchoolName: entry.SchoolName, SchoolSlug: entry.SchoolSlug, SchoolActive: entry.SchoolActive,
+			OrganizationID: ident.ID(entry.OrganizationID), OrganizationName: entry.OrganizationName, Status: entry.Status,
 			ActivatedAt: entry.ActivatedAt, DeactivatedAt: entry.DeactivatedAt,
 			HasPerson: entry.HasPerson, HasStaff: entry.HasStaff, Roles: roles,
 		})

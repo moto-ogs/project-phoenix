@@ -3666,7 +3666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentPortalSchools.SchoolNames",
-      "binding_digest": "edc1c7ccc2927e4dadf7aa16f49d62ad",
+      "binding_digest": "be95969cae89c3035ff4ad4db4794bcb",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.SchoolDirectory.SchoolNames",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
@@ -3674,7 +3674,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentPortalSchools.SchoolNames",
-      "binding_digest": "2000c4eca074441a101fbeaf206b0531",
+      "binding_digest": "dd09f7611ad0402940889ab2508e9597",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.SchoolDirectory.SchoolNames",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",

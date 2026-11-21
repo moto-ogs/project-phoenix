@@ -4979,7 +4979,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
-      "reason": "Reads the federal state from the resolved settings snapshot in memory (#4702).",
+      "reason": "Reads the federal state from the resolved settings snapshot in memory (#4702). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-calendar",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.String",
       "target_owner": "settings-platform"
@@ -4989,7 +4989,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
-      "reason": "Lists the Träger's schools for its calendar (#4702); read only.",
+      "reason": "Lists the Träger's schools for its calendar (#4702); read only. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -4999,7 +4999,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
-      "reason": "Pure value check on a read school row (#4702).",
+      "reason": "Pure value check on a read school row (#4702). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -5009,7 +5009,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
-      "reason": "Reads each school's federal state (#4702) in an administrative unit detached from the caller's Träger transaction (ADR 0175, ADR 0105); no write or scope change of the caller.",
+      "reason": "Reads each school's federal state (#4702) in an administrative unit detached from the caller's Träger transaction (ADR 0175, ADR 0105); no write or scope change of the caller. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
       "target_owner": "settings-platform"

@@ -175,12 +175,16 @@ func seedBookingProfileAttendance(rt *Runtime, state *SeedState) error {
 		return err
 	}
 	var response struct {
-		Data SeedDevice `json:"data"`
+		Data struct {
+			SeedDevice
+			ID apiID `json:"id"`
+		} `json:"data"`
 	}
 	if err := parseJSON(raw, &response); err != nil {
 		return err
 	}
-	device := response.Data
+	device := response.Data.SeedDevice
+	device.ID = int64(response.Data.ID)
 	if device.ID <= 0 || device.APIKey == "" {
 		return fmt.Errorf("physical terminal returned no ID or API key")
 	}

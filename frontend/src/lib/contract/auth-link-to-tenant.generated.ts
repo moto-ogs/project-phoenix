@@ -16,7 +16,7 @@ import {
 /** Go: account.LinkToTenantRequest */
 export interface LinkToTenantRequest {
   email?: string;
-  role_id?: number | null;
+  role_id?: string | null;
   first_name?: string;
   last_name?: string;
   tag_id?: string | null;
