@@ -66,3 +66,62 @@ describe("traeger-billing-api release (#6506)", () => {
     });
   });
 });
+
+// ADR 0270 point 6: a value a newer backend adds is not passed on as a known
+// one. A direct debit that is not collected for a new reason stays a gap.
+describe("traeger-billing-api unknown values (#2353)", () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps unknown run, document and payment values apart", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        data: {
+          ...PREVIEW,
+          status: "archived",
+          service_from: null,
+          due_dates: [
+            { payment_method: "cash", due_on: "2027-02-01" },
+            { payment_method: "transfer", due_on: "2027-02-15" },
+          ],
+          documents: [
+            {
+              id: "0",
+              kind: "reminder",
+              registration_child_id: "0",
+              recipient_kind: "",
+              payment: {
+                method: "cash",
+                due_on: null,
+                due_source: "term",
+                debit_gap: "bank_closed",
+              },
+              children: [],
+            },
+          ],
+        },
+      }),
+    );
+    const run = await fetchBillingRun("9");
+    expect(run.status).toBeUndefined();
+    expect(run.serviceFrom).toBeNull();
+    expect(run.dueDates).toEqual([
+      { paymentMethod: "transfer", dueOn: "2027-02-15" },
+    ]);
+    expect(run.documents[0]).toMatchObject({
+      id: "",
+      kind: undefined,
+      registrationChildId: "",
+      recipientKind: "",
+      payment: { method: undefined, dueOn: null, debitGap: "other" },
+    });
+  });
+});

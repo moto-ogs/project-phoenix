@@ -4,9 +4,17 @@ import { formatDate } from "~/lib/date-helpers";
 import { groupParallelWeeks } from "~/lib/holiday-week-groups";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 
-/** "02.11.2026 bis 04.12.2026". */
-export function formatDateRange(from: string, to: string): string {
-  return `${formatDate(from)} bis ${formatDate(to)}`;
+/** "02.11.2026 bis 04.12.2026"; a day the backend left empty shows „–“. */
+export function formatDateRange(
+  from: string | null,
+  to: string | null,
+): string {
+  return `${formatDay(from)} bis ${formatDay(to)}`;
+}
+
+/** The German date of a calendar day; „–“ when the backend sent none. */
+export function formatDay(day: string | null): string {
+  return day ? formatDate(day) : "–";
 }
 
 /**

@@ -374,7 +374,7 @@ function DebitHintsCard({
                 </span>
               </p>
               <p className="mt-0.5 text-sm text-gray-700">
-                {dueTooSoon && dueDatesHref && item.payment
+                {dueTooSoon && dueDatesHref && item.payment?.dueOn
                   ? `Abbuchung am ${formatDate(item.payment.dueOn)}: zu früh${earliest ? `, frühestens am ${formatDate(earliest)}` : ""}.`
                   : text}
               </p>

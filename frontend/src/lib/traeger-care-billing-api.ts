@@ -25,9 +25,11 @@ import type {
   MailProviderBlock,
 } from "~/lib/email-delivery-status";
 import { traegerRequest } from "./traeger-api";
+import type {
+  InvoicePayment as WireInvoicePayment,
+  RunDueDate as WireRunDueDate,
+} from "./contract/shared.generated";
 import {
-  type BackendInvoicePayment,
-  type BackendRunDueDate,
   type InvoicePayment,
   type PostalAddress,
   type RecipientKind,
@@ -530,7 +532,7 @@ interface BackendInvoice {
     second_name?: string;
     address?: { street: string; postal_code: string; city: string } | null;
   };
-  payment?: BackendInvoicePayment | null;
+  payment?: WireInvoicePayment | null;
   positions:
     | {
         care_offering_id: number | string;
@@ -712,7 +714,7 @@ export interface BackendRunDetail extends BackendRun {
   meal_gaps?: BackendMealGap[] | null;
   meal_unbilled?: BackendMealUnbilled[] | null;
   meal_changed?: BackendMealChanged[] | null;
-  due_dates?: BackendRunDueDate[] | null;
+  due_dates?: WireRunDueDate[] | null;
   schools?: { id: number | string; name: string }[] | null;
   excluded_count?: number;
   excluded_cents?: number;
@@ -834,7 +836,7 @@ function invoiceFromBackend(invoice: BackendInvoice): CareInvoice {
           }
         : null,
     },
-    payment: invoicePaymentFromBackend(invoice.payment),
+    payment: invoicePaymentFromBackend(invoice.payment ?? null),
     positions: (invoice.positions ?? []).map((position) => ({
       careOfferingId: id(position.care_offering_id),
       moduleName: position.module_name,
@@ -930,7 +932,7 @@ export function detailFromBackend(detail: BackendRunDetail): CareRunDetail {
     mealGaps: mealGapsFromBackend(detail.meal_gaps),
     mealUnbilled: mealUnbilledFromBackend(detail.meal_unbilled),
     mealChanged: mealChangedFromBackend(detail.meal_changed),
-    dueDates: runDueDatesFromBackend(detail.due_dates),
+    dueDates: runDueDatesFromBackend(detail.due_dates ?? null),
     schools: (detail.schools ?? []).map((school) => ({
       id: id(school.id),
       name: school.name,
