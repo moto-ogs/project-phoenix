@@ -411,7 +411,7 @@ describe("traeger-holiday-registrations-api", () => {
     );
     expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("PUT");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
-      bookings: [{ week_id: 51, time_model_id: 61 }],
+      bookings: [{ week_id: "51", time_model_id: "61" }],
     });
   });
 
