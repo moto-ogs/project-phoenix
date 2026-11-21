@@ -107,12 +107,12 @@ func (f *feedFixture) block(t *testing.T, date calendar.Date, staff ...feedPerso
 type feedResponse struct {
 	Data struct {
 		Entries []struct {
-			ID       int64   `json:"id"`
-			Type     string  `json:"type"`
-			Title    string  `json:"title"`
-			Body     string  `json:"body"`
-			DeepLink string  `json:"deep_link"`
-			ReadAt   *string `json:"read_at"`
+			ID       testpkg.ID `json:"id"`
+			Type     string     `json:"type"`
+			Title    string     `json:"title"`
+			Body     string     `json:"body"`
+			DeepLink string     `json:"deep_link"`
+			ReadAt   *string    `json:"read_at"`
 		} `json:"entries"`
 		NextCursor  *string `json:"next_cursor"`
 		UnreadCount int     `json:"unread_count"`
@@ -386,7 +386,7 @@ func TestCancellationFeedReachesMotoSchule(t *testing.T) {
 	var staffEntryID int64
 	for _, candidate := range f.feed(t, teacher, "").Data.Entries {
 		if candidate.Type == "pickup_upcoming" {
-			staffEntryID = candidate.ID
+			staffEntryID = int64(candidate.ID)
 		}
 	}
 	require.NotZero(t, staffEntryID)

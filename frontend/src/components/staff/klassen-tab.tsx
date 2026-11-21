@@ -32,16 +32,12 @@ import { fetchSchoolClasses } from "~/lib/student-api";
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
+import type { ApiResponse } from "~/lib/api-envelope";
 
 const logger = createLogger({ component: "StaffKlassenTab" });
 
 const OBJECT = "die Zuweisung der Schulklassen";
 const NO_CLASSES: readonly string[] = [];
-
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-}
 
 interface SchoolClassesPayload {
   staff_id: number | string;
@@ -49,7 +45,7 @@ interface SchoolClassesPayload {
 }
 
 async function fetchAssignedClasses(staffId: string): Promise<string[]> {
-  const response = await authFetch<ProxyResponse<SchoolClassesPayload>>(
+  const response = await authFetch<ApiResponse<SchoolClassesPayload>>(
     `/api/staff/${staffId}/school-classes`,
   );
   return response.data.school_classes ?? [];
@@ -59,7 +55,7 @@ async function saveAssignedClasses(
   staffId: string,
   classes: string[],
 ): Promise<string[]> {
-  const response = await authFetch<ProxyResponse<SchoolClassesPayload>>(
+  const response = await authFetch<ApiResponse<SchoolClassesPayload>>(
     `/api/staff/${staffId}/school-classes`,
     { method: "PUT", body: { school_classes: classes } },
   );

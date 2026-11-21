@@ -25,7 +25,7 @@ const schools = ["school-a", "school-b"].map((subdomain, index) => ({
 }));
 
 // Only synthetic fixtures. This is not a backend/authentication test.
-const envelope = (data) => ({ status: "success", success: true, data });
+const envelope = (data) => ({ status: "success", data });
 const claims = (scope = "") => ({
   id: 1,
   sub: "1",

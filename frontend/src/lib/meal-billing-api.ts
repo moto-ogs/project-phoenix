@@ -3,6 +3,8 @@
 // ate in a month and releases it for the Träger's billing. Calendar dates
 // stay "YYYY-MM-DD"; backend int64 IDs leave as strings.
 
+import { knownEnum } from "~/lib/contract/known-enum";
+import type * as wire from "~/lib/contract/meal-billing-months.generated";
 import { apiErrorFromResponse } from "./api-error";
 import { sessionFetch } from "./session-cache";
 
@@ -55,47 +57,6 @@ interface MealBillingRelease {
   readonly mealCount: number;
 }
 
-interface BackendSummary {
-  month: string;
-  status: MealBillingStatus;
-  released_at: string | null;
-  child_count: number | null;
-  meal_count: number | null;
-}
-
-interface BackendMonth {
-  month: string;
-  status: MealBillingStatus;
-  school_days: number;
-  released_at: string | null;
-  child_count: number;
-  meal_count: number;
-  absence_count: number;
-  fingerprint?: string;
-  version?: number;
-  releases?:
-    | {
-        version: number;
-        released_at: string;
-        reason: string;
-        child_count: number;
-        meal_count: number;
-      }[]
-    | null;
-  current?: BackendMonth | null;
-  children:
-    | {
-        student_id: number | string;
-        first_name: string;
-        last_name: string;
-        school_class: string;
-        registered_days: number;
-        meal_days: number;
-        absent_dates: string[] | null;
-      }[]
-    | null;
-}
-
 const PATH = "/api/meal-billing-months";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -110,17 +71,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body.data;
 }
 
-function monthFromBackend(body: BackendMonth): MealBillingMonth {
+const STATUSES: readonly MealBillingStatus[] = [
+  "running",
+  "open",
+  "released",
+  "expired",
+];
+
+/** A status this build does not know offers no release: it reads as expired. */
+const status = (value: string): MealBillingStatus =>
+  knownEnum(STATUSES, value) ?? "expired";
+
+function monthFromBackend(
+  body: wire.BillingMonthState & { current?: wire.BillingMonthState },
+): MealBillingMonth {
   return {
     month: body.month,
-    status: body.status,
+    status: status(body.status),
     schoolDays: body.school_days,
     releasedAt: body.released_at,
     childCount: body.child_count,
     mealCount: body.meal_count,
     absenceCount: body.absence_count,
-    fingerprint: body.fingerprint ?? "",
-    version: body.version ?? 0,
+    fingerprint: body.fingerprint,
+    version: body.version,
     releases: (body.releases ?? []).map((release) => ({
       version: release.version,
       releasedAt: release.released_at,
@@ -130,7 +104,7 @@ function monthFromBackend(body: BackendMonth): MealBillingMonth {
     })),
     current: body.current ? monthFromBackend(body.current) : null,
     children: (body.children ?? []).map((child) => ({
-      studentId: String(child.student_id),
+      studentId: child.student_id,
       firstName: child.first_name,
       lastName: child.last_name,
       schoolClass: child.school_class,
@@ -143,10 +117,10 @@ function monthFromBackend(body: BackendMonth): MealBillingMonth {
 
 /** The current month and the eleven before it, the latest first. */
 export async function fetchMealBillingMonths(): Promise<MealBillingSummary[]> {
-  const body = await request<BackendSummary[] | null>(PATH);
-  return (body ?? []).map((summary) => ({
+  const body = await request<wire.BillingMonthSummary[]>(PATH);
+  return body.map((summary) => ({
     month: summary.month,
-    status: summary.status,
+    status: status(summary.status),
     releasedAt: summary.released_at,
     childCount: summary.child_count,
     mealCount: summary.meal_count,
@@ -157,7 +131,9 @@ export async function fetchMealBillingMonth(
   month: string,
 ): Promise<MealBillingMonth> {
   return monthFromBackend(
-    await request<BackendMonth>(`${PATH}/${encodeURIComponent(month)}`),
+    await request<wire.BillingMonthResponse>(
+      `${PATH}/${encodeURIComponent(month)}`,
+    ),
   );
 }
 
@@ -173,7 +149,7 @@ export async function releaseMealBillingMonth(
   reason = "",
 ): Promise<MealBillingMonth> {
   return monthFromBackend(
-    await request<BackendMonth>(
+    await request<wire.BillingMonthResponse>(
       `${PATH}/${encodeURIComponent(month.month)}/release`,
       {
         method: "POST",

@@ -3,18 +3,13 @@
 // übertragene Datei ist dieselbe, die der Download liefert.
 
 import { apiErrorFromResponse } from "./api-error";
+import type {
+  ExportTransferResponse,
+  ExportTransferStatus,
+} from "./contract/staff.generated";
 import { sessionFetch } from "./session-cache";
 
 type ExportFormat = "csv" | "xlsx" | "datev_lodas" | "datev_lug";
-
-interface BackendSFTPStatus {
-  enabled: boolean;
-  ready: boolean;
-  host?: string;
-  port?: number;
-  remote_directory?: string;
-  missing_settings?: string[];
-}
 
 export interface SFTPStatus {
   /** Die Übertragung ist eingeschaltet. */
@@ -25,15 +20,6 @@ export interface SFTPStatus {
   remoteDirectory?: string;
   /** Schlüssel der noch leeren Einstellungen, in Formularreihenfolge. */
   missingSettings: string[];
-}
-
-interface BackendTransferOutcome {
-  transferred: boolean;
-  filename: string;
-  byte_size: number;
-  target_host?: string;
-  target_directory?: string;
-  reason?: string;
 }
 
 export interface TransferOutcome {
@@ -110,7 +96,7 @@ export async function fetchSFTPStatus(): Promise<SFTPStatus> {
       `Failed to fetch SFTP status: ${response.statusText}`,
     );
   }
-  const json = (await response.json()) as { data: BackendSFTPStatus };
+  const json = (await response.json()) as { data: ExportTransferStatus };
   return {
     enabled: json.data.enabled,
     ready: json.data.ready,
@@ -161,7 +147,7 @@ export async function transferExportViaSFTP(
     );
   }
   const json = (await response.json()) as {
-    data?: BackendTransferOutcome;
+    data?: ExportTransferResponse;
   };
   // Die Hülle muss ein `data` tragen. Fehlt es, hat die Route-Hülle das
   // Ergebnis für eine fertige Antwort gehalten — das passiert, sobald das

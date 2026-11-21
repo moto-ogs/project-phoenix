@@ -7,11 +7,7 @@ import { authFetch } from "./api-helpers";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import type { SchoolsResponse } from "./contract/caterer-schools.generated";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
-
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-}
+import type { ApiResponse } from "./api-envelope";
 
 interface BackendChild {
   first_name?: string;
@@ -142,7 +138,7 @@ function mapCatererOrders(data: BackendCatererOrders): CatererOrders {
 }
 
 export async function fetchCatererSchools(): Promise<CatererSchools> {
-  const response = await authFetch<ProxyResponse<SchoolsResponse>>(
+  const response = await authFetch<ApiResponse<SchoolsResponse>>(
     "/api/caterer/schools",
   );
   return {
@@ -157,7 +153,7 @@ export async function fetchCatererOrders(
   to: string,
 ): Promise<CatererOrders> {
   const params = new URLSearchParams({ from, to });
-  const response = await authFetch<ProxyResponse<BackendCatererOrders>>(
+  const response = await authFetch<ApiResponse<BackendCatererOrders>>(
     `/api/caterer/schools/${encodeURIComponent(schoolId)}/orders?${params.toString()}`,
   );
   return mapCatererOrders(response.data);
@@ -182,7 +178,7 @@ export async function fetchCatererInvitation(
   token: string,
 ): Promise<CatererInvitationPreview> {
   const response = await authFetch<
-    ProxyResponse<{
+    ApiResponse<{
       email: string;
       caterer_name: string;
       school_name: string;

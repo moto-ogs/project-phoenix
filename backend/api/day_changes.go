@@ -32,10 +32,12 @@ import (
 )
 
 // dayChangesCaller is the Identity & Access read of the caller's staff
-// record and groups (own groups and the ones the caller covers today).
+// record and own groups. The groups the caller covers on the day come from
+// the day's Gruppenübergaben the source reads anyway (#7666, as #7661): one
+// read less, and the same day as the overview.
 type dayChangesCaller interface {
 	CurrentStaffID(ctx context.Context) (int64, bool, error)
-	MyGroupIDs(ctx context.Context) ([]int64, error)
+	MyTeacherGroupIDs(ctx context.Context) ([]int64, error)
 }
 
 // dayChangesWorkforce is the Workforce read of absences and substitutions.
@@ -97,6 +99,8 @@ type DayChangesSources struct {
 	Groups    dayChangesGroups
 	// Notices is Timetable's read of the Hinweise der Leitung (#7667).
 	Notices dayChangesNoticeReads
+	// Blocks is Timetable's read of the day's changed blocks (#7662).
+	Blocks dayChangesBlocks
 	// MealPlan is Meal Plan's change mark of a day (#7666).
 	MealPlan mealplan.MenuChanges
 	Today    func() calendar.Date
@@ -111,16 +115,20 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Notices == nil {
 		return nil, fmt.Errorf("%w: notice source", daychangesview.ErrDependencies)
 	}
+	if sources.Blocks == nil {
+		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
+	}
 	if sources.MealPlan == nil {
 		return nil, fmt.Errorf("%w: meal plan source", daychangesview.ErrDependencies)
 	}
 	return daychangesview.New(daychangesview.Dependencies{
-		Today:     sources.Today,
-		Isolation: dayChangesSavepoints{},
-		Staff:     dayChangesStaff{sources: sources},
-		Notices:   dayChangesNotices{reads: sources.Notices},
-		MealPlan:  dayChangesMealPlan{reads: sources.MealPlan},
-		Logger:    sources.Logger,
+		Today:      sources.Today,
+		Isolation:  dayChangesSavepoints{},
+		Staff:      dayChangesStaff{sources: sources},
+		Notices:    dayChangesNotices{reads: sources.Notices},
+		Activities: dayChangesActivities{sources: sources},
+		MealPlan:   dayChangesMealPlan{reads: sources.MealPlan},
+		Logger:     sources.Logger,
 	})
 }
 
@@ -182,6 +190,9 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 	if err != nil {
 		return nil, err
 	}
+	if err := s.addTeam(ctx, &viewer, handovers); err != nil {
+		return nil, err
+	}
 	viewer.addSubstitutes(handovers)
 	absences, err := s.sources.Workforce.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		Statuses:    []string{workforce.AbsenceStatusReported, workforce.AbsenceStatusApproved},
@@ -231,14 +242,14 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		return viewer, nil
 	}
 	viewer.selfID = staffID
-	groupIDs, err := s.sources.Caller.MyGroupIDs(ctx)
+	groupIDs, err := s.sources.Caller.MyTeacherGroupIDs(ctx)
 	if err != nil {
 		return staffViewer{}, fmt.Errorf("resolve caller groups: %w", err)
 	}
-	if len(groupIDs) == 0 {
-		return viewer, nil
+	for _, id := range groupIDs {
+		viewer.groups[id] = true
 	}
-	return viewer, s.addTeam(ctx, &viewer, groupIDs)
+	return viewer, nil
 }
 
 func hasStaffRecordAccess(granted []string) bool {
@@ -262,13 +273,18 @@ func containsRole(roles []string, role string) bool {
 	return false
 }
 
-// addTeam names the teachers of the caller's groups. Today's substitutes are
-// added after their source query succeeds.
-func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, groupIDs []int64) error {
-	for _, id := range groupIDs {
-		viewer.groups[id] = true
+// addTeam completes the caller's groups with those it covers on the day and
+// names the teachers of all of them. Today's substitutes are added after.
+func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, handovers []workforce.GroupSubstitution) error {
+	for _, cover := range handovers {
+		if viewer.selfID != 0 && cover.SubstituteStaffID == viewer.selfID {
+			viewer.groups[cover.GroupID] = true
+		}
 	}
-	teachers, err := s.sources.Teachers.ListTeachers(ctx, schoolmembership.TeacherFilter{GroupIDs: groupIDs})
+	if len(viewer.groups) == 0 {
+		return nil
+	}
+	teachers, err := s.sources.Teachers.ListTeachers(ctx, schoolmembership.TeacherFilter{GroupIDs: sortedIDs(viewer.groups)})
 	if err != nil {
 		return fmt.Errorf("resolve group teachers: %w", err)
 	}

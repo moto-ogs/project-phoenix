@@ -23,8 +23,8 @@ import (
 // push (#6347, decision A) through the routes.
 
 type careNoticeLetterBody struct {
-	NoticeID       int64  `json:"notice_id"`
-	ContractID     int64  `json:"contract_id"`
+	NoticeID       wireID `json:"notice_id"`
+	ContractID     wireID `json:"contract_id"`
 	Kind           string `json:"kind"`
 	Number         string `json:"number"`
 	AmendsNumber   string `json:"amends_number"`
@@ -57,7 +57,7 @@ func releasedNoticeRun(t *testing.T, name string) (careBillingFixture, int64, ca
 	f, contract := newNoticeFixture(t, name)
 	writeLegalRemedy(t, f.db, f.office.organization)
 	administration := brandedAdministration(t, f)
-	run := f.releaseNoticeRun(t, f.noticeRun(t, f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID))
+	run := f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID)))
 	require.Len(t, run.Notices, 1)
 	return f, contract, run, administration
 }
@@ -120,29 +120,29 @@ func storedSHA256(t *testing.T, f careBillingFixture, runID int64) string {
 func TestCareNoticeOriginalStaysByteIdenticalAfterEveryLaterChange(t *testing.T) {
 	t.Parallel()
 	f, contract, run, administration := releasedNoticeRun(t, "Träger Bescheid Original")
-	path := careNoticeRunPath(run.ID, "/notices/"+strconv.FormatInt(contract, 10)+"/pdf")
+	path := careNoticeRunPath(int64(run.ID), "/notices/"+strconv.FormatInt(contract, 10)+"/pdf")
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, path, nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "no original before it is stored: %s", rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[careNoticeLettersBody](t, rec.Body.Bytes())
 	require.Len(t, created.Notices, 1)
 	assert.True(t, created.Notices[0].HasLetter)
-	original := noticePDF(t, f, run.ID, contract)
-	assert.Equal(t, storedSHA256(t, f, run.ID), created.Notices[0].SHA256, "the overview names the stored bytes")
+	original := noticePDF(t, f, int64(run.ID), contract)
+	assert.Equal(t, storedSHA256(t, f, int64(run.ID)), created.Notices[0].SHA256, "the overview names the stored bytes")
 	var stored []byte
 	require.NoError(t, f.db.NewRaw(`SELECT pdf FROM parent_billing.care_notice_letters WHERE run_id = ?`, run.ID).
 		Scan(context.Background(), &stored))
 	assert.Equal(t, stored, original, "the download is the stored PDF")
 
 	// #4718: the mail list as a file, read like the page.
-	lines := billingListCSV(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/letters/export"))
+	lines := billingListCSV(t, f.traeger, f.office.token, careNoticeRunPath(int64(run.ID), "/letters/export"))
 	require.Len(t, lines, 2, "the header and the notice")
 	assert.Equal(t, "Nachname;Vorname;Schule;Art;Bescheid-Nr.;Empfänger;E-Mail;Gesamtbetrag (Euro);Original;An die Familie;Gesendet am", lines[0])
 	assert.Contains(t, lines[1], ";Gespeichert;Nicht gesendet;–")
-	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/letters/export"),
-		"bescheid-versand-"+strconv.FormatInt(run.ID, 10))
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunPath(int64(run.ID), "/letters/export"),
+		"bescheid-versand-"+strconv.FormatInt(int64(run.ID), 10))
 	assertTraegerListNumbers(t, spreadsheet, map[string]string{"H7": "310"})
 
 	// Letterhead, template, address, contract and bank account change afterwards.
@@ -171,11 +171,11 @@ func TestCareNoticeOriginalStaysByteIdenticalAfterEveryLaterChange(t *testing.T)
 		})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, "the original is stored once: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_letters_exist")
-	assert.Equal(t, original, noticePDF(t, f, run.ID, contract), "the original never changes")
-	assert.Equal(t, created.Notices[0].SHA256, noticeLetters(t, f, run.ID).Notices[0].SHA256)
+	assert.Equal(t, original, noticePDF(t, f, int64(run.ID), contract), "the original never changes")
+	assert.Equal(t, created.Notices[0].SHA256, noticeLetters(t, f, int64(run.ID)).Notices[0].SHA256)
 
 	// No role changes it in the database either.
 	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.care_notice_letters SET pdf = '\x255044'::bytea WHERE run_id = ?`, run.ID)
@@ -189,17 +189,17 @@ func TestCareNoticeOriginalStaysByteIdenticalAfterEveryLaterChange(t *testing.T)
 func TestCareNoticeMailCarriesTheStoredOriginalOnceAndAgainOnRequest(t *testing.T) {
 	t.Parallel()
 	f, contract, run, administration := releasedNoticeRun(t, "Träger Bescheid Versand")
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters/mail"), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, "no mail before the original: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.Zero(t, careInboxPushes(t, f), "a stored original is not in the inbox yet")
-	original := noticePDF(t, f, run.ID, contract)
+	original := noticePDF(t, f, int64(run.ID), contract)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters/mail"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, careSeriesBody{Queued: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))
-	mails := noticeMails(t, f, run.ID)
+	mails := noticeMails(t, f, int64(run.ID))
 	require.Len(t, mails, 1)
 	var payload struct {
 		DocumentKind string `json:"document_kind"`
@@ -217,36 +217,36 @@ func TestCareNoticeMailCarriesTheStoredOriginalOnceAndAgainOnRequest(t *testing.
 	rec = traegerJSON(t, f.traeger, administration.token, http.MethodPut,
 		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": "Träger ohne Anschrift"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters/mail"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, careSeriesBody{Already: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()), "a second series sends nothing twice")
 	rec = traegerJSON(t, f.traeger, administration.token, http.MethodPut,
 		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": traegerTestLetterhead})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	one := careNoticeRunPath(run.ID, "/notices/"+strconv.FormatInt(contract, 10)+"/mail")
+	one := careNoticeRunPath(int64(run.ID), "/notices/"+strconv.FormatInt(contract, 10)+"/mail")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, one, nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, "a waiting mail is not sent again: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.letter_mail_pending")
-	assert.Equal(t, "queued", noticeLetters(t, f, run.ID).Notices[0].Status)
+	assert.Equal(t, "queued", noticeLetters(t, f, int64(run.ID)).Notices[0].Status)
 
 	_, err := f.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'dead_letter' WHERE id = ?`, mails[0].ID)
 	require.NoError(t, err)
-	assert.Equal(t, "failed", noticeLetters(t, f, run.ID).Notices[0].Status)
+	assert.Equal(t, "failed", noticeLetters(t, f, int64(run.ID)).Notices[0].Status)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, one, nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, "a failed mail is sent again: %s", rec.Body.String())
-	mails = noticeMails(t, f, run.ID)
+	mails = noticeMails(t, f, int64(run.ID))
 	require.Len(t, mails, 2)
 	require.NoError(t, json.Unmarshal(mails[1].Payload, &payload))
 	assert.Equal(t, original, payload.PDF, "the repeat carries the same original")
 	assert.Equal(t, 1, careInboxPushes(t, f), "only the first send pushes")
-	assert.Equal(t, 2, noticeLetters(t, f, run.ID).Notices[0].Sends)
+	assert.Equal(t, 2, noticeLetters(t, f, int64(run.ID)).Notices[0].Sends)
 	var keys []string
 	require.NoError(t, f.db.NewRaw(`SELECT idempotency_key FROM platform.email_outbox WHERE id IN (?, ?) ORDER BY id`, mails[0].ID, mails[1].ID).
 		Scan(context.Background(), &keys))
 	require.Len(t, keys, 2)
 	assert.NotEqual(t, keys[0], keys[1], "each send is one outbox entry with its own key")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careNoticeRunPath(run.ID, "/letters/print"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careNoticeRunPath(int64(run.ID), "/letters/print"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
 	var actions []string
@@ -273,15 +273,15 @@ func TestCareNoticeMailRefusesMissingAddressAndChangedPayer(t *testing.T) {
 				_, err := f.db.ExecContext(context.Background(), change, contract)
 				require.NoError(t, err)
 			}
-			run := f.releaseNoticeRun(t, f.noticeRun(t, f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID))
-			rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+			run := f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID)))
+			rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			if name == "changed party" {
 				_, err := f.db.ExecContext(context.Background(), change, contract)
 				require.NoError(t, err)
 			}
 			rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost,
-				careNoticeRunPath(run.ID, "/notices/"+strconv.FormatInt(contract, 10)+"/mail"), nil)
+				careNoticeRunPath(int64(run.ID), "/notices/"+strconv.FormatInt(contract, 10)+"/mail"), nil)
 			assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 			want := careSeriesBody{RecipientChanged: 1}
 			if name == "missing address" {
@@ -290,13 +290,13 @@ func TestCareNoticeMailRefusesMissingAddressAndChangedPayer(t *testing.T) {
 			} else {
 				assert.Contains(t, rec.Body.String(), "parent_billing.care_notice_recipient_changed")
 			}
-			rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters/mail"), nil)
+			rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 			require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 			assert.Equal(t, want, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))
-			assert.Empty(t, noticeMails(t, f, run.ID))
+			assert.Empty(t, noticeMails(t, f, int64(run.ID)))
 			assert.Zero(t, careInboxPushes(t, f))
 			if name == "missing address" {
-				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careNoticeRunPath(run.ID, "/letters/print?only=without_email"), nil)
+				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careNoticeRunPath(int64(run.ID), "/letters/print?only=without_email"), nil)
 				require.Equal(t, http.StatusOK, rec.Code, "a notice without an address prints: %s", rec.Body.String())
 			}
 		})
@@ -317,15 +317,15 @@ func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
 	}
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	run := f.releaseNoticeRun(t, f.noticeRun(t, f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID))
+	run := f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID)))
 	assert.Equal(t, "oma@example.org", run.Notices[0].Recipient.Email)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	input["payer_email"] = "opa@example.org"
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters/mail"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, careSeriesBody{RecipientChanged: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()),
 		"a payer who no longer pays gets nothing")
@@ -333,10 +333,10 @@ func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
 	input["payer_email"] = "oma@example.org"
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters/mail"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, careSeriesBody{Queued: 1}, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))
-	mails := noticeMails(t, f, run.ID)
+	mails := noticeMails(t, f, int64(run.ID))
 	require.Len(t, mails, 1)
 	var email string
 	require.NoError(t, f.db.NewRaw(`SELECT recipient->>'address' FROM platform.email_outbox WHERE id = ?`, mails[0].ID).
@@ -350,31 +350,31 @@ func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
 func TestCareChangeNoticeHasItsOwnOriginalThatNamesItsPredecessor(t *testing.T) {
 	t.Parallel()
 	f, contract, first, _ := releasedNoticeRun(t, "Träger Änderungsbescheid Original")
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(first.ID, "/letters"), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(first.ID), "/letters"), nil)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	firstOriginal := noticePDF(t, f, first.ID, contract)
+	firstOriginal := noticePDF(t, f, int64(first.ID), contract)
 	ctx := context.Background()
 	_, err := f.db.ExecContext(ctx, `DELETE FROM care_contract.contract_version_services
 		WHERE weekday = 'tue' AND contract_version_id IN (SELECT id FROM care_contract.contract_versions WHERE contract_id = ?)`, contract)
 	require.NoError(t, err)
 
-	change := f.releaseNoticeRun(t, f.noticeRun(t, f.startNoticeRun(t, "2030-11-01", "2030-10-20").ID))
+	change := f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-11-01", "2030-10-20").ID)))
 	require.Len(t, change.Notices, 1)
 	require.Equal(t, "change", change.Notices[0].Kind)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(change.ID, "/letters"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(change.ID), "/letters"), nil)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	letters := decodeSchoolPortalData[careNoticeLettersBody](t, rec.Body.Bytes())
 	require.Len(t, letters.Notices, 1)
 	assert.Equal(t, "change", letters.Notices[0].Kind)
 	assert.Equal(t, first.Notices[0].Number, letters.Notices[0].AmendsNumber, "the change notice names its predecessor")
-	changeOriginal := noticePDF(t, f, change.ID, contract)
+	changeOriginal := noticePDF(t, f, int64(change.ID), contract)
 	assert.NotEqual(t, firstOriginal, changeOriginal)
-	assert.Equal(t, firstOriginal, noticePDF(t, f, first.ID, contract), "the first notice keeps its original")
-	assert.Equal(t, change.Notices[0].Number, noticeLetters(t, f, first.ID).Notices[0].AmendedBy)
+	assert.Equal(t, firstOriginal, noticePDF(t, f, int64(first.ID), contract), "the first notice keeps its original")
+	assert.Equal(t, change.Notices[0].Number, noticeLetters(t, f, int64(first.ID)).Notices[0].AmendedBy)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(change.ID, "/letters/mail"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(change.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	mails := noticeMails(t, f, change.ID)
+	mails := noticeMails(t, f, int64(change.ID))
 	require.Len(t, mails, 1)
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(mails[0].Payload, &payload))
@@ -394,18 +394,18 @@ func TestCareNoticeLettersNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	}
 	stranger := newTraegerOffice(t, f.db, f.traeger, "Träger Bescheid Fremd", identityaccess.TraegerRoleBilling)
 	for _, route := range routes {
-		rec := traegerJSON(t, f.traeger, administration.token, route.method, careNoticeRunPath(run.ID, route.path), nil)
+		rec := traegerJSON(t, f.traeger, administration.token, route.method, careNoticeRunPath(int64(run.ID), route.path), nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s %s without the right: %s", route.method, route.path, rec.Body.String())
-		rec = traegerJSON(t, f.traeger, stranger.token, route.method, careNoticeRunPath(run.ID, route.path), nil)
+		rec = traegerJSON(t, f.traeger, stranger.token, route.method, careNoticeRunPath(int64(run.ID), route.path), nil)
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s %s of another Träger: %s", route.method, route.path, rec.Body.String())
 	}
-	assert.False(t, noticeLetters(t, f, run.ID).Notices[0].HasLetter, "nothing changed through the refused routes")
+	assert.False(t, noticeLetters(t, f, int64(run.ID)).Notices[0].HasLetter, "nothing changed through the refused routes")
 	rec := traegerJSON(t, f.traeger, administration.token, http.MethodGet, careNoticeRunsPath+"/export", nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, "the file of the runs without the right: %s", rec.Body.String())
 	assert.Len(t, billingListCSV(t, f.traeger, stranger.token, careNoticeRunsPath+"/export"), 1, "the file of another Träger holds no run")
 
 	open := f.startNoticeRun(t, "2030-10-01", "")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(open.ID, "/letters"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(open.ID), "/letters"), nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_not_released")
 }
@@ -419,7 +419,7 @@ func TestCareNoticeLettersQueryBudgetIsFlat(t *testing.T) {
 	for _, child := range []string{"Lea", "Ben"} {
 		careContract(t, f.db, f.office.organization, school, child, careMonth, sjrServices()...)
 	}
-	second := f.releaseNoticeRun(t, f.noticeRun(t, f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID))
+	second := f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID)))
 	require.Len(t, second.Notices, 2)
 	read := func(runID int64) testpkg.QueryMeasurement {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(runID, "/letters"), nil)
@@ -434,8 +434,8 @@ func TestCareNoticeLettersQueryBudgetIsFlat(t *testing.T) {
 		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 		return counter.Measurement(counter.Selects(""))
 	}
-	one := read(run.ID)
-	assert.Len(t, read(second.ID).Statements, len(one.Statements), fmt.Sprintf("flat for any number of notices (%d)", len(one.Statements)))
+	one := read(int64(run.ID))
+	assert.Len(t, read(int64(second.ID)).Statements, len(one.Statements), fmt.Sprintf("flat for any number of notices (%d)", len(one.Statements)))
 	querybudgets.AssertQueryBudget(t, "api.traeger.care_notice_run_letters", one)
 }
 
@@ -447,24 +447,24 @@ func TestCareNoticeOriginalByTransferNeedsTheBankAccount(t *testing.T) {
 	t.Parallel()
 	f, contract := newNoticeFixture(t, "Träger Bescheid ohne Konto")
 	writeLegalRemedy(t, f.db, f.office.organization)
-	run := f.releaseNoticeRun(t, f.noticeRun(t, f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID))
+	run := f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID)))
 	require.Len(t, run.Notices, 1)
 	var method string
 	require.NoError(t, f.db.NewRaw(`SELECT payment_method FROM parent_billing.care_notices WHERE id = ?`, run.Notices[0].ID).
 		Scan(context.Background(), &method))
 	require.NotEqual(t, "direct_debit", method, "the fixture pays by transfer")
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.bank_account_missing")
-	assert.False(t, noticeLetters(t, f, run.ID).Notices[0].HasLetter, "no original without the account")
+	assert.False(t, noticeLetters(t, f, int64(run.ID)).Notices[0].HasLetter, "no original without the account")
 
 	administration := brandedAdministration(t, f)
 	requireLettersNeedTheLetterhead(t, f.traeger, administration.token, func() *httptest.ResponseRecorder {
-		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 	})
-	assert.False(t, noticeLetters(t, f, run.ID).Notices[0].HasLetter, "no original without the letterhead")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(run.ID, "/letters"), nil)
+	assert.False(t, noticeLetters(t, f, int64(run.ID)).Notices[0].HasLetter, "no original without the letterhead")
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters"), nil)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	noticePDF(t, f, run.ID, contract)
+	noticePDF(t, f, int64(run.ID), contract)
 }

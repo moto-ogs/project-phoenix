@@ -6,6 +6,7 @@ import { ApiError } from "~/lib/api-error";
 import type {
   ExportRecipient,
   ExportRecipientsPage,
+  HandoverResult,
 } from "~/lib/traeger-export-handovers-api";
 import type { ExportRun } from "~/lib/traeger-finance-exports-api";
 
@@ -156,14 +157,25 @@ it("hands the Sollstellung over and names where it arrived", async () => {
   );
 });
 
+const ARRIVED: HandoverResult = {
+  fileName: "sollstellung-111.csv",
+  state: "transferred",
+  reason: "",
+  recipientName: "Kämmerei",
+  targetHost: "dateien.kaemmerei-beispiel.de",
+  targetDirectory: "/eingang",
+};
+
 it("shows a handover that did not arrive with its reason and a retry", async () => {
-  handoverApi.handOverRunFile.mockResolvedValue({
-    fileName: "sollstellung-110.csv",
-    state: "failed",
-    reason: "host_key_mismatch",
-    targetHost: "dateien.kaemmerei-beispiel.de",
-    targetDirectory: "/eingang",
-  });
+  handoverApi.handOverRunFile
+    .mockResolvedValueOnce({
+      fileName: "sollstellung-110.csv",
+      state: "failed",
+      reason: "host_key_mismatch",
+      targetHost: "dateien.kaemmerei-beispiel.de",
+      targetDirectory: "/eingang",
+    })
+    .mockResolvedValueOnce(ARRIVED);
   renderPage();
   await chooseSollstellung();
   expect(
@@ -174,12 +186,60 @@ it("shows a handover that did not arrive with its reason and a retry", async () 
   expect(
     screen.getByText(/Bitte prüfe den Fingerabdruck beim Empfänger/),
   ).toBeInTheDocument();
+  // Anker: the reason of the failed handover is shown (above). An error has
+  // no X (#7704): it ends with the next handover.
+  expect(
+    screen.queryByRole("button", { name: "Hinweis schließen" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(
     screen.getByRole("button", { name: "Noch einmal übergeben" }),
   );
   await waitFor(() =>
     expect(handoverApi.handOverRunFile).toHaveBeenCalledTimes(2),
   );
+  await waitFor(() =>
+    expect(
+      screen.queryByText(
+        "Sollstellung von Monatsbeiträge Oktober 2026 ist nicht angekommen",
+      ),
+    ).not.toBeInTheDocument(),
+  );
+});
+
+it("keeps a file made without a ready recipient on screen until the next handover", async () => {
+  handoverApi.handOverRunFile
+    .mockRejectedValueOnce(
+      new ApiError("conflict", 409, {
+        code: "parent_billing.export_recipient_not_ready",
+      }),
+    )
+    .mockResolvedValueOnce(ARRIVED);
+  renderPage();
+  await chooseSollstellung();
+  const title = "Für die Sollstellung fehlt der Empfänger";
+  // Anker: the notice on the missing recipient is shown.
+  expect(await screen.findByText(title)).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Hinweis schließen" }),
+  ).not.toBeInTheDocument();
+  await chooseSollstellung();
+  await waitFor(() =>
+    expect(screen.queryByText(title)).not.toBeInTheDocument(),
+  );
+});
+
+it("lets the person close an unclear handover result", async () => {
+  handoverApi.handOverRunFile.mockResolvedValue({
+    ...ARRIVED,
+    state: "unknown",
+  });
+  renderPage();
+  await chooseSollstellung();
+  const title = "sollstellung-111.csv: Ergebnis bei Kämmerei unklar";
+  // Anker: the unclear result is shown before it is closed.
+  expect(await screen.findByText(title)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Hinweis schließen" }));
+  expect(screen.queryByText(title)).not.toBeInTheDocument();
 });
 
 it("asks before the same file goes to the recipient again", async () => {
@@ -403,4 +463,28 @@ it("names the invoices DATEV would refuse when a DATEV handover makes no file", 
   expect(
     await screen.findByText("Debitorennummer passt nicht: MB-2026-0001"),
   ).toBeInTheDocument();
+  // Anker: the refused invoice is listed (above). The refusal has no X
+  // (#7704); the next handover ends it.
+  expect(
+    screen.queryByRole("button", { name: "Hinweis schließen" }),
+  ).not.toBeInTheDocument();
+  handoverApi.handOverRunFile.mockResolvedValue({
+    ...ARRIVED,
+    fileName: "EXTF_Buchungsstapel_110.csv",
+  });
+  fireEvent.click(
+    (
+      await screen.findAllByRole("button", {
+        name: "Dateien von Monatsbeiträge Oktober 2026 herunterladen oder übergeben",
+      })
+    )[0]!,
+  );
+  fireEvent.click(
+    screen.getByRole("menuitem", { name: /DATEV-Datei übergeben/ }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByText("Debitorennummer passt nicht: MB-2026-0001"),
+    ).not.toBeInTheDocument(),
+  );
 });

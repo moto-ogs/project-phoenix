@@ -149,12 +149,12 @@ func (f *menuChangeFixture) mealRequestAs(t *testing.T, req *http.Request, accou
 }
 
 type menuChangeEntry struct {
-	ID       int64   `json:"id"`
-	Type     string  `json:"type"`
-	Title    string  `json:"title"`
-	Body     string  `json:"body"`
-	DeepLink string  `json:"deep_link"`
-	ReadAt   *string `json:"read_at"`
+	ID       testpkg.ID `json:"id"`
+	Type     string     `json:"type"`
+	Title    string     `json:"title"`
+	Body     string     `json:"body"`
+	DeepLink string     `json:"deep_link"`
+	ReadAt   *string    `json:"read_at"`
 }
 
 func (f *menuChangeFixture) entries(t *testing.T, accountID int64) []menuChangeEntry {

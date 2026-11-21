@@ -28,9 +28,9 @@ type seedBillingRunDetail struct {
 	PreviewCents int64  `json:"preview_cents"`
 	Fingerprint  string `json:"fingerprint"`
 	Documents    []struct {
-		RegistrationID int64 `json:"registration_id"`
+		RegistrationID apiID `json:"registration_id"`
 		Children       []struct {
-			ChildID    int64 `json:"child_id"`
+			ChildID    apiID `json:"child_id"`
 			TotalCents int64 `json:"total_cents"`
 		} `json:"children"`
 	} `json:"documents"`

@@ -13,7 +13,7 @@ import type {
 // Actual backend structure for enrolled students from /api/activities/{id}/students
 // Backend returns a simplified StudentResponse with id, first_name, last_name
 export interface BackendStudentEnrollment {
-  id: number; // This is the student ID
+  id: number | string; // The student ID; a string once Go sends strings (ADR 0270)
   student_id?: number; // Backend doesn't actually return this field
   activity_group_id?: number;
   enrollment_date?: string;

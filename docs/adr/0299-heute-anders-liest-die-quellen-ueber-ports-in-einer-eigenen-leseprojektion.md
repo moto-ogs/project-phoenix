@@ -217,5 +217,8 @@ Projektion nutzt „change“.
   neuen After-Commit-Eintrag.
 - Query-Budget: Die Quelle kostet ein Statement. Dafür liest die Quelle
   Personal das Team der eigenen Gruppen jetzt in einem Statement
-  (`TeacherFilter.GroupIDs` in School Membership) statt in zweien. Das Budget
-  von `api.day_changes.today` bleibt 19.
+  (`TeacherFilter.GroupIDs` in School Membership) statt in zweien. Die eigenen
+  Gruppen liest sie über `MyTeacherGroupIDs`; die heute vertretenen Gruppen
+  leitet sie aus den Gruppenübergaben des Tages ab, die sie ohnehin liest (wie
+  in #7661 beschrieben). `api.day_changes.today` misst danach 18 von 19,
+  `api.day_changes.today_activities` 20 von 20.

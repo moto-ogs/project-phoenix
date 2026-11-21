@@ -1,16 +1,11 @@
 import { apiErrorFromResponse } from "~/lib/api-error";
+import type { StaffWithRoleResponse } from "~/lib/contract/staff.generated";
 import { sessionFetch } from "~/lib/session-cache";
 
 export interface StaffGroupLeaderCandidate {
   id: string;
   teacherId?: string;
   fullName: string;
-}
-
-interface BackendStaffGroupLeaderCandidate {
-  id: number | string;
-  teacher_id?: number | string;
-  full_name: string;
 }
 
 export async function fetchGroupLeaderCandidates(): Promise<
@@ -26,14 +21,12 @@ export async function fetchGroupLeaderCandidates(): Promise<
     );
   }
   const data = (await response.json()) as {
-    data: BackendStaffGroupLeaderCandidate[] | null;
+    data: StaffWithRoleResponse[] | null;
   };
-  if (!Array.isArray(data.data)) {
-    throw new Error("Ungültige Antwort für verfügbare Fachkräfte.");
-  }
-  return data.data.map((staff) => ({
-    id: staff.id.toString(),
-    teacherId: staff.teacher_id?.toString(),
+  // Go writes an empty result as null.
+  return (data.data ?? []).map((staff) => ({
+    id: staff.id,
+    teacherId: staff.teacher_id,
     fullName: staff.full_name,
   }));
 }

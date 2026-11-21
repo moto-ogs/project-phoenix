@@ -43,6 +43,8 @@ import {
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { labelOf } from "~/lib/label-of";
+import { formatDay } from "~/components/traeger/holiday-period-format";
 
 /** The line under a Storno or Gutschrift: its invoice and its reason. */
 function referenceText(document: BillingFamilyDocument): string {
@@ -60,7 +62,7 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
     header: "Datum",
     sortValue: (document) => document.issuedOn,
     render: (document) => (
-      <span className="whitespace-nowrap">{formatDate(document.issuedOn)}</span>
+      <span className="whitespace-nowrap">{formatDay(document.issuedOn)}</span>
     ),
     stacked: "meta",
   },
@@ -75,7 +77,7 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
               longer fit beside the amounts on a tablet. */}
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-gray-900">
             <span>
-              {BILLING_DOCUMENT_KIND_LABELS[document.kind]}{" "}
+              {labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")}{" "}
               <span className="font-mono whitespace-nowrap">
                 {document.number}
               </span>
@@ -106,7 +108,7 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
                   stay out of reach by finger. */}
               <StatusBadge
                 label={paymentLabel(document.payment)}
-                tone={PAYMENT_TONES[document.payment.kind]}
+                tone={labelOf(PAYMENT_TONES, document.payment.kind, "gray")}
                 wrap
               />
             </span>
@@ -281,7 +283,7 @@ export default function TraegerBillingFamilyPage() {
                       <StatusBadge
                         key={`${payment.kind}-${payment.costBearerName}`}
                         label={paymentLabel(payment)}
-                        tone={PAYMENT_TONES[payment.kind]}
+                        tone={labelOf(PAYMENT_TONES, payment.kind, "gray")}
                         wrap
                       />
                     ))}

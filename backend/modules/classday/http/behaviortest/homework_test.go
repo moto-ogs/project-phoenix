@@ -81,7 +81,7 @@ type homeworkReport struct {
 		Description string `json:"description"`
 	} `json:"homework"`
 	Rows []struct {
-		StudentID int64 `json:"student_id"`
+		StudentID testpkg.ID `json:"student_id"`
 		Feedback  *struct {
 			Status string `json:"status"`
 			Note   string `json:"note"`
@@ -247,7 +247,7 @@ func TestHomeworkFeedbackShowsInTheClassView(t *testing.T) {
 	report := f.report(t, f.lehrkraft, classDayReadPermission)
 	var found bool
 	for _, row := range report.Rows {
-		if row.StudentID == f.child {
+		if int64(row.StudentID) == f.child {
 			found = true
 			require.NotNil(t, row.Feedback)
 			assert.Equal(t, "difficult", row.Feedback.Status)

@@ -7,8 +7,8 @@ vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
 import { studentDocumentsService } from "./student-documents-api";
 
 const backendDocument = {
-  id: 91,
-  student_id: 42,
+  id: "91",
+  student_id: "42",
   category: "attest",
   category_label: "Ärztliches Attest",
   filename: "Attest.pdf",
@@ -38,7 +38,7 @@ describe("studentDocumentsService.list", () => {
       Response.json(
         {
           data: {
-            student_id: 42,
+            student_id: "42",
             documents: [backendDocument],
             visible_categories: visibleCategories,
           },
@@ -79,11 +79,11 @@ describe("studentDocumentsService.list", () => {
       Response.json(
         {
           data: {
-            student_id: 42,
+            student_id: "42",
             documents: [
               {
                 ...backendDocument,
-                id: 92,
+                id: "92",
                 category: "unfallanzeige",
                 category_label: "Unfallanzeige",
                 has_file: false,
@@ -130,7 +130,7 @@ describe("studentDocumentsService.list", () => {
   it("returns an empty list when the child has no documents", async () => {
     mockSessionFetch.mockResolvedValueOnce(
       Response.json(
-        { data: { student_id: 42, documents: [], visible_categories: [] } },
+        { data: { student_id: "42", documents: [], visible_categories: [] } },
         { status: 200 },
       ),
     );

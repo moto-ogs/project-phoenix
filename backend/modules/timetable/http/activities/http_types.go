@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 )
 
 const (
-	routeScheduleByID         = "/{id}/schedules/{scheduleId}"
 	msgActivityCreatedSuccess = "Activity created successfully"
 	msgActivityUpdatedSuccess = "Activity updated successfully"
 )
@@ -175,9 +175,19 @@ func participantLimit(maxParticipants *int) int {
 	return *maxParticipants
 }
 
-// BatchEnrollmentRequest represents a request for updating enrollments in batch
+// BatchEnrollmentRequest represents a request for updating enrollments in batch.
+// Each student ID reads a JSON number or a decimal string.
 type BatchEnrollmentRequest struct {
-	StudentIDs []int64 `json:"student_ids"`
+	StudentIDs []common.JSONID `json:"student_ids"`
+}
+
+// studentIDs returns the requested student IDs as int64s.
+func (req *BatchEnrollmentRequest) studentIDs() []int64 {
+	ids := make([]int64, len(req.StudentIDs))
+	for i, id := range req.StudentIDs {
+		ids[i] = id.Int64()
+	}
+	return ids
 }
 
 // Bind validates the batch enrollment request

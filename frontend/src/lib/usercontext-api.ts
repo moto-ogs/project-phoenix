@@ -11,20 +11,14 @@ import {
   type EducationalGroup,
   type ActiveGroup,
   type Staff,
-  type BackendEducationalGroup,
-  type BackendActiveGroup,
-  type BackendStaff,
+  type EducationalGroupWire,
+  type ActiveGroupWire,
+  type StaffWire,
 } from "./usercontext-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 // The BFF routes read the session cookie; the browser holds no token (#5005).
 const JSON_HEADERS = { "Content-Type": "application/json" };
-
-// Generic API response interface
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
 
 export const userContextService = {
   // Get current user's staff profile
@@ -53,7 +47,7 @@ export const userContextService = {
         );
       }
 
-      const responseData = (await response.json()) as ApiResponse<BackendStaff>;
+      const responseData = (await response.json()) as ApiResponse<StaffWire>;
       return mapStaffResponse(responseData.data);
     } catch (error) {
       // Suppress 404 logs (account not linked to a person) to avoid noisy console
@@ -87,7 +81,7 @@ export const userContextService = {
       }
 
       const responseData = (await response.json()) as ApiResponse<
-        BackendEducationalGroup[]
+        EducationalGroupWire[]
       >;
       // Handle empty or missing data
       if (!responseData.data || !Array.isArray(responseData.data)) {
@@ -123,7 +117,7 @@ export const userContextService = {
       }
 
       const responseData = (await response.json()) as ApiResponse<
-        BackendActiveGroup[] | null
+        ActiveGroupWire[] | null
       >;
       const groups = Array.isArray(responseData.data) ? responseData.data : [];
       return groups.map(mapActiveGroupResponse);

@@ -326,6 +326,9 @@ func deferredPastSteps() []Step {
 		// Nach der Historie und den Diensten der Woche: Die Krankmeldung
 		// sagt den Dienst ab und braucht die Sollzeiten der Historie.
 		seedTodaysAbsencesStep{},
+		// Nach den Ausfällen von heute: sagt einen Termin ab, nimmt eine
+		// Absage zurück und verlegt einen Termin für „Heute anders“ (#7662).
+		seedTodaysBlockChangesStep{},
 		seedDataAccessAuditStep{},
 		// Rührt weder an der Zeiterfassung noch am NFC-Block: legt nur
 		// vergangene Kurstermine samt Anwesenheit an (#2891).

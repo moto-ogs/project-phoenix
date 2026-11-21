@@ -19,13 +19,13 @@ import {
 } from "./caregiver-capability-api";
 
 const backendState = {
-  account_id: 42,
+  account_id: "42",
   email: "caregiver@example.com",
   first_name: "Ada",
   last_name: "Lovelace",
-  person_id: 101,
-  staff_id: 202,
-  teacher_id: 303,
+  person_id: "101",
+  staff_id: "202",
+  teacher_id: "303",
   has_admin_role: true,
   has_user_role: true,
   has_person: true,
@@ -36,11 +36,11 @@ const backendState = {
   disable_blocked: true,
   disable_blockers: ["active_group_supervisions", "group_assignments"],
   active_supervisions: [
-    { id: 1, group_name: "Gruppe Blau", start_date: "2026-04-05" },
+    { id: "1", group_name: "Gruppe Blau", start_date: "2026-04-05" },
   ],
   active_substitutions: [
     {
-      id: 2,
+      id: "2",
       group_name: "Gruppe Rot",
       start_date: "2026-04-05",
       end_date: "2026-04-06",
@@ -48,19 +48,19 @@ const backendState = {
   ],
   activity_supervisions: [
     {
-      id: 3,
-      activity_id: 4,
+      id: "3",
+      activity_id: "4",
       activity_name: "Theater",
       is_primary: true,
     },
   ],
   group_assignments: [
     {
-      id: 5,
-      group_id: 6,
+      id: "5",
+      group_id: "6",
       group_name: "Gruppe Gelb",
-      teacher_id: 7,
-      teacher_ids: [7, 8],
+      teacher_id: "7",
+      teacher_ids: ["7", "8"],
     },
   ],
 };

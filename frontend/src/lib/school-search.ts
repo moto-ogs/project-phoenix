@@ -1,9 +1,9 @@
 import { bffJson } from "~/lib/bff-fetch";
-import type { SchoolSearchRequest } from "~/lib/contract/search.generated";
-import {
-  mapSchoolSearchResult,
-  type BackendSchoolSearchResult,
-} from "~/lib/school-search-wire";
+import type {
+  SchoolSearchRequest,
+  SearchResult,
+} from "~/lib/contract/search.generated";
+import { mapSchoolSearchResult } from "~/lib/school-search-wire";
 import type { SchoolSearchResult } from "~/lib/school-search-types";
 
 export type {
@@ -26,7 +26,7 @@ export async function searchSchool(
   query: string,
   signal?: AbortSignal,
 ): Promise<SchoolSearchResult> {
-  const result = await bffJson<BackendSchoolSearchResult>("/api/search", {
+  const result = await bffJson<SearchResult>("/api/search", {
     method: "POST",
     body: { query } satisfies SchoolSearchRequest,
     signal,

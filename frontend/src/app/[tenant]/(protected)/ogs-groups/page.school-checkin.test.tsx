@@ -354,7 +354,7 @@ describe("OGSGroupPage — school check-in wiring", () => {
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: async () => ({ success: true, data: {} }),
+        json: async () => ({ status: "success", data: {} }),
       }),
     ) as unknown as typeof fetch;
 

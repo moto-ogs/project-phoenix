@@ -55,7 +55,7 @@ func TestParentHolidayRegistrationLinksNameTheLinksTraegerOnly(t *testing.T) {
 	}
 
 	draft := createHolidayPeriod(t, f.traeger, other, januaryHolidays(other))
-	rec := traegerJSON(t, f.traeger, other.token, http.MethodGet, holidayPeriodPath(draft.ID), nil)
+	rec := traegerJSON(t, f.traeger, other.token, http.MethodGet, holidayPeriodPath(int64(draft.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	_, _, err = resolve(decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes()).PublicToken)
 	assert.ErrorIs(t, err, parentAPI.ErrHolidayRegistrationLinkNotFound, "a draft has no open link")

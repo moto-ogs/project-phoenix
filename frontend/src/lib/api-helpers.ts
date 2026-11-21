@@ -11,15 +11,6 @@ import {
 // Logger instance for API helpers
 const logger = createLogger({ component: "ApiHelpers" });
 
-/**
- * Type for API response to ensure consistent structure
- */
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
 /** The error body of an API answer: the RFC 9457 envelope (ADR 0006). */
 export type ApiErrorResponse = ProblemBody;
 

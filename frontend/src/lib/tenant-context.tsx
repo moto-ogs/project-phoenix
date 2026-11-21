@@ -18,6 +18,7 @@ import { setTenantAnalyticsPolicy } from "~/lib/posthog-client";
 import { useAnalyticsSchoolPolicy } from "~/lib/hooks/use-analytics-school-policy";
 import { subscribeSettingsChanged } from "~/lib/settings-broadcast";
 import type { ModuleKey } from "~/lib/modules";
+import { createLogger } from "~/lib/logger";
 
 interface TenantContextValue {
   /** The tenant slug from the URL path segment */
@@ -32,6 +33,8 @@ export type TenantRoutingMode = "path" | "subdomain";
 
 // Unexported — knip flags exports it can't trace through the `~/` alias and
 // the test mock in setup.ts can't replicate createContext output.
+const logger = createLogger({ component: "TenantProvider" });
+
 const TenantContext = createContext<TenantContextValue | null>(null);
 
 /**
@@ -85,29 +88,36 @@ export function TenantProvider({
       setTenantAnalyticsPolicy(analyticsSource, { tenantSlug, enabled: false });
       const token = ++requestSeqRef.current;
       const requestedSlug = tenantSlug;
-      void resolveTenant(requestedSlug).then((fresh) => {
-        if (token !== requestSeqRef.current) return;
-        if (!fresh) {
-          // A failed privacy refresh must not erase operational settings.
+      void resolveTenant(requestedSlug).then(
+        (fresh) => {
+          if (token !== requestSeqRef.current) return;
+          // Defence-in-depth: also drop responses whose payload doesn't
+          // match the tenant we asked for. The counter-bump on slug change
+          // already invalidates stale responses, but the explicit compare
+          // guards against an upstream that returned data for a different
+          // tenant than requested. Compare the SUBDOMAIN: the URL segment
+          // is the subdomain, while the payload slug column can
+          // legitimately differ from it (#1975).
+          if (fresh.subdomain !== requestedSlug) return;
+          setTenantAnalyticsPolicy(analyticsSource, {
+            tenantSlug: requestedSlug,
+            enabled: fresh.analyticsEnabled === true,
+          });
+          setTenant(fresh);
+        },
+        (error: unknown) => {
+          if (token !== requestSeqRef.current) return;
+          // Bewusst ohne Anzeige: ein Auffrischen im Hintergrund, das niemand
+          // angestoßen hat. Es darf die Betriebseinstellungen nicht löschen,
+          // schaltet aber die Analyse ab, bis die Schule wieder antwortet.
+          logger.warn("tenant_refresh_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
           setTenant((previous) =>
             previous ? { ...previous, analyticsEnabled: false } : null,
           );
-          return;
-        }
-        // Defence-in-depth: also drop responses whose payload doesn't
-        // match the tenant we asked for. The counter-bump on slug change
-        // already invalidates stale responses, but the explicit compare
-        // guards against an upstream that returned data for a different
-        // tenant than requested. Compare the SUBDOMAIN: the URL segment
-        // is the subdomain, while the payload slug column can
-        // legitimately differ from it (#1975).
-        if (fresh.subdomain !== requestedSlug) return;
-        setTenantAnalyticsPolicy(analyticsSource, {
-          tenantSlug: requestedSlug,
-          enabled: fresh.analyticsEnabled === true,
-        });
-        setTenant(fresh);
-      });
+        },
+      );
     };
 
     // Token edit/adjust pages initially know only the target slug.

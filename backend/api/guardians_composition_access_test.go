@@ -90,7 +90,7 @@ func TestGuardianComposition_RelationshipRoutesRejectStaffWithoutPermissions(t *
 	// no portal access; the refused writes must leave it exactly so.
 	rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, fmt.Sprintf("/students/%d/guardians", studentID), relationshipBody(guardianID, "pickup_only"))
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
-	linkID := int64(dataObject(t, rr.Body.Bytes())["id"].(float64))
+	linkID := testpkg.JSONID(t, dataObject(t, rr.Body.Bytes())["id"])
 	unlinkedStudentID, _ := ctx.createStudent("Unlinked", "RelationshipChild", "1b")
 	unlinkedGuardianID, _ := ctx.createGuardian("unlinked-relationship-access")
 
@@ -137,7 +137,7 @@ func TestGuardianComposition_WriteRoutesAllowStaffWithRequiredPermissions(t *tes
 
 	require.Equal(t, http.StatusOK, ctx.status(t, updateClaims, http.MethodPut,
 		fmt.Sprintf("/relationships/%d", linkID), relationshipUpdateBody("primary_guardian", true)))
-	ctx.requireLinkState(t, linkID, "primary_guardian", true, true, true)
+	ctx.requireLinkState(t, int64(linkID), "primary_guardian", true, true, true)
 
 	require.Equal(t, http.StatusOK, ctx.status(t, updateClaims, http.MethodDelete,
 		fmt.Sprintf("/students/%d/guardians/%d", studentID, guardianID), nil))
@@ -159,7 +159,7 @@ func TestGuardianComposition_WriteRoutesAllowStaffWithRequiredPermissions(t *tes
 		fmt.Sprintf("/students/%d/guardians/batch", batchStudentID), batchBody(fmt.Sprintf("allowed-batch-%d@example.test", testpkg.UniqueSuffix()))))
 	batchLinked := ctx.studentGuardians(t, batchStudentID)
 	require.Len(t, batchLinked, 1)
-	assert.True(t, ctx.linkGrantsPortalAccess(batchLinked[0].RelationshipID))
+	assert.True(t, ctx.linkGrantsPortalAccess(int64(batchLinked[0].RelationshipID)))
 }
 
 func TestGuardianComposition_RelationshipWritesAllowAdmin(t *testing.T) {

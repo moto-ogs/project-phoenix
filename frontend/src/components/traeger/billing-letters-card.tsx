@@ -11,10 +11,11 @@ import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
-import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
+import { formatBerlinDate } from "~/lib/date-helpers";
 import type { BillingLetters } from "~/lib/traeger-billing-api";
 import type { InvoicePayment } from "~/lib/traeger-billing-terms-api";
 import { invoiceDueDatesText } from "./billing-payment-format";
+import { formatDay } from "./holiday-period-format";
 import type { LetterSource } from "./billing-letters-modal";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -118,7 +119,7 @@ export function LettersFacts({
   emptyNotes,
   children,
 }: Readonly<{
-  paymentDueOn: string;
+  paymentDueOn: string | null;
   payments: readonly (InvoicePayment | null | undefined)[];
   createdAt: string;
   notes: string;
@@ -137,7 +138,7 @@ export function LettersFacts({
         <DataField
           label={deadlines ? "Zahlen bis (ältere Rechnungen)" : "Zahlen bis"}
         >
-          {formatDate(paymentDueOn)}
+          {formatDay(paymentDueOn)}
         </DataField>
       ) : null}
       <DataField label="Erstellt am">{formatBerlinDate(createdAt)}</DataField>

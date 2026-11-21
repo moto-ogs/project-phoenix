@@ -70,9 +70,9 @@ func sentCareContract(t *testing.T, f careContractFixture, child int64) (int64, 
 	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes())
 	require.Len(t, created.Created, 1, rec.Body.String())
 	id := created.Created[0].ID
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(id)}})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	return id, lastSigningLink(t, f, id)
+	return int64(id), lastSigningLink(t, f, int64(id))
 }
 
 // lastSigningLink reads the link of the newest mail of the contract.
@@ -156,11 +156,11 @@ func TestCareContractMailLinkSignsOnceOnlyItsContract(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	view := decodeSchoolPortalData[struct {
-		ContractID       int64    `json:"contract_id"`
+		ContractID       wireID   `json:"contract_id"`
 		Status           string   `json:"status"`
 		WithdrawalNotice []string `json:"withdrawal_notice"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, contract, view.ContractID, "the link names its contract")
+	assert.Equal(t, contract, int64(view.ContractID), "the link names its contract")
 	assert.Equal(t, "versendet", view.Status)
 	assert.NotEmpty(t, view.WithdrawalNotice)
 	assert.NotContains(t, rec.Body.String(), "child_birth_date", "the link without an account shows no birth date")
@@ -275,26 +275,26 @@ func TestCareContractSignedOnPaperNeedsAPDFAndTheRight(t *testing.T) {
 	pdf := []byte("%PDF-1.4 unterschriebener Vertrag")
 
 	billing := traegerColleague(t, f.reviewFixture, identityaccess.TraegerRoleBilling)
-	assert.Equal(t, http.StatusForbidden, paperUpload(t, f, billing, draft, "vertrag.pdf", pdf).Code, "the right is required")
+	assert.Equal(t, http.StatusForbidden, paperUpload(t, f, billing, int64(draft), "vertrag.pdf", pdf).Code, "the right is required")
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Vertrag Papier Fremd", identityaccess.TraegerRoleAdministration)
 	testpkg.OwnTraegerCareContracts(t, f.db, foreign.organization)
-	assert.Equal(t, http.StatusNotFound, paperUpload(t, f, foreign.token, draft, "vertrag.pdf", pdf).Code, "another Träger reaches nothing")
+	assert.Equal(t, http.StatusNotFound, paperUpload(t, f, foreign.token, int64(draft), "vertrag.pdf", pdf).Code, "another Träger reaches nothing")
 
-	rec = paperUpload(t, f, f.office.token, draft, "vertrag.pdf", []byte("kein PDF"))
+	rec = paperUpload(t, f, f.office.token, int64(draft), "vertrag.pdf", []byte("kein PDF"))
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.paper_document_invalid", "the content decides, not the name")
-	rec = paperUpload(t, f, f.office.token, draft, "vertrag.png", pdf)
+	rec = paperUpload(t, f, f.office.token, int64(draft), "vertrag.png", pdf)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "only a .pdf")
 
-	rec = paperUpload(t, f, f.office.token, draft, "vertrag.pdf", pdf)
+	rec = paperUpload(t, f, f.office.token, int64(draft), "vertrag.pdf", pdf)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
-	detail := signedDetail(t, f, draft)
+	detail := signedDetail(t, f, int64(draft))
 	assert.Equal(t, "aktiv", detail.Status)
 	require.NotNil(t, detail.Signature)
 	assert.Equal(t, "paper", detail.Signature.Method)
 	assert.Equal(t, "office", detail.Signature.Channel)
 	assert.True(t, detail.Signature.Intact)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(draft, "/paper-signature"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(int64(draft), "/paper-signature"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, pdf, rec.Body.Bytes())
 	var paperReads int
@@ -304,7 +304,7 @@ func TestCareContractSignedOnPaperNeedsAPDFAndTheRight(t *testing.T) {
 		AND metadata->'contract_ids' @> to_jsonb(?::bigint)`, f.school, draft).Scan(context.Background(), &paperReads))
 	assert.Equal(t, 1, paperReads, "the signed scan is in the school's access log")
 
-	rec = paperUpload(t, f, f.office.token, draft, "vertrag.pdf", pdf)
+	rec = paperUpload(t, f, f.office.token, int64(draft), "vertrag.pdf", pdf)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.contract_not_signable")
 	var frozen int
@@ -313,7 +313,7 @@ func TestCareContractSignedOnPaperNeedsAPDFAndTheRight(t *testing.T) {
 
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_signatures SET paper_pdf = ? WHERE contract_id = ?`, []byte("%PDF-1.4 anderer Vertrag"), draft)
 	require.NoError(t, err)
-	assert.False(t, signedDetail(t, f, draft).Signature.Intact, "replacing the signed scan breaks its original checksum")
+	assert.False(t, signedDetail(t, f, int64(draft)).Signature.Intact, "replacing the signed scan breaks its original checksum")
 
 	_, err = f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_signatures SET paper_pdf = ? WHERE contract_id = ?`, pdf, draft)
 	require.NoError(t, err)
@@ -324,7 +324,7 @@ func TestCareContractSignedOnPaperNeedsAPDFAndTheRight(t *testing.T) {
 	require.NoError(t, err)
 	_, err = f.db.ExecContext(context.Background(), `DELETE FROM auth.accounts WHERE id = ?`, recorder.ID)
 	require.NoError(t, err)
-	assert.True(t, signedDetail(t, f, draft).Signature.Intact, "account deletion retains the proof")
+	assert.True(t, signedDetail(t, f, int64(draft)).Signature.Intact, "account deletion retains the proof")
 }
 
 type reminderTraeger struct{ id int64 }
@@ -498,9 +498,9 @@ func TestCareContractSignedOnPaperIsConcludedOnPaper(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	draft := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID
-	rec = paperUpload(t, f, f.office.token, draft, "vertrag.pdf", []byte("%PDF-1.4 unterschriebener Vertrag"))
+	rec = paperUpload(t, f, f.office.token, int64(draft), "vertrag.pdf", []byte("%PDF-1.4 unterschriebener Vertrag"))
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
-	assertConcludedBySignature(t, f, draft, "papier")
+	assertConcludedBySignature(t, f, int64(draft), "papier")
 }
 
 // A planned amendment must not replace the PDF used to verify the signature

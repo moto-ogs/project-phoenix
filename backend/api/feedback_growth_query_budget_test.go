@@ -48,8 +48,8 @@ func TestFeedbackListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 			var body struct {
 				Data []struct {
-					ID              int64  `json:"id"`
-					StudentID       int64  `json:"student_id"`
+					ID              wireID `json:"id"`
+					StudentID       wireID `json:"student_id"`
 					Value           string `json:"value"`
 					Day             string `json:"day"`
 					Time            string `json:"time"`
@@ -60,8 +60,8 @@ func TestFeedbackListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Len(t, body.Data, n)
 			for i, row := range body.Data {
 				want := entries[n-1-i]
-				require.Equal(t, want.ID, row.ID)
-				require.Equal(t, student.ID, row.StudentID)
+				require.Equal(t, want.ID, int64(row.ID))
+				require.Equal(t, student.ID, int64(row.StudentID))
 				require.Equal(t, want.Value, row.Value)
 				require.Equal(t, string(want.Day), row.Day)
 				require.Equal(t, want.Time, row.Time)

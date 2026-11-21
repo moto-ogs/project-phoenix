@@ -58,7 +58,7 @@ func TestHomeSchoolSeesTheConfirmedHolidayBookingsOfItsChildrenAtOtherSchools(t 
 	assert.Equal(t, "Tom", entry.FirstName)
 	assert.Equal(t, "Beispiel", entry.LastName)
 	assert.Equal(t, calendar.NewDate(2017, 5, 20), entry.BirthDate)
-	assert.Equal(t, f.offer.Weeks[0].ID, entry.WeekID)
+	assert.Equal(t, int64(f.offer.Weeks[0].ID), entry.WeekID)
 	assert.Equal(t, "Sommerferien 2099", entry.PeriodName)
 	assert.Equal(t, calendar.NewDate(2099, 7, 6), entry.StartsOn)
 	assert.Equal(t, calendar.NewDate(2099, 7, 10), entry.EndsOn)

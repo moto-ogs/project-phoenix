@@ -121,9 +121,9 @@ describe("public routes below a portal's auth", () => {
 
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({
-        success: true,
-        message: "Success",
+        status: "success",
         data: null,
+        message: "sent",
       });
       expect(sent()).toEqual({ path, authorization: null });
     },

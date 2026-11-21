@@ -116,8 +116,8 @@ func (f *morningAttendanceFixture) switchOff(t *testing.T) {
 type morningReport struct {
 	CanRecord bool `json:"can_record_morning_attendance"`
 	Rows      []struct {
-		StudentID         int64  `json:"student_id"`
-		ListEntryID       string `json:"list_entry_id"`
+		StudentID         testpkg.ID `json:"student_id"`
+		ListEntryID       string     `json:"list_entry_id"`
 		MorningAttendance *struct {
 			Status string `json:"status"`
 			Source string `json:"source"`

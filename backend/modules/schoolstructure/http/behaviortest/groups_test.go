@@ -98,7 +98,7 @@ func setupProtectedRouter(t *testing.T, publishers ...*testpkg.RecordingBroadcas
 // tests assert on.
 type groupListResponse struct {
 	Data []struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	} `json:"data"`
 	Pagination struct {
 		PageSize     int `json:"page_size"`
@@ -117,7 +117,7 @@ func decodeGroupList(t *testing.T, rr *httptest.ResponseRecorder) groupListRespo
 func (l groupListResponse) ids() []int64 {
 	ids := make([]int64, 0, len(l.Data))
 	for _, group := range l.Data {
-		ids = append(ids, group.ID)
+		ids = append(ids, int64(group.ID))
 	}
 	return ids
 }

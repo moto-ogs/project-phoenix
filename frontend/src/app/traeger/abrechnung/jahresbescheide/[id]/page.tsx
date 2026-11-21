@@ -53,6 +53,7 @@ import {
 } from "~/lib/traeger-care-notices-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 const logger = createLogger({ component: "TraegerCareNoticeRunPage" });
 
 const noticeColumns: DataTableColumn<CareNotice>[] = [
@@ -74,8 +75,8 @@ const noticeColumns: DataTableColumn<CareNotice>[] = [
     header: "Art",
     render: (notice) => (
       <StatusBadge
-        label={NOTICE_KIND_LABELS[notice.kind]}
-        tone={NOTICE_KIND_TONES[notice.kind]}
+        label={labelOf(NOTICE_KIND_LABELS, notice.kind, "Bescheid")}
+        tone={labelOf(NOTICE_KIND_TONES, notice.kind, "gray")}
       />
     ),
     stacked: "meta",
@@ -308,9 +309,9 @@ export default function TraegerCareNoticeRunPage() {
               label={
                 run.status === "released" && run.previewCount === 0
                   ? "Abgeschlossen"
-                  : NOTICE_RUN_STATUS_LABELS[run.status]
+                  : labelOf(NOTICE_RUN_STATUS_LABELS, run.status, "–")
               }
-              tone={NOTICE_RUN_STATUS_TONES[run.status]}
+              tone={labelOf(NOTICE_RUN_STATUS_TONES, run.status, "gray")}
             />
           ) : null}
           {empty ? (

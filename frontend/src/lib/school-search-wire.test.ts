@@ -1,8 +1,6 @@
+import type { SearchResult } from "~/lib/contract/search.generated";
 import { describe, expect, it } from "vitest";
-import {
-  mapSchoolSearchResult,
-  type BackendSchoolSearchResult,
-} from "./school-search-wire";
+import { mapSchoolSearchResult } from "./school-search-wire";
 
 describe("mapSchoolSearchResult", () => {
   it("maps every kind to camelCase", () => {
@@ -104,7 +102,7 @@ describe("mapSchoolSearchResult", () => {
       staff: null,
       rooms: null,
       groups: null,
-    } as unknown as BackendSchoolSearchResult);
+    } as unknown as SearchResult);
     expect(result.scope).toEqual({
       children: false,
       childDetails: false,

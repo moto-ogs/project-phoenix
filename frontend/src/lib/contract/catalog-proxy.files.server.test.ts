@@ -489,8 +489,7 @@ describe("catalog multipart upload", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: null,
     });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -516,8 +515,7 @@ describe("catalog multipart upload", () => {
 
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { id: "9" },
     });
     expect(received).toEqual(new Uint8Array([1, 2, 3, 4]));

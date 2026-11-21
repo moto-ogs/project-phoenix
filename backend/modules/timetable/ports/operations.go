@@ -200,6 +200,10 @@ type OperationDependencies struct {
 	// Homework reads the class homework and feedback a Lernzeit roster
 	// shows (#4796); without it the roster carries none.
 	Homework timetable.HomeworkQuery
-	Logger   *slog.Logger
-	Now      func() time.Time
+	// DeviationEvents reads the Änderungsprotokoll for "Heute anders"
+	// (#7662): a block whose cancellation was taken back. Without it no block
+	// counts as reinstated.
+	DeviationEvents DeviationEventReader
+	Logger          *slog.Logger
+	Now             func() time.Time
 }

@@ -68,14 +68,14 @@ describe("planner reference lists", () => {
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ success: true, data: fullPage }), {
+        new Response(JSON.stringify({ status: "success", data: fullPage }), {
           status: 200,
         }),
       )
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            success: true,
+            status: "success",
             data: [{ id: "1001", name: "Aula" }],
           }),
           { status: 200 },

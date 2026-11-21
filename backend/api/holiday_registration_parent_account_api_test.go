@@ -138,11 +138,11 @@ func TestHolidayRegistrationWithTheAccountProofLinksTheAccount(t *testing.T) {
 	offer := holidayOffer(t, f, period.PublicToken)
 	account := testpkg.CreateTestAccount(t, f.db, "holiday-proof-account")
 	proofs := enrollmentCompose.NewHolidayParentAccountProofs(testHealthCipher(), holidayFixtureNow)
-	proof, err := proofs.HolidayParentAccountProof(office.organization, period.ID, account.ID)
+	proof, err := proofs.HolidayParentAccountProof(office.organization, int64(period.ID), account.ID)
 	require.NoError(t, err)
-	foreignTraeger, err := proofs.HolidayParentAccountProof(other.organization, otherPeriod.ID, account.ID)
+	foreignTraeger, err := proofs.HolidayParentAccountProof(other.organization, int64(otherPeriod.ID), account.ID)
 	require.NoError(t, err)
-	otherPeriodProof, err := proofs.HolidayParentAccountProof(office.organization, period.ID+1000000, account.ID)
+	otherPeriodProof, err := proofs.HolidayParentAccountProof(office.organization, int64(period.ID+1000000), account.ID)
 	require.NoError(t, err)
 	tampered := []byte(proof)
 	tampered[len(tampered)/2] ^= 0x01
@@ -179,11 +179,11 @@ func TestHolidayRegistrationRetentionTakesTheAccountLinkAlong(t *testing.T) {
 	body.Weeks[0].StartsOn, body.Weeks[0].EndsOn = "2020-07-06", "2020-07-10"
 	body.Weeks[1].StartsOn, body.Weeks[1].EndsOn = "2020-07-13", "2020-07-17"
 	created := createHolidayPeriod(t, f.traeger, office, body)
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	account := testpkg.CreateTestAccount(t, f.db, "holiday-retention-account")
-	proof, err := enrollmentCompose.NewHolidayParentAccountProofs(testHealthCipher(), holidayFixtureNow).HolidayParentAccountProof(office.organization, period.ID, account.ID)
+	proof, err := enrollmentCompose.NewHolidayParentAccountProofs(testHealthCipher(), holidayFixtureNow).HolidayParentAccountProof(office.organization, int64(period.ID), account.ID)
 	require.NoError(t, err)
 	offer := holidayOffer(t, f, period.PublicToken)
 	submitWithAccount(t, f, period.PublicToken, offer, "frist.konto@example.org", map[string]any{"parent_account_proof": proof})

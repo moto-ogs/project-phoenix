@@ -21,7 +21,7 @@ func (seedTraegerCareLettersStep) Name() string { return "Seeding the letters of
 type seedCareLetters struct {
 	Letters   *struct{} `json:"letters"`
 	Documents []struct {
-		InvoiceID int64  `json:"invoice_id"`
+		InvoiceID apiID  `json:"invoice_id"`
 		Kind      string `json:"kind"`
 	} `json:"documents"`
 }
@@ -41,7 +41,7 @@ func (seedTraegerCareLettersStep) Run(_ context.Context, rt *Runtime) error {
 	var list struct {
 		Data struct {
 			Runs []struct {
-				ID     int64  `json:"id"`
+				ID     apiID  `json:"id"`
 				Status string `json:"status"`
 			} `json:"runs"`
 		} `json:"data"`
@@ -54,7 +54,7 @@ func (seedTraegerCareLettersStep) Run(_ context.Context, rt *Runtime) error {
 		if run.Status != "released" {
 			continue
 		}
-		queued, err := seedCareRunLetters(rt.Client, auth, run.ID)
+		queued, err := seedCareRunLetters(rt.Client, auth, int64(run.ID))
 		if err != nil {
 			return err
 		}

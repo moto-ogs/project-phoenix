@@ -62,7 +62,7 @@ func TestTabletListNamesTheSchoolAHolidayGuestComesFrom(t *testing.T) {
 		(SELECT organization_id FROM enrollment.holiday_registrations WHERE id = ?)`, f.siblings, f.siblings).Scan(t.Context(), &tomRegistration))
 	f.confirm(t, f.siblings, "confirm")
 	f.confirm(t, tomRegistration, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 
 	f.today.Store(calendar.NewDate(2099, 7, 6))
 	f.reconcile(t)
@@ -87,8 +87,8 @@ func TestTabletListNamesTheSchoolAHolidayGuestComesFrom(t *testing.T) {
 	assert.Nil(t, hints[own], "an own child carries no field, as on the established wire")
 
 	// Other schools see no hint, neither of the same Träger nor of another.
-	testpkg.CreateTestStudentForTenant(t, f.db, sued.ID, "Kind", "Sued", "3a")
-	suedHints := f.tabletHints(t, sued.ID)
+	testpkg.CreateTestStudentForTenant(t, f.db, int64(sued.ID), "Kind", "Sued", "3a")
+	suedHints := f.tabletHints(t, int64(sued.ID))
 	require.NotEmpty(t, suedHints)
 	for id, hint := range suedHints {
 		assert.Nil(t, hint, "the OGS Süd sees no hint, child %d", id)

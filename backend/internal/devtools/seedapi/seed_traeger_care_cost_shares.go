@@ -18,15 +18,15 @@ import (
 const seedCareCostShareOverlap = "parent_billing.care_cost_share_overlap"
 
 type seedCareCostShareContract struct {
-	ContractID int64             `json:"contract_id"`
-	SchoolID   int64             `json:"school_id"`
+	ContractID apiID             `json:"contract_id"`
+	SchoolID   apiID             `json:"school_id"`
 	Shares     []json.RawMessage `json:"shares"`
 }
 
 type seedCareCostShareSet struct {
 	Contracts   []seedCareCostShareContract `json:"contracts"`
 	CostBearers []struct {
-		ID     int64  `json:"id"`
+		ID     apiID  `json:"id"`
 		Name   string `json:"name"`
 		Active bool   `json:"active"`
 	} `json:"cost_bearers"`
@@ -45,7 +45,7 @@ func seedCareCostShares(client *Client, auth AuthRef, school int64, month calend
 	if err != nil {
 		return err
 	}
-	set.Contracts = slices.DeleteFunc(set.Contracts, func(contract seedCareCostShareContract) bool { return contract.SchoolID != school })
+	set.Contracts = slices.DeleteFunc(set.Contracts, func(contract seedCareCostShareContract) bool { return int64(contract.SchoolID) != school })
 	if len(set.Contracts) < 4 {
 		return nil
 	}
@@ -85,7 +85,7 @@ func seedCareCostShares(client *Client, auth AuthRef, school int64, month calend
 func seedCostBearer(client *Client, auth AuthRef, set seedCareCostShareSet, name, reference string) (int64, error) {
 	for _, bearer := range set.CostBearers {
 		if bearer.Name == name && bearer.Active {
-			return bearer.ID, nil
+			return int64(bearer.ID), nil
 		}
 	}
 	raw, err := client.PostWithAuth(auth, "/traeger/cost-bearers/", map[string]any{

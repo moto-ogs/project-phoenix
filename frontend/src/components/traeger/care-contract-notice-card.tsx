@@ -34,6 +34,7 @@ import {
 } from "~/lib/date-helpers";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import { useTraegerResource } from "./use-traeger-resource";
+import { labelOf } from "~/lib/label-of";
 
 // The entry form carries the date picker; it loads when the office opens it,
 // so the contract page stays as light as before (bundle budget).
@@ -92,7 +93,7 @@ export function CareContractNoticeCard({
   onChanged,
 }: Readonly<{
   contractId: string;
-  status: CareContractStatus;
+  status: CareContractStatus | undefined;
   /** When the contract was concluded: no declaration can be older. */
   concludedAt: string;
   onChanged: () => void;
@@ -369,7 +370,7 @@ function NoticeFacts({
         <DataField label="Eingegangen am">
           {formatDate(notice.receivedOn)}
           <span className="block text-sm font-normal text-gray-500">
-            {CHANNEL_LABELS[notice.channel]},{" "}
+            {labelOf(CHANNEL_LABELS, notice.channel, "–")},{" "}
             {formatBerlinDate(notice.declaredAt)} um{" "}
             {formatBerlinTime(notice.declaredAt)} Uhr
           </span>

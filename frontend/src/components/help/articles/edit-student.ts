@@ -83,8 +83,10 @@ export function editStudentTopic(): HelpTopic {
       "Steht bei `Abholung` zum Beispiel `Gebucht 16:00 Uhr`? Dann gilt eine von Hand eingetragene Zeit statt der gebuchten. Wähle den Tag und dann `Gebuchte Abholzeit übernehmen`. Das gilt ab sofort für diesen Wochentag in jeder Woche, auch vor dem gewählten Tag. Braucht ein früherer Tag die eingetragene Zeit noch, nennt moto den Tag, ab dem das Übernehmen geht.",
     ],
     notes: [
-      // #6855: pickup-change-alert.tsx über den Bereichen der Kinderakte.
-      "Gilt ab heute an einzelnen Tagen eine andere Abholzeit, steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert` mit Tag und Uhrzeit. Ein Tag, den du noch nicht gesehen hattest, trägt `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück.",
+      // #6855, #7707: pickup-change-alert.tsx über den Bereichen der Kinderakte,
+      // die Markierung in care-schedule-manager.tsx.
+      "Gibt es eine neue Abholzeit, die du noch nicht kennst? Dann steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück. Mit dem X schließt du den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
+      "Jeden geänderten Tag findest du unter `Betreuungszeiten`. Bei `Abholung` steht die neue Uhrzeit. Die normale Zeit ist durchgestrichen. Daneben steht `Ausnahme`. Liegt der Tag in einer späteren Woche, blättere mit `Nächste Woche` dorthin.",
       "Nach einem Widerruf löscht moto das Foto des Kindes. Nach dem letzten Betreuungstag löscht moto Foto und Foto-Einwilligung in der Nacht danach von selbst.",
       "Steht unter dem Feld `Ankunft` die Auswahl `Nach Schulstunde`? Wähle zum Beispiel `5. Stunde`. moto trägt die passende Uhrzeit ein.",
       // #3371: Knopf erscheint nur mit gepflegter Vorgabe unter einem leeren

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { SessionProvider } from "next-auth/react";
 import { SWRConfig } from "~/lib/swr/testing";
+import { ApiError } from "~/lib/api-error";
 
 // The form loads through real SWR under a parent session, a fresh cache per
 // render.
@@ -224,7 +225,13 @@ describe("ParentEnrollFormPage", () => {
   });
 
   it("shows an error instead of falling back when tenant metadata is unavailable", async () => {
-    mocks.resolveTenant.mockResolvedValueOnce(null);
+    // #2353: the failed lookup carries its request ID to the parent.
+    mocks.resolveTenant.mockRejectedValueOnce(
+      new ApiError("tenant lookup failed", 500, {
+        code: "general.server",
+        instance: "req-tenant",
+      }),
+    );
 
     await act(async () => {
       render(
@@ -238,6 +245,9 @@ describe("ParentEnrollFormPage", () => {
     });
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Vorgangskennung: req-tenant"),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(
         screen.queryByTestId("parent-enrollment-form"),

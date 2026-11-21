@@ -123,7 +123,7 @@ func coveredSickBlocks(rt *Runtime, today seedDate, staffID int64) ([]int64, err
 	var ids []int64
 	for _, instance := range envelope.Data.Instances {
 		if slices.Contains(coveredSubstituteBlocks, instance.Title) && !instanceIsOver(instance) && instancePlansStaff(instance, staffID) {
-			ids = append(ids, instance.ID)
+			ids = append(ids, int64(instance.ID))
 		}
 	}
 	return ids, nil
@@ -131,7 +131,7 @@ func coveredSickBlocks(rt *Runtime, today seedDate, staffID int64) ([]int64, err
 
 func instancePlansStaff(instance seedPlanningInstance, staffID int64) bool {
 	for _, staff := range instance.Staff {
-		if staff.StaffID == staffID {
+		if int64(staff.StaffID) == staffID {
 			return true
 		}
 	}

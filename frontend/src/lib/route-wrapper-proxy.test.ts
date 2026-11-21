@@ -75,8 +75,7 @@ describe("proxyGet", () => {
     expect(sent().url).toBe("http://backend:8080/api/items");
     expect(sent().headers.get("authorization")).toBe("Bearer test-token");
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: [{ id: 1 }],
     });
   });
@@ -106,21 +105,6 @@ describe("proxyGet", () => {
     );
 
     expect(sent().url).toBe("http://backend:8080/api/items");
-  });
-
-  it("forwards the whole response when raw is set", async () => {
-    fetchMock.mockResolvedValueOnce(
-      backend({ status: "success", data: [], pagination: { page: 1 } }),
-    );
-
-    const response = await proxyGet("/api/items", { raw: true })(
-      request("/api/items"),
-      createMockContext(),
-    );
-
-    expect(await response.json()).toMatchObject({
-      data: { data: [], pagination: { page: 1 } },
-    });
   });
 
   it("resolves an endpoint builder against route params (id in path)", async () => {
@@ -192,32 +176,16 @@ describe("proxyPost", () => {
 
     expect(sent().headers.get("idempotency-key")).toBe("abc");
   });
-
-  it("forwards the whole response when raw is set", async () => {
-    fetchMock.mockResolvedValueOnce(
-      backend({ status: "success", data: { id: 3 }, message: "created" }),
-    );
-
-    const response = await proxyPost("/api/items", { raw: true })(
-      request("/api/items", { method: "POST", body: {} }),
-      createMockContext(),
-    );
-
-    expect(await response.json()).toMatchObject({
-      data: { message: "created" },
-    });
-  });
 });
 
 describe("proxyPut", () => {
-  it("resolves the endpoint builder, forwards the body, and can return raw", async () => {
+  it("resolves the endpoint builder and forwards the body", async () => {
     fetchMock.mockResolvedValueOnce(
       backend({ status: "success", data: { id: 7 } }),
     );
 
     const response = await proxyPut(
       (params) => `/api/items/${String(params.id)}`,
-      { raw: true },
     )(
       request("/api/items/7", { method: "PUT", body: { name: "B" } }),
       createMockContext({ id: "7" }),
@@ -225,8 +193,9 @@ describe("proxyPut", () => {
 
     expect(sent().url).toBe("http://backend:8080/api/items/7");
     expect(sent().init).toMatchObject({ method: "PUT", body: '{"name":"B"}' });
-    expect(await response.json()).toMatchObject({
-      data: { status: "success" },
+    expect(await response.json()).toEqual({
+      status: "success",
+      data: { id: 7 },
     });
   });
 });

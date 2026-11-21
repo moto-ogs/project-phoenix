@@ -15,8 +15,8 @@ import type {
 } from "./enrollment-phase-api";
 import type { CareSelectionRule, DaysOfWeekMode } from "./care-offering-api";
 import type { CareWeekday } from "./traeger-care-billing-api";
+import type { TemplateInput } from "./contract/traeger-contracts.generated";
 import {
-  type BackendTerms,
   type ContractTerms,
   termsFromBackend,
   termsToBackend,
@@ -233,7 +233,7 @@ interface BackendPrice {
   meal_extra: boolean;
 }
 
-type BackendContractTemplate = Omit<BackendTerms, "term_months"> & {
+type BackendContractTemplate = Omit<TemplateInput, "term_months"> & {
   term_months?: number | null;
 };
 

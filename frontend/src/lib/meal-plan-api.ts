@@ -2,6 +2,7 @@
 // API client for the meal plan (Essensplan). Staff read a week, upsert a day,
 // and delete a day; the feature is gated per tenant by the backend.
 
+import type * as wire from "~/lib/contract/meal-plan.generated";
 import { apiErrorFromResponse } from "./api-error";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
 import { sessionFetch } from "./session-cache";
@@ -13,15 +14,6 @@ import {
 } from "~/lib/meal-allergens";
 
 const logger = createLogger({ component: "MealPlanAPI" });
-
-/** Wire shape returned by the backend (snake_case, date as YYYY-MM-DD). */
-interface BackendMealPlanEntry {
-  date: string;
-  position: number;
-  dish: string;
-  note?: string | null;
-  allergens?: string[] | null;
-}
 
 /** One dish on a day of the meal plan as used by the UI. */
 export interface MealPlanEntry {
@@ -70,7 +62,7 @@ export interface WeeklyMealList {
   }>;
 }
 
-function mapEntry(entry: BackendMealPlanEntry): MealPlanEntry {
+function mapEntry(entry: wire.MealPlanWeekEntryResponse): MealPlanEntry {
   return {
     date: entry.date,
     position: entry.position,
@@ -80,10 +72,12 @@ function mapEntry(entry: BackendMealPlanEntry): MealPlanEntry {
   };
 }
 
-function unwrap(data: { data: unknown } | unknown[]): BackendMealPlanEntry[] {
-  if (Array.isArray(data)) return data as BackendMealPlanEntry[];
+function unwrap(
+  data: { data: unknown } | unknown[],
+): wire.MealPlanWeekEntryResponse[] {
+  if (Array.isArray(data)) return data as wire.MealPlanWeekEntryResponse[];
   if (data && typeof data === "object" && "data" in data) {
-    return (data.data as BackendMealPlanEntry[]) ?? [];
+    return (data.data as wire.MealPlanWeekEntryResponse[]) ?? [];
   }
   return [];
 }
@@ -120,14 +114,7 @@ export async function setDay(date: string, dishes: DishInput[]): Promise<void> {
   }
 }
 
-interface BackendDailyParticipant {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-}
-
-function dailyParticipant(participant: BackendDailyParticipant) {
+function dailyParticipant(participant: wire.DailyParticipantResponse) {
   return {
     studentId: participant.student_id,
     firstName: participant.first_name,
@@ -152,14 +139,7 @@ export async function getDailyMealParticipants(
     throw await apiErrorFromResponse(response, "meal participants load failed");
   }
   const json = (await response.json()) as {
-    data?: {
-      date: string;
-      cutoff_time: string;
-      deadline: string;
-      closed: boolean;
-      participants: BackendDailyParticipant[];
-      others?: BackendDailyParticipant[];
-    };
+    data?: wire.DailyListResponse;
   };
   const data = json.data;
   if (!data) throw new Error("Meal participant response is missing data");
@@ -167,8 +147,8 @@ export async function getDailyMealParticipants(
     date: data.date,
     cutoffTime: data.cutoff_time,
     deadline: data.deadline,
-    closed: data.closed === true,
-    participants: data.participants.map(dailyParticipant),
+    closed: data.closed,
+    participants: (data.participants ?? []).map(dailyParticipant),
     others: (data.others ?? []).map(dailyParticipant),
   };
 }
@@ -273,7 +253,7 @@ export async function getWeeklyMealParticipants(
       days: Array<{
         date: string;
         closed?: boolean;
-        participants: BackendDailyParticipant[];
+        participants: wire.DailyParticipantResponse[];
       }>;
     };
   };

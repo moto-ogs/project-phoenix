@@ -82,8 +82,8 @@ func (f *offeringRosterFixture) book(t *testing.T, studentID, offeringID int64, 
 }
 
 type offeringRosterRow struct {
-	ID         int64   `json:"id"`
-	PickupTime *string `json:"pickup_time"`
+	ID         testpkg.ID `json:"id"`
+	PickupTime *string    `json:"pickup_time"`
 }
 
 func listOfferingRoster(t *testing.T, tc *testContext, offeringID int64, perms ...string) []offeringRosterRow {
@@ -104,7 +104,7 @@ func listOfferingRoster(t *testing.T, tc *testContext, offeringID int64, perms .
 func rosterIDs(rows []offeringRosterRow) []int64 {
 	ids := make([]int64, 0, len(rows))
 	for _, row := range rows {
-		ids = append(ids, row.ID)
+		ids = append(ids, int64(row.ID))
 	}
 	return ids
 }
@@ -150,7 +150,7 @@ func TestListStudentsCareOfferingFilter(t *testing.T) {
 	assert.ElementsMatch(t, []int64{booked, lateException, earlyRegular}, rosterIDs(rows))
 	assert.NotContains(t, rosterIDs(rows), unbooked)
 	for _, row := range rows {
-		if row.ID == lateException {
+		if int64(row.ID) == lateException {
 			require.NotNil(t, row.PickupTime)
 			assert.Equal(t, "17:00", *row.PickupTime, "the row keeps showing the later Gehzeit")
 		}
@@ -195,8 +195,8 @@ func TestListStudentsCareOfferingFilterStaysInsideTheSchool(t *testing.T) {
 }
 
 type careOfferingOptionRow struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   testpkg.ID `json:"id"`
+	Name string     `json:"name"`
 }
 
 func listCareOfferingOptions(t *testing.T, tc *testContext, perms []string) []careOfferingOptionRow {
@@ -213,7 +213,7 @@ func listCareOfferingOptions(t *testing.T, tc *testContext, perms []string) []ca
 func optionIDs(rows []careOfferingOptionRow) []int64 {
 	ids := make([]int64, 0, len(rows))
 	for _, row := range rows {
-		ids = append(ids, row.ID)
+		ids = append(ids, int64(row.ID))
 	}
 	return ids
 }
@@ -234,7 +234,7 @@ func TestCareOfferingOptionsNeedOnlyUsersRead(t *testing.T) {
 
 	options := listCareOfferingOptions(t, tc, []string{"users:read"})
 
-	assert.Equal(t, []careOfferingOptionRow{{ID: active.ID, Name: active.Name}}, options)
+	assert.Equal(t, []careOfferingOptionRow{{ID: testpkg.ID(active.ID), Name: active.Name}}, options)
 	rr := authExec(t, tc, testutil.NewRequest("GET", "/care-offerings", nil), testutil.AdminTestClaims(1), []string{"groups:read"})
 	assert.Equal(t, http.StatusForbidden, rr.Code, "body: %s", rr.Body.String())
 }

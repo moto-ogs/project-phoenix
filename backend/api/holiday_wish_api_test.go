@@ -54,7 +54,7 @@ func holidayWishProofFor(t *testing.T, f reviewFixture, school, student int64) e
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinTenant(ctx, id, func(txCtx context.Context) error {
 		statement, err = proofs.HolidayWishProof(txCtx, enrollment.HolidayWishClaim{
-			OrganizationID: f.office.organization, PeriodID: f.period.ID, SchoolID: school, StudentID: student,
+			OrganizationID: f.office.organization, PeriodID: int64(f.period.ID), SchoolID: school, StudentID: student,
 			FirstName: "Lia", LastName: "Muster", BirthDate: calendar.NewDate(2018, 3, 1), On: calendar.NewDate(2027, 1, 4),
 		})
 		return err
@@ -66,12 +66,12 @@ func holidayWishProofFor(t *testing.T, f reviewFixture, school, student int64) e
 // portal, as the office does in the period editor.
 func switchOnHolidayWish(t *testing.T, f reviewFixture) {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(f.period.ID), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[map[string]any](t, rec.Body.Bytes())
 	assert.Equal(t, false, period["holiday_wish_rule"], "the rule is off by default")
 	period["holiday_wish_rule"] = true
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(f.period.ID), period)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), period)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, true, decodeSchoolPortalData[map[string]any](t, rec.Body.Bytes())["holiday_wish_rule"])
 }
@@ -88,7 +88,7 @@ func wishRegistration(offer holidayOfferBody, email, proof string) map[string]an
 }
 
 type wishChildBody struct {
-	ID                int64  `json:"id"`
+	ID                wireID `json:"id"`
 	FirstName         string `json:"first_name"`
 	HolidayWish       string `json:"holiday_wish"`
 	HolidayWishSource string `json:"holiday_wish_source"`
@@ -96,7 +96,7 @@ type wishChildBody struct {
 }
 
 type wishRegistrationBody struct {
-	ID       int64           `json:"id"`
+	ID       wireID          `json:"id"`
 	Children []wishChildBody `json:"children"`
 	History  []struct {
 		Action string `json:"action"`
@@ -139,7 +139,7 @@ func TestHolidayWishRoundTrip(t *testing.T) {
 	require.Equal(t, http.StatusCreated, stated.Code, stated.Body.String())
 	assert.NotContains(t, stated.Body.String(), "holiday_wish", "the receipt names no wish")
 	statedID := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, stated.Body.Bytes()).ID
 
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
@@ -157,7 +157,7 @@ func TestHolidayWishRoundTrip(t *testing.T) {
 	require.Equal(t, http.StatusCreated, unknown.StatusCode, "without a statement nothing is looked up and nothing refused")
 	var unknownBody struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.NewDecoder(unknown.Body).Decode(&unknownBody))
@@ -169,11 +169,11 @@ func TestHolidayWishRoundTrip(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return decodeSchoolPortalData[wishRegistrationBody](t, rec.Body.Bytes())
 	}
-	statedChild := detail(statedID).Children[0]
+	statedChild := detail(int64(statedID)).Children[0]
 	assert.Equal(t, enrollment.HolidayWishNo, statedChild.HolidayWish)
 	assert.Equal(t, enrollment.HolidayWishSourceAccount, statedChild.HolidayWishSource)
 	assert.False(t, statedChild.HolidayWishCheck)
-	unknownChild := detail(unknownID).Children[0]
+	unknownChild := detail(int64(unknownID)).Children[0]
 	assert.Empty(t, unknownChild.HolidayWish, "a wish the caller sets is dropped")
 	assert.True(t, unknownChild.HolidayWishCheck, "the office checks an unknown wish")
 	assert.False(t, detail(f.siblings).Children[1].HolidayWishCheck, "a holiday guest is never checked")
@@ -181,12 +181,12 @@ func TestHolidayWishRoundTrip(t *testing.T) {
 	checks := f.list(t, "?wish=check")
 	ids := []int64{}
 	for _, registration := range checks.Registrations {
-		ids = append(ids, registration.ID)
+		ids = append(ids, int64(registration.ID))
 	}
-	assert.Contains(t, ids, unknownID)
-	assert.NotContains(t, ids, statedID, "a stated wish needs no check")
+	assert.Contains(t, ids, int64(unknownID))
+	assert.NotContains(t, ids, int64(statedID), "a stated wish needs no check")
 
-	wishPath := f.registrationPath(unknownID, fmt.Sprintf("/children/%d/holiday-wish", unknownChild.ID))
+	wishPath := f.registrationPath(int64(unknownID), fmt.Sprintf("/children/%d/holiday-wish", unknownChild.ID))
 	other := newTraegerOffice(t, f.db, f.traeger, "Fremder Träger Ferienwunsch", identityaccess.TraegerRoleAdministration)
 	rec = traegerJSON(t, f.traeger, other.token, http.MethodPut, wishPath, map[string]any{"wish": "yes"})
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger reaches no registration: %s", rec.Body.String())

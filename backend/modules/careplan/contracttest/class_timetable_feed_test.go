@@ -161,12 +161,12 @@ func (f *classFeedFixture) weekly(t *testing.T, actor classFeedPerson, inputs ..
 }
 
 type classFeedEntry struct {
-	ID       int64   `json:"id"`
-	Type     string  `json:"type"`
-	Title    string  `json:"title"`
-	Body     string  `json:"body"`
-	DeepLink string  `json:"deep_link"`
-	ReadAt   *string `json:"read_at"`
+	ID       testpkg.ID `json:"id"`
+	Type     string     `json:"type"`
+	Title    string     `json:"title"`
+	Body     string     `json:"body"`
+	DeepLink string     `json:"deep_link"`
+	ReadAt   *string    `json:"read_at"`
 }
 
 func (f *classFeedFixture) read(t *testing.T, claims sessiontoken.AppClaims, method, path string) []classFeedEntry {

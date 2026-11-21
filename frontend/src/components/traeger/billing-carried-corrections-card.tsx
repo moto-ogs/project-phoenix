@@ -17,7 +17,6 @@ import {
 } from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
   type BillingCarriedCorrection,
@@ -28,6 +27,7 @@ import {
 import { totalAfterRemovingCarriedCorrection } from "./billing-carried-correction-model";
 import { recipientName } from "./billing-document-card";
 import { formatEuro } from "./contribution-format";
+import { formatDay } from "./holiday-period-format";
 
 const logger = createLogger({ component: "BillingCarriedCorrectionsCard" });
 
@@ -161,7 +161,7 @@ export function BillingCarriedCorrectionsCard({
           message={`${credits
             .map(
               ({ familyName, replaced, credit }) =>
-                `${familyName}: Gutschrift ${credit.number} vom ${formatDate(credit.issuedOn)} über ${formatEuro(credit.totalCents)} zu ${replaced}.`,
+                `${familyName}: Gutschrift ${credit.number} vom ${formatDay(credit.issuedOn)} über ${formatEuro(credit.totalCents)} zu ${replaced}.`,
             )
             .join(
               " ",

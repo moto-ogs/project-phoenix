@@ -57,6 +57,7 @@ import {
 } from "~/lib/traeger-billing-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 // On a phone a run is one line: its holiday period, the status beside it,
 // and below the care days with what the run issued. Only the first "meta"
@@ -134,8 +135,8 @@ const columnsFor = (
     header: "Status",
     render: (run) => (
       <StatusBadge
-        label={BILLING_RUN_STATUS_LABELS[run.status]}
-        tone={BILLING_RUN_STATUS_TONES[run.status]}
+        label={labelOf(BILLING_RUN_STATUS_LABELS, run.status, "–")}
+        tone={labelOf(BILLING_RUN_STATUS_TONES, run.status, "gray")}
       />
     ),
     stacked: "meta",

@@ -149,7 +149,7 @@ func (rs *Resource) updateGroupEnrollments(w http.ResponseWriter, r *http.Reques
 	// Update group enrollments
 	tenantID := tenant.FromContext(r.Context())
 	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ActivityService.UpdateGroupEnrollments(ctx, activity.ID, req.StudentIDs)
+		return rs.ActivityService.UpdateGroupEnrollments(ctx, activity.ID, req.studentIDs())
 	}); err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
 		return

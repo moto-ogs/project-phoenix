@@ -17,6 +17,7 @@ import {
   savePayrollSetting,
   type PayrollStatus,
 } from "./payroll-api";
+import { routes } from "./contract/settings.generated";
 
 const mockedSessionFetch = vi.mocked(sessionFetch);
 
@@ -177,14 +178,19 @@ describe("mapPayrollStatus dispatch (#4805)", () => {
     });
   });
 
-  it("falls back to the backend defaults when the block is missing or unknown", () => {
+  // An answer without the block never reaches the client: the catalog
+  // proxy's decoder requires it and answers 502.
+  it("refuses a status without the dispatch block at the proxy", () => {
     const { dispatch: _dispatch, ...withoutDispatch } = backendStatus;
-    expect(mapPayrollStatus(withoutDispatch).dispatch).toEqual({
-      auto: false,
-      channel: "sftp",
-      format: "csv",
-      email: "",
-    });
+    expect(
+      routes["GET /api/settings/payroll-status"].response.safeParse({
+        status: "success",
+        data: withoutDispatch,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("falls back to the backend defaults for an unknown channel or format", () => {
     expect(
       mapPayrollStatus({
         ...backendStatus,

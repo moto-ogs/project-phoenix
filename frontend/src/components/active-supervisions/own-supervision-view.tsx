@@ -79,7 +79,7 @@ function ownRunningBlocks(
       .filter((session) => !plannedIds.has(session.id))
       .map((session) => ({
         id: null,
-        title: session.name ?? session.room?.name ?? "Aktuelle Aufsicht",
+        title: session.room?.name ?? "Aktuelle Aufsicht",
         activeGroupId: session.id,
       })),
   ];

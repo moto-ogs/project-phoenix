@@ -243,7 +243,7 @@ func TestCreateRoom(t *testing.T) {
 		// uniqueness is enforced the cleanup is mandatory.
 		var resp struct {
 			Data struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
@@ -571,7 +571,7 @@ func TestGetRoomHistory_StaffScope(t *testing.T) {
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		data := decodeData(t, rr)
 		require.Len(t, data, 1, "supervisor should see exactly the one session they supervise")
-		assert.Equal(t, float64(activeGroup.ID), data[0]["session_id"], "session id should match the active group")
+		assert.Equal(t, int64(activeGroup.ID), testpkg.JSONID(t, data[0]["session_id"]), "session id should match the active group")
 	})
 
 	t.Run("bystander_staff_sees_session_too", func(t *testing.T) {
@@ -582,7 +582,7 @@ func TestGetRoomHistory_StaffScope(t *testing.T) {
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		data := decodeData(t, rr)
 		require.Len(t, data, 1, "verified staff read the room history whether or not they supervise the session")
-		assert.Equal(t, float64(activeGroup.ID), data[0]["session_id"])
+		assert.Equal(t, int64(activeGroup.ID), testpkg.JSONID(t, data[0]["session_id"]))
 	})
 
 	t.Run("admin_needs_no_staff_record", func(t *testing.T) {
@@ -593,7 +593,7 @@ func TestGetRoomHistory_StaffScope(t *testing.T) {
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		data := decodeData(t, rr)
 		require.Len(t, data, 1, "admin should see the session even without a supervisor row")
-		assert.Equal(t, float64(activeGroup.ID), data[0]["session_id"])
+		assert.Equal(t, int64(activeGroup.ID), testpkg.JSONID(t, data[0]["session_id"]))
 	})
 
 	t.Run("caller_without_staff_record_returns_forbidden", func(t *testing.T) {
@@ -687,7 +687,7 @@ func TestGetRoomHistory_RangeCapClamped(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 
 	require.Len(t, body.Data, 1, "30d request must be clamped to 1d window (cap=1); only the recent session survives")
-	assert.Equal(t, float64(recent.ID), body.Data[0]["session_id"], "the returned session should be the one inside the cap")
+	assert.Equal(t, int64(recent.ID), testpkg.JSONID(t, body.Data[0]["session_id"]), "the returned session should be the one inside the cap")
 }
 
 // TestGetRoomHistory_DurationMinutesPopulated — covers the duration_minutes

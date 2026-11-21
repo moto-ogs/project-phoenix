@@ -64,9 +64,9 @@ func TestHolidayChildDayLimitCountsTheChildsOtherRegistrations(t *testing.T) {
 	other := d.submit(t, d.registration("ina.zweite@example.org", "Ole", d.days(dayThursday, dayFriday)))
 	assert.Equal(t, "placed", other.Placements[0].Placement, "another family's child of the same name is another child")
 
-	child := d.childOf(t, second.ID)
+	child := d.childOf(t, int64(second.ID))
 	rebook := func(bookings ...map[string]any) *httptest.ResponseRecorder {
-		return traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(d.period.ID, second.ID, child),
+		return traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(second.ID), child),
 			map[string]any{"bookings": bookings})
 	}
 	rec = rebook(d.days(dayWednesday, dayThursday))
@@ -75,7 +75,7 @@ func TestHolidayChildDayLimitCountsTheChildsOtherRegistrations(t *testing.T) {
 	rec = rebook(d.days(dayThursday))
 	assert.Equal(t, http.StatusOK, rec.Code, "the same number of days on another day is fine: %s", rec.Body.String())
 
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayCancelPath(d.period.ID, first.ID), nil)
+	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayCancelPath(int64(d.period.ID), int64(first.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = rebook(d.days(dayMonday, dayTuesday, dayThursday))
 	assert.Equal(t, http.StatusOK, rec.Code, "a cancelled registration holds no days: %s", rec.Body.String())
@@ -180,7 +180,7 @@ func TestHolidayChildDayLimitWithRepeatedIdentityEditKeys(t *testing.T) {
 	sibling := d.registration(email, "Bea", d.days(dayWednesday))
 	body["children"] = append(body["children"].([]map[string]any), sibling["children"].([]map[string]any)...)
 	registration := d.submit(t, body)
-	path := holidayPeriodPath(d.period.ID) + fmt.Sprintf("/registrations/%d", registration.ID)
+	path := holidayPeriodPath(int64(d.period.ID)) + fmt.Sprintf("/registrations/%d", registration.ID)
 	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, path, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[editedRegistration](t, rec.Body.Bytes())
@@ -192,7 +192,7 @@ func TestHolidayChildDayLimitWithRepeatedIdentityEditKeys(t *testing.T) {
 	assert.Equal(t, map[string]any{"limit": float64(3), "days": float64(4), "elsewhere": float64(2), "child": float64(1)},
 		dayLimitRefusal(t, rec.Code, rec.Body.Bytes()), "merging identities still counts every child's bookings")
 
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(d.period.ID, registration.ID, detail.Children[0].ID),
+	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
 		map[string]any{"bookings": []map[string]any{d.days(dayTuesday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path+"/details", edit)
@@ -221,7 +221,7 @@ func TestHolidayWeekChangeCountsTheChildsOtherRegistrations(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/holiday-periods/", body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	d := dayFixture{holidayRegistrationFixture: f, office: office, period: decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())}
 	d.offer = d.readOffer(t)
@@ -230,11 +230,11 @@ func TestHolidayWeekChangeCountsTheChildsOtherRegistrations(t *testing.T) {
 			map[string]any{"week_id": week.ID, "time_model_id": week.TimeModels[0].ID}))
 	}
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(created.ID), nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(created.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[map[string]any](t, rec.Body.Bytes())
 	period["weeks"].([]any)[1].(map[string]any)["ends_on"] = "2027-01-19"
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(created.ID), period)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), period)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_day_limit", code)
@@ -260,9 +260,9 @@ func TestHolidayIdentityEditsKeepTheChildDayLimit(t *testing.T) {
 				body["children"].([]map[string]any)[0][field] = value
 			}
 			second := d.submit(t, body)
-			child := d.childOf(t, second.ID)
-			path := holidayPeriodPath(d.period.ID) + fmt.Sprintf("/registrations/%d/details", second.ID)
-			before := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPeriodPath(d.period.ID)+fmt.Sprintf("/registrations/%d", second.ID), nil)
+			child := d.childOf(t, int64(second.ID))
+			path := holidayPeriodPath(int64(d.period.ID)) + fmt.Sprintf("/registrations/%d/details", second.ID)
+			before := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPeriodPath(int64(d.period.ID))+fmt.Sprintf("/registrations/%d", second.ID), nil)
 			require.Equal(t, http.StatusOK, before.Code, before.Body.String())
 			unchanged := decodeSchoolPortalData[editedRegistration](t, before.Body.Bytes())
 			edit := map[string]any{}
@@ -275,7 +275,7 @@ func TestHolidayIdentityEditsKeepTheChildDayLimit(t *testing.T) {
 			}
 			rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path, edit)
 			assert.Equal(t, map[string]any{"limit": float64(3), "days": float64(4), "elsewhere": float64(2), "child": float64(1)}, dayLimitRefusal(t, rec.Code, rec.Body.Bytes()))
-			after := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPeriodPath(d.period.ID)+fmt.Sprintf("/registrations/%d", second.ID), nil)
+			after := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPeriodPath(int64(d.period.ID))+fmt.Sprintf("/registrations/%d", second.ID), nil)
 			require.Equal(t, http.StatusOK, after.Code, after.Body.String())
 			assert.Equal(t, unchanged, decodeSchoolPortalData[editedRegistration](t, after.Body.Bytes()), "a refusal changes no details or history")
 			// A different identity remains editable with the same bookings.
@@ -287,7 +287,7 @@ func TestHolidayIdentityEditsKeepTheChildDayLimit(t *testing.T) {
 			rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path, edit)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			// Joining the identities is allowed once their total fits the bound.
-			rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(d.period.ID, second.ID, child),
+			rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(second.ID), child),
 				map[string]any{"bookings": []map[string]any{d.days(dayWednesday)}})
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			if field == "email" {
@@ -308,7 +308,7 @@ func TestHolidayIdentityEditsCountTheFinalIdentitiesOfAllSiblings(t *testing.T) 
 	sibling := d.registration("eva.geschwister@example.org", "Ada", d.days(dayWednesday, dayThursday))
 	body["children"] = append(body["children"].([]map[string]any), sibling["children"].([]map[string]any)...)
 	registration := d.submit(t, body)
-	path := holidayPeriodPath(d.period.ID) + fmt.Sprintf("/registrations/%d", registration.ID)
+	path := holidayPeriodPath(int64(d.period.ID)) + fmt.Sprintf("/registrations/%d", registration.ID)
 	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, path, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[editedRegistration](t, rec.Body.Bytes())

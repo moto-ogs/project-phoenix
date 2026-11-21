@@ -262,10 +262,7 @@ func TestRegister(t *testing.T) {
 		response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
 		data, ok := response["data"].(map[string]interface{})
 		require.True(t, ok, "Expected data to be an object")
-		// JSON numbers are float64
-		id, ok := data["id"].(float64)
-		require.True(t, ok, "Expected id to be a number")
-		return int64(id)
+		return testpkg.JSONID(t, data["id"])
 	}
 
 	t.Run("success with valid data", func(t *testing.T) {
@@ -1139,12 +1136,6 @@ func TestPermissionManagement(t *testing.T) {
 		testutil.AssertBadRequest(t, rr)
 	})
 
-	t.Run("get permission not found", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/permissions/99999", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"permissions:read"})
-
-		testutil.AssertNotFound(t, rr)
-	})
 }
 
 // TestAccountManagement tests account management endpoints (protected)

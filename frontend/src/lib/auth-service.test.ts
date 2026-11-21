@@ -2,21 +2,23 @@
 // Tests for the auth service methods that still have callers
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { BackendRole, BackendPermission } from "./auth-helpers";
+import type { PermissionWire, RoleWire } from "./auth-helpers";
 import { authService } from "./auth-service";
 
 // Sample test data
-const sampleBackendRole: BackendRole = {
-  ID: 1,
-  Name: "admin",
-  Description: "Administrator role",
-  IsSystem: false,
-  CreatedAt: "2024-01-01T00:00:00Z",
-  UpdatedAt: "2024-01-01T00:00:00Z",
+// The shape the catalog proxy decodes (snake_case, string IDs).
+const sampleBackendRole: RoleWire = {
+  id: "1",
+  name: "admin",
+  description: "Administrator role",
+  is_system: false,
+  school_portal: false,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
 };
 
-const sampleBackendPermission: BackendPermission = {
-  id: 1,
+const sampleBackendPermission: PermissionWire = {
+  id: "1",
   name: "users.read",
   description: "Read users",
   resource: "users",

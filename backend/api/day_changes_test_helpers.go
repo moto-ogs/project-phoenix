@@ -12,6 +12,7 @@ import (
 
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetableAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -36,9 +37,16 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	// The operational day of the active graph; its read takes the day.
+	day, _ := NewActiveTestTimetable(db, unit)
+	blocks, err := timetable.BlockDayChangesOf(day.TimetableOperations)
+	if err != nil {
+		return nil, err
+	}
 	view, err := NewDayChanges(DayChangesSources{
 		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: membership,
-		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
+		Blocks: blocks,
+		Names:  newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
 		// weekdays and the validity still decide.
 		Notices: timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{

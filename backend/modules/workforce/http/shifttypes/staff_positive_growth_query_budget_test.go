@@ -263,7 +263,7 @@ func TestStaffRecordPositiveGrowthQueryBudget(t *testing.T) {
 					default:
 						require.Equal(t, fmt.Sprintf("Growth %02d.pdf", n-1-i), row["filename"])
 						require.Equal(t, "zeugnis", row["category"])
-						require.Equal(t, float64(f.staff), row["staff_id"])
+						require.Equal(t, int64(f.staff), testpkg.JSONID(t, row["staff_id"]))
 					}
 				}
 				if route == "schedule" {
@@ -379,13 +379,13 @@ func TestStaffReportingPositiveGrowthQueryBudget(t *testing.T) {
 						row := v.(map[string]any)
 						seen[fmt.Sprint(row["staff_id"])] = true
 						if route == "month-close" {
-							require.Equal(t, float64(ids[i]), row["staff_id"])
+							require.Equal(t, int64(ids[i]), testpkg.JSONID(t, row["staff_id"]))
 							require.Equal(t, float64(60+i), row["closing_balance_minutes"])
 						}
 						if route == "audit-log" {
 							require.Equal(t, "adjustment", row["source"])
 							require.Equal(t, fmt.Sprintf("Growth %02d", n-1-i), row["reason"])
-							require.Equal(t, float64(ids[n-1-i]), row["staff"].(map[string]any)["id"])
+							require.Equal(t, int64(ids[n-1-i]), testpkg.JSONID(t, row["staff"].(map[string]any)["id"]))
 						}
 						if route == "overview" {
 							last := "Reader"

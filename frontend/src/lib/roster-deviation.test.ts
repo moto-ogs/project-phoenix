@@ -191,13 +191,17 @@ describe("mapRosterDeviations", () => {
       mapRosterDeviations({
         deviations: [
           {
-            template_id: 7,
-            offerings: [{ id: 3, name: "Randstunde" }],
+            unbooked: null,
+            missing: null,
+            combinations: null,
+            ambiguous: false,
+            template_id: "7",
+            offerings: [{ id: "3", name: "Randstunde" }],
             grade_levels: null,
             school_classes: ["1a"],
             unbooked_count: 8,
             missing_count: 0,
-            candidates: [{ id: 3, name: "Randstunde" }],
+            candidates: [{ id: "3", name: "Randstunde" }],
           },
         ],
       }),
@@ -206,12 +210,16 @@ describe("mapRosterDeviations", () => {
       mapRosterDeviations({
         deviations: [
           {
-            template_id: 7,
-            offerings: [{ id: 3, name: "Randstunde" }],
+            grade_levels: null,
+            unbooked: null,
+            missing: null,
+            combinations: null,
+            template_id: "7",
+            offerings: [{ id: "3", name: "Randstunde" }],
             school_classes: ["1a"],
             unbooked_count: 8,
             missing_count: 0,
-            candidates: [{ id: 3, name: "Randstunde" }],
+            candidates: [{ id: "3", name: "Randstunde" }],
             ambiguous: true,
           },
         ],
@@ -221,13 +229,18 @@ describe("mapRosterDeviations", () => {
       mapRosterDeviations({
         deviations: [
           {
-            template_id: 7,
-            offerings: [{ id: 3, name: "Randstunde" }],
+            grade_levels: null,
+            school_classes: null,
+            unbooked: null,
+            missing: null,
+            candidates: null,
+            template_id: "7",
+            offerings: [{ id: "3", name: "Randstunde" }],
             unbooked_count: 0,
             missing_count: 0,
             combinations: [
-              [{ id: 3, name: "Randstunde" }],
-              [{ id: 4, name: "Ganztag" }],
+              [{ id: "3", name: "Randstunde" }],
+              [{ id: "4", name: "Ganztag" }],
             ],
             ambiguous: true,
           },
@@ -241,10 +254,17 @@ describe("mapRosterDeviations", () => {
       mapRosterDeviations({
         deviations: [
           {
-            template_id: 7,
+            offerings: null,
+            grade_levels: null,
+            school_classes: null,
+            missing: null,
+            candidates: null,
+            combinations: null,
+            ambiguous: false,
+            template_id: "7",
             unbooked_count: 1,
             missing_count: 0,
-            unbooked: [{ student_id: 9, name: "Mia Sommer", weekdays: [5] }],
+            unbooked: [{ student_id: "9", name: "Mia Sommer", weekdays: [5] }],
           },
         ],
       })[0]?.unbooked,
@@ -330,18 +350,19 @@ describe("selection helpers", () => {
 
 describe("mapOfferingPreview and laterSegmentSentence", () => {
   const preview = mapOfferingPreview({
+    other_offerings: null,
     from: "2026-10-28",
     weekdays: [
       {
         weekday: 1,
-        added: [{ student_id: 5, name: "Ali Kaya" }],
+        added: [{ student_id: "5", name: "Ali Kaya" }],
         removed: null,
         kept_count: 4,
       },
     ],
     segments: [
-      { template_id: 7, valid_from: "2026-09-01", valid_until: "2026-10-30" },
-      { template_id: 9, valid_from: "2026-10-30", valid_until: null },
+      { template_id: "7", valid_from: "2026-09-01", valid_until: "2026-10-30" },
+      { template_id: "9", valid_from: "2026-10-30", valid_until: null },
     ],
   });
 
@@ -373,29 +394,39 @@ describe("mapOfferingPreview and laterSegmentSentence", () => {
 describe("mapOfferingPreview other offerings", () => {
   it("maps the offerings that keep dropped children", () => {
     const preview = mapOfferingPreview({
+      weekdays: null,
+      segments: null,
       from: "2026-11-04",
-      other_offerings: [{ offering_id: 6, name: "Ganztag", child_count: 5 }],
+      other_offerings: [{ offering_id: "6", name: "Ganztag", child_count: 5 }],
     });
     expect(preview.otherOfferings).toEqual([
       { offeringId: "6", name: "Ganztag", childCount: 5 },
     ]);
-    expect(mapOfferingPreview({ from: "2026-11-04" }).otherOfferings).toEqual(
-      [],
-    );
+    expect(
+      mapOfferingPreview({
+        weekdays: null,
+        segments: null,
+        other_offerings: null,
+        from: "2026-11-04",
+      }).otherOfferings,
+    ).toEqual([]);
   });
 });
 
 describe("dropped children", () => {
   it("maps the days the selection books each dropped child", () => {
     const preview = mapOfferingPreview({
+      segments: null,
+      other_offerings: null,
       from: "2026-11-10",
       weekdays: [
         {
+          added: null,
           weekday: 2,
           removed: [
-            { student_id: 8, name: "Matilda W.", booked_weekdays: [1] },
+            { student_id: "8", name: "Matilda W.", booked_weekdays: [1] },
             {
-              student_id: 9,
+              student_id: "9",
               name: "Lina R.",
               booked_weekdays: [],
               excluded_by: "school_class",
@@ -452,11 +483,12 @@ describe("dropped children", () => {
 
 describe("untouchedSegmentSentence", () => {
   const preview = mapOfferingPreview({
+    other_offerings: null,
     from: "2026-10-28",
     weekdays: [],
     segments: [
-      { template_id: 7, valid_from: "2026-09-01", valid_until: "2026-10-30" },
-      { template_id: 9, valid_from: "2026-10-30", valid_until: null },
+      { template_id: "7", valid_from: "2026-09-01", valid_until: "2026-10-30" },
+      { template_id: "9", valid_from: "2026-10-30", valid_until: null },
     ],
   });
 

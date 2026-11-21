@@ -68,15 +68,18 @@ export function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Dazu kommen die Hinweise der Leitung für heute.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Dazu kommen die Hinweise der Leitung für heute. Sie zeigt auch Angebote und AGs, die heute ausfallen, doch stattfinden, in einem anderen Raum sind oder bei denen jemand anderes betreut.",
         ordered: false,
         steps: [
-          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen, deine Termine und ob du selbst heute fehlst.",
           "Unter `Schule` steht der Rest der Schule.",
           // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
           // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
           // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
           "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          // Quelle Stundenplan (#7662): Uhrzeit und Raum, eingeklapptes „erledigt“.
+          "Bei Angeboten und AGs stehen Uhrzeit und Raum unter dem Satz. Sie stehen nach Beginn geordnet.",
+          "Was heute schon vorbei ist, steht eingeklappt am Ende, zum Beispiel `3 erledigt`. Tippe darauf, um es zu sehen.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
@@ -119,6 +122,8 @@ export function appOverviewTopic(): HelpTopic {
       // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
       // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
+      // Sichtregel der Quelle Stundenplan (#7662): wie im Tagesplan.
+      "In `Heute anders` fehlen Angebote anderer Leute? Die Karte zeigt die Termine, die du auch im Tagesplan siehst. Je nach Einstellung deiner Schule sind das nur deine eigenen.",
       // Link zum Speiseplan nur mit Leserecht des Speiseplans (#7666).
       "Du kannst `Der Speiseplan für heute wurde geändert.` nicht antippen? Dann darfst du den Speiseplan nicht öffnen. Frag in der Küche oder bei der Leitung, was es gibt.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit

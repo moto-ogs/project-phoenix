@@ -310,7 +310,7 @@ describe("TenantProvider — cross-tab settings sync", () => {
 
   it("keeps operational metadata but disables analytics when a refresh fails", async () => {
     const initial = { ...mockTenant, nfcEnabled: true, analyticsEnabled: true };
-    mockResolveTenant.mockResolvedValueOnce(null);
+    mockResolveTenant.mockRejectedValueOnce(new Error("resolve failed"));
     const { result } = renderHook(
       () => ({ tenant: useTenant().tenant, nfcEnabled: useNFCEnabled() }),
       {
