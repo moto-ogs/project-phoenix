@@ -1,22 +1,47 @@
 import { operatorFetch } from "./api-helpers";
+import type {
+  deviceHistoryResponse,
+  DeviceTransferStatus as WireDeviceTransferStatus,
+  setDeviceAPIKeyRequest,
+  transferDeviceRequest,
+} from "~/lib/contract/operator-devices.generated";
+import type {
+  OrganizationSummary as WireOrganizationSummary,
+  SampleChildrenResult as WireSampleChildrenResult,
+  TestTraeger as WireTestTraeger,
+  TraegerErasureOrder as WireTraegerErasureOrder,
+  TraegerInvitation as WireTraegerInvitation,
+  TraegerMember as WireTraegerMember,
+} from "~/lib/contract/operator-organizations.generated";
+import type {
+  CreatedAccount,
+  SchoolAccount as WireSchoolAccount,
+  SchoolPWAUsage as WireSchoolPWAUsage,
+  SchoolRequiredDetails as WireSchoolRequiredDetails,
+  deviceSlotsRequest,
+  operatorInvitationResponse as WireInvitation,
+} from "~/lib/contract/operator-schools.generated";
+import type { SystemRole } from "~/lib/contract/operator-roles.generated";
+import type { ProvisioningStats as WireProvisioningStats } from "~/lib/contract/operator-stats.generated";
+import type {
+  resolveUnregisteredTagScanRequest,
+  scanResponse as WireUnregisteredTagScan,
+} from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type { CatererSecurityResponse as WireOperatorCaterer } from "~/lib/contract/operator-caterers.generated";
+import type {
+  OperatorDevice as WireOperatorDevice,
+  OperatorPerson as WireOperatorPerson,
+  Organization as WireOrganization,
+  OrganizationAccount as WireOrgAccount,
+  School as WireSchool,
+  SchoolSummary as WireSchoolSummary,
+} from "~/lib/contract/shared.generated";
 import {
   mapDeviceHistoryEntry,
   type DeviceHistoryEntry,
 } from "~/lib/device-history";
 import type {
-  BackendOrganization,
-  BackendOrganizationSummary,
-  BackendProvisioningStats,
-  BackendSchool,
-  BackendSchoolSummary,
-  BackendSchoolRequiredDetails,
   SchoolRequiredDetails,
-  BackendInvitation,
-  BackendSchoolAccount,
-  BackendOrgAccount,
-  BackendOperatorDevice,
-  BackendOperatorPerson,
-  BackendUnregisteredTagScan,
   Organization,
   OrganizationSummary,
   ProvisioningStats,
@@ -30,9 +55,7 @@ import type {
   UnregisteredTagScan,
   CreateOrganizationRequest,
   CreateTestTraegerRequest,
-  BackendTestTraeger,
   TestTraeger,
-  BackendSampleChildrenResult,
   SampleChildrenResult,
   CreateSchoolRequest,
   CreateDeviceRequest,
@@ -40,15 +63,10 @@ import type {
   CreateAccountRequest,
   UpdateOrganizationRequest,
   UpdateSchoolRequest,
-  BackendDeviceTransferStatus,
   DeviceTransferStatus,
-  BackendSchoolPWAUsage,
   SchoolPWAUsage,
   AssignTraegerMemberRequest,
-  BackendOperatorCaterer,
   InviteTraegerMemberRequest,
-  BackendTraegerMember,
-  BackendTraegerInvitation,
   TraegerInvitation,
   OperatorCaterer,
   TraegerMember,
@@ -74,7 +92,6 @@ import {
   mapTraegerMember,
   mapTraegerInvitation,
   mapOperatorCaterer,
-  isBackendTraegerErasureOrder,
   mapTraegerErasureOrder,
   mapTestTraeger,
   mapSampleChildrenResult,
@@ -82,28 +99,28 @@ import {
 
 class OperatorProvisioningService {
   async getStats(): Promise<ProvisioningStats> {
-    const data = await operatorFetch<BackendProvisioningStats>(
+    const data = await operatorFetch<WireProvisioningStats>(
       "/api/operator/stats",
     );
     return mapProvisioningStats(data);
   }
 
   async listOrganizationSummaries(): Promise<OrganizationSummary[]> {
-    const data = await operatorFetch<BackendOrganizationSummary[]>(
+    const data = await operatorFetch<WireOrganizationSummary[]>(
       "/api/operator/organizations/summaries",
     );
     return data.map(mapOrganizationSummary);
   }
 
   async listSchoolSummaries(): Promise<SchoolSummary[]> {
-    const data = await operatorFetch<BackendSchoolSummary[]>(
+    const data = await operatorFetch<WireSchoolSummary[]>(
       "/api/operator/schools/summaries",
     );
     return data.map(mapSchoolSummary);
   }
 
   async listSchoolRequiredDetails(): Promise<SchoolRequiredDetails[]> {
-    const data = await operatorFetch<BackendSchoolRequiredDetails[]>(
+    const data = await operatorFetch<WireSchoolRequiredDetails[]>(
       "/api/operator/schools/required-details",
     );
     return data.map(mapSchoolRequiredDetails);
@@ -112,14 +129,14 @@ class OperatorProvisioningService {
   async listOrganizationSchools(
     organizationId: string,
   ): Promise<SchoolSummary[]> {
-    const data = await operatorFetch<BackendSchoolSummary[]>(
+    const data = await operatorFetch<WireSchoolSummary[]>(
       `/api/operator/organizations/${encodeURIComponent(organizationId)}/schools`,
     );
     return data.map(mapSchoolSummary);
   }
 
   async listOrganizations(): Promise<Organization[]> {
-    const data = await operatorFetch<BackendOrganization[]>(
+    const data = await operatorFetch<WireOrganization[]>(
       "/api/operator/organizations",
     );
     return data.map(mapOrganization);
@@ -128,7 +145,7 @@ class OperatorProvisioningService {
   async createOrganization(
     data: CreateOrganizationRequest,
   ): Promise<Organization> {
-    const result = await operatorFetch<BackendOrganization>(
+    const result = await operatorFetch<WireOrganization>(
       "/api/operator/organizations",
       { method: "POST", body: data },
     );
@@ -136,12 +153,12 @@ class OperatorProvisioningService {
   }
 
   async listSchools(): Promise<School[]> {
-    const data = await operatorFetch<BackendSchool[]>("/api/operator/schools");
+    const data = await operatorFetch<WireSchool[]>("/api/operator/schools");
     return data.map(mapSchool);
   }
 
   async createSchool(data: CreateSchoolRequest): Promise<School> {
-    const result = await operatorFetch<BackendSchool>("/api/operator/schools", {
+    const result = await operatorFetch<WireSchool>("/api/operator/schools", {
       method: "POST",
       body: data,
     });
@@ -152,7 +169,7 @@ class OperatorProvisioningService {
     id: string,
     data: UpdateOrganizationRequest,
   ): Promise<Organization> {
-    const result = await operatorFetch<BackendOrganization>(
+    const result = await operatorFetch<WireOrganization>(
       `/api/operator/organizations/${encodeURIComponent(id)}`,
       { method: "PUT", body: data },
     );
@@ -160,7 +177,7 @@ class OperatorProvisioningService {
   }
 
   async updateSchool(id: string, data: UpdateSchoolRequest): Promise<School> {
-    const result = await operatorFetch<BackendSchool>(
+    const result = await operatorFetch<WireSchool>(
       `/api/operator/schools/${encodeURIComponent(id)}`,
       { method: "PUT", body: data },
     );
@@ -168,14 +185,14 @@ class OperatorProvisioningService {
   }
 
   async listSchoolAccounts(schoolId: string): Promise<SchoolAccount[]> {
-    const data = await operatorFetch<BackendSchoolAccount[]>(
+    const data = await operatorFetch<WireSchoolAccount[]>(
       `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts`,
     );
     return data.map(mapSchoolAccount);
   }
 
   async listOrganizationAccounts(orgId: string): Promise<OrgAccount[]> {
-    const data = await operatorFetch<BackendOrgAccount[]>(
+    const data = await operatorFetch<WireOrgAccount[]>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/accounts`,
     );
     return data.map(mapOrgAccount);
@@ -183,14 +200,14 @@ class OperatorProvisioningService {
 
   /** The caterers with the state of their two-factor sign-in (#4497). */
   async listCaterers(): Promise<OperatorCaterer[]> {
-    const data = await operatorFetch<BackendOperatorCaterer[]>(
+    const data = await operatorFetch<WireOperatorCaterer[]>(
       "/api/operator/caterers",
     );
     return data.map(mapOperatorCaterer);
   }
 
   async listTraegerMembers(orgId: string): Promise<TraegerMember[]> {
-    const data = await operatorFetch<BackendTraegerMember[]>(
+    const data = await operatorFetch<WireTraegerMember[]>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members`,
     );
     return data.map(mapTraegerMember);
@@ -200,7 +217,7 @@ class OperatorProvisioningService {
     orgId: string,
     data: AssignTraegerMemberRequest,
   ): Promise<TraegerMember> {
-    const result = await operatorFetch<BackendTraegerMember>(
+    const result = await operatorFetch<WireTraegerMember>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members`,
       { method: "POST", body: data },
     );
@@ -223,7 +240,7 @@ class OperatorProvisioningService {
 
   /** Open and expired invitations into the Träger-Büro (#5749). */
   async listTraegerInvitations(orgId: string): Promise<TraegerInvitation[]> {
-    const data = await operatorFetch<BackendTraegerInvitation[]>(
+    const data = await operatorFetch<WireTraegerInvitation[]>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations`,
     );
     return data.map(mapTraegerInvitation);
@@ -237,7 +254,7 @@ class OperatorProvisioningService {
     orgId: string,
     invitationId: string,
   ): Promise<TraegerInvitation> {
-    const result = await operatorFetch<BackendTraegerInvitation>(
+    const result = await operatorFetch<WireTraegerInvitation>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations/${encodeURIComponent(invitationId)}/resend`,
       { method: "POST" },
     );
@@ -258,25 +275,21 @@ class OperatorProvisioningService {
   async getTraegerErasureOrder(
     orgId: string,
   ): Promise<TraegerErasureOrder | null> {
-    const data = await operatorFetch<unknown>(
+    // The backend answers without an order when none is open.
+    const data = await operatorFetch<WireTraegerErasureOrder | null>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
     );
-    return isBackendTraegerErasureOrder(data)
-      ? mapTraegerErasureOrder(data)
-      : null;
+    return data ? mapTraegerErasureOrder(data) : null;
   }
 
   async recordTraegerErasureOrder(
     orgId: string,
     data: RecordTraegerErasureOrderRequest,
   ): Promise<TraegerErasureOrder> {
-    const result = await operatorFetch<unknown>(
+    const result = await operatorFetch<WireTraegerErasureOrder>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
       { method: "POST", body: data },
     );
-    if (!isBackendTraegerErasureOrder(result)) {
-      throw new Error("erasure order response without order");
-    }
     return mapTraegerErasureOrder(result);
   }
 
@@ -284,13 +297,10 @@ class OperatorProvisioningService {
     orgId: string,
     data: RecordTraegerErasureOrderRecordsRequest,
   ): Promise<TraegerErasureOrder> {
-    const result = await operatorFetch<unknown>(
+    const result = await operatorFetch<WireTraegerErasureOrder>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order/records`,
       { method: "PUT", body: data },
     );
-    if (!isBackendTraegerErasureOrder(result)) {
-      throw new Error("erasure order records response without order");
-    }
     return mapTraegerErasureOrder(result);
   }
 
@@ -304,7 +314,7 @@ class OperatorProvisioningService {
   async createTestTraeger(
     data: CreateTestTraegerRequest,
   ): Promise<TestTraeger> {
-    const result = await operatorFetch<BackendTestTraeger>(
+    const result = await operatorFetch<WireTestTraeger>(
       "/api/operator/organizations/test-traeger",
       { method: "POST", body: data },
     );
@@ -312,7 +322,7 @@ class OperatorProvisioningService {
   }
 
   async createSampleChildren(orgId: string): Promise<SampleChildrenResult> {
-    const result = await operatorFetch<BackendSampleChildrenResult>(
+    const result = await operatorFetch<WireSampleChildrenResult>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/sample-children`,
       { method: "POST", body: {} },
     );
@@ -320,35 +330,35 @@ class OperatorProvisioningService {
   }
 
   async listAllAccounts(): Promise<OrgAccount[]> {
-    const data = await operatorFetch<BackendOrgAccount[]>(
+    const data = await operatorFetch<WireOrgAccount[]>(
       "/api/operator/accounts",
     );
     return data.map(mapOrgAccount);
   }
 
   async listAllDevices(): Promise<OperatorDevice[]> {
-    const data = await operatorFetch<BackendOperatorDevice[]>(
+    const data = await operatorFetch<WireOperatorDevice[]>(
       "/api/operator/devices",
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async listSchoolDevices(schoolId: string): Promise<OperatorDevice[]> {
-    const data = await operatorFetch<BackendOperatorDevice[]>(
+    const data = await operatorFetch<WireOperatorDevice[]>(
       `/api/operator/schools/${encodeURIComponent(schoolId)}/devices`,
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async listOrganizationDevices(orgId: string): Promise<OperatorDevice[]> {
-    const data = await operatorFetch<BackendOperatorDevice[]>(
+    const data = await operatorFetch<WireOperatorDevice[]>(
       `/api/operator/organizations/${encodeURIComponent(orgId)}/devices`,
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async createDevice(data: CreateDeviceRequest): Promise<OperatorDevice> {
-    const result = await operatorFetch<BackendOperatorDevice>(
+    const result = await operatorFetch<WireOperatorDevice>(
       "/api/operator/devices",
       { method: "POST", body: data },
     );
@@ -366,9 +376,14 @@ class OperatorProvisioningService {
     deviceId: string,
     apiKey?: string,
   ): Promise<OperatorDevice> {
-    const result = await operatorFetch<BackendOperatorDevice>(
+    const result = await operatorFetch<WireOperatorDevice>(
       `/api/operator/devices/${encodeURIComponent(deviceId)}/set-api-key`,
-      { method: "POST", body: apiKey ? { api_key: apiKey } : {} },
+      {
+        method: "POST",
+        body: (apiKey
+          ? { api_key: apiKey }
+          : {}) satisfies setDeviceAPIKeyRequest,
+      },
     );
     return mapOperatorDevice(result, true);
   }
@@ -376,7 +391,7 @@ class OperatorProvisioningService {
   async getDeviceTransferStatus(
     deviceId: string,
   ): Promise<DeviceTransferStatus> {
-    const result = await operatorFetch<BackendDeviceTransferStatus>(
+    const result = await operatorFetch<WireDeviceTransferStatus>(
       `/api/operator/devices/${encodeURIComponent(deviceId)}/transfer-status`,
     );
     return mapDeviceTransferStatus(result);
@@ -387,10 +402,10 @@ class OperatorProvisioningService {
    * first (#2321). Each entry names its school; staff stay unnamed.
    */
   async listDeviceHistory(deviceId: string): Promise<DeviceHistoryEntry[]> {
-    const result = await operatorFetch<
-      Parameters<typeof mapDeviceHistoryEntry>[0][] | null
-    >(`/api/operator/devices/${encodeURIComponent(deviceId)}/history`);
-    return (result ?? []).map(mapDeviceHistoryEntry);
+    const result = await operatorFetch<deviceHistoryResponse[]>(
+      `/api/operator/devices/${encodeURIComponent(deviceId)}/history`,
+    );
+    return result.map(mapDeviceHistoryEntry);
   }
 
   /**
@@ -415,7 +430,10 @@ class OperatorProvisioningService {
   ): Promise<void> {
     await operatorFetch<null>(
       `/api/operator/schools/${encodeURIComponent(schoolId)}/device-slots`,
-      { method: "PUT", body: { device_slots: deviceSlots } },
+      {
+        method: "PUT",
+        body: { device_slots: deviceSlots } satisfies deviceSlotsRequest,
+      },
     );
   }
 
@@ -423,11 +441,13 @@ class OperatorProvisioningService {
     deviceId: string,
     targetSchoolId: string,
   ): Promise<OperatorDevice> {
-    const result = await operatorFetch<BackendOperatorDevice>(
+    const result = await operatorFetch<WireOperatorDevice>(
       `/api/operator/devices/${encodeURIComponent(deviceId)}/transfer`,
       {
         method: "POST",
-        body: { target_school_id: Number(targetSchoolId) },
+        body: {
+          target_school_id: Number(targetSchoolId),
+        } satisfies transferDeviceRequest,
       },
     );
     return mapOperatorDevice(result);
@@ -437,7 +457,7 @@ class OperatorProvisioningService {
     schoolId: string,
     data: InviteAdminRequest,
   ): Promise<Invitation> {
-    const result = await operatorFetch<BackendInvitation>(
+    const result = await operatorFetch<WireInvitation>(
       `/api/operator/schools/${encodeURIComponent(schoolId)}/invite-admin`,
       { method: "POST", body: data },
     );
@@ -448,22 +468,22 @@ class OperatorProvisioningService {
     schoolId: string,
     data: CreateAccountRequest,
   ): Promise<{ id: string; email: string }> {
-    const result = await operatorFetch<{ id: number | string; email: string }>(
+    const result = await operatorFetch<CreatedAccount>(
       `/api/operator/schools/${encodeURIComponent(schoolId)}/create-account`,
       { method: "POST", body: data },
     );
-    return { id: result.id.toString(), email: result.email };
+    return { id: result.id, email: result.email };
   }
 
   async getSchoolPWAUsage(schoolId: string): Promise<SchoolPWAUsage> {
-    const data = await operatorFetch<BackendSchoolPWAUsage>(
+    const data = await operatorFetch<WireSchoolPWAUsage>(
       `/api/operator/schools/${encodeURIComponent(schoolId)}/pwa-usage`,
     );
     return mapSchoolPWAUsage(data);
   }
 
   async listSchoolPersons(schoolId: string): Promise<OperatorPerson[]> {
-    const data = await operatorFetch<BackendOperatorPerson[]>(
+    const data = await operatorFetch<WireOperatorPerson[]>(
       `/api/operator/schools/${encodeURIComponent(schoolId)}/persons`,
     );
     return data.map(mapOperatorPerson);
@@ -472,7 +492,7 @@ class OperatorProvisioningService {
   async listOrganizationPersons(
     organizationId: string,
   ): Promise<OperatorPerson[]> {
-    const data = await operatorFetch<BackendOperatorPerson[]>(
+    const data = await operatorFetch<WireOperatorPerson[]>(
       `/api/operator/organizations/${encodeURIComponent(organizationId)}/persons`,
     );
     return data.map(mapOperatorPerson);
@@ -501,15 +521,15 @@ class OperatorProvisioningService {
       params.set("resolved", "all");
     }
     const suffix = params.toString() ? `?${params.toString()}` : "";
-    const data = await operatorFetch<BackendUnregisteredTagScan[]>(
+    const data = await operatorFetch<WireUnregisteredTagScan[]>(
       `/api/operator/unregistered-tag-scans${suffix}`,
     );
     return data.map(mapUnregisteredTagScan);
   }
 
   async resolveUnregisteredTagScan(id: string, note?: string): Promise<void> {
-    const body = note ? { note } : {};
-    await operatorFetch<BackendUnregisteredTagScan>(
+    const body: resolveUnregisteredTagScanRequest = note ? { note } : {};
+    await operatorFetch<WireUnregisteredTagScan>(
       `/api/operator/unregistered-tag-scans/${encodeURIComponent(id)}/resolve`,
       { method: "POST", body },
     );
@@ -545,10 +565,7 @@ class OperatorProvisioningService {
   async listSystemRoles(): Promise<
     { id: string; name: string; isSystem: boolean }[]
   > {
-    const result =
-      await operatorFetch<{ id: string; name: string; is_system: boolean }[]>(
-        `/api/operator/roles`,
-      );
+    const result = await operatorFetch<SystemRole[]>(`/api/operator/roles`);
     return result.map((r) => ({
       id: r.id,
       name: r.name,
