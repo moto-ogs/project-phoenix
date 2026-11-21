@@ -27,9 +27,11 @@ generated type instead.
 
 Worked example: `GET /api/activities/categories`, staff portal.
 
-1. **Handler.** Mount it in the owner's router:
-   `r.Get("/categories", rs.listCategories)` in
-   `backend/modules/timetable/http/activities/http.go`.
+1. **Handler.** Mount it in the owner's router inside the tenant
+   transaction and behind its permission:
+   `r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).Get("/{id}", rs.getActivity)`
+   in `backend/modules/timetable/http/activities/http.go`. (The category list
+   beside it has no permission on purpose: every picker reads it.)
 2. **Contract.** Add one line to the owner's `RouteContracts()` in
    `backend/modules/timetable/http/activities/route_contracts.go`:
 
@@ -61,17 +63,34 @@ Worked example: `GET /api/activities/categories`, staff portal.
    `frontend/src/lib/contract/activities.generated.ts`, and the allowlist entry
    in `portals.generated.ts`. Commit all of them; `TestTheCommittedContractIsCurrent`
    fails on a stale file.
-5. **Browser call.** The domain client calls the BFF path and types the answer
-   with the generated type: `frontend/src/lib/category-api.ts` fetches
-   `/api/activities/categories?include_archived=true…` and maps each
-   `ActivityCategoryResponse` with `mapActivityCategoryResponse`
-   (`frontend/src/lib/activity-helpers.ts`). A new tenant client reads the
-   answer with `bffJson<T>` (`frontend/src/lib/bff-fetch.ts`). Components
-   load it through `useSWRAuth` and a key factory of `~/lib/swr`.
+5. **Browser call.** The domain client calls the BFF path with `bffJson`
+   (`frontend/src/lib/bff-fetch.ts`) and types the answer with the generated
+   type:
+
+   ```ts
+   import { bffJson } from "./bff-fetch";
+   import type { ActivityCategoryResponse } from "./contract/activities.generated";
+
+   const rows = await bffJson<ActivityCategoryResponse[] | null>(
+     "/api/activities/categories?include_archived=true",
+   );
+   return (rows ?? []).map(mapActivityCategoryResponse);
+   ```
+
+   `mapActivityCategoryResponse` (`frontend/src/lib/activity-helpers.ts`)
+   maps to the view type. A failure throws an `ApiError` for the shared error
+   path. Components load it through `useSWRAuth` and a key factory of
+   `~/lib/swr`.
 6. **No route file.** The staff portal's catch-all `app/api/[...path]/route.ts`
    serves the path. Other portals call `/api/<portal>/…` for the backend's
    `/<portal>/…`; the prefix table is in
    [Portal proxy](frontend-api.md#portal-proxy-2352).
+
+Also part of a read route, from [backend/CLAUDE.md](../../backend/CLAUDE.md):
+a list registers a query budget scenario; a paged list answers through
+`common.RespondPaginated` and registers `Paginated: true`; a user-facing
+feature ships seed data; the architecture check and `check-changed.mjs` run
+before push.
 
 ## Write route
 
@@ -107,8 +126,8 @@ Same steps; the contract names the body type:
   `backend/modules/peopledirectory/inbound/students/route_contracts.go`). The
   handler checks size, extension and content.
 - Browser cache, conditional GET, public token links and public uploads are
-  flags of the same contract (`FileCache`, `ConditionalGet`, `PublicFile`,
-  `PublicUpload`); rules in [Portal proxy](frontend-api.md#portal-proxy-2352).
+  flags of the same contract (`PrivateCache` or `FileCache`, `ConditionalGet`,
+  `PublicFile`, `PublicUpload`); rules in [Portal proxy](frontend-api.md#portal-proxy-2352).
 
 ## When a route needs its own `route.ts`
 

@@ -33,7 +33,7 @@ read [frontend API and server boundaries](../docs/agents/frontend-api.md).
 
 ## Multi-Tenancy & Routing
 
-The proxy (`src/proxy.ts`) routes by hostname from one `PortalHost` table: each portal host → `/<portal>/*`, `{slug}.TENANT_DOMAIN` → `/[tenant]/*`; reserved slugs (`src/lib/reserved-slugs.ts`) are blocked. A new page folder needs `pnpm generate:portal-pages`, a new BFF route of a portal page an entry in its API allow-list. Cross-host paths redirect (307) back to their canonical subdomain (defense-in-depth on top of cookie isolation). Portal/session/cookie details: `docs/agents/contracts.md`.
+The proxy (`src/proxy.ts`) routes by hostname from one `PortalHost` table: each portal host → `/<portal>/*`, `{slug}.TENANT_DOMAIN` → `/[tenant]/*`; reserved slugs (`src/lib/reserved-slugs.ts`) are blocked. A new page folder needs `pnpm generate:portal-pages`; a BFF path outside the portal's `/api/<portal>/` prefix needs an entry in its API allow-list. Cross-host paths redirect (307) back to their canonical subdomain (defense-in-depth on top of cookie isolation). Portal/session/cookie details: `docs/agents/contracts.md`.
 
 ### Tenant Context & Navigation
 
