@@ -13,7 +13,7 @@ import type { NoticeOptions as OfficeNoticeOptions } from "./contract/traeger-co
 import {
   type CareContractStatus,
   knownContractStatus,
-} from "./traeger-care-contracts-api";
+} from "./care-contract-status";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
