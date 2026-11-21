@@ -19869,7 +19869,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.EducationalGroupRows",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.EducationalGroupRows. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.EducationalGroupRows. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
@@ -19919,7 +19919,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.NavigationRow. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.NavigationRow. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
@@ -28663,7 +28663,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.ListAccountTraegerOrganizations",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListAccountTraegerOrganizations",
       "target_owner": "organization-tenancy"
@@ -28673,7 +28673,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.ListAccountTraegerOrganizations",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListAccountTraegerOrganizations",
       "target_owner": "organization-tenancy"
@@ -28683,7 +28683,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.ListAccountTraegerOrganizations",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMembershipQuery.ListAccountTraegerOrganizations",
       "target_owner": "organization-tenancy"

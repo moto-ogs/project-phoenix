@@ -3162,7 +3162,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.calendarGroupPort.List",
-      "binding_digest": "8901386d457b32d17b9c9524cec53be9",
+      "binding_digest": "656712bc1fc67e91d4aebe7716dbe887",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.Groups.List",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.List",

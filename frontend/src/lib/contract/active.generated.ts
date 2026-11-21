@@ -5,7 +5,6 @@ import {
   bool,
   instant,
   int64String,
-  int64StringOrNumber,
   nullable,
   num,
   object,

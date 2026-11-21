@@ -499,15 +499,15 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 		activeGroupID := session1.ID
 		mirroredInstance := api.NewAttendanceMirrorInstance()
 		mirroredInstance.Date = calendar.Date(calendar.TodayDate())
-		mirroredInstance.ActivityGroupID = &activityGroup.ID
+		mirroredInstance.ActivityGroupID = (*ident.ID)(&activityGroup.ID)
 		mirroredInstance.Title = "Force Transfer Activity"
 		mirroredInstance.StartTime = time.Date(2000, 1, 1, 14, 0, 0, 0, time.UTC)
 		mirroredInstance.EndTime = time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC)
-		mirroredInstance.RoomID = room1.ID
+		mirroredInstance.RoomID = ident.ID(room1.ID)
 		mirroredInstance.Status = studentpresence.ActivitySessionActive
-		mirroredInstance.ActiveGroupID = (*int64)(&activeGroupID)
+		mirroredInstance.ActiveGroupID = &activeGroupID
 		mirroredInstance.IsSpontaneous = true
-		mirroredInstance.TenantID = testpkg.Tenant(t)
+		mirroredInstance.TenantID = ident.ID(testpkg.Tenant(t))
 		require.NoError(t, api.NewAttendanceSyncTestRepositories(testpkg.MustDatabase(db), owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db))).Instances.Create(ctx, mirroredInstance))
 
 		// ACT: Force-start the same activity on device 2

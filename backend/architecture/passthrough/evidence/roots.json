@@ -947,7 +947,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (n holidaySchoolNames) HolidaySchoolNames(ctx context.Context, organizationID int64) (map[int64]string, error) {\n\tschools, err := n.overview.Schools(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make(map[int64]string, len(schools))\n\tfor _, school := range schools {\n\t\tnames[school.ID] = school.Name\n\t}\n\treturn names, nil\n}",
+      "evidence": "func (n holidaySchoolNames) HolidaySchoolNames(ctx context.Context, organizationID int64) (map[int64]string, error) {\n\tschools, err := n.overview.Schools(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make(map[int64]string, len(schools))\n\tfor _, school := range schools {\n\t\tnames[school.ID.Int64()] = school.Name\n\t}\n\treturn names, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/holidaySchoolNames.HolidaySchoolNames",
       "owner": "roots"
@@ -3369,7 +3369,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r ReminderSupervisionReader) GetStaffActiveSupervisions(ctx context.Context, id int64) ([]*ports.GroupSupervisor, error) {\n\tday := timezone.TodayDate().String()\n\tvalues, err := r.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: \u0026id, ActiveOn: \u0026day})\n\tif err != nil {\n\t\treturn nil, \u0026studentpresence.OperationError{Op: \"GetStaffActiveSupervisions\", Err: studentpresence.ErrDatabaseOperation}\n\t}\n\tresult := make([]*ports.GroupSupervisor, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, \u0026ports.GroupSupervisor{StaffID: value.StaffID, GroupID: value.GroupID})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (r ReminderSupervisionReader) GetStaffActiveSupervisions(ctx context.Context, id int64) ([]*ports.GroupSupervisor, error) {\n\tday := timezone.TodayDate().String()\n\tvalues, err := r.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: \u0026id, ActiveOn: \u0026day})\n\tif err != nil {\n\t\treturn nil, \u0026studentpresence.OperationError{Op: \"GetStaffActiveSupervisions\", Err: studentpresence.ErrDatabaseOperation}\n\t}\n\tresult := make([]*ports.GroupSupervisor, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, \u0026ports.GroupSupervisor{StaffID: ident.ID(value.StaffID).Int64(), GroupID: ident.ID(value.GroupID).Int64()})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/ReminderSupervisionReader.GetStaffActiveSupervisions",
       "owner": "roots"
@@ -3922,7 +3922,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d TraegerMembershipDirectory) ListAccountTraegerOrganizations(ctx context.Context, accountID int64) ([]identityaccess.TraegerOrganization, error) {\n\tif d.Memberships == nil {\n\t\treturn nil, errors.New(\"the Träger membership directory is not composed\")\n\t}\n\torganizations, err := d.Memberships.ListAccountTraegerOrganizations(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityaccess.TraegerOrganization, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, identityaccess.TraegerOrganization{ID: organization.ID, Name: organization.Name})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d TraegerMembershipDirectory) ListAccountTraegerOrganizations(ctx context.Context, accountID int64) ([]identityaccess.TraegerOrganization, error) {\n\tif d.Memberships == nil {\n\t\treturn nil, errors.New(\"the Träger membership directory is not composed\")\n\t}\n\torganizations, err := d.Memberships.ListAccountTraegerOrganizations(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityaccess.TraegerOrganization, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, identityaccess.TraegerOrganization{ID: organization.ID.Int64(), Name: organization.Name})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/TraegerMembershipDirectory.ListAccountTraegerOrganizations",
       "owner": "roots"
@@ -4356,7 +4356,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p calendarGroupPort) List(ctx context.Context) ([]*calendarCompose.Group, error) {\n\tvalue, err := p.source.List(ctx, nil)\n\treturn CalendarMapSlice(value, func(v *educationRepo.Group) *calendarCompose.Group {\n\t\treturn \u0026calendarCompose.Group{ID: v.ID, Name: v.Name}\n\t}), err\n}",
+      "evidence": "func (p calendarGroupPort) List(ctx context.Context) ([]*calendarCompose.Group, error) {\n\tvalue, err := p.source.List(ctx, nil)\n\treturn CalendarMapSlice(value, func(v *educationRepo.Group) *calendarCompose.Group {\n\t\treturn \u0026calendarCompose.Group{ID: v.ID.Int64(), Name: v.Name}\n\t}), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/calendarGroupPort.List",
       "owner": "roots"
@@ -7093,7 +7093,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a planExportPlanningTracks) ListPlanningTracks(ctx context.Context) ([]*planexport.PlanningTrack, error) {\n\ttracks, err := a.source.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]*planexport.PlanningTrack, 0, len(tracks))\n\tfor _, track := range tracks {\n\t\tout = append(out, \u0026planexport.PlanningTrack{ID: track.ID, Color: track.Color})\n\t}\n\treturn out, nil\n}",
+      "evidence": "func (a planExportPlanningTracks) ListPlanningTracks(ctx context.Context) ([]*planexport.PlanningTrack, error) {\n\ttracks, err := a.source.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]*planexport.PlanningTrack, 0, len(tracks))\n\tfor _, track := range tracks {\n\t\tout = append(out, \u0026planexport.PlanningTrack{ID: track.ID.Int64(), Color: track.Color})\n\t}\n\treturn out, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/planExportPlanningTracks.ListPlanningTracks",
       "owner": "roots"
