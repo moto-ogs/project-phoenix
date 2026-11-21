@@ -1,6 +1,8 @@
 import type { StammdatenGender } from "~/lib/staff-api";
 import type {
   CreateSchoolInvitationRequest,
+  FormerEmploymentView,
+  InvitationValidationResponse,
   SchoolInvitationResponse,
 } from "~/lib/contract/auth-invitations.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
@@ -66,21 +68,13 @@ export interface PendingInvitation {
   addressMark?: EmailAddressMark;
 }
 
-export interface BackendInvitationValidation {
-  target_portal?: "tenant" | "school";
-  requires_account_login?: boolean;
-  email: string;
-  role_name: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  position?: string | null;
-  expires_at: string;
-}
+const INVITATION_PORTALS = ["tenant", "school"] as const;
 
 export const mapInvitationValidationResponse = (
-  data: BackendInvitationValidation,
+  data: InvitationValidationResponse,
 ): InvitationValidation => ({
-  targetPortal: data.target_portal,
+  // A portal this build does not know stays undefined, like a missing one.
+  targetPortal: knownEnum(INVITATION_PORTALS, data.target_portal),
   requiresAccountLogin: data.requires_account_login,
   email: data.email,
   roleName: data.role_name,
@@ -169,25 +163,18 @@ export interface FormerEmployment {
   notReturning: FormerEmploymentPart[];
 }
 
-export interface BackendFormerEmployment {
-  started_on: string;
-  ended_on: string;
-  resumes: string[];
-  not_returning: string[];
-}
-
 const isFormerEmploymentPart = (part: string): part is FormerEmploymentPart =>
   Object.hasOwn(FORMER_EMPLOYMENT_PART_LABELS, part);
 
 /** A part key this frontend does not know yet is left out, not shown raw. */
 export const mapFormerEmploymentResponse = (
-  data: BackendFormerEmployment | null | undefined,
+  data: FormerEmploymentView | null | undefined,
 ): FormerEmployment | null =>
   data
     ? {
         startedOn: data.started_on,
         endedOn: data.ended_on,
-        resumes: data.resumes.filter(isFormerEmploymentPart),
-        notReturning: data.not_returning.filter(isFormerEmploymentPart),
+        resumes: (data.resumes ?? []).filter(isFormerEmploymentPart),
+        notReturning: (data.not_returning ?? []).filter(isFormerEmploymentPart),
       }
     : null;

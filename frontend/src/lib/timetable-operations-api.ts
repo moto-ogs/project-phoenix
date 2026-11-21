@@ -5,6 +5,7 @@ import {
   wireErrorCode,
 } from "./api-error";
 import type {
+  CompleteOperationRequest,
   OperationRoster,
   ScheduledInstance,
   startOperationResponse,
@@ -276,7 +277,7 @@ export const timetableOperationsApi = {
           },
           body: JSON.stringify({
             confirmed_present_student_ids: confirmedPresentStudentIds,
-          }),
+          } satisfies CompleteOperationRequest),
         },
       ),
     );

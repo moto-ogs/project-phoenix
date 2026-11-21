@@ -10,9 +10,17 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
  * - materialize(from?, to?)      → POST   /materialize
  */
 
+import type { PatchAttendanceRequest } from "./contract/shared.generated";
 import type {
+  AttendanceResponse as WireAttendance,
+  createInstanceRequest,
+  DeviationHistoryResponse as WireDeviationHistory,
+  enrichedInstance as WireInstance,
+  GapsResponse as WireGaps,
   offeringPreviewResponse,
   rosterDeviationsResponse,
+  updateInstanceRequest,
+  weeklyInstancesResponse as WireWeeklyInstances,
 } from "./contract/timetable.generated";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession } from "./session-cache";
@@ -27,11 +35,7 @@ import type {
   BackendShiftCoverageCheckResult,
   BackendCreateTemplateResult,
   BackendConvertInstanceToSeriesResult,
-  BackendAttendanceResponse,
   BackendEndTemplateResult,
-  BackendEnrichedInstance,
-  BackendGapsResponse,
-  BackendDeviationHistoryResponse,
   BackendGuardianNoticeReach,
   BackendInstanceStatusResult,
   BackendMaterializeResult,
@@ -52,7 +56,6 @@ import type {
   BackendTimetableTemplate,
   BackendTemplatesResponse,
   OfferingSourceOption,
-  BackendWeeklyInstancesResponse,
   AttendancePatchBody,
   AttendanceResponse,
   ConflictCheckParams,
@@ -211,7 +214,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendWeeklyInstancesResponse>(response);
+    const raw = await unwrap<WireWeeklyInstances>(response);
     return mapWeeklyInstances(raw);
   }
 
@@ -234,9 +237,9 @@ class TimetableService {
         "Idempotency-Key": idempotencyKey,
       },
       credentials: "include",
-      body: JSON.stringify(body),
+      body: JSON.stringify(body satisfies createInstanceRequest),
     });
-    const raw = await unwrap<BackendEnrichedInstance>(response);
+    const raw = await unwrap<WireInstance>(response);
     logger.info("instance_created", {
       instance_id: raw.id,
       is_spontaneous: raw.is_spontaneous,
@@ -839,10 +842,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies updateInstanceRequest),
       },
     );
-    const raw = await unwrap<BackendEnrichedInstance>(response);
+    const raw = await unwrap<WireInstance>(response);
     return mapInstance(raw);
   }
 
@@ -1149,7 +1152,7 @@ class TimetableService {
       credentials: "include",
     });
 
-    const raw = await unwrap<BackendGapsResponse>(response);
+    const raw = await unwrap<WireGaps>(response);
     return mapGaps(raw);
   }
 
@@ -1173,7 +1176,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendDeviationHistoryResponse>(response);
+    const raw = await unwrap<WireDeviationHistory>(response);
     return mapDeviationHistory(raw);
   }
 
@@ -1339,11 +1342,11 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies PatchAttendanceRequest),
       },
     );
 
-    const raw = await unwrap<BackendAttendanceResponse>(response);
+    const raw = await unwrap<WireAttendance>(response);
     return mapAttendance(raw);
   }
 }

@@ -269,6 +269,14 @@ function viewToTab(view: TimetableView): ViewParam {
 // Die Legenden-Ableitung teilen sich Betreuungsplan und Vertretung, damit
 // beide Raster dieselben Farben mit denselben Wörtern erklären. Der Re-Export
 // hält den bestehenden Import-Pfad dieser Datei stabil.
+
+/** Who a conflict names when the name lookup has no entry. */
+const CONFLICT_PERSON_FALLBACK = {
+  student: "Kind",
+  staff: "Personal",
+  other: "Person",
+} as const;
+
 export { buildPlanningTrackLegend };
 
 // Dichte-Umschalter des Wochenrasters (reiner Component-State, nie in der URL).
@@ -1246,11 +1254,15 @@ function TimetablesContent() {
           }
           continue;
         }
+        const names =
+          warning.kind === "student"
+            ? studentNames
+            : warning.kind === "staff"
+              ? staffNames
+              : undefined;
         const personName =
-          (warning.kind === "student"
-            ? studentNames.get(warning.resourceId)
-            : staffNames.get(warning.resourceId)) ??
-          (warning.kind === "student" ? "Kind" : "Personal");
+          names?.get(warning.resourceId) ??
+          CONFLICT_PERSON_FALLBACK[warning.kind];
         byFingerprint.set(warning.fingerprint, {
           fingerprint: warning.fingerprint,
           kind: warning.kind,

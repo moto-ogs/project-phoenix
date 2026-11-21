@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { buildEnrichedInstance } from "~/test/fixtures/timetable";
 
 import {
   assignBlockLanes,
@@ -43,30 +44,32 @@ function instance(overrides: Partial<EnrichedInstance> = {}): EnrichedInstance {
 
 describe("planning track rendering", () => {
   it("maps planning track metadata from the backend response", () => {
-    const mapped = mapInstance({
-      id: 1,
-      date: "2026-08-03",
-      start_time: "12:00",
-      end_time: "13:00",
-      title: "Mensa",
-      status: "planned",
-      is_spontaneous: false,
-      is_live: false,
-      activity_type: "care",
-      planning_track_id: 8,
-      planning_track_name: "Mittag",
-      planning_track_color: "#F78C10",
-      planning_track_sort_order: 2,
-      room_id: 2,
-      room_name: "Mensa",
-      staff: [],
-      staff_count: 0,
-      absent_staff_count: 0,
-      expected_students_count: 0,
-      present_students_count: 0,
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-    });
+    const mapped = mapInstance(
+      buildEnrichedInstance({
+        id: "1",
+        date: "2026-08-03",
+        start_time: "12:00",
+        end_time: "13:00",
+        title: "Mensa",
+        status: "planned",
+        is_spontaneous: false,
+        is_live: false,
+        activity_type: "care",
+        planning_track_id: "8",
+        planning_track_name: "Mittag",
+        planning_track_color: "#F78C10",
+        planning_track_sort_order: 2,
+        room_id: "2",
+        room_name: "Mensa",
+        staff: [],
+        staff_count: 0,
+        absent_staff_count: 0,
+        expected_students_count: 0,
+        present_students_count: 0,
+        required_staff_count: 0,
+        assigned_staff_count: 0,
+      }),
+    );
 
     expect(mapped).toMatchObject({
       planningTrackId: "8",

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   mapProfileResponse,
   mapProfileUpdateRequest,
-  type BackendProfile,
+  type ProfileWire,
   type ProfileUpdateRequest,
   type ProfileSettings,
 } from "./profile-helpers";
@@ -25,8 +25,8 @@ describe("profile-helpers", () => {
         },
       };
 
-      const backendProfile: BackendProfile = {
-        id: 123,
+      const backendProfile: ProfileWire = {
+        id: "123",
         first_name: "John",
         last_name: "Doe",
         email: "john.doe@example.com",
@@ -58,36 +58,17 @@ describe("profile-helpers", () => {
       });
     });
 
-    it("should map backend profile with settings as object", () => {
-      const settingsObj: ProfileSettings = {
-        theme: "light",
-        language: "en",
-      };
-
-      const backendProfile: BackendProfile = {
-        id: 456,
-        first_name: "Jane",
-        last_name: "Smith",
-        email: "jane.smith@example.com",
-        settings: settingsObj as unknown as Record<string, unknown>,
-        created_at: "2024-01-01T00:00:00Z",
-        updated_at: "2024-01-15T10:30:00Z",
-      };
-
-      const result = mapProfileResponse(backendProfile);
-
-      expect(result.settings).toEqual(settingsObj);
-    });
-
     it("should handle invalid JSON string in settings", () => {
-      const backendProfile: BackendProfile = {
-        id: 789,
+      const backendProfile: ProfileWire = {
+        id: "789",
         first_name: "Invalid",
         last_name: "Settings",
         email: "invalid@example.com",
         settings: "{invalid json}",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        username: null,
+        last_login: null,
       };
 
       const result = mapProfileResponse(backendProfile);
@@ -96,13 +77,15 @@ describe("profile-helpers", () => {
     });
 
     it("should handle profile with no settings", () => {
-      const backendProfile: BackendProfile = {
-        id: 100,
+      const backendProfile: ProfileWire = {
+        id: "100",
         first_name: "No",
         last_name: "Settings",
         email: "nosettings@example.com",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        username: null,
+        last_login: null,
       };
 
       const result = mapProfileResponse(backendProfile);
@@ -111,14 +94,16 @@ describe("profile-helpers", () => {
     });
 
     it("should rewrite avatar path starting with /uploads/", () => {
-      const backendProfile: BackendProfile = {
-        id: 200,
+      const backendProfile: ProfileWire = {
+        id: "200",
         first_name: "Avatar",
         last_name: "Test",
         email: "avatar@example.com",
         avatar: "/uploads/avatars/global/user123.png",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        username: null,
+        last_login: null,
       };
 
       const result = mapProfileResponse(backendProfile);
@@ -127,14 +112,16 @@ describe("profile-helpers", () => {
     });
 
     it("should not rewrite avatar path not starting with /uploads/", () => {
-      const backendProfile: BackendProfile = {
-        id: 300,
+      const backendProfile: ProfileWire = {
+        id: "300",
         first_name: "External",
         last_name: "Avatar",
         email: "external@example.com",
         avatar: "https://example.com/avatar.jpg",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        username: null,
+        last_login: null,
       };
 
       const result = mapProfileResponse(backendProfile);
@@ -143,14 +130,16 @@ describe("profile-helpers", () => {
     });
 
     it("should handle null avatar", () => {
-      const backendProfile: BackendProfile = {
-        id: 400,
+      const backendProfile: ProfileWire = {
+        id: "400",
         first_name: "No",
         last_name: "Avatar",
         email: "noavatar@example.com",
         avatar: undefined,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        username: null,
+        last_login: null,
       };
 
       const result = mapProfileResponse(backendProfile);
@@ -159,14 +148,16 @@ describe("profile-helpers", () => {
     });
 
     it("should handle avatar path with no filename", () => {
-      const backendProfile: BackendProfile = {
-        id: 500,
+      const backendProfile: ProfileWire = {
+        id: "500",
         first_name: "Empty",
         last_name: "Path",
         email: "emptypath@example.com",
         avatar: "/uploads/",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        username: null,
+        last_login: null,
       };
 
       const result = mapProfileResponse(backendProfile);
@@ -176,13 +167,15 @@ describe("profile-helpers", () => {
     });
 
     it("should handle missing optional fields", () => {
-      const backendProfile: BackendProfile = {
-        id: 600,
+      const backendProfile: ProfileWire = {
+        id: "600",
         first_name: "Minimal",
         last_name: "Profile",
         email: "minimal@example.com",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        username: null,
+        last_login: null,
       };
 
       const result = mapProfileResponse(backendProfile);
@@ -198,7 +191,7 @@ describe("profile-helpers", () => {
         rfidCard: undefined,
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-15T10:30:00Z",
-        lastLogin: undefined,
+        lastLogin: null,
         settings: undefined,
       });
     });

@@ -160,9 +160,7 @@ export function useSchulhofActions(
       await timetableOperationsApi.createAndStartSpontaneous({
         title: SCHULHOF_ROOM_NAME,
         room_id: schulhofState.roomId,
-        activity_group_id: schulhofState.activityGroupId
-          ? schulhofState.activityGroupId
-          : undefined,
+        activity_group_id: schulhofState.activityGroupId || undefined,
         staff_ids: [currentStaffId],
       });
     } catch (err) {

@@ -196,6 +196,9 @@ export function HolidayRegistrationContribution({
         // The quote before sending never has one; only the Träger-Büro
         // chooses a cost bearer at the confirmation (#5627).
         return line.costBearerName ?? "";
+      case undefined:
+        // A line this build does not know: its amount still counts.
+        return "–";
     }
   };
   const childName = (position: number) => {
