@@ -67,6 +67,9 @@ export function contributionLineLabel(line: ContributionLine): string {
       return `Befreiung bei Leistungsbezug: ${line.note}`;
     case "cost_takeover":
       return `Kosten übernimmt: ${line.costBearerName ?? ""}`;
+    case undefined:
+      // A line this build does not know: its amount still counts.
+      return "–";
   }
 }
 
