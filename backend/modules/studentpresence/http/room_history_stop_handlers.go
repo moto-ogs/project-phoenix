@@ -19,10 +19,10 @@ var errRoomHistoryStopsUnavailable = errors.New("room history stop capability is
 // capture of a child are stopped (#3844). DeletedVisits counts the completed
 // visits a new stop deleted; it is zero on every other answer.
 type RoomHistoryStopResponse struct {
-	StudentID     int64      `json:"student_id"`
+	StudentID     common.ID  `json:"student_id"`
 	Stopped       bool       `json:"stopped"`
 	StoppedAt     *time.Time `json:"stopped_at,omitempty"`
-	DeletedVisits int64      `json:"deleted_visits"`
+	DeletedVisits int        `json:"deleted_visits"`
 }
 
 // getRoomHistoryStop answers whether the child's room history is stopped.
@@ -36,7 +36,7 @@ func (rs *Resource) getRoomHistoryStop(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	response := RoomHistoryStopResponse{StudentID: student}
+	response := RoomHistoryStopResponse{StudentID: common.ID(student)}
 	if since, found := stops[student]; found {
 		response.Stopped, response.StoppedAt = true, &since
 	}
@@ -57,7 +57,7 @@ func (rs *Resource) stopRoomHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	stoppedAt := result.StoppedAt
 	common.Respond(w, r, http.StatusOK, RoomHistoryStopResponse{
-		StudentID: student, Stopped: true, StoppedAt: &stoppedAt, DeletedVisits: result.DeletedVisits,
+		StudentID: common.ID(student), Stopped: true, StoppedAt: &stoppedAt, DeletedVisits: int(result.DeletedVisits),
 	}, "Room history stopped successfully")
 }
 
@@ -71,7 +71,7 @@ func (rs *Resource) resumeRoomHistory(w http.ResponseWriter, r *http.Request) {
 		renderRoomHistoryStopError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, RoomHistoryStopResponse{StudentID: student}, "Room history resumed successfully")
+	common.Respond(w, r, http.StatusOK, RoomHistoryStopResponse{StudentID: common.ID(student)}, "Room history resumed successfully")
 }
 
 // roomHistoryStopTarget resolves the child and checks the caller's access to

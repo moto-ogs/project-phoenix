@@ -614,6 +614,10 @@ function StudentDetailPageContent() {
   const canViewEnrollments =
     sessionStatus === "authenticated" &&
     hasPermission(session, "config:manage");
+  // Den Stopp von Raumverlauf und Stimmung setzt die OGS-Verwaltung (#3844).
+  const canManageRoomHistoryStop =
+    sessionStatus === "authenticated" &&
+    hasPermission(session, "config:manage");
   const canViewCarePlan =
     sessionStatus === "authenticated" &&
     hasPermission(session, "schedules:read");
@@ -1873,6 +1877,7 @@ function StudentDetailPageContent() {
           activeTab={activeTab}
           tabs={visibleTabs}
           canViewEnrollments={canViewEnrollments}
+          canManageRoomHistoryStop={canManageRoomHistoryStop}
           canViewCarePlan={canViewCarePlan}
           canRecordAccidents={canRecordAccidents}
           showParentRecords={showParentRecords}
@@ -2167,6 +2172,7 @@ interface FullAccessViewProps {
   activeTab: StudentTabId;
   tabs: StudentTabId[];
   canViewEnrollments: boolean;
+  canManageRoomHistoryStop: boolean;
   canViewCarePlan: boolean;
   /** student_accidents:manage: „Unfall erfassen“ (#4771). */
   canRecordAccidents: boolean;
@@ -2199,6 +2205,7 @@ function FullAccessView({
   activeTab,
   tabs,
   canViewEnrollments,
+  canManageRoomHistoryStop,
   canViewCarePlan,
   canRecordAccidents,
   showParentRecords,
@@ -2457,6 +2464,7 @@ function FullAccessView({
           attendanceLogEnabled={attendanceLogEnabled}
           feedbackEnabled={feedbackEnabled}
           canViewChangeHistory={hasWriteAccess}
+          canManageRoomHistoryStop={canManageRoomHistoryStop}
           onNavigate={(path) => historyRouter.push(path)}
         />
       </StudentTabPanel>

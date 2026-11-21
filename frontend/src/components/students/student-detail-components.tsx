@@ -27,10 +27,22 @@ import {
   type AttendanceActor,
 } from "~/lib/attendance-actor";
 import {
+  fetchRoomHistoryStop,
   fetchStudentChangeHistory,
+  resumeRoomHistory,
+  stopRoomHistory,
+  type RoomHistoryStop,
   type StudentEnrollmentExtraFieldGroup,
   type StudentFieldChange,
 } from "~/lib/student-api";
+import { Alert } from "~/components/ui/alert";
+import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
+import { formatDate } from "~/lib/date-helpers";
 import {
   allowedDepartureModesFromDeparture,
   departureDaysFromLegacy,
@@ -1137,14 +1149,94 @@ interface StudentHistorySectionProps {
   feedbackEnabled: boolean;
   readOnly?: boolean;
   canViewChangeHistory?: boolean;
+  /** The OGS administration (config:manage) sets and lifts the stop of the
+   *  child's room history and mood (#3844). */
+  canManageRoomHistoryStop?: boolean;
   onNavigate: (path: string) => void;
+}
+
+/** Objekt der Fehlertexte aus dem Katalog (#2513). */
+const ROOM_HISTORY_STOP_OBJECT = "der Stopp von Raumverlauf und Stimmung";
+
+/**
+ * The stop of a child's room history and mood (#3844): read for every
+ * reader with full access, set and lifted by the OGS administration. Setting
+ * it deletes the child's room history, so it asks first; lifting it records
+ * from now on and asks nothing.
+ */
+function useRoomHistoryStop(studentId: string, enabled: boolean) {
+  const read = useSWRAuth(
+    enabled ? tenantStudentKeys.roomHistoryStop(studentId) : null,
+    () => fetchRoomHistoryStop(studentId),
+    { keepPreviousData: false },
+  );
+  const loadError = useSwrLoadError(read.error, ROOM_HISTORY_STOP_OBJECT, () =>
+    read.mutate(),
+  );
+  const toast = useToast();
+  const confirmErrors = useApiFormError();
+  const { show: showError } = useApiErrorDisplay();
+  const [confirming, setConfirming] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const apply = (next: RoomHistoryStop) =>
+    void read.mutate(next, { revalidate: false });
+  const stop = async () => {
+    setSaving(true);
+    confirmErrors.clear();
+    try {
+      const result = await stopRoomHistory(studentId);
+      apply(result);
+      setConfirming(false);
+      toast.success(
+        result.deletedVisits === 1
+          ? "Gestoppt. 1 Raumbesuch ist gelöscht."
+          : `Gestoppt. ${result.deletedVisits} Raumbesuche sind gelöscht.`,
+      );
+    } catch (err) {
+      await confirmErrors.show(err, {
+        object: ROOM_HISTORY_STOP_OBJECT,
+        retry: () => void stop(),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+  const resume = async () => {
+    setSaving(true);
+    try {
+      apply(await resumeRoomHistory(studentId));
+      toast.success("moto speichert Räume und Stimmung ab jetzt wieder.");
+    } catch (err) {
+      await showError(err, { object: ROOM_HISTORY_STOP_OBJECT });
+    } finally {
+      setSaving(false);
+    }
+  };
+  return {
+    stopped: read.data?.stopped ?? false,
+    stoppedAt: read.data?.stoppedAt ?? null,
+    loaded: read.data !== undefined,
+    loadError,
+    confirming,
+    openConfirm: () => {
+      confirmErrors.clear();
+      setConfirming(true);
+    },
+    closeConfirm: () => setConfirming(false),
+    confirmError: confirmErrors.error,
+    saving,
+    stop,
+    resume,
+  };
 }
 
 /**
  * History section on the student detail page. The Anwesenheitsprotokoll button
  * is gated by the tenant's `gdpr.attendance_log_enabled` setting. The
  * Feedbackhistorie button is gated by the tenant's `feedback.enabled` setting.
- * Mensa history remains a disabled placeholder (future feature).
+ * Mensa history remains a disabled placeholder (future feature). A child
+ * whose room history and mood are stopped (#3844) shows it here, where the
+ * OGS administration also sets and lifts the stop.
  */
 export function StudentHistorySection({
   studentId,
@@ -1152,14 +1244,57 @@ export function StudentHistorySection({
   feedbackEnabled,
   readOnly = false,
   canViewChangeHistory = true,
+  canManageRoomHistoryStop = false,
   onNavigate,
 }: Readonly<StudentHistorySectionProps>) {
   const attendanceDisabled = readOnly || !attendanceLogEnabled;
   const feedbackDisabled = readOnly || !feedbackEnabled;
   const changeHistoryDisabled = readOnly || !canViewChangeHistory;
+  const stop = useRoomHistoryStop(studentId, !readOnly);
+
+  const stopAction =
+    canManageRoomHistoryStop && !readOnly && stop.loaded ? (
+      stop.stopped ? (
+        <Button
+          type="button"
+          variant="outline"
+          isLoading={stop.saving}
+          loadingText="Wird aufgehoben …"
+          tooltip="moto speichert Räume und Stimmung ab jetzt wieder."
+          onClick={() => void stop.resume()}
+        >
+          Stopp aufheben
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="outline_danger"
+          tooltip="Stoppt Raumverlauf und Stimmung für dieses Kind. moto fragt vorher nach."
+          onClick={stop.openConfirm}
+        >
+          Stopp setzen
+        </Button>
+      )
+    ) : undefined;
 
   return (
-    <SectionCard title="Historien" concept={changeHistoryConcept}>
+    <SectionCard
+      title="Historien"
+      concept={changeHistoryConcept}
+      action={stopAction}
+    >
+      {stop.loadError ? <LoadErrorAlert error={stop.loadError} /> : null}
+      {stop.stopped ? (
+        <div className="mb-4">
+          <Alert
+            type="info"
+            announce="off"
+            message={`Raumverlauf und Stimmung sind für dieses Kind gestoppt${
+              stop.stoppedAt ? ` (seit ${formatDate(stop.stoppedAt)})` : ""
+            }. Der aktuelle Raum bleibt sichtbar.`}
+          />
+        </div>
+      ) : null}
       <FramedList>
         <HistoryButton
           concept={roomsConcept}
@@ -1167,9 +1302,11 @@ export function StudentHistorySection({
           description={
             readOnly
               ? "Nur für Gruppenbetreuer"
-              : attendanceLogEnabled
-                ? "Anwesenheit je Betreuungsangebot und besuchte Räume"
-                : "Für deine Schule deaktiviert"
+              : !attendanceLogEnabled
+                ? "Für deine Schule deaktiviert"
+                : stop.stopped
+                  ? "Anwesenheit je Betreuungsangebot, ohne Räume"
+                  : "Anwesenheit je Betreuungsangebot und besuchte Räume"
           }
           disabled={attendanceDisabled}
           onClick={
@@ -1184,9 +1321,11 @@ export function StudentHistorySection({
           description={
             readOnly
               ? "Nur für Gruppenbetreuer"
-              : feedbackEnabled
-                ? "Feedback und Bewertungen"
-                : "Für deine Schule deaktiviert"
+              : !feedbackEnabled
+                ? "Für deine Schule deaktiviert"
+                : stop.stopped
+                  ? "Neue Stimmung wird nicht gespeichert"
+                  : "Feedback und Bewertungen"
           }
           disabled={feedbackDisabled}
           onClick={
@@ -1217,6 +1356,37 @@ export function StudentHistorySection({
           }
         />
       </FramedList>
+      {stop.confirming ? (
+        // Der bisherige Raumverlauf ist danach unwiderruflich weg:
+        // Texteingabe-Stufe (BAUARTEN-SPEC Bauart 2 Regel 6).
+        <ConfirmDeleteModal
+          isOpen
+          title="Raumverlauf und Stimmung stoppen?"
+          description={
+            <div className="space-y-2">
+              <p>
+                moto löscht den bisherigen Raumverlauf dieses Kindes sofort.
+              </p>
+              <p>Danach speichert moto keine Räume und keine Stimmung mehr.</p>
+              <p>Der aktuelle Raum bleibt für die Betreuung sichtbar.</p>
+            </div>
+          }
+          gate={{
+            mode: "textConfirm",
+            expected: "LÖSCHEN",
+            inputId: "room-history-stop-confirm",
+            label: "Zur Bestätigung LÖSCHEN eingeben:",
+            placeholder: "LÖSCHEN",
+          }}
+          confirmLabel="Stoppen und löschen"
+          confirmTooltip="Löscht den Raumverlauf sofort und stoppt die Erfassung."
+          loadingLabel="Wird gestoppt …"
+          onConfirm={stop.stop}
+          onClose={stop.closeConfirm}
+          loading={stop.saving}
+          error={stop.confirmError}
+        />
+      ) : null}
     </SectionCard>
   );
 }

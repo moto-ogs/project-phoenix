@@ -12,6 +12,7 @@ DELETE /api/students/{id}/pickup-exceptions/{exceptionId}
 DELETE /api/students/{id}/pickup-notes/{noteId}
 DELETE /api/students/{id}/purge
 DELETE /api/students/{id}/rfid
+DELETE /api/students/{id}/room-history-stop
 DELETE /api/students/{id}/status-days/{statusDayId}
 GET /api/students/
 GET /api/students/arrival-settings
@@ -58,6 +59,7 @@ GET /api/students/{id}/partial-absences
 GET /api/students/{id}/photo/{filename}
 GET /api/students/{id}/pickup-schedules
 GET /api/students/{id}/privacy-consent
+GET /api/students/{id}/room-history-stop
 GET /api/students/{id}/status-days
 POST /api/students/
 POST /api/students/arrival-schedules/bulk
@@ -119,3 +121,4 @@ PUT /api/students/{id}/pickup-notes
 PUT /api/students/{id}/pickup-notes/{noteId}
 PUT /api/students/{id}/pickup-schedules
 PUT /api/students/{id}/privacy-consent
+PUT /api/students/{id}/room-history-stop
