@@ -11,6 +11,10 @@ import {
   knownMailOutcome,
 } from "~/lib/email-delivery-status";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import {
+  type CareContractStatus,
+  knownContractStatus,
+} from "./care-contract-status";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type { OfferingTemplate as WireOfferingTemplate } from "./contract/traeger-contract-templates.generated";
@@ -33,23 +37,10 @@ import { traegerRequest } from "./traeger-api";
 const CONTRACTS_PATH = "/api/traeger/contracts";
 const TEMPLATES_PATH = "/api/traeger/contract-templates";
 
-/**
- * Every state of ADR 0088. The office reaches draft and sent; the conclusion
- * at the acceptance (#4680) or the signature (#4679) reaches active; a
- * termination or a withdrawal (#4682) ends an active contract.
- */
-export type CareContractStatus = (typeof STATUS_VALUES)[number];
+export type { CareContractStatus } from "./care-contract-status";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
-const STATUS_VALUES = [
-  "entwurf",
-  "versendet",
-  "aktiv",
-  "gekuendigt",
-  "widerrufen",
-  "beendet",
-] as const;
 const TERM_KIND_VALUES = ["open_ended", "school_year", "fixed_months"] as const;
 const NOTICE_TO_VALUES = ["month_end", "half_year", "school_year_end"] as const;
 const WEEKDAY_VALUES = [
@@ -123,11 +114,6 @@ const SEND_BLOCK_VALUES = [
   "provider",
   "provider_unknown",
 ] as const;
-
-/** The status a value names, undefined for one this build does not know. */
-function knownContractStatus(value: string): CareContractStatus | undefined {
-  return knownEnum(STATUS_VALUES, value);
-}
 
 export type ContractTermKind = (typeof TERM_KIND_VALUES)[number];
 export type ContractNoticeTo = (typeof NOTICE_TO_VALUES)[number];
