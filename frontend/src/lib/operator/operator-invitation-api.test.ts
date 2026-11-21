@@ -1,9 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { InvitationsListResponse as WireInvitationsListResponse } from "~/lib/contract/operator-invitations.generated";
 import { ApiError } from "~/lib/api-error";
-import type {
-  BackendInvitationsListResponse,
-  BackendInvitationValidation,
-} from "./operator-invitation-helpers";
+import type { InvitationValidationBody } from "./operator-invitation-helpers";
 
 // Hoist mocks
 const { mockOperatorFetch } = vi.hoisted(() => ({
@@ -51,24 +49,24 @@ describe("operator invitation api", () => {
 
   describe("listInvitations", () => {
     it("returns mapped invitations and operators", async () => {
-      const raw: BackendInvitationsListResponse = {
+      const raw: WireInvitationsListResponse = {
         invitations: [
           {
-            id: 1,
+            id: "1",
             email: "invited@example.com",
             display_name: "Test",
-            created_by: 2,
+            created_by: "2",
             creator_name: "Admin",
             expires_at: "2026-04-06T00:00:00Z",
             email_sent_at: "2026-04-04T00:00:00Z",
-            email_error: null,
+            email_error: undefined,
             email_retry_count: 0,
             created_at: "2026-04-04T00:00:00Z",
           },
         ],
         operators: [
           {
-            id: 2,
+            id: "2",
             email: "admin@example.com",
             display_name: "Admin",
             active: true,
@@ -87,6 +85,29 @@ describe("operator invitation api", () => {
       expect(result.invitations[0]!.email).toBe("invited@example.com");
       expect(result.operators).toHaveLength(1);
       expect(result.operators[0]!.id).toBe("2");
+    });
+
+    it("skips null entries the contract allows in both lists (#2353)", async () => {
+      const raw: WireInvitationsListResponse = {
+        invitations: [null],
+        operators: [
+          null,
+          {
+            id: "2",
+            email: "admin@example.com",
+            display_name: "Admin",
+            active: true,
+            created_at: "2026-01-01T00:00:00Z",
+            is_self: false,
+          },
+        ],
+      };
+      mockOperatorFetch.mockResolvedValue(raw);
+
+      const result = await listOperatorInvitations();
+
+      expect(result.invitations).toEqual([]);
+      expect(result.operators.map((operator) => operator.id)).toEqual(["2"]);
     });
 
     it("handles null invitations and operators arrays", async () => {
@@ -177,7 +198,7 @@ describe("validateOperatorInvitation", () => {
   });
 
   it("returns mapped validation data on success", async () => {
-    const backendData: BackendInvitationValidation = {
+    const backendData: InvitationValidationBody = {
       email: "invited@example.com",
       display_name: "Test User",
       expires_at: "2026-04-06T00:00:00Z",
@@ -251,7 +272,7 @@ describe("validateOperatorInvitation", () => {
   });
 
   it("handles unwrapped response (no envelope)", async () => {
-    const backendData: BackendInvitationValidation = {
+    const backendData: InvitationValidationBody = {
       email: "direct@example.com",
       display_name: null,
       expires_at: "2026-04-06T00:00:00Z",
