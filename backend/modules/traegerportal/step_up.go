@@ -70,7 +70,7 @@ func (rs *Resource) stepUpVerify(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.ExchangeRules, portalauth.LoginRules)
 		return
 	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: result.AccessToken, RefreshToken: result.RefreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: result.AccessToken, RefreshToken: result.RefreshToken})
 }
 
 // stepUpRequest names the Träger session of the request: account, Träger

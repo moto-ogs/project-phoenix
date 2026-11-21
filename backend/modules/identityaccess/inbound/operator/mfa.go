@@ -114,7 +114,7 @@ func (rs *MFAResource) Resend(w http.ResponseWriter, r *http.Request) {
 		mapOperatorMFAError(w, r, err)
 		return
 	}
-	render.JSON(w, r, MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, MFAResendResponse{ChallengeToken: renewed})
 }
 
 // ----- /auth/mfa/enroll/start -----

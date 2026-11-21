@@ -81,7 +81,7 @@ func (rs *Resource) confirmMFA(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
 }
 
 func (rs *Resource) disableMFA(w http.ResponseWriter, r *http.Request) {
