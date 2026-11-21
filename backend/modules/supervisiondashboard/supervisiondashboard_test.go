@@ -2,12 +2,12 @@ package supervisiondashboard
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -922,7 +922,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.ArrivalTimes = []ArrivalTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch"}}
 	projection.TeacherHints = []SupervisionTeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
 
-	got, err := json.Marshal(projection)
+	got, err := wire.Marshal(projection)
 	require.NoError(t, err)
 
 	want := `{"business_day":"2026-08-19","spontaneous_start_availability":{"available":true},` +
@@ -950,7 +950,7 @@ func TestProjectionWireShape(t *testing.T) {
 	assert.JSONEq(t, want, string(got))
 	assert.Equal(t, want, string(got), "key order is part of the golden contract")
 
-	empty, err := json.Marshal(emptyProjection())
+	empty, err := wire.Marshal(emptyProjection())
 	require.NoError(t, err)
 	assert.Equal(t, `{"business_day":"","spontaneous_start_availability":{"available":false},"groups":[],"unclaimed_groups":[],"educational_groups":[],"schulhof_status":null,`+
 		`"open_rooms":[],"capabilities":{"web_spontaneous_activities_enabled":false},"active_sessions":[],"planned_now":[],"visits":[],"tracking_indicators":{"labels":[],"results":{}},"pickup_times":[],"arrival_times":[],"teacher_hints":[]}`, string(empty))

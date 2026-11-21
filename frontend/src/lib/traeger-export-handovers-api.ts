@@ -294,10 +294,7 @@ export async function assignExportFormats(
       body: {
         assignments: assignments.map((assignment) => ({
           format: assignment.format,
-          recipient_id:
-            assignment.recipientId === null
-              ? null
-              : Number(assignment.recipientId),
+          recipient_id: assignment.recipientId,
         })),
       } satisfies FormatsRequest,
     }),

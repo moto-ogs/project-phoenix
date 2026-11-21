@@ -95,7 +95,7 @@ func TestTraegerComparisonComparesTheChosenSchools(t *testing.T) {
 	require.Equal(t, http.StatusOK, one.Code, one.Body.String())
 	chosen := decodeSchoolPortalData[traegerview.SchoolComparison](t, one.Body.Bytes())
 	require.Len(t, chosen.Schools, 1)
-	assert.Equal(t, linden, chosen.Schools[0].ID)
+	assert.Equal(t, ident.ID(linden), chosen.Schools[0].ID)
 	assert.InDelta(t, 1, chosen.Average[traegerview.ComparisonBooked], 1e-9, "the average of the chosen schools only")
 
 	export := traegerOccupancyRequest(t, router, "/traeger/schools/comparison/export?"+window+"&metrics=places_rate,booked,active_students", answer.AccessToken, nil)

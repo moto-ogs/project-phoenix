@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
@@ -118,8 +117,8 @@ func (rs *Resource) requireManage(next http.Handler) http.Handler {
 // InfoDisplayResponse is the wire shape of one screen. It is spelled out here
 // so the owner's value can change without moving the public contract.
 type InfoDisplayResponse struct {
-	ID        common.ID `json:"id"`
-	TenantID  common.ID `json:"tenant_id"`
+	ID        ident.ID  `json:"id"`
+	TenantID  ident.ID  `json:"tenant_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Name      string    `json:"name"`

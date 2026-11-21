@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	feedbackModule "github.com/moto-ogs/project-phoenix/modules/feedback"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -61,11 +60,11 @@ func (rs *Resource) Router() chi.Router {
 }
 
 type FeedbackResponse struct {
-	ID              common.ID                `json:"id"`
+	ID              ident.ID                 `json:"id"`
 	Value           string                   `json:"value"`
 	Day             string                   `json:"day"`
 	Time            string                   `json:"time"`
-	StudentID       common.ID                `json:"student_id"`
+	StudentID       ident.ID                 `json:"student_id"`
 	IsMensaFeedback bool                     `json:"is_mensa_feedback"`
 	CreatedAt       time.Time                `json:"created_at"`
 	UpdatedAt       time.Time                `json:"updated_at"`
@@ -73,9 +72,9 @@ type FeedbackResponse struct {
 }
 
 type FeedbackStudentResponse struct {
-	ID        common.ID `json:"id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 type FeedbackRequest struct {

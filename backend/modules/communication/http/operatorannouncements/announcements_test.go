@@ -417,8 +417,8 @@ func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 	assert.Equal(t, []int64{3}, testpkg.JSONIDs(t, data["target_org_ids"]))
 	tenantIDs := data["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
-	assert.Equal(t, int64(7), testpkg.JSONID(t, tenantIDs[0]))
-	assert.Equal(t, int64(8), testpkg.JSONID(t, tenantIDs[1]))
+	assert.Equal(t, "7", tenantIDs[0])
+	assert.Equal(t, "8", tenantIDs[1])
 }
 
 // --- List includes org/tenant IDs ---
@@ -453,7 +453,7 @@ func TestListAnnouncements_IncludesOrgAndTenantIDs(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	item := response["data"].([]any)[0].(map[string]any)
 	orgIDs := item["target_org_ids"].([]any)
-	assert.Equal(t, int64(1), testpkg.JSONID(t, orgIDs[0]))
+	assert.Equal(t, "1", orgIDs[0])
 	tenantIDs := item["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
 }

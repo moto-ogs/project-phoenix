@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
@@ -43,7 +42,7 @@ type FeedService interface {
 }
 
 type feedEntryResponse struct {
-	ID        common.ID  `json:"id"`
+	ID        ident.ID   `json:"id"`
 	Type      string     `json:"type"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`

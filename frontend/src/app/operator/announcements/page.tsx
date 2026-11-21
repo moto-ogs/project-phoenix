@@ -333,12 +333,10 @@ export default function OperatorAnnouncementsPage() {
         // mean "visible to all" in the backend). The backend enforces the
         // soft-delete invariant server-side by rejecting NEW additions via
         // CountByIDs; historical targets pass through via a diff on update.
-        const targetOrgIdsNum = formData.targetOrgIds
-          .map((id) => parseInt(id, 10))
-          .filter((id) => !isNaN(id));
-        const targetTenantIdsNum = formData.targetTenantIds
-          .map((id) => parseInt(id, 10))
-          .filter((id) => !isNaN(id));
+        const idList = (ids: string[]) =>
+          ids.map((id) => id.trim()).filter((id) => /^\d+$/.test(id));
+        const targetOrgIdList = idList(formData.targetOrgIds);
+        const targetTenantIdList = idList(formData.targetTenantIds);
 
         if (editTarget) {
           const updateData: UpdateAnnouncementRequest = {
@@ -349,8 +347,8 @@ export default function OperatorAnnouncementsPage() {
             version: formData.version || null,
             expires_at: formData.expiresAt || null,
             target_roles: formData.targetRoles,
-            target_org_ids: targetOrgIdsNum,
-            target_tenant_ids: targetTenantIdsNum,
+            target_org_ids: targetOrgIdList,
+            target_tenant_ids: targetTenantIdList,
           };
           await operatorAnnouncementsService.update(editTarget.id, updateData);
         } else {
@@ -360,8 +358,8 @@ export default function OperatorAnnouncementsPage() {
             type: formData.type,
             severity: formData.severity,
             target_roles: formData.targetRoles,
-            target_org_ids: targetOrgIdsNum,
-            target_tenant_ids: targetTenantIdsNum,
+            target_org_ids: targetOrgIdList,
+            target_tenant_ids: targetTenantIdList,
             ...(formData.version && { version: formData.version }),
             ...(formData.expiresAt && { expires_at: formData.expiresAt }),
           };

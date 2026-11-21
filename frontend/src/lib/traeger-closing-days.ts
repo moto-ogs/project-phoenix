@@ -168,7 +168,7 @@ function backendInput(input: TraegerClosingDayInput): TraegerClosingDayRequest {
     start_date: input.startDate,
     end_date: input.endDate,
     reason: input.reason.trim(),
-    school_ids: input.schoolIds.map(Number),
+    school_ids: [...input.schoolIds],
     holiday_bookings_token: input.holidayBookingsToken ?? "",
   };
 }

@@ -53,7 +53,7 @@ func TestPresenceGroups20CallerQueryBudget(t *testing.T) {
 			group := testpkg.CreateTestEducationGroup(t, db, fmt.Sprintf("Caller20Group%02d", i))
 			testpkg.CreateTestGroupTeacher(t, db, group.ID, teacher.ID)
 			groupIDs = append(groupIDs, group.ID)
-			expected["groups"][group.ID] = map[string]any{"id": group.ID, "tenant_id": group.TenantID, "created_at": group.CreatedAt, "updated_at": group.UpdatedAt, "name": group.Name, "via_substitution": false}
+			expected["groups"][group.ID] = map[string]any{"id": ident.ID(group.ID), "tenant_id": ident.ID(group.TenantID), "created_at": group.CreatedAt, "updated_at": group.UpdatedAt, "name": group.Name, "via_substitution": false}
 			activity := testpkg.CreateTestActivityGroup(t, db, fmt.Sprintf("Caller20Activity%02d", i))
 			var category testpkg.ActivityCategory
 			require.NoError(t, db.NewSelect().Model(&category).Where("id = ?", activity.CategoryID).Scan(testpkg.Ctx(t)))
