@@ -196,42 +196,63 @@ func eventBlockDaySlot(event timetable.DeviationEvent) (blockDaySlot, bool) {
 // protocol to the current rows. Instance IDs retain compatibility for
 // one-off blocks; template-backed rows use their stable occurrence slot.
 func reinstatedInstances(instances []*scheduleModels.ActivityInstance, events []timetable.DeviationEvent) map[int64]bool {
-	byInstance := make(map[int64]bool)
-	bySlot := make(map[blockDaySlot]bool)
-	for _, event := range events {
-		var reinstated bool
-		switch event.EventType {
-		case DeviationEventCancellation:
-			reinstated = false
-		case DeviationEventReinstatement:
-			reinstated = true
-		default:
-			continue
-		}
-		if event.InstanceID != nil {
-			byInstance[*event.InstanceID] = reinstated
-		}
-		if slot, ok := eventBlockDaySlot(event); ok {
-			bySlot[slot] = reinstated
-		}
-	}
-
+	states := latestReinstatementStates(events)
 	result := make(map[int64]bool)
 	for _, instance := range instances {
-		if instance == nil {
-			continue
-		}
-		if slot, ok := instanceBlockDaySlot(instance); ok {
-			if reinstated, found := bySlot[slot]; found {
-				result[instance.ID] = reinstated
-				continue
-			}
-		}
-		if reinstated, found := byInstance[instance.ID]; found {
+		if reinstated, found := states.forInstance(instance); found {
 			result[instance.ID] = reinstated
 		}
 	}
 	return result
+}
+
+type reinstatementStates struct {
+	byInstance map[int64]bool
+	bySlot     map[blockDaySlot]bool
+}
+
+func latestReinstatementStates(events []timetable.DeviationEvent) reinstatementStates {
+	states := reinstatementStates{
+		byInstance: make(map[int64]bool),
+		bySlot:     make(map[blockDaySlot]bool),
+	}
+	for _, event := range events {
+		reinstated, relevant := reinstatementState(event.EventType)
+		if !relevant {
+			continue
+		}
+		if event.InstanceID != nil {
+			states.byInstance[*event.InstanceID] = reinstated
+		}
+		if slot, ok := eventBlockDaySlot(event); ok {
+			states.bySlot[slot] = reinstated
+		}
+	}
+	return states
+}
+
+func reinstatementState(eventType string) (bool, bool) {
+	switch eventType {
+	case DeviationEventCancellation:
+		return false, true
+	case DeviationEventReinstatement:
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+func (states reinstatementStates) forInstance(instance *scheduleModels.ActivityInstance) (bool, bool) {
+	if instance == nil {
+		return false, false
+	}
+	if slot, ok := instanceBlockDaySlot(instance); ok {
+		if reinstated, found := states.bySlot[slot]; found {
+			return reinstated, true
+		}
+	}
+	reinstated, found := states.byInstance[instance.ID]
+	return reinstated, found
 }
 
 // regularRooms maps each series block to the room its series plans. A block
