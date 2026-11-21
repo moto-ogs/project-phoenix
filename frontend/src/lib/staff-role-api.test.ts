@@ -12,7 +12,7 @@ describe("fetchGroupLeaderCandidates", () => {
     sessionFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
-        data: [{ id: 7, teacher_id: 9, full_name: "Toni Test" }],
+        data: [{ id: "7", teacher_id: "9", full_name: "Toni Test" }],
       }),
     });
 
@@ -24,14 +24,14 @@ describe("fetchGroupLeaderCandidates", () => {
     });
   });
 
-  it("rejects malformed responses", async () => {
+  // The contract allows null: Go writes an empty result of several roles as
+  // null. A malformed answer never arrives; the catalog proxy refuses it (502).
+  it("reads a null list as no candidates", async () => {
     sessionFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ data: null }),
     });
 
-    await expect(fetchGroupLeaderCandidates()).rejects.toThrow(
-      "Ungültige Antwort",
-    );
+    await expect(fetchGroupLeaderCandidates()).resolves.toEqual([]);
   });
 });

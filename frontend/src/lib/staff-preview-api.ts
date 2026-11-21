@@ -12,6 +12,7 @@ import { signOut } from "next-auth/react";
 
 import { apiErrorFromResponse } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import type { StaffPreviewCandidate as StaffPreviewCandidateWire } from "~/lib/contract/auth-staff-preview.generated";
 import { sessionFetch, clearSessionCache } from "~/lib/session-cache";
 
 const logger = createLogger({ component: "StaffPreviewApi" });
@@ -20,16 +21,6 @@ export interface StaffPreviewCandidate {
   accountId: string;
   firstName: string;
   lastName: string;
-  email: string;
-  roles: string[];
-}
-
-interface BackendStaffPreviewCandidate {
-  // int64 on the backend, serialized as a string so no ID passes through a
-  // JavaScript number.
-  account_id: string;
-  first_name: string;
-  last_name: string;
   email: string;
   roles: string[];
 }
@@ -101,14 +92,14 @@ export async function fetchStaffPreviewCandidates(): Promise<
   }
   // createGetHandler wraps GET responses in { status, data }.
   const envelope = (await response.json()) as {
-    data?: BackendStaffPreviewCandidate[] | null;
+    data?: StaffPreviewCandidateWire[] | null;
   };
   return (envelope.data ?? []).map((candidate) => ({
     accountId: candidate.account_id,
     firstName: candidate.first_name,
     lastName: candidate.last_name,
     email: candidate.email,
-    roles: candidate.roles,
+    roles: candidate.roles ?? [],
   }));
 }
 

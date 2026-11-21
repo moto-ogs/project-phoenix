@@ -1,4 +1,5 @@
 import { apiErrorFromResponse } from "./api-error";
+import type { StaffTargetOverride as StaffTargetOverrideWire } from "./contract/staff.generated";
 import { sessionFetch } from "./session-cache";
 
 // Sonderarbeitszeit (#3259): for every Monday to Friday in [startDate,
@@ -26,27 +27,17 @@ type StaffTargetOverrideInput = {
   | { weekdayMinutes: readonly number[]; dailyMinutes?: never }
 );
 
-interface BackendStaffTargetOverride {
-  id: number | string;
-  staff_id: number | string;
-  start_date: string;
-  end_date: string;
-  daily_minutes: number | null;
-  weekday_minutes?: number[] | null;
-  kept_by_traeger?: boolean;
-}
-
 function mapStaffTargetOverride(
-  row: BackendStaffTargetOverride,
+  row: StaffTargetOverrideWire,
 ): StaffTargetOverride {
   return {
-    id: String(row.id),
-    staffId: String(row.staff_id),
+    id: row.id,
+    staffId: row.staff_id,
     startDate: row.start_date.slice(0, 10),
     endDate: row.end_date.slice(0, 10),
     dailyMinutes: row.daily_minutes,
-    weekdayMinutes: row.weekday_minutes ?? null,
-    keptByTraeger: row.kept_by_traeger === true,
+    weekdayMinutes: row.weekday_minutes,
+    keptByTraeger: row.kept_by_traeger,
   };
 }
 
@@ -74,7 +65,7 @@ class StaffTargetOverrideService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendStaffTargetOverride[] | null;
+      data: StaffTargetOverrideWire[] | null;
     };
     return (json.data ?? []).map(mapStaffTargetOverride);
   }
@@ -93,7 +84,7 @@ class StaffTargetOverrideService {
     );
     if (!response.ok) throw await apiErrorFromResponse(response, FAILED);
     const json = (await response.json()) as {
-      data: BackendStaffTargetOverride;
+      data: StaffTargetOverrideWire;
     };
     return mapStaffTargetOverride(json.data);
   }
