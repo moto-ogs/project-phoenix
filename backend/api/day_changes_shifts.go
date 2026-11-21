@@ -90,7 +90,8 @@ func (b *staffEntryBuilder) shift(shift workforce.StaffShift, window dayShifts) 
 // changeKind decides whether a shift changes the day and whether its time
 // belongs to the entry:
 //   - cancelled today; not when an absence cancelled it, the absence is the
-//     entry then (the cascade stamps the absence on the shift);
+//     entry then (the cascade stamps the absence on the shift; older rows
+//     carry its neutral reason instead);
 //   - a series occurrence of today moved to another day: cancelled today,
 //     without a time;
 //   - a replacement covering a cancelled shift;
@@ -109,7 +110,9 @@ func (w dayShifts) changeKind(shift workforce.StaffShift) (daychangesview.Kind, 
 	}
 	switch {
 	case shift.Cancelled:
-		return daychangesview.KindShiftCancelled, true, shift.SickAbsenceID == nil
+		absenceCancelled := shift.SickAbsenceID != nil ||
+			(shift.ChangeReason != nil && workforce.IsAbsenceShiftChangeReason(*shift.ChangeReason))
+		return daychangesview.KindShiftCancelled, true, !absenceCancelled
 	case shift.OriginShiftID != nil:
 		return daychangesview.KindShiftReplacement, true, true
 	case shift.SeriesID == nil:

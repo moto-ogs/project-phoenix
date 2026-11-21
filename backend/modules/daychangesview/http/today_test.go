@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -373,6 +374,32 @@ func TestDayChangesShiftSourceComparesDetachedShiftToTheSeries(t *testing.T) {
 
 	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
 	assert.Empty(t, overview.Entries, "a detach without a time change is not a day change")
+}
+
+func TestDayChangesShiftSourceDoesNotDuplicateLegacyAbsenceCancellations(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	for _, legacy := range []struct {
+		firstName string
+		reason    string
+	}{
+		{firstName: "Lena", reason: workforce.SickShiftChangeReason},
+		{firstName: "Mia", reason: workforce.AbsenceShiftChangeReason},
+	} {
+		staff := testpkg.CreateTestStaff(t, db, legacy.firstName, "Altbestand")
+		testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, staff.ID, day, day, "Grippe "+legacy.firstName)
+		testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day, testpkg.StaffShiftChange{
+			Cancelled: true, ChangeReason: &legacy.reason,
+		})
+	}
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+
+	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
+	assert.Equal(t, []string{
+		"school staff_absent Lena Altbestand/absent ->staff_absences",
+		"school staff_absent Mia Altbestand/absent ->staff_absences",
+	}, summary(overview.Entries))
 }
 
 // assertNoShiftReason proves no reason of an absence or a cancellation
