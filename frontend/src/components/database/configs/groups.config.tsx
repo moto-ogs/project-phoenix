@@ -1,7 +1,7 @@
 // Group Entity Configuration
 
 import { defineEntityConfig } from "@/lib/database/types";
-import type { Group, BackendGroup } from "@/lib/group-helpers";
+import type { Group, GroupWire } from "@/lib/group-helpers";
 import { mapGroupResponse } from "@/lib/group-helpers";
 import { apiErrorFromResponse, unavailableApiError } from "~/lib/api-error";
 import { groupsConcept } from "~/lib/concepts/groups";
@@ -248,7 +248,7 @@ export const groupsConfig = defineEntityConfig<Group>({
         actualData = (data as { status: string; data: unknown }).data;
       }
 
-      return mapGroupResponse(actualData as BackendGroup);
+      return mapGroupResponse(actualData as GroupWire);
     },
 
     mapRequest: (data: Partial<Group>) => {
