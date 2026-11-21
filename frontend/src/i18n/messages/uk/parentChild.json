@@ -64,14 +64,14 @@
       "granted": "Надано",
       "withdrawn": "Відкликано",
       "not_recorded": "Не надано",
-      "recording": "Зберігається",
+      "recording": "Не зупинено",
       "stopped": "Зупинено"
     },
     "dates": {
       "granted": "Надано {date}",
       "withdrawn": "Відкликано {date}",
       "not_recorded": "Не надано",
-      "recording": "Зберігається",
+      "recording": "Не зупинено",
       "stopped": "Зупинено {date}"
     },
     "withdrawButton": "Відкликати згоду на фото",
@@ -105,12 +105,12 @@
     "roomHistoryStopSuccess": "Історію приміщень і настрій зупинено. Попередню історію приміщень видалено.",
     "roomHistoryResumeAria": "Знову зберігати історію приміщень і настрій",
     "roomHistoryResumeShort": "Знову зберігати",
-    "roomHistoryResumeTooltip": "Відтепер moto знову зберігає приміщення та настрій. moto спершу запитає.",
+    "roomHistoryResumeTooltip": "Ви скасовуєте зупинку для своєї дитини. moto спершу запитає.",
     "roomHistoryResumeTitle": "Знову зберігати історію приміщень і настрій?",
-    "roomHistoryResumeBody": "Відтепер moto знову зберігає, у яких приміщеннях ваша дитина і як вона почувається. Видалені дані не повернуться.",
+    "roomHistoryResumeBody": "Ви скасовуєте зупинку для своєї дитини. Ваша школа вирішує, чи зберігати історію приміщень і настрій. Видалені дані не повернуться.",
     "roomHistoryResumeButton": "Знову зберігати",
-    "roomHistoryResuming": "Зберігається",
-    "roomHistoryResumeSuccess": "Відтепер moto знову зберігає історію приміщень і настрій.",
+    "roomHistoryResuming": "Зупинка скасовується",
+    "roomHistoryResumeSuccess": "Зупинку для вашої дитини скасовано.",
     "errorObjectRoomHistory": "історія приміщень і настрій"
   },
   "errorObject": "список ваших дітей",

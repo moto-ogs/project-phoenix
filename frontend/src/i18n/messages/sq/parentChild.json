@@ -64,14 +64,14 @@
       "granted": "Ruajtur",
       "withdrawn": "Tërhequr",
       "not_recorded": "Nuk është ruajtur",
-      "recording": "Po ruhet",
+      "recording": "Nuk është ndaluar",
       "stopped": "Ndalur"
     },
     "dates": {
       "granted": "Ruajtur më {date}",
       "withdrawn": "Tërhequr më {date}",
       "not_recorded": "Nuk është ruajtur",
-      "recording": "Po ruhet",
+      "recording": "Nuk është ndaluar",
       "stopped": "Ndalur më {date}"
     },
     "withdrawButton": "Tërhiq pëlqimin për fotografinë",
@@ -105,12 +105,12 @@
     "roomHistoryStopSuccess": "Historiku i dhomave dhe disponimi janë ndalur. Historiku i deritanishëm i dhomave është fshirë.",
     "roomHistoryResumeAria": "Ruaj përsëri historikun e dhomave dhe disponimin",
     "roomHistoryResumeShort": "Ruaj përsëri",
-    "roomHistoryResumeTooltip": "Nga tani moto ruan përsëri dhomat dhe disponimin. moto pyet më parë.",
+    "roomHistoryResumeTooltip": "Ju hiqni ndalimin për fëmijën tuaj. moto pyet më parë.",
     "roomHistoryResumeTitle": "Të ruhet përsëri historiku i dhomave dhe disponimi?",
-    "roomHistoryResumeBody": "Nga tani moto ruan përsëri në cilat dhoma është fëmija juaj dhe si ndihet. Të dhënat e fshira nuk kthehen.",
+    "roomHistoryResumeBody": "Ju hiqni ndalimin për fëmijën tuaj. Shkolla juaj vendos nëse ruhen historiku i dhomave dhe disponimi. Të dhënat e fshira nuk kthehen.",
     "roomHistoryResumeButton": "Ruaj përsëri",
-    "roomHistoryResuming": "Po ruhet",
-    "roomHistoryResumeSuccess": "Nga tani moto ruan përsëri historikun e dhomave dhe disponimin.",
+    "roomHistoryResuming": "Po hiqet ndalimi",
+    "roomHistoryResumeSuccess": "Ndalimi për fëmijën tuaj është hequr.",
     "errorObjectRoomHistory": "historiku i dhomave dhe disponimi"
   },
   "errorObject": "lista e fëmijëve tuaj",

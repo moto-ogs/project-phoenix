@@ -64,14 +64,14 @@
       "granted": "Сохранено",
       "withdrawn": "Отозвано",
       "not_recorded": "Не сохранено",
-      "recording": "Сохраняется",
+      "recording": "Не остановлено",
       "stopped": "Остановлено"
     },
     "dates": {
       "granted": "Сохранено {date}",
       "withdrawn": "Отозвано {date}",
       "not_recorded": "Не сохранено",
-      "recording": "Сохраняется",
+      "recording": "Не остановлено",
       "stopped": "Остановлено {date}"
     },
     "withdrawButton": "Отозвать согласие на фотографию",
@@ -105,12 +105,12 @@
     "roomHistoryStopSuccess": "История помещений и настроение остановлены. Прежняя история помещений удалена.",
     "roomHistoryResumeAria": "Снова сохранять историю помещений и настроение",
     "roomHistoryResumeShort": "Снова сохранять",
-    "roomHistoryResumeTooltip": "С этого момента moto снова сохраняет помещения и настроение. moto сначала спросит.",
+    "roomHistoryResumeTooltip": "Вы снимаете остановку для своего ребёнка. moto сначала спросит.",
     "roomHistoryResumeTitle": "Снова сохранять историю помещений и настроение?",
-    "roomHistoryResumeBody": "С этого момента moto снова сохраняет, в каких помещениях ваш ребёнок и как он себя чувствует. Удалённые данные не вернутся.",
+    "roomHistoryResumeBody": "Вы снимаете остановку для своего ребёнка. Ваша школа решает, сохраняются ли история помещений и настроение. Удалённые данные не вернутся.",
     "roomHistoryResumeButton": "Снова сохранять",
-    "roomHistoryResuming": "Сохраняется",
-    "roomHistoryResumeSuccess": "С этого момента moto снова сохраняет историю помещений и настроение.",
+    "roomHistoryResuming": "Остановка снимается",
+    "roomHistoryResumeSuccess": "Остановка для вашего ребёнка снята.",
     "errorObjectRoomHistory": "история помещений и настроение"
   },
   "errorObject": "список ваших детей",

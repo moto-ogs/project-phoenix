@@ -64,14 +64,14 @@
       "granted": "Kayıtlı",
       "withdrawn": "Geri alındı",
       "not_recorded": "Kayıtlı değil",
-      "recording": "Kaydediliyor",
+      "recording": "Durdurulmadı",
       "stopped": "Durduruldu"
     },
     "dates": {
       "granted": "{date} tarihinde kaydedildi",
       "withdrawn": "{date} tarihinde geri alındı",
       "not_recorded": "Kayıtlı değil",
-      "recording": "Kaydediliyor",
+      "recording": "Durdurulmadı",
       "stopped": "{date} tarihinde durduruldu"
     },
     "withdrawButton": "Fotoğraf iznini geri al",
@@ -105,12 +105,12 @@
     "roomHistoryStopSuccess": "Oda geçmişi ve ruh hâli durduruldu. Şimdiye kadarki oda geçmişi silindi.",
     "roomHistoryResumeAria": "Oda geçmişini ve ruh hâlini yeniden kaydet",
     "roomHistoryResumeShort": "Yeniden kaydet",
-    "roomHistoryResumeTooltip": "moto şu andan itibaren odaları ve ruh hâlini yeniden kaydeder. moto önce sorar.",
+    "roomHistoryResumeTooltip": "Çocuğun için durdurmayı kaldırırsın. moto önce sorar.",
     "roomHistoryResumeTitle": "Oda geçmişi ve ruh hâli yeniden kaydedilsin mi?",
-    "roomHistoryResumeBody": "moto şu andan itibaren çocuğunun hangi odalarda olduğunu ve nasıl hissettiğini yeniden kaydeder. Silinenler geri gelmez.",
+    "roomHistoryResumeBody": "Çocuğun için durdurmayı kaldırırsın. Oda geçmişinin ve ruh hâlinin kaydedilip kaydedilmeyeceğine okulun karar verir. Silinenler geri gelmez.",
     "roomHistoryResumeButton": "Yeniden kaydet",
-    "roomHistoryResuming": "Kaydediliyor",
-    "roomHistoryResumeSuccess": "moto şu andan itibaren oda geçmişini ve ruh hâlini yeniden kaydeder.",
+    "roomHistoryResuming": "Durdurma kaldırılıyor",
+    "roomHistoryResumeSuccess": "Çocuğun için durdurma kaldırıldı.",
     "errorObjectRoomHistory": "Oda geçmişi ve ruh hâli"
   },
   "errorObject": "çocuklarınızın listesi",

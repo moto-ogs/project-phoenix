@@ -345,7 +345,7 @@ describe("ChildConsentsSection", () => {
     expect(
       await screen.findByText("Raumverlauf und Stimmung"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Wird gespeichert")).toBeInTheDocument();
+    expect(screen.getByText("Nicht gestoppt")).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: "Raumverlauf und Stimmung stoppen" }),
     );
@@ -371,10 +371,19 @@ describe("ChildConsentsSection", () => {
       }),
     );
     const resumeDialog = await screen.findByRole("dialog");
+    expect(
+      within(resumeDialog).getByText(
+        "Du hebst den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
+      ),
+    ).toBeInTheDocument();
     await user.click(
       within(resumeDialog).getByRole("button", { name: "Wieder speichern" }),
     );
     await waitFor(() => expect(mockedResume).toHaveBeenCalledWith("42"));
+    expect(
+      await screen.findByText("Der Stopp für dein Kind ist aufgehoben."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nicht gestoppt")).toBeInTheDocument();
   });
 
   it("zeigt keine Zeile, solange der Träger den Stopp nicht freigibt", async () => {

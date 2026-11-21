@@ -64,14 +64,14 @@
       "granted": "Hinterlegt",
       "withdrawn": "Widerrufen",
       "not_recorded": "Nicht hinterlegt",
-      "recording": "Wird gespeichert",
+      "recording": "Nicht gestoppt",
       "stopped": "Gestoppt"
     },
     "dates": {
       "granted": "Hinterlegt am {date}",
       "withdrawn": "Widerrufen am {date}",
       "not_recorded": "Nicht hinterlegt",
-      "recording": "Wird gespeichert",
+      "recording": "Nicht gestoppt",
       "stopped": "Gestoppt am {date}"
     },
     "withdrawButton": "Foto-Einwilligung widerrufen",
@@ -105,12 +105,12 @@
     "roomHistoryStopSuccess": "Raumverlauf und Stimmung sind gestoppt. Der bisherige Raumverlauf ist gelöscht.",
     "roomHistoryResumeAria": "Raumverlauf und Stimmung wieder speichern",
     "roomHistoryResumeShort": "Wieder speichern",
-    "roomHistoryResumeTooltip": "moto speichert Räume und Stimmung ab jetzt wieder. moto fragt vorher nach.",
+    "roomHistoryResumeTooltip": "Du hebst den Stopp für dein Kind auf. moto fragt vorher nach.",
     "roomHistoryResumeTitle": "Raumverlauf und Stimmung wieder speichern?",
-    "roomHistoryResumeBody": "moto speichert ab jetzt wieder, in welchen Räumen dein Kind ist und wie es ihm geht. Gelöschtes kommt nicht zurück.",
+    "roomHistoryResumeBody": "Du hebst den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
     "roomHistoryResumeButton": "Wieder speichern",
-    "roomHistoryResuming": "Wird gespeichert",
-    "roomHistoryResumeSuccess": "moto speichert Raumverlauf und Stimmung ab jetzt wieder.",
+    "roomHistoryResuming": "Stopp wird aufgehoben",
+    "roomHistoryResumeSuccess": "Der Stopp für dein Kind ist aufgehoben.",
     "errorObjectRoomHistory": "Raumverlauf und Stimmung"
   },
   "errorObject": "die Liste deiner Kinder",

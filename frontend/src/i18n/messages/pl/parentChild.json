@@ -64,14 +64,14 @@
       "granted": "Zapisano",
       "withdrawn": "Wycofano",
       "not_recorded": "Nie zapisano",
-      "recording": "Zapisywane",
+      "recording": "Nie zatrzymano",
       "stopped": "Zatrzymane"
     },
     "dates": {
       "granted": "Zapisano {date}",
       "withdrawn": "Wycofano {date}",
       "not_recorded": "Nie zapisano",
-      "recording": "Zapisywane",
+      "recording": "Nie zatrzymano",
       "stopped": "Zatrzymane dnia {date}"
     },
     "withdrawButton": "Wycofaj zgodę na zdjęcia",
@@ -105,12 +105,12 @@
     "roomHistoryStopSuccess": "Historia sal i nastrój są zatrzymane. Dotychczasowa historia sal została usunięta.",
     "roomHistoryResumeAria": "Znowu zapisuj historię sal i nastrój",
     "roomHistoryResumeShort": "Znowu zapisuj",
-    "roomHistoryResumeTooltip": "moto od teraz znowu zapisuje sale i nastrój. moto najpierw zapyta.",
+    "roomHistoryResumeTooltip": "Cofasz zatrzymanie dla swojego dziecka. moto najpierw zapyta.",
     "roomHistoryResumeTitle": "Znowu zapisywać historię sal i nastrój?",
-    "roomHistoryResumeBody": "Od teraz moto znowu zapisuje, w których salach jest Twoje dziecko i jak się czuje. Usunięte dane nie wrócą.",
+    "roomHistoryResumeBody": "Cofasz zatrzymanie dla swojego dziecka. Twoja szkoła decyduje, czy historia sal i nastrój są zapisywane. Usunięte dane nie wrócą.",
     "roomHistoryResumeButton": "Znowu zapisuj",
-    "roomHistoryResuming": "Zapisywanie",
-    "roomHistoryResumeSuccess": "moto od teraz znowu zapisuje historię sal i nastrój.",
+    "roomHistoryResuming": "Cofanie zatrzymania",
+    "roomHistoryResumeSuccess": "Zatrzymanie dla Twojego dziecka zostało cofnięte.",
     "errorObjectRoomHistory": "historia sal i nastrój"
   },
   "errorObject": "lista Państwa dzieci",

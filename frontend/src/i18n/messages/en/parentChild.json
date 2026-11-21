@@ -64,14 +64,14 @@
       "granted": "Recorded",
       "withdrawn": "Withdrawn",
       "not_recorded": "Not recorded",
-      "recording": "Being saved",
+      "recording": "Not stopped",
       "stopped": "Stopped"
     },
     "dates": {
       "granted": "Recorded on {date}",
       "withdrawn": "Withdrawn on {date}",
       "not_recorded": "Not recorded",
-      "recording": "Being saved",
+      "recording": "Not stopped",
       "stopped": "Stopped on {date}"
     },
     "withdrawButton": "Withdraw photo consent",
@@ -105,12 +105,12 @@
     "roomHistoryStopSuccess": "Room history and mood are stopped. The room history so far has been deleted.",
     "roomHistoryResumeAria": "Save room history and mood again",
     "roomHistoryResumeShort": "Save again",
-    "roomHistoryResumeTooltip": "moto saves rooms and mood again from now on. moto asks first.",
+    "roomHistoryResumeTooltip": "You remove the stop for your child. moto asks first.",
     "roomHistoryResumeTitle": "Save room history and mood again?",
-    "roomHistoryResumeBody": "From now on, moto saves again which rooms your child is in and how your child is feeling. Deleted data does not come back.",
+    "roomHistoryResumeBody": "You remove the stop for your child. Your school decides whether room history and mood are saved. Deleted data does not come back.",
     "roomHistoryResumeButton": "Save again",
-    "roomHistoryResuming": "Saving",
-    "roomHistoryResumeSuccess": "moto saves room history and mood again from now on.",
+    "roomHistoryResuming": "Removing stop",
+    "roomHistoryResumeSuccess": "The stop for your child has been removed.",
     "errorObjectRoomHistory": "room history and mood"
   },
   "errorObject": "the list of your children",
