@@ -82,6 +82,7 @@ func TestDayChangesClassSource(t *testing.T) {
 	}
 	deleted := testpkg.CreateTestStudent(t, db, "Gelöschtes", "Kind", "3a")
 	testpkg.CreateTestStudentStatusDay(t, db, deleted.ID, day, "class_trip")
+	testpkg.CreateTestPickupException(t, db, deleted.ID, day, classStaff.ID, "14:10", "Abholung")
 	_, err = db.NewUpdate().TableExpr(`users.persons`).
 		Set(`deleted_at = NOW()`).
 		Where(`id = ?`, deleted.PersonID).
@@ -117,6 +118,7 @@ func TestDayChangesClassSource(t *testing.T) {
 		for _, leak := range []string{"Tierpark", "Lehrerkonferenz", "Arzttermin", "Reise", "Gelöschtes", "Zoo", "9x", "9y", "Morgen", "10:00"} {
 			assert.NotContains(t, body, leak, "no reason, child name, other day or other school")
 		}
+		assert.NotContains(t, body, "14:10", "a deleted child has no ordinary change row")
 	})
 
 	t.Run("care staff of a child on the trip sees the trip under Betrifft dich", func(t *testing.T) {

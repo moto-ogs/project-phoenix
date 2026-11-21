@@ -32,7 +32,7 @@ func RouteContracts() []common.RouteContract {
 		Response: daychangesview.Overview{},
 		Enums: []common.EnumContract{
 			{Type: daychangesview.Section(""), Values: []string{string(daychangesview.SectionYou), string(daychangesview.SectionSchool)}},
-			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities)}},
+			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities), string(daychangesview.SourceClasses)}},
 			{Type: daychangesview.SourceState(""), Values: []string{string(daychangesview.SourceLoaded), string(daychangesview.SourceFailed)}},
 			{Type: daychangesview.Kind(""), Values: []string{
 				string(daychangesview.KindStaffAbsent), string(daychangesview.KindStaffAbsentCount),
@@ -47,6 +47,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindActivityRoomChanged), string(daychangesview.KindActivityLeadChanged),
 				string(daychangesview.KindBlockStaffAbsent), string(daychangesview.KindBlockSubstitution),
 				string(daychangesview.KindBlockChangeCount),
+				string(daychangesview.KindClassTrip), string(daychangesview.KindClassDismissalChanged),
 			}},
 			{Type: daychangesview.ChildStatus(""), Values: []string{string(daychangesview.ChildSick), string(daychangesview.ChildExcused)}},
 			{Type: daychangesview.PersonRole(""), Values: []string{

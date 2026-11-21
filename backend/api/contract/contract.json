@@ -22740,6 +22740,8 @@
         "child_pickup_changed",
         "child_pickup_note",
         "child_summary",
+        "class_dismissal_changed",
+        "class_trip",
         "closing_day",
         "group_substitution",
         "group_substitution_count",
@@ -22832,6 +22834,7 @@
       "values": [
         "activities",
         "children",
+        "classes",
         "closing_days",
         "notices",
         "staff"

@@ -153,6 +153,13 @@ function DayChangesAnnouncer({
             entry.activity?.title,
             entry.roomName,
             entry.previousRoomName,
+            entry.schoolClass
+              ? [
+                  entry.schoolClass.name,
+                  entry.schoolClass.time,
+                  entry.schoolClass.children,
+                ]
+              : null,
             entry.notice
               ? [
                   entry.notice.id,

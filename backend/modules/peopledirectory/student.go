@@ -72,10 +72,28 @@ type StudentName struct {
 	SchoolMemberUntil *calendar.Date `json:"-"`
 	// SchoolClass and GroupID are set by the read by id, so an owner names a
 	// child and places it in its class and group in one statement ("Heute
-	// anders", #7681). A soft-deleted person has empty names but retains this
-	// placement. Not on the wire.
+	// anders", #7681). Not on the wire.
 	SchoolClass string `json:"-"`
 	GroupID     *int64 `json:"-"`
+	// PersonDeleted is true only when a read explicitly keeps the student
+	// placement of a soft-deleted person. Its names are empty. Not on the wire.
+	PersonDeleted bool `json:"-"`
+}
+
+type deletedStudentPlacementKey struct{}
+
+// WithDeletedStudentPlacements retains class and group metadata for a
+// soft-deleted person in a name read, without its name. It is for projections
+// of facts owned by the student record, not for displaying a child.
+func WithDeletedStudentPlacements(ctx context.Context) context.Context {
+	return context.WithValue(ctx, deletedStudentPlacementKey{}, true)
+}
+
+// IncludeDeletedStudentPlacements reports whether this read may retain the
+// placement of soft-deleted people.
+func IncludeDeletedStudentPlacements(ctx context.Context) bool {
+	include, _ := ctx.Value(deletedStudentPlacementKey{}).(bool)
+	return include
 }
 
 func (s Student) IsAlumnus() bool { return s.Status == StudentStatusAlumnus }

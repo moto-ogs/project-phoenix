@@ -36,8 +36,8 @@ type dayChangesCarePlan interface {
 }
 
 // dayChangesStudents is the People Directory read of the children: names,
-// class and group in one statement (#7681). A deleted person has no name but
-// retains the metadata of their student record.
+// class and group in one statement (#7681). Class trips retain the placement
+// of a deleted person, but normal child changes do not display that person.
 type dayChangesStudents interface {
 	ListStudentNamesByID(context.Context, []int64) ([]peopledirectory.StudentName, error)
 }
@@ -210,21 +210,23 @@ func pickupChanges(exceptions []careplan.PickupException, absent map[int64]bool)
 
 // childRecord is what the source needs to know about a child.
 type childRecord struct {
-	first, last string
-	groupID     *int64
-	class       string
+	first, last   string
+	groupID       *int64
+	class         string
+	personDeleted bool
 }
 
 // children reads the group, class and name of every child in one statement
-// (#7681). A student whose person was deleted remains, without their name.
+// (#7681). A deleted person remains only for a class-trip count, never a
+// normal child change.
 func (s dayChangesChildren) children(ctx context.Context, ids []int64) (map[int64]childRecord, error) {
-	names, err := s.sources.Students.ListStudentNamesByID(ctx, ids)
+	names, err := s.sources.Students.ListStudentNamesByID(peopledirectory.WithDeletedStudentPlacements(ctx), ids)
 	if err != nil {
 		return nil, fmt.Errorf("list student names: %w", err)
 	}
 	records := make(map[int64]childRecord, len(names))
 	for _, name := range names {
-		records[name.StudentID] = childRecord{first: name.FirstName, last: name.LastName, groupID: name.GroupID, class: name.SchoolClass}
+		records[name.StudentID] = childRecord{first: name.FirstName, last: name.LastName, groupID: name.GroupID, class: name.SchoolClass, personDeleted: name.PersonDeleted}
 	}
 	return records, nil
 }
@@ -254,7 +256,7 @@ func newChildEntryBuilder(children map[int64]childRecord, ownGroups map[int64]bo
 
 func (b *childEntryBuilder) add(change childChange) {
 	record, known := b.children[change.child.StudentID]
-	if !known {
+	if !known || record.personDeleted {
 		return
 	}
 	child := change.child

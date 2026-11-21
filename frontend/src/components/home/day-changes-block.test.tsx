@@ -647,6 +647,23 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
     expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
   });
 
+  it("sagt eine geänderte Zahl eines Klassenausflugs an", () => {
+    const trip = (children: number) =>
+      change({
+        kind: "class_trip",
+        schoolClass: { name: "3a", time: "13:00", children },
+      });
+    serve({ entries: [trip(2)] });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({ entries: [trip(3)] });
+    rerender(<DayChangesBlock />);
+
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+  });
+
   it("sagt geänderte Titel und Räume einer bestehenden Terminänderung an", () => {
     const activity = (
       title: string,
