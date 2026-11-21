@@ -119,6 +119,8 @@ var legacyNumericIDsPToZ = []string{
 	"parentbilling.FamilyChildrenInput.ContractID",
 	"parentbilling.FamilyContractChild.ContractID",
 	"parentbilling.HolidayBillingPeriod.ID",
+	"parentbilling.HolidayBookingChoice.TimeModelID",
+	"parentbilling.HolidayBookingChoice.WeekID",
 	"parentbilling.HolidayCancellation.MovedUp",
 	"parentbilling.HolidayCancellation.RegistrationID",
 	"parentbilling.HolidayChildContribution.ChildID",

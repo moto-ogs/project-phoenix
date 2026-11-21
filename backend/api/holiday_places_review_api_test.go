@@ -22,7 +22,7 @@ func TestHolidayPlacesRebookingKeepsTheFrozenContribution(t *testing.T) {
 	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil)).Children[0].ID
 	second := f.offer.Weeks[1]
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
-		"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}},
+		"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Zero(t, f.mails(t, "holiday_place_granted", int64(registration.ID)), "a direct rebooking is not a promotion")

@@ -54373,14 +54373,14 @@
           "name": "week_id",
           "optional": true,
           "schema": {
-            "kind": "id"
+            "kind": "legacy_id"
           }
         },
         {
           "name": "time_model_id",
           "optional": true,
           "schema": {
-            "kind": "id"
+            "kind": "legacy_id"
           }
         },
         {
@@ -119985,6 +119985,8 @@
     "parentbilling.FamilyChildrenInput.ContractID",
     "parentbilling.FamilyContractChild.ContractID",
     "parentbilling.HolidayBillingPeriod.ID",
+    "parentbilling.HolidayBookingChoice.TimeModelID",
+    "parentbilling.HolidayBookingChoice.WeekID",
     "parentbilling.HolidayCancellation.MovedUp",
     "parentbilling.HolidayCancellation.RegistrationID",
     "parentbilling.HolidayChildContribution.ChildID",
