@@ -133,3 +133,49 @@ describe("files-api errors", () => {
     ).rejects.toMatchObject({ code: "general.unavailable" });
   });
 });
+
+// The contract sends a folder's visibility as an open string (#2353).
+describe("files-api folder visibility", () => {
+  let originalFetch: typeof fetch;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalFetch = globalThis.fetch;
+    mockedGetSession.mockResolvedValue(mockSessionData());
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  // The edit form would save a default visibility and open the folder to
+  // more people, so the list leaves such a folder out.
+  it("leaves out a folder whose visibility this build does not know", async () => {
+    const folder = (id: string, visibility: string) => ({
+      id,
+      name: `Ordner ${id}`,
+      visibility,
+      file_count: 0,
+      role_ids: [],
+      account_ids: [],
+      created_at: "2026-09-01T10:00:00Z",
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        status: "success",
+        data: {
+          folders: [folder("1", "admins"), folder("2", "parents")],
+          can_manage: true,
+          can_upload: true,
+          staff_upload_enabled: true,
+          used_bytes: 0,
+          max_bytes: 100,
+        },
+      }),
+    );
+
+    const overview = await filesService.listFolders();
+
+    expect(overview.folders.map((entry) => entry.id)).toEqual(["1"]);
+  });
+});
