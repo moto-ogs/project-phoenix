@@ -129,7 +129,6 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Die frühere Sperrzeit ohne Adresse; das Fenster räumt sie beim Lesen weg.
   "passwordResetRateLimitUntil",
   // Hinweise auf diesem Gerät und die öffentliche Demo.
-  "schulhof-banner-dismissed",
   "moto-pwa-install-hint-*",
   "moto-demo-*",
   // Im Dienstplan ausgeblendete Abwesenheiten (#7021): nur Abwesenheits-IDs
