@@ -50,12 +50,12 @@ function mockLoad(assigned: string[], known: string[] = ["1a", "2b", "3c"]) {
       if (init?.method === "PUT") {
         const body = (init as { body: { school_classes: string[] } }).body;
         return Promise.resolve({
-          success: true,
+          status: "success",
           data: { staff_id: 7, school_classes: body.school_classes },
         });
       }
       return Promise.resolve({
-        success: true,
+        status: "success",
         data: { staff_id: 7, school_classes: assigned },
       });
     },
@@ -237,7 +237,7 @@ describe("KlassenTab", () => {
     let fail = true;
     mockAuthFetch.mockImplementation((url: string) => {
       if (url === "/api/students/school-classes") {
-        return Promise.resolve({ success: true, data: [] });
+        return Promise.resolve({ status: "success", data: [] });
       }
       if (fail) {
         return Promise.reject(
@@ -245,7 +245,7 @@ describe("KlassenTab", () => {
         );
       }
       return Promise.resolve({
-        success: true,
+        status: "success",
         data: { staff_id: 7, school_classes: ["4d"] },
       });
     });

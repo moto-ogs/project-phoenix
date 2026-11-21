@@ -210,8 +210,7 @@ describe("makeCatalogProxy, public routes", () => {
     const response = await call("GET", ["rows", "public", "tok"]);
 
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { name: "Ada" },
     });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");

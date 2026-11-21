@@ -407,8 +407,7 @@ describe("enrollment-submission-api", () => {
     // The proxy's envelope: the count is its data.
     mockFetch.mockResolvedValueOnce(
       jsonResponse({
-        success: true,
-        message: "Success",
+        status: "success",
         data: { confirmed: 3 },
       }),
     );

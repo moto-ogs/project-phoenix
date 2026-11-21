@@ -176,6 +176,8 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
 - Die Upload-Antwort ist JSON und läuft durch den Decoder der Route; sie hat
   danach die Hülle des Katalogs (`success`, `message`, `data`) statt der des
   Backends. Ein Client, der mehr als `data` liest, zieht beim Umzug mit.
+  Berichtigt im Nachtrag vom 2026-11-21: Die Antwort hat seitdem die Hülle
+  des Backends.
 - Ein gestreamter Upload läuft unter dem Header-Timeout des Backend-Clients
   (90 s ab Beginn des Sendens). Bisher lief er erst nach dem vollständigen
   Lesen an.
@@ -277,7 +279,8 @@ beiden öffentlichen als Dateien stehen. Dieser Nachtrag ersetzt ihn.
    lehnt jeden anderen Teil mit 400 ab, bevor er speichert. Größe, Inhalt
    und Endung prüfte das Backend schon.
 5. **Antwort.** JSON durch den Decoder der Route in der Hülle des Katalogs,
-   `private, no-store`, Status des Backends (201).
+   `private, no-store`, Status des Backends (201). Seit dem Nachtrag vom
+   2026-11-21 ist das die Hülle des Backends.
 
 ### Grenzen
 
@@ -376,3 +379,45 @@ diese Fälle nicht mehr.
 - Ein neuer Cache-Wert braucht einen Nachtrag und einen Eintrag in beiden
   Listen.
 - Uploads ohne Sitzung folgen dem Nachtrag „Öffentliche Uploads“.
+
+## Nachtrag vom 2026-11-21: Die Antwort hat die Hülle des Backends
+
+Für [#2353](https://github.com/moto-ogs/project-phoenix/issues/2353)
+(Kriterium 1). Der BFF schrieb jede Erfolgsantwort in eine eigene Hülle
+`{ success, message, data }` (`wrapInApiResponse`), das Backend antwortet in
+`{ status, data, message }` (`common.Response`), eine Liste dazu mit
+`pagination` (`common.PaginatedResponse`). Zwei Formen für dieselbe Antwort
+hießen: jeder Client musste wissen, welche Schicht er vor sich hat, ein
+Payload mit eigenem `success`-Schlüssel ging ungewrappt durch, und eine Liste
+durch die Datenbank-Dienste verlor die Seite des Backends.
+
+### Entscheidung
+
+1. **Der BFF reicht die Hülle des Backends mit den dekodierten Daten durch.**
+   Der Katalog-Proxy antwortet `status`, die vom Decoder der Route geprüften
+   `data`, die `pagination` einer Liste und die `message` des Backends, auch
+   bei Uploads und öffentlichen JSON-Routen. Eine eigene `route.ts` antwortet
+   über `successResponse` in derselben Form (`{ status: "success", data }`).
+   Der geteilte Typ ist `ApiResponse` / `PaginatedApiResponse` in
+   `frontend/src/lib/api-envelope.ts`; Clients führen keine eigene Hülle.
+2. **Ohne Daten.** Eine `NoData`-Route antwortet `{ status: "success",
+   data: null }` mit der Nachricht des Backends; ein DELETE ohne Daten
+   antwortet weiter 204, wie bisher.
+3. **Kein nacktes Payload.** Gegen eine Antwort nur aus `data` spricht, dass
+   rund 130 Client-Dateien `.data` lesen und alle mitziehen müssten, ohne
+   dass ein Leser etwas gewinnt; für sie spräche nur ein kürzerer Body. Die
+   Hülle des Backends behält, was Clients schon lesen, und streicht die
+   zweite Form.
+4. **Ein Schritt.** Es läuft eine Instanz, der Deploy kommt am Ende; offene
+   Tabs laden nach dem Release neu. Kein externer Client liest die Hülle des
+   BFF: PyrePortal ruft das Backend direkt, Dateien und Feeds streamen ohne
+   Hülle.
+
+### Grenzen
+
+- Eine `route.ts`, die selbst eine Antwort baut (`Response.json`), bleibt
+  dafür verantwortlich, keine dritte Hülle zu erfinden; Auth-Schritte mit
+  eigener Form (Tokens, `session_renewed`) sind keine Erfolgshülle in diesem
+  Sinn.
+- Der Statuscode des Backends geht nur bei Uploads durch; JSON-Routen
+  antworten 200 wie zuvor.

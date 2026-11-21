@@ -15,16 +15,10 @@ import {
   type BackendActiveGroup,
   type BackendStaff,
 } from "./usercontext-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 // The BFF routes read the session cookie; the browser holds no token (#5005).
 const JSON_HEADERS = { "Content-Type": "application/json" };
-
-// Generic API response interface
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
 
 export const userContextService = {
   // Get current user's staff profile

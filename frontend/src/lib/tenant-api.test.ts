@@ -852,7 +852,7 @@ describe("tenant-api", () => {
 
   describe("switchTenant", () => {
     it("confirms a server-side switch without reading credentials", async () => {
-      const confirmation = { success: true };
+      const confirmation = { status: "success", data: null };
 
       mockSessionFetch.mockResolvedValueOnce(
         new Response(JSON.stringify(confirmation), {
@@ -1004,7 +1004,7 @@ describe("tenant-api", () => {
   // --------------------------------------------------------------------------
 
   describe("performTenantSwitch", () => {
-    const confirmation = { success: true };
+    const confirmation = { status: "success", data: null };
 
     const mockSwrMutate = vi.fn().mockResolvedValue(undefined);
 

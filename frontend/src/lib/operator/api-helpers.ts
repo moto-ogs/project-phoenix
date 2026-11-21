@@ -1,4 +1,5 @@
 import { ApiError, apiErrorFromBody, transportFetch } from "../api-error";
+import type { ApiResponse } from "../api-envelope";
 interface OperatorFetchOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
@@ -43,14 +44,14 @@ export async function operatorFetch<T>(
 
   const json: unknown = await response.json();
 
-  // Unwrap proxy response envelope { success, data, message }
+  // Unwrap the backend's envelope { status, data, message } (#2353).
   if (
     typeof json === "object" &&
     json !== null &&
     "data" in json &&
-    "success" in json
+    (json as { status?: unknown }).status === "success"
   ) {
-    return (json as { data: T }).data;
+    return (json as ApiResponse<T>).data;
   }
 
   return json as T;

@@ -12,6 +12,7 @@ import type {
 } from "~/lib/email-delivery-status";
 import { ApiError, apiErrorFromText, transportFetch } from "~/lib/api-error";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
+import type { ApiResponse } from "./api-envelope";
 
 export type AnnouncementPriority = "info" | "important";
 export type AnnouncementStatus = "draft" | "published" | "expired";
@@ -408,11 +409,6 @@ export interface DeclarationStatus {
   submissions: DeclarationSubmission[];
   /** False when any version or history entry fails its checksum. */
   integrity_ok: boolean;
-}
-
-interface ApiResponse<T> {
-  status?: string;
-  data?: T;
 }
 
 /**

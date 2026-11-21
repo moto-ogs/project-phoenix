@@ -113,8 +113,10 @@ The key is the scope claim of the portal's session token
   before any backend call.
 - Only the registered query parameters are forwarded, every path segment is
   encoded again, and the answer is checked against the route's decoder.
-  Session, the single 401 renewal, body limit, `Idempotency-Key` and the
-  response envelope come from the portal's handlers (`makePortalHandlers`).
+  Session, the single 401 renewal, body limit and `Idempotency-Key` come
+  from the portal's handlers (`makePortalHandlers`). The answer is the
+  backend's envelope with the decoded data: `{ status, data, message }`, a
+  paginated list also `pagination`, as `common.Response` writes them.
 - The BFF path must equal the backend path below the portal's prefix. A
   route whose BFF path differs (`/api/operator/provisioning/schools` for
   `/operator/schools`) moves its callers to the backend's path first.
@@ -174,7 +176,8 @@ The key is the scope claim of the portal's session token
   `lib/contract/shared.generated.ts`, and imported by both resource files.
 - A route that answers 204 or the envelope without data registers
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
-  exactly those two answers, and the BFF answers `data: null` (a DELETE: 204).
+  exactly those two answers, and the BFF answers `{ status: "success",
+  data: null }` with the backend's message (a DELETE: 204).
 - An identifier in `NumericIDs` leaves the proxy as a string, whatever Go
   sends. A client type for such a route reads `string`, never `number`.
 
@@ -195,9 +198,11 @@ session, renews it once on a backend 401 and answers errors through
 `handleApiError`. The helpers that read the session (`backendFetch`,
 `forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
 `src/app/api/route-session-coverage.test.ts` runs every route and fails on a
-session read outside it. Success answers `{ success, message, data }`, a
-DELETE without a result answers 204, and a handler may return a Response as
-it is. Public JSON routes use `createPublicJsonProxy`
+session read outside it. Success answers the backend's envelope
+`{ status: "success", data }` (`successResponse`, type `ApiResponse` in
+`lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
+may return a Response as it is. No BFF route invents another success
+envelope (#2353). Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session
 `authStepProxy` (`lib/auth-proxy.server.ts`). Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented

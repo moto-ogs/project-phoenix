@@ -94,9 +94,9 @@ describe("public links below the staff portal's auth", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { account_id: "42", email: "a@example.test" },
+      message: "done",
     });
     expect(response.headers.get("Cache-Control")).toContain("no-store");
     expect(sent()).toEqual({

@@ -1,6 +1,7 @@
 import { ApiError, enrichApiError, problemDetail } from "./api-error";
 import type { CaregiverCapabilityState as CaregiverCapabilityStateWire } from "./contract/auth-accounts.generated";
 import { createLogger } from "~/lib/logger";
+import type { ApiResponse } from "./api-envelope";
 
 const logger = createLogger({ component: "CaregiverCapabilityAPI" });
 
@@ -113,13 +114,6 @@ interface EnableCaregiverCapabilityRequest {
   position?: string;
 }
 
-interface ApiEnvelope<T> {
-  data?: T;
-  success?: boolean;
-  status?: string;
-  message?: string;
-}
-
 interface CapabilityErrorPayload {
   blockers?: string[];
 }
@@ -189,7 +183,7 @@ async function parseCapabilityResponse(
   response: Response,
 ): Promise<CaregiverCapabilityState> {
   const raw = (await response.json()) as
-    CaregiverCapabilityStateWire | ApiEnvelope<CaregiverCapabilityStateWire>;
+    CaregiverCapabilityStateWire | ApiResponse<CaregiverCapabilityStateWire>;
 
   const payload =
     typeof raw === "object" &&

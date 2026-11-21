@@ -31,15 +31,7 @@ import {
   mapWorkSessionBreakResponse,
   mapWorkSessionEditResponse,
 } from "./time-tracking-helpers";
-
-/**
- * Standard API response wrapper
- */
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+import type { ApiResponse } from "./api-envelope";
 
 export const PLANNED_START_NOT_REACHED_CODE: ErrorCode =
   "iot.planned_start_not_reached";

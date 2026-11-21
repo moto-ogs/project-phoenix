@@ -2,6 +2,7 @@ import { ApiError, apiErrorFromResponse } from "./api-error";
 import { sessionFetch } from "./session-cache";
 import { createLogger } from "./logger";
 import { shellResourceKeys } from "./swr/shell-keys";
+import type { ApiResponse } from "./api-envelope";
 
 const logger = createLogger({ component: "SettingsApi" });
 
@@ -94,12 +95,6 @@ export interface ResolvedSetting {
   options?: {
     static?: { label: string; value: unknown }[];
   } | null;
-}
-
-interface ApiResponse<T> {
-  status: string;
-  data: T;
-  message?: string;
 }
 
 // --- Optimistic Update Helper ---
