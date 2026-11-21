@@ -19,19 +19,6 @@ import { handleAuthFailure } from "./auth-failure";
 // Logger instance for API client
 const logger = createLogger({ component: "ApiClient" });
 
-// Paginated response interface for API responses with pagination metadata
-interface PaginatedResponse<T> {
-  status: string;
-  data: T[];
-  pagination: {
-    current_page: number;
-    page_size: number;
-    total_pages: number;
-    total_records: number;
-  };
-  message?: string;
-}
-
 /**
  * Headers for the raw fetch() call sites in the services below. The BFF
  * routes authenticate through the session cookie; the browser holds no
@@ -96,52 +83,27 @@ function buildRoomQueryParams(filters?: {
 }
 
 /**
- * Parse rooms response, handling null, non-array, and valid array formats.
- * Returns empty array for invalid formats with warning.
+ * The list of a list response: the wrapped `{data: [...]}` envelope or a bare
+ * array; `{data: null}` is the empty list of a Go nil slice. Any other shape
+ * is a broken answer and rejects (#2353): an empty list would read as "no
+ * rooms" or "no groups" instead of a failure.
  */
-function parseRoomsResponse(responseData: unknown): RoomResponse[] {
+function parseListResponse<T>(responseData: unknown, what: string): T[] {
+  if (Array.isArray(responseData)) return responseData as T[];
   if (
     responseData &&
     typeof responseData === "object" &&
-    "data" in responseData &&
-    Array.isArray((responseData as { data?: unknown }).data)
-  ) {
-    return (responseData as { data: RoomResponse[] }).data;
-  }
-
-  if (!responseData || !Array.isArray(responseData)) {
-    logger.warn("invalid response format for rooms", {
-      response_type: typeof responseData,
-      is_array: Array.isArray(responseData),
-    });
-    return [];
-  }
-  return responseData as RoomResponse[];
-}
-
-/**
- * Parse groups response from API.
- * Handles wrapped {data: BackendGroup[]} and direct BackendGroup[] formats.
- */
-function parseGroupsResponse(responseData: unknown): BackendGroup[] {
-  // Check if wrapped in ApiResponse format {data: [...]}
-  if (
-    typeof responseData === "object" &&
-    responseData !== null &&
     "data" in responseData
   ) {
-    const apiResponse = responseData as { data?: unknown };
-    return Array.isArray(apiResponse.data)
-      ? (apiResponse.data as BackendGroup[])
-      : [];
+    const list = (responseData as { data?: unknown }).data;
+    if (list === null) return [];
+    if (Array.isArray(list)) return list as T[];
   }
-
-  // Direct array response
-  if (Array.isArray(responseData)) {
-    return responseData as BackendGroup[];
-  }
-
-  return [];
+  logger.warn("invalid list response", {
+    resource: what,
+    response_type: typeof responseData,
+  });
+  throw new ApiError(`invalid ${what} response`, 500);
 }
 
 // Re-export types for external usage
@@ -170,10 +132,11 @@ export interface Room {
 // Group service for API operations
 export const groupService = {
   // Get all groups
-  getGroups: async (
-    filters?: { search?: string; page?: number; pageSize?: number },
-    options?: { strict?: boolean },
-  ): Promise<Group[]> => {
+  getGroups: async (filters?: {
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<Group[]> => {
     const params = new URLSearchParams();
     if (filters?.search) params.append("search", filters.search);
 
@@ -195,22 +158,21 @@ export const groupService = {
             beforeRetry: reloadSession,
           });
 
-        // Handle errors: null response means auth failed or permission denied
-        // Return empty array for graceful degradation
-        if (response === null || data === null) {
-          if (options?.strict)
-            throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
-          return [];
+        // A refused read is an error, not a school without groups (#2353).
+        if (response === null) {
+          throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
         }
 
-        return mapGroupsResponse(parseGroupsResponse(data));
+        return mapGroupsResponse(
+          parseListResponse<BackendGroup>(data, "groups"),
+        );
       }
 
       // Server-side: use axios with the API URL directly
       const response = await api.get(url, { params });
-      const paginatedResponse =
-        response.data as PaginatedResponse<BackendGroup>;
-      return mapGroupsResponse(paginatedResponse.data);
+      return mapGroupsResponse(
+        parseListResponse<BackendGroup>(response.data, "groups"),
+      );
     } catch (error) {
       logger.error("failed to fetch groups", {
         error: error instanceof Error ? error.message : String(error),
@@ -223,19 +185,16 @@ export const groupService = {
 // Room service for API operations
 export const roomService = {
   // Get all rooms
-  getRooms: async (
-    filters?: {
-      building?: string;
-      floor?: number;
-      category?: string;
-      occupied?: boolean;
-      search?: string;
-      includeSystem?: boolean;
-      page?: number;
-      pageSize?: number;
-    },
-    options?: { strict?: boolean },
-  ): Promise<Room[]> => {
+  getRooms: async (filters?: {
+    building?: string;
+    floor?: number;
+    category?: string;
+    occupied?: boolean;
+    search?: string;
+    includeSystem?: boolean;
+    page?: number;
+    pageSize?: number;
+  }): Promise<Room[]> => {
     const params = buildRoomQueryParams(filters);
     const queryString = params.toString();
 
@@ -252,18 +211,19 @@ export const roomService = {
             beforeRetry: reloadSession,
           });
 
-        if (options?.strict && (response === null || data === null)) {
+        // A refused read is an error, not a school without rooms (#2353).
+        if (response === null) {
           throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
         }
 
-        const rooms = parseRoomsResponse(data);
-        return mapRoomsResponse(rooms);
+        return mapRoomsResponse(parseListResponse<RoomResponse>(data, "rooms"));
       }
 
       // Server-side: use axios with the API URL directly
       const response = await api.get(url, { params });
-      const rooms = parseRoomsResponse(response.data);
-      return mapRoomsResponse(rooms);
+      return mapRoomsResponse(
+        parseListResponse<RoomResponse>(response.data, "rooms"),
+      );
     } catch (error) {
       logger.error("failed to fetch rooms", {
         error: error instanceof Error ? error.message : String(error),
