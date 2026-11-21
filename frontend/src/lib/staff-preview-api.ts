@@ -31,7 +31,9 @@ export interface StaffPreviewSession {
   targetName: string;
 }
 
-interface BackendStaffPreviewStartResponse {
+// The answer of /api/auth/staff-preview: the BFF route sets the session and
+// is outside the generated contract (#2353).
+interface StaffPreviewStartBody {
   expires_in: number;
   target_account_id: string;
   target_name: string;
@@ -117,7 +119,7 @@ async function startStaffPreview(
       `Failed to start preview: ${response.status}`,
     );
   }
-  const data = (await response.json()) as BackendStaffPreviewStartResponse;
+  const data = (await response.json()) as StaffPreviewStartBody;
   return {
     expiresIn: data.expires_in,
     targetAccountId: data.target_account_id,

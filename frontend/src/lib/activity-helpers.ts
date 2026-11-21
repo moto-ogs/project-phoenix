@@ -10,9 +10,11 @@ import type {
   ActivitySupervisorResponse,
 } from "./contract/activities.generated";
 
-// Actual backend structure for enrolled students from /api/activities/{id}/students
-// Backend returns a simplified StudentResponse with id, first_name, last_name
-export interface BackendStudentEnrollment {
+// The raw body of GET /api/activities/{id}/students: the route is outside the
+// generated contract and the BFF reads it from Go directly, so no decoder
+// stands between (#2353). Go returns a simplified StudentResponse with id,
+// first_name, last_name.
+export interface StudentEnrollmentBody {
   id: number | string; // The student ID; a string once Go sends strings (ADR 0270)
   student_id?: number; // Backend doesn't actually return this field
   activity_group_id?: number;
@@ -274,7 +276,7 @@ export function mapActivityCategoryResponse(
 
 // Map enrolled students from backend enrollment structure
 export function mapStudentEnrollmentResponse(
-  enrollment: BackendStudentEnrollment,
+  enrollment: StudentEnrollmentBody,
 ): ActivityStudent {
   // Handle both direct and flattened person fields
   const firstName =
@@ -307,7 +309,7 @@ export function mapStudentEnrollmentResponse(
 
 // Map an array of enrolled students
 export function mapStudentEnrollmentsResponse(
-  enrollments: BackendStudentEnrollment[],
+  enrollments: StudentEnrollmentBody[],
 ): ActivityStudent[] {
   return enrollments.map(mapStudentEnrollmentResponse);
 }
