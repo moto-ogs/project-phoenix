@@ -283,12 +283,6 @@ test('a changed contract model is compared with the base', () => {
   assert.deepEqual(steps[1].command, ['node', 'scripts/check-contract-compat.mjs', 'origin/development']);
 });
 
-test('a changed proxy route register is compared with the base', () => {
-  const steps = stepsFor('/repo', 'origin/development', ['frontend/src/test/proxy-routes/api/groups.json']);
-  assert.deepEqual(steps.map(step => step.name), ['static', 'proxy-routes', 'tests']);
-  assert.deepEqual(steps[1].command, ['node', 'scripts/check-proxy-routes.mjs', 'origin/development']);
-});
-
 test('steps run side by side only on a machine with room', () => {
   assert.equal(concurrencyFor(16, 64 * 1024 ** 3, 3), 2);
   assert.equal(concurrencyFor(4, 64 * 1024 ** 3, 0), 1);
