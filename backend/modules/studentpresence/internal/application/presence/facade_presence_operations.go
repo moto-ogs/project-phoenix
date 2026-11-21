@@ -49,7 +49,7 @@ func (p PresenceOperations) ClaimSupervision(ctx context.Context, groupID, staff
 		return studentpresence.ClaimedSupervision{}, err
 	}
 	return studentpresence.ClaimedSupervision{
-		ID: row.ID, TenantID: row.TenantID, GroupID: row.GroupID, StaffID: row.StaffID,
+		ID: row.ID.Int64(), TenantID: row.TenantID.Int64(), GroupID: row.GroupID.Int64(), StaffID: row.StaffID.Int64(),
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Role: row.Role, StartDate: row.StartDate.String(),
 	}, nil
 }

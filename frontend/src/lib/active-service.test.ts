@@ -222,8 +222,8 @@ describe("active-service", () => {
           expect.objectContaining({
             method: "POST",
             body: JSON.stringify({
-              student_ids: [50],
-              active_group_id: 1,
+              student_ids: ["50"],
+              active_group_id: "1",
             }),
           }),
         );
@@ -306,8 +306,8 @@ describe("active-service", () => {
           expect.objectContaining({
             method: "POST",
             body: JSON.stringify({
-              student_ids: [50, 51],
-              target_active_group_id: 1,
+              student_ids: ["50", "51"],
+              target_active_group_id: "1",
             }),
           }),
         );
@@ -495,7 +495,7 @@ describe("active-service", () => {
         "/api/active/tracking-indicators",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ student_ids: [10, 20] }),
+          body: JSON.stringify({ student_ids: ["10", "20"] }),
         }),
       );
     });
@@ -515,7 +515,7 @@ describe("active-service", () => {
       const callBody = JSON.parse(
         (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string,
       ) as { student_ids: number[] };
-      expect(callBody.student_ids).toEqual([42, 99]);
+      expect(callBody.student_ids).toEqual(["42", "99"]);
     });
 
     it("returns empty response on non-ok HTTP status", async () => {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 )
@@ -161,11 +162,11 @@ func (r *SessionRepository) FindActiveByDeviceIDWithNames(ctx context.Context, d
 		return nil, r.errors.WrapRecordError("find active by device ID with names", err)
 	}
 	// The room owner resolves the name the former LEFT JOIN projected (#2665).
-	rooms, err := roomsByID(ctx, r.rooms, []int64{session.RoomID})
+	rooms, err := roomsByID(ctx, r.rooms, []int64{session.RoomID.Int64()})
 	if err != nil {
 		return nil, r.errors.WrapRecordError("find active by device ID with names", err)
 	}
-	if room, ok := rooms[session.RoomID]; ok && room.Name != "" {
+	if room, ok := rooms[session.RoomID.Int64()]; ok && room.Name != "" {
 		session.Room = &studentpresence.SessionRoom{ID: session.RoomID, Name: room.Name}
 	}
 	return session, nil
@@ -182,8 +183,8 @@ func (r *SessionRepository) attachActivityName(ctx context.Context, session *Act
 		return err
 	}
 	for _, activity := range activities {
-		if activity.ID == templateID && activity.Name != "" {
-			session.ActualGroup = &ports.SessionActivity{ID: templateID, Name: activity.Name}
+		if activity.ID == ident.ID(templateID) && activity.Name != "" {
+			session.ActualGroup = &ports.SessionActivity{ID: ident.ID(templateID), Name: activity.Name}
 		}
 	}
 	return nil
@@ -198,7 +199,7 @@ func (r *SessionRepository) CheckRoomConflict(ctx context.Context, roomID int64,
 		return false, nil, err
 	}
 	occupants := slices.DeleteFunc(groups, func(group *ActiveGroupRow) bool {
-		return excludeGroupID > 0 && group.ID == excludeGroupID
+		return excludeGroupID > 0 && group.ID == ident.ID(excludeGroupID)
 	})
 	systemByActivity, err := r.systemActivitiesByID(ctx, deviceLessTemplateIDs(occupants))
 	if err != nil {
@@ -243,7 +244,7 @@ func (r *SessionRepository) systemActivitiesByID(ctx context.Context, ids []int6
 	}
 	for _, activity := range activities {
 		if activity != nil {
-			result[activity.ID] = activity.IsSystem
+			result[activity.ID.Int64()] = activity.IsSystem
 		}
 	}
 	return result, nil
@@ -303,7 +304,7 @@ func (r *SessionRepository) FindByIDs(ctx context.Context, ids []int64) (map[int
 	}
 	result := make(map[int64]*ActiveGroupRow, len(groups))
 	for _, group := range groups {
-		result[group.ID] = group
+		result[group.ID.Int64()] = group
 	}
 	return result, nil
 }
@@ -353,7 +354,7 @@ func (r *SessionRepository) Update(ctx context.Context, group *ActiveGroupRow) e
 	if err != nil {
 		return err
 	}
-	group.CreatedAt, group.UpdatedAt, group.TenantID = row.CreatedAt, row.UpdatedAt, row.TenantID
+	group.CreatedAt, group.UpdatedAt, group.TenantID = row.CreatedAt, row.UpdatedAt, ident.ID(row.TenantID)
 	return nil
 }
 
@@ -368,7 +369,7 @@ func (r *SessionRepository) Create(ctx context.Context, group *ActiveGroupRow) e
 	if err != nil {
 		return err
 	}
-	group.ID, group.CreatedAt, group.UpdatedAt, group.TenantID = row.ID, row.CreatedAt, row.UpdatedAt, row.TenantID
+	group.ID, group.CreatedAt, group.UpdatedAt, group.TenantID = ident.ID(row.ID), row.CreatedAt, row.UpdatedAt, ident.ID(row.TenantID)
 	return nil
 }
 
@@ -387,16 +388,16 @@ func activeGroups(rows []studentpresence.LiveGroup) []*ActiveGroupRow {
 
 func activeGroup(row studentpresence.LiveGroup) *ActiveGroupRow {
 	return &ActiveGroupRow{
-		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		StartTime: row.StartTime, EndTime: row.EndTime, LastActivity: row.LastActivity,
-		TimeoutMinutes: row.TimeoutMinutes, GroupID: row.ActivityGroupID, DeviceID: row.DeviceID, RoomID: row.RoomID,
+		TimeoutMinutes: row.TimeoutMinutes, GroupID: (*ident.ID)(row.ActivityGroupID), DeviceID: (*ident.ID)(row.DeviceID), RoomID: ident.ID(row.RoomID),
 	}
 }
 
 func liveGroup(group *ActiveGroupRow) studentpresence.LiveGroup {
 	return studentpresence.LiveGroup{
-		ID: group.ID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+		ID: group.ID.Int64(), CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 		StartTime: group.StartTime, EndTime: group.EndTime, LastActivity: group.LastActivity,
-		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: group.GroupID, DeviceID: group.DeviceID, RoomID: group.RoomID,
+		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: (*int64)(group.GroupID), DeviceID: (*int64)(group.DeviceID), RoomID: group.RoomID.Int64(),
 	}
 }

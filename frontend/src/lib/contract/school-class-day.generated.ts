@@ -7,7 +7,6 @@ import {
   fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   noData,
   nullable,
   object,
@@ -100,7 +99,7 @@ export interface DayRow {
 }
 
 export const DayRowSchema: z.ZodType<DayRow, unknown> = object<DayRow>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   list_entry: optional(bool),
@@ -219,7 +218,7 @@ export interface AbsenceListChild {
 }
 
 export const AbsenceListChildSchema: z.ZodType<AbsenceListChild, unknown> = object<AbsenceListChild>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   absent_days: safeInt,
@@ -472,7 +471,7 @@ export const StudentSharedNotesSchema: z.ZodType<StudentSharedNotes, unknown> = 
 export interface ClassTripRequest {
   from?: string;
   to?: string;
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   return_time?: string | null;
   reason?: string | null;
 }
@@ -515,13 +514,13 @@ export interface DayHintRequest {
 
 /** Go: classdayhttp.ClassHandoverRequest */
 export interface ClassHandoverRequest {
-  present_student_ids?: number[] | null;
-  absent_student_ids?: number[] | null;
+  present_student_ids?: string[] | null;
+  absent_student_ids?: string[] | null;
 }
 
 /** Go: classdayhttp.MorningAttendanceMarkRequest */
 export interface MorningAttendanceMarkRequest {
-  student_id?: number;
+  student_id?: string;
   list_entry_id?: string;
   status?: string;
 }

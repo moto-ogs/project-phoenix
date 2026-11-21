@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type PresenceQueries interface {
@@ -36,7 +37,7 @@ func presenceQueryError(operation string, err error) error {
 
 func newPresenceVisitResponse(visit studentpresence.Visit) VisitResponse {
 	return VisitResponse{
-		ID: visit.ID, StudentID: visit.StudentID, ActiveGroupID: visit.ActiveGroupID,
+		ID: ident.ID(visit.ID), StudentID: ident.ID(visit.StudentID), ActiveGroupID: ident.ID(visit.ActiveGroupID),
 		CheckInTime: visit.EntryTime, CheckOutTime: visit.ExitTime, IsActive: visit.ExitTime == nil,
 		CreatedAt: visit.CreatedAt, UpdatedAt: visit.UpdatedAt,
 	}

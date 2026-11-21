@@ -369,8 +369,8 @@ export const activeService = {
         "/api/active/visits/transit/assign",
         "Assign transit students",
         {
-          student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-          active_group_id: Number.parseInt(activeGroupId, 10),
+          student_ids: [...studentIds],
+          active_group_id: activeGroupId,
         } satisfies assignTransitStudentsRequest,
       ),
     );
@@ -386,8 +386,8 @@ export const activeService = {
         "/api/active/visits/move-to-group",
         "Move students to active group",
         {
-          student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-          target_active_group_id: Number.parseInt(activeGroupId, 10),
+          student_ids: [...studentIds],
+          target_active_group_id: activeGroupId,
         } satisfies moveStudentsToActiveGroupRequest,
       ),
     );
@@ -406,8 +406,8 @@ export const activeService = {
     const response = await sessionFetch("/api/active/visits/move-to-room", {
       method: "POST",
       body: JSON.stringify({
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_room_id: Number.parseInt(roomId, 10),
+        student_ids: [...studentIds],
+        target_room_id: roomId,
       } satisfies moveStudentsToOpenRoomRequest),
     });
     if (!response.ok) {
@@ -444,8 +444,8 @@ export const activeService = {
         "/api/active/visits/check-in-to-group",
         "Check students in to active group",
         {
-          student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-          target_active_group_id: Number.parseInt(activeGroupId, 10),
+          student_ids: [...studentIds],
+          target_active_group_id: activeGroupId,
           keep_present: keepPresent,
         } satisfies checkInStudentsToSessionRequest,
       ),
@@ -467,8 +467,8 @@ export const activeService = {
         "/api/active/visits/check-in-to-room",
         "Check students in to open room",
         {
-          student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-          target_room_id: Number.parseInt(roomId, 10),
+          student_ids: [...studentIds],
+          target_room_id: roomId,
           keep_present: keepPresent,
         } satisfies checkInStudentsToOpenRoomRequest,
       ),
@@ -507,7 +507,7 @@ export const activeService = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
+        student_ids: [...studentIds],
       } satisfies TrackingIndicatorsRequest),
     });
 

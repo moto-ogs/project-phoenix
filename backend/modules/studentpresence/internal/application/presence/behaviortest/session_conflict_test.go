@@ -97,6 +97,7 @@ import (
 	activeSvc "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -142,8 +143,8 @@ func TestActivitySessionConflictDetection(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, session)
 		require.NotNil(t, session.GroupID)
-		assert.Equal(t, activityGroup.ID, *session.GroupID)
-		assert.Equal(t, &device.ID, session.DeviceID)
+		assert.Equal(t, ident.ID(activityGroup.ID), *session.GroupID)
+		assert.Equal(t, (*ident.ID)(&device.ID), session.DeviceID)
 	})
 
 	t.Run("conflict when activity already active on different device", func(t *testing.T) {
@@ -212,11 +213,11 @@ func TestActivitySessionConflictDetection(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, session2)
 		require.NotNil(t, session2.GroupID)
-		assert.Equal(t, activityGroup.ID, *session2.GroupID)
-		assert.Equal(t, &device.ID, session2.DeviceID)
+		assert.Equal(t, ident.ID(activityGroup.ID), *session2.GroupID)
+		assert.Equal(t, (*ident.ID)(&device.ID), session2.DeviceID)
 
 		// Verify first session was ended (force start ends previous session on same device)
-		updatedSession1, err := service.GetActiveGroup(ctx, session1.ID)
+		updatedSession1, err := service.GetActiveGroup(ctx, session1.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, updatedSession1.EndTime, "Expected first session to be ended by force start")
 	})
@@ -240,10 +241,10 @@ func TestActivitySessionConflictDetection(t *testing.T) {
 		assert.NotNil(t, currentSession)
 		assert.Equal(t, session.ID, currentSession.ID)
 		require.NotNil(t, currentSession.GroupID)
-		assert.Equal(t, activityGroup.ID, *currentSession.GroupID)
+		assert.Equal(t, ident.ID(activityGroup.ID), *currentSession.GroupID)
 
 		// End session
-		_, err = service.EndActivitySession(ctx, session.ID)
+		_, err = service.EndActivitySession(ctx, session.ID.Int64())
 		require.NoError(t, err)
 
 		// Verify no current session
@@ -277,7 +278,7 @@ func TestSessionLifecycle(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, session)
 		assert.Nil(t, session.EndTime, "New session should not have end time")
-		assert.Equal(t, &device.ID, session.DeviceID)
+		assert.Equal(t, (*ident.ID)(&device.ID), session.DeviceID)
 
 		// Verify session is active
 		currentSession, err := service.GetDeviceCurrentSession(ctx, device.ID)
@@ -285,11 +286,11 @@ func TestSessionLifecycle(t *testing.T) {
 		assert.Equal(t, session.ID, currentSession.ID)
 
 		// End session
-		_, err = service.EndActivitySession(ctx, session.ID)
+		_, err = service.EndActivitySession(ctx, session.ID.Int64())
 		require.NoError(t, err)
 
 		// Verify session is ended
-		endedSession, err := service.GetActiveGroup(ctx, session.ID)
+		endedSession, err := service.GetActiveGroup(ctx, session.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, endedSession.EndTime, "Ended session should have end time")
 
@@ -446,11 +447,11 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, session)
 		require.NotNil(t, session.GroupID)
-		assert.Equal(t, activityGroup.ID, *session.GroupID)
-		assert.Equal(t, &device.ID, session.DeviceID)
+		assert.Equal(t, ident.ID(activityGroup.ID), *session.GroupID)
+		assert.Equal(t, (*ident.ID)(&device.ID), session.DeviceID)
 
 		// Verify supervisors were assigned
-		supervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		supervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		assert.Len(t, supervisors, 2, "Expected 2 supervisors")
 	})
@@ -476,7 +477,7 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 		assert.NotEqual(t, session1.ID, session2.ID)
 
 		// Verify first session was ended
-		endedSession, err := service.GetActiveGroup(ctx, session1.ID)
+		endedSession, err := service.GetActiveGroup(ctx, session1.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, endedSession.EndTime, "Expected first session to be ended")
 	})
@@ -494,7 +495,7 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 
 		session1, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device1.ID, []int64{oldSupervisor.ID}, &room1.ID)
 		require.NoError(t, err)
-		visit := testpkg.CreateTestVisit(t, db, student.ID, session1.ID, time.Now().Add(-15*time.Minute), nil)
+		visit := testpkg.CreateTestVisit(t, db, student.ID, session1.ID.Int64(), time.Now().Add(-15*time.Minute), nil)
 		activeGroupID := session1.ID
 		mirroredInstance := api.NewAttendanceMirrorInstance()
 		mirroredInstance.Date = calendar.Date(calendar.TodayDate())
@@ -504,7 +505,7 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 		mirroredInstance.EndTime = time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC)
 		mirroredInstance.RoomID = room1.ID
 		mirroredInstance.Status = studentpresence.ActivitySessionActive
-		mirroredInstance.ActiveGroupID = &activeGroupID
+		mirroredInstance.ActiveGroupID = (*int64)(&activeGroupID)
 		mirroredInstance.IsSpontaneous = true
 		mirroredInstance.TenantID = testpkg.Tenant(t)
 		require.NoError(t, api.NewAttendanceSyncTestRepositories(testpkg.MustDatabase(db), owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db))).Instances.Create(ctx, mirroredInstance))
@@ -517,18 +518,18 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 		require.NotNil(t, session2)
 		assert.NotEqual(t, session1.ID, session2.ID)
 
-		endedSession, err := service.GetActiveGroup(ctx, session1.ID)
+		endedSession, err := service.GetActiveGroup(ctx, session1.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, endedSession.EndTime, "expected old cross-device activity session to be ended")
 
 		activeSessions, err := testSchoolPresence(t, db).QueryLiveGroups(ctx, studentpresence.LiveGroupFilter{ActivityGroupIDs: []int64{activityGroup.ID}, OpenOnly: true})
 		require.NoError(t, err)
 		require.Len(t, activeSessions, 1, "expected exactly one active session for the activity")
-		assert.Equal(t, session2.ID, activeSessions[0].ID)
+		assert.Equal(t, session2.ID.Int64(), activeSessions[0].ID)
 
 		transferredVisit, err := testSchoolPresence(t, db).FindVisit(ctx, visit.ID)
 		require.NoError(t, err)
-		assert.Equal(t, session2.ID, transferredVisit.ActiveGroupID, "expected active visit to move to new session")
+		assert.Equal(t, session2.ID.Int64(), transferredVisit.ActiveGroupID, "expected active visit to move to new session")
 		assert.Nil(t, transferredVisit.ExitTime, "expected transferred visit to remain open")
 
 		completedMirror, err := api.NewAttendanceSyncTestRepositories(testpkg.MustDatabase(db), owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db))).Instances.FindByID(ctx, mirroredInstance.ID)
@@ -536,18 +537,18 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 		assert.Equal(t, studentpresence.ActivitySessionCompleted, completedMirror.Status, "expected old timetable mirror to be completed")
 		assert.NotNil(t, completedMirror.CompletedAt, "expected completed mirror timestamp")
 
-		oldActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session1.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		oldActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session1.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		assert.Empty(t, oldActiveSupervisors, "expected old session to have no active supervisors")
 
-		allOldSupervisors, err := api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).GroupSupervisor.FindByActiveGroupID(ctx, session1.ID, false)
+		allOldSupervisors, err := api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).GroupSupervisor.FindByActiveGroupID(ctx, session1.ID.Int64(), false)
 		require.NoError(t, err)
 		require.Len(t, allOldSupervisors, 1, "expected old session supervisor history to be preserved")
 		assert.Equal(t, oldSupervisor.ID, allOldSupervisors[0].StaffID)
-		assert.Equal(t, session1.ID, allOldSupervisors[0].GroupID)
+		assert.Equal(t, session1.ID.Int64(), allOldSupervisors[0].GroupID)
 		assert.NotNil(t, allOldSupervisors[0].EndDate, "expected old supervisor row to be ended, not moved")
 
-		newActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session2.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		newActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session2.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		require.Len(t, newActiveSupervisors, 2, "expected old and new supervisors on the new session")
 
@@ -590,23 +591,23 @@ func TestForceStartActivitySessionWithSupervisors(t *testing.T) {
 		require.NotNil(t, session2)
 		assert.NotEqual(t, session1.ID, session2.ID)
 
-		oldActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session1.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		oldActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session1.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		assert.Empty(t, oldActiveSupervisors, "expected old session to have no active supervisors")
 
-		allOldSupervisors, err := api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).GroupSupervisor.FindByActiveGroupID(ctx, session1.ID, false)
+		allOldSupervisors, err := api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).GroupSupervisor.FindByActiveGroupID(ctx, session1.ID.Int64(), false)
 		require.NoError(t, err)
 		require.Len(t, allOldSupervisors, 1, "expected supervisor row to remain on old session")
 		assert.Equal(t, staff.ID, allOldSupervisors[0].StaffID)
-		assert.Equal(t, session1.ID, allOldSupervisors[0].GroupID)
+		assert.Equal(t, session1.ID.Int64(), allOldSupervisors[0].GroupID)
 		assert.Equal(t, "Supervisor", allOldSupervisors[0].Role)
 		assert.NotNil(t, allOldSupervisors[0].EndDate, "expected old supervisor row to be ended")
 
-		newActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session2.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		newActiveSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session2.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		require.Len(t, newActiveSupervisors, 1, "expected role casing mismatch not to duplicate the same staff member")
 		assert.Equal(t, staff.ID, newActiveSupervisors[0].StaffID)
-		assert.Equal(t, session2.ID, newActiveSupervisors[0].GroupID)
+		assert.Equal(t, session2.ID.Int64(), newActiveSupervisors[0].GroupID)
 		assert.Equal(t, "supervisor", newActiveSupervisors[0].Role)
 	})
 
@@ -662,7 +663,7 @@ func TestStartActivitySessionWithSupervisors(t *testing.T) {
 		assert.NotNil(t, session)
 
 		// Verify both supervisors assigned
-		supervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		supervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		assert.Len(t, supervisors, 2)
 	})

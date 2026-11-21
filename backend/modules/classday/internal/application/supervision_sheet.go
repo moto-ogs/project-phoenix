@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SupervisionStudentSheet builds the per-child sheet a supervisor opens from
@@ -50,7 +51,7 @@ func (s *dayReports) SupervisionStudentSheet(ctx context.Context, in classday.Su
 // departure, the day status and the contacts of the date.
 func (s *dayReports) supervisionSheetFor(ctx context.Context, student *SheetStudent, date calendar.Date, boundary []int64) (*classday.SupervisionStudentSheet, error) {
 	sheet := &classday.SupervisionStudentSheet{
-		StudentID:         student.ID,
+		StudentID:         ident.ID(student.ID),
 		SchoolClass:       student.SchoolClass,
 		Date:              date,
 		PickupContacts:    []classday.SupervisionContact{},
@@ -251,10 +252,10 @@ func (s *dayReports) recordSupervisionSheetAudit(ctx context.Context, sheet *cla
 		return err
 	}
 	studentID := sheet.StudentID
-	entry.StudentID = &studentID
+	entry.StudentID = (*int64)(&studentID)
 	entry.Metadata = map[string]any{
 		"report":                  "supervision_student_sheet",
-		"student_id":              sheet.StudentID,
+		"student_id":              sheet.StudentID.Int64(),
 		"date":                    sheet.Date.String(),
 		"pickup_contact_count":    len(sheet.PickupContacts),
 		"emergency_contact_count": len(sheet.EmergencyContacts),

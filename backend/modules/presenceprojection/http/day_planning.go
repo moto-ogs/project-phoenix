@@ -236,7 +236,7 @@ func applyAtSchoolLocation(
 			continue
 		}
 		var pickupTime *time.Time
-		if pickup := pickups[response.ID]; pickup != nil {
+		if pickup := pickups[response.ID.Int64()]; pickup != nil {
 			pickupTime = pickup.PickupTime
 		}
 		if !careplan.IsAtSchoolBeforeCheckIn(careplan.AtSchoolInputs{
@@ -244,7 +244,7 @@ func applyAtSchoolLocation(
 				ComesToday: response.DayPlanningStatus == DayPlanningStatusComesToday,
 				Reason:     response.DayPlanningReason,
 			},
-			CheckedInToday: attendances[response.ID].HasRecordToday(),
+			CheckedInToday: attendances[response.ID.Int64()].HasRecordToday(),
 			PickupTime:     pickupTime,
 			CareDayEnd:     careDayEnd,
 			Now:            now,
@@ -275,7 +275,7 @@ func (rs *Resource) applyPendingExcusedNotes(ctx context.Context, responses []St
 		return nil
 	}
 	for i := range responses {
-		req, ok := pendingExcused[responses[i].ID]
+		req, ok := pendingExcused[responses[i].ID.Int64()]
 		if !ok {
 			continue
 		}
@@ -395,7 +395,7 @@ func applyDayPlanning(
 			continue
 		}
 		id := responses[i].ID
-		status, reason, label := resolveDayPlanningForDate(responses[i], arrivals[id], pickups[id], attendances[id], timetableIDs, isToday)
+		status, reason, label := resolveDayPlanningForDate(responses[i], arrivals[id.Int64()], pickups[id.Int64()], attendances[id.Int64()], timetableIDs, isToday)
 		responses[i].DayPlanningStatus = status
 		responses[i].DayPlanningReason = reason
 		responses[i].DayPlanningLabel = label
@@ -415,7 +415,7 @@ func resolveDayPlanningForDate(
 	timetableIDs map[int64]struct{},
 	isToday bool,
 ) (string, string, string) {
-	_, hasTimetable := timetableIDs[student.ID]
+	_, hasTimetable := timetableIDs[student.ID.Int64()]
 	decision := careplan.ResolveDayPlanning(careplan.DayPlanningInputs{
 		HasActualAttendance: isToday && hasActualAttendanceToday(attendance),
 		Sick:                student.Sick,

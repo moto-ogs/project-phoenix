@@ -155,7 +155,7 @@ func (s *service) loadDashboardActivityGroups(ctx context.Context, data *dashboa
 	}
 	data.allActivityGroups = allActivityGroups
 	for _, ag := range allActivityGroups {
-		data.activityGroupsByID[ag.ID] = ag
+		data.activityGroupsByID[ag.ID.Int64()] = ag
 	}
 }
 
@@ -178,7 +178,7 @@ func (s *service) buildRoomLookupMaps(allRooms []*studentpresence.SessionRoom) *
 	}
 
 	for _, room := range allRooms {
-		data.roomByID[room.ID] = room
+		data.roomByID[room.ID.Int64()] = room
 		if room.Capacity != nil && *room.Capacity > 0 {
 			data.roomCapacityTotal += *room.Capacity
 		}
@@ -268,17 +268,17 @@ func processActiveGroups(activeGroups []*ports.ActiveGroup, visitsByGroupID map[
 	uniqueStudentsInRoomsOverall := make(map[int64]struct{})
 
 	for _, group := range activeGroups {
-		roomData.occupiedRooms[group.RoomID] = true
+		roomData.occupiedRooms[group.RoomID.Int64()] = true
 
 		// Initialize room student set if not exists
-		if roomData.roomStudentsMap[group.RoomID] == nil {
-			roomData.roomStudentsMap[group.RoomID] = make(map[int64]struct{})
+		if roomData.roomStudentsMap[group.RoomID.Int64()] == nil {
+			roomData.roomStudentsMap[group.RoomID.Int64()] = make(map[int64]struct{})
 		}
 
 		// Count unique students for this group
-		if groupVisits, ok := visitsByGroupID[group.ID]; ok {
+		if groupVisits, ok := visitsByGroupID[group.ID.Int64()]; ok {
 			for _, visit := range groupVisits {
-				roomData.roomStudentsMap[group.RoomID][visit.StudentID] = struct{}{}
+				roomData.roomStudentsMap[group.RoomID.Int64()][visit.StudentID] = struct{}{}
 				uniqueStudentsInRoomsOverall[visit.StudentID] = struct{}{}
 			}
 		}
@@ -380,9 +380,9 @@ func buildActiveGroupRoomLookup(activeGroups []*ports.ActiveGroup, roomData *das
 		if !group.IsActive() {
 			continue
 		}
-		room, ok := roomData.roomByID[group.RoomID]
+		room, ok := roomData.roomByID[group.RoomID.Int64()]
 		if ok && !isPlaygroundRoom(room) {
-			lookup[group.ID] = true
+			lookup[group.ID.Int64()] = true
 		}
 	}
 	return lookup
@@ -402,12 +402,12 @@ func buildRecentActivity(activeGroups []*ports.ActiveGroup, activityGroupsByID m
 			continue
 		}
 
-		groupName := resolveGroupName(group.GroupID, activityGroupsByID)
-		roomName := resolveRoomName(group.RoomID, roomData.roomByID)
+		groupName := resolveGroupName((*int64)(group.GroupID), activityGroupsByID)
+		roomName := resolveRoomName(group.RoomID.Int64(), roomData.roomByID)
 
 		// Count unique students
 		visitCount := 0
-		if studentSet, ok := roomData.roomStudentsMap[group.RoomID]; ok {
+		if studentSet, ok := roomData.roomStudentsMap[group.RoomID.Int64()]; ok {
 			visitCount = len(studentSet)
 		}
 
@@ -436,7 +436,7 @@ func buildCurrentActivities(allActivityGroups []*ports.SessionActivity, activeGr
 			break
 		}
 
-		hasActiveSession, participantCount := findActiveSessionForActivity(actGroup.ID, activeGroups, visitsByGroupID)
+		hasActiveSession, participantCount := findActiveSessionForActivity(actGroup.ID.Int64(), activeGroups, visitsByGroupID)
 		if !hasActiveSession {
 			continue
 		}
@@ -449,7 +449,7 @@ func buildCurrentActivities(allActivityGroups []*ports.SessionActivity, activeGr
 		status := determineActivityStatus(participantCount, actGroup.MaxParticipants)
 
 		activity := CurrentActivity{
-			ID:           actGroup.ID,
+			ID:           actGroup.ID.Int64(),
 			Name:         actGroup.Name,
 			Category:     categoryName,
 			Participants: participantCount,
@@ -469,7 +469,7 @@ func findActiveSessionForActivity(activityID int64, activeGroups []*ports.Active
 	for _, group := range activeGroups {
 		templateID, ok := group.TemplateID()
 		if group.IsActive() && ok && templateID == activityID {
-			return true, len(visitsByGroupID[group.ID])
+			return true, len(visitsByGroupID[group.ID.Int64()])
 		}
 	}
 	return false, 0
@@ -509,13 +509,13 @@ func buildActiveGroupsSummary(activeGroups []*ports.ActiveGroup, activityGroupsB
 			continue
 		}
 
-		groupName, groupType := resolveGroupNameAndType(group.GroupID, activityGroupsByID)
-		location := resolveRoomName(group.RoomID, roomData.roomByID)
+		groupName, groupType := resolveGroupNameAndType((*int64)(group.GroupID), activityGroupsByID)
+		location := resolveRoomName(group.RoomID.Int64(), roomData.roomByID)
 
-		studentCount := len(roomData.roomStudentsMap[group.RoomID])
+		studentCount := len(roomData.roomStudentsMap[group.RoomID.Int64()])
 		limit := sessionParticipantLimit(group, activityGroupsByID)
 		if limit != nil {
-			studentCount = len(visitsByGroupID[group.ID])
+			studentCount = len(visitsByGroupID[group.ID.Int64()])
 		}
 
 		groupInfo := ActiveGroupInfo{

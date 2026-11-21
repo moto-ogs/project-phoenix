@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -106,8 +107,8 @@ func TestCreateGroupSupervisor_AutoOpensWorkSession(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 
 	supervisor := &ports.GroupSupervisor{
-		StaffID:   staff.ID,
-		GroupID:   activeGroup.ID,
+		StaffID:   ident.ID(staff.ID),
+		GroupID:   ident.ID(activeGroup.ID),
 		Role:      "Supervisor",
 		StartDate: calendar.TodayDate(),
 	}
@@ -130,7 +131,7 @@ func TestCreateGroupSupervisor_SkipsWorkSessionForExternalCaregiver(t *testing.T
 	activeGroup := testpkg.CreateTestActiveGroup(t, db, activityGroup.ID, room.ID)
 
 	require.NoError(t, service.CreateGroupSupervisor(testpkg.Ctx(t), &ports.GroupSupervisor{
-		StaffID: staff.ID, GroupID: activeGroup.ID, Role: "additional_supervisor",
+		StaffID: ident.ID(staff.ID), GroupID: ident.ID(activeGroup.ID), Role: "additional_supervisor",
 		StartDate: calendar.TodayDate(), SkipPresenceStamp: true,
 	}))
 
@@ -166,7 +167,7 @@ func TestCreateGroupSupervisor_SkipsWorkSessionForAccountBackedExternal(t *testi
 
 	for _, staffID := range []int64{externalID, colleague.ID} {
 		require.NoError(t, service.CreateGroupSupervisor(testpkg.Ctx(t), &ports.GroupSupervisor{
-			StaffID: staffID, GroupID: activeGroup.ID, Role: "Supervisor", StartDate: calendar.TodayDate(),
+			StaffID: ident.ID(staffID), GroupID: ident.ID(activeGroup.ID), Role: "Supervisor", StartDate: calendar.TodayDate(),
 		}))
 	}
 
