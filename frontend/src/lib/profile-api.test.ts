@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type {
   Profile,
   ProfileUpdateRequest,
-  BackendProfile,
+  ProfileWire,
 } from "./profile-helpers";
 
 // Mock dependencies before importing the module under test
@@ -46,8 +46,8 @@ const mockedMapProfileResponse = vi.mocked(mapProfileResponse);
 const mockedMapProfileUpdateRequest = vi.mocked(mapProfileUpdateRequest);
 
 // Sample data
-const sampleBackendProfile: BackendProfile = {
-  id: 123,
+const sampleProfileWire: ProfileWire = {
+  id: "123",
   first_name: "Max",
   last_name: "Mustermann",
   email: "max@example.com",
@@ -118,7 +118,7 @@ describe("profile-api", () => {
           Promise.resolve({
             status: "success",
             message: "Profile fetched",
-            data: sampleBackendProfile,
+            data: sampleProfileWire,
           }),
       });
       global.fetch = mockFetch;
@@ -131,9 +131,7 @@ describe("profile-api", () => {
           "Content-Type": "application/json",
         },
       });
-      expect(mockedMapProfileResponse).toHaveBeenCalledWith(
-        sampleBackendProfile,
-      );
+      expect(mockedMapProfileResponse).toHaveBeenCalledWith(sampleProfileWire);
       expect(result).toEqual(sampleProfile);
     });
 
@@ -235,7 +233,7 @@ describe("profile-api", () => {
           Promise.resolve({
             status: "success",
             message: "Profile updated",
-            data: sampleBackendProfile,
+            data: sampleProfileWire,
           }),
       });
       global.fetch = mockFetch;
@@ -256,9 +254,7 @@ describe("profile-api", () => {
           bio: "Updated bio",
         }),
       });
-      expect(mockedMapProfileResponse).toHaveBeenCalledWith(
-        sampleBackendProfile,
-      );
+      expect(mockedMapProfileResponse).toHaveBeenCalledWith(sampleProfileWire);
       expect(result).toEqual(sampleProfile);
     });
 
@@ -329,7 +325,7 @@ describe("profile-api", () => {
           Promise.resolve({
             status: "success",
             message: "Avatar uploaded",
-            data: sampleBackendProfile,
+            data: sampleProfileWire,
           }),
       });
       global.fetch = mockFetch;
@@ -352,9 +348,7 @@ describe("profile-api", () => {
       expect(body).toBeInstanceOf(FormData);
       expect(body.get("avatar")).toBe(mockFile);
 
-      expect(mockedMapProfileResponse).toHaveBeenCalledWith(
-        sampleBackendProfile,
-      );
+      expect(mockedMapProfileResponse).toHaveBeenCalledWith(sampleProfileWire);
       expect(result).toEqual(sampleProfile);
     });
 

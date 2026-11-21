@@ -14,10 +14,10 @@ import {
   mapProfileUpdateRequest,
   type Profile,
   type ProfileUpdateRequest,
-  type BackendProfile,
+  type ProfileWire,
 } from "./profile-helpers";
 
-type ProfileApiResult = ApiResponse<BackendProfile>;
+type ProfileApiResult = ApiResponse<ProfileWire>;
 
 /**
  * A 200 answer without the backend's success status is a server defect: the
