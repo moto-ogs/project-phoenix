@@ -329,6 +329,27 @@ function markerLines(source, lines, line, comment, literalLines) {
   return [start, until];
 }
 
+// Check directly concatenated literals as one text, keeping the original
+// tokens so findings and exception markers still refer to their source lines.
+function joinedTexts(source, texts) {
+  const groups = texts.filter(token => token.verbatim).map(token => ({ text: token.text, parts: [{ token, start: 0 }] }));
+  let group;
+  let previous;
+  for (const token of texts.filter(token => !token.verbatim).sort((a, b) => a.offset - b.offset)) {
+    const gap = previous ? source.slice(previous.end, token.offset) : '';
+    const operator = gap.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').trim();
+    if (!previous || previous.end > token.offset || operator !== '+') {
+      group = { text: '', parts: [] };
+      groups.push(group);
+    }
+    group.parts.push({ token, start: group.text.length });
+    group.text += token.text;
+    previous = token;
+  }
+  const order = new Map(texts.map((token, index) => [token, index]));
+  return groups.sort((a, b) => order.get(a.parts[0].token) - order.get(b.parts[0].token));
+}
+
 // Applies the inline markers of one file to its hits.
 // Returns { findings: [{ line, word, excerpt }], staleMarkers: [line] }.
 export function checkTokens(source, { texts, comments }) {
@@ -348,17 +369,20 @@ export function checkTokens(source, { texts, comments }) {
     });
   }
   const findings = [];
-  for (const token of texts) {
-    for (const hit of findFormalAddress(token.text)) {
+  for (const { text, parts } of joinedTexts(source, texts)) {
+    for (const hit of findFormalAddress(text)) {
+      const part = parts.find(({ token, start }) => hit.index >= start && hit.index < start + token.text.length);
+      const { token } = part;
+      const index = hit.index - part.start;
       // Verbatim text (code, templates) sits in the source as is; a literal
       // counts by its first line, and only raw literals keep their line breaks.
-      const start = token.verbatim ? line(token.offset + hit.index) : line(token.offset);
+      const start = token.verbatim ? line(token.offset + index) : line(token.offset);
       const marker = markers.find(candidate => start >= candidate.from && start <= candidate.until);
       if (marker) { marker.used = true; continue; }
       findings.push({
-        line: token.verbatim || !token.raw ? start : start + lineCountBefore(token.text, hit.index),
+        line: token.verbatim || !token.raw ? start : start + lineCountBefore(token.text, index),
         word: hit.word,
-        excerpt: excerpt(token.text, hit.index),
+        excerpt: excerpt(text, hit.index),
       });
     }
   }
@@ -423,7 +447,7 @@ const TOKENIZERS = { go: goTokens, script: scriptTokens, template: templateToken
 
 // Problem lines of one file. JSON exceptions that matched are added to `used`.
 export function checkSource(file, kind, source, exceptions = JSON_EXCEPTIONS, used = new Set()) {
-  if (!FORMAL_ANYWHERE.test(source)) return [];
+  if (!FORMAL_ANYWHERE.test(source) && !MARKER.test(source)) return [];
   const problems = [];
   if (kind === 'json') {
     for (const { key, text } of jsonTexts(JSON.parse(source))) {

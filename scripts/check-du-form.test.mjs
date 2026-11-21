@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, test } from 'node:test';
-import { checkRepository, checkTokens, findFormalAddress, goTokens, scriptTokens, templateTokens } from './check-du-form.mjs';
+import { checkRepository, checkSource, checkTokens, findFormalAddress, goTokens, scriptTokens, templateTokens } from './check-du-form.mjs';
 
 const words = text => findFormalAddress(text).map(hit => hit.word);
 
@@ -52,6 +52,31 @@ describe('findFormalAddress', () => {
 });
 
 const check = (source, tokenize) => checkTokens(source, tokenize(source));
+
+for (const kind of ['go', 'script']) {
+  test(`${kind}: concatenated literals retain sentence context and source lines`, () => {
+    const source = [
+      'const a = "Bitte " + /* weiter */ "prüfen " +',
+      '  "Sie die Angaben.";',
+      'const b = "Erledigt. " + "Sie bleibt bestehen.";',
+      'const c = ["Bitte prüfen ", "Sie bleibt bestehen."];',
+      'const d = "Bitte prüfen " + name + "Sie bleibt bestehen.";',
+      'const e = "Tippe auf „" + "Senden Sie“.";',
+      '// sie-anrede-erlaubt (ADR 0294): gebundener Wortlaut',
+      'const f = "Bitte prüfen " + "Sie das.";',
+    ].join('\n');
+    const problems = checkSource('sample', kind, source);
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /^sample:2: „Sie“/);
+  });
+
+  test(`${kind}: checkSource reports stale markers without formal address`, () => {
+    const source = '// sie-anrede-erlaubt (ADR 0294): alt\nconst a = "Bitte prüfe das.";';
+    assert.deepEqual(checkSource('sample', kind, source), [
+      'sample:1: Marker „sie-anrede-erlaubt“ deckt keinen Sie-Text mehr ab; entfernen.',
+    ]);
+  });
+}
 
 describe('Go strings', () => {
   test('reads interpreted and raw strings, not comments', () => {
