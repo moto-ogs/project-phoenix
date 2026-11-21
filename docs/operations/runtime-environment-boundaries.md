@@ -49,13 +49,16 @@ The mail provider group (`EMAIL_PROVIDER`, `EMAIL_FROM_SECURITY_ADDRESS`,
 `EMAIL_FALLBACK_*`, #5933) uses `${KEY-}` until #5935: an environment deploys
 without these keys and keeps plain SMTP. `EMAIL_PROVIDER=lettermint` makes the
 backend refuse to start while one of them is empty.
-`HUBSPOT_DEMO_TOKEN` (#7677) is an optional private-app token exposed only to
+`HUBSPOT_DEMO_TOKEN` (#7677) is an optional HubSpot service key or legacy
+private-app token exposed only to
 the demo server, which runs its embedded Worker. The demo binding uses
 `${HUBSPOT_DEMO_TOKEN-}`; empty or absent disables the integration. It is absent
 from staging, production, frontend, migration and standalone Worker allowlists,
 and application composition ignores it outside `APP_ENV=demo`. Before
 activation, provision the token through `environments/demo.sops.env` using
-SOPS, with contact read/write scopes and the properties listed below. No
+SOPS, with `crm.objects.contacts.read` and `crm.objects.contacts.write` scopes
+and the properties listed below. Create a service key under HubSpot's
+Development > Keys > Service keys. No
 plaintext host override is an alternative to SOPS.
 
 The HubSpot account must define `moto_demo_status` (enumeration values
