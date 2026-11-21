@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The letters of the monthly invoices (#4684, ADR 0165). A released monthly
@@ -115,7 +116,7 @@ type CareLetterInput struct {
 // whose letters are not created yet and for a Storno of an invoice that was
 // neither mailed nor downloaded for printing, which has no letter.
 type CareLetterMailing struct {
-	InvoiceID          int64         `json:"invoice_id"`
+	InvoiceID          ident.ID      `json:"invoice_id"`
 	Kind               string        `json:"kind"`
 	Number             string        `json:"number"`
 	InvoiceNumber      string        `json:"invoice_number"`

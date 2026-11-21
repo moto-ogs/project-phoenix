@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The review of a monthly run before its release (#5916, ADR 0119 addendum
@@ -56,7 +57,7 @@ var ExcludableServices = []string{ServiceCare, ServiceMeal}
 // part of CareRun.
 type CareRunScope struct {
 	// SchoolIDs are the schools the run bills, ascending.
-	SchoolIDs []int64 `json:"school_ids"`
+	SchoolIDs []ident.ID `json:"school_ids"`
 	// InvoiceDate is the invoice date the release puts on every invoice; nil
 	// takes the day of the release.
 	InvoiceDate *calendar.Date `json:"invoice_date"`
@@ -74,7 +75,7 @@ type CareRunStart struct {
 // the reason, the account and the time of its entry in the trail.
 type CareExclusion struct {
 	Reason     string    `json:"reason"`
-	AccountID  *int64    `json:"account_id"`
+	AccountID  *ident.ID `json:"account_id"`
 	ExcludedAt time.Time `json:"excluded_at"`
 }
 
@@ -99,9 +100,9 @@ type CareRunReviewState struct {
 // CareRunSchool is a school of the Träger a new run of a month may bill;
 // OpenRunID names the open run of the month that bills it already.
 type CareRunSchool struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	OpenRunID *int64 `json:"open_run_id"`
+	ID        ident.ID  `json:"id"`
+	Name      string    `json:"name"`
+	OpenRunID *ident.ID `json:"open_run_id"`
 }
 
 // CareRelease is what the reviewer saw before the release: the count and

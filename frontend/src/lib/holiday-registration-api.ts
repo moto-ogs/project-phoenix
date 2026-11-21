@@ -1,9 +1,3 @@
-import {
-  holidayAddressRequirement,
-  holidayHealthRequirement,
-  holidayLegalBlocks,
-  type HolidayLegalBlockWire,
-} from "~/lib/holiday-form-field";
 // Öffentliche Ferienanmeldung (#4661): der eine Link eines Ferienzeitraums
 // für alle Schulen des Trägers, ohne Elternkonto.
 
@@ -24,9 +18,9 @@ import {
   knownHolidayPlacement,
   type HolidayPlacement,
 } from "~/lib/parent-holiday-registration-entries";
-import type {
-  HolidayFormField,
-  HolidayFormVersion,
+import {
+  holidayFormVersionFromContract,
+  type HolidayFormVersion,
 } from "~/lib/holiday-form-field";
 import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import {
@@ -235,31 +229,13 @@ export interface HolidayContactPayload {
   readonly relationship: string;
 }
 
-/**
- * The offer as the contract decodes it, with the form questions and legal
- * blocks in the shape of the online registration's form schema: their open
- * enums and translations follow with the form schema client, not here.
- */
-type HolidayRegistrationOfferWire = Omit<
-  WireHolidayRegistrationOffer,
-  "form"
-> & {
-  form: Omit<
-    WireHolidayRegistrationOffer["form"],
-    "fields" | "legal_blocks"
-  > & {
-    fields: HolidayFormField[] | null;
-    legal_blocks: HolidayLegalBlockWire[] | null;
-  };
-};
-
 /** The days of a list the decoder may leave null, without the empty ones. */
 function presentDays(days: readonly (string | null)[] | null): string[] {
   return (days ?? []).filter((day): day is string => day !== null);
 }
 
 function offerFromBackend(
-  offer: HolidayRegistrationOfferWire,
+  offer: WireHolidayRegistrationOffer,
 ): HolidayRegistrationOffer {
   return {
     traegerName: offer.traeger_name,
@@ -306,17 +282,10 @@ function offerFromBackend(
       name: school.name,
     })),
     captchaSiteKey: offer.captcha_site_key,
-    form: {
-      legalBlocks: holidayLegalBlocks(offer.form.legal_blocks),
-      version: offer.form.version,
-      fields: offer.form.fields ?? [],
-      addressRequirement: holidayAddressRequirement(
-        offer.form.address_requirement,
-      ),
-      healthRequirement: holidayHealthRequirement(
-        offer.form.health_requirement,
-      ),
-    },
+    // Read only, but a question, legal block or rule this build does not
+    // know fails the read too: leaving it out could hide a required answer
+    // or consent the backend then refuses when the registration arrives.
+    form: holidayFormVersionFromContract(offer.form, "HolidayRegistrationForm"),
     consentTexts: consentTextsFromBackend(offer.consent_texts),
     // Go itself answers "off" for a Träger without a choice; the backend
     // checks every wish again when the registration arrives.
@@ -375,7 +344,7 @@ export async function fetchHolidayRegistrationOffer(
     );
   }
   const body = (await response.json()) as {
-    data: HolidayRegistrationOfferWire;
+    data: WireHolidayRegistrationOffer;
   };
   return offerFromBackend(body.data);
 }
@@ -472,7 +441,13 @@ export async function quoteHolidayContribution(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         children: children.map((bookings, index) => ({
-          bookings,
+          // The quote names its weeks and time models as strings (#2342);
+          // the registration form keeps numbers until its route reads both.
+          bookings: bookings.map((booking) => ({
+            ...booking,
+            week_id: String(booking.week_id),
+            time_model_id: String(booking.time_model_id),
+          })),
           age_rank: ageRanks[index] ?? 0,
         })),
         benefits_declared: benefitsDeclared,

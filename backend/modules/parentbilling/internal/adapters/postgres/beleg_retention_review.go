@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type clarificationReviewRow struct {
@@ -29,7 +30,7 @@ type clarificationReviewRow struct {
 
 func (r clarificationReviewRow) review() parentbilling.BelegClarificationReview {
 	review := parentbilling.BelegClarificationReview{
-		ID: r.ID, BelegType: r.BelegType, Reason: r.Reason, Note: r.Note, Escalated: r.Escalated,
+		ID: ident.ID(r.ID), BelegType: r.BelegType, Reason: r.Reason, Note: r.Note, Escalated: r.Escalated,
 		ReviewedOn: r.ReviewedOn, NextReviewOn: r.NextReviewOn, ReviewedAt: r.ReviewedAt,
 	}
 	if r.EscalationReason != nil {

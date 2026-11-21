@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // A registration confirmed with a cost bearer while every week waits keeps
@@ -25,7 +26,7 @@ func TestWaitlistedConfirmationKeepsItsCostBearerForTheMoveUp(t *testing.T) {
 	var named *int64
 	for _, line := range frozen.Children[0].Lines {
 		if line.Kind == parentbilling.LineCostTakeover {
-			named = line.CostBearerID
+			named = (*int64)(line.CostBearerID)
 			assert.Equal(t, int64(0), line.AmountCents)
 		}
 	}
@@ -33,7 +34,7 @@ func TestWaitlistedConfirmationKeepsItsCostBearerForTheMoveUp(t *testing.T) {
 
 	// The store reads the cost bearer back from that line only.
 	stored := parentbilling.HolidayContribution{
-		Children: frozen.Children, Frozen: true, CostBearerID: named, CostBearerName: bearer.Name,
+		Children: frozen.Children, Frozen: true, CostBearerID: (*ident.ID)(named), CostBearerName: bearer.Name,
 	}
 	placed := chainChild(1, 1, 4500)
 	placed.Bookings[0].Promoted = true

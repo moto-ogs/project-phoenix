@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The billing unit child-month (ADR 0158, Nachtrag Kind-Monat): the monthly
@@ -54,10 +55,10 @@ func holdSnapshot(duplicates []parentbilling.CareDuplicate) []parentbilling.Care
 	index := map[int64]int{}
 	for _, duplicate := range duplicates {
 		key := duplicate.Contracts[0].ContractID
-		i, seen := index[key]
+		i, seen := index[key.Int64()]
 		if !seen {
 			i = len(holds)
-			index[key] = i
+			index[key.Int64()] = i
 			holds = append(holds, parentbilling.CareRunHold{
 				Position: i + 1, Reason: parentbilling.HoldReasonDuplicateContract,
 				ChildFirstName: duplicate.ChildFirstName, ChildLastName: duplicate.ChildLastName,
@@ -240,7 +241,7 @@ func childContracts(child []int64, byContract map[int64][]parentbilling.CareCont
 	contracts := make([]parentbilling.CareDuplicateContract, len(child))
 	for i, contractID := range child {
 		head := byContract[contractID][0]
-		contracts[i] = parentbilling.CareDuplicateContract{ContractID: contractID, SchoolID: head.SchoolID, SchoolName: head.SchoolName}
+		contracts[i] = parentbilling.CareDuplicateContract{ContractID: ident.ID(contractID), SchoolID: ident.ID(head.SchoolID), SchoolName: head.SchoolName}
 	}
 	return contracts
 }

@@ -125,6 +125,7 @@ type Scheduler struct {
 
 	// Outbox worker (parent-enrollment PR 5).
 	// Nil → outbox task does not register.
+	demoCRMWorker          ports.OutboxJobRunner
 	outboxWorker           ports.OutboxWorkerRunner
 	emailReconciliation    ports.EmailDeliveryReconciler
 	settleExpiredTransfers func(context.Context, int) (int, error)
@@ -235,6 +236,7 @@ func newScheduler(deps ports.WorkerDependencies) *Scheduler {
 		studentLifecycleRepo:  deps.StudentLifecycleRepo,
 		studentLifecycleAudit: deps.StudentLifecycleAudit,
 		careExitEffector:      deps.CareExitEffector,
+		demoCRMWorker:         deps.DemoCRMWorker,
 		outboxWorker:          deps.OutboxWorker, emailReconciliation: deps.EmailReconciliation,
 		settleExpiredTransfers: deps.SettleExpiredTransfers,
 		rolloverDeadlineRunner: deps.RolloverDeadlineRunner,

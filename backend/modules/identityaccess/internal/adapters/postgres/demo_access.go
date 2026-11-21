@@ -84,16 +84,19 @@ func (s *Store) FindDemoAccessByTokenHash(ctx context.Context, tokenHash string)
 		return domain.DemoAccess{}, false, err
 	}
 	var row struct {
-		ID         int64     `bun:"id"`
-		Email      string    `bun:"email"`
-		ExpiresAt  time.Time `bun:"expires_at"`
-		SchoolSlug string    `bun:"school_slug"`
-		SchoolName string    `bun:"school_name"`
-		FirstName  string    `bun:"first_name"`
-		LastName   string    `bun:"last_name"`
-		Source     string    `bun:"source"`
+		ContactOptIn bool      `bun:"contact_opt_in"`
+		CreatedAt    time.Time `bun:"created_at"`
+		UseCount     int       `bun:"use_count"`
+		ID           int64     `bun:"id"`
+		Email        string    `bun:"email"`
+		ExpiresAt    time.Time `bun:"expires_at"`
+		SchoolSlug   string    `bun:"school_slug"`
+		SchoolName   string    `bun:"school_name"`
+		FirstName    string    `bun:"first_name"`
+		LastName     string    `bun:"last_name"`
+		Source       string    `bun:"source"`
 	}
-	err = db.NewRaw(`SELECT id, email, expires_at, school_slug, school_name, first_name, last_name, source FROM auth.demo_accesses WHERE token_hash = ?`, tokenHash).Scan(ctx, &row)
+	err = db.NewRaw(`SELECT id, email, expires_at, school_slug, school_name, first_name, last_name, source, contact_opt_in, created_at, use_count FROM auth.demo_accesses WHERE token_hash = ?`, tokenHash).Scan(ctx, &row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.DemoAccess{}, false, nil
 	}
@@ -101,7 +104,7 @@ func (s *Store) FindDemoAccessByTokenHash(ctx context.Context, tokenHash string)
 		return domain.DemoAccess{}, false, fmt.Errorf("identity access postgres: find demo access: %w", err)
 	}
 	return domain.DemoAccess{
-		ID: row.ID, Email: row.Email, TokenHash: tokenHash, ExpiresAt: row.ExpiresAt,
+		ContactOptIn: row.ContactOptIn, CreatedAt: row.CreatedAt, UseCount: row.UseCount, ID: row.ID, Email: row.Email, TokenHash: tokenHash, ExpiresAt: row.ExpiresAt,
 		SchoolSlug: row.SchoolSlug, SchoolName: row.SchoolName, FirstName: row.FirstName, LastName: row.LastName, Source: row.Source,
 	}, true, nil
 }

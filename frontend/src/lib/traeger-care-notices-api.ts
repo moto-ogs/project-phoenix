@@ -303,7 +303,7 @@ export async function startCareNoticeRun(
       body: {
         year: input.year,
         from_month: input.fromMonth,
-        school_ids: input.schoolIds.map(Number),
+        school_ids: [...input.schoolIds],
         notice_date: input.noticeDate,
       } satisfies CareNoticeRunRequest,
     }),

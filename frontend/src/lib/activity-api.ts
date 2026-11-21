@@ -23,7 +23,7 @@ import {
   type UpdateActivityRequest,
   type ActivityFilter,
   type ActivityStudent,
-  type BackendStudentEnrollment,
+  type StudentEnrollmentBody,
 } from "./activity-helpers";
 
 // Re-export types for external use
@@ -92,7 +92,7 @@ function parseEnrolledStudentsResponse(
     return wrapped.data.map((item) =>
       isActivityStudent(item)
         ? normalizeActivityStudent(item)
-        : mapStudentEnrollmentResponse(item as BackendStudentEnrollment),
+        : mapStudentEnrollmentResponse(item as StudentEnrollmentBody),
     );
   }
   // Handle direct array response
@@ -100,7 +100,7 @@ function parseEnrolledStudentsResponse(
     ? responseData.map((item) =>
         isActivityStudent(item)
           ? normalizeActivityStudent(item)
-          : mapStudentEnrollmentResponse(item as BackendStudentEnrollment),
+          : mapStudentEnrollmentResponse(item as StudentEnrollmentBody),
       )
     : [];
 }

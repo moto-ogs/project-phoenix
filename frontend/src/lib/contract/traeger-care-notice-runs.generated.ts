@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -44,12 +44,12 @@ export interface CareNoticeRun {
 }
 
 export const CareNoticeRunSchema: z.ZodType<CareNoticeRun, unknown> = object<CareNoticeRun>({
-  id: int64StringOrNumber,
+  id: int64String,
   year: safeInt,
   period_from: nullable(calendarDate),
   period_until: nullable(calendarDate),
   status: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   notice_date: nullable(calendarDate),
   created_at: instant,
   released_at: nullable(instant),
@@ -93,7 +93,7 @@ export const CareNoticeLineSchema: z.ZodType<CareNoticeLine, unknown> = object<C
   kind: str,
   label: str,
   detail: str,
-  care_offering_id: optional(int64StringOrNumber),
+  care_offering_id: optional(int64String),
   period_from: nullable(calendarDate),
   period_until: nullable(calendarDate),
   months: safeInt,
@@ -132,7 +132,7 @@ export interface CareNoticeReference {
 }
 
 export const CareNoticeReferenceSchema: z.ZodType<CareNoticeReference, unknown> = object<CareNoticeReference>({
-  id: int64StringOrNumber,
+  id: int64String,
   number: str,
   issued_on: nullable(calendarDate),
 });
@@ -164,12 +164,12 @@ export interface CareNotice {
 }
 
 export const CareNoticeSchema: z.ZodType<CareNotice, unknown> = object<CareNotice>({
-  id: int64StringOrNumber,
+  id: int64String,
   number: str,
   issued_on: nullable(calendarDate),
   kind: str,
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -218,12 +218,12 @@ export interface CareNoticeRunDetail {
 }
 
 export const CareNoticeRunDetailSchema: z.ZodType<CareNoticeRunDetail, unknown> = object<CareNoticeRunDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   year: safeInt,
   period_from: nullable(calendarDate),
   period_until: nullable(calendarDate),
   status: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   notice_date: nullable(calendarDate),
   created_at: instant,
   released_at: nullable(instant),
@@ -274,8 +274,8 @@ export interface CareNoticeMailing {
 }
 
 export const CareNoticeMailingSchema: z.ZodType<CareNoticeMailing, unknown> = object<CareNoticeMailing>({
-  notice_id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  notice_id: int64String,
+  contract_id: int64String,
   kind: str,
   number: str,
   amends_number: optional(str),
@@ -378,7 +378,7 @@ export const CareNoticeLetterSchema: z.ZodType<CareNoticeLetter, unknown> = obje
 export interface CareNoticeRunRequest {
   year?: number;
   from_month?: string | null;
-  school_ids?: number[] | null;
+  school_ids?: string[] | null;
   notice_date?: string | null;
 }
 

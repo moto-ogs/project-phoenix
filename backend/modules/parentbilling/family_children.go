@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The children of a family for the sibling rule (#5918, ADR 0088 section 4
@@ -78,10 +79,10 @@ var ErrFamilyChildrenNotFound = errors.New("no number of children for this famil
 // FamilyChildCount is the number of a family: what the parents stated and
 // what the Abrechnung confirmed with its validity.
 type FamilyChildCount struct {
-	ID int64 `json:"id"`
+	ID ident.ID `json:"id"`
 	// ContractID is the contract the number was last stated or confirmed
 	// for; the number goes with it.
-	ContractID        int64          `json:"contract_id"`
+	ContractID        ident.ID       `json:"contract_id"`
 	StatedChildren    *int           `json:"stated_children"`
 	StatedAt          *time.Time     `json:"stated_at"`
 	ConfirmedChildren *int           `json:"confirmed_children"`
@@ -135,10 +136,10 @@ type FamilyChildConfirmation struct {
 
 // FamilyContractChild is a child of a family with a contract in force.
 type FamilyContractChild struct {
-	ContractID     int64  `json:"contract_id"`
-	SchoolName     string `json:"school_name"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
+	ContractID     ident.ID `json:"contract_id"`
+	SchoolName     string   `json:"school_name"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
 }
 
 // FamilyChildren is one family as the Abrechnung checks it: the recipient
@@ -147,7 +148,7 @@ type FamilyContractChild struct {
 type FamilyChildren struct {
 	// ContractID names the family in a request: one of its contracts. A
 	// family without an address has only this one.
-	ContractID         int64                 `json:"contract_id"`
+	ContractID         ident.ID              `json:"contract_id"`
 	RecipientFirstName string                `json:"recipient_first_name"`
 	RecipientLastName  string                `json:"recipient_last_name"`
 	RecipientEmail     string                `json:"recipient_email"`
@@ -170,7 +171,7 @@ type FamilyChildrenSet struct {
 // FamilyChildrenInput is the number the Abrechnung confirms for the family
 // of a contract, from ValidFrom on; a nil ValidUntil is open.
 type FamilyChildrenInput struct {
-	ContractID int64          `json:"contract_id"`
+	ContractID ident.ID       `json:"contract_id"`
 	Children   int            `json:"children"`
 	ValidFrom  calendar.Date  `json:"valid_from"`
 	ValidUntil *calendar.Date `json:"valid_until"`

@@ -12,6 +12,7 @@
  * bar that ties the card back to the activity type.
  */
 
+import { labelOf } from "~/lib/label-of";
 import { Archive, Palette, Users } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
@@ -51,7 +52,7 @@ interface TemplateCardProps {
 
 const WEEKDAYS = [1, 2, 3, 4, 5] as const;
 
-const TYPE_LABELS: Record<TimetableTemplate["type"], string> = {
+const TYPE_LABELS: Record<NonNullable<TimetableTemplate["type"]>, string> = {
   care: "Betreuung",
   activity: "AG",
   external: "Extern",
@@ -137,7 +138,7 @@ export function TemplateCard({
               {template.name}
             </h3>
             <p className="mt-0.5 text-xs text-gray-500">
-              {TYPE_LABELS[template.type]}
+              {labelOf(TYPE_LABELS, template.type, "–")}
               {template.categoryName ? ` · ${template.categoryName}` : ""}
             </p>
             {template.rosterMaintenance &&

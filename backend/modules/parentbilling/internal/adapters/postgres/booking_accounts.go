@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The revenue accounts and cost centers of a Träger (#4821). Every query
@@ -64,10 +65,10 @@ func (s *Store) BookingAssignments(ctx context.Context, organizationID int64) (p
 		CostCenters:     make([]parentbilling.CostCenter, len(centers)),
 	}
 	for i, row := range accounts {
-		out.RevenueAccounts[i] = parentbilling.RevenueAccount{Scope: row.Scope, ScopeID: row.ScopeID, Account: row.Account, UpdatedAt: row.UpdatedAt}
+		out.RevenueAccounts[i] = parentbilling.RevenueAccount{Scope: row.Scope, ScopeID: ident.ID(row.ScopeID), Account: row.Account, UpdatedAt: row.UpdatedAt}
 	}
 	for i, row := range centers {
-		out.CostCenters[i] = parentbilling.CostCenter{ID: row.ID, Scope: row.Scope, ScopeID: row.ScopeID, ValidFrom: row.ValidFrom,
+		out.CostCenters[i] = parentbilling.CostCenter{ID: ident.ID(row.ID), Scope: row.Scope, ScopeID: ident.ID(row.ScopeID), ValidFrom: row.ValidFrom,
 			Code: row.Code, CreatedAt: row.CreatedAt}
 	}
 	return out, nil
@@ -97,7 +98,7 @@ func (s *Store) BookingOfferings(ctx context.Context, organizationID int64) ([]p
 	}
 	offerings := make([]parentbilling.BookingOffering, len(rows))
 	for i, row := range rows {
-		offerings[i] = parentbilling.BookingOffering{SchoolID: row.SchoolID, CareOfferingID: row.CareOfferingID, ModuleNames: row.ModuleNames}
+		offerings[i] = parentbilling.BookingOffering{SchoolID: ident.ID(row.SchoolID), CareOfferingID: ident.ID(row.CareOfferingID), ModuleNames: row.ModuleNames}
 	}
 	return offerings, nil
 }
@@ -138,7 +139,7 @@ func (s *Store) InsertCostCenter(ctx context.Context, organizationID, accountID 
 	if err != nil {
 		return err
 	}
-	row := &costCenterRow{OrganizationID: organizationID, Scope: center.Scope, ScopeID: center.ScopeID, ValidFrom: center.ValidFrom,
+	row := &costCenterRow{OrganizationID: organizationID, Scope: center.Scope, ScopeID: center.ScopeID.Int64(), ValidFrom: center.ValidFrom,
 		Code: center.Code, CreatedByAccountID: accountRef(accountID)}
 	if _, err := db.NewInsert().Model(row).Exec(ctx); err != nil {
 		if constraintOf(err) == costCenterScopeConstraint {

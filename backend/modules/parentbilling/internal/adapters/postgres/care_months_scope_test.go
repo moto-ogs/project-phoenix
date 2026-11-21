@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -117,7 +118,7 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		tariffs, err := store.CareTariffs(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, tariffs, 1, "CareTariffs")
-		assert.Equal(t, own.school, tariffs[0].SchoolID)
+		assert.Equal(t, ident.ID(own.school), tariffs[0].SchoolID)
 
 		billed, err := store.CareBilledUntil(ctx, own.organization)
 		require.NoError(t, err)
@@ -130,7 +131,7 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		runs, err := store.ListCareRuns(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, runs, 2, "ListCareRuns")
-		assert.ElementsMatch(t, []int64{own.released, own.open}, []int64{runs[0].ID, runs[1].ID})
+		assert.ElementsMatch(t, []int64{own.released, own.open}, []int64{runs[0].ID.Int64(), runs[1].ID.Int64()})
 
 		_, err = store.CareRun(ctx, own.organization, other.open, false)
 		assert.ErrorIs(t, err, parentbilling.ErrCareRunNotFound, "CareRun of another Träger")
@@ -140,7 +141,7 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		invoiced, err := store.InvoicedContracts(ctx, own.organization, september)
 		require.NoError(t, err)
 		require.Len(t, invoiced, 1, "InvoicedContracts")
-		assert.Equal(t, own.contract, invoiced[own.contract].ContractID)
+		assert.Equal(t, ident.ID(own.contract), invoiced[own.contract].ContractID)
 		assert.Equal(t, int64(3200), invoiced[own.contract].TotalCents)
 		assert.Equal(t, int64(3200), invoiced[own.contract].Positions[0].PayableCents)
 

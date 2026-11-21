@@ -24,6 +24,12 @@ func shiftReadToPublic(shift *workforce.ShiftRecord) workforce.StaffShift {
 	if shift.SeriesOccurrenceDate != nil {
 		value.SeriesOccurrenceDate = shift.SeriesOccurrenceDate.String()
 	}
+	if shift.SeriesStartTime != nil {
+		value.SeriesStartTime = shift.SeriesStartTime.Format(domain.ClockLayout)
+	}
+	if shift.SeriesEndTime != nil {
+		value.SeriesEndTime = shift.SeriesEndTime.Format(domain.ClockLayout)
+	}
 	return value
 }
 
@@ -43,6 +49,14 @@ func shiftReadRecord(value domain.StaffShift) *workforce.ShiftRecord {
 	shift.SeriesID = value.SeriesID
 	shift.Detached = value.Detached
 	shift.SeriesOverride = value.SeriesOverride
+	if value.SeriesStartTime != "" {
+		plannedStart := shiftReadClock(value.SeriesStartTime)
+		shift.SeriesStartTime = &plannedStart
+	}
+	if value.SeriesEndTime != "" {
+		plannedEnd := shiftReadClock(value.SeriesEndTime)
+		shift.SeriesEndTime = &plannedEnd
+	}
 	shift.SeriesOccurrenceDate = nil
 	if value.SeriesOccurrenceDate != "" {
 		occurrence := calendar.Date(value.SeriesOccurrenceDate)

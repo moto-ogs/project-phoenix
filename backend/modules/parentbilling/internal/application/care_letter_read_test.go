@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // A single download must not load the other invoices or their PDF bodies.
@@ -23,7 +24,7 @@ func (s *singleCareLetterStore) CareRun(_ context.Context, organizationID, runID
 	assert.Equal(s.t, s.organization, organizationID)
 	assert.Equal(s.t, int64(11), runID)
 	assert.True(s.t, lock, "a read holds the run like a send or a Storno")
-	return parentbilling.CareRun{ID: runID, Status: parentbilling.RunReleased}, nil
+	return parentbilling.CareRun{ID: ident.ID(runID), Status: parentbilling.RunReleased}, nil
 }
 
 func (s *singleCareLetterStore) CareRunCancellations(context.Context, int64, int64) ([]parentbilling.CareCancellation, error) {

@@ -26,6 +26,9 @@ PostHog has no host variable, because the browser reaches it through the
 same-origin `/ingest` proxy. Optional does not mean a fallback endpoint or
 credential may be invented.
 
+Demo-only `HUBSPOT_DEMO_TOKEN` (#7677) is optional pending SOPS provisioning;
+empty disables sync. Binding: `docs/operations/runtime-environment-boundaries.md`.
+
 Until #5935, `EMAIL_PROVIDER` is empty by default: plain SMTP, and its group
 (#5933) binds as `${KEY-}` without SOPS keys. `lettermint` requires the whole
 group and fails the start naming missing keys.

@@ -1,6 +1,10 @@
 package parentbilling
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // The corrections a reissued invoice carries over (#5663, ADR 0119 addendum).
 // The preview of the next run proposes every correction of the cancelled
@@ -19,11 +23,11 @@ var ErrCarriedCorrectionNotFound = errors.New("the correction is not proposed in
 // SourceAmountCents only when the proposal stops at zero, because the
 // contribution of the child is lower now than on the cancelled invoice.
 type BillingCarriedCorrection struct {
-	PositionID        int64  `json:"position_id"`
-	SourceNumber      string `json:"source_number"`
-	AmountCents       int64  `json:"amount_cents"`
-	SourceAmountCents int64  `json:"source_amount_cents"`
-	Reason            string `json:"reason"`
+	PositionID        ident.ID `json:"position_id"`
+	SourceNumber      string   `json:"source_number"`
+	AmountCents       int64    `json:"amount_cents"`
+	SourceAmountCents int64    `json:"source_amount_cents"`
+	Reason            string   `json:"reason"`
 	// ChildID and SourceDocumentID place the proposal; TotalBeforeCents is the
 	// child's amount before it, which the history of the release records.
 	ChildID          int64 `json:"-"`

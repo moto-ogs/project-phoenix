@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The monthly contribution of the care contract (#4684, spec #4611 user
@@ -72,9 +73,9 @@ var (
 // offering the contracts of the Träger book in the year before or after the
 // current month, with the weekdays they book it on and how many contracts.
 type CareModule struct {
-	SchoolID       int64    `json:"school_id"`
+	SchoolID       ident.ID `json:"school_id"`
 	SchoolName     string   `json:"school_name"`
-	CareOfferingID int64    `json:"care_offering_id"`
+	CareOfferingID ident.ID `json:"care_offering_id"`
 	ModuleName     string   `json:"module_name"`
 	EndsAt         string   `json:"ends_at"`
 	BookedWeekdays []string `json:"booked_weekdays"`
@@ -102,9 +103,9 @@ const MaxDaysPerWeek = 7
 // the meal. ValidUntil is the last day before the next price of the same
 // module and key, nil while none follows.
 type CareTariff struct {
-	ID             int64          `json:"id"`
-	SchoolID       int64          `json:"school_id"`
-	CareOfferingID int64          `json:"care_offering_id"`
+	ID             ident.ID       `json:"id"`
+	SchoolID       ident.ID       `json:"school_id"`
+	CareOfferingID ident.ID       `json:"care_offering_id"`
 	ModuleName     string         `json:"module_name"`
 	Weekday        string         `json:"weekday"`
 	DaysPerWeek    *int           `json:"days_per_week"`
@@ -128,15 +129,15 @@ func (t CareTariff) PriceForm() string {
 // on: the months of the year the monthly run bills nothing for, e.g.
 // August (#6196). It holds until the next price list of the school.
 type CarePriceListHead struct {
-	SchoolID   int64         `json:"school_id"`
+	SchoolID   ident.ID      `json:"school_id"`
 	ValidFrom  calendar.Date `json:"valid_from"`
 	FreeMonths []int         `json:"free_months"`
 }
 
 // CareSchool is a school of the Träger by its name.
 type CareSchool struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // CareTariffs is the price list of a Träger: its schools, the modules its
@@ -163,7 +164,7 @@ type CareBilledPrice struct {
 // CarePrice is one price of a price list a school gets from a month on:
 // for a weekday or, with DaysPerWeek, for a scale step (#6196).
 type CarePrice struct {
-	CareOfferingID int64
+	CareOfferingID ident.ID
 	ModuleName     string
 	Weekday        string
 	DaysPerWeek    *int
@@ -186,7 +187,7 @@ type CarePriceList struct {
 // CareRun is a monthly run as the list shows it. DocumentCount, TotalCents
 // and MonthRule are set once it is released.
 type CareRun struct {
-	ID            int64          `json:"id"`
+	ID            ident.ID       `json:"id"`
 	BillingMonth  calendar.Date  `json:"billing_month"`
 	Status        string         `json:"status"`
 	CreatedAt     time.Time      `json:"created_at"`
@@ -222,7 +223,7 @@ type CareWeekdayPrice struct {
 // CarePosition is one booked module of an invoice: the weekdays the
 // version books it on, the days of the month it bills and the sum.
 type CarePosition struct {
-	CareOfferingID int64              `json:"care_offering_id"`
+	CareOfferingID ident.ID           `json:"care_offering_id"`
 	ModuleName     string             `json:"module_name"`
 	VersionNumber  int                `json:"version_number"`
 	ServiceFrom    calendar.Date      `json:"service_from"`
@@ -263,18 +264,18 @@ type CareRecipient struct {
 // CareInvoice is the invoice of one contract and month: a draft without a
 // number in a calculated run, the issued invoice in a released one.
 type CareInvoice struct {
-	ID         int64          `json:"id"`
+	ID         ident.ID       `json:"id"`
 	Number     string         `json:"number"`
 	IssuedOn   *calendar.Date `json:"issued_on"`
-	ContractID int64          `json:"contract_id"`
+	ContractID ident.ID       `json:"contract_id"`
 	// Service is what the invoice bills (#4686, ADR 0167): ServiceCare with
 	// every service bundled with it, or ServiceMeal on an invoice of its own
 	// when the Träger bills the Mensa apart (TermsSet.InvoiceService).
-	Service        string `json:"service"`
-	SchoolID       int64  `json:"school_id"`
-	SchoolName     string `json:"school_name"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
+	Service        string   `json:"service"`
+	SchoolID       ident.ID `json:"school_id"`
+	SchoolName     string   `json:"school_name"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
 	// StudentID is the child record the contract names, nil without one; the
 	// parents inbox shows the letter only for it (ADR 0165).
 	StudentID *int64 `json:"-"`
@@ -318,14 +319,14 @@ type CareInvoice struct {
 // CareUnpriced is a booked weekday of a module the price list has no price
 // for in the month. The run leaves the contract out until it has one.
 type CareUnpriced struct {
-	ContractID     int64  `json:"contract_id"`
-	SchoolID       int64  `json:"school_id"`
-	SchoolName     string `json:"school_name"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
-	CareOfferingID int64  `json:"care_offering_id"`
-	ModuleName     string `json:"module_name"`
-	Weekday        string `json:"weekday"`
+	ContractID     ident.ID `json:"contract_id"`
+	SchoolID       ident.ID `json:"school_id"`
+	SchoolName     string   `json:"school_name"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
+	CareOfferingID ident.ID `json:"care_offering_id"`
+	ModuleName     string   `json:"module_name"`
+	Weekday        string   `json:"weekday"`
 	// DaysPerWeek names the missing scale step of a module priced by days
 	// per week (#6196); Weekday is empty then.
 	DaysPerWeek *int `json:"days_per_week,omitempty"`
@@ -333,9 +334,9 @@ type CareUnpriced struct {
 
 // CareDuplicateContract is one of the contracts of a duplicate.
 type CareDuplicateContract struct {
-	ContractID int64  `json:"contract_id"`
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
+	ContractID ident.ID `json:"contract_id"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
 }
 
 // CareDuplicate is a child the run holds back (ADR 0158, Nachtrag
@@ -356,11 +357,11 @@ type CareDuplicate struct {
 // confirmed number for the month (#7356). Status is FamilyChildrenMissing
 // or FamilyChildrenExpired.
 type CareUncountedContract struct {
-	ContractID     int64  `json:"contract_id"`
-	SchoolName     string `json:"school_name"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
-	Status         string `json:"status"`
+	ContractID     ident.ID `json:"contract_id"`
+	SchoolName     string   `json:"school_name"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
+	Status         string   `json:"status"`
 }
 
 // HoldReasonDuplicateContract is why a release held a child back: two of

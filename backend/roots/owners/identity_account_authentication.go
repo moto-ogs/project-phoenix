@@ -122,7 +122,7 @@ func DemoDependencies(wiring *DemoAccessWiring, standingSchool string, schools o
 		Schools: demoSchoolDirectory{access: organizationtenancy.NewDemoSchoolAccess(
 			schools, organizationCompose.NewDemoSchoolOrders(SecureRandomSource(), wiring.MaxActiveSchools), standingSchool,
 		)},
-		Mail:     newDemoAccessMail(wiring),
+		CRMEnabled: wiring.CRMEnabled, CRMToken: wiring.CRMToken, Mail: newDemoAccessMail(wiring),
 		NewToken: wiring.NewToken, Fingerprint: wiring.Fingerprint,
 		OperatorWithoutSecondFactor: wiring.OperatorWithoutSecondFactor,
 	}, nil

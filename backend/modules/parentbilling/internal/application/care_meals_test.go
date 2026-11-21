@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Mensa of the monthly run (#4686, ADR 0168), computed by hand. The
@@ -22,7 +23,7 @@ const (
 
 func mealTariff(t *testing.T, mode, from string, cents int64) parentbilling.CareMealTariff {
 	t.Helper()
-	return parentbilling.CareMealTariff{SchoolID: schoolIspringen, ValidFrom: day(t, from), Mode: mode, AmountCents: cents}
+	return parentbilling.CareMealTariff{SchoolID: ident.ID(schoolIspringen), ValidFrom: day(t, from), Mode: mode, AmountCents: cents}
 }
 
 func mealRelease(t *testing.T, month string, children ...parentbilling.CareMealChild) parentbilling.CareMealRelease {
@@ -71,7 +72,7 @@ func TestCareMealsMatchOnlyAnUnambiguousChild(t *testing.T) {
 				return
 			}
 			require.Len(t, month.invoices, 1)
-			assert.Equal(t, wantContract, month.invoices[0].ContractID)
+			assert.Equal(t, ident.ID(wantContract), month.invoices[0].ContractID)
 		})
 	}
 }
@@ -108,7 +109,7 @@ func TestCareMealsResolveNamesWithinTheTwelveMonthWindow(t *testing.T) {
 				return
 			}
 			require.Len(t, month.invoices, 1)
-			assert.Equal(t, int64(contractMia), month.invoices[0].ContractID)
+			assert.Equal(t, ident.ID(int64(contractMia)), month.invoices[0].ContractID)
 			require.Len(t, month.invoices[0].MealPositions, 1)
 			assert.Equal(t, calendar.NewDate(2026, 3, 1), month.invoices[0].MealPositions[0].MealMonth)
 			assert.Equal(t, int64(960), month.invoices[0].TotalCents)
@@ -119,7 +120,7 @@ func TestCareMealsResolveNamesWithinTheTwelveMonthWindow(t *testing.T) {
 
 func TestCareReviewFingerprintChangesWhenAMensaNamesakeEntersTheWindow(t *testing.T) {
 	t.Parallel()
-	run := parentbilling.CareRun{ID: 7, SchoolIDs: []int64{schoolIspringen}}
+	run := parentbilling.CareRun{ID: 7, SchoolIDs: []ident.ID{ident.ID(schoolIspringen)}}
 	review := func(namesakeMonth calendar.Date) reviewedMonth {
 		month, versions := mealMonth(t)
 		versions[0].StudentID = nil
@@ -307,7 +308,7 @@ func TestCareMealTable(t *testing.T) {
 				in.billed[CareMealKey{SchoolID: schoolIspringen, StudentID: mealStudent, Month: day(t, billed)}] = true
 			}
 			if tc.invoiced {
-				in.invoiced[contractMia] = parentbilling.CareInvoice{ContractID: contractMia}
+				in.invoiced[contractMia] = parentbilling.CareInvoice{ContractID: ident.ID(contractMia)}
 			}
 			billMeals(&month, in)
 
@@ -333,7 +334,7 @@ func TestCareMealTable(t *testing.T) {
 			}
 			assert.Equal(t, tc.lines, lines)
 			assert.Equal(t, tc.total, invoice.TotalCents)
-			assert.Equal(t, contractMia, invoice.ContractID)
+			assert.Equal(t, ident.ID(contractMia), invoice.ContractID)
 			assert.Equal(t, "Eva", invoice.Recipient.FirstName, "a Mensa-only invoice goes to the contract's recipient")
 		})
 	}
@@ -374,7 +375,7 @@ func TestCareMealsJoinTheModuleInvoiceAndNoRuleReducesThem(t *testing.T) {
 
 	totals := map[int64]int64{}
 	for _, invoice := range month.invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[invoice.ContractID.Int64()] = invoice.TotalCents
 		require.Len(t, invoice.MealPositions, 1)
 		assert.Equal(t, int64(960), invoice.MealPositions[0].AmountCents, "the Mensa stays in full")
 		require.Len(t, invoice.Positions, 1, "the Mensa joins the module invoice")
@@ -400,7 +401,7 @@ func TestCareMealsStayInFullWhenTheRuleCountsTheFamily(t *testing.T) {
 	family := parentbilling.CareRecipient{FirstName: "Eva", LastName: "Beispiel", Email: familyEva}
 	recipients := map[int64]parentbilling.CareRecipient{contractMia: family, contractNoah: family}
 	from := day(t, "2026-01-01")
-	counts := []parentbilling.FamilyChildCount{{ContractID: contractMia, ConfirmedChildren: ptr(3), ValidFrom: &from,
+	counts := []parentbilling.FamilyChildCount{{ContractID: ident.ID(contractMia), ConfirmedChildren: ptr(3), ValidFrom: &from,
 		FamilyEmail: parentbilling.FamilyKey(familyEva)}}
 	month, err := buildCareMonth(careMonthInput{month: day(t, mealRunMonth), rule: parentbilling.MonthRuleVersionOnFirst,
 		versions: versions, invoiced: map[int64]parentbilling.CareInvoice{}, recipients: recipients, familyCounts: counts,
@@ -421,7 +422,7 @@ func TestCareMealsStayInFullWhenTheRuleCountsTheFamily(t *testing.T) {
 
 	totals := map[int64]int64{}
 	for _, invoice := range month.invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[invoice.ContractID.Int64()] = invoice.TotalCents
 		require.Len(t, invoice.MealPositions, 1)
 		assert.Equal(t, int64(960), invoice.MealPositions[0].AmountCents, "the family count leaves the Mensa in full")
 	}
@@ -441,9 +442,9 @@ func TestCareMealGapBeforeTheAttendanceWindowIsExpired(t *testing.T) {
 		attendance: map[int64]calendar.Date{schoolIspringen: day(t, "2026-02-10")},
 		versions:   versions})
 	assert.Equal(t, []parentbilling.CareMealGap{
-		{SchoolID: schoolIspringen, SchoolName: "Ispringen", Month: day(t, "2026-01-01"), Expired: true},
-		{SchoolID: schoolIspringen, SchoolName: "Ispringen", Month: day(t, "2026-02-01"), Expired: true},
-		{SchoolID: schoolIspringen, SchoolName: "Ispringen", Month: day(t, "2026-03-01")},
+		{SchoolID: ident.ID(schoolIspringen), SchoolName: "Ispringen", Month: day(t, "2026-01-01"), Expired: true},
+		{SchoolID: ident.ID(schoolIspringen), SchoolName: "Ispringen", Month: day(t, "2026-02-01"), Expired: true},
+		{SchoolID: ident.ID(schoolIspringen), SchoolName: "Ispringen", Month: day(t, "2026-03-01")},
 	}, month.mealGaps)
 }
 
@@ -453,14 +454,14 @@ func TestCareMealGapBeforeTheAttendanceWindowIsExpired(t *testing.T) {
 func TestCareMealGapsSkipASchoolOutsideTheTraeger(t *testing.T) {
 	t.Parallel()
 	month, versions := mealMonth(t)
-	departed := parentbilling.CareMealTariff{SchoolID: schoolIspringen + 1, ValidFrom: day(t, "2026-01-01"),
+	departed := parentbilling.CareMealTariff{SchoolID: ident.ID(schoolIspringen + 1), ValidFrom: day(t, "2026-01-01"),
 		Mode: parentbilling.MealModePerMeal, AmountCents: 480}
 	billMeals(&month, careMealInput{month: day(t, mealRunMonth), today: day(t, mealToday),
 		schools:  map[int64]string{schoolIspringen: "Ispringen"},
 		tariffs:  []parentbilling.CareMealTariff{mealTariff(t, parentbilling.MealModePerMeal, "2026-03-01", 480), departed},
 		versions: versions})
 	assert.Equal(t, []parentbilling.CareMealGap{
-		{SchoolID: schoolIspringen, SchoolName: "Ispringen", Month: day(t, "2026-03-01")},
+		{SchoolID: ident.ID(schoolIspringen), SchoolName: "Ispringen", Month: day(t, "2026-03-01")},
 	}, month.mealGaps)
 }
 
@@ -469,8 +470,8 @@ func TestCareMealGapsSkipASchoolOutsideTheTraeger(t *testing.T) {
 // or a school that releases it, changes the reviewed state.
 func TestCareReviewFingerprintCoversTheMensaGaps(t *testing.T) {
 	t.Parallel()
-	run := parentbilling.CareRun{ID: 7, SchoolIDs: []int64{schoolIspringen}}
-	gap := parentbilling.CareMealGap{SchoolID: schoolIspringen, SchoolName: "Ispringen", Month: day(t, "2026-02-01")}
+	run := parentbilling.CareRun{ID: 7, SchoolIDs: []ident.ID{ident.ID(schoolIspringen)}}
+	gap := parentbilling.CareMealGap{SchoolID: ident.ID(schoolIspringen), SchoolName: "Ispringen", Month: day(t, "2026-02-01")}
 	review := func(gaps ...parentbilling.CareMealGap) reviewedMonth {
 		return reviewedMonth{careMonth: careMonth{mealGaps: gaps, mealUnbilled: []parentbilling.CareMealUnbilled{}}}
 	}
@@ -488,11 +489,11 @@ func TestSplitMealInvoicesPutsTheMensaOnAnInvoiceOfItsOwn(t *testing.T) {
 	t.Parallel()
 	meal := parentbilling.CareMealPosition{MealMonth: day(t, "2026-03-01"), Mode: parentbilling.MealModePerMeal, Quantity: 2, UnitCents: 480, AmountCents: 960}
 	month := careMonth{invoices: []parentbilling.CareInvoice{
-		{ContractID: contractMia, Service: parentbilling.ServiceCare, Positions: []parentbilling.CarePosition{{AmountCents: 7750}},
+		{ContractID: ident.ID(contractMia), Service: parentbilling.ServiceCare, Positions: []parentbilling.CarePosition{{AmountCents: 7750}},
 			MealPositions: []parentbilling.CareMealPosition{meal}, TotalCents: 7750 + 960},
-		{ContractID: contractNoah, Service: parentbilling.ServiceCare, Positions: []parentbilling.CarePosition{},
+		{ContractID: ident.ID(contractNoah), Service: parentbilling.ServiceCare, Positions: []parentbilling.CarePosition{},
 			MealPositions: []parentbilling.CareMealPosition{meal}, TotalCents: 960},
-		{ContractID: contractMia + contractNoah, Service: parentbilling.ServiceCare, Positions: []parentbilling.CarePosition{{AmountCents: 3200}}, TotalCents: 3200},
+		{ContractID: ident.ID(contractMia + contractNoah), Service: parentbilling.ServiceCare, Positions: []parentbilling.CarePosition{{AmountCents: 3200}}, TotalCents: 3200},
 	}}
 	splitMealInvoices(&month)
 	require.Len(t, month.invoices, 4)
@@ -502,7 +503,7 @@ func TestSplitMealInvoicesPutsTheMensaOnAnInvoiceOfItsOwn(t *testing.T) {
 	assert.Empty(t, month.invoices[0].MealPositions)
 	assert.Equal(t, int64(960), month.invoices[1].TotalCents)
 	assert.Empty(t, month.invoices[1].Positions)
-	assert.Equal(t, int64(contractNoah), month.invoices[2].ContractID, "the Mensa-only invoice is the Mensa invoice")
+	assert.Equal(t, ident.ID(int64(contractNoah)), month.invoices[2].ContractID, "the Mensa-only invoice is the Mensa invoice")
 	assert.Equal(t, int64(3200), month.invoices[3].TotalCents)
 }
 
@@ -513,7 +514,7 @@ func TestCareMealsOfAnIssuedMensaInvoiceWaitEvenWithACareDraft(t *testing.T) {
 	t.Parallel()
 	month, versions := mealMonth(t)
 	// The care's draft after its Storno: a new care invoice of the month.
-	month.invoices = []parentbilling.CareInvoice{{ContractID: contractMia, Service: parentbilling.ServiceCare,
+	month.invoices = []parentbilling.CareInvoice{{ContractID: ident.ID(contractMia), Service: parentbilling.ServiceCare,
 		Positions: []parentbilling.CarePosition{{AmountCents: 3200}}, TotalCents: 3200}}
 	billMeals(&month, careMealInput{month: day(t, mealRunMonth), today: day(t, mealToday),
 		schools:  map[int64]string{schoolIspringen: "Ispringen"},

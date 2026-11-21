@@ -17,8 +17,10 @@ vi.mock("./logger", () => ({
 }));
 
 import { timetableService } from "./timetable-api";
-import type { BackendTimetableTemplate } from "./timetable-types";
-import { buildEnrichedInstance } from "~/test/fixtures/timetable";
+import {
+  buildEnrichedInstance,
+  buildTemplateResponse,
+} from "~/test/fixtures/timetable";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -68,35 +70,34 @@ const backendInstance = buildEnrichedInstance({
   ],
 });
 
-const backendTemplate: BackendTimetableTemplate = {
-  id: 7,
+const backendTemplate = buildTemplateResponse({
+  id: "7",
   name: "Yoga",
   type: "activity",
-  category_id: 2,
+  category_id: "2",
   category_name: "AG",
-  room_id: 3,
+  room_id: "3",
   room_name: "Turnhalle",
   is_open: true,
   max_participants: 12,
-  target_group_type: "none",
   enrollment_count: 8,
   supervisor_count: 1,
   required_staff_count: 1,
   assigned_staff_count: 1,
-  student_ids: [21],
-  staff_ids: [11],
-  primary_staff_id: 11,
+  student_ids: ["21"],
+  staff_ids: ["11"],
+  primary_staff_id: "11",
   schedules: [
     {
-      id: 9,
+      id: "9",
       weekday: 1,
       start_time: "14:00",
       end_time: "15:00",
       week_pattern: 0,
-      calendar_period_id: 5,
+      calendar_period_id: "5",
     },
   ],
-};
+});
 
 describe("timetableService", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -240,9 +241,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
     };
 
     await expect(timetableService.createTemplate(createBody)).resolves.toEqual({
@@ -287,9 +288,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-05-04",
       instance_notes: "Heute draußen",
     };
@@ -320,9 +321,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       series_roster_from: "2026-06-01",
     };
 
@@ -346,9 +347,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-08-12",
     };
 
@@ -401,8 +402,8 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "15:00",
       end_time: "16:00",
-      room_id: 3,
-      category_id: 2,
+      room_id: "3",
+      category_id: "2",
       effective_date: "2026-06-01",
       materialize_from: "2026-06-01",
       materialize_to: "2026-06-07",
@@ -645,9 +646,9 @@ describe("timetableService", () => {
           dates: ["2026-05-04", "2026-05-06"],
           start_time: "12:00",
           end_time: "13:00",
-          staff_ids: [11, 12],
-          replan_activity_group_id: 7,
-          calendar_period_id: 5,
+          staff_ids: ["11", "12"],
+          replan_activity_group_id: "7",
+          calendar_period_id: "5",
           week_pattern: 2,
         }),
       }),
@@ -826,9 +827,9 @@ describe("timetableService", () => {
         body: JSON.stringify({
           understaffed_ack: true,
           understaffed_note: "keine Vertretung",
-          absences: [{ staff_id: 11, reason: "krank" }],
-          substitutions: [{ absent_staff_id: 12, substitute_staff_id: 13 }],
-          presences: [{ staff_id: 14 }],
+          absences: [{ staff_id: "11", reason: "krank" }],
+          substitutions: [{ absent_staff_id: "12", substitute_staff_id: "13" }],
+          presences: [{ staff_id: "14" }],
         }),
       }),
     );
@@ -869,7 +870,7 @@ describe("timetableService", () => {
         body: JSON.stringify({
           from_date: "2026-05-04",
           to_date: "2026-05-08",
-          activity_group_id: 7,
+          activity_group_id: "7",
         }),
       }),
     );
@@ -1076,19 +1077,22 @@ describe("timetableService", () => {
           understaffed_ack: true,
           understaffed_note: "Rest offen",
           absences: [
-            { staff_id: 11, reason: "krank", instance_ids: [42] },
-            { staff_id: 13 },
+            { staff_id: "11", reason: "krank", instance_ids: ["42"] },
+            { staff_id: "13" },
           ],
           substitutions: [
             {
-              absent_staff_id: 11,
-              substitute_staff_id: 12,
+              absent_staff_id: "11",
+              substitute_staff_id: "12",
               reason: "springt ein",
-              instance_ids: [42, 43],
+              instance_ids: ["42", "43"],
             },
           ],
-          substitution_removals: [{ staff_id: 16, instance_ids: [42] }],
-          presences: [{ staff_id: 14, instance_ids: [42] }, { staff_id: 15 }],
+          substitution_removals: [{ staff_id: "16", instance_ids: ["42"] }],
+          presences: [
+            { staff_id: "14", instance_ids: ["42"] },
+            { staff_id: "15" },
+          ],
         }),
       }),
     );
@@ -1166,8 +1170,8 @@ describe("timetableService", () => {
       "/api/timetable/instances/42/deviations",
       expect.objectContaining({
         body: JSON.stringify({
-          absences: [{ staff_id: 11 }],
-          substitutions: [{ absent_staff_id: 11, substitute_staff_id: 12 }],
+          absences: [{ staff_id: "11" }],
+          substitutions: [{ absent_staff_id: "11", substitute_staff_id: "12" }],
         }),
       }),
     );
@@ -1308,7 +1312,7 @@ describe("staff pool + move (#1884)", () => {
     );
   });
 
-  it("posts a move with numeric ids and maps the result", async () => {
+  it("posts a move with string ids and maps the result", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         status: "success",
@@ -1331,8 +1335,8 @@ describe("staff pool + move (#1884)", () => {
     const [url, init] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
     expect(url).toBe("/api/timetable/instances/42/move-staff");
     expect(JSON.parse(String(init.body))).toEqual({
-      staff_id: 7,
-      source_instance_id: 41,
+      staff_id: "7",
+      source_instance_id: "41",
     });
   });
 
@@ -1352,7 +1356,7 @@ describe("staff pool + move (#1884)", () => {
     const result = await timetableService.moveStaff("42", { staffId: "9" });
     expect(result.action).toBe("assigned");
     const [, init] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
-    expect(JSON.parse(String(init.body))).toEqual({ staff_id: 9 });
+    expect(JSON.parse(String(init.body))).toEqual({ staff_id: "9" });
   });
 
   it("posts confirmed present ids and reopens a completed instance", async () => {
@@ -1396,7 +1400,7 @@ describe("staff pool + move (#1884)", () => {
       "/api/timetable/instances/42/complete",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ confirmed_present_student_ids: [21, 22] }),
+        body: JSON.stringify({ confirmed_present_student_ids: ["21", "22"] }),
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -1478,9 +1482,9 @@ describe("timetableService.applyBulkSubstitution (#2284)", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          absent_staff_id: 11,
+          absent_staff_id: "11",
           dates: ["2026-08-18", "2026-08-19"],
-          substitute_staff_id: 12,
+          substitute_staff_id: "12",
           reason: "Krankheit",
         }),
       }),
@@ -1502,7 +1506,7 @@ describe("timetableService.applyBulkSubstitution (#2284)", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/substitutions/bulk",
       expect.objectContaining({
-        body: JSON.stringify({ absent_staff_id: 11, dates: ["2026-08-18"] }),
+        body: JSON.stringify({ absent_staff_id: "11", dates: ["2026-08-18"] }),
       }),
     );
   });

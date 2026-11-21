@@ -9,6 +9,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Storno and Gutschrift of an issued invoice (#4690, ADR 0119 addendum).
@@ -84,11 +85,11 @@ func (b *BillingLetters) CreditBillingDocument(ctx context.Context, reviewer par
 	if err != nil {
 		return parentbilling.BillingDocument{}, err
 	}
-	child, ok := findChild(target.invoice, input.ChildID)
+	child, ok := findChild(target.invoice, input.ChildID.Int64())
 	if !ok {
 		return parentbilling.BillingDocument{}, validation.Errors{"child_id": errors.New("is not a child of the invoice")}
 	}
-	if left := child.TotalCents + creditedCents(target.history, input.ChildID); input.AmountCents > left {
+	if left := child.TotalCents + creditedCents(target.history, input.ChildID.Int64()); input.AmountCents > left {
 		return parentbilling.BillingDocument{}, validation.Errors{"amount_cents": fmt.Errorf("is more than the %d cent left", left)}
 	}
 	return b.issueCorrection(ctx, reviewer, target, creditOf(target.invoice, child, input), runEventCredit)
@@ -105,10 +106,10 @@ func (b *BillingLetters) correctable(ctx context.Context, reviewer parentbilling
 	if err != nil {
 		return correctionTarget{}, err
 	}
-	if err := b.store.LockPeriodBilling(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID); err != nil {
+	if err := b.store.LockPeriodBilling(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID.Int64()); err != nil {
 		return correctionTarget{}, fmt.Errorf("parent billing: hold the invoices of the period: %w", err)
 	}
-	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
+	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return correctionTarget{}, fmt.Errorf("parent billing: read invoices: %w", err)
 	}
@@ -116,7 +117,7 @@ func (b *BillingLetters) correctable(ctx context.Context, reviewer parentbilling
 	if !ok || invoice.Kind != parentbilling.DocumentInvoice {
 		return correctionTarget{}, parentbilling.ErrBillingDocumentNotFound
 	}
-	history, err := b.store.ReferencingDocuments(ctx, reviewer.OrganizationID, []int64{invoice.ID})
+	history, err := b.store.ReferencingDocuments(ctx, reviewer.OrganizationID, []int64{invoice.ID.Int64()})
 	if err != nil {
 		return correctionTarget{}, fmt.Errorf("parent billing: read the history of the invoice: %w", err)
 	}
@@ -145,14 +146,16 @@ func (b *BillingLetters) issueCorrection(ctx context.Context, reviewer parentbil
 	}
 	document.RunID = run.ID
 	document.Number, document.IssuedOn = formatInvoiceNumber(pattern, issuedOn.Year(), sequence), &issuedOn
-	if document.ID, err = b.store.IssueDocument(ctx, organizationID, run, year, sequence, document); err != nil {
+	issuedID, err := b.store.IssueDocument(ctx, organizationID, run, year, sequence, document)
+	if err != nil {
 		return parentbilling.BillingDocument{}, err
 	}
+	document.ID = ident.ID(issuedID)
 	if err := b.correctionLetter(ctx, reviewer, target, document); err != nil {
 		return parentbilling.BillingDocument{}, err
 	}
-	if err := b.store.InsertRunEvent(ctx, organizationID, run.ID, reviewer.AccountID, action,
-		map[string]any{"document_id": document.ID, "invoice_id": target.invoice.ID, "total_cents": document.TotalCents}); err != nil {
+	if err := b.store.InsertRunEvent(ctx, organizationID, run.ID.Int64(), reviewer.AccountID, action,
+		map[string]any{"document_id": document.ID.Int64(), "invoice_id": target.invoice.ID.Int64(), "total_cents": document.TotalCents}); err != nil {
 		return parentbilling.BillingDocument{}, fmt.Errorf("parent billing: record %s: %w", action, err)
 	}
 	document.History = []parentbilling.BillingDocumentLink{}
@@ -163,7 +166,7 @@ func (b *BillingLetters) issueCorrection(ctx context.Context, reviewer parentbil
 // credit once the run has its letters. Before, the letters of the run
 // render it with the invoices.
 func (b *BillingLetters) correctionLetter(ctx context.Context, reviewer parentbilling.HolidayReviewer, target correctionTarget, document parentbilling.BillingDocument) error {
-	letters, err := b.store.RunLetters(ctx, reviewer.OrganizationID, target.run.ID)
+	letters, err := b.store.RunLetters(ctx, reviewer.OrganizationID, target.run.ID.Int64())
 	if err != nil {
 		return fmt.Errorf("parent billing: read letters: %w", err)
 	}
@@ -188,7 +191,7 @@ func (b *BillingLetters) correctionLetter(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return err
 	}
-	if err := b.store.InsertDocumentLetter(ctx, reviewer.OrganizationID, target.run.ID, document.ID, file); err != nil {
+	if err := b.store.InsertDocumentLetter(ctx, reviewer.OrganizationID, target.run.ID.Int64(), document.ID.Int64(), file); err != nil {
 		return fmt.Errorf("parent billing: store letter: %w", err)
 	}
 	return nil
@@ -250,7 +253,7 @@ func correctionOf(invoice parentbilling.BillingDocument, kind, reason string) pa
 
 func findChild(document parentbilling.BillingDocument, childID int64) (parentbilling.BillingChild, bool) {
 	for _, child := range document.Children {
-		if child.ChildID == childID {
+		if child.ChildID == ident.ID(childID) {
 			return child, true
 		}
 	}
@@ -266,7 +269,7 @@ func creditedCents(history []parentbilling.BillingDocument, childID int64) int64
 			continue
 		}
 		for _, child := range document.Children {
-			if child.ChildID == childID {
+			if child.ChildID == ident.ID(childID) {
 				credited += child.TotalCents
 			}
 		}
@@ -293,7 +296,7 @@ func withDocumentHistory(ctx context.Context, store documentHistoryReader, organ
 	for i := range documents {
 		documents[i].History = []parentbilling.BillingDocumentLink{}
 		if documents[i].Kind == parentbilling.DocumentInvoice {
-			ids = append(ids, documents[i].ID)
+			ids = append(ids, documents[i].ID.Int64())
 		}
 	}
 	referencing, err := store.ReferencingDocuments(ctx, organizationID, ids)
@@ -305,13 +308,13 @@ func withDocumentHistory(ctx context.Context, store documentHistoryReader, organ
 		if document.ReferenceDocumentID == nil || document.IssuedOn == nil {
 			continue
 		}
-		byInvoice[*document.ReferenceDocumentID] = append(byInvoice[*document.ReferenceDocumentID], parentbilling.BillingDocumentLink{
+		byInvoice[(*document.ReferenceDocumentID).Int64()] = append(byInvoice[(*document.ReferenceDocumentID).Int64()], parentbilling.BillingDocumentLink{
 			ID: document.ID, RunID: document.RunID, Kind: document.Kind, Number: document.Number,
 			IssuedOn: *document.IssuedOn, TotalCents: document.TotalCents, Reason: document.Reason,
 		})
 	}
 	for i := range documents {
-		if links, ok := byInvoice[documents[i].ID]; ok {
+		if links, ok := byInvoice[documents[i].ID.Int64()]; ok {
 			documents[i].History = links
 		}
 	}

@@ -16,8 +16,16 @@ func NewDemoAccessBinding(dbReady bool, sessions ports.DemoSessions, deps *resto
 	if !dbReady || sessions == nil || deps.Schools == nil || deps.Mail == nil || deps.NewToken == nil || deps.Fingerprint == nil {
 		return nil, errors.New("identity access compose: every demo access dependency is required")
 	}
+	var crm ports.DemoCRMQueue
+	if deps.CRMEnabled {
+		var ok bool
+		crm, ok = store.(ports.DemoCRMQueue)
+		if !ok {
+			return nil, errors.New("identity access compose: demo CRM queue is required")
+		}
+	}
 	flows, err := NewDemoAccess(DemoAccessDependencies{
-		Sessions: sessions, Store: store, Schools: DemoSchoolsPort{DemoSchools: deps.Schools},
+		CRM: crm, Sessions: sessions, Store: store, Schools: DemoSchoolsPort{DemoSchools: deps.Schools},
 		Tokens:  DemoAccessTokens{Mint: deps.NewToken, FingerprintFunc: deps.Fingerprint},
 		Mail:    DemoAccessMail{Mail: deps.Mail},
 		AdminTx: execute, Now: now,
@@ -25,5 +33,5 @@ func NewDemoAccessBinding(dbReady bool, sessions ports.DemoSessions, deps *resto
 	if err != nil {
 		return nil, err
 	}
-	return identityaccess.NewDemoAccess(DemoAccessEngine{Flows: flows}), nil
+	return identityaccess.NewDemoAccess(DemoAccessEngine{Flows: flows}, deps.CRMJobs), nil
 }

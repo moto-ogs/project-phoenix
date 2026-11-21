@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -38,7 +39,7 @@ func TestBookingAccountsKeepTheTraegerBelowRLS(t *testing.T) {
 
 		require.NoError(t, store.SetRevenueAccount(ctx, own.organization, 0, parentbilling.BookingScopeOffering, 101, "4410"))
 		require.NoError(t, store.InsertCostCenter(ctx, own.organization, 0, parentbilling.CostCenter{
-			Scope: parentbilling.BookingScopeSchool, ScopeID: own.school, ValidFrom: calendar.NewDate(2029, time.September, 1), Code: "ISP"}))
+			Scope: parentbilling.BookingScopeSchool, ScopeID: ident.ID(own.school), ValidFrom: calendar.NewDate(2029, time.September, 1), Code: "ISP"}))
 		var foreignCenter int64
 		_, err = tx.ExecContext(ctx, `INSERT INTO parent_billing.revenue_accounts (organization_id, scope, scope_id, account)
 			VALUES (?, 'offering', 101, '4999'), (?, 'care', 0, '4998')`, other.organization, other.organization)
@@ -55,7 +56,7 @@ func TestBookingAccountsKeepTheTraegerBelowRLS(t *testing.T) {
 
 		offerings, err := store.BookingOfferings(ctx, own.organization)
 		require.NoError(t, err)
-		assert.Equal(t, []parentbilling.BookingOffering{{SchoolID: own.school, CareOfferingID: 101,
+		assert.Equal(t, []parentbilling.BookingOffering{{SchoolID: ident.ID(own.school), CareOfferingID: 101,
 			ModuleNames: []string{"Betreuung bis 14:00 Uhr"}}}, offerings, "the Angebote of this Träger's prices")
 
 		assert.ErrorIs(t, store.DeleteCostCenter(ctx, own.organization, foreignCenter), parentbilling.ErrCostCenterNotFound)
@@ -121,9 +122,9 @@ func TestIssuedPositionsKeepWhereTheyBook(t *testing.T) {
 		issuedOn := calendar.NewDate(2029, time.September, 21)
 		sequence := testpkg.UniqueTestTenantID(t)
 		frozenAt := parentbilling.PositionAccounts{RevenueAccount: "4420", CostCenter: "FER", Frozen: true}
-		document, err := store.IssueDocument(ctx, scope.organization, parentbilling.BillingRun{ID: run, Service: parentbilling.ServiceHoliday,
+		document, err := store.IssueDocument(ctx, scope.organization, parentbilling.BillingRun{ID: ident.ID(run), Service: parentbilling.ServiceHoliday,
 			HolidayPeriodID: 1}, 2029, sequence, parentbilling.BillingDocument{
-			Number: fmt.Sprintf("FE-K-%d", sequence), IssuedOn: &issuedOn, RegistrationID: sequence, RecipientFirstName: "Eva",
+			Number: fmt.Sprintf("FE-K-%d", sequence), IssuedOn: &issuedOn, RegistrationID: ident.ID(sequence), RecipientFirstName: "Eva",
 			RecipientLastName: "Beispiel", ServiceFrom: calendar.NewDate(2029, time.October, 1), ServiceUntil: calendar.NewDate(2029, time.October, 5),
 			TotalCents: 4500,
 			Children: []parentbilling.BillingChild{{ChildID: 1, FirstName: "Mia", LastName: "Beispiel", Positions: []parentbilling.BillingPosition{

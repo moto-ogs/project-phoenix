@@ -185,6 +185,76 @@ describe("DayChangesBlock", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("zeigt geänderte, abgesagte und vertretene Dienste mit Uhrzeit und ohne Grund", () => {
+    // Vor Beginn aller Dienste: keiner steht schon unter „erledigt“ (#7660).
+    setTestClock("2026-09-09T09:00:00+02:00");
+    serve({
+      entries: [
+        change({
+          kind: "shift_changed",
+          section: "you",
+          startsAt: "2026-09-09T08:00:00Z",
+          endsAt: "2026-09-09T12:00:00Z",
+          people: [
+            { staffId: "1", name: "Anna", role: "on_duty", isSelf: true },
+          ],
+          link: { target: "own_shift_plan", staffId: null },
+        }),
+        change({
+          kind: "shift_cancelled",
+          startsAt: "2026-09-09T10:00:00Z",
+          endsAt: "2026-09-09T14:00:00Z",
+          people: [
+            {
+              staffId: "2",
+              name: "Ben Kollege",
+              role: "on_duty",
+              isSelf: false,
+            },
+          ],
+          link: { target: "shift_plan", staffId: "2" },
+        }),
+        change({
+          kind: "shift_replacement",
+          startsAt: "2026-09-09T10:00:00Z",
+          endsAt: "2026-09-09T13:00:00Z",
+          people: [
+            {
+              staffId: "3",
+              name: "Tom Hilfe",
+              role: "substitute",
+              isSelf: false,
+            },
+            {
+              staffId: "2",
+              name: "Ben Kollege",
+              role: "replaced",
+              isSelf: false,
+            },
+          ],
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", {
+        name: "Dein Dienst ist heute anders. 10:00 bis 14:00 Uhr",
+      }),
+    ).toHaveAttribute("href", "/schule/mein-dienstplan");
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(
+      school.getByRole("link", {
+        name: "Der Dienst von Ben Kollege fällt heute aus. 12:00 bis 16:00 Uhr",
+      }),
+    ).toHaveAttribute("href", "/schule/dienstplan?view=person&staff=2");
+    expect(
+      school.getByText("Tom Hilfe vertritt heute Ben Kollege."),
+    ).toBeInTheDocument();
+    expect(school.getByText("12:00 bis 15:00 Uhr")).toBeInTheDocument();
+  });
+
   it("sagt ohne Einträge, dass alles wie geplant läuft", () => {
     serve({});
     render(<DayChangesBlock />);
@@ -198,7 +268,7 @@ describe("DayChangesBlock", () => {
     render(<DayChangesBlock />);
     expect(
       screen.getByText(
-        "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+        "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -287,6 +357,44 @@ describe("DayChangesBlock", () => {
         "Hinweise der Leitung konnten gerade nicht geladen werden.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("nennt eine ausgefallene Quelle der Schließtage", () => {
+    serve({ failedSources: ["closing_days"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText("Schließtage konnten gerade nicht geladen werden."),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt Schul- und Träger-Schließtage mit Link zum Kalender", () => {
+    serve({
+      entries: [
+        change({
+          kind: "closing_day",
+          link: { target: "calendar_periods", staffId: null },
+          closing: { name: "Pädagogischer Tag", traeger: false },
+        }),
+        change({
+          kind: "closing_day",
+          link: { target: "calendar_periods", staffId: null },
+          closing: { name: "Brückentag", traeger: true },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(
+      school.getByRole("link", {
+        name: "Die OGS ist heute geschlossen: Pädagogischer Tag.",
+      }),
+    ).toHaveAttribute("href", "/schule/calendar-periods");
+    expect(
+      school.getByRole("link", {
+        name: "Der Träger hat die OGS heute geschlossen: Brückentag.",
+      }),
+    ).toHaveAttribute("href", "/schule/calendar-periods");
   });
 
   it("erfasst beim Klick auf einen Eintrag nur seine Art", () => {

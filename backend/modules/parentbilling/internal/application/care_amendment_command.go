@@ -11,6 +11,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AmendCareInvoice appends one change of an invoice of a calculated run
@@ -50,10 +51,10 @@ func (c *CareBilling) AmendCareInvoice(ctx context.Context, reviewer parentbilli
 		return parentbilling.CareRunDetail{}, err
 	}
 	entry.Invoice, entry.AccountID = key, &reviewer.AccountID
-	if err := c.store.InsertCareRunAmendment(ctx, reviewer.OrganizationID, run.ID, entry); err != nil {
+	if err := c.store.InsertCareRunAmendment(ctx, reviewer.OrganizationID, run.ID.Int64(), entry); err != nil {
 		return parentbilling.CareRunDetail{}, fmt.Errorf("parent billing: record the change: %w", err)
 	}
-	return c.CareRun(ctx, reviewer, run.ID)
+	return c.CareRun(ctx, reviewer, run.ID.Int64())
 }
 
 // checkAmendmentInput checks what a change needs whatever its invoice: a
@@ -205,7 +206,7 @@ func addressEntry(entry *parentbilling.CareAmendmentEntry, invoice parentbilling
 // that is in force on the invoice; a conflicting one may be taken back too.
 func revocationEntry(entry *parentbilling.CareAmendmentEntry, invoice parentbilling.CareInvoice, id int64, carried bool) error {
 	index := slices.IndexFunc(invoice.Amendments, func(amendment parentbilling.CareAmendment) bool {
-		return amendment.ID == id && amendment.Carried == carried && amendment.Revocation == nil
+		return amendment.ID == ident.ID(id) && amendment.Carried == carried && amendment.Revocation == nil
 	})
 	if id <= 0 || index < 0 {
 		return parentbilling.ErrCareAmendmentConflict

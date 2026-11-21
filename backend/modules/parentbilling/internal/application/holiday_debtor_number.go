@@ -10,6 +10,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The debtor number of a holiday registration (#5621, ADR 0121 addendum):
@@ -92,7 +93,7 @@ func (h *HolidayContributions) ChangeHolidayDebtorNumber(ctx context.Context, re
 			return parentbilling.HolidayDebtorNumber{}, err
 		}
 	}
-	return parentbilling.HolidayDebtorNumber{RegistrationID: registration.ID, DebtorNumber: registration.DebtorNumber}, nil
+	return parentbilling.HolidayDebtorNumber{RegistrationID: ident.ID(registration.ID), DebtorNumber: registration.DebtorNumber}, nil
 }
 
 // requireDebtorNumber refuses a blank debtor number when the Träger asks
@@ -130,8 +131,8 @@ func (h *HolidayContributions) shareGroupDebtorNumber(ctx context.Context, revie
 	if !grouped {
 		return nil, nil
 	}
-	ids := slices.DeleteFunc(slices.Clone(group.RegistrationIDs), func(id int64) bool { return id == registration.ID })
-	others, err := h.readSiblings(ctx, reviewer, periodID, ids, nil)
+	ids := slices.DeleteFunc(slices.Clone(group.RegistrationIDs), func(id ident.ID) bool { return id == ident.ID(registration.ID) })
+	others, err := h.readSiblings(ctx, reviewer, periodID, ident.Int64s(ids), nil)
 	if err != nil {
 		return nil, err
 	}

@@ -66,7 +66,7 @@ describe("confirmFamilyChildren", () => {
       {
         method: "PUT",
         body: {
-          contract_id: 77,
+          contract_id: "77",
           children: 3,
           valid_from: "2026-09-01",
           valid_until: null,

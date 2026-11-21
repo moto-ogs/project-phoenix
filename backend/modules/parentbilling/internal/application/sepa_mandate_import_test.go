@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The import reads the exports an office program writes in Germany: UTF-8
@@ -227,7 +228,7 @@ func TestImportCheckTakesOverCompleteOldMandates(t *testing.T) {
 	assert.Equal(t, calendar.NewDate(2024, 2, 1), *used.row.SignedOn)
 	assert.Equal(t, parentbilling.SequenceRecurring, used.row.Sequence)
 	assert.Equal(t, calendar.NewDate(2026, 10, 1), *used.row.LastCollectedOn)
-	assert.Equal(t, int64(10), used.row.ContractID)
+	assert.Equal(t, ident.ID(int64(10)), used.row.ContractID)
 	assert.Equal(t, "a@example.org", used.family)
 	assert.Equal(t, importIBAN, used.iban)
 	assert.NotContains(t, used.row.IBANMasked, "0532", "the IBAN shows only masked")
@@ -325,7 +326,7 @@ func TestImportCheckSkipsDuplicatesAndReportsConflicts(t *testing.T) {
 	check := newTestImportCheck(existing, nil)
 	// The stored account of SJR-1 as the owner opened it; SJR-2 stays
 	// unopened.
-	check.accounts[existing[0].ID] = importAccount{iban: importIBAN, holder: "Jürgen Müller"}
+	check.accounts[existing[0].ID.Int64()] = importAccount{iban: importIBAN, holder: "Jürgen Müller"}
 	same := check.row(importRow("SJR-1", "01.02.2024", importIBAN, "a@example.org", importCreditor, "RCUR", ""), 2)
 	assert.Equal(t, parentbilling.ImportRowDuplicate, same.row.Status)
 	assert.Equal(t, existing[0].ID, same.row.MandateID)

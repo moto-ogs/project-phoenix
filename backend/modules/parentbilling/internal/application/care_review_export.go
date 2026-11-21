@@ -71,7 +71,7 @@ func (c *CareBilling) ExportCareRunReview(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: render the review list: %w", err)
 	}
-	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventExport,
+	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventExport,
 		map[string]any{"format": format, "contract_ids": shownContracts(detail)}); err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: record the review list: %w", err)
 	}

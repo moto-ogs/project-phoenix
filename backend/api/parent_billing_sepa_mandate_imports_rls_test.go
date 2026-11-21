@@ -52,7 +52,7 @@ func TestSEPAMandateImportPayersStayWithTheirTraegerBelowRLS(t *testing.T) {
 		}, parentbilling.SEPAMandateImportRequest{Content: []byte(csv), Mapping: mapping})
 		require.NoError(t, err)
 		require.Len(t, result.Rows, 2)
-		assert.Equal(t, own, result.Rows[0].ContractID, "the Träger's own contract is a payer")
+		assert.Equal(t, own, result.Rows[0].ContractID.Int64(), "the Träger's own contract is a payer")
 		assert.Zero(t, result.Rows[1].ContractID, "a contract of another Träger is no payer")
 		assert.Equal(t, parentbilling.ImportRowInvalid, result.Rows[1].Status)
 		assert.Contains(t, result.Rows[1].Problems, parentbilling.SEPAMandateImportProblem{

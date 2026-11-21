@@ -3448,7 +3448,7 @@ export interface InvoiceMandate {
 }
 
 export const InvoiceMandateSchema: z.ZodType<InvoiceMandate, unknown> = object<InvoiceMandate>({
-  mandate_id: int64StringOrNumber,
+  mandate_id: int64String,
   reference: str,
   signed_on: nullable(calendarDate),
   creditor_id: str,
@@ -3522,12 +3522,12 @@ export interface CareUnpriced {
 }
 
 export const CareUnpricedSchema: z.ZodType<CareUnpriced, unknown> = object<CareUnpriced>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   weekday: str,
   days_per_week: optional(safeInt),
@@ -3541,8 +3541,8 @@ export interface CareDuplicateContract {
 }
 
 export const CareDuplicateContractSchema: z.ZodType<CareDuplicateContract, unknown> = object<CareDuplicateContract>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
 });
 
@@ -3570,7 +3570,7 @@ export interface CareSchool {
 }
 
 export const CareSchoolSchema: z.ZodType<CareSchool, unknown> = object<CareSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -3600,7 +3600,7 @@ export interface CostBearer {
 }
 
 export const CostBearerSchema: z.ZodType<CostBearer, unknown> = object<CostBearer>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   address: str,
   file_reference: str,
@@ -3632,7 +3632,7 @@ export interface ContributionRule {
 }
 
 export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = object<ContributionRule>({
-  id: int64StringOrNumber,
+  id: int64String,
   service: str,
   kind: str,
   valid_from: nullable(calendarDate),
@@ -3642,9 +3642,9 @@ export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = obje
   discount_cents: nullable(safeInt),
   note: str,
   name: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
-  care_offering_ids: nullable(arr(int64StringOrNumber)),
-  count_school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
+  care_offering_ids: nullable(arr(int64String)),
+  count_school_ids: nullable(arr(int64String)),
   price_cents: nullable(safeInt),
   cap_cents: nullable(safeInt),
   tariff_sibling_price: bool,
@@ -3665,9 +3665,9 @@ export interface CareModule {
 }
 
 export const CareModuleSchema: z.ZodType<CareModule, unknown> = object<CareModule>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   ends_at: str,
   booked_weekdays: nullable(arr(str)),
@@ -3683,7 +3683,7 @@ export interface HolidaySiblingChild {
 }
 
 export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -3696,7 +3696,7 @@ export interface HolidaySibling {
 }
 
 export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
-  registration_id: int64StringOrNumber,
+  registration_id: int64String,
   status: str,
   children: nullable(arr(HolidaySiblingChildSchema)),
 });
@@ -4193,11 +4193,11 @@ export interface SEPADebit {
 }
 
 export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = object<SEPADebit>({
-  id: int64StringOrNumber,
-  mandate_id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  mandate_id: int64String,
+  contract_id: int64String,
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   invoice_number: str,
   recipient_name: str,
   amount_cents: safeInt,
@@ -4209,7 +4209,7 @@ export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = object<SEPADebit>(
   status: str,
   left: optional(str),
   submitted_at: nullable(instant),
-  notice_id: optional(int64StringOrNumber),
+  notice_id: optional(int64String),
   notice_month: optional(calendarDate),
   message_id: optional(str),
 });

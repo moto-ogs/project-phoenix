@@ -420,7 +420,9 @@ export function useTimetableActions(
         const result = await timetableOperationsApi.createAndStartSpontaneous({
           title: payload.title,
           room_id: payload.roomId,
-          activity_group_id: payload.activityGroupId || undefined,
+          activity_group_id: payload.activityGroupId
+            ? payload.activityGroupId
+            : undefined,
           staff_ids: staffIds,
         });
         setPresentPickerAutoOpenInstanceId(result.instanceId);

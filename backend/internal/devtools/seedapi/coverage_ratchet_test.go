@@ -143,6 +143,7 @@ var seedCoverageDebt = map[string]string{}
 // its scheduled job runs. Unlike exemptions, populated entries are not stale
 // classification debt.
 var seedCoverageTransient = map[string]string{
+	"auth.demo_crm_jobs":                         "transient external CRM deliveries of real public demo requests; absent from school seed data",
 	"auth.account_avatar_file_cleanup":           "transient deletion intents for anonymized accounts; drained hourly, never create orphan files as demo data",
 	"auth.invitation_tokens":                     "short-lived invitation state; the seed accepts some and leaves some open",
 	"auth.request_rate_limits":                   "short-lived API traffic quotas; the seed can run with limiting disabled",

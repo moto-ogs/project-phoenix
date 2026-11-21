@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mk007Months are the months of the Hardt notice MK-007: 01.09. to
@@ -22,7 +23,7 @@ func mk007Position(offering int64, name string, cents int64, month calendar.Date
 	for i, weekday := range weekdays {
 		prices[i] = parentbilling.CareWeekdayPrice{Weekday: weekday, MonthlyCents: cents / int64(len(weekdays)), AmountCents: cents / int64(len(weekdays))}
 	}
-	return parentbilling.CarePosition{CareOfferingID: offering, ModuleName: name, VersionNumber: 1, ServiceFrom: month,
+	return parentbilling.CarePosition{CareOfferingID: ident.ID(offering), ModuleName: name, VersionNumber: 1, ServiceFrom: month,
 		ServiceUntil: monthEnd(month), Weekdays: prices, AmountCents: cents, PayableCents: cents}
 }
 
@@ -349,7 +350,7 @@ func TestCareNoticeMonthCountsAKeptAssessmentBeforeTheRuleChain(t *testing.T) {
 		booked("mon", moduleUntil1400, "Betreuung bis 14:00 Uhr", "14:00"), booked("sat", moduleUntil1400, "Betreuung bis 14:00 Uhr", "14:00"))
 	priced := sjrVersion(t, contractNoah, schoolIspringen, 1, january2027, januaryLastDay2027,
 		booked("mon", moduleUntil1400, "Betreuung bis 14:00 Uhr", "14:00"))
-	assessed := parentbilling.CareInvoice{ContractID: contractMia, SchoolID: schoolIspringen, TotalCents: 3200, Number: "JB-1",
+	assessed := parentbilling.CareInvoice{ContractID: ident.ID(contractMia), SchoolID: ident.ID(schoolIspringen), TotalCents: 3200, Number: "JB-1",
 		DocumentKind: parentbilling.DocumentKindFeeNotice}
 	in := careMonthInput{month: day(t, january2027), rule: parentbilling.MonthRuleVersionOnFirst,
 		versions: []parentbilling.CareContractVersion{unpriced, priced}, tariffs: sjrTariffs(t)}
@@ -360,7 +361,7 @@ func TestCareNoticeMonthCountsAKeptAssessmentBeforeTheRuleChain(t *testing.T) {
 	assert.Zero(t, review.billed, "the first computation computes the noticed contract again")
 	assert.Equal(t, 1, final.billed, "the kept assessment is issued for the rule chain")
 	require.Len(t, final.invoices, 1)
-	assert.Equal(t, int64(contractNoah), final.invoices[0].ContractID)
+	assert.Equal(t, ident.ID(int64(contractNoah)), final.invoices[0].ContractID)
 }
 
 // TestCareNoticeKeepsTheFamilyOfTheContract: the family the sibling rules
@@ -408,12 +409,12 @@ func TestCareFixedShareTakenByANoticeLeavesTheMensaToTheFamily(t *testing.T) {
 	t.Parallel()
 	month := day(t, mealRunMonth)
 	twenty := int64(2000)
-	share := parentbilling.CareCostShare{ContractID: contractMia, Kind: parentbilling.CostShareOtherSubsidy, CostBearerID: 77,
+	share := parentbilling.CareCostShare{ContractID: ident.ID(contractMia), Kind: parentbilling.CostShareOtherSubsidy, CostBearerID: 77,
 		CostBearerName: "Gemeinde", ShareCents: &twenty, Scope: parentbilling.CostShareScopeBoth, ValidFrom: month,
 		ValidUntil: monthEnd(month)}
-	mensa := careMonth{invoices: []parentbilling.CareInvoice{{ContractID: contractMia, Service: parentbilling.ServiceCare,
+	mensa := careMonth{invoices: []parentbilling.CareInvoice{{ContractID: ident.ID(contractMia), Service: parentbilling.ServiceCare,
 		MealPositions: []parentbilling.CareMealPosition{{AmountCents: 1440}}, TotalCents: 1440}}}
-	notice := parentbilling.CareInvoice{ContractID: contractMia, Number: "JB-1", DocumentKind: parentbilling.DocumentKindFeeNotice,
+	notice := parentbilling.CareInvoice{ContractID: ident.ID(contractMia), Number: "JB-1", DocumentKind: parentbilling.DocumentKindFeeNotice,
 		CostShares: []parentbilling.CareInvoiceCostShare{{Kind: parentbilling.CostShareOtherSubsidy, CostBearerID: 77, AmountCents: 2000}}}
 	applyMealCostShares(&mensa, []parentbilling.CareCostShare{share}, month, map[int64]parentbilling.CareInvoice{contractMia: notice})
 	assert.Equal(t, int64(1440), mensa.invoices[0].TotalCents, "the family pays the Mensa")
@@ -431,13 +432,13 @@ func TestCareMonthNamesTheContractsANoticeTookBack(t *testing.T) {
 		contractNoah: {{ContractID: contractNoah, SchoolID: schoolIspringen, ChildFirstName: "Noah", ChildLastName: "Beispiel"}},
 	}
 	invoiced := map[int64]parentbilling.CareInvoice{
-		contractMia: {ContractID: contractMia, Number: "JB-2", DocumentKind: parentbilling.DocumentKindFeeNotice},
-		contractNoah: {ContractID: contractNoah, Number: "JB-3", DocumentKind: parentbilling.DocumentKindFeeNotice,
+		contractMia: {ContractID: ident.ID(contractMia), Number: "JB-2", DocumentKind: parentbilling.DocumentKindFeeNotice},
+		contractNoah: {ContractID: ident.ID(contractNoah), Number: "JB-3", DocumentKind: parentbilling.DocumentKindFeeNotice,
 			Positions: []parentbilling.CarePosition{{CareOfferingID: 1, AmountCents: 3200}}},
 		99: {ContractID: 99, Number: "JB-4", DocumentKind: parentbilling.DocumentKindFeeNotice},
 	}
 	holds := feeNoticeHolds(invoiced, versions)
 	require.Len(t, holds, 1)
-	assert.Equal(t, parentbilling.CareFeeNoticeHold{ContractID: contractMia, SchoolID: schoolIspringen, ChildFirstName: "Mia",
+	assert.Equal(t, parentbilling.CareFeeNoticeHold{ContractID: ident.ID(contractMia), SchoolID: ident.ID(schoolIspringen), ChildFirstName: "Mia",
 		ChildLastName: "Beispiel", NoticeNumber: "JB-2"}, holds[0])
 }

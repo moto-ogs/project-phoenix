@@ -24761,6 +24761,14 @@
       "target_owner": "school-calendar"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingAnnouncer.AnnounceStaffingChanged",
+      "binding_digest": "45b319b01b08e8c61bb5c097c9f8c163",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.StaffingAnnouncer.AnnounceStaffingChanged",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.TimetableSupervisionSheets.SupervisionStudentSheet",
       "binding_digest": "a12f542dbf67c35fb49744ea2f918211",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.SupervisionSheets.SupervisionStudentSheet",

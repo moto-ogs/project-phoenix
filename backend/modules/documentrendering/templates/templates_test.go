@@ -214,3 +214,25 @@ func TestLegalRemedyNeedsRenderedTextNotOnlyPlaceholdersOrAHeading(t *testing.T)
 		assert.True(t, templates.LacksLegalRemedy(templates.KindFeeNotice, templates.Template{LegalRemedy: text}), text)
 	}
 }
+
+// The standard template for one person (ADR 0294, #7463) is the standard
+// text in the du-form: the same placeholders and closing, no ihr-form, and
+// no salutation, because the letter greets the person by name. A kind no
+// letter to one person uses keeps its standard template.
+func TestTheStandardTemplateForOnePersonSaysDu(t *testing.T) {
+	t.Parallel()
+	ihrForm := regexp.MustCompile(`(?i)\b(ihr|euch|euer|eure[mnrs]?|habt|müsst|gebt|überweist|beachtet)\b`)
+	placeholder := regexp.MustCompile(`\{\{\w+\}\}`)
+	for _, kind := range []templates.Kind{templates.KindConfirmation, templates.KindInvoice, templates.KindFeeNotice} {
+		one, standard := templates.DefaultForOne(kind), templates.Default(kind)
+		require.NoError(t, templates.Check(kind, one), kind)
+		assert.Empty(t, one.Salutation, kind)
+		assert.Equal(t, standard.Closing, one.Closing, kind)
+		for _, text := range []string{one.Subject, one.Body} {
+			assert.Empty(t, ihrForm.FindAllString(text, -1), "%s: %q", kind, text)
+		}
+		assert.ElementsMatch(t, placeholder.FindAllString(standard.Subject+standard.Body, -1),
+			placeholder.FindAllString(one.Subject+one.Body, -1), kind)
+	}
+	assert.Equal(t, templates.Default(templates.KindContract), templates.DefaultForOne(templates.KindContract))
+}

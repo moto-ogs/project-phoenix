@@ -317,7 +317,7 @@ export function familyBillingBody(
   const both = input.recipientKind === "both";
   const payer = input.recipientKind === "payer";
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     recipient_kind: input.recipientKind,
     second_first_name: both ? input.secondFirstName.trim() : "",
     second_last_name: both ? input.secondLastName.trim() : "",

@@ -360,14 +360,18 @@ function HolidayWeekPlacesReadout({
                     ) : null}
                     <StatusBadge
                       label={
-                        HOLIDAY_REGISTRATION_STATUS_LABELS[
-                          entry.registrationStatus
-                        ]
+                        entry.registrationStatus
+                          ? HOLIDAY_REGISTRATION_STATUS_LABELS[
+                              entry.registrationStatus
+                            ]
+                          : "–"
                       }
                       tone={
-                        HOLIDAY_REGISTRATION_STATUS_TONES[
-                          entry.registrationStatus
-                        ]
+                        entry.registrationStatus
+                          ? HOLIDAY_REGISTRATION_STATUS_TONES[
+                              entry.registrationStatus
+                            ]
+                          : "gray"
                       }
                       size="xs"
                     />
