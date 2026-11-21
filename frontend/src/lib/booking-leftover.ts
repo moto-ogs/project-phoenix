@@ -1,3 +1,5 @@
+import type { bookingLeftoversResponse } from "./contract/timetable.generated";
+
 /**
  * A child a hand-maintained Regeltermin keeps after a booking change (#5102):
  * the booking of these weekdays ended and no other booking carries the
@@ -30,34 +32,18 @@ export interface BookingLeftover {
   kept: boolean;
 }
 
-interface BackendBookingLeftover {
-  template_id: number;
-  template_name: string;
-  student_id: number;
-  student_name: string;
-  weekdays?: number[] | null;
-  booking_ended_on: string;
-  from: string;
-  until?: string | null;
-  kept: boolean;
-}
-
-export interface BackendBookingLeftoversResponse {
-  leftovers?: BackendBookingLeftover[] | null;
-}
-
 export function mapBookingLeftovers(
-  raw: BackendBookingLeftoversResponse,
+  raw: bookingLeftoversResponse,
 ): BookingLeftover[] {
   return (raw.leftovers ?? []).map((leftover) => ({
-    templateId: String(leftover.template_id),
+    templateId: leftover.template_id,
     templateName: leftover.template_name,
-    studentId: String(leftover.student_id),
+    studentId: leftover.student_id,
     studentName: leftover.student_name,
     weekdays: leftover.weekdays ?? [],
     bookingEndedOn: leftover.booking_ended_on,
     from: leftover.from,
-    until: leftover.until ?? null,
+    until: leftover.until,
     kept: leftover.kept,
   }));
 }

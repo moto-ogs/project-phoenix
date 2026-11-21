@@ -22,6 +22,12 @@ import type {
   ApplyDeviationsResponse as WireApplyDeviations,
   AttendanceResponse as WireAttendance,
   BulkCancelResult as WireBulkCancel,
+  combinedOfferingCountsResponse as WireCombinedOfferingCounts,
+  createTemplateResponse as WireCreateTemplate,
+  endTemplateResponse as WireEndTemplate,
+  listTemplatesResponse as WireTemplates,
+  offeringSourcesResponse as WireOfferingSources,
+  splitTemplateResponse as WireSplitTemplate,
   BulkSubstitutionResponse as WireBulkSubstitution,
   DeviationHistoryResponse as WireDeviationHistory,
   editedInWindowResponse as WireEditedInWindow,
@@ -54,18 +60,14 @@ import type {
   CareDayStatus,
   EditedChange,
   InstanceStatus,
+  RosterMaintenanceMode,
+  TargetGroupType,
   TimetableListKind,
-  BackendCreateTemplateResult,
-  BackendEndTemplateResult,
   MoveStaffResponse,
   StaffPoolResponse,
   BulkSubstitutionResponse,
   EditedInWindowResult,
-  BackendCombinedOfferingCountsResponse,
-  BackendOfferingSourcesResponse,
   CombinedOfferingCounts,
-  BackendSplitTemplateResult,
-  BackendTemplatesResponse,
   OfferingSourceOption,
   AttendanceResponse,
   ConflictCheckResult,
@@ -576,6 +578,19 @@ const STAFF_POOL_CATEGORY_VALUES = [
   "on_shift_free",
   "not_on_shift",
 ] as const;
+const TARGET_GROUP_TYPE_VALUES = [
+  "jahrgang",
+  "klasse",
+  "gruppe",
+  "angebot",
+  "none",
+] as const satisfies readonly TargetGroupType[];
+const TARGET_TYPE_VALUES = ["jahrgang", "klasse", "gruppe"] as const;
+const ROSTER_MAINTENANCE_MODE_VALUES = [
+  "automatic",
+  "partial",
+  "manual",
+] as const satisfies readonly RosterMaintenanceMode[];
 const MOVE_STAFF_ACTION_VALUES = [
   "moved",
   "assigned",
@@ -1046,12 +1061,12 @@ export function mapGuardianNoticeReach(
 }
 
 export function mapCreateTemplateResult(
-  raw: BackendCreateTemplateResult,
+  raw: WireCreateTemplate,
 ): CreateTemplateResult {
   return {
-    templateId: String(raw.template_id),
-    timeframeId: String(raw.timeframe_id),
-    scheduleIds: (raw.schedule_ids ?? []).map(String),
+    templateId: raw.template_id,
+    timeframeId: raw.timeframe_id,
+    scheduleIds: raw.schedule_ids ?? [],
     instancesCreated: raw.instances_created,
     materializedFrom: raw.materialized_from,
     materializedTo: raw.materialized_to,
@@ -1059,22 +1074,20 @@ export function mapCreateTemplateResult(
 }
 
 export function mapSplitTemplateResult(
-  raw: BackendSplitTemplateResult,
+  raw: WireSplitTemplate,
 ): SplitTemplateResult {
   return {
-    oldTemplateId: String(raw.old_template_id),
-    newTemplateId: String(raw.new_template_id),
-    scheduleIds: (raw.schedule_ids ?? []).map(String),
+    oldTemplateId: raw.old_template_id,
+    newTemplateId: raw.new_template_id,
+    scheduleIds: raw.schedule_ids ?? [],
     deletedInstances: raw.deleted_instances,
     instancesCreated: raw.instances_created,
   };
 }
 
-export function mapEndTemplateResult(
-  raw: BackendEndTemplateResult,
-): EndTemplateResult {
+export function mapEndTemplateResult(raw: WireEndTemplate): EndTemplateResult {
   return {
-    templateId: String(raw.template_id),
+    templateId: raw.template_id,
     effectiveDate: raw.effective_date,
     deletedInstances: raw.deleted_instances,
   };
@@ -1167,141 +1180,126 @@ export function mapMoveStaff(raw: WireMoveStaff): MoveStaffResponse {
   };
 }
 
-export function mapTemplates(raw: BackendTemplatesResponse): TemplatesResponse {
+type WireTemplate = NonNullable<WireTemplates["templates"]>[number];
+
+function mapRosterMaintenance(
+  raw: WireTemplate["roster_maintenance"],
+): TimetableTemplate["rosterMaintenance"] {
+  // A mode this build does not know reads like a state the backend could not
+  // derive: the Regeltermin shows no badge.
+  const mode = raw && knownEnum(ROSTER_MAINTENANCE_MODE_VALUES, raw.mode);
+  if (!raw || !mode) return undefined;
   return {
-    templates: (raw.templates ?? []).map((template) => ({
-      id: String(template.id),
-      name: template.name,
-      type: template.type,
-      listKind: template.list_kind,
-      categoryId: String(template.category_id),
-      categoryName: template.category_name,
-      planningTrackId:
-        template.planning_track_id !== undefined &&
-        template.planning_track_id !== null
-          ? String(template.planning_track_id)
-          : undefined,
-      planningTrackName: template.planning_track_name,
-      planningTrackColor: template.planning_track_color,
-      planningTrackSortOrder: template.planning_track_sort_order,
-      roomId:
-        template.room_id !== undefined && template.room_id !== null
-          ? String(template.room_id)
-          : undefined,
-      roomName: template.room_name,
-      educationGroupId:
-        template.education_group_id !== undefined &&
-        template.education_group_id !== null
-          ? String(template.education_group_id)
-          : undefined,
-      educationGroupName: template.education_group_name,
-      isOpen: template.is_open,
-      maxParticipants: template.max_participants,
-      notes: template.notes,
-      includeClosingDays: template.include_closing_days ?? false,
-      endDate: template.end_date ?? undefined,
-      shiftTypeName: template.shift_type_name,
-      shiftTypeColor: template.shift_type_color,
-      calendarPeriodId:
-        template.calendar_period_id !== undefined &&
-        template.calendar_period_id !== null
-          ? String(template.calendar_period_id)
-          : undefined,
-      targetGroupType: template.target_group_type,
-      targetGradeLevel: template.target_grade_level,
-      targetSchoolClass: template.target_school_class,
-      ...(template.targets
-        ? {
-            targets: template.targets.map((target) => ({
-              type: target.type,
-              gradeLevel: target.grade_level,
-              schoolClass: target.school_class,
-              educationGroupId:
-                target.education_group_id === undefined
-                  ? undefined
-                  : String(target.education_group_id),
-              educationGroupName: target.education_group_name,
-            })),
-          }
-        : {}),
-      sourceCareOfferingIds:
-        template.source_care_offering_ids &&
-        template.source_care_offering_ids.length > 0
-          ? template.source_care_offering_ids.map(String)
-          : undefined,
-      sourceGradeLevels: template.source_grade_levels ?? undefined,
-      sourceSchoolClasses: template.source_school_classes ?? undefined,
-      enrollmentCount: template.enrollment_count,
-      supervisorCount: template.supervisor_count,
-      requiredStaffCount: template.required_staff_count,
-      assignedStaffCount: template.assigned_staff_count,
-      requiredStaffOverride: template.required_staff_override ?? undefined,
-      studentIds: (template.student_ids ?? []).map(String),
-      staffIds: (template.staff_ids ?? []).map(String),
-      primaryStaffId:
-        template.primary_staff_id !== undefined &&
-        template.primary_staff_id !== null
-          ? String(template.primary_staff_id)
-          : undefined,
-      schedules: (template.schedules ?? []).map((schedule) => ({
-        id: String(schedule.id),
-        weekday: schedule.weekday,
-        startTime: schedule.start_time,
-        endTime: schedule.end_time,
-        weekPattern: schedule.week_pattern,
-        calendarPeriodId:
-          schedule.calendar_period_id !== undefined &&
-          schedule.calendar_period_id !== null
-            ? String(schedule.calendar_period_id)
-            : undefined,
-        validFrom: schedule.valid_from,
-        validUntil: schedule.valid_until,
-      })),
-      weekdayAssignments: (template.weekday_assignments ?? []).map(
-        (assignment) => ({
-          weekday: assignment.weekday,
-          staffIds: (assignment.staff_ids ?? []).map(String),
-          studentIds: (assignment.student_ids ?? []).map(String),
-          primaryStaffId:
-            assignment.primary_staff_id !== undefined &&
-            assignment.primary_staff_id !== null
-              ? String(assignment.primary_staff_id)
-              : undefined,
-        }),
-      ),
-      protectedStudentAssignments: (
-        template.protected_student_assignments ?? []
-      ).map((assignment) => ({
-        weekday: assignment.weekday,
-        studentIds: (assignment.student_ids ?? []).map(String),
-      })),
-      resolvedFromTemplateId:
-        template.resolved_from_template_id !== undefined &&
-        template.resolved_from_template_id !== null
-          ? String(template.resolved_from_template_id)
-          : undefined,
-      rosterMaintenance: template.roster_maintenance
-        ? {
-            mode: template.roster_maintenance.mode,
-            offeringNames: (template.roster_maintenance.offerings ?? []).map(
-              (offering) => offering.name,
-            ),
-            gradeLevels: template.roster_maintenance.grade_levels ?? [],
-            schoolClasses: template.roster_maintenance.school_classes ?? [],
-            inactiveOfferingNames: (
-              template.roster_maintenance.inactive_offerings ?? []
-            ).map((offering) => offering.name),
-            invalidOfferingNames: (
-              template.roster_maintenance.invalid_offerings ?? []
-            ).map((offering) => offering.name),
-            dynamicTargets: template.roster_maintenance.dynamic_targets,
-            careOfferingsDisabled:
-              template.roster_maintenance.care_offerings_disabled,
-          }
-        : undefined,
-      manualRosterConfirmed: template.manual_roster_confirmed,
-    })),
+    mode,
+    offeringNames: (raw.offerings ?? []).map((offering) => offering.name),
+    gradeLevels: raw.grade_levels ?? [],
+    schoolClasses: raw.school_classes ?? [],
+    inactiveOfferingNames: (raw.inactive_offerings ?? []).map(
+      (offering) => offering.name,
+    ),
+    invalidOfferingNames: (raw.invalid_offerings ?? []).map(
+      (offering) => offering.name,
+    ),
+    dynamicTargets: raw.dynamic_targets,
+    careOfferingsDisabled: raw.care_offerings_disabled,
   };
+}
+
+function mapTemplate(template: WireTemplate): TimetableTemplate {
+  return {
+    id: template.id,
+    name: template.name,
+    type: knownEnum(ACTIVITY_TYPE_VALUES, template.type),
+    listKind: knownEnum(LIST_KIND_VALUES, template.list_kind),
+    categoryId: template.category_id,
+    categoryName: template.category_name,
+    planningTrackId: template.planning_track_id,
+    planningTrackName: template.planning_track_name,
+    planningTrackColor: template.planning_track_color,
+    planningTrackSortOrder: template.planning_track_sort_order,
+    roomId: template.room_id,
+    roomName: template.room_name,
+    educationGroupId: template.education_group_id,
+    educationGroupName: template.education_group_name,
+    isOpen: template.is_open,
+    maxParticipants: template.max_participants,
+    notes: template.notes,
+    includeClosingDays: template.include_closing_days,
+    endDate: template.end_date,
+    shiftTypeName: template.shift_type_name,
+    shiftTypeColor: template.shift_type_color,
+    calendarPeriodId: template.calendar_period_id,
+    targetGroupType: knownEnum(
+      TARGET_GROUP_TYPE_VALUES,
+      template.target_group_type,
+    ),
+    targetGradeLevel: template.target_grade_level,
+    targetSchoolClass: template.target_school_class,
+    ...(template.targets
+      ? {
+          // A target kind this build does not know is left out of the list.
+          targets: template.targets.flatMap((target) => {
+            const type = knownEnum(TARGET_TYPE_VALUES, target.type);
+            if (!type) return [];
+            return [
+              {
+                type,
+                gradeLevel: target.grade_level,
+                schoolClass: target.school_class,
+                educationGroupId: target.education_group_id,
+                educationGroupName: target.education_group_name,
+              },
+            ];
+          }),
+        }
+      : {}),
+    sourceCareOfferingIds:
+      template.source_care_offering_ids &&
+      template.source_care_offering_ids.length > 0
+        ? template.source_care_offering_ids
+        : undefined,
+    sourceGradeLevels: template.source_grade_levels,
+    sourceSchoolClasses: template.source_school_classes,
+    enrollmentCount: template.enrollment_count,
+    supervisorCount: template.supervisor_count,
+    requiredStaffCount: template.required_staff_count,
+    assignedStaffCount: template.assigned_staff_count,
+    requiredStaffOverride: template.required_staff_override,
+    studentIds: template.student_ids ?? [],
+    staffIds: template.staff_ids ?? [],
+    primaryStaffId: template.primary_staff_id,
+    schedules: (template.schedules ?? []).map((schedule) => ({
+      id: schedule.id,
+      weekday: schedule.weekday,
+      startTime: schedule.start_time,
+      endTime: schedule.end_time,
+      weekPattern: schedule.week_pattern,
+      calendarPeriodId: schedule.calendar_period_id,
+      validFrom: schedule.valid_from,
+      validUntil: schedule.valid_until,
+    })),
+    weekdayAssignments: (template.weekday_assignments ?? []).map(
+      (assignment) => ({
+        weekday: assignment.weekday,
+        staffIds: assignment.staff_ids ?? [],
+        studentIds: assignment.student_ids ?? [],
+        primaryStaffId: assignment.primary_staff_id,
+      }),
+    ),
+    protectedStudentAssignments: (
+      template.protected_student_assignments ?? []
+    ).map((assignment) => ({
+      weekday: assignment.weekday,
+      studentIds: assignment.student_ids ?? [],
+    })),
+    resolvedFromTemplateId: template.resolved_from_template_id,
+    rosterMaintenance: mapRosterMaintenance(template.roster_maintenance),
+    manualRosterConfirmed: template.manual_roster_confirmed,
+  };
+}
+
+export function mapTemplates(raw: WireTemplates): TemplatesResponse {
+  return { templates: (raw.templates ?? []).map(mapTemplate) };
 }
 
 /**
@@ -1309,7 +1307,7 @@ export function mapTemplates(raw: BackendTemplatesResponse): TemplatesResponse {
  * arrive as JSON object strings and become numbers (0 = ohne Jahrgang).
  */
 export function mapCombinedOfferingCounts(
-  raw: BackendCombinedOfferingCountsResponse,
+  raw: WireCombinedOfferingCounts,
 ): CombinedOfferingCounts {
   const gradeCounts: Record<number, number> = {};
   for (const [grade, count] of Object.entries(raw.grade_counts ?? {})) {
@@ -1317,14 +1315,14 @@ export function mapCombinedOfferingCounts(
     if (!Number.isNaN(parsed)) gradeCounts[parsed] = count;
   }
   const students = (raw.students ?? []).map((student) => ({
-    studentId: String(student.student_id),
+    studentId: student.student_id,
     schoolClass: student.school_class ?? "",
   }));
-  return { totalCount: raw.total_count ?? 0, gradeCounts, students };
+  return { totalCount: raw.total_count, gradeCounts, students };
 }
 
 export function mapOfferingSourceOptions(
-  raw: BackendOfferingSourcesResponse,
+  raw: WireOfferingSources,
 ): OfferingSourceOption[] {
   return (raw.offerings ?? []).map((offering) => {
     const gradeCounts: Record<number, number> = {};
@@ -1333,24 +1331,20 @@ export function mapOfferingSourceOptions(
       if (!Number.isNaN(parsed)) gradeCounts[parsed] = count;
     }
     return {
-      id: String(offering.id),
+      id: offering.id,
       name: offering.name,
-      phaseId: String(offering.phase_id),
+      phaseId: offering.phase_id,
       phaseName: offering.phase_name,
       phaseServiceStart: offering.phase_service_start || undefined,
       totalCount: offering.total_count,
       gradeCounts,
       sourcedTemplates: (offering.sourced_templates ?? []).map((template) => ({
-        id: String(template.id),
+        id: template.id,
         name: template.name,
         gradeLevels: template.grade_levels ?? [],
         schoolClasses: template.school_classes ?? [],
       })),
-      legacyLinkedTemplateId:
-        offering.legacy_linked_template_id !== undefined &&
-        offering.legacy_linked_template_id !== null
-          ? String(offering.legacy_linked_template_id)
-          : undefined,
+      legacyLinkedTemplateId: offering.legacy_linked_template_id,
     };
   });
 }

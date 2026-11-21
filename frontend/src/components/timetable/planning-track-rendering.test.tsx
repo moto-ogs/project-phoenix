@@ -1,7 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { buildEnrichedInstance } from "~/test/fixtures/timetable";
+import {
+  buildEnrichedInstance,
+  buildTemplateResponse,
+} from "~/test/fixtures/timetable";
 
 import {
   assignBlockLanes,
@@ -148,13 +151,13 @@ describe("planning track rendering", () => {
   it("maps template metadata independently from category and target group", () => {
     const result = mapTemplates({
       templates: [
-        {
-          id: 4,
+        buildTemplateResponse({
+          id: "4",
           name: "Lernzeit 1",
           type: "care",
-          category_id: 9,
+          category_id: "9",
           category_name: "Lernzeit",
-          planning_track_id: 8,
+          planning_track_id: "8",
           planning_track_name: "Jahrgang 1",
           planning_track_color: "#5080D8",
           planning_track_sort_order: 1,
@@ -169,7 +172,7 @@ describe("planning track rendering", () => {
           student_ids: [],
           staff_ids: [],
           schedules: [],
-        },
+        }),
       ],
     });
 

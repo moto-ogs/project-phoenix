@@ -17,8 +17,10 @@ vi.mock("./logger", () => ({
 }));
 
 import { timetableService } from "./timetable-api";
-import type { BackendTimetableTemplate } from "./timetable-types";
-import { buildEnrichedInstance } from "~/test/fixtures/timetable";
+import {
+  buildEnrichedInstance,
+  buildTemplateResponse,
+} from "~/test/fixtures/timetable";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -68,35 +70,34 @@ const backendInstance = buildEnrichedInstance({
   ],
 });
 
-const backendTemplate: BackendTimetableTemplate = {
-  id: 7,
+const backendTemplate = buildTemplateResponse({
+  id: "7",
   name: "Yoga",
   type: "activity",
-  category_id: 2,
+  category_id: "2",
   category_name: "AG",
-  room_id: 3,
+  room_id: "3",
   room_name: "Turnhalle",
   is_open: true,
   max_participants: 12,
-  target_group_type: "none",
   enrollment_count: 8,
   supervisor_count: 1,
   required_staff_count: 1,
   assigned_staff_count: 1,
-  student_ids: [21],
-  staff_ids: [11],
-  primary_staff_id: 11,
+  student_ids: ["21"],
+  staff_ids: ["11"],
+  primary_staff_id: "11",
   schedules: [
     {
-      id: 9,
+      id: "9",
       weekday: 1,
       start_time: "14:00",
       end_time: "15:00",
       week_pattern: 0,
-      calendar_period_id: 5,
+      calendar_period_id: "5",
     },
   ],
-};
+});
 
 describe("timetableService", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -240,9 +241,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
     };
 
     await expect(timetableService.createTemplate(createBody)).resolves.toEqual({
@@ -287,9 +288,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-05-04",
       instance_notes: "Heute draußen",
     };
@@ -320,9 +321,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       series_roster_from: "2026-06-01",
     };
 
@@ -346,9 +347,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-08-12",
     };
 
@@ -401,8 +402,8 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "15:00",
       end_time: "16:00",
-      room_id: 3,
-      category_id: 2,
+      room_id: "3",
+      category_id: "2",
       effective_date: "2026-06-01",
       materialize_from: "2026-06-01",
       materialize_to: "2026-06-07",
