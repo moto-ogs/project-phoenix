@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -232,7 +233,7 @@ func TestTimeTrackingOverview_MatchesMonthSummary(t *testing.T) {
 
 	byStaff := make(map[int64]timetracking.TimeTrackingOverviewRow, len(overview.Rows))
 	for _, row := range overview.Rows {
-		byStaff[row.StaffID] = row
+		byStaff[row.StaffID.Int64()] = row
 	}
 	for _, staffID := range f.staff {
 		row, ok := byStaff[staffID]
@@ -310,7 +311,7 @@ func TestTimeTrackingOverview_VacationMatchesQuotaEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, row := range overview.Rows {
-		expected, err := absenceSvc.GetVacationQuotaSummary(f.ctx, row.StaffID, f.today.Year())
+		expected, err := absenceSvc.GetVacationQuotaSummary(f.ctx, row.StaffID.Int64(), f.today.Year())
 		require.NoError(t, err)
 		assert.InDelta(t, expected.RemainingDays, row.RemainingVacationDays, 0.001,
 			"Resturlaub for staff %d must match the per-staff endpoint", row.StaffID)
@@ -508,7 +509,7 @@ func TestTimeTrackingOverview_Filters(t *testing.T) {
 	require.Len(t, all.Rows, 3)
 	unfiltered := make(map[int64]int, 3)
 	for _, row := range all.Rows {
-		unfiltered[row.StaffID] = row.BalanceMinutes
+		unfiltered[row.StaffID.Int64()] = row.BalanceMinutes
 	}
 
 	fullTime, err := testpkg.TenantQuery1(t, f.ctx, f.db, f.svc.GetTimeTrackingOverview, timetracking.OverviewFilters{
@@ -516,7 +517,7 @@ func TestTimeTrackingOverview_Filters(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, fullTime.Rows, 1)
-	assert.Equal(t, f.staff[0], fullTime.Rows[0].StaffID)
+	assert.Equal(t, ident.ID(f.staff[0]), fullTime.Rows[0].StaffID)
 	assert.Equal(t, unfiltered[f.staff[0]], fullTime.Rows[0].BalanceMinutes,
 		"filtering must not change the computed values")
 

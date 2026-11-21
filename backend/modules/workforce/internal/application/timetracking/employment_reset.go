@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // NewEmploymentTimeReset uses the ordinary carry-chain math, including frozen
@@ -28,7 +29,7 @@ func NewEmploymentTimeReset(deps Dependencies, clearSchedule func(context.Contex
 		if err != nil {
 			return fmt.Errorf("read balance before resumption: %w", err)
 		}
-		if _, err := deps.Adjustments.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: in.StaffID, Type: BalanceAdjustmentTypeReset, MinutesDelta: -balance, EffectiveDate: today.String(), Note: note, DecidedBy: in.StaffID, DecidedAt: deps.Now()}); err != nil {
+		if _, err := deps.Adjustments.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: ident.ID(in.StaffID), Type: BalanceAdjustmentTypeReset, MinutesDelta: -balance, EffectiveDate: today.String(), Note: note, DecidedBy: ident.ID(in.StaffID), DecidedAt: deps.Now()}); err != nil {
 			return err
 		}
 		if err := resetEmploymentVacation(ctx, deps, in, today, note); err != nil {

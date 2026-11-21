@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,7 +79,7 @@ func TestAbsencePlanGaps_PreCascadeVacationIsShownAndTakenOver(t *testing.T) {
 	require.Len(t, gaps, 1, "only an approved absence has plan effect, and each row counts once")
 	assert.NotEqual(t, overlap, gaps[0].AbsenceID)
 	assert.Equal(t, workforce.AbsencePlanGap{
-		AbsenceID: approved, StaffID: requester.staffID, AbsenceType: workforce.AbsenceTypeVacation,
+		AbsenceID: ident.ID(approved), StaffID: ident.ID(requester.staffID), AbsenceType: workforce.AbsenceTypeVacation,
 		DateStart: vacationDay.String(), DateEnd: vacationDay.String(), OpenShifts: 1, OpenBlocks: 1,
 	}, gaps[0], "the hand-cancelled shift and the hand-marked row are no gap")
 

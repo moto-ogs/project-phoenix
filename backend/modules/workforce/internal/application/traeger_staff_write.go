@@ -56,7 +56,7 @@ func (t *TraegerStaff) writeLink(ctx context.Context, actor workforce.TraegerSta
 	}
 	links := make([]domain.TraegerStaffLink, 0, len(plan.members))
 	for _, member := range plan.members {
-		links = append(links, domain.TraegerStaffLink{SchoolID: member.ref.SchoolID, StaffID: member.ref.StaffID})
+		links = append(links, domain.TraegerStaffLink{SchoolID: member.ref.SchoolID.Int64(), StaffID: member.ref.StaffID.Int64()})
 	}
 	if err := t.store.InsertStaffLinks(ctx, actor.OrganizationID, record.ID, actor.AccountID, links); err != nil {
 		return domain.TraegerStaffRecord{}, err

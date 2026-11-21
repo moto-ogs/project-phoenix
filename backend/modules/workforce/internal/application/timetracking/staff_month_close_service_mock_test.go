@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	"github.com/stretchr/testify/assert"
@@ -287,5 +288,5 @@ func TestStaffMonthCloseService_SkipsOnlyStaffWithThisMonthClosed(t *testing.T) 
 	assert.Equal(t, 1, result.SkippedStaff)
 	assert.Equal(t, 1, result.ClosedStaff)
 	require.Len(t, result.Snapshots, 1)
-	assert.Equal(t, int64(42), result.Snapshots[0].StaffID)
+	assert.Equal(t, ident.ID(int64(42)), result.Snapshots[0].StaffID)
 }

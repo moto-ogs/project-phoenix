@@ -98,7 +98,7 @@ func sickReportOf(absence workforce.StaffAbsence) (timetable.SickReport, error) 
 	}
 	skipStart, skipEnd := absence.HalfBoundaryDays()
 	return timetable.SickReport{
-		AbsenceID: absence.ID, StaffID: absence.StaffID, Sick: absence.AbsenceType == workforce.AbsenceTypeSick,
+		AbsenceID: absence.ID.Int64(), StaffID: absence.StaffID.Int64(), Sick: absence.AbsenceType == workforce.AbsenceTypeSick,
 		DateStart: start, DateEnd: end, SkipStartDay: skipStart, SkipEndDay: skipEnd,
 	}, nil
 }

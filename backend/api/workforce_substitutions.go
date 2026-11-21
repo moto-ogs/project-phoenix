@@ -8,6 +8,7 @@ import (
 	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	substitutionsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/substitutions"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // capabilityError reports a Workforce sentinel through errors.Is while keeping
@@ -166,7 +167,7 @@ func scheduleAbsencesToModule(changes []workforceModule.ScheduleAbsenceChange) [
 	}
 	result := make([]education.ScheduleAbsenceChange, 0, len(changes))
 	for _, change := range changes {
-		result = append(result, education.ScheduleAbsenceChange{StaffID: change.StaffID, Reason: change.Reason, InstanceIDs: change.InstanceIDs})
+		result = append(result, education.ScheduleAbsenceChange{StaffID: change.StaffID.Int64(), Reason: change.Reason, InstanceIDs: ident.OptionalInt64s(change.InstanceIDs)})
 	}
 	return result
 }
@@ -178,7 +179,7 @@ func scheduleSubstitutionsToModule(changes []workforceModule.ScheduleSubstitutio
 	result := make([]education.ScheduleSubstitutionChange, 0, len(changes))
 	for _, change := range changes {
 		result = append(result, education.ScheduleSubstitutionChange{
-			AbsentStaffID: change.AbsentStaffID, SubstituteStaffID: change.SubstituteStaffID, Reason: change.Reason, InstanceIDs: change.InstanceIDs,
+			AbsentStaffID: change.AbsentStaffID.Int64(), SubstituteStaffID: change.SubstituteStaffID.Int64(), Reason: change.Reason, InstanceIDs: ident.OptionalInt64s(change.InstanceIDs),
 		})
 	}
 	return result
@@ -190,7 +191,7 @@ func scheduleRemovalsToModule(changes []workforceModule.ScheduleSubstitutionRemo
 	}
 	result := make([]education.ScheduleSubstitutionRemoval, 0, len(changes))
 	for _, change := range changes {
-		result = append(result, education.ScheduleSubstitutionRemoval{StaffID: change.StaffID, InstanceIDs: change.InstanceIDs})
+		result = append(result, education.ScheduleSubstitutionRemoval{StaffID: change.StaffID.Int64(), InstanceIDs: ident.OptionalInt64s(change.InstanceIDs)})
 	}
 	return result
 }
@@ -201,7 +202,7 @@ func schedulePresencesToModule(changes []workforceModule.SchedulePresenceChange)
 	}
 	result := make([]education.SchedulePresenceChange, 0, len(changes))
 	for _, change := range changes {
-		result = append(result, education.SchedulePresenceChange{StaffID: change.StaffID, InstanceIDs: change.InstanceIDs})
+		result = append(result, education.SchedulePresenceChange{StaffID: change.StaffID.Int64(), InstanceIDs: ident.OptionalInt64s(change.InstanceIDs)})
 	}
 	return result
 }
@@ -243,12 +244,12 @@ func overviewToCapability(result *education.OverviewResult) *workforceModule.Sub
 		staff := make([]workforceModule.ScheduleAppointmentStaff, 0, len(appointment.Staff))
 		for _, entry := range appointment.Staff {
 			staff = append(staff, workforceModule.ScheduleAppointmentStaff{
-				AssignmentID: entry.AssignmentID, Staff: workforceModule.StaffRef{ID: entry.Staff.ID, FullName: entry.Staff.FullName},
+				AssignmentID: ident.ID(entry.AssignmentID), Staff: workforceModule.StaffRef{ID: entry.Staff.ID, FullName: entry.Staff.FullName},
 				IsAbsent: entry.IsAbsent, IsSubstitute: entry.IsSubstitute, CanEnd: entry.CanEnd,
 			})
 		}
 		out.ScheduleAppointments = append(out.ScheduleAppointments, workforceModule.ScheduleAppointmentOverview{
-			ID: appointment.ID, Type: workforceModule.SubstitutionTargetType(appointment.Type), Date: appointment.Date.String(),
+			ID: ident.ID(appointment.ID), Type: workforceModule.SubstitutionTargetType(appointment.Type), Date: appointment.Date.String(),
 			StartTime: appointment.StartTime, EndTime: appointment.EndTime, Title: appointment.Title, Status: appointment.Status, Staff: staff,
 		})
 	}
@@ -303,7 +304,7 @@ func assignmentResultToCapability(result *education.AssignmentResult) *workforce
 
 func scheduleResultToCapability(result *education.ScheduleSubstitutionResult) *workforceModule.ScheduleSubstitutionResult {
 	out := &workforceModule.ScheduleSubstitutionResult{
-		InstanceID: result.InstanceID, Cancelled: result.Cancelled, UnderstaffedAck: result.UnderstaffedAck,
+		InstanceID: ident.ID(result.InstanceID), Cancelled: result.Cancelled, UnderstaffedAck: result.UnderstaffedAck,
 		AffectedAppointments: affectedAppointmentsToCapability(result.AffectedAppointments),
 		Warnings:             timeConflictsToCapability(result.Warnings),
 		TotalAffected:        result.TotalAffected,
@@ -326,7 +327,7 @@ func affectedAppointmentsToCapability(values []education.ScheduleAffectedAppoint
 	}
 	result := make([]workforceModule.ScheduleAffectedAppointment, 0, len(values))
 	for _, value := range values {
-		result = append(result, workforceModule.ScheduleAffectedAppointment{InstanceID: value.InstanceID, Title: value.Title, StartTime: value.StartTime, Action: value.Action})
+		result = append(result, workforceModule.ScheduleAffectedAppointment{InstanceID: ident.ID(value.InstanceID), Title: value.Title, StartTime: value.StartTime, Action: value.Action})
 	}
 	return result
 }
@@ -337,7 +338,7 @@ func timeConflictsToCapability(values []education.ScheduleTimeConflict) []workfo
 	}
 	result := make([]workforceModule.ScheduleTimeConflict, 0, len(values))
 	for _, value := range values {
-		result = append(result, workforceModule.ScheduleTimeConflict{Kind: value.Kind, InstanceID: value.InstanceID, OtherID: value.OtherID, Message: value.Message})
+		result = append(result, workforceModule.ScheduleTimeConflict{Kind: value.Kind, InstanceID: ident.ID(value.InstanceID), OtherID: ident.ID(value.OtherID), Message: value.Message})
 	}
 	return result
 }

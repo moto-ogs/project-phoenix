@@ -58,7 +58,7 @@ func TestRebookingCandidateBatchKeepsStaffAndTenantBoundaries(t *testing.T) {
 	rows, err := capability.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{StaffID: f.SubjectID, IDs: []int64{f.Absences[2], f.Absences[0]}})
 	require.NoError(t, err)
 	require.Len(t, rows, 2)
-	require.ElementsMatch(t, []int64{f.Absences[0], f.Absences[2]}, []int64{rows[0].ID, rows[1].ID})
+	require.ElementsMatch(t, []int64{f.Absences[0], f.Absences[2]}, []int64{rows[0].ID.Int64(), rows[1].ID.Int64()})
 	rows, err = capability.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{IDs: []int64{}})
 	require.NoError(t, err)
 	require.Empty(t, rows)

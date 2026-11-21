@@ -2,7 +2,7 @@
 import { z } from "zod";
 import {
   bool,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
   requestBody,
@@ -22,7 +22,7 @@ export interface ShiftTypeDeleteResponse {
 }
 
 export const ShiftTypeDeleteResponseSchema: z.ZodType<ShiftTypeDeleteResponse, unknown> = object<ShiftTypeDeleteResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   outcome: str,
 });
 
@@ -49,7 +49,7 @@ export interface ShiftTypeResponse {
 }
 
 export const ShiftTypeResponseSchema: z.ZodType<ShiftTypeResponse, unknown> = object<ShiftTypeResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   color: str,
   description: optional(str),
@@ -64,7 +64,7 @@ export interface ShiftTypeRequest {
   color?: string;
   description?: string;
   is_active?: boolean | null;
-  category_ids?: number[] | null;
+  category_ids?: string[] | null;
 }
 
 /** Query of GET /api/shift-types/ */

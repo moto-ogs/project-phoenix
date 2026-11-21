@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // previewAbsenceID marks the not yet stored booking inside a preview ledger;
@@ -112,7 +113,7 @@ func (s *Service) listAllowanceAbsences(ctx context.Context, staffID int64, from
 // [from, to] and still count: reported, approved or awaiting a decision.
 func (s *Service) addAllowanceUses(accounts *allowanceAccounts, absences []workforce.StaffAbsence, from, to string) error {
 	for _, absence := range absences {
-		if absence.AbsenceTypeID == nil || *absence.AbsenceTypeID != accounts.absenceType.ID {
+		if absence.AbsenceTypeID == nil || *absence.AbsenceTypeID != ident.ID(accounts.absenceType.ID) {
 			continue
 		}
 		if absence.DateEnd < from || absence.DateStart > to {
@@ -226,7 +227,7 @@ func (s *Service) rebookingCandidates(ctx context.Context, staffID int64, absenc
 	}
 	byID := make(map[int64]workforce.StaffAbsence, len(absences))
 	for _, absence := range absences {
-		byID[absence.ID] = absence
+		byID[absence.ID.Int64()] = absence
 	}
 	candidates := make([]domain.StaffAbsence, 0, len(absenceIDs))
 	firstYear, lastYear := 0, 0
@@ -235,7 +236,7 @@ func (s *Service) rebookingCandidates(ctx context.Context, staffID int64, absenc
 			return nil, 0, 0, invalidAbsence("staff absence ID is required")
 		}
 		absence, found := byID[id]
-		if !found || absence.StaffID != staffID {
+		if !found || absence.StaffID != ident.ID(staffID) {
 			return nil, 0, 0, domain.ErrStaffAbsenceNotFound
 		}
 		start, end, err := absenceYears(absenceToDomain(absence))

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Nachweise am Personalstamm (#4707, ADR 0089 section 7). The Träger keeps
@@ -61,14 +63,14 @@ func (e *TraegerProofError) Unwrap() error { return ErrTraegerProofInvalid }
 // PoliceCertificate marks the certificate of conduct, whose result moto
 // records instead of a document.
 type TraegerStaffProofType struct {
-	ID                int64  `json:"id"`
-	StandardKey       string `json:"standard_key,omitempty"`
-	Name              string `json:"name"`
-	ValidityMonths    *int   `json:"validity_months"`
-	ReminderLeadWeeks int    `json:"reminder_lead_weeks"`
-	Mandatory         bool   `json:"mandatory"`
-	Archived          bool   `json:"archived"`
-	PoliceCertificate bool   `json:"police_certificate"`
+	ID                ident.ID `json:"id"`
+	StandardKey       string   `json:"standard_key,omitempty"`
+	Name              string   `json:"name"`
+	ValidityMonths    *int     `json:"validity_months"`
+	ReminderLeadWeeks int      `json:"reminder_lead_weeks"`
+	Mandatory         bool     `json:"mandatory"`
+	Archived          bool     `json:"archived"`
+	PoliceCertificate bool     `json:"police_certificate"`
 }
 
 // TraegerStaffProofTypeInput creates or rewrites a kind.
@@ -84,16 +86,16 @@ type TraegerStaffProofTypeInput struct {
 // days of the proof, or not held. Status is empty for a kind that is
 // neither mandatory nor held.
 type TraegerStaffProof struct {
-	TypeID            int64  `json:"type_id"`
-	TypeName          string `json:"type_name"`
-	Mandatory         bool   `json:"mandatory"`
-	PoliceCertificate bool   `json:"police_certificate"`
-	Held              bool   `json:"held"`
-	Status            string `json:"status"`
-	PresentedOn       string `json:"presented_on,omitempty"`
-	IssuedOn          string `json:"issued_on,omitempty"`
-	NoRelevantEntry   bool   `json:"no_relevant_entry"`
-	ExpiresOn         string `json:"expires_on,omitempty"`
+	TypeID            ident.ID `json:"type_id"`
+	TypeName          string   `json:"type_name"`
+	Mandatory         bool     `json:"mandatory"`
+	PoliceCertificate bool     `json:"police_certificate"`
+	Held              bool     `json:"held"`
+	Status            string   `json:"status"`
+	PresentedOn       string   `json:"presented_on,omitempty"`
+	IssuedOn          string   `json:"issued_on,omitempty"`
+	NoRelevantEntry   bool     `json:"no_relevant_entry"`
+	ExpiresOn         string   `json:"expires_on,omitempty"`
 }
 
 // TraegerStaffProofInput records or renews the proof of one kind. An empty
@@ -108,12 +110,12 @@ type TraegerStaffProofInput struct {
 // TraegerStaffProofEntry is one row of the list: a kind at a record that is
 // expired, expiring, missing or valid.
 type TraegerStaffProofEntry struct {
-	RecordID        int64    `json:"staff_record_id"`
+	RecordID        ident.ID `json:"staff_record_id"`
 	FirstName       string   `json:"first_name"`
 	LastName        string   `json:"last_name"`
 	PersonnelNumber *string  `json:"personnel_number"`
 	Schools         []string `json:"schools"`
-	TypeID          int64    `json:"type_id"`
+	TypeID          ident.ID `json:"type_id"`
 	TypeName        string   `json:"type_name"`
 	Status          string   `json:"status"`
 	PresentedOn     string   `json:"presented_on,omitempty"`
@@ -140,14 +142,14 @@ type TraegerStaffProofList struct {
 // TraegerSchoolProofKind is one kind of proof of a school with the Träger
 // kind it maps onto, nil while it maps onto none.
 type TraegerSchoolProofKind struct {
-	SchoolTypeID int64  `json:"school_type_id"`
-	Name         string `json:"name"`
-	ProofTypeID  *int64 `json:"proof_type_id"`
+	SchoolTypeID ident.ID  `json:"school_type_id"`
+	Name         string    `json:"name"`
+	ProofTypeID  *ident.ID `json:"proof_type_id"`
 }
 
 // TraegerSchoolProofKinds are the live kinds of one school of the Träger.
 type TraegerSchoolProofKinds struct {
-	SchoolID   int64                    `json:"school_id"`
+	SchoolID   ident.ID                 `json:"school_id"`
 	SchoolName string                   `json:"school_name"`
 	Kinds      []TraegerSchoolProofKind `json:"kinds"`
 }
