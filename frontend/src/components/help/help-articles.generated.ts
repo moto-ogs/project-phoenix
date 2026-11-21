@@ -1230,6 +1230,8 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
           "Richtet deine OGS in dieser Zeit Ferienbetreuung für den Träger aus, zeigt der Dialog die Woche und wie viele Kinder gebucht haben. Die Buchungen bleiben.",
           "Wähle `Speichern`.",
           "Stehen an diesen Tagen schon Termine, fragt moto nach. Sage sie ab wie im nächsten Abschnitt.",
+          // „Heute anders“ (#7664) zeigt den Schließtag mit seinem Grund.
+          "Am Schließtag steht auf der `Startseite` unter `Heute anders`, dass die OGS geschlossen ist. Dort steht auch der `Grund`.",
         ],
       },
       {

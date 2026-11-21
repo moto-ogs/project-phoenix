@@ -69,6 +69,7 @@ import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 
+import { labelOf } from "~/lib/label-of";
 import { instanceStatusTone } from "./timetable-colors";
 import {
   buildStaffDeviationInput,
@@ -621,7 +622,7 @@ export function SubstitutionSlideOver({
                 <SlideOverTitle>{instance.title}</SlideOverTitle>
                 <StatusBadge
                   label={getStatusLabel(instance.status)}
-                  tone={instanceStatusTone[instance.status]}
+                  tone={labelOf(instanceStatusTone, instance.status, "gray")}
                   compact
                 />
                 {typeBadge && (

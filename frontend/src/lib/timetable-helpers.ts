@@ -15,6 +15,16 @@ import {
   toISODate,
 } from "./date-helpers";
 import { LOCATION_COLORS } from "./location-helper";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  AttendanceResponse as WireAttendance,
+  DeviationHistoryResponse as WireDeviationHistory,
+  enrichedInstance as WireInstance,
+  GapInstance as WireGapInstance,
+  GapsResponse as WireGaps,
+  weeklyInstancesResponse as WireWeeklyInstances,
+} from "./contract/timetable.generated";
+import type { InstanceConflictWarning as WireConflictWarning } from "./contract/shared.generated";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
@@ -23,19 +33,17 @@ import {
 } from "./calendar-period-helpers";
 import type {
   ActivityType,
+  CareDayStatus,
+  InstanceStatus,
+  TimetableListKind,
   BackendConflictCheckResult,
   BackendShiftCoverageCheckResult,
   BackendCreateTemplateResult,
-  BackendAttendanceResponse,
   BackendEndTemplateResult,
-  BackendEnrichedInstance,
-  BackendGapInstance,
-  BackendGapsResponse,
   BackendMoveStaffResponse,
   BackendStaffPoolResponse,
   MoveStaffResponse,
   StaffPoolResponse,
-  BackendDeviationHistoryResponse,
   BackendApplyDeviationsResponse,
   BackendBulkSubstitutionResponse,
   BulkSubstitutionResponse,
@@ -54,7 +62,6 @@ import type {
   BackendTemplatesResponse,
   OfferingSourceOption,
   BackendStartInstanceResult,
-  BackendWeeklyInstancesResponse,
   AttendanceResponse,
   ConflictCheckResult,
   CreateTemplateResult,
@@ -135,7 +142,7 @@ export function getActivityColor(type: ActivityType): string {
  * when the type is non-default.
  */
 export function getActivityTypeBadge(
-  type: ActivityType,
+  type: ActivityType | undefined,
 ): { label: string; color: string } | null {
   switch (type) {
     case "activity":
@@ -145,6 +152,7 @@ export function getActivityTypeBadge(
     case "duty":
       return { label: "Dienst", color: getActivityColor(type) };
     case "care":
+    case undefined:
       return null;
   }
 }
@@ -492,38 +500,114 @@ export function getStatusLabel(status: EnrichedInstance["status"]): string {
       return "Abgeschlossen";
     case "cancelled":
       return "Abgesagt";
+    case undefined:
+      return "–";
   }
 }
 
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const INSTANCE_STATUS_VALUES = [
+  "planned",
+  "active",
+  "completed",
+  "cancelled",
+] as const satisfies readonly InstanceStatus[];
+const ACTIVITY_TYPE_VALUES = [
+  "care",
+  "activity",
+  "external",
+  "duty",
+] as const satisfies readonly ActivityType[];
+const LIST_KIND_VALUES = [
+  "edge_hours",
+  "learning_time",
+  "activity",
+  "mensa",
+] as const satisfies readonly TimetableListKind[];
+const ATTENDANCE_STATUS_VALUES = ["expected", "present", "absent"] as const;
+const ATTENDANCE_SUBSTATUS_VALUES = [
+  "late",
+  "excused",
+  "sick",
+  "field_trip",
+  "other",
+] as const;
+const CARE_DAY_STATUS_VALUES = [
+  "scheduled",
+  "not_scheduled",
+  "cancelled",
+  "unknown",
+] as const satisfies readonly CareDayStatus[];
+const EMPTY_ROSTER_REASON_VALUES = [
+  "before_offering_start",
+  "offering_source_empty",
+] as const;
+const CONFLICT_KIND_VALUES = ["staff", "student"] as const;
+
+type ConflictWarning = EnrichedInstance["conflictWarnings"][number];
+
+/** A substatus of the contract; absent is none, unknown is undefined. */
+function attendanceSubstatus(value: string | null | undefined) {
+  return value === undefined || value === null
+    ? null
+    : knownEnum(ATTENDANCE_SUBSTATUS_VALUES, value);
+}
+
 /**
- * Backend → frontend mapping. snake_case → camelCase, int64 IDs → strings,
- * conflict_warnings array always present (defaults to []).
+ * A conflict kind of the contract. A kind this build does not know stays a
+ * conflict ("other") instead of disappearing.
  */
-export function mapInstance(raw: BackendEnrichedInstance): EnrichedInstance {
+function conflictKind(value: string): ConflictWarning["kind"] {
+  return knownEnum(CONFLICT_KIND_VALUES, value) ?? "other";
+}
+
+function mapConflictWarning(warning: WireConflictWarning): ConflictWarning {
+  return {
+    kind: conflictKind(warning.kind),
+    resourceId: warning.resource_id,
+    message: warning.message,
+    canOverride: warning.can_override,
+    fingerprint: warning.fingerprint,
+    conflictingInstanceId: warning.conflicting_instance_id,
+    conflictingTitle: warning.conflicting_title,
+    overlapStart: warning.overlap_start,
+    overlapEnd: warning.overlap_end,
+  };
+}
+
+/**
+ * Contract → frontend mapping. snake_case → camelCase; conflict_warnings
+ * always present (defaults to []).
+ */
+export function mapInstance(raw: WireInstance): EnrichedInstance {
   const staff: InstanceStaffSummary[] = (raw.staff ?? []).map((s) => ({
-    staffId: String(s.staff_id),
+    staffId: s.staff_id,
     isPrimary: s.is_primary,
     isAbsent: s.is_absent,
     isSubstitute: s.is_substitute,
-    isSickAbsence: s.is_sick_absence === true,
-    absenceReason: s.absence_reason ?? undefined,
+    isSickAbsence: s.is_sick_absence,
+    absenceReason: s.absence_reason,
   }));
   const students: InstanceStudentSummary[] = (raw.students ?? []).map((s) => ({
-    studentId: String(s.student_id),
-    status: s.status,
-    substatus: s.substatus,
+    studentId: s.student_id,
+    status: knownEnum(ATTENDANCE_STATUS_VALUES, s.status),
+    substatus: attendanceSubstatus(s.substatus),
     note: s.note,
     checkedInAt: s.checked_in_at,
-    careDayStatus: s.care_day_status ?? "unknown",
-    earlyPickupTime: s.early_pickup_time ?? undefined,
+    // Go's own fallback for a day the plan says nothing about
+    // (backend/modules/timetable/care_days.go:19); it keeps the child expected.
+    careDayStatus:
+      knownEnum(CARE_DAY_STATUS_VALUES, s.care_day_status) ?? "unknown",
+    earlyPickupTime: s.early_pickup_time,
   }));
   const studentIds =
     students.length > 0
       ? students.map((student) => student.studentId)
-      : (raw.student_ids ?? []).map(String);
+      : (raw.student_ids ?? []);
 
   return {
-    id: String(raw.id),
+    id: raw.id,
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,
@@ -531,27 +615,19 @@ export function mapInstance(raw: BackendEnrichedInstance): EnrichedInstance {
     description: raw.description,
     notes: raw.notes,
     seriesNotes: raw.series_notes,
-    status: raw.status,
+    status: knownEnum(INSTANCE_STATUS_VALUES, raw.status),
     isSpontaneous: raw.is_spontaneous,
     isLive: raw.is_live,
-    activityGroupId:
-      raw.activity_group_id !== undefined && raw.activity_group_id !== null
-        ? String(raw.activity_group_id)
-        : undefined,
-    calendarPeriodId:
-      raw.calendar_period_id !== undefined && raw.calendar_period_id !== null
-        ? String(raw.calendar_period_id)
-        : undefined,
-    planningTrackId:
-      raw.planning_track_id !== undefined && raw.planning_track_id !== null
-        ? String(raw.planning_track_id)
-        : undefined,
+    activityGroupId: raw.activity_group_id,
+    calendarPeriodId: raw.calendar_period_id,
+    planningTrackId: raw.planning_track_id,
     planningTrackName: raw.planning_track_name,
     planningTrackColor: raw.planning_track_color,
     planningTrackSortOrder: raw.planning_track_sort_order,
-    listKind: raw.list_kind,
-    activityType: raw.activity_type,
-    roomId: String(raw.room_id),
+    listKind: knownEnum(LIST_KIND_VALUES, raw.list_kind),
+    rawListKind: raw.list_kind,
+    activityType: knownEnum(ACTIVITY_TYPE_VALUES, raw.activity_type),
+    roomId: raw.room_id,
     roomName: raw.room_name,
     groupName: raw.group_name,
     staff,
@@ -559,15 +635,13 @@ export function mapInstance(raw: BackendEnrichedInstance): EnrichedInstance {
     students,
     staffCount: raw.staff_count,
     absentStaffCount: raw.absent_staff_count,
-    understaffedAck: raw.understaffed_ack ?? false,
-    understaffedNote: raw.understaffed_note ?? undefined,
-    cancelReason: raw.cancel_reason ?? undefined,
+    understaffedAck: raw.understaffed_ack,
+    understaffedNote: raw.understaffed_note,
+    cancelReason: raw.cancel_reason,
     expectedStudentsCount: raw.expected_students_count,
-    notScheduledStudentsCount: raw.not_scheduled_students_count ?? 0,
+    notScheduledStudentsCount: raw.not_scheduled_students_count,
     presentStudentsCount: raw.present_students_count,
-    ...(raw.current_students_count === undefined
-      ? {}
-      : { currentStudentsCount: raw.current_students_count }),
+    currentStudentsCount: raw.current_students_count,
     occupancy: raw.occupancy
       ? {
           participantLimit: raw.occupancy.participant_limit,
@@ -576,36 +650,26 @@ export function mapInstance(raw: BackendEnrichedInstance): EnrichedInstance {
       : null,
     emptyRosterReason: raw.empty_roster_reason
       ? {
-          kind: raw.empty_roster_reason.kind,
+          kind: knownEnum(
+            EMPTY_ROSTER_REASON_VALUES,
+            raw.empty_roster_reason.kind,
+          ),
           phaseName: raw.empty_roster_reason.phase_name,
           serviceStartDate: raw.empty_roster_reason.service_start_date,
         }
       : undefined,
     requiredStaffCount: raw.required_staff_count,
     assignedStaffCount: raw.assigned_staff_count,
-    requiredStaffOverride: raw.required_staff_override ?? undefined,
+    requiredStaffOverride: raw.required_staff_override,
     canReopen: raw.can_reopen === true,
-    canComplete: raw.can_complete === true,
+    canComplete: raw.can_complete,
     completeAvailableAt: raw.complete_available_at,
-    conflictWarnings: (raw.conflict_warnings ?? []).map((warning) => ({
-      kind: warning.kind,
-      resourceId: String(warning.resource_id),
-      message: warning.message,
-      canOverride: warning.can_override,
-      fingerprint: warning.fingerprint,
-      conflictingInstanceId:
-        warning.conflicting_instance_id !== undefined
-          ? String(warning.conflicting_instance_id)
-          : undefined,
-      conflictingTitle: warning.conflicting_title,
-      overlapStart: warning.overlap_start,
-      overlapEnd: warning.overlap_end,
-    })),
+    conflictWarnings: (raw.conflict_warnings ?? []).map(mapConflictWarning),
   };
 }
 
 export function mapWeeklyInstances(
-  raw: BackendWeeklyInstancesResponse,
+  raw: WireWeeklyInstances,
 ): WeeklyInstancesResponse {
   return {
     from: raw.from,
@@ -687,20 +751,20 @@ export function mapEditedInWindowResult(
   };
 }
 
-function mapGapInstance(gap: BackendGapInstance): GapInstance {
+function mapGapInstance(gap: WireGapInstance): GapInstance {
   return {
-    instanceId: String(gap.instance_id),
+    instanceId: gap.instance_id,
     date: gap.date,
     title: gap.title,
     startTime: gap.start_time,
     endTime: gap.end_time,
-    roomId: String(gap.room_id),
-    status: gap.status,
+    roomId: gap.room_id,
+    status: knownEnum(INSTANCE_STATUS_VALUES, gap.status),
     assignedStaffCount: gap.assigned_staff_count,
     absentStaffCount: gap.absent_staff_count,
     presentStaffCount: gap.present_staff_count,
     plannedStaffCount: gap.planned_staff_count,
-    understaffedNote: gap.understaffed_note ?? undefined,
+    understaffedNote: gap.understaffed_note,
   };
 }
 
@@ -727,34 +791,30 @@ export function deviationEventLabel(eventType: string): string {
 }
 
 export function mapDeviationHistory(
-  raw: BackendDeviationHistoryResponse,
+  raw: WireDeviationHistory,
 ): DeviationHistoryResponse {
   const events: DeviationHistoryEvent[] = (raw.events ?? []).map((ev) => ({
-    id: String(ev.id),
-    activityGroupId:
-      ev.activity_group_id != null ? String(ev.activity_group_id) : undefined,
+    id: ev.id,
+    activityGroupId: ev.activity_group_id,
     occurrenceDate: ev.occurrence_date,
     startTime: ev.start_time,
-    instanceId: ev.instance_id != null ? String(ev.instance_id) : undefined,
+    instanceId: ev.instance_id,
     eventType: ev.event_type,
-    subjectStaffId:
-      ev.subject_staff_id != null ? String(ev.subject_staff_id) : undefined,
-    subjectStaffName: ev.subject_staff_name ?? undefined,
-    relatedStaffId:
-      ev.related_staff_id != null ? String(ev.related_staff_id) : undefined,
-    relatedStaffName: ev.related_staff_name ?? undefined,
-    actorAccountId:
-      ev.actor_account_id != null ? String(ev.actor_account_id) : undefined,
-    actorName: ev.actor_name ?? undefined,
+    subjectStaffId: ev.subject_staff_id,
+    subjectStaffName: ev.subject_staff_name,
+    relatedStaffId: ev.related_staff_id,
+    relatedStaffName: ev.related_staff_name,
+    actorAccountId: ev.actor_account_id,
+    actorName: ev.actor_name,
     oldValue: ev.old_value ?? undefined,
     newValue: ev.new_value ?? undefined,
-    reason: ev.reason ?? undefined,
+    reason: ev.reason,
     occurredAt: ev.occurred_at,
   }));
   return { events };
 }
 
-export function mapGaps(raw: BackendGapsResponse): GapsResponse {
+export function mapGaps(raw: WireGaps): GapsResponse {
   return {
     from: raw.from,
     to: raw.to,
@@ -775,15 +835,13 @@ export function staffLabel(
   return staffNames.get(staffId) ?? `Personal #${staffId}`;
 }
 
-export function mapAttendance(
-  raw: BackendAttendanceResponse,
-): AttendanceResponse {
+export function mapAttendance(raw: WireAttendance): AttendanceResponse {
   return {
-    id: String(raw.id),
-    instanceId: String(raw.instance_id),
-    studentId: String(raw.student_id),
-    status: raw.status,
-    substatus: raw.substatus,
+    id: raw.id,
+    instanceId: raw.instance_id,
+    studentId: raw.student_id,
+    status: knownEnum(ATTENDANCE_STATUS_VALUES, raw.status),
+    substatus: attendanceSubstatus(raw.substatus),
     note: raw.note,
     checkedInAt: raw.checked_in_at,
   };

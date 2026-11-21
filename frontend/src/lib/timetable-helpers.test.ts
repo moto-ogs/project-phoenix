@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildEnrichedInstance } from "~/test/fixtures/timetable";
 import { setTestClock } from "~/test/clock";
 
 import {
@@ -373,6 +374,47 @@ describe("activity/status helpers", () => {
 });
 
 describe("backend mappers", () => {
+  it("leaves values this build does not know undefined and keeps an unknown conflict", () => {
+    const mapped = mapInstance(
+      buildEnrichedInstance({
+        status: "paused",
+        activity_type: "workshop",
+        list_kind: "sport",
+        students: [
+          {
+            student_id: "21",
+            status: "away",
+            substatus: "hospital",
+            care_day_status: "half_day",
+          },
+        ],
+        empty_roster_reason: { kind: "phase_closed" },
+        conflict_warnings: [
+          {
+            kind: "room",
+            resource_id: "3",
+            message: "Raum doppelt belegt",
+            can_override: true,
+          },
+        ],
+      }),
+    );
+
+    expect(mapped.status).toBeUndefined();
+    expect(mapped.activityType).toBeUndefined();
+    expect(mapped.listKind).toBeUndefined();
+    expect(mapped.students[0]).toMatchObject({
+      status: undefined,
+      substatus: undefined,
+      careDayStatus: "unknown",
+    });
+    expect(mapped.emptyRosterReason?.kind).toBeUndefined();
+    expect(mapped.conflictWarnings).toEqual([
+      expect.objectContaining({ kind: "other", resourceId: "3" }),
+    ]);
+    expect(getStatusLabel(mapped.status)).toBe("–");
+  });
+
   it("maps deviation history identifiers and nullable display fields", () => {
     expect(deviationEventLabel("cancellation")).toBe("Block abgesagt");
     expect(deviationEventLabel("future_event")).toBe("future_event");
@@ -381,23 +423,23 @@ describe("backend mappers", () => {
       mapDeviationHistory({
         events: [
           {
-            id: 42,
-            activity_group_id: 7,
+            id: "42",
+            activity_group_id: "7",
             occurrence_date: "2026-05-04",
             start_time: "12:00:00",
-            instance_id: 9,
+            instance_id: "9",
             event_type: "substitution",
-            subject_staff_id: 11,
+            subject_staff_id: "11",
             subject_staff_name: "Ada",
-            related_staff_id: 12,
+            related_staff_id: "12",
             related_staff_name: "Berta",
-            actor_account_id: 13,
+            actor_account_id: "13",
             actor_name: "Planung",
             reason: "Krankheit",
             occurred_at: "2026-05-03T12:00:00Z",
           },
           {
-            id: 43,
+            id: "43",
             occurrence_date: "2026-05-05",
             start_time: "13:00:00",
             event_type: "deviation_dropped_by_replan",
@@ -435,8 +477,8 @@ describe("backend mappers", () => {
       mapDeviationHistory({
         events: [
           {
-            id: 44,
-            activity_group_id: 7,
+            id: "44",
+            activity_group_id: "7",
             occurrence_date: "2026-05-04",
             start_time: "12:00:00",
             event_type: "substitution",
@@ -462,7 +504,7 @@ describe("backend mappers", () => {
       mapDeviationHistory({
         events: [
           {
-            id: 45,
+            id: "45",
             occurrence_date: "2026-05-05",
             start_time: "13:00:00",
             event_type: "deviation_dropped_by_replan",
@@ -486,8 +528,8 @@ describe("backend mappers", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 42,
+        buildEnrichedInstance({
+          id: "42",
           date: "2026-05-04",
           start_time: "12:00",
           end_time: "13:00",
@@ -497,24 +539,26 @@ describe("backend mappers", () => {
           status: "planned",
           is_spontaneous: false,
           is_live: false,
-          activity_group_id: 7,
+          activity_group_id: "7",
           activity_type: "care",
-          room_id: 3,
+          room_id: "3",
           room_name: "Mensa",
           staff: [
             {
-              staff_id: 11,
+              staff_id: "11",
               is_primary: true,
               is_absent: false,
               is_substitute: false,
+              is_sick_absence: false,
             },
           ],
-          student_ids: [99],
+          student_ids: ["99"],
           students: [
             {
-              student_id: 21,
+              student_id: "21",
               status: "present",
               checked_in_at: "2026-05-04T12:03:00Z",
+              care_day_status: "unknown",
             },
           ],
           staff_count: 1,
@@ -527,12 +571,12 @@ describe("backend mappers", () => {
           conflict_warnings: [
             {
               kind: "staff",
-              resource_id: 3,
+              resource_id: "3",
               message: "Doppelt",
               can_override: true,
             },
           ],
-        },
+        }),
       ],
     });
 
@@ -552,8 +596,8 @@ describe("backend mappers", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 43,
+        buildEnrichedInstance({
+          id: "43",
           date: "2026-05-04",
           start_time: "14:00",
           end_time: "15:00",
@@ -562,7 +606,7 @@ describe("backend mappers", () => {
           is_spontaneous: true,
           is_live: false,
           activity_type: "external",
-          room_id: 4,
+          room_id: "4",
           room_name: "Musik",
           staff: [],
           staff_count: 0,
@@ -571,7 +615,7 @@ describe("backend mappers", () => {
           present_students_count: 0,
           required_staff_count: 0,
           assigned_staff_count: 0,
-        },
+        }),
       ],
     });
 
@@ -669,17 +713,20 @@ describe("backend mappers", () => {
         to: "2026-05-08",
         gaps: [
           {
-            instance_id: 42,
+            instance_id: "42",
             date: "2026-05-04",
             title: "Mensa",
             start_time: "12:00",
             end_time: "13:00",
-            room_id: 3,
+            room_id: "3",
             status: "planned",
             assigned_staff_count: 1,
+            present_staff_count: 0,
+            planned_staff_count: 0,
             absent_staff_count: 1,
           },
         ],
+        acknowledged: null,
       }).gaps[0],
     ).toMatchObject({ instanceId: "42", roomId: "3" });
 
@@ -716,12 +763,13 @@ describe("backend mappers", () => {
     ).toMatchObject({ templateId: "7", scheduleIds: ["9"] });
     expect(
       mapAttendance({
-        id: 100,
-        instance_id: 42,
-        student_id: 21,
+        id: "100",
+        instance_id: "42",
+        student_id: "21",
         status: "absent",
         substatus: "sick",
         note: "krank",
+        checked_in_at: null,
       }),
     ).toMatchObject({ id: "100", studentId: "21" });
   });
@@ -754,7 +802,8 @@ describe("backend mappers", () => {
       mapGaps({
         from: "2026-05-04",
         to: "2026-05-08",
-        gaps: undefined as never,
+        gaps: null,
+        acknowledged: null,
       }),
     ).toMatchObject({ gaps: [] });
   });
@@ -765,28 +814,27 @@ describe("backend mappers", () => {
       to: "2026-05-08",
       gaps: [
         {
-          instance_id: 42,
+          instance_id: "42",
           date: "2026-05-04",
           title: "Mensa",
           start_time: "12:00",
           end_time: "13:00",
-          room_id: 3,
+          room_id: "3",
           status: "planned",
           assigned_staff_count: 2,
           absent_staff_count: 1,
           present_staff_count: 1,
           planned_staff_count: 2,
-          understaffed_note: null,
         },
       ],
       acknowledged: [
         {
-          instance_id: 43,
+          instance_id: "43",
           date: "2026-05-04",
           title: "Freispiel",
           start_time: "13:00",
           end_time: "14:00",
-          room_id: 4,
+          room_id: "4",
           status: "planned",
           assigned_staff_count: 0,
           absent_staff_count: 0,
@@ -817,7 +865,7 @@ describe("backend mappers", () => {
         from: "2026-05-04",
         to: "2026-05-08",
         gaps: [],
-        acknowledged: undefined,
+        acknowledged: null,
       }),
     ).toMatchObject({ gaps: [], acknowledged: [] });
   });
@@ -970,44 +1018,47 @@ describe("backend mappers", () => {
   });
 
   it("maps deviation fields on an instance: reason, ack and cancel note (#1840)", () => {
-    const mapped = mapInstance({
-      id: 42,
-      date: "2026-05-04",
-      start_time: "12:00",
-      end_time: "13:00",
-      title: "Mensa",
-      status: "cancelled",
-      is_spontaneous: false,
-      is_live: false,
-      activity_group_id: 7,
-      activity_type: "care",
-      room_id: 3,
-      room_name: "Mensa",
-      staff: [
-        {
-          staff_id: 11,
-          is_primary: true,
-          is_absent: true,
-          is_substitute: false,
-          absence_reason: "krank",
+    const mapped = mapInstance(
+      buildEnrichedInstance({
+        id: "42",
+        date: "2026-05-04",
+        start_time: "12:00",
+        end_time: "13:00",
+        title: "Mensa",
+        status: "cancelled",
+        is_spontaneous: false,
+        is_live: false,
+        activity_group_id: "7",
+        activity_type: "care",
+        room_id: "3",
+        room_name: "Mensa",
+        staff: [
+          {
+            staff_id: "11",
+            is_primary: true,
+            is_absent: true,
+            is_substitute: false,
+            is_sick_absence: false,
+            absence_reason: "krank",
+          },
+        ],
+        students: [],
+        staff_count: 1,
+        absent_staff_count: 1,
+        understaffed_ack: true,
+        understaffed_note: "keine Vertretung",
+        cancel_reason: "Ausflug",
+        expected_students_count: 0,
+        present_students_count: 0,
+        empty_roster_reason: {
+          kind: "before_offering_start",
+          phase_name: "Schuljahr 2026/27",
+          service_start_date: "2026-08-13",
         },
-      ],
-      students: [],
-      staff_count: 1,
-      absent_staff_count: 1,
-      understaffed_ack: true,
-      understaffed_note: "keine Vertretung",
-      cancel_reason: "Ausflug",
-      expected_students_count: 0,
-      present_students_count: 0,
-      empty_roster_reason: {
-        kind: "before_offering_start",
-        phase_name: "Schuljahr 2026/27",
-        service_start_date: "2026-08-13",
-      },
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-    });
+        required_staff_count: 0,
+        assigned_staff_count: 0,
+      }),
+    );
 
     expect(mapped.staff[0]?.absenceReason).toBe("krank");
     expect(mapped).toMatchObject({
@@ -1023,60 +1074,49 @@ describe("backend mappers", () => {
   });
 
   it("maps the instance calendar period for period-scoped series reads", () => {
-    const mapped = mapInstance({
-      id: 42,
-      date: "2026-05-04",
-      start_time: "12:00",
-      end_time: "13:00",
-      title: "Mensa",
-      status: "planned",
-      is_spontaneous: false,
-      is_live: false,
-      activity_type: "care",
-      room_id: 3,
-      room_name: "Mensa",
-      staff: [],
-      staff_count: 0,
-      absent_staff_count: 0,
-      expected_students_count: 0,
-      present_students_count: 0,
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-      calendar_period_id: 9,
-    });
+    const mapped = mapInstance(
+      buildEnrichedInstance({
+        id: "42",
+        date: "2026-05-04",
+        start_time: "12:00",
+        end_time: "13:00",
+        title: "Mensa",
+        status: "planned",
+        is_spontaneous: false,
+        is_live: false,
+        activity_type: "care",
+        room_id: "3",
+        room_name: "Mensa",
+        staff: [],
+        staff_count: 0,
+        absent_staff_count: 0,
+        expected_students_count: 0,
+        present_students_count: 0,
+        required_staff_count: 0,
+        assigned_staff_count: 0,
+        calendar_period_id: "9",
+      }),
+    );
 
     expect(mapped.calendarPeriodId).toBe("9");
   });
 
   it("maps the Wochennotiz (series_notes) and Tagesnotiz (notes) independently (#1837)", () => {
-    const base = {
-      id: 42,
+    const base = buildEnrichedInstance({
+      id: "42",
       date: "2026-05-04",
-      start_time: "14:00",
-      end_time: "15:00",
       title: "Betreuung",
-      status: "planned" as const,
-      is_spontaneous: false,
-      is_live: false,
-      activity_type: "care" as const,
-      room_id: 3,
+      room_id: "3",
       room_name: "Aula",
-      staff: [],
-      students: [],
-      staff_count: 0,
-      absent_staff_count: 0,
-      understaffed_ack: false,
-      expected_students_count: 0,
-      present_students_count: 0,
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-    };
-
-    const withBoth = mapInstance({
-      ...base,
-      notes: "Heute ohne Herrn Müller",
-      series_notes: "Raum erst ab 14 Uhr offen",
     });
+
+    const withBoth = mapInstance(
+      buildEnrichedInstance({
+        ...base,
+        notes: "Heute ohne Herrn Müller",
+        series_notes: "Raum erst ab 14 Uhr offen",
+      }),
+    );
     expect(withBoth.notes).toBe("Heute ohne Herrn Müller");
     expect(withBoth.seriesNotes).toBe("Raum erst ab 14 Uhr offen");
 
@@ -1086,55 +1126,59 @@ describe("backend mappers", () => {
 
   it("maps actor-aware reopen eligibility", () => {
     expect(
-      mapInstance({
-        id: 42,
-        date: "2026-05-04",
-        start_time: "12:00",
-        end_time: "13:00",
-        title: "Mensa",
-        status: "completed",
-        is_spontaneous: false,
-        is_live: false,
-        activity_type: "care",
-        room_id: 3,
-        room_name: "Mensa",
-        staff: [],
-        students: [],
-        staff_count: 0,
-        absent_staff_count: 0,
-        expected_students_count: 0,
-        present_students_count: 0,
-        required_staff_count: 0,
-        assigned_staff_count: 0,
-        can_reopen: true,
-        can_complete: true,
-        complete_available_at: "2026-05-04T13:00:00+02:00",
-      }).canReopen,
+      mapInstance(
+        buildEnrichedInstance({
+          id: "42",
+          date: "2026-05-04",
+          start_time: "12:00",
+          end_time: "13:00",
+          title: "Mensa",
+          status: "completed",
+          is_spontaneous: false,
+          is_live: false,
+          activity_type: "care",
+          room_id: "3",
+          room_name: "Mensa",
+          staff: [],
+          students: [],
+          staff_count: 0,
+          absent_staff_count: 0,
+          expected_students_count: 0,
+          present_students_count: 0,
+          required_staff_count: 0,
+          assigned_staff_count: 0,
+          can_reopen: true,
+          can_complete: true,
+          complete_available_at: "2026-05-04T13:00:00+02:00",
+        }),
+      ).canReopen,
     ).toBe(true);
     expect(
-      mapInstance({
-        id: 42,
-        date: "2026-05-04",
-        start_time: "12:00",
-        end_time: "13:00",
-        title: "Mensa",
-        status: "active",
-        is_spontaneous: false,
-        is_live: true,
-        activity_type: "care",
-        room_id: 3,
-        room_name: "Mensa",
-        staff: [],
-        students: [],
-        staff_count: 0,
-        absent_staff_count: 0,
-        expected_students_count: 0,
-        present_students_count: 0,
-        required_staff_count: 0,
-        assigned_staff_count: 0,
-        can_complete: false,
-        complete_available_at: "2026-05-04T13:00:00+02:00",
-      }),
+      mapInstance(
+        buildEnrichedInstance({
+          id: "42",
+          date: "2026-05-04",
+          start_time: "12:00",
+          end_time: "13:00",
+          title: "Mensa",
+          status: "active",
+          is_spontaneous: false,
+          is_live: true,
+          activity_type: "care",
+          room_id: "3",
+          room_name: "Mensa",
+          staff: [],
+          students: [],
+          staff_count: 0,
+          absent_staff_count: 0,
+          expected_students_count: 0,
+          present_students_count: 0,
+          required_staff_count: 0,
+          assigned_staff_count: 0,
+          can_complete: false,
+          complete_available_at: "2026-05-04T13:00:00+02:00",
+        }),
+      ),
     ).toMatchObject({
       canComplete: false,
       completeAvailableAt: "2026-05-04T13:00:00+02:00",
@@ -1460,8 +1504,8 @@ describe("required staff override mapping (#1839)", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 42,
+        buildEnrichedInstance({
+          id: "42",
           date: "2026-05-04",
           start_time: "14:00",
           end_time: "15:00",
@@ -1470,7 +1514,7 @@ describe("required staff override mapping (#1839)", () => {
           is_spontaneous: false,
           is_live: false,
           activity_type: "care",
-          room_id: 3,
+          room_id: "3",
           room_name: "Hof",
           staff: [],
           staff_count: 1,
@@ -1480,7 +1524,7 @@ describe("required staff override mapping (#1839)", () => {
           required_staff_count: 3,
           assigned_staff_count: 1,
           required_staff_override: 3,
-        },
+        }),
       ],
     }).instances[0]!;
     expect(withOverride.requiredStaffOverride).toBe(3);
@@ -1489,8 +1533,8 @@ describe("required staff override mapping (#1839)", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 43,
+        buildEnrichedInstance({
+          id: "43",
           date: "2026-05-04",
           start_time: "14:00",
           end_time: "15:00",
@@ -1499,7 +1543,7 @@ describe("required staff override mapping (#1839)", () => {
           is_spontaneous: false,
           is_live: false,
           activity_type: "care",
-          room_id: 3,
+          room_id: "3",
           room_name: "Raum",
           staff: [],
           staff_count: 2,
@@ -1508,7 +1552,7 @@ describe("required staff override mapping (#1839)", () => {
           present_students_count: 10,
           required_staff_count: 1,
           assigned_staff_count: 2,
-        },
+        }),
       ],
     }).instances[0]!;
     expect(derived.requiredStaffOverride).toBeUndefined();

@@ -74,7 +74,17 @@ describe("loadShellBootstrap", () => {
   it("loads every shell field an admin's sidebar renders, in one pass", async () => {
     routeBackend({
       "/api/me/profile": {
-        data: { id: 7, first_name: "Ada", last_name: "L", email: "a@b" },
+        status: "success",
+        data: {
+          id: 7,
+          first_name: "Ada",
+          last_name: "L",
+          email: "a@b",
+          username: null,
+          last_login: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
       },
       "/auth/account/tenants": {
         data: [
@@ -176,7 +186,17 @@ describe("loadShellBootstrap", () => {
   it("skips the calls a caregiver's hooks would not make, and keeps the rest", async () => {
     routeBackend({
       "/api/me/profile": {
-        data: { id: 8, first_name: "Bo", last_name: "K", email: "b@k" },
+        status: "success",
+        data: {
+          id: 8,
+          first_name: "Bo",
+          last_name: "K",
+          email: "b@k",
+          username: null,
+          last_login: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
       },
       "/auth/account/tenants": { data: [] },
       "/api/students/ogs-group-navigation": { data: [] },
@@ -219,6 +239,7 @@ describe("loadShellBootstrap", () => {
   it("leaves the messages badge out for staff without users:read (role Extern, #4573)", async () => {
     routeBackend({
       "/api/me/profile": {
+        status: "success",
         data: { id: 9, first_name: "Jo", last_name: "B", email: "j@b" },
       },
       "/auth/account/tenants": { data: [] },

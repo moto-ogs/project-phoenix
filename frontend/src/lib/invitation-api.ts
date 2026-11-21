@@ -5,10 +5,12 @@ import type {
   InvitationAcceptRequest,
   CreateInvitationRequest,
   PendingInvitation,
-  BackendInvitationValidation,
-  BackendFormerEmployment,
   FormerEmployment,
 } from "./invitation-helpers";
+import type {
+  FormerEmploymentView,
+  InvitationValidationResponse,
+} from "./contract/auth-invitations.generated";
 import {
   mapFormerEmploymentResponse,
   mapInvitationValidationResponse,
@@ -41,7 +43,7 @@ export async function validateInvitation(
     );
   }
   const raw = (await response.json()) as unknown;
-  const data = extractData<BackendInvitationValidation>(raw);
+  const data = extractData<InvitationValidationResponse>(raw);
   return mapInvitationValidationResponse(data);
 }
 
@@ -132,7 +134,7 @@ export async function findFormerEmployment(
   }
   const raw = (await response.json()) as unknown;
   const data = extractData<{
-    former_employment?: BackendFormerEmployment | null;
+    former_employment?: FormerEmploymentView | null;
   }>(raw);
   return mapFormerEmploymentResponse(data.former_employment);
 }
