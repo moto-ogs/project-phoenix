@@ -28,7 +28,7 @@ describe('findFormalAddress', () => {
     assert.deepEqual(words('Sie lässt sich nicht ändern.'), []);
     assert.deepEqual(words('Der Antrag geht an die Leitung. Sie entscheidet.'), []);
     assert.deepEqual(words('Gilt das? Ihr müsst nichts tun!'), []);
-    assert.deepEqual(words('Hinweis: Sie bleibt bestehen; Ihre Daten auch.'), []);
+    assert.deepEqual(words('Hinweis: Sie bleibt bestehen.'), []);
     assert.deepEqual(words('(Sie bleibt bestehen.)'), []);
     assert.deepEqual(words('<p>Sie gilt ab morgen.</p>'), []);
     assert.deepEqual(words('Erster Absatz\n\nSie gilt ab morgen.'), []);
@@ -60,7 +60,7 @@ for (const kind of ['go', 'script']) {
       '  "Sie die Angaben.";',
       'const b = "Erledigt. " + "Sie bleibt bestehen.";',
       'const c = ["Bitte prüfen ", "Sie bleibt bestehen."];',
-      'const d = "Bitte prüfen " + name + "Sie bleibt bestehen.";',
+      'const d = status + " Sie bleibt bestehen.";',
       'const e = "Tippe auf „" + "Senden Sie“.";',
       '// sie-anrede-erlaubt (ADR 0294): gebundener Wortlaut',
       'const f = "Bitte prüfen " + "Sie das.";',
@@ -202,7 +202,7 @@ test('an escaped line break keeps the hit on the line of its literal', () => {
   assert.deepEqual(check(source, goTokens).findings.map(finding => finding.line), [2]);
 });
 
-test('a raw Go string inside a marked block is covered to its end', () => {
+test('a marker covers one text: a raw Go string to its end, not the next element', () => {
   const source = [
     '\t// sie-anrede-erlaubt (ADR 0294): gesetzlicher Wortlaut',
     '\tnotice := []string{',
@@ -212,7 +212,59 @@ test('a raw Go string inside a marked block is covered to its end', () => {
     '\t}',
     '\tother := "Bitte prüfen Sie das."',
   ].join('\n');
-  assert.deepEqual(check(source, goTokens).findings.map(finding => finding.line), [7]);
+  assert.deepEqual(check(source, goTokens).findings.map(finding => finding.line), [5, 7]);
+});
+
+test('a marker covers a concatenation with expressions as one text', () => {
+  const source = [
+    'var notice = []string{',
+    '\t// sie-anrede-erlaubt (ADR 0294): gesetzlicher Wortlaut',
+    '\t"Um Ihr Recht auszuüben, müssen Sie uns (" + contact.details(true) + ") informieren. " +',
+    '\t\t"Sie können dafür das Muster verwenden, das Ihnen beiliegt.",',
+    '\t"Bitte prüfen Sie das.",',
+    '}',
+  ].join('\n');
+  const { findings, staleMarkers } = check(source, goTokens);
+  assert.deepEqual(findings.map(finding => [finding.line, finding.word]), [[5, 'Sie']]);
+  assert.deepEqual(staleMarkers, []);
+});
+
+test('a marker separated from its text by a blank line covers nothing', () => {
+  const source = 'func f() {\n\t// sie-anrede-erlaubt (ADR 0294): x\n\n\ta := "Bitte prüfen Sie das."\n}\n';
+  const { findings, staleMarkers } = check(source, goTokens);
+  assert.deepEqual(findings.map(finding => finding.line), [4]);
+  assert.deepEqual(staleMarkers, [2]);
+});
+
+describe('placeholders, slashes, links and quotes', () => {
+  test('a placeholder inside a sentence stays part of it', () => {
+    assert.deepEqual(words('Es sind {count} Ihrer Kinder angemeldet.'), ['Ihrer']);
+    assert.deepEqual(words('Hallo {name} Ihre Anmeldung ist da.'), ['Ihre']);
+    assert.deepEqual(words('<p>Es sind {{.Count}} Ihrer Kinder da.</p>'), ['Ihrer']);
+    assert.deepEqual(words('Bitte {} Sie das.'), ['Sie']);
+  });
+
+  test('a semicolon keeps the sentence going, a colon ends it', () => {
+    assert.deepEqual(words('Die Frist läuft; Sie können noch ändern.'), ['Sie']);
+    assert.deepEqual(words('Eine Person fehlt: Sie hat keine Personalnummer.'), []);
+  });
+
+  test('a German quote closes on its own line only', () => {
+    assert.deepEqual(words('<p>Status „Offen</p>\n<p>Bitte melden Sie sich.</p>\n<a href="x">'), ['Sie']);
+  });
+
+  test('JSX text after a placeholder slash, a self-closing tag or a link is read', () => {
+    const source = [
+      'export const A = () => (',
+      '  <div>',
+      '    <p>{done}/{total} erledigt, bitte prüfen Sie den Rest.</p>',
+      '    <p><Icon className={a} /> Bitte prüfen Sie die Angaben. <a href="/hilfe">Hilfe</a></p>',
+      '    <p>Mehr auf https://example.org und bitte melden Sie sich.</p>',
+      '  </div>',
+      ');',
+    ].join('\n');
+    assert.deepEqual(check(source, scriptTokens).findings.map(finding => finding.line), [3, 4, 5]);
+  });
 });
 
 describe('checkRepository', () => {
@@ -226,6 +278,7 @@ describe('checkRepository', () => {
   write('frontend/src/i18n/messages/en/form.json', JSON.stringify({ a: 'Sie Ihnen' }));
   write('frontend/src/components/a.tsx', 'export const A = () => <p>Bitte geben Sie Ihrem Kind etwas mit.</p>;');
   write('frontend/src/components/a.stories.tsx', 'export const S = { args: { title: "Wir senden Ihnen den Link." } };');
+  write('frontend/.storybook/fixtures/slots.tsx', 'export const text = "Wenn Sie es brauchen, sprechen Sie mit der Leitung.";');
   write('frontend/src/components/a.test.tsx', 'expect("Bitte prüfen Sie das.").toBe(1);');
   write('frontend/src/i18n/messages/de.generated.ts', 'export const x = "Bitte prüfen Sie das.";');
   write('backend/modules/x/text.go', 'package x\nvar a = "Bitte prüfen Sie das."\n');
@@ -240,6 +293,8 @@ describe('checkRepository', () => {
     assert.deepEqual(problems.map(problem => problem.split(':')[0].split(' ')[0]), [
       'backend/modules/x/text.go',
       'backend/templates/email/invite.html',
+      'frontend/.storybook/fixtures/slots.tsx',
+      'frontend/.storybook/fixtures/slots.tsx',
       'frontend/src/components/a.stories.tsx',
       'frontend/src/components/a.tsx',
       'frontend/src/components/a.tsx',

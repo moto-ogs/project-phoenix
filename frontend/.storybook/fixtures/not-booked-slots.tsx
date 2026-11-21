@@ -15,7 +15,7 @@ import { MODULE_LABELS, type ModuleKey } from "~/lib/modules";
  * where the slot renders, not which role reads which sentence.
  */
 function explanation(module: ModuleKey): string {
-  return `Diese Seite gehört zum Modul ${MODULE_LABELS[module]}. Ihre Schule nutzt es nicht. Wenn Sie es brauchen, sprechen Sie mit Ihrer Leitung.`;
+  return `Diese Seite gehört zum Modul ${MODULE_LABELS[module]}. Deine Schule nutzt es nicht. Wenn du es brauchst, sprich mit deiner Leitung.`;
 }
 
 const STORY_NOT_BOOKED_SLOTS: NotBookedSlots = {

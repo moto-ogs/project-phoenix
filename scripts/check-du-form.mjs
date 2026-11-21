@@ -4,14 +4,14 @@
 //
 //   node scripts/check-du-form.mjs
 //
-// Scans the whole tree in about half a second: the German message files, help
-// articles, components and stories under frontend/src, the e-mail templates
-// and the string literals of the Go code. Code comments, tests and the demo
-// and seed data under backend/internal/devtools stay out.
+// Scans the whole tree in about a second: the German message files, help
+// articles, components and stories under frontend/src and frontend/.storybook,
+// the e-mail templates and the string literals of the Go code. Code comments,
+// tests and the demo and seed data under backend/internal/devtools stay out.
 //
 // A hit is „Ihnen“ anywhere, and „Sie“ or „Ihr/Ihre/Ihrem/Ihren/Ihrer/Ihres“
 // inside a sentence. A sentence starts at the beginning of a text, after
-// „. ! ? : ; …“ (not after „z. B.“ and similar) or a block tag. There both
+// „. ! ? : …“ (not after „z. B.“ and similar) or a block tag. There both
 // can be the third person („Sie lässt sich nicht ändern.“) or the plural
 // „Ihr könnt …“, so they pass.
 // Lower-case „sie/ihr“ is the third person or the plural and always passes, as
@@ -47,12 +47,13 @@ const FORMAL = /(?<![\p{L}\p{N}_])(Sie|Ihnen|Ihr|Ihre|Ihrem|Ihren|Ihrer|Ihres)(?
 const ABBREVIATIONS = new Set(['z', 'B', 'd', 'h', 'u', 'a', 'o', 's', 'bzw', 'ggf', 'ca', 'Nr', 'evtl', 'inkl', 'vgl', 'usw', 'etc', 'bspw', 'zzgl', 'max', 'min', 'gem', 'lt', 'Str']);
 // Characters that may open a sentence without ending the one before.
 const OPENERS = new Set([' ', '\t', '\r', '\n', ' ', '(', '[', '*', '_', '-', '–', '—', '•', '·', '#', '"', "'", '“', '‘', '`']);
-const SENTENCE_END = new Set(['.', '!', '?', ':', ';', '…']);
+// A colon ends a sentence („Eine Person fehlt: Sie hat …“), a semicolon not.
+const SENTENCE_END = new Set(['.', '!', '?', ':', '…']);
 // Inline markup continues the sentence; any other tag starts a new one.
 const INLINE_TAGS = new Set(['a', 'b', 'strong', 'em', 'i', 'u', 'span', 'code', 'mark', 'small', 'abbr', 'link', 'trans']);
 
-// Ranges inside German quotation marks: „…“ (also closed by a straight quote),
-// »…« and ‚…‘.
+// Ranges inside German quotation marks on one line: „…“ (also closed by a
+// straight quote), »…« and ‚…‘.
 function quotedRanges(text) {
   const ranges = [];
   const pairs = { '„': ['“', '"'], '»': ['«'], '‚': ['‘'] };
@@ -60,8 +61,8 @@ function quotedRanges(text) {
     const closers = pairs[text[index]];
     if (!closers) continue;
     let end = index + 1;
-    while (end < text.length && !closers.includes(text[end])) end++;
-    if (end >= text.length) continue;
+    while (end < text.length && text[end] !== '\n' && !closers.includes(text[end])) end++;
+    if (end >= text.length || text[end] === '\n') continue;
     ranges.push([index, end]);
     index = end;
   }
@@ -90,8 +91,22 @@ function atSentenceStart(text, index) {
       if (name && INLINE_TAGS.has(name.toLowerCase())) { position = open - 1; continue; }
       return true;
     }
-    // A placeholder ({{.Name}}, ${…}, JSX {…}) may hold a whole sentence.
-    if (char === '}') return true;
+    // A placeholder ({{.Name}}, ${…}, JSX {…}) stands for a word: look past it.
+    // Whether one that opens the text holds a whole sentence is unknown, so
+    // a placeholder without its opening brace in this text counts as a start.
+    if (char === '}') {
+      let depth = 0;
+      let open = position;
+      for (; open >= 0; open--) {
+        if (text[open] === '}') depth++;
+        else if (text[open] === '{' && --depth === 0) break;
+      }
+      if (open < 0) return true;
+      while (open > 0 && text[open - 1] === '{') open--;
+      if (text[open - 1] === '$') open--;
+      position = open - 1;
+      continue;
+    }
     if (char === '.') {
       const word = /(?<![\p{L}\p{N}%$])(\p{L}+)$/u.exec(text.slice(Math.max(0, position - 12), position))?.[1];
       return !(word && ABBREVIATIONS.has(word));
@@ -135,6 +150,8 @@ const JS_ESCAPES = { ...GO_ESCAPES, '`': '`', '\n': '' };
 // A `//` or `/* */` comment at `index`: { text, offset, end }, or undefined.
 function readComment(source, index) {
   if (source[index] !== '/' || (source[index + 1] !== '/' && source[index + 1] !== '*')) return undefined;
+  // „https://“ in JSX text is no comment.
+  if (source[index + 1] === '/' && source[index - 1] === ':') return undefined;
   const block = source[index + 1] === '*';
   const end = block ? source.indexOf('*/', index + 2) : source.indexOf('\n', index);
   const stop = end < 0 ? source.length : block ? end + 2 : end;
@@ -186,7 +203,8 @@ export function goTokens(source) {
   return { texts, comments };
 }
 
-const REGEX_AFTER = new Set(['(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '%', '~', '^']);
+// Not „}“: in JSX a slash after a placeholder is text („{done}/{total}“) or „/>“.
+const REGEX_AFTER = new Set(['(', ',', '=', ':', '[', '!', '&', '|', '?', '{', ';', '+', '-', '*', '%', '~', '^']);
 const REGEX_KEYWORDS = /(?:^|[^\w$])(return|typeof|case|in|of|void|delete|throw|new|yield|await)$/;
 const IDENTIFIER = /[\p{L}\p{N}_$]/u;
 
@@ -314,7 +332,8 @@ function markerLines(source, lines, line, comment, literalLines) {
   const alone = /^\s*\{?\s*$/.test(source.slice(lineStart, comment.offset));
   let start = alone ? line(comment.end - 1) + 1 : first;
   while (alone && start <= lines.length && /^\s*\{?\s*(\/\/|\/\*)/.test(lines[start - 1])) start++;
-  if (start > lines.length) return [first, first];
+  // The marker sits directly at its text; a blank line in between covers nothing.
+  if (start > lines.length || lines[start - 1].trim() === '') return [0, -1];
   const base = indentOf(lines[start - 1]);
   let until = start;
   for (let number = start + 1; number <= lines.length; number++) {
@@ -329,8 +348,10 @@ function markerLines(source, lines, line, comment, literalLines) {
   return [start, until];
 }
 
-// Check directly concatenated literals as one text, keeping the original
-// tokens so findings and exception markers still refer to their source lines.
+// Check concatenated literals as one text, keeping the original tokens so
+// findings and exception markers still refer to their source lines. An
+// expression between two „+“ („…uns (" + contact.details() + ") mittels…“)
+// joins as the placeholder „{}“; a comma or brace in between ends the text.
 function joinedTexts(source, texts) {
   const groups = texts.filter(token => token.verbatim).map(token => ({ text: token.text, parts: [{ token, start: 0 }] }));
   let group;
@@ -338,9 +359,12 @@ function joinedTexts(source, texts) {
   for (const token of texts.filter(token => !token.verbatim).sort((a, b) => a.offset - b.offset)) {
     const gap = previous ? source.slice(previous.end, token.offset) : '';
     const operator = gap.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').trim();
-    if (!previous || previous.end > token.offset || operator !== '+') {
+    const joins = previous && previous.end <= token.offset && (operator === '+' || /^\+[^,;{}]*\+$/.test(operator));
+    if (!joins) {
       group = { text: '', parts: [] };
       groups.push(group);
+    } else if (operator !== '+') {
+      group.text += '{}';
     }
     group.parts.push({ token, start: group.text.length });
     group.text += token.text;
@@ -368,24 +392,41 @@ export function checkTokens(source, { texts, comments }) {
       return { line: line(comment.offset), from, until, used: false };
     });
   }
-  const findings = [];
-  for (const { text, parts } of joinedTexts(source, texts)) {
-    for (const hit of findFormalAddress(text)) {
-      const part = parts.find(({ token, start }) => hit.index >= start && hit.index < start + token.text.length);
+  const hits = [];
+  for (const group of joinedTexts(source, texts)) {
+    for (const hit of findFormalAddress(group.text)) {
+      const part = group.parts.find(({ token, start }) => hit.index >= start && hit.index < start + token.text.length);
       const { token } = part;
       const index = hit.index - part.start;
       // Verbatim text (code, templates) sits in the source as is; a literal
       // counts by its first line, and only raw literals keep their line breaks.
       const start = token.verbatim ? line(token.offset + index) : line(token.offset);
-      const marker = markers.find(candidate => start >= candidate.from && start <= candidate.until);
-      if (marker) { marker.used = true; continue; }
-      findings.push({
+      hits.push({
+        group,
+        verbatim: Boolean(token.verbatim),
+        start,
+        order: token.offset + index,
         line: token.verbatim || !token.raw ? start : start + lineCountBefore(token.text, index),
         word: hit.word,
-        excerpt: excerpt(text, hit.index),
+        excerpt: excerpt(group.text, hit.index),
       });
     }
   }
+  hits.sort((a, b) => a.order - b.order);
+  // A marker covers one text: the first text with a hit in its lines. That is
+  // one literal (with the literals joined to it by „+“), or the JSX/HTML text
+  // of the element it stands above.
+  const covered = new Set();
+  for (const marker of markers) {
+    const inRange = hits.filter(hit => hit.start >= marker.from && hit.start <= marker.until);
+    if (!inRange.length) continue;
+    const first = inRange[0];
+    for (const hit of inRange) {
+      if (first.verbatim ? hit.verbatim : hit.group === first.group) covered.add(hit);
+    }
+    marker.used = true;
+  }
+  const findings = hits.filter(hit => !covered.has(hit)).map(({ line: number, word, excerpt: text }) => ({ line: number, word, excerpt: text }));
   return { findings, staleMarkers: markers.filter(marker => !marker.used).map(marker => marker.line) };
 }
 
@@ -421,6 +462,8 @@ const TEST_FILE = /(\.test|\.spec|_test|\.node-test)\.[cm]?[jt]sx?$|_test\.go$|\
 // The kind of a repository-relative path, or undefined when the check skips it.
 export function kindOf(file) {
   if (TEST_FILE.test(file)) return undefined;
+  // Storybook's own fixtures render in stories as well.
+  if (file.startsWith('frontend/.storybook/')) return /\.(ts|tsx)$/.test(file) ? 'script' : undefined;
   if (file.startsWith('frontend/src/')) {
     if (file.startsWith('frontend/src/i18n/messages/')) return file.startsWith('frontend/src/i18n/messages/de/') && file.endsWith('.json') ? 'json' : undefined;
     return /\.(ts|tsx)$/.test(file) ? 'script' : undefined;
@@ -433,7 +476,7 @@ export function kindOf(file) {
 // The files the check reads, as repository-relative paths with their kind.
 export function scannedFiles(root) {
   const files = [];
-  for (const directory of ['frontend/src', 'backend']) {
+  for (const directory of ['frontend/src', 'frontend/.storybook', 'backend']) {
     for (const path of walk(join(root, directory))) {
       const file = relative(root, path).split(sep).join('/');
       const kind = kindOf(file);
