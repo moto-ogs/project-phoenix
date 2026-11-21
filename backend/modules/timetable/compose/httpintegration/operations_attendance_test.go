@@ -8,6 +8,7 @@ import (
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	fixtures "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -133,9 +134,9 @@ func TestTimetableOperationsCheckInMovesStudentActiveElsewhere(t *testing.T) {
 		deps.instanceRepo.byID[instanceID] = activeInstance(instanceID, activeGroupID)
 		deps.visitRepo.currentByStudent[studentID] = &studentpresence.Visit{StudentID: studentID, ActiveGroupID: originActiveGroupID, EntryTime: opsNow}
 		deps.activeService.moveResult = &studentpresence.StudentMoveResult{
-			Moved:                  []int64{studentID},
+			Moved:                  []ident.ID{ident.ID(studentID)},
 			PreviousActiveGroupIDs: map[int64]int64{studentID: originActiveGroupID},
-			ActiveGroupID:          &activeGroupID,
+			ActiveGroupID:          (*ident.ID)(&activeGroupID),
 		}
 		return deps
 	}
@@ -225,7 +226,7 @@ func TestTimetableOperationsCheckInMovesStudentActiveElsewhere(t *testing.T) {
 	t.Run("maps a skipped move to a conflict", func(t *testing.T) {
 		deps := newDeps()
 		deps.activeService.moveResult = &studentpresence.StudentMoveResult{
-			Skipped: []studentpresence.StudentMoveSkipped{{StudentID: studentID, Reason: studentpresence.StudentMoveSkipConflict}},
+			Skipped: []studentpresence.StudentMoveSkipped{{StudentID: ident.ID(studentID), Reason: studentpresence.StudentMoveSkipConflict}},
 		}
 		ctx := tenant.WithRollbackMarker(context.Background())
 
@@ -238,7 +239,7 @@ func TestTimetableOperationsCheckInMovesStudentActiveElsewhere(t *testing.T) {
 
 	t.Run("treats an unchanged result as same-group success without move notice", func(t *testing.T) {
 		deps := newDeps()
-		deps.activeService.moveResult = &studentpresence.StudentMoveResult{Unchanged: []int64{studentID}}
+		deps.activeService.moveResult = &studentpresence.StudentMoveResult{Unchanged: []ident.ID{ident.ID(studentID)}}
 
 		roster, err := deps.service.CheckInStudent(context.Background(), 670, false, instanceID, studentID)
 

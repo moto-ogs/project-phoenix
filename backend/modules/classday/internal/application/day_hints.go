@@ -218,8 +218,8 @@ func reportStudentRows(report *classday.DayReport) (map[int64]int, []int64) {
 		if row.NoCare() || row.StudentID <= 0 {
 			continue
 		}
-		rowIndex[row.StudentID] = index
-		studentIDs = append(studentIDs, row.StudentID)
+		rowIndex[row.StudentID.Int64()] = index
+		studentIDs = append(studentIDs, row.StudentID.Int64())
 	}
 	return rowIndex, studentIDs
 }

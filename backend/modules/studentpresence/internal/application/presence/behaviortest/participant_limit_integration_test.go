@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	activeSvc "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
@@ -105,7 +106,7 @@ func TestWebParticipantLimit_TransitDefaultAllowsExceeding(t *testing.T) {
 	result, err := service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID)
 
 	require.NoError(t, err)
-	assert.ElementsMatch(t, fixture.inTransit, result.Assigned)
+	assert.ElementsMatch(t, fixture.inTransit, ident.Int64s(result.Assigned))
 	assert.Equal(t, 4, openVisitsIn(t, service, fixture.session.ID))
 }
 
@@ -135,7 +136,7 @@ func TestWebParticipantLimit_TransitFillsLastPlaces(t *testing.T) {
 	result, err := service.AssignTransitStudentsToActiveGroup(testpkg.Ctx(t), fixture.inTransit, fixture.session.ID)
 
 	require.NoError(t, err)
-	assert.ElementsMatch(t, fixture.inTransit, result.Assigned)
+	assert.ElementsMatch(t, fixture.inTransit, ident.Int64s(result.Assigned))
 }
 
 func TestWebParticipantLimit_TransitWithoutLimit(t *testing.T) {
@@ -291,10 +292,10 @@ func TestWebParticipantLimit_OpenRoomMove(t *testing.T) {
 	roomActivity := testpkg.CreateTestActivityGroupWithLimit(t, db, "limit-open-room-stay", 1)
 	roomSession, err := openRoom.EnsureOpenRoomSession(ctx, testpkg.CreateTestRoom(t, db, "limit-open-room Werkraum").ID, roomActivity.ID)
 	require.NoError(t, err)
-	presentChild(t, db, "Drinnen", staff.ID, device.ID, roomSession.ID)
+	presentChild(t, db, "Drinnen", staff.ID, device.ID, roomSession.ID.Int64())
 	child := presentChild(t, db, "Draußen", staff.ID, device.ID, source.ID)
 
-	_, err = openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID, activeSvcBypassAuth)
+	_, err = openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID.Int64(), activeSvcBypassAuth)
 
 	requireLimitRefusal(t, err, 1, 1, 1)
 	visit, err := service.GetStudentCurrentVisit(ctx, child)

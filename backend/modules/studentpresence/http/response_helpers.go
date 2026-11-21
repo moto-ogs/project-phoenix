@@ -4,6 +4,7 @@ import (
 	json "encoding/json"
 
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // newPrivacyConsentResponse converts an owner consent record to a response.
@@ -16,8 +17,8 @@ func newPrivacyConsentResponse(consent studentpresence.PrivacyConsent) (PrivacyC
 		}
 	}
 	return PrivacyConsentResponse{
-		ID:                consent.ID,
-		StudentID:         consent.StudentID,
+		ID:                ident.ID(consent.ID),
+		StudentID:         ident.ID(consent.StudentID),
 		PolicyVersion:     consent.PolicyVersion,
 		Accepted:          consent.Accepted,
 		AcceptedAt:        consent.AcceptedAt,

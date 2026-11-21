@@ -130,7 +130,7 @@ export interface GroupSupervisorSimple {
 }
 
 export const GroupSupervisorSimpleSchema: z.ZodType<GroupSupervisorSimple, unknown> = object<GroupSupervisorSimple>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   role: optional(str),
 });
 
@@ -142,7 +142,7 @@ export interface RoomSimple {
 }
 
 export const RoomSimpleSchema: z.ZodType<RoomSimple, unknown> = object<RoomSimple>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   color: optional(str),
 });
@@ -164,9 +164,9 @@ export interface ActiveGroupResponse {
 }
 
 export const ActiveGroupResponseSchema: z.ZodType<ActiveGroupResponse, unknown> = object<ActiveGroupResponse>({
-  id: int64StringOrNumber,
-  group_id: nullable(int64StringOrNumber),
-  room_id: int64StringOrNumber,
+  id: int64String,
+  group_id: nullable(int64String),
+  room_id: int64String,
   start_time: instant,
   end_time: optional(instant),
   is_active: bool,
@@ -193,9 +193,9 @@ export interface SupervisorResponse {
 }
 
 export const SupervisorResponseSchema: z.ZodType<SupervisorResponse, unknown> = object<SupervisorResponse>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  active_group_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
+  active_group_id: int64String,
   start_time: instant,
   end_time: optional(instant),
   is_active: bool,
@@ -873,9 +873,9 @@ export interface VisitResponse {
 }
 
 export const VisitResponseSchema: z.ZodType<VisitResponse, unknown> = object<VisitResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
-  active_group_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
+  active_group_id: int64String,
   check_in_time: instant,
   check_out_time: optional(instant),
   is_active: bool,
@@ -898,19 +898,19 @@ export interface claimedSupervisionResponse {
 }
 
 export const claimedSupervisionResponseSchema: z.ZodType<claimedSupervisionResponse, unknown> = object<claimedSupervisionResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  group_id: int64StringOrNumber,
+  tenant_id: int64String,
+  staff_id: int64String,
+  group_id: int64String,
   role: str,
   start_date: str,
 });
 
 /** Go: presence.TrackingIndicatorsRequest */
 export interface TrackingIndicatorsRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
 }
 
 /** Go: presence.TrackingIndicatorsResponse */
@@ -926,8 +926,8 @@ export const TrackingIndicatorsResponseSchema: z.ZodType<TrackingIndicatorsRespo
 
 /** Go: presence.checkInStudentsToSessionRequest */
 export interface checkInStudentsToSessionRequest {
-  student_ids?: number[] | null;
-  target_active_group_id?: number;
+  student_ids?: string[] | null;
+  target_active_group_id?: string;
   keep_present?: boolean;
 }
 
@@ -938,7 +938,7 @@ export interface StudentMoveSkipped {
 }
 
 export const StudentMoveSkippedSchema: z.ZodType<StudentMoveSkipped, unknown> = object<StudentMoveSkipped>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   reason: str,
 });
 
@@ -953,37 +953,37 @@ export interface StudentMoveResult {
 }
 
 export const StudentMoveResultSchema: z.ZodType<StudentMoveResult, unknown> = object<StudentMoveResult>({
-  moved: nullable(arr(int64StringOrNumber)),
-  unchanged: nullable(arr(int64StringOrNumber)),
+  moved: nullable(arr(int64String)),
+  unchanged: nullable(arr(int64String)),
   skipped: nullable(arr(StudentMoveSkippedSchema)),
-  active_group_id: optional(int64StringOrNumber),
-  room_id: optional(int64StringOrNumber),
-  checked_in: optional(arr(int64StringOrNumber)),
+  active_group_id: optional(int64String),
+  room_id: optional(int64String),
+  checked_in: optional(arr(int64String)),
 });
 
 /** Go: openroommovehttp.checkInStudentsToOpenRoomRequest */
 export interface checkInStudentsToOpenRoomRequest {
-  student_ids?: number[] | null;
-  target_room_id?: number;
+  student_ids?: string[] | null;
+  target_room_id?: string;
   keep_present?: boolean;
 }
 
 /** Go: presence.moveStudentsToActiveGroupRequest */
 export interface moveStudentsToActiveGroupRequest {
-  student_ids?: number[] | null;
-  target_active_group_id?: number;
+  student_ids?: string[] | null;
+  target_active_group_id?: string;
 }
 
 /** Go: openroommovehttp.moveStudentsToOpenRoomRequest */
 export interface moveStudentsToOpenRoomRequest {
-  student_ids?: number[] | null;
-  target_room_id?: number;
+  student_ids?: string[] | null;
+  target_room_id?: string;
 }
 
 /** Go: presence.assignTransitStudentsRequest */
 export interface assignTransitStudentsRequest {
-  student_ids?: number[] | null;
-  active_group_id?: number;
+  student_ids?: string[] | null;
+  active_group_id?: string;
 }
 
 /** Go: studentpresence.TransitAssignSkipped */
@@ -993,7 +993,7 @@ export interface TransitAssignSkipped {
 }
 
 export const TransitAssignSkippedSchema: z.ZodType<TransitAssignSkipped, unknown> = object<TransitAssignSkipped>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   reason: str,
 });
 
@@ -1006,10 +1006,10 @@ export interface TransitAssignResult {
 }
 
 export const TransitAssignResultSchema: z.ZodType<TransitAssignResult, unknown> = object<TransitAssignResult>({
-  assigned: nullable(arr(int64StringOrNumber)),
+  assigned: nullable(arr(int64String)),
   skipped: nullable(arr(TransitAssignSkippedSchema)),
-  active_group_id: int64StringOrNumber,
-  room_id: int64StringOrNumber,
+  active_group_id: int64String,
+  room_id: int64String,
 });
 
 /** Query of GET /api/active/groups/ */

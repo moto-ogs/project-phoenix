@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,7 +98,7 @@ func (m *mockGroupRepository) FindByIDForUpdate(ctx context.Context, id int64) (
 		return m.FindByID(ctx, id)
 	}
 	return &ports.ActiveGroup{
-		ID: id,
+		ID: ident.ID(id),
 	}, nil
 }
 
@@ -743,10 +744,10 @@ func TestAssignMultipleSupervisorsNonCritical_PreservesBestEffortAssignments(t *
 	var createdStaffIDs []int64
 	supervisorRepo := &mockGroupSupervisorRepository{
 		createFunc: func(_ context.Context, entity *ports.GroupSupervisor) error {
-			if entity.StaffID == int64(22) {
+			if entity.StaffID == ident.ID(int64(22)) {
 				return errors.New("insert failed")
 			}
-			createdStaffIDs = append(createdStaffIDs, entity.StaffID)
+			createdStaffIDs = append(createdStaffIDs, entity.StaffID.Int64())
 			return nil
 		},
 	}

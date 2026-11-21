@@ -237,8 +237,8 @@ func (rs *Resource) enrichWithTeacherHints(ctx context.Context, responses []Stud
 	studentIDs := make([]int64, 0, len(responses))
 	for i := range responses {
 		if responses[i].HasFullAccess {
-			index[responses[i].ID] = i
-			studentIDs = append(studentIDs, responses[i].ID)
+			index[responses[i].ID.Int64()] = i
+			studentIDs = append(studentIDs, responses[i].ID.Int64())
 		}
 	}
 	if len(studentIDs) == 0 {

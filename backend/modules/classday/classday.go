@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrClassNotAssigned is returned when the requested class is not among the
@@ -235,9 +236,9 @@ type Actor struct {
 // contact details: the Lehrkraft view is a privacy-reduced projection of the
 // class roster — who stays, who goes home, and how.
 type DayRow struct {
-	StudentID int64  `json:"student_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	StudentID ident.ID `json:"student_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 	// ListEntry marks a class-list-only entry (#2382): a child of the class
 	// cohort with NO OGS record ("Keine Betreuung"). StudentID is 0;
 	// ListEntryID carries the users.class_list_entries id, serialized as a
@@ -582,7 +583,7 @@ type SupervisionContact struct {
 // be assigned to the block, the child must be on that block's roster, and every
 // single call writes a GDPR access-log row naming the child.
 type SupervisionStudentSheet struct {
-	StudentID   int64         `json:"student_id"`
+	StudentID   ident.ID      `json:"student_id"`
 	FirstName   string        `json:"first_name"`
 	LastName    string        `json:"last_name"`
 	SchoolClass string        `json:"school_class,omitempty"`

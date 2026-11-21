@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The bindings below connect the absence list of moto schule (#4793) to
@@ -64,7 +65,7 @@ func withClassDayAbsenceList(
 			children := make([]classday.AbsenceListChild, 0, len(rows))
 			for _, row := range rows {
 				children = append(children, classday.AbsenceListChild{
-					StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName, SchoolMemberOnly: row.SchoolMemberOnly,
+					StudentID: ident.ID(row.StudentID), FirstName: row.FirstName, LastName: row.LastName, SchoolMemberOnly: row.SchoolMemberOnly,
 					SchoolMemberFrom: row.SchoolMemberFrom, SchoolMemberUntil: row.SchoolMemberUntil,
 				})
 			}

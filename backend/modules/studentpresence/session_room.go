@@ -1,12 +1,16 @@
 package studentpresence
 
-import "time"
+import (
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // SessionRoom is room information projected onto a presence session.
 // Facilities owns the writable room record.
 type SessionRoom struct {
-	ID         int64     `json:"id"`
-	TenantID   int64     `json:"tenant_id"`
+	ID         ident.ID  `json:"id"`
+	TenantID   ident.ID  `json:"tenant_id"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 	Name       string    `json:"name"`
@@ -20,7 +24,7 @@ type SessionRoom struct {
 }
 
 // SetTenantID sets the owning tenant.
-func (r *SessionRoom) SetTenantID(id int64) { r.TenantID = id }
+func (r *SessionRoom) SetTenantID(id int64) { r.TenantID = ident.ID(id) }
 
 // GetTenantID returns the owning tenant.
-func (r *SessionRoom) GetTenantID() int64 { return r.TenantID }
+func (r *SessionRoom) GetTenantID() int64 { return int64(r.TenantID) }

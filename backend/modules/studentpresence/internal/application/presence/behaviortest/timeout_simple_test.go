@@ -47,13 +47,13 @@ func TestUpdateSessionActivity(t *testing.T) {
 		require.NoError(t, err)
 
 		// ACT: Update session activity
-		err = service.UpdateSessionActivity(ctx, session.ID)
+		err = service.UpdateSessionActivity(ctx, session.ID.Int64())
 
 		// ASSERT
 		require.NoError(t, err)
 
 		// Verify LastActivity was updated
-		updatedSession, err := service.GetActiveGroup(ctx, session.ID)
+		updatedSession, err := service.GetActiveGroup(ctx, session.ID.Int64())
 		require.NoError(t, err)
 		assert.True(t, updatedSession.LastActivity.After(backdated),
 			"LastActivity should be updated to a later time")
@@ -79,11 +79,11 @@ func TestUpdateSessionActivity(t *testing.T) {
 		session, err := service.StartActivitySessionWithSupervisors(ctx, activity.ID, device.ID, []int64{staff.ID}, &room.ID)
 		require.NoError(t, err)
 
-		_, err = service.EndActivitySession(ctx, session.ID)
+		_, err = service.EndActivitySession(ctx, session.ID.Int64())
 		require.NoError(t, err)
 
 		// ACT: Try to update the ended session
-		err = service.UpdateSessionActivity(ctx, session.ID)
+		err = service.UpdateSessionActivity(ctx, session.ID.Int64())
 
 		// ASSERT
 		require.Error(t, err)

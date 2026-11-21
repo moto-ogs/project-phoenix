@@ -13,8 +13,8 @@ import type {
 import { buildBackendStudent } from "~/test/fixtures/students";
 
 const sampleStudentResponse = buildBackendStudent({
-  id: 1,
-  person_id: 100,
+  id: "1",
+  person_id: "100",
   first_name: "Max",
   last_name: "Mustermann",
   tag_id: "RFID-12345",
@@ -27,7 +27,7 @@ const sampleStudentResponse = buildBackendStudent({
   address_street: "Musterstraße 12",
   address_city: "Köln",
   address_postal_code: "50667",
-  group_id: 5,
+  group_id: "5",
   group_name: "Klasse 3a",
   extra_info: "Allergies: None",
   birthday: "2015-06-15",

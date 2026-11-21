@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	activeSvc "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -85,11 +86,11 @@ func TestCheckInToSessionPlacesArrivalsInASupervisedRoom(t *testing.T) {
 	result, err := f.checkIn.CheckInStudentsToSessionAuthorized(ctx, []int64{first, second, first}, f.target, f.staff, f.staffAuth(), false)
 
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []int64{first, second}, result.CheckedIn)
-	assert.ElementsMatch(t, []int64{first, second}, result.Moved)
+	assert.ElementsMatch(t, []int64{first, second}, ident.Int64s(result.CheckedIn))
+	assert.ElementsMatch(t, []int64{first, second}, ident.Int64s(result.Moved))
 	assert.Empty(t, result.Skipped)
 	require.NotNil(t, result.ActiveGroupID)
-	assert.Equal(t, f.target, *result.ActiveGroupID)
+	assert.Equal(t, ident.ID(f.target), *result.ActiveGroupID)
 	assert.Equal(t, 2, openAttendanceCount(t, db, []int64{first, second}))
 	sessions := openVisitSessions(t, testSchoolPresence(t, db), []int64{first, second})
 	assert.Equal(t, map[int64]int64{first: f.target, second: f.target}, sessions,
@@ -144,8 +145,8 @@ func TestCheckInToSessionPullsPresentChildrenWithTheirSourceRights(t *testing.T)
 	result, err := f.checkIn.CheckInStudentsToSessionAuthorized(ctx, []int64{arriving, present}, f.target, f.staff, f.staffAuth(), false)
 
 	require.NoError(t, err)
-	assert.Equal(t, []int64{arriving}, result.CheckedIn, "only the absent child is a new check-in")
-	assert.ElementsMatch(t, []int64{arriving, present}, result.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(arriving)}, result.CheckedIn, "only the absent child is a new check-in")
+	assert.ElementsMatch(t, []int64{arriving, present}, ident.Int64s(result.Moved))
 	sessions := openVisitSessions(t, testSchoolPresence(t, db), []int64{arriving, present})
 	assert.Equal(t, map[int64]int64{arriving: f.target, present: f.target}, sessions)
 }
@@ -168,9 +169,9 @@ func TestCheckInToSessionSkipsChildrenItCannotCheckIn(t *testing.T) {
 	result, err := f.checkIn.CheckInStudentsToSessionAuthorized(ctx, []int64{graduate, child}, f.target, f.staff, f.staffAuth(), false)
 
 	require.NoError(t, err)
-	assert.Equal(t, []int64{child}, result.CheckedIn)
-	assert.Equal(t, []int64{child}, result.Moved)
-	assert.Equal(t, []activeSvc.StudentMoveSkipped{{StudentID: graduate, Reason: studentpresence.StudentMoveSkipNotFound}}, result.Skipped)
+	assert.Equal(t, []ident.ID{ident.ID(child)}, result.CheckedIn)
+	assert.Equal(t, []ident.ID{ident.ID(child)}, result.Moved)
+	assert.Equal(t, []activeSvc.StudentMoveSkipped{{StudentID: ident.ID(graduate), Reason: studentpresence.StudentMoveSkipNotFound}}, result.Skipped)
 	assert.Zero(t, openAttendanceCount(t, db, []int64{graduate}))
 }
 
@@ -187,13 +188,13 @@ func TestCheckInToOpenRoomSessionNeedsNoSupervision(t *testing.T) {
 	require.NoError(t, err)
 	child := testpkg.CreateTestStudent(t, db, "Paul", "Hof", "1a").ID
 
-	result, err := f.checkIn.CheckInStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, session.ID, f.staff, f.staffAuth(), false)
+	result, err := f.checkIn.CheckInStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, session.ID.Int64(), f.staff, f.staffAuth(), false)
 
 	require.NoError(t, err)
-	assert.Equal(t, []int64{child}, result.CheckedIn)
-	assert.Equal(t, []int64{child}, result.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(child)}, result.CheckedIn)
+	assert.Equal(t, []ident.ID{ident.ID(child)}, result.Moved)
 	sessions := openVisitSessions(t, testSchoolPresence(t, db), []int64{child})
-	assert.Equal(t, session.ID, sessions[child])
+	assert.Equal(t, session.ID.Int64(), sessions[child])
 }
 
 func TestCheckInToSessionKeepsPresentChildrenWhereTheyAre(t *testing.T) {
@@ -210,9 +211,9 @@ func TestCheckInToSessionKeepsPresentChildrenWhereTheyAre(t *testing.T) {
 	result, err := f.checkIn.CheckInStudentsToSessionAuthorized(ctx, []int64{arriving, present}, f.target, f.staff, f.staffAuth(), true)
 
 	require.NoError(t, err)
-	assert.Equal(t, []int64{arriving}, result.CheckedIn)
-	assert.Equal(t, []int64{arriving}, result.Moved)
-	assert.Equal(t, []int64{present}, result.Unchanged)
+	assert.Equal(t, []ident.ID{ident.ID(arriving)}, result.CheckedIn)
+	assert.Equal(t, []ident.ID{ident.ID(arriving)}, result.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(present)}, result.Unchanged)
 	sessions := openVisitSessions(t, testSchoolPresence(t, db), []int64{arriving, present})
 	assert.Equal(t, map[int64]int64{arriving: f.target, present: f.source}, sessions)
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove/ports"
 )
@@ -62,9 +63,9 @@ func moveAuthorization(actor openroommove.Actor) studentpresence.StudentMoveAuth
 }
 
 func moveOutcome(result *studentpresence.StudentMoveResult) ports.MoveOutcome {
-	outcome := ports.MoveOutcome{Moved: result.Moved, Unchanged: result.Unchanged, CheckedIn: result.CheckedIn}
+	outcome := ports.MoveOutcome{Moved: ident.Int64s(result.Moved), Unchanged: ident.Int64s(result.Unchanged), CheckedIn: ident.Int64s(result.CheckedIn)}
 	for _, skipped := range result.Skipped {
-		outcome.Skipped = append(outcome.Skipped, openroommove.Skipped{StudentID: skipped.StudentID, Reason: skipped.Reason})
+		outcome.Skipped = append(outcome.Skipped, openroommove.Skipped{StudentID: skipped.StudentID.Int64(), Reason: skipped.Reason})
 	}
 	return outcome
 }

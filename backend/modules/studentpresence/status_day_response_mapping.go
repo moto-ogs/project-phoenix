@@ -2,12 +2,13 @@ package studentpresence
 
 import (
 	absencerecords "github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func NewStudentStatusDayResponse(entry *absencerecords.StudentStatusDay) StudentStatusDayResponse {
 	return StudentStatusDayResponse{
-		ID:         entry.ID,
-		StudentID:  entry.StudentID,
+		ID:         ident.ID(entry.ID),
+		StudentID:  ident.ID(entry.StudentID),
 		Date:       entry.Date.String(),
 		Status:     entry.Status,
 		Label:      StudentStatusDayLabel(entry.Status),

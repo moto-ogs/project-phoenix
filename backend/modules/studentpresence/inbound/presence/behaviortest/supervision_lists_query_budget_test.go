@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	presenceAPI "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -126,9 +127,9 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(envelope.Data, &objects))
 				for index, dto := range rows {
 					expect := want[index]
-					require.Equal(t, expect.row.ID, dto.ID, "ascending persisted ID order")
-					require.Equal(t, expect.row.StaffID, dto.StaffID)
-					require.Equal(t, expect.row.GroupID, dto.ActiveGroupID)
+					require.Equal(t, ident.ID(expect.row.ID), dto.ID, "ascending persisted ID order")
+					require.Equal(t, ident.ID(expect.row.StaffID), dto.StaffID)
+					require.Equal(t, ident.ID(expect.row.GroupID), dto.ActiveGroupID)
 					require.Equal(t, expect.active, dto.IsActive)
 					require.True(t, expect.row.CreatedAt.Equal(dto.CreatedAt))
 					require.True(t, expect.row.UpdatedAt.Equal(dto.UpdatedAt))

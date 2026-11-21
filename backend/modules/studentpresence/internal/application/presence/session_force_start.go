@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -60,7 +61,7 @@ func (s *service) forceStartActivitySessionTx(ctx context.Context, activityID, d
 			return &ActiveError{Op: opForceStartSession, Err: err}
 		}
 
-		if err := s.transferForceStartedActivityState(txCtx, conflictingSessionIDs, group.ID, group.StartTime); err != nil {
+		if err := s.transferForceStartedActivityState(txCtx, conflictingSessionIDs, group.ID.Int64(), group.StartTime); err != nil {
 			return &ActiveError{Op: opForceStartSession, Err: err}
 		}
 
@@ -69,7 +70,7 @@ func (s *service) forceStartActivitySessionTx(ctx context.Context, activityID, d
 		}
 		// The force start ended sessions, moved their visits and opened a
 		// new one; the kiosk path announces none of that on its own.
-		s.queueSupervisionRefresh(txCtx, group.ID, activeSupervisionReasonActivityStarted)
+		s.queueSupervisionRefresh(txCtx, group.ID.Int64(), activeSupervisionReasonActivityStarted)
 
 		*newGroup = group
 		return nil
@@ -137,13 +138,13 @@ func (s *service) lockForceStartSupervisors(ctx context.Context, activityID int6
 		if group == nil {
 			continue
 		}
-		supervisors, err := s.SupervisorRepo.FindByActiveGroupID(ctx, group.ID, true)
+		supervisors, err := s.SupervisorRepo.FindByActiveGroupID(ctx, group.ID.Int64(), true)
 		if err != nil {
 			return nil, err
 		}
 		for _, supervisor := range supervisors {
 			if supervisor != nil {
-				staffIDs[supervisor.StaffID] = true
+				staffIDs[supervisor.StaffID.Int64()] = true
 			}
 		}
 	}
@@ -189,7 +190,7 @@ func (s *service) validateTransferredSupervisorLocks(ctx context.Context, groupI
 
 func hasUnlockedSupervisor(supervisors []*ports.GroupSupervisor, lockedStaff map[int64]bool) bool {
 	for _, supervisor := range supervisors {
-		if supervisor != nil && !lockedStaff[supervisor.StaffID] {
+		if supervisor != nil && !lockedStaff[supervisor.StaffID.Int64()] {
 			return true
 		}
 	}
@@ -265,7 +266,7 @@ func (s *service) endExistingActivitySessionsForForceStart(ctx context.Context, 
 		if session == nil || session.ID <= 0 {
 			continue
 		}
-		locked, err := s.GroupRepo.FindByIDForUpdate(ctx, session.ID)
+		locked, err := s.GroupRepo.FindByIDForUpdate(ctx, session.ID.Int64())
 		if err != nil {
 			return nil, err
 		}
@@ -274,10 +275,10 @@ func (s *service) endExistingActivitySessionsForForceStart(ctx context.Context, 
 		}
 		// The Student Presence owner releases the group; its visits and
 		// supervisors move to the new session afterwards (#2697).
-		if err := s.SchoolPresence.EndGroup(ctx, session.ID, s.now()); err != nil {
+		if err := s.SchoolPresence.EndGroup(ctx, session.ID.Int64(), s.now()); err != nil {
 			return nil, err
 		}
-		endedIDs = append(endedIDs, session.ID)
+		endedIDs = append(endedIDs, session.ID.Int64())
 	}
 
 	return endedIDs, nil
@@ -292,10 +293,10 @@ func (s *service) endExistingDeviceSessionForForceStart(ctx context.Context, dev
 	if existingSession == nil {
 		return 0, nil
 	}
-	if existingSession.ID != preparedID {
+	if existingSession.ID != ident.ID(preparedID) {
 		return 0, ErrSessionConflict
 	}
-	locked, err := s.GroupRepo.FindByIDForUpdate(ctx, existingSession.ID)
+	locked, err := s.GroupRepo.FindByIDForUpdate(ctx, existingSession.ID.Int64())
 	if err != nil {
 		return 0, err
 	}
@@ -303,11 +304,11 @@ func (s *service) endExistingDeviceSessionForForceStart(ctx context.Context, dev
 		return 0, nil
 	}
 
-	if err := s.SchoolPresence.EndGroup(ctx, existingSession.ID, s.now()); err != nil {
+	if err := s.SchoolPresence.EndGroup(ctx, existingSession.ID.Int64(), s.now()); err != nil {
 		return 0, err
 	}
 
-	return existingSession.ID, nil
+	return existingSession.ID.Int64(), nil
 }
 
 func (s *service) transferForceStartedActivityState(ctx context.Context, oldGroupIDs []int64, newGroupID int64, newGroupStartTime time.Time) error {
@@ -350,7 +351,7 @@ func (s *service) transferActiveVisitsBetweenGroups(ctx context.Context, oldGrou
 			return 0, err
 		}
 		if incoming > 0 {
-			if err := s.ensureRoomCapacity(ctx, newGroup.RoomID, incoming); err != nil {
+			if err := s.ensureRoomCapacity(ctx, newGroup.RoomID.Int64(), incoming); err != nil {
 				return 0, err
 			}
 		}
@@ -375,7 +376,7 @@ func (s *service) transferActiveSupervisorsBetweenGroups(ctx context.Context, ol
 		if supervisor == nil {
 			continue
 		}
-		existingStaffIDs[supervisor.StaffID] = true
+		existingStaffIDs[supervisor.StaffID.Int64()] = true
 	}
 
 	transferred := 0
@@ -384,17 +385,17 @@ func (s *service) transferActiveSupervisorsBetweenGroups(ctx context.Context, ol
 			continue
 		}
 
-		if err := s.SupervisorRepo.EndSupervision(ctx, supervisor.ID); err != nil {
+		if err := s.SupervisorRepo.EndSupervision(ctx, supervisor.ID.Int64()); err != nil {
 			return transferred, err
 		}
 
-		if existingStaffIDs[supervisor.StaffID] {
+		if existingStaffIDs[supervisor.StaffID.Int64()] {
 			continue
 		}
 
 		transferredSupervisor := &ports.GroupSupervisor{
 			StaffID:   supervisor.StaffID,
-			GroupID:   newGroupID,
+			GroupID:   ident.ID(newGroupID),
 			Role:      normalizeTransferredSupervisorRole(supervisor.Role),
 			StartDate: calendar.DateFromTime(newGroupStartTime),
 		}
@@ -402,7 +403,7 @@ func (s *service) transferActiveSupervisorsBetweenGroups(ctx context.Context, ol
 		if err := s.SupervisorRepo.Create(ctx, transferredSupervisor); err != nil {
 			return transferred, err
 		}
-		existingStaffIDs[supervisor.StaffID] = true
+		existingStaffIDs[supervisor.StaffID.Int64()] = true
 		transferred++
 	}
 
@@ -486,7 +487,7 @@ func (s *service) discoverForceStartCohort(ctx context.Context, activityID, devi
 	}
 	for _, group := range groups {
 		if group != nil {
-			cohort.activityIDs = appendActiveGroupID(cohort.activityIDs, group.ID)
+			cohort.activityIDs = appendActiveGroupID(cohort.activityIDs, group.ID.Int64())
 		}
 	}
 	slices.Sort(cohort.activityIDs)
@@ -495,7 +496,7 @@ func (s *service) discoverForceStartCohort(ctx context.Context, activityID, devi
 		return cohort, err
 	}
 	if device != nil {
-		cohort.deviceSessionID = device.ID
+		cohort.deviceSessionID = device.ID.Int64()
 	}
 	return cohort, nil
 }
@@ -509,14 +510,14 @@ func (s *service) getPlannedRoomID(ctx context.Context, activityID int64) (int64
 		return 0, err
 	}
 	if activityGroup != nil && activityGroup.PlannedRoomID != nil && *activityGroup.PlannedRoomID > 0 {
-		return *activityGroup.PlannedRoomID, nil
+		return (*activityGroup.PlannedRoomID).Int64(), nil
 	}
 	return 0, nil
 }
 
 func validateForceStartSources(sessions []*ports.ActiveGroup, preparedIDs []int64) error {
 	for _, session := range sessions {
-		if session != nil && session.ID > 0 && !slices.Contains(preparedIDs, session.ID) {
+		if session != nil && session.ID > 0 && !slices.Contains(preparedIDs, session.ID.Int64()) {
 			return ErrSessionConflict
 		}
 	}
