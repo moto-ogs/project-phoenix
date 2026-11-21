@@ -251,7 +251,7 @@ func withDocumentTemplate(ctx context.Context, source parentbilling.BillingDocum
 	if err != nil {
 		return parentbilling.Letterhead{}, fmt.Errorf("parent billing: read the template of the document: %w", err)
 	}
-	if required && documentKind == parentbilling.DocumentKindFeeNotice && templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice)) {
+	if required && documentKind == parentbilling.DocumentKindFeeNotice && templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice, letterAddressee{})) {
 		return parentbilling.Letterhead{}, parentbilling.ErrLegalRemedyMissing
 	}
 	head.Template = template

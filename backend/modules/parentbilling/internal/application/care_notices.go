@@ -461,6 +461,6 @@ func (n *CareFeeNotices) legalRemedyOf(ctx context.Context, organizationID int64
 	if err != nil {
 		return "", "", false, fmt.Errorf("parent billing: read the template of the fee notice: %w", err)
 	}
-	missing := templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice))
+	missing := templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice, letterAddressee{}))
 	return template.LegalRemedy, fmt.Sprintf("%d:%s", template.Version, template.LegalRemedy), missing, nil
 }
