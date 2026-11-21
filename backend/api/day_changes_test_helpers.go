@@ -56,12 +56,8 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
-	classDay, err := timetable.ClassArrivalDayOf(classArrivals)
-	if err != nil {
-		return nil, err
-	}
 	view, err := NewDayChanges(DayChangesSources{
-		Assignments: membership, ClassArrivals: classDay,
+		Assignments: membership, ClassArrivals: classArrivals,
 		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
 		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
 		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,

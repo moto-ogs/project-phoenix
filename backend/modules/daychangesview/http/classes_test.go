@@ -120,6 +120,15 @@ func TestDayChangesClassSource(t *testing.T) {
 		}, classLines(t, body))
 	})
 
+	t.Run("an account reaching every class is no staff of each", func(t *testing.T) {
+		_, body := read(t, router, plainAccount.ID, tenantID, "users:read", "class_day:all_classes")
+		assert.Equal(t, []string{
+			"school class_dismissal_changed 2c 11:30",
+			"school class_trip 3a n=2",
+			"school class_trip 4b 13:00 n=1",
+		}, classLines(t, body))
+	})
+
 	t.Run("account without users:read sees no class and no failure", func(t *testing.T) {
 		overview, body := read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, classLines(t, body))

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ClassArrivalPlan preserves the entered class label and recurring dismissal
@@ -55,9 +57,9 @@ type ClassArrivalQuery interface {
 }
 
 // ClassArrivalDayQuery reads the class-wide dismissal changes of every class
-// on one day (#7681). Date is YYYY-MM-DD.
+// on one day (#7681).
 type ClassArrivalDayQuery interface {
-	ListClassArrivalExceptionsOn(ctx context.Context, date string) ([]ClassArrivalException, error)
+	ListClassArrivalExceptionsOn(ctx context.Context, day calendar.Date) ([]ClassArrivalException, error)
 }
 
 // ErrNoClassArrivalDay reports a class arrival query without the day read.

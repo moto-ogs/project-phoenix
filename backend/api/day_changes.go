@@ -26,6 +26,7 @@ import (
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	schoolstructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -109,9 +110,9 @@ type DayChangesSources struct {
 	// Assignments is School Membership's read of the caller's teacher
 	// groups by staff record (#7681).
 	Assignments dayChangesAssignments
-	// ClassArrivals is Timetable's read of the class-wide arrival exceptions
-	// of the day (#7681).
-	ClassArrivals dayChangesClassArrivals
+	// ClassArrivals is Timetable's class arrival query; its day read gives
+	// the class-wide arrival exceptions of the day (#7681).
+	ClassArrivals timetable.ClassArrivalQuery
 	Today         func() calendar.Date
 	Logger        *slog.Logger
 }
@@ -136,6 +137,10 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Assignments == nil || sources.ClassArrivals == nil {
 		return nil, fmt.Errorf("%w: class sources", daychangesview.ErrDependencies)
 	}
+	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
+	if err != nil {
+		return nil, err
+	}
 	// One name read per request for the sources that name staff (#7675).
 	sources.Names = memoStaffNames{inner: sources.Names}
 	return daychangesview.New(daychangesview.Dependencies{
@@ -146,7 +151,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 		Notices:    dayChangesNotices{reads: sources.Notices},
 		Closing:    dayChangesClosingDays{reads: sources.ClosingDays},
 		Activities: dayChangesActivities{sources: sources},
-		Classes:    dayChangesClasses{sources: sources},
+		Classes:    dayChangesClasses{sources: sources, classDay: classDay},
 		Logger:     sources.Logger,
 	})
 }

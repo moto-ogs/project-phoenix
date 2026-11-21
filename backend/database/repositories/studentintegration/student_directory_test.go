@@ -51,7 +51,8 @@ func TestStudentDirectoryReadsClassesAndCohorts(t *testing.T) {
 	names, err := module.ListStudentNamesByID(ctx, []int64{first.ID, graduate.ID})
 	require.NoError(t, err)
 	require.Len(t, names, 2)
-	assert.Equal(t, peopledirectory.StudentName{StudentID: first.ID, FirstName: "Anna", LastName: "Directory"}, names[0])
+	// The read by id places the child in its class and group too (#7681).
+	assert.Equal(t, peopledirectory.StudentName{StudentID: first.ID, FirstName: "Anna", LastName: "Directory", SchoolClass: "1a"}, names[0])
 
 	classes, err := module.ListSchoolClasses(ctx)
 	require.NoError(t, err)

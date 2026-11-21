@@ -39,7 +39,7 @@ import (
 // dayChangesClassArrivals is Timetable's read of the class-wide arrival
 // exceptions of every class on one day.
 type dayChangesClassArrivals interface {
-	ListClassArrivalExceptionsOn(ctx context.Context, date string) ([]timetable.ClassArrivalException, error)
+	ListClassArrivalExceptionsOn(ctx context.Context, day calendar.Date) ([]timetable.ClassArrivalException, error)
 }
 
 // dayChangesAssignments is School Membership's read of the group assignments:
@@ -58,8 +58,13 @@ func readsClasses(ctx context.Context) bool {
 // trimmed and case-insensitive.
 func classKey(name string) string { return strings.ToLower(strings.TrimSpace(name)) }
 
-// callerClasses are the caller's assigned classes as keys.
+// callerClasses are the caller's assigned classes as keys. A caller who
+// reaches every class (class_day:all_classes, Schulverwaltung) is no staff
+// of each of them; its classes stay under "Schule".
 func callerClasses(ctx context.Context, caller dayChangesCaller) (map[string]bool, error) {
+	if securityruntime.HasPermission(permissions.ClassDayAllClasses, sessiontoken.PermissionsFromCtx(ctx)) {
+		return map[string]bool{}, nil
+	}
 	classes, err := caller.MySchoolClasses(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("resolve caller classes: %w", err)
@@ -72,13 +77,16 @@ func callerClasses(ctx context.Context, caller dayChangesCaller) (map[string]boo
 }
 
 // dayChangesClasses is the Stundenplan der Klassen.
-type dayChangesClasses struct{ sources DayChangesSources }
+type dayChangesClasses struct {
+	sources  DayChangesSources
+	classDay dayChangesClassArrivals
+}
 
 func (s dayChangesClasses) ClassChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
 	if !readsClasses(ctx) {
 		return nil, nil
 	}
-	rows, err := s.sources.ClassArrivals.ListClassArrivalExceptionsOn(ctx, day.String())
+	rows, err := s.classDay.ListClassArrivalExceptionsOn(ctx, day)
 	if err != nil {
 		return nil, fmt.Errorf("list class arrival exceptions: %w", err)
 	}
