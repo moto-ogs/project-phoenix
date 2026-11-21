@@ -231,12 +231,12 @@ func (req *SwitchTenantRequest) Bind(_ *http.Request) error {
 
 // AccountTenantResponse represents a tenant available to the authenticated user
 type AccountTenantResponse struct {
-	TenantID         int64  `json:"tenant_id"`
-	Slug             string `json:"slug"`
-	Name             string `json:"name"`
-	Subdomain        string `json:"subdomain"`
-	OrganizationID   int64  `json:"organization_id"`
-	OrganizationName string `json:"organization_name"`
+	TenantID         common.ID `json:"tenant_id"`
+	Slug             string    `json:"slug"`
+	Name             string    `json:"name"`
+	Subdomain        string    `json:"subdomain"`
+	OrganizationID   common.ID `json:"organization_id"`
+	OrganizationName string    `json:"organization_name"`
 }
 
 // PublicTenantResponse is the public-facing tenant info returned by the
@@ -268,11 +268,11 @@ func (req *LoginRequest) Bind(_ *http.Request) error {
 
 // RegisterRequest represents the register request payload
 type RegisterRequest struct {
-	Email           string `json:"email"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirm_password"`
-	RoleID          *int64 `json:"role_id,omitempty"` // Optional role assignment
+	Email           string     `json:"email"`
+	Username        string     `json:"username"`
+	Password        string     `json:"password"`
+	ConfirmPassword string     `json:"confirm_password"`
+	RoleID          *common.ID `json:"role_id,omitempty"` // Optional role assignment
 
 	// Identity fields. Supplying them makes the account staff at the school in
 	// the same transaction (#2222) instead of leaving that to follow-up
@@ -311,12 +311,12 @@ func validateAccountCredentialFields(structPtr any, email, username, password, c
 
 // AccountResponse represents the account response payload
 type AccountResponse struct {
-	ID          int64    `json:"id"`
-	Email       string   `json:"email"`
-	Username    string   `json:"username,omitempty"`
-	Active      bool     `json:"active"`
-	Roles       []string `json:"roles,omitempty"`
-	Permissions []string `json:"permissions,omitempty"`
+	ID          common.ID `json:"id"`
+	Email       string    `json:"email"`
+	Username    string    `json:"username,omitempty"`
+	Active      bool      `json:"active"`
+	Roles       []string  `json:"roles,omitempty"`
+	Permissions []string  `json:"permissions,omitempty"`
 
 	// SchoolIdentity reports what was provisioned alongside the account, so the
 	// caller can attach staff details without looking the rows up again. Absent
@@ -349,8 +349,8 @@ type SchoolIdentityResponse struct {
 
 // LinkToTenantRequest represents a request to link an existing account to the current tenant.
 type LinkToTenantRequest struct {
-	Email  string `json:"email"`
-	RoleID *int64 `json:"role_id,omitempty"`
+	Email  string     `json:"email"`
+	RoleID *common.ID `json:"role_id,omitempty"`
 
 	// Identity fields, same meaning as on RegisterRequest (#2222).
 	FirstName string  `json:"first_name,omitempty"`

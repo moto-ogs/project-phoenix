@@ -31,9 +31,9 @@ func (p enrollmentFamilyChildrenPurpose) FamilyChildrenAsked(ctx context.Context
 		return false, err
 	}
 	var asked bool
-	if err := (CareContractRuntime{}).WithinTraeger(ctx, school.OrganizationID, func(txCtx context.Context) error {
+	if err := (CareContractRuntime{}).WithinTraeger(ctx, school.OrganizationID.Int64(), func(txCtx context.Context) error {
 		var err error
-		asked, err = parentBillingCompose.NewParentDocuments().CountsFamilyChildrenAt(txCtx, school.OrganizationID, schoolID, calendar.TodayDate())
+		asked, err = parentBillingCompose.NewParentDocuments().CountsFamilyChildrenAt(txCtx, school.OrganizationID.Int64(), schoolID, calendar.TodayDate())
 		return err
 	}); err != nil {
 		return false, fmt.Errorf("enrollment: read the sibling rules of the Träger: %w", err)

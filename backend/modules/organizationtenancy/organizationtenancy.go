@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type InvalidOrganizationError struct{ Reason string }
@@ -52,7 +54,7 @@ var (
 )
 
 type Organization struct {
-	ID        int64      `json:"id"`
+	ID        ident.ID   `json:"id"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	Name      string     `json:"name"`

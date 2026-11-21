@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // defaultActivityCategories are the categories every operator-provisioned
@@ -56,26 +57,26 @@ func (p *Provisioning) createSchool(adminCtx context.Context, school organizatio
 	if err != nil {
 		return nil, mapSchoolError(err, 0, school.OrganizationID)
 	}
-	if err := p.categories.SeedCategories(adminCtx, created.ID, defaultActivityCategories); err != nil {
+	if err := p.categories.SeedCategories(adminCtx, created.ID.Int64(), defaultActivityCategories); err != nil {
 		return nil, err
 	}
-	if err := p.createWebManualDevice(adminCtx, created.ID); err != nil {
+	if err := p.createWebManualDevice(adminCtx, created.ID.Int64()); err != nil {
 		return nil, err
 	}
 	// Settings records the state in this unit (#7174): the school exists
 	// with its federal state or not at all.
-	recorded, err := p.settings.RecordFederalState(adminCtx, created.ID, school.FederalState)
+	recorded, err := p.settings.RecordFederalState(adminCtx, created.ID.Int64(), school.FederalState)
 	if err != nil {
 		return nil, fmt.Errorf("record federal state of school %d: %w", created.ID, err)
 	}
 	if !recorded {
 		return nil, &organizationtenancy.InvalidProvisioningDataError{Err: &organizationtenancy.InvalidSchoolError{Reason: "federal state is not supported"}}
 	}
-	if err := p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceSchool, &created.ID, clientIP, map[string]any{
+	if err := p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceSchool, (*int64)(&created.ID), clientIP, map[string]any{
 		"name":           created.Name,
 		"slug":           created.Slug,
 		"subdomain":      created.Subdomain,
-		"organizationID": created.OrganizationID,
+		"organizationID": created.OrganizationID.Int64(),
 		"federalState":   school.FederalState,
 	}); err != nil {
 		return nil, err
@@ -136,7 +137,7 @@ func (p *Provisioning) ListSchools(ctx context.Context) ([]*organizationtenancy.
 	result := make([]*organizationtenancy.School, 0, len(schools))
 	for i := range schools {
 		school := schools[i]
-		if organization, ok := names[school.OrganizationID]; ok {
+		if organization, ok := names[school.OrganizationID.Int64()]; ok {
 			school.Organization = &organization
 		}
 		result = append(result, &school)
@@ -148,9 +149,9 @@ func (p *Provisioning) organizationsByID(ctx context.Context, schools []organiza
 	ids := make([]int64, 0, len(schools))
 	seen := make(map[int64]bool, len(schools))
 	for _, school := range schools {
-		if !seen[school.OrganizationID] {
-			seen[school.OrganizationID] = true
-			ids = append(ids, school.OrganizationID)
+		if !seen[school.OrganizationID.Int64()] {
+			seen[school.OrganizationID.Int64()] = true
+			ids = append(ids, school.OrganizationID.Int64())
 		}
 	}
 	result := make(map[int64]organizationtenancy.Organization, len(ids))
@@ -162,7 +163,7 @@ func (p *Provisioning) organizationsByID(ctx context.Context, schools []organiza
 		return nil, err
 	}
 	for _, organization := range organizations {
-		result[organization.ID] = organization
+		result[organization.ID.Int64()] = organization
 	}
 	return result, nil
 }
@@ -223,17 +224,17 @@ func (p *Provisioning) finishSchoolUpdate(ctx context.Context, existing, updated
 	id := existing.ID
 	change := changes.ChildQuota
 	if change == nil || sameChildQuota(existing.ChildQuota(), change.Quota) {
-		if err := p.recordAction(ctx, operatorID, domain.AuditActionUpdate, domain.AuditResourceSchool, &id, clientIP, diff); err != nil {
+		if err := p.recordAction(ctx, operatorID, domain.AuditActionUpdate, domain.AuditResourceSchool, (*int64)(&id), clientIP, diff); err != nil {
 			return nil, err
 		}
 		return &updated, nil
 	}
-	updated, err := p.organizations.SetSchoolChildQuota(ctx, id, change.Quota)
+	updated, err := p.organizations.SetSchoolChildQuota(ctx, id.Int64(), change.Quota)
 	if err != nil {
-		return nil, mapSchoolError(err, id, changes.OrganizationID)
+		return nil, mapSchoolError(err, id.Int64(), changes.OrganizationID)
 	}
 	diff["child_quota"] = map[string]any{"old": childQuotaAudit(existing.ChildQuota()), "new": childQuotaAudit(change.Quota)}
-	if err := p.recordAction(ctx, operatorID, domain.AuditActionUpdate, domain.AuditResourceSchool, &id, clientIP, diff); err != nil {
+	if err := p.recordAction(ctx, operatorID, domain.AuditActionUpdate, domain.AuditResourceSchool, (*int64)(&id), clientIP, diff); err != nil {
 		return nil, err
 	}
 	return &updated, nil
@@ -261,7 +262,7 @@ func (p *Provisioning) schoolChangeSet(ctx context.Context, existing organizatio
 		return nil, err
 	}
 	diff := map[string]any{}
-	if changes.OrganizationID != existing.OrganizationID {
+	if ident.ID(changes.OrganizationID) != existing.OrganizationID {
 		organization, err := p.organizations.FindOrganizationForSchoolMutation(ctx, changes.OrganizationID)
 		if err != nil {
 			return nil, mapOrganizationError(err, changes.OrganizationID)
@@ -269,7 +270,7 @@ func (p *Provisioning) schoolChangeSet(ctx context.Context, existing organizatio
 		if organization.IsDeleted() {
 			return nil, &organizationtenancy.OrganizationDeletedError{OrganizationID: changes.OrganizationID}
 		}
-		diff["organization_id"] = map[string]int64{"old": existing.OrganizationID, "new": changes.OrganizationID}
+		diff["organization_id"] = map[string]int64{"old": existing.OrganizationID.Int64(), "new": changes.OrganizationID}
 	}
 	if err := p.schoolSlugChange(ctx, existing, changes, diff); err != nil {
 		return nil, err
@@ -316,7 +317,7 @@ func (p *Provisioning) SoftDeleteSchool(ctx context.Context, schoolID, operatorI
 			return fmt.Errorf("revoke tokens for school %d: %w", schoolID, err)
 		}
 		if _, err := p.organizations.SoftDeleteSchool(adminCtx, schoolID); err != nil {
-			return mapSchoolError(err, schoolID, school.OrganizationID)
+			return mapSchoolError(err, schoolID, school.OrganizationID.Int64())
 		}
 		invalidatedInvitations, err := p.identity.InvalidatePendingInvitations(adminCtx, schoolID)
 		if err != nil {
@@ -346,15 +347,15 @@ func (p *Provisioning) RestoreSchool(ctx context.Context, schoolID, operatorID i
 		if !school.IsDeleted() {
 			return &organizationtenancy.SchoolNotDeletedError{SchoolID: schoolID}
 		}
-		organization, err := p.organizations.FindOrganizationForSchoolMutation(adminCtx, school.OrganizationID)
+		organization, err := p.organizations.FindOrganizationForSchoolMutation(adminCtx, school.OrganizationID.Int64())
 		if err != nil {
-			return mapOrganizationError(err, school.OrganizationID)
+			return mapOrganizationError(err, school.OrganizationID.Int64())
 		}
 		if organization.IsDeleted() {
-			return &organizationtenancy.OrganizationDeletedError{OrganizationID: school.OrganizationID}
+			return &organizationtenancy.OrganizationDeletedError{OrganizationID: school.OrganizationID.Int64()}
 		}
 		if _, err := p.organizations.RestoreSchool(adminCtx, schoolID); err != nil {
-			return mapSchoolError(err, schoolID, school.OrganizationID)
+			return mapSchoolError(err, schoolID, school.OrganizationID.Int64())
 		}
 		return p.recordAction(adminCtx, operatorID, domain.AuditActionRestore, domain.AuditResourceSchool, &schoolID, clientIP, map[string]any{
 			"name":      school.Name,
@@ -424,7 +425,7 @@ func (p *Provisioning) schoolSubdomainChange(ctx context.Context, existing organ
 }
 
 func (p *Provisioning) schoolSlugChange(ctx context.Context, existing organizationtenancy.School, changes organizationtenancy.SchoolChanges, diff map[string]any) error {
-	if changes.Slug != existing.Slug || changes.OrganizationID != existing.OrganizationID {
+	if changes.Slug != existing.Slug || ident.ID(changes.OrganizationID) != existing.OrganizationID {
 		taken, err := p.schoolBySlug(ctx, changes.OrganizationID, changes.Slug)
 		if err != nil {
 			return err

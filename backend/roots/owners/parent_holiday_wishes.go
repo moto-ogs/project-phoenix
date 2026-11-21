@@ -147,7 +147,7 @@ func (r parentHolidayRegistrations) traegerNames(ctx context.Context, ids []int6
 	names := make(map[int64]string, len(organizations))
 	for _, organization := range organizations {
 		if !activeOnly || (organization.Active && !organization.IsDeleted()) {
-			names[organization.ID] = organization.Name
+			names[organization.ID.Int64()] = organization.Name
 		}
 	}
 	return names, nil

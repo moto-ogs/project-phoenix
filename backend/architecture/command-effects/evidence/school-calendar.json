@@ -3698,7 +3698,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerCalendarSchools.TraegerSchools",
-      "binding_digest": "327fad507fd2696bc9e03a1546b985ee",
+      "binding_digest": "a4c819262f7fb4cd36a0ccecbfadb926",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
       "source_owner": "school-calendar",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.String",
@@ -3706,7 +3706,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerCalendarSchools.TraegerSchools",
-      "binding_digest": "d49baa774884acddcfff9abd7d6680a2",
+      "binding_digest": "bcbf3f338291a70f6b8c33fb66cc600a",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -3714,7 +3714,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerCalendarSchools.TraegerSchools",
-      "binding_digest": "9002b0710bda07cb6f35d3da4dc8b69a",
+      "binding_digest": "8be3e141430f24cbf6b0594dd38236c2",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
@@ -3722,7 +3722,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerCalendarSchools.TraegerSchools",
-      "binding_digest": "58d8fa8bd4cde5bdefbad0ee6a692e82",
+      "binding_digest": "e833f9da9e8ae4929300aea02c1665aa",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.Schools.TraegerSchools",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",

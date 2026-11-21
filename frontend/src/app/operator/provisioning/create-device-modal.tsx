@@ -86,7 +86,7 @@ export function CreateDeviceModal({
       clearError();
       try {
         const device = await operatorProvisioningService.createDevice({
-          school_id: parseInt(schoolId, 10),
+          school_id: schoolId,
           device_id: deviceId.trim(),
           device_type: deviceType,
           ...(name.trim() && { name: name.trim() }),

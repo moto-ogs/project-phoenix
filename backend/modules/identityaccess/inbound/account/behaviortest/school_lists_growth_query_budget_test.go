@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api"
@@ -73,8 +74,8 @@ func schoolListsGrowthBudget(t *testing.T, accountList bool) {
 		require.NoError(t, db.NewSelect().TableExpr("platform.schools").Column("slug", "subdomain").Where("id = ?", id).Scan(context.Background(), &school))
 		dto := map[string]any{"slug": school.Slug, "name": "Schule " + name, "subdomain": school.Subdomain, "organization_name": organization.Name}
 		if accountList {
-			dto["tenant_id"] = float64(id)
-			dto["organization_id"] = float64(organization.ID)
+			dto["tenant_id"] = strconv.FormatInt(id, 10)
+			dto["organization_id"] = strconv.FormatInt(organization.ID, 10)
 		}
 		t.Logf("persisted school id=%d organization_id=%d hidden=%v member=%d DTO=%v", id, organization.ID, hidden, member, dto)
 		return id, dto

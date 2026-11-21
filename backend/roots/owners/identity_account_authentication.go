@@ -169,7 +169,7 @@ type SchoolDirectory struct {
 
 func schoolFact(school organizationtenancy.School) identityaccess.School {
 	return identityaccess.School{
-		ID: school.ID, OrganizationID: school.OrganizationID, Name: school.Name, Slug: school.Slug,
+		ID: school.ID.Int64(), OrganizationID: school.OrganizationID.Int64(), Name: school.Name, Slug: school.Slug,
 		Subdomain: school.Subdomain, Active: school.Active, Deleted: school.IsDeleted(),
 		LogoURL: schoolLogoURLFromSettings(school.Settings),
 	}
@@ -313,7 +313,7 @@ func liveTraegersInOrder(organizations []organizationtenancy.Organization, organ
 	live := make(map[int64]identityaccess.TraegerOrganization, len(organizations))
 	for _, organization := range organizations {
 		if organization.Active && !organization.IsDeleted() {
-			live[organization.ID] = identityaccess.TraegerOrganization{ID: organization.ID, Name: organization.Name}
+			live[organization.ID.Int64()] = identityaccess.TraegerOrganization{ID: organization.ID.Int64(), Name: organization.Name}
 		}
 	}
 	result := make([]identityaccess.TraegerOrganization, 0, len(live))

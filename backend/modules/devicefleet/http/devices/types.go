@@ -7,17 +7,18 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	devicefleet "github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DeviceResponse represents a device API response
 type DeviceResponse struct {
-	ID             int64     `json:"id"`
+	ID             ident.ID  `json:"id"`
 	DeviceID       string    `json:"device_id"`
 	DeviceType     string    `json:"device_type"`
 	Name           *string   `json:"name,omitempty"`
 	Status         string    `json:"status"`
 	LastSeen       *WireTime `json:"last_seen,omitempty"`
-	RegisteredByID *int64    `json:"registered_by_id,omitempty"`
+	RegisteredByID *ident.ID `json:"registered_by_id,omitempty"`
 	RoomName       *string   `json:"room_name,omitempty"`
 	IsOnline       bool      `json:"is_online"`
 	CreatedAt      WireTime  `json:"created_at"`
@@ -32,11 +33,11 @@ type DeviceCreationResponse struct {
 
 // DeviceRequest represents a device creation/update request
 type DeviceRequest struct {
-	DeviceID       string  `json:"device_id"`
-	DeviceType     string  `json:"device_type"`
-	Name           *string `json:"name,omitempty"`
-	Status         string  `json:"status,omitempty"`
-	RegisteredByID *int64  `json:"registered_by_id,omitempty"`
+	DeviceID       string    `json:"device_id"`
+	DeviceType     string    `json:"device_type"`
+	Name           *string   `json:"name,omitempty"`
+	Status         string    `json:"status,omitempty"`
+	RegisteredByID *ident.ID `json:"registered_by_id,omitempty"`
 }
 
 // Bind validates the device request
@@ -80,12 +81,12 @@ func (req *DeviceStatusRequest) Bind(_ *http.Request) error {
 // rather than the model.
 func newDeviceResponse(ctx context.Context, svc devicefleet.DeviceOnlineMonitoring, device *devicefleet.Device) DeviceResponse {
 	response := DeviceResponse{
-		ID:             device.ID,
+		ID:             ident.ID(device.ID),
 		DeviceID:       device.DeviceID,
 		DeviceType:     device.DeviceType,
 		Name:           device.Name,
 		Status:         string(device.Status),
-		RegisteredByID: device.RegisteredByID,
+		RegisteredByID: (*ident.ID)(device.RegisteredByID),
 		RoomName:       device.RoomName,
 		IsOnline:       svc.IsDeviceOnline(ctx, device),
 		CreatedAt:      WireTime(device.CreatedAt),

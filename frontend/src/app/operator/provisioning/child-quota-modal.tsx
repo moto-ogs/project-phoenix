@@ -33,7 +33,7 @@ function schoolUpdate(
   childQuota: UpdateSchoolRequest["child_quota"],
 ): UpdateSchoolRequest {
   return {
-    organization_id: parseInt(school.organizationId, 10),
+    organization_id: school.organizationId,
     name: school.name,
     slug: school.slug,
     subdomain: school.subdomain,

@@ -126,7 +126,7 @@ func (d TraegerBueroDirectory) FindLiveTraeger(ctx context.Context, organization
 	if !organization.Active || organization.IsDeleted() {
 		return identityaccess.TraegerOrganization{}, false, nil
 	}
-	return identityaccess.TraegerOrganization{ID: organization.ID, Name: organization.Name}, true, nil
+	return identityaccess.TraegerOrganization{ID: organization.ID.Int64(), Name: organization.Name}, true, nil
 }
 
 // ListActiveTraegerMemberships returns the active memberships of the Träger.

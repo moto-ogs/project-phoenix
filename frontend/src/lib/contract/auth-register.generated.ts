@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
   requestBody,
@@ -21,7 +21,7 @@ export interface RegisterRequest {
   username?: string;
   password?: string;
   confirm_password?: string;
-  role_id?: number | null;
+  role_id?: string | null;
   first_name?: string;
   last_name?: string;
   tag_id?: string | null;
@@ -39,7 +39,7 @@ export interface AccountResponse {
 }
 
 export const AccountResponseSchema: z.ZodType<AccountResponse, unknown> = object<AccountResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   username: optional(str),
   active: bool,

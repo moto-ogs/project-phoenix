@@ -34,7 +34,7 @@ func TestDeviceManagementAnswersItsContract(t *testing.T) {
 	require.Equal(t, http.StatusCreated, code, string(body))
 	var created struct {
 		Data struct {
-			ID     int64  `json:"id"`
+			ID     wireID `json:"id"`
 			APIKey string `json:"api_key"`
 		} `json:"data"`
 	}

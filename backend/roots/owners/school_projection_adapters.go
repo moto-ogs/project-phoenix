@@ -18,7 +18,7 @@ func (q activeSchoolQuery) ListSchoolsByID(ctx context.Context, ids []int64) ([]
 	}
 	result := make([]presenceservice.School, 0, len(schools))
 	for _, school := range schools {
-		result = append(result, presenceservice.School{ID: school.ID, Slug: school.Slug})
+		result = append(result, presenceservice.School{ID: school.ID.Int64(), Slug: school.Slug})
 	}
 	return result, nil
 }

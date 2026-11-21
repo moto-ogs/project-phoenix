@@ -99,7 +99,7 @@ func (rs *Resource) createDevice(w http.ResponseWriter, r *http.Request) {
 		DeviceID:       req.DeviceID,
 		DeviceType:     req.DeviceType,
 		Name:           req.Name,
-		RegisteredByID: req.RegisteredByID,
+		RegisteredByID: (*int64)(req.RegisteredByID),
 	}
 
 	// Set status if provided, otherwise default to active
@@ -161,7 +161,7 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	device.DeviceID = req.DeviceID
 	device.DeviceType = req.DeviceType
 	device.Name = req.Name
-	device.RegisteredByID = req.RegisteredByID
+	device.RegisteredByID = (*int64)(req.RegisteredByID)
 	// An omitted status keeps the stored one; the edit then does not write
 	// the status this request read, which may already be outdated.
 	device.Status = devicefleet.DeviceStatus(req.Status)

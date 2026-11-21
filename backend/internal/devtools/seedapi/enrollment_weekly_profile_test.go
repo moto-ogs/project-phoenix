@@ -272,7 +272,7 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		}
 		data = map[string]any{"created_student_id": parts[6]}
 	case path == "/api/iot/" && r.Method == "POST":
-		data = map[string]any{"id": m.nextID, "api_key": "synthetic-device-key"}
+		data = map[string]any{"id": fmt.Sprint(m.nextID), "api_key": "synthetic-device-key"}
 	case path == "/api/iot/":
 		if !m.bookings {
 			w.WriteHeader(seedHTTPStatusForbidden)
@@ -281,7 +281,7 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		}
 		data = []map[string]any{}
 		if m.bookings && r.URL.Query().Get("device_type") == "terminal" {
-			data = []map[string]any{{"id": 42, "device_id": "BUCHUNGEN-NFC-001", "device_type": "terminal"}}
+			data = []map[string]any{{"id": "42", "device_id": "BUCHUNGEN-NFC-001", "device_type": "terminal"}}
 		}
 		if r.URL.Query().Get("device_type") == "virtual" {
 			data = []map[string]any{{"device_id": webManualDeviceID, "device_type": "virtual"}}

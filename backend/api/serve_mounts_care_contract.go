@@ -161,7 +161,7 @@ func (s careContractSchools) TraegerSchools(ctx context.Context, organizationID 
 	result := make([]carecontract.School, 0, len(schools))
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			result = append(result, carecontract.School{ID: school.ID, Name: school.Name})
+			result = append(result, carecontract.School{ID: school.ID.Int64(), Name: school.Name})
 		}
 	}
 	slices.SortFunc(result, func(a, b carecontract.School) int {

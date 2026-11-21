@@ -466,7 +466,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractTraeger.ActiveTraegerIDs",
-      "binding_digest": "f07cb6a9eb49dc51c63531af8920c6d8",
+      "binding_digest": "2e15fb2a101c101505011861d3a5d486",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerOrganizations.ActiveTraegerIDs",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizations",
@@ -474,7 +474,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractTraeger.ActiveTraegerIDs",
-      "binding_digest": "15aaf3bca36bf448936a981535b10dd4",
+      "binding_digest": "efc6249e84de604db1a384071e256b3a",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerOrganizations.ActiveTraegerIDs",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizations",
@@ -482,7 +482,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchools.TraegerSchools",
-      "binding_digest": "2f82bb7b68d86a13cd7a2f415381e2a0",
+      "binding_digest": "7519878fd4963492ed520b35a6e684b5",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerSchools.TraegerSchools",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -490,7 +490,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchools.TraegerSchools",
-      "binding_digest": "6f8d20bdbd9cea6afb5d9e965015d65a",
+      "binding_digest": "90a10970287dfafb1bda6e90ca017b49",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerSchools.TraegerSchools",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
@@ -498,7 +498,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchools.TraegerSchools",
-      "binding_digest": "c64697fbc24f71f22199ae4f3d4dfef2",
+      "binding_digest": "ee5f5a4394ee278d4144b822b26b95c5",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerSchools.TraegerSchools",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",

@@ -29,7 +29,7 @@ func TestOperatorAuditFailureRollsBackRotation(t *testing.T) {
 	FOR EACH ROW EXECUTE FUNCTION platform.reject_operator_audit()`)
 	require.NoError(t, err)
 
-	rotated, err := service.SetDeviceAPIKey(ctx, device.ID, nil, operatorID, provisioningTestClientIP)
+	rotated, err := service.SetDeviceAPIKey(ctx, device.ID.Int64(), nil, operatorID, provisioningTestClientIP)
 	require.Error(t, err)
 	assert.Nil(t, rotated, "a failed audit must not return a new credential")
 	var after string
@@ -135,13 +135,15 @@ func TestOperatorAuditFailureRollsBackDeletesAndTransfer(t *testing.T) {
 	require.NoError(t, err)
 	for name, action := range map[string]func() error{
 		"transfer": func() error {
-			_, err := service.TransferDevice(ctx, device.ID, target.ID, operatorID, provisioningTestClientIP)
+			_, err := service.TransferDevice(ctx, device.ID.Int64(), target.ID.Int64(), operatorID, provisioningTestClientIP)
 			return err
 		},
-		"device": func() error { return service.DeleteDevice(ctx, device.ID, operatorID, provisioningTestClientIP) },
+		"device": func() error {
+			return service.DeleteDevice(ctx, device.ID.Int64(), operatorID, provisioningTestClientIP)
+		},
 		"school": func() error { return service.SoftDeleteSchool(ctx, schoolID, operatorID, provisioningTestClientIP) },
 		"organization": func() error {
-			return service.SoftDeleteOrganization(ctx, organization.ID, operatorID, provisioningTestClientIP)
+			return service.SoftDeleteOrganization(ctx, organization.ID.Int64(), operatorID, provisioningTestClientIP)
 		},
 		"person": func() error { return service.SoftDeletePerson(ctx, person.ID, operatorID, provisioningTestClientIP) },
 	} {

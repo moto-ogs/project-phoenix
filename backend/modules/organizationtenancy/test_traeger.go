@@ -95,7 +95,7 @@ func TestSchools(organization Organization, input CreateTestTraeger) []CreateSch
 	schools := make([]CreateSchool, 0, input.SchoolCount)
 	for number := 1; number <= input.SchoolCount; number++ {
 		schools = append(schools, CreateSchool{
-			OrganizationID: organization.ID,
+			OrganizationID: organization.ID.Int64(),
 			Name:           fmt.Sprintf("Test-Schule %d", number),
 			Slug:           fmt.Sprintf("test-schule-%d", number),
 			Subdomain:      fmt.Sprintf("%s-test-%d", organization.Slug, number),

@@ -201,8 +201,8 @@ export async function releaseTraegerDocument(
       method: "POST",
       body: {
         audience: input.audience,
-        school_id: input.schoolId === null ? null : Number(input.schoolId),
-        group_id: input.groupId === null ? null : Number(input.groupId),
+        school_id: input.schoolId === null ? null : input.schoolId,
+        group_id: input.groupId === null ? null : input.groupId,
       } satisfies ReleaseRequest,
     },
   );

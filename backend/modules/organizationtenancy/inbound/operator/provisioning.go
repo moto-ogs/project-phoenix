@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -93,17 +94,17 @@ func (req *createOrganizationRequest) Bind(_ *http.Request) error {
 }
 
 type createSchoolRequest struct {
-	OrganizationID int64  `json:"organization_id"`
-	Name           string `json:"name"`
-	Slug           string `json:"slug"`
-	Subdomain      string `json:"subdomain"`
-	Address        string `json:"address,omitempty"`
-	City           string `json:"city,omitempty"`
-	Zip            string `json:"zip,omitempty"`
-	Phone          string `json:"phone,omitempty"`
-	Email          string `json:"email,omitempty"`
-	FederalState   string `json:"federal_state"`
-	Hidden         bool   `json:"hidden,omitempty"`
+	OrganizationID common.ID `json:"organization_id"`
+	Name           string    `json:"name"`
+	Slug           string    `json:"slug"`
+	Subdomain      string    `json:"subdomain"`
+	Address        string    `json:"address,omitempty"`
+	City           string    `json:"city,omitempty"`
+	Zip            string    `json:"zip,omitempty"`
+	Phone          string    `json:"phone,omitempty"`
+	Email          string    `json:"email,omitempty"`
+	FederalState   string    `json:"federal_state"`
+	Hidden         bool      `json:"hidden,omitempty"`
 }
 
 func (req *createSchoolRequest) Bind(_ *http.Request) error {
@@ -146,9 +147,9 @@ type inviteSchoolAdminRequest struct {
 }
 
 type operatorInvitationResponse struct {
-	ID               int64      `json:"id"`
+	ID               common.ID  `json:"id"`
 	Email            string     `json:"email"`
-	RoleID           int64      `json:"role_id"`
+	RoleID           common.ID  `json:"role_id"`
 	RoleName         string     `json:"role_name,omitempty"`
 	Token            *string    `json:"token,omitempty"`
 	ExpiresAt        time.Time  `json:"expires_at"`
@@ -156,7 +157,7 @@ type operatorInvitationResponse struct {
 	LastName         *string    `json:"last_name,omitempty"`
 	Position         *string    `json:"position,omitempty"`
 	CaregiverEnabled bool       `json:"caregiver_enabled"`
-	CreatedBy        int64      `json:"created_by"`
+	CreatedBy        common.ID  `json:"created_by"`
 	Creator          string     `json:"creator,omitempty"`
 	DeliveryStatus   string     `json:"delivery_status"`
 	EmailSentAt      *time.Time `json:"email_sent_at,omitempty"`
@@ -252,7 +253,7 @@ func (rs *ProvisioningResource) CreateSchool(w http.ResponseWriter, r *http.Requ
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
 	school := &organizationtenancy.CreateSchool{
-		OrganizationID: req.OrganizationID,
+		OrganizationID: req.OrganizationID.Int64(),
 		Name:           req.Name,
 		Slug:           req.Slug,
 		Subdomain:      req.Subdomain,
@@ -318,7 +319,7 @@ func (rs *ProvisioningResource) UpdateSchool(w http.ResponseWriter, r *http.Requ
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
 	svcReq := organizationtenancy.SchoolChanges{
-		OrganizationID: req.OrganizationID,
+		OrganizationID: req.OrganizationID.Int64(),
 		Name:           req.Name,
 		Slug:           req.Slug,
 		Subdomain:      req.Subdomain,
@@ -424,15 +425,15 @@ func (rs *ProvisioningResource) InviteSchoolAdmin(w http.ResponseWriter, r *http
 		return
 	}
 	resp := operatorInvitationResponse{
-		ID:               invitation.ID,
+		ID:               ident.ID(invitation.ID),
 		Email:            invitation.Email,
-		RoleID:           invitation.RoleID,
+		RoleID:           ident.ID(invitation.RoleID),
 		ExpiresAt:        invitation.ExpiresAt,
 		FirstName:        invitation.FirstName,
 		LastName:         invitation.LastName,
 		Position:         invitation.Position,
 		CaregiverEnabled: invitation.CaregiverEnabled,
-		CreatedBy:        operatorInvitationCreatedByValue(invitation.CreatedBy),
+		CreatedBy:        ident.ID(operatorInvitationCreatedByValue(invitation.CreatedBy)),
 		DeliveryStatus:   operatorInvitationDeliveryStatus(invitation.EmailSentAt, invitation.EmailError),
 		EmailSentAt:      invitation.EmailSentAt,
 		EmailError:       invitation.EmailError,
@@ -628,11 +629,11 @@ func (rs *ProvisioningResource) ListOrganizationDevices(w http.ResponseWriter, r
 }
 
 type createDeviceRequest struct {
-	SchoolID   int64  `json:"school_id"`
-	DeviceID   string `json:"device_id"`
-	DeviceType string `json:"device_type"`
-	Name       string `json:"name,omitempty"`
-	APIKey     string `json:"api_key,omitempty"`
+	SchoolID   common.ID `json:"school_id"`
+	DeviceID   string    `json:"device_id"`
+	DeviceType string    `json:"device_type"`
+	Name       string    `json:"name,omitempty"`
+	APIKey     string    `json:"api_key,omitempty"`
 }
 
 func (req *createDeviceRequest) Bind(_ *http.Request) error {
@@ -657,7 +658,7 @@ type setDeviceAPIKeyRequest struct {
 }
 
 type transferDeviceRequest struct {
-	TargetSchoolID int64 `json:"target_school_id"`
+	TargetSchoolID common.ID `json:"target_school_id"`
 }
 
 func (req *transferDeviceRequest) Bind(_ *http.Request) error {
@@ -687,7 +688,7 @@ func (rs *ProvisioningResource) CreateDevice(w http.ResponseWriter, r *http.Requ
 	if req.APIKey != "" {
 		apiKey = &req.APIKey
 	}
-	device, err := rs.service.CreateDevice(r.Context(), req.SchoolID, req.DeviceID, req.DeviceType, name, apiKey, operatorID, common.ParseClientIP(r))
+	device, err := rs.service.CreateDevice(r.Context(), req.SchoolID.Int64(), req.DeviceID, req.DeviceType, name, apiKey, operatorID, common.ParseClientIP(r))
 	if err != nil {
 		common.RenderError(w, r, ProvisioningErrorRenderer(err))
 		return
@@ -758,7 +759,7 @@ func (rs *ProvisioningResource) TransferDevice(w http.ResponseWriter, r *http.Re
 		return
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
-	device, err := rs.service.TransferDevice(r.Context(), deviceID, req.TargetSchoolID, operatorID, common.ParseClientIP(r))
+	device, err := rs.service.TransferDevice(r.Context(), deviceID, req.TargetSchoolID.Int64(), operatorID, common.ParseClientIP(r))
 	if err != nil {
 		common.RenderError(w, r, ProvisioningErrorRenderer(err))
 		return

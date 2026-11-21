@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger lifecycle (#4657, spec #4611 user story 11): the moto team
@@ -38,12 +39,12 @@ var ErrTraegerErasureOrderNotFound = errors.New("organization has no open erasur
 // TraegerErasureOrder is the open erasure order of a Träger. It carries no
 // personal data: the order reference is a case number, the operators are IDs.
 type TraegerErasureOrder struct {
-	ID             int64         `json:"id"`
-	OrganizationID int64         `json:"organization_id"`
+	ID             ident.ID      `json:"id"`
+	OrganizationID ident.ID      `json:"organization_id"`
 	OrderReference string        `json:"order_reference"`
 	ConfirmedOn    calendar.Date `json:"confirmed_on"`
 	EraseNotBefore calendar.Date `json:"erase_not_before"`
-	RecordedBy     int64         `json:"recorded_by"`
+	RecordedBy     ident.ID      `json:"recorded_by"`
 	RecordedAt     time.Time     `json:"recorded_at"`
 	// StartedAt is set once the erasure CLI erased the first school; the
 	// order can no longer be withdrawn.

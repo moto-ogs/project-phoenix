@@ -84,7 +84,7 @@ func (d authSchoolDirectory) GetSchoolBySubdomain(ctx context.Context, subdomain
 		return nil, err
 	}
 	// The tenant shell names the Träger only while it runs several schools.
-	if views[0].TraegerName, err = d.schools.FindVisibleTraegerName(ctx, school.OrganizationID); err != nil {
+	if views[0].TraegerName, err = d.schools.FindVisibleTraegerName(ctx, school.OrganizationID.Int64()); err != nil {
 		return nil, err
 	}
 	return &views[0], nil
@@ -123,9 +123,9 @@ func (d authSchoolDirectory) withOrganizations(ctx context.Context, schools []or
 	ids := make([]int64, 0, len(schools))
 	seen := make(map[int64]bool, len(schools))
 	for _, school := range schools {
-		if !seen[school.OrganizationID] {
-			seen[school.OrganizationID] = true
-			ids = append(ids, school.OrganizationID)
+		if !seen[school.OrganizationID.Int64()] {
+			seen[school.OrganizationID.Int64()] = true
+			ids = append(ids, school.OrganizationID.Int64())
 		}
 	}
 	names := make(map[int64]string, len(ids))
@@ -135,19 +135,19 @@ func (d authSchoolDirectory) withOrganizations(ctx context.Context, schools []or
 			return nil, err
 		}
 		for _, organization := range organizations {
-			names[organization.ID] = organization.Name
+			names[organization.ID.Int64()] = organization.Name
 		}
 	}
 	views := make([]authAPI.TenantSchool, 0, len(schools))
 	for _, school := range schools {
-		views = append(views, tenantSchool(school, names[school.OrganizationID]))
+		views = append(views, tenantSchool(school, names[school.OrganizationID.Int64()]))
 	}
 	return views, nil
 }
 
 func tenantSchool(school organizationModule.School, organizationName string) authAPI.TenantSchool {
 	return authAPI.TenantSchool{
-		ID: school.ID, OrganizationID: school.OrganizationID, OrganizationName: organizationName,
+		ID: school.ID.Int64(), OrganizationID: school.OrganizationID.Int64(), OrganizationName: organizationName,
 		Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Settings: school.Settings,
 		Active: school.Active, Hidden: school.Hidden, Deleted: school.IsDeleted(),
 	}
@@ -163,7 +163,7 @@ func (d enrollmentSchoolDirectory) GetSchoolBySlug(ctx context.Context, slug str
 	if err != nil || school == nil {
 		return nil, err
 	}
-	return &enrollmentAPI.PublicSchool{ID: school.ID, Deleted: school.IsDeleted()}, nil
+	return &enrollmentAPI.PublicSchool{ID: school.ID.Int64(), Deleted: school.IsDeleted()}, nil
 }
 
 // parentSchoolDirectory answers the parent enrollment routes.
@@ -176,7 +176,7 @@ func (d parentSchoolDirectory) GetSchoolBySubdomain(ctx context.Context, subdoma
 	if err != nil || school == nil {
 		return nil, err
 	}
-	return &parentAPI.EnrollmentSchool{ID: school.ID, Active: school.Active, Hidden: school.Hidden, Deleted: school.IsDeleted()}, nil
+	return &parentAPI.EnrollmentSchool{ID: school.ID.Int64(), Active: school.Active, Hidden: school.Hidden, Deleted: school.IsDeleted()}, nil
 }
 
 // studentSchoolDirectory answers the student export routes.
@@ -245,7 +245,7 @@ func (d tagScanSchoolDirectory) ListOrganizationsByID(ctx context.Context, ids [
 	}
 	result := make([]tagScanOperatorAPI.Organization, 0, len(organizations))
 	for _, organization := range organizations {
-		result = append(result, tagScanOperatorAPI.Organization{ID: organization.ID, Name: organization.Name})
+		result = append(result, tagScanOperatorAPI.Organization{ID: organization.ID.Int64(), Name: organization.Name})
 	}
 	return result, nil
 }
@@ -256,7 +256,7 @@ func tagScanSchools(schools []organizationModule.School) []tagScanOperatorAPI.Sc
 	}
 	result := make([]tagScanOperatorAPI.School, 0, len(schools))
 	for _, school := range schools {
-		result = append(result, tagScanOperatorAPI.School{ID: school.ID, OrganizationID: school.OrganizationID, Name: school.Name})
+		result = append(result, tagScanOperatorAPI.School{ID: school.ID.Int64(), OrganizationID: school.OrganizationID.Int64(), Name: school.Name})
 	}
 	return result
 }

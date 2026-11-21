@@ -221,7 +221,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendSchool);
 
       const updateData = {
-        organization_id: 5,
+        organization_id: "5",
         name: "Updated School",
         slug: "updated-school",
         subdomain: "updated-school",
@@ -245,7 +245,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendSchool);
 
       const result = await operatorProvisioningService.updateSchool("10", {
-        organization_id: 5,
+        organization_id: "5",
         name: "GGS Europaschule",
         slug: "ggs-europa",
         subdomain: "ggs-europa",
@@ -329,7 +329,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendSchool);
 
       await operatorProvisioningService.createSchool({
-        organization_id: 5,
+        organization_id: "5",
         name: "GGS Europaschule",
         slug: "ggs-europa",
         subdomain: "ggs-europa",
@@ -340,7 +340,7 @@ describe("OperatorProvisioningService", () => {
       expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/schools", {
         method: "POST",
         body: {
-          organization_id: 5,
+          organization_id: "5",
           name: "GGS Europaschule",
           slug: "ggs-europa",
           subdomain: "ggs-europa",
@@ -599,7 +599,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendDevice);
 
       const createData = {
-        school_id: 10,
+        school_id: "10",
         device_id: "DEV-001",
         device_type: "terminal",
         name: "Eingang Hauptgebäude",
@@ -620,7 +620,7 @@ describe("OperatorProvisioningService", () => {
       });
 
       const result = await operatorProvisioningService.createDevice({
-        school_id: 10,
+        school_id: "10",
         device_id: "DEV-001",
         device_type: "terminal",
       });
@@ -731,7 +731,7 @@ describe("OperatorProvisioningService", () => {
       });
     });
 
-    it("posts the numeric target school and maps the transferred device", async () => {
+    it("posts the target school as a string and maps the transferred device", async () => {
       mockOperatorFetch.mockResolvedValue({
         ...mockBackendDevice,
         school_id: "20",
@@ -745,7 +745,7 @@ describe("OperatorProvisioningService", () => {
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
         "/api/operator/devices/1%2Funsafe/transfer",
-        { method: "POST", body: { target_school_id: 20 } },
+        { method: "POST", body: { target_school_id: "20" } },
       );
       expect(result.schoolId).toBe("20");
       expect(result.schoolName).toBe("Walbach");

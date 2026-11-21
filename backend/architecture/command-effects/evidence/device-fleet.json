@@ -226,7 +226,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.tagScanSchoolDirectory.ListOrganizationsByID",
-      "binding_digest": "ca095b1cb2a34dd0758ec7fa2ddb1464",
+      "binding_digest": "dfa947dbbf888e13d21d5466c5c0176a",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/inbound/operator.Directory.ListOrganizationsByID",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizationsByID",
@@ -234,7 +234,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.tagScanSchoolDirectory.ListOrganizationsByID",
-      "binding_digest": "688fe8079b787081ca48165625f816fe",
+      "binding_digest": "8e3fb502b9561b6294f14007b78f8e64",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/inbound/operator.Directory.ListOrganizationsByID",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizationsByID",

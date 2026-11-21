@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -121,7 +123,7 @@ func TestInvitationHandlers_CreateInvitationAndListPending(t *testing.T) {
 	body := decodeJSONBody(t, rr)
 	data := body["data"].(map[string]any)
 	assert.Equal(t, "9007199254740993", data["role_id"])
-	assert.Equal(t, float64(0), data["created_by"])
+	assert.Equal(t, int64(0), testpkg.JSONID(t, data["created_by"]))
 	assert.Equal(t, "failed", data["delivery_status"])
 	assert.Equal(t, creator, data["creator"])
 
@@ -134,7 +136,7 @@ func TestInvitationHandlers_CreateInvitationAndListPending(t *testing.T) {
 	require.Len(t, items, 1)
 	item := items[0].(map[string]any)
 	assert.Equal(t, "sent", item["delivery_status"])
-	assert.Equal(t, float64(0), item["created_by"])
+	assert.Equal(t, int64(0), testpkg.JSONID(t, item["created_by"]))
 }
 
 func TestInvitationHandlers_CreateInvitation_AccountAlreadyHasTenantAccess(t *testing.T) {

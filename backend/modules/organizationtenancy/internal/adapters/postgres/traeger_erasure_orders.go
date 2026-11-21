@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -35,9 +36,9 @@ type traegerErasureOrderRow struct {
 
 func (r traegerErasureOrderRow) toDomain() organizationtenancy.TraegerErasureOrder {
 	return organizationtenancy.TraegerErasureOrder{
-		ID: r.ID, OrganizationID: r.OrganizationID, OrderReference: r.OrderReference,
+		ID: ident.ID(r.ID), OrganizationID: ident.ID(r.OrganizationID), OrderReference: r.OrderReference,
 		ConfirmedOn: r.ConfirmedOn, EraseNotBefore: r.EraseNotBefore,
-		RecordedBy: r.RecordedBy, RecordedAt: r.RecordedAt, StartedAt: r.StartedAt,
+		RecordedBy: ident.ID(r.RecordedBy), RecordedAt: r.RecordedAt, StartedAt: r.StartedAt,
 		RecordsNoticeShownAt: r.RecordsNoticeShownAt, RecordsHandedOverOn: r.RecordsHandedOverOn,
 		RecordsChoice:       organizationtenancy.RecordsChoice(deref(r.RecordsChoice)),
 		RecordsExportSHA256: deref(r.RecordsExportSHA256),

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The operator assigns the first person of a Träger-Büro (ADR 0084, spec
@@ -56,7 +57,7 @@ func (p *Provisioning) AssignTraegerMember(ctx context.Context, input organizati
 	}
 	p.logger.Info("traeger_member_assigned",
 		slog.Int64("organization_id", input.OrganizationID),
-		slog.Int64("account_id", member.AccountID),
+		slog.Int64("account_id", member.AccountID.Int64()),
 		slog.Int64("operator_id", input.OperatorID))
 	return member, nil
 }
@@ -125,7 +126,7 @@ func (p *Provisioning) InviteTraegerMember(ctx context.Context, input organizati
 		if err != nil {
 			return organizationtenancy.TraegerInvitation{}, traegerInvitationError(err)
 		}
-		return invitation, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionCreate, domain.AuditResourceTraegerInvitation, &invitation.ID, input.ClientIP, map[string]any{
+		return invitation, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionCreate, domain.AuditResourceTraegerInvitation, (*int64)(&invitation.ID), input.ClientIP, map[string]any{
 			"organization_id": input.OrganizationID,
 			"email":           invitation.Email,
 			"roles":           invitation.Roles,
@@ -136,7 +137,7 @@ func (p *Provisioning) InviteTraegerMember(ctx context.Context, input organizati
 	}
 	p.logger.Info("traeger_member_invited",
 		slog.Int64("organization_id", input.OrganizationID),
-		slog.Int64("invitation_id", invitation.ID),
+		slog.Int64("invitation_id", invitation.ID.Int64()),
 		slog.Int64("operator_id", input.OperatorID))
 	return invitation, nil
 }
@@ -163,7 +164,7 @@ func (p *Provisioning) ResendTraegerInvitation(ctx context.Context, input organi
 		if err != nil {
 			return organizationtenancy.TraegerInvitation{}, err
 		}
-		return invitation, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionResend, domain.AuditResourceTraegerInvitation, &invitation.ID, input.ClientIP, map[string]any{
+		return invitation, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionResend, domain.AuditResourceTraegerInvitation, (*int64)(&invitation.ID), input.ClientIP, map[string]any{
 			"organization_id":     input.OrganizationID,
 			"replaced_invitation": input.InvitationID,
 			"email":               invitation.Email,
@@ -175,7 +176,7 @@ func (p *Provisioning) ResendTraegerInvitation(ctx context.Context, input organi
 	}
 	p.logger.Info("traeger_invitation_resent",
 		slog.Int64("organization_id", input.OrganizationID),
-		slog.Int64("invitation_id", invitation.ID),
+		slog.Int64("invitation_id", invitation.ID.Int64()),
 		slog.Int64("operator_id", input.OperatorID))
 	return invitation, nil
 }
@@ -191,7 +192,7 @@ func (p *Provisioning) RevokeTraegerInvitation(ctx context.Context, input organi
 		if err != nil {
 			return struct{}{}, err
 		}
-		return struct{}{}, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionRevoke, domain.AuditResourceTraegerInvitation, &invitation.ID, input.ClientIP, map[string]any{
+		return struct{}{}, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionRevoke, domain.AuditResourceTraegerInvitation, (*int64)(&invitation.ID), input.ClientIP, map[string]any{
 			"organization_id": input.OrganizationID,
 			"email":           invitation.Email,
 			"roles":           invitation.Roles,
@@ -260,7 +261,7 @@ func traegerMembers(memberships []organizationtenancy.TraegerMembership, account
 			roles = []string{}
 		}
 		members = append(members, organizationtenancy.TraegerMember{
-			AccountID: membership.AccountID, Email: account.Email, Status: membership.Status,
+			AccountID: ident.ID(membership.AccountID), Email: account.Email, Status: membership.Status,
 			Roles: roles, ActivatedAt: membership.ActivatedAt,
 		})
 	}

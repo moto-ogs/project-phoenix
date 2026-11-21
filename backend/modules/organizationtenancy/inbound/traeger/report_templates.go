@@ -76,8 +76,8 @@ func (req *ReportTemplateRequest) input() organizationtenancy.TraegerReportTempl
 // ReportDistrictRequest assigns a school to a Sozialraum in a request; the
 // contract keeps a request type apart from the answer's (ADR 0270).
 type ReportDistrictRequest struct {
-	SchoolID int64  `json:"school_id"`
-	District string `json:"district"`
+	SchoolID common.ID `json:"school_id"`
+	District string    `json:"district"`
 }
 
 func (rs *ReportTemplateResource) list(w http.ResponseWriter, r *http.Request) {

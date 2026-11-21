@@ -1199,7 +1199,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizationID int64) ([]parentbilling.CareSchool, error) {\n\tschools, err := s.organizations.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]parentbilling.CareSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tresult = append(result, parentbilling.CareSchool{ID: ident.ID(school.ID), Name: school.Name})\n\t\t}\n\t}\n\tslices.SortFunc(result, func(a, b parentbilling.CareSchool) int {\n\t\treturn strings.Compare(a.Name, b.Name)\n\t})\n\treturn result, nil\n}",
+      "evidence": "func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizationID int64) ([]parentbilling.CareSchool, error) {\n\tschools, err := s.organizations.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]parentbilling.CareSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tresult = append(result, parentbilling.CareSchool{ID: school.ID, Name: school.Name})\n\t\t}\n\t}\n\tslices.SortFunc(result, func(a, b parentbilling.CareSchool) int {\n\t\treturn strings.Compare(a.Name, b.Name)\n\t})\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingCareSchools.TraegerSchools",
       "owner": "roots"
@@ -1640,7 +1640,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d tagScanSchoolDirectory) ListOrganizationsByID(ctx context.Context, ids []int64) ([]tagScanOperatorAPI.Organization, error) {\n\torganizations, err := d.schools.ListOrganizationsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]tagScanOperatorAPI.Organization, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, tagScanOperatorAPI.Organization{ID: organization.ID, Name: organization.Name})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d tagScanSchoolDirectory) ListOrganizationsByID(ctx context.Context, ids []int64) ([]tagScanOperatorAPI.Organization, error) {\n\torganizations, err := d.schools.ListOrganizationsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]tagScanOperatorAPI.Organization, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, tagScanOperatorAPI.Organization{ID: organization.ID.Int64(), Name: organization.Name})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/tagScanSchoolDirectory.ListOrganizationsByID",
       "owner": "roots"
@@ -1738,7 +1738,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (g traegerDocumentGroups) SchoolGroups(ctx context.Context) ([]organizationtenancy.TraegerDocumentGroup, error) {\n\tgroups, err := g.groups.ListGroups(ctx, traegerDocumentGroupLimit)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationtenancy.TraegerDocumentGroup, 0, len(groups))\n\tfor _, group := range groups {\n\t\tresult = append(result, organizationtenancy.TraegerDocumentGroup{ID: group.ID, Name: group.Name})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (g traegerDocumentGroups) SchoolGroups(ctx context.Context) ([]organizationtenancy.TraegerDocumentGroup, error) {\n\tgroups, err := g.groups.ListGroups(ctx, traegerDocumentGroupLimit)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationtenancy.TraegerDocumentGroup, 0, len(groups))\n\tfor _, group := range groups {\n\t\tresult = append(result, organizationtenancy.TraegerDocumentGroup{ID: ident.ID(group.ID), Name: group.Name})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerDocumentGroups.SchoolGroups",
       "owner": "roots"
@@ -1815,7 +1815,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (t traegerReportTemplates) ReportTemplate(ctx context.Context, organizationID, templateID int64) (traegerview.ReportTemplate, error) {\n\ttemplate, err := t.reads.TraegerReportTemplate(ctx, organizationID, templateID)\n\tif errors.Is(err, organizationtenancy.ErrTraegerReportTemplateNotFound) {\n\t\treturn traegerview.ReportTemplate{}, traegerview.ErrReportTemplateNotFound\n\t}\n\tif err != nil {\n\t\treturn traegerview.ReportTemplate{}, err\n\t}\n\tdistricts := make(map[int64]string, len(template.Districts))\n\tfor _, district := range template.Districts {\n\t\tdistricts[district.SchoolID] = district.District\n\t}\n\treturn traegerview.ReportTemplate{ID: template.ID, Name: template.Name, Sections: template.Sections, Districts: districts}, nil\n}",
+      "evidence": "func (t traegerReportTemplates) ReportTemplate(ctx context.Context, organizationID, templateID int64) (traegerview.ReportTemplate, error) {\n\ttemplate, err := t.reads.TraegerReportTemplate(ctx, organizationID, templateID)\n\tif errors.Is(err, organizationtenancy.ErrTraegerReportTemplateNotFound) {\n\t\treturn traegerview.ReportTemplate{}, traegerview.ErrReportTemplateNotFound\n\t}\n\tif err != nil {\n\t\treturn traegerview.ReportTemplate{}, err\n\t}\n\tdistricts := make(map[int64]string, len(template.Districts))\n\tfor _, district := range template.Districts {\n\t\tdistricts[district.SchoolID.Int64()] = district.District\n\t}\n\treturn traegerview.ReportTemplate{ID: template.ID.Int64(), Name: template.Name, Sections: template.Sections, Districts: districts}, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerReportTemplates.ReportTemplate",
       "owner": "roots"
@@ -2998,7 +2998,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d ParentPortalSchools) ListParentPortalSchools(ctx context.Context, ids []int64) ([]carePlanBindingPorts.ParentPortalSchool, error) {\n\tschools, err := d.Schools.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]carePlanBindingPorts.ParentPortalSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, carePlanBindingPorts.ParentPortalSchool{ID: school.ID, Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Active: school.Active, Hidden: school.Hidden, Deleted: school.IsDeleted()})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d ParentPortalSchools) ListParentPortalSchools(ctx context.Context, ids []int64) ([]carePlanBindingPorts.ParentPortalSchool, error) {\n\tschools, err := d.Schools.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]carePlanBindingPorts.ParentPortalSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, carePlanBindingPorts.ParentPortalSchool{ID: school.ID.Int64(), Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, Active: school.Active, Hidden: school.Hidden, Deleted: school.IsDeleted()})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/ParentPortalSchools.ListParentPortalSchools",
       "owner": "roots"
@@ -4020,7 +4020,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (q activeSchoolQuery) ListSchoolsByID(ctx context.Context, ids []int64) ([]presenceservice.School, error) {\n\tschools, err := q.schools.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceservice.School, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, presenceservice.School{ID: school.ID, Slug: school.Slug})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (q activeSchoolQuery) ListSchoolsByID(ctx context.Context, ids []int64) ([]presenceservice.School, error) {\n\tschools, err := q.schools.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceservice.School, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, presenceservice.School{ID: school.ID.Int64(), Slug: school.Slug})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/activeSchoolQuery.ListSchoolsByID",
       "owner": "roots"
@@ -4566,7 +4566,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (t careContractTraeger) ActiveTraegerIDs(ctx context.Context) ([]int64, error) {\n\torganizations, err := t.organizations.ListOrganizations(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tif organization.Active \u0026\u0026 organization.DeletedAt == nil {\n\t\t\tids = append(ids, organization.ID)\n\t\t}\n\t}\n\treturn ids, nil\n}",
+      "evidence": "func (t careContractTraeger) ActiveTraegerIDs(ctx context.Context) ([]int64, error) {\n\torganizations, err := t.organizations.ListOrganizations(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tif organization.Active \u0026\u0026 organization.DeletedAt == nil {\n\t\t\tids = append(ids, organization.ID.Int64())\n\t\t}\n\t}\n\treturn ids, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/careContractTraeger.ActiveTraegerIDs",
       "owner": "roots"
@@ -6813,7 +6813,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r parentReleaseSchools) TraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, error) {\n\tschools, err := r.schools.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tids = append(ids, school.ID)\n\t\t}\n\t}\n\treturn ids, nil\n}",
+      "evidence": "func (r parentReleaseSchools) TraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, error) {\n\tschools, err := r.schools.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tids = append(ids, school.ID.Int64())\n\t\t}\n\t}\n\treturn ids, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentReleaseSchools.TraegerSchoolIDs",
       "owner": "roots"
@@ -6855,7 +6855,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d parentSharedDocuments) ListSharedDocuments(ctx context.Context, organizationID int64, reader parentportal.SharedDocumentReader) ([]parentportal.SharedDocument, error) {\n\tfound, err := d.documents.ParentDocuments(ctx, organizationID, organizationtenancy.TraegerDocumentParent(reader))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tdocuments := make([]parentportal.SharedDocument, len(found))\n\tfor i, document := range found {\n\t\tdocuments[i] = parentportal.SharedDocument{ID: document.ID, OrganizationID: organizationID, Title: document.Title, FileName: document.FileName, ContentType: document.ContentType, SizeBytes: document.SizeBytes, ReleasedAt: document.ReleasedAt}\n\t}\n\treturn documents, nil\n}",
+      "evidence": "func (d parentSharedDocuments) ListSharedDocuments(ctx context.Context, organizationID int64, reader parentportal.SharedDocumentReader) ([]parentportal.SharedDocument, error) {\n\tfound, err := d.documents.ParentDocuments(ctx, organizationID, organizationtenancy.TraegerDocumentParent(reader))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tdocuments := make([]parentportal.SharedDocument, len(found))\n\tfor i, document := range found {\n\t\tdocuments[i] = parentportal.SharedDocument{ID: document.ID.Int64(), OrganizationID: organizationID, Title: document.Title, FileName: document.FileName, ContentType: document.ContentType, SizeBytes: document.SizeBytes, ReleasedAt: document.ReleasedAt}\n\t}\n\treturn documents, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentSharedDocuments.ListSharedDocuments",
       "owner": "roots"
@@ -7905,14 +7905,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (d tenancyDirectory) ListOrganizationNames(ctx context.Context, ids []int64) ([]identityPorts.OrganizationName, error) {\n\torganizations, err := d.query.ListOrganizationsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityPorts.OrganizationName, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, identityPorts.OrganizationName{ID: organization.ID, Name: organization.Name})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d tenancyDirectory) ListOrganizationNames(ctx context.Context, ids []int64) ([]identityPorts.OrganizationName, error) {\n\torganizations, err := d.query.ListOrganizationsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityPorts.OrganizationName, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, identityPorts.OrganizationName{ID: organization.ID.Int64(), Name: organization.Name})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/tenancyDirectory.ListOrganizationNames",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (d tenancyDirectory) ListSchools(ctx context.Context, ids []int64) ([]identityaccess.School, error) {\n\tschools, err := d.query.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityaccess.School, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, identityaccess.School{ID: school.ID, OrganizationID: school.OrganizationID, Name: school.Name, Slug: school.Slug, Active: school.Active, Deleted: school.IsDeleted()})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d tenancyDirectory) ListSchools(ctx context.Context, ids []int64) ([]identityaccess.School, error) {\n\tschools, err := d.query.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityaccess.School, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, identityaccess.School{ID: school.ID.Int64(), OrganizationID: school.OrganizationID.Int64(), Name: school.Name, Slug: school.Slug, Active: school.Active, Deleted: school.IsDeleted()})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/tenancyDirectory.ListSchools",
       "owner": "roots"

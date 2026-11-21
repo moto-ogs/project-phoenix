@@ -100,6 +100,31 @@ func TestVerifyProfileSettings_RejectsReadBackMismatch(t *testing.T) {
 	assert.Contains(t, err.Error(), "expected true, got false")
 }
 
+func TestVerifyProfileDevices_ReadsNumericAndStringIDs(t *testing.T) {
+	t.Parallel()
+	for _, id := range []string{`9007199254740993`, `"9007199254740993"`} {
+		t.Run(id, func(t *testing.T) {
+			t.Parallel()
+			srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+				assert.Equal(t, "/api/iot/", r.URL.Path)
+				deviceType := r.URL.Query().Get("device_type")
+				assert.Contains(t, []string{"terminal", "virtual"}, deviceType)
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = fmt.Fprintf(w, `{"data":[{"id":%s,"device_id":"WEB-MANUAL-001","device_type":%q,"name":"Web-Portal (Manuell)"}]}`, id, deviceType)
+			})
+			defer srv.Close()
+
+			rt := &Runtime{Client: newTestClient(srv.URL, false)}
+			device, err := verifyProfileDevices(rt, 1)
+			require.NoError(t, err)
+			assert.Equal(t, SeedDevice{
+				ID: 9007199254740993, DeviceID: webManualDeviceID,
+				DeviceType: "virtual", Name: webManualDeviceName, Protected: true,
+			}, device)
+		})
+	}
+}
+
 func TestConfigureDemoProfilesOrdersAttendanceScopeChanges(t *testing.T) {
 	t.Parallel()
 	for _, definition := range []demoProfileDefinition{fullOperationProfileDefinition(), manualProfileDefinition()} {

@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -99,19 +100,19 @@ func (rs *Resource) Router(routeMiddleware ...func(http.Handler) http.Handler) c
 
 // scanResponse keeps the wire shape of the retired audit row.
 type scanResponse struct {
-	ID                   int64      `json:"id"`
+	ID                   ident.ID   `json:"id"`
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
-	TenantID             int64      `json:"tenant_id"`
+	TenantID             ident.ID   `json:"tenant_id"`
 	TagUID               string     `json:"tag_uid"`
-	DeviceID             *int64     `json:"device_id,omitempty"`
+	DeviceID             *ident.ID  `json:"device_id,omitempty"`
 	ScannedAt            time.Time  `json:"scanned_at"`
 	ResolvedAt           *time.Time `json:"resolved_at,omitempty"`
-	ResolvedByOperatorID *int64     `json:"resolved_by_operator_id,omitempty"`
+	ResolvedByOperatorID *ident.ID  `json:"resolved_by_operator_id,omitempty"`
 	ResolutionNote       *string    `json:"resolution_note,omitempty"`
-	SchoolID             int64      `json:"school_id,omitempty"`
+	SchoolID             ident.ID   `json:"school_id,omitempty"`
 	SchoolName           string     `json:"school_name,omitempty"`
-	OrganizationID       int64      `json:"organization_id,omitempty"`
+	OrganizationID       ident.ID   `json:"organization_id,omitempty"`
 	OrganizationName     string     `json:"organization_name,omitempty"`
 	DeviceIdentifier     *string    `json:"device_identifier,omitempty"`
 	DeviceName           *string    `json:"device_name,omitempty"`
@@ -280,7 +281,7 @@ func (rs *Resource) label(ctx context.Context, scans []devicefleet.UnregisteredT
 		names[organization.ID] = organization.Name
 	}
 	for i := range responses {
-		name, found := names[responses[i].OrganizationID]
+		name, found := names[responses[i].OrganizationID.Int64()]
 		if !found {
 			return nil, fmt.Errorf("organization %d missing from unregistered tag scan query", responses[i].OrganizationID)
 		}
@@ -291,19 +292,19 @@ func (rs *Resource) label(ctx context.Context, scans []devicefleet.UnregisteredT
 
 func newScanResponse(scan devicefleet.UnregisteredTagScan, school School) scanResponse {
 	return scanResponse{
-		ID:                   scan.ID,
+		ID:                   ident.ID(scan.ID),
 		CreatedAt:            scan.CreatedAt,
 		UpdatedAt:            scan.UpdatedAt,
-		TenantID:             scan.TenantID,
+		TenantID:             ident.ID(scan.TenantID),
 		TagUID:               scan.TagUID,
-		DeviceID:             scan.DeviceID,
+		DeviceID:             (*ident.ID)(scan.DeviceID),
 		ScannedAt:            scan.ScannedAt,
 		ResolvedAt:           scan.ResolvedAt,
-		ResolvedByOperatorID: scan.ResolvedByOperatorID,
+		ResolvedByOperatorID: (*ident.ID)(scan.ResolvedByOperatorID),
 		ResolutionNote:       scan.ResolutionNote,
-		SchoolID:             scan.TenantID,
+		SchoolID:             ident.ID(scan.TenantID),
 		SchoolName:           school.Name,
-		OrganizationID:       school.OrganizationID,
+		OrganizationID:       ident.ID(school.OrganizationID),
 		DeviceIdentifier:     scan.DeviceIdentifier,
 		DeviceName:           scan.DeviceName,
 	}

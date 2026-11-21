@@ -202,11 +202,11 @@ func TestOperatorRoutesRotateAndTransferADevice(t *testing.T) {
 	assert.True(t, status.CanTransfer, "an idle device can move")
 
 	var moved operatorRouteDevice
-	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/transfer", created.ID), map[string]int64{"target_school_id": target.ID}, &moved)
-	assert.Equal(t, target.ID, int64(moved.SchoolID))
+	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/transfer", created.ID), map[string]int64{"target_school_id": target.ID.Int64()}, &moved)
+	assert.Equal(t, target.ID.Int64(), int64(moved.SchoolID))
 	var tenantID int64
 	require.NoError(t, f.db.NewSelect().TableExpr("iot.devices").Column("tenant_id").Where("id = ?", moved.ID).Scan(testpkg.Ctx(t), &tenantID))
-	assert.Equal(t, target.ID, tenantID, "the moved device belongs to the target school")
+	assert.Equal(t, target.ID.Int64(), tenantID, "the moved device belongs to the target school")
 }
 
 func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
@@ -215,15 +215,15 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	_, schoolID := provisionTestSchool(t, f.db, f.service, f.operatorID, "route-block")
 	device, err := f.service.CreateDevice(f.ctx, schoolID, fmt.Sprintf("route-block-%d", schoolID), "rfid_terminal", nil, nil, f.operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
-	_, hash := f.storedDevice(t, device.ID)
+	_, hash := f.storedDevice(t, device.ID.Int64())
 
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/block", device.ID), nil, nil)
-	status, blockedHash := f.storedDevice(t, device.ID)
+	status, blockedHash := f.storedDevice(t, device.ID.Int64())
 	assert.Equal(t, "inactive", status)
 	assert.Equal(t, hash, blockedHash, "blocking keeps the key")
 
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/unblock", device.ID), nil, nil)
-	status, unblockedHash := f.storedDevice(t, device.ID)
+	status, unblockedHash := f.storedDevice(t, device.ID.Int64())
 	assert.Equal(t, "active", status)
 	assert.Equal(t, hash, unblockedHash, "the unblocked device keeps its key")
 

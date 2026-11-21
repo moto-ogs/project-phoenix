@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -32,7 +33,7 @@ func (p *Provisioning) InviteSchoolAdmin(ctx context.Context, schoolID, operator
 			return nil, err
 		}
 		invitation, err := p.identity.InviteSchoolAdmin(adminCtx, domain.SchoolAdminInvitationRequest{
-			TenantID: school.ID, RoleID: adminRole.ID,
+			TenantID: school.ID.Int64(), RoleID: adminRole.ID,
 			Email:     strings.TrimSpace(strings.ToLower(input.Email)),
 			FirstName: input.FirstName, LastName: input.LastName, Position: input.Position,
 			CaregiverEnabled: input.CaregiverEnabled,
@@ -41,7 +42,7 @@ func (p *Provisioning) InviteSchoolAdmin(ctx context.Context, schoolID, operator
 			return nil, err
 		}
 		if err := p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceInvitation, &invitation.ID, clientIP, map[string]any{
-			"schoolID": school.ID,
+			"schoolID": school.ID.Int64(),
 			"email":    invitation.Email,
 			"roleID":   invitation.RoleID,
 		}); err != nil {
@@ -86,20 +87,20 @@ func (p *Provisioning) CreateSchoolAccount(ctx context.Context, schoolID, operat
 		p.secrets.UsernameSuffix(),
 	)
 	var account domain.CreatedAccount
-	err = p.inTenant(ctx, school.ID, func(tenantCtx context.Context) error {
+	err = p.inTenant(ctx, school.ID.Int64(), func(tenantCtx context.Context) error {
 		registered, err := p.identity.RegisterSchoolAccount(tenantCtx, domain.SchoolAccountRegistration{
-			TenantID: school.ID, Email: input.Email, Username: username, Password: input.Password, RoleID: role.ID,
+			TenantID: school.ID.Int64(), Email: input.Email, Username: username, Password: input.Password, RoleID: role.ID,
 		})
 		if err != nil {
 			return err
 		}
 		account = registered
-		if err := p.ensureSchoolIdentity(tenantCtx, account.ID, school.ID, role, input); err != nil {
+		if err := p.ensureSchoolIdentity(tenantCtx, account.ID.Int64(), school.ID.Int64(), role, input); err != nil {
 			return err
 		}
 		return p.tx.RunAdminDetached(tenantCtx, func(adminCtx context.Context) error {
-			return p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceAccount, &account.ID, clientIP, map[string]any{
-				"schoolID": school.ID,
+			return p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceAccount, (*int64)(&account.ID), clientIP, map[string]any{
+				"schoolID": school.ID.Int64(),
 				"email":    account.Email,
 			})
 		})
@@ -260,7 +261,7 @@ func organizationAccounts(accounts []domain.OrganizationAccount) []organizationt
 	for _, account := range accounts {
 		result = append(result, organizationtenancy.OrganizationAccount{
 			SchoolAccount: organizationtenancy.SchoolAccount(account.SchoolAccount),
-			SchoolID:      account.SchoolID, SchoolName: account.SchoolName,
+			SchoolID:      ident.ID(account.SchoolID), SchoolName: account.SchoolName,
 		})
 	}
 	return result
