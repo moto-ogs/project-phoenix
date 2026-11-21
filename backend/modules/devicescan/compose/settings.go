@@ -25,9 +25,7 @@ type settings struct {
 
 // MoodCaptureStops tells whether a child's mood capture is stopped (#3844);
 // the root binds it to Student Presence's per-child stop.
-type MoodCaptureStops interface {
-	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
-}
+type MoodCaptureStops = application.MoodCaptureStops
 
 type presenceModes interface {
 	GetPresenceMode(ctx context.Context) (string, error)
@@ -38,19 +36,9 @@ func (s settings) FeedbackEnabled(ctx context.Context) (bool, error) {
 }
 
 // FeedbackEnabledFor offers the mood prompt only when the school takes
-// feedback and the child is not stopped. A stop that cannot be read offers
-// no prompt rather than omitting the flag, which the kiosk reads as on; the
-// submission itself refuses such a child on its own.
+// feedback and the child is not stopped (#3844).
 func (s settings) FeedbackEnabledFor(ctx context.Context, studentID int64) (bool, error) {
-	enabled, err := s.FeedbackEnabled(ctx)
-	if err != nil || !enabled {
-		return enabled, err
-	}
-	if s.stops == nil {
-		return false, nil
-	}
-	stopped, err := s.stops.MoodCaptureStopped(ctx, studentID)
-	return err == nil && !stopped, nil
+	return application.FeedbackEnabledForBinding(ctx, s.settings, s.stops, studentID)
 }
 
 func (s settings) CapacityDetailsDisclosed(ctx context.Context, kind ports.CapacityKind) (bool, error) {

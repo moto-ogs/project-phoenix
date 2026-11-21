@@ -21,9 +21,8 @@ type RoomHistoryStops struct {
 
 // RoomHistoryStopReads reads the stops without writing any.
 type RoomHistoryStopReads struct {
-	store   ports.RoomHistoryStopStore
-	tx      ports.Transaction
-	observe func(ports.Observation)
+	store ports.RoomHistoryStopStore
+	tx    ports.Transaction
 }
 
 var (
@@ -31,30 +30,39 @@ var (
 	_ studentpresence.RoomHistoryStopReads = (*RoomHistoryStopReads)(nil)
 )
 
-func NewRoomHistoryStopReads(store ports.RoomHistoryStopStore, tx ports.Transaction, observe func(ports.Observation)) *RoomHistoryStopReads {
-	if store == nil || tx == nil || observe == nil {
+func NewRoomHistoryStopReads(store ports.RoomHistoryStopStore, tx ports.Transaction) *RoomHistoryStopReads {
+	if store == nil || tx == nil {
 		panic("student presence room history stop reads: all dependencies are required")
 	}
-	return &RoomHistoryStopReads{store: store, tx: tx, observe: observe}
+	return &RoomHistoryStopReads{store: store, tx: tx}
 }
 
-func NewRoomHistoryStops(store ports.RoomHistoryStopStore, tx ports.Transaction, audit studentpresence.RoomHistoryStopAudit, observe func(ports.Observation), now func() time.Time) *RoomHistoryStops {
+// NewRoomHistoryStopReadsOf reads the stops over the owner's own store and
+// transaction, so the stop shares the owner's tenant binding.
+func NewRoomHistoryStopReadsOf(owner *Service) *RoomHistoryStopReads {
+	return NewRoomHistoryStopReads(owner.store, owner.tx)
+}
+
+// NewRoomHistoryStopsOf runs the stop over the owner's own store, transaction
+// and clock.
+func NewRoomHistoryStopsOf(owner *Service, audit studentpresence.RoomHistoryStopAudit) *RoomHistoryStops {
+	return NewRoomHistoryStops(owner.store, owner.tx, audit, owner.now)
+}
+
+func NewRoomHistoryStops(store ports.RoomHistoryStopStore, tx ports.Transaction, audit studentpresence.RoomHistoryStopAudit, now func() time.Time) *RoomHistoryStops {
 	if audit == nil || now == nil {
 		panic("student presence room history stops: all dependencies are required")
 	}
-	return &RoomHistoryStops{RoomHistoryStopReads: NewRoomHistoryStopReads(store, tx, observe), audit: audit, now: now}
+	return &RoomHistoryStops{RoomHistoryStopReads: NewRoomHistoryStopReads(store, tx), audit: audit, now: now}
 }
 
-func (s *RoomHistoryStopReads) run(ctx context.Context, operation string, fn func(context.Context) (ports.Stats, error)) error {
-	started := time.Now()
-	var stats ports.Stats
-	err := s.tx.Run(ctx, func(txCtx context.Context) error {
-		var err error
-		stats, err = fn(txCtx)
+// run executes fn in the caller's tenant transaction or its own. Failures
+// return to the caller; the request log records them.
+func (s *RoomHistoryStopReads) run(ctx context.Context, _ string, fn func(context.Context) (ports.Stats, error)) error {
+	return s.tx.Run(ctx, func(txCtx context.Context) error {
+		_, err := fn(txCtx)
 		return err
 	})
-	s.observe(ports.Observation{Operation: operation, Duration: time.Since(started), Stats: stats, Err: err})
-	return err
 }
 
 func (s *RoomHistoryStopReads) RoomHistoryStoppedSince(ctx context.Context, studentIDs []int64) (map[int64]time.Time, error) {

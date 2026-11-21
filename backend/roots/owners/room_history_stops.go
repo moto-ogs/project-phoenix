@@ -14,18 +14,23 @@ import (
 // NewRoomHistoryStopReads composes the read side of the per-child stop of
 // room history and mood (#3844) that Feedback and the device scan consult.
 func NewRoomHistoryStopReads(db transactionruntime.Database) (studentpresence.RoomHistoryStopReads, error) {
-	return presenceCompose.NewRoomHistoryStopReads(db.Pool(), presenceCompose.FailureLogger())
+	owner, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger()})
+	if err != nil {
+		return nil, err
+	}
+	return presenceCompose.NewRoomHistoryStopReads(owner)
 }
 
 // NewRoomHistoryStops composes the per-child stop with its audit: each
 // effective change goes to the child's change history, the visits a stop
 // deletes to the deletion log, both in the command's transaction.
 func NewRoomHistoryStops(db transactionruntime.Database) (studentpresence.RoomHistoryStops, error) {
+	owner, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger()})
+	if err != nil {
+		return nil, err
+	}
 	trails := peopleDirectoryAudit(db)
-	return presenceCompose.NewRoomHistoryStops(presenceCompose.RoomHistoryStopDependencies{
-		DB: db.Pool(), Observe: presenceCompose.FailureLogger(),
-		Audit: roomHistoryStopAudit{edits: trails.StudentFieldEdit, deletions: trails.DataDeletion},
-	})
+	return presenceCompose.NewRoomHistoryStops(owner, roomHistoryStopAudit{edits: trails.StudentFieldEdit, deletions: trails.DataDeletion})
 }
 
 // roomHistoryStopAudit writes a stop change into the Audit Platform. The
@@ -65,7 +70,7 @@ func (a roomHistoryStopAudit) RecordRoomHistoryStop(ctx context.Context, event s
 		"account:"+strconv.FormatInt(event.Actor.AccountID, 10))
 	deletion.DeletionReason = "Raumverlauf und Stimmung für dieses Kind gestoppt"
 	deletion.DeletedAt = event.At
-	deletion.SetMetadata("source", event.Actor.Source)
+	deletion.Metadata["source"] = event.Actor.Source
 	if err := a.deletions.Create(ctx, deletion); err != nil {
 		return fmt.Errorf("record the deleted room visits: %w", err)
 	}

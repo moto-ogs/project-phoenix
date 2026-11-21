@@ -77,30 +77,23 @@ func (transaction) Run(ctx context.Context, fn func(context.Context) error) erro
 	return tenant.NewTransactionRunner().RunInTx(ctx, fn)
 }
 
-// RoomHistoryStopDependencies build the per-child room history stop (#3844).
-// Audit receives each effective change in the command's transaction.
-type RoomHistoryStopDependencies struct {
-	DB      *bun.DB
-	Observe func(Observation)
-	Audit   studentpresence.RoomHistoryStopAudit
-	// Now stamps the stop; nil uses time.Now.
-	Now func() time.Time
+// NewRoomHistoryStops builds the per-child room history stop (#3844) over a
+// composed owner. Audit receives each effective change in the command's
+// transaction.
+func NewRoomHistoryStops(owner studentpresence.Owner, audit studentpresence.RoomHistoryStopAudit) (studentpresence.RoomHistoryStops, error) {
+	service, ok := owner.(*application.Service)
+	if !ok || audit == nil {
+		return nil, errors.New("student presence room history stops: a composed owner and the audit are required")
+	}
+	return application.NewRoomHistoryStopsOf(service, audit), nil
 }
 
-// NewRoomHistoryStops builds the per-child room history stop.
-func NewRoomHistoryStops(deps RoomHistoryStopDependencies) (studentpresence.RoomHistoryStops, error) {
-	if deps.DB == nil || deps.Observe == nil || deps.Audit == nil {
-		return nil, errors.New("student presence room history stops: database, observer and audit are required")
+// NewRoomHistoryStopReads builds the read side of the per-child stop over a
+// composed owner, for the owners that take no mood of a stopped child.
+func NewRoomHistoryStopReads(owner studentpresence.Owner) (studentpresence.RoomHistoryStopReads, error) {
+	service, ok := owner.(*application.Service)
+	if !ok {
+		return nil, errors.New("student presence room history stop reads: a composed owner is required")
 	}
-	now := orWallClock(deps.Now)
-	return application.NewRoomHistoryStops(postgres.New(databaseRuntime(deps.DB), now), transaction{}, deps.Audit, deps.Observe, now), nil
-}
-
-// NewRoomHistoryStopReads builds the read side of the per-child stop, for the
-// owners that take no mood of a stopped child.
-func NewRoomHistoryStopReads(db *bun.DB, observe func(Observation)) (studentpresence.RoomHistoryStopReads, error) {
-	if db == nil || observe == nil {
-		return nil, errors.New("student presence room history stop reads: database and observer are required")
-	}
-	return application.NewRoomHistoryStopReads(postgres.New(databaseRuntime(db), time.Now), transaction{}, observe), nil
+	return application.NewRoomHistoryStopReadsOf(service), nil
 }

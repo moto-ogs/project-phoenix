@@ -111,6 +111,14 @@
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "interface{MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)}.MoodCaptureStopped",
+      "binding_digest": "d2677872ffbeefc62cc3a9d6df0efa1e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.StudentStops.MoodCaptureStopped",
+      "source_owner": "feedback",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "target_owner": "student-presence"
     }
   ]
 }

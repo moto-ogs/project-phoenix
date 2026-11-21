@@ -139,6 +139,16 @@
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "interface{MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)}.MoodCaptureStopped",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.StudentStops.MoodCaptureStopped",
+      "reason": "Reviewed read: feedback asks Student Presence whether a child's mood capture is stopped (#3844) through interface{MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)}.MoodCaptureStopped; no owned-row mutation or locking read at this terminal.",
+      "source_owner": "feedback",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "target_owner": "student-presence"
     }
   ]
 }
