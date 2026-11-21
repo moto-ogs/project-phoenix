@@ -167,14 +167,14 @@ export interface HolidayRegistrationPayload {
     readonly first_name: string;
     readonly last_name: string;
     readonly birth_date: string;
-    readonly home_school_id: number;
+    readonly home_school_id: string;
     readonly guest_school_name: string;
     readonly allergies: string;
     readonly medication: string;
     readonly health_notes: string;
     readonly bookings: {
-      readonly week_id: number;
-      readonly time_model_id: number;
+      readonly week_id: string;
+      readonly time_model_id: string;
       /** The chosen days of a week by days (#4701). */
       readonly days?: string[];
     }[];
@@ -416,8 +416,8 @@ export async function submitHolidayRegistration(
 
 /** The bookings of one child of the form, for its contribution (#4664). */
 export type HolidayQuoteChild = {
-  readonly week_id: number;
-  readonly time_model_id: number;
+  readonly week_id: string;
+  readonly time_model_id: string;
   readonly days?: string[];
   /** The child eats lunch on the care days of the booking (#5631). */
   readonly lunch?: boolean;
@@ -441,13 +441,7 @@ export async function quoteHolidayContribution(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         children: children.map((bookings, index) => ({
-          // The quote names its weeks and time models as strings (#2342);
-          // the registration form keeps numbers until its route reads both.
-          bookings: bookings.map((booking) => ({
-            ...booking,
-            week_id: String(booking.week_id),
-            time_model_id: String(booking.time_model_id),
-          })),
+          bookings,
           age_rank: ageRanks[index] ?? 0,
         })),
         benefits_declared: benefitsDeclared,

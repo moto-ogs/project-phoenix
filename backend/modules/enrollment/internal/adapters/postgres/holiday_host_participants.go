@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -120,8 +121,8 @@ func (row hostedParticipantRow) participant(organizationID int64) (enrollment.Ho
 		return enrollment.HolidayParticipant{}, err
 	}
 	participant := enrollment.HolidayParticipant{
-		ChildID: row.ChildID, FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate,
-		HomeSchoolID: row.HomeSchoolID, GuestSchoolName: row.GuestSchoolName, TimeModelID: row.TimeModelID, Answers: answers,
+		ChildID: ident.ID(row.ChildID), FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate,
+		HomeSchoolID: (*ident.ID)(row.HomeSchoolID), GuestSchoolName: row.GuestSchoolName, TimeModelID: ident.ID(row.TimeModelID), Answers: answers,
 		Sealed: sealed,
 	}
 	if row.SecondGuardianName != nil {
@@ -252,7 +253,7 @@ func (s *HolidayHostStore) ReadHostedHolidayWeek(ctx context.Context, schoolID, 
 	}
 	counted := make([]enrollment.HolidayTimeModelCount, len(models))
 	for i, model := range models {
-		counted[i] = enrollment.HolidayTimeModelCount{ID: model.ID, Name: model.Name, StartsAt: model.StartsAt, EndsAt: model.EndsAt}
+		counted[i] = enrollment.HolidayTimeModelCount{ID: ident.ID(model.ID), Name: model.Name, StartsAt: model.StartsAt, EndsAt: model.EndsAt}
 	}
 	participants := make([]enrollment.HolidayParticipant, len(children))
 	for i, child := range children {
@@ -312,11 +313,11 @@ func hostedWeek(row hostedWeekRow) (enrollment.HostedHolidayWeek, error) {
 		}
 	}
 	return enrollment.HostedHolidayWeek{
-		ID: row.ID, PeriodName: row.PeriodName, StartsOn: row.StartsOn, EndsOn: row.EndsOn, Participants: row.Participants,
+		ID: ident.ID(row.ID), PeriodName: row.PeriodName, StartsOn: row.StartsOn, EndsOn: row.EndsOn, Participants: row.Participants,
 		BookingUnit:  row.BookingUnit,
 		LunchOffered: row.LunchOffered, Lunches: []enrollment.HolidayDayCount{},
 		CareStartsAt: clockOrEmpty(row.CareStartsAt), CareEndsAt: clockOrEmpty(row.CareEndsAt), DayParticipants: days,
-		GuestGroupID: row.GuestGroupID, Guests: row.Guests,
+		GuestGroupID: (*ident.ID)(row.GuestGroupID), Guests: row.Guests,
 	}, nil
 }
 
@@ -376,7 +377,7 @@ func (s *HolidayHostStore) ReadStudentHealth(ctx context.Context, schoolID int64
 			return nil, err
 		}
 		entries = append(entries, enrollment.HolidayStudentHealth{
-			WeekID: row.WeekID, PeriodName: row.PeriodName, StartsOn: row.StartsOn, EndsOn: row.EndsOn, Sealed: sealed,
+			WeekID: ident.ID(row.WeekID), PeriodName: row.PeriodName, StartsOn: row.StartsOn, EndsOn: row.EndsOn, Sealed: sealed,
 		})
 	}
 	return entries, nil

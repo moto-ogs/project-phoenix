@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -292,7 +293,7 @@ func (s *HolidayRegistrationStore) InsertHolidayRegistration(ctx context.Context
 	if err := insertHolidayContacts(ctx, db, organizationID, receipt.ID, input); err != nil {
 		return enrollment.HolidayRegistrationReceipt{}, err
 	}
-	return enrollment.HolidayRegistrationReceipt{ID: receipt.ID, SubmittedAt: receipt.SubmittedAt, StatusToken: input.StatusToken}, nil
+	return enrollment.HolidayRegistrationReceipt{ID: ident.ID(receipt.ID), SubmittedAt: receipt.SubmittedAt, StatusToken: input.StatusToken}, nil
 }
 
 // storeHolidayFamilyHealth seals the health information for the new
@@ -342,8 +343,8 @@ func insertHolidayChildren(ctx context.Context, db bun.IDB, organizationID, peri
 		ids[i] = row.ID
 		for _, booking := range child.Bookings {
 			childIDs = append(childIDs, row.ID)
-			weekIDs = append(weekIDs, booking.WeekID)
-			modelIDs = append(modelIDs, booking.TimeModelID)
+			weekIDs = append(weekIDs, booking.WeekID.Int64())
+			modelIDs = append(modelIDs, booking.TimeModelID.Int64())
 			days = append(days, holidayDaysLiteral(booking.Days))
 			lunches = append(lunches, booking.Lunch)
 		}

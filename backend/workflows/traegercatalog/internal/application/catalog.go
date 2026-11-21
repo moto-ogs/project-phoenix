@@ -109,8 +109,8 @@ func (s snapshot) targets() []target {
 	}
 	for _, school := range s.phase.Schools {
 		copied := (school.AppliedVersion != nil || school.Outcome != "") && school.Outcome != enrollment.TraegerOutcomeWithdrawn
-		if copied && own[school.SchoolID] && !selected[school.SchoolID] {
-			targets = append(targets, target{schoolID: school.SchoolID, action: traegercatalog.ActionWithdraw})
+		if copied && own[school.SchoolID.Int64()] && !selected[school.SchoolID.Int64()] {
+			targets = append(targets, target{schoolID: school.SchoolID.Int64(), action: traegercatalog.ActionWithdraw})
 		}
 	}
 	slices.SortFunc(targets, func(a, b target) int { return int(a.schoolID - b.schoolID) })
@@ -125,7 +125,7 @@ func (s snapshot) selected(own map[int64]bool) map[int64]bool {
 		return selected
 	}
 	for _, school := range s.phase.Schools {
-		selected[school.SchoolID] = school.Selected && own[school.SchoolID]
+		selected[school.SchoolID.Int64()] = school.Selected && own[school.SchoolID.Int64()]
 	}
 	if s.phase.AllSchools {
 		for _, id := range s.schools {

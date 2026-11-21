@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The access log of a home school read names each week once and counts each
@@ -14,7 +15,7 @@ import (
 func TestHomeSchoolAccessCountsChildrenNotBookings(t *testing.T) {
 	t.Parallel()
 	week := func(child, week int64, monday calendar.Date) enrollment.HolidayHomeSchoolBooking {
-		return enrollment.HolidayHomeSchoolBooking{ChildID: child, WeekID: week, StartsOn: monday, EndsOn: monday.AddDays(4)}
+		return enrollment.HolidayHomeSchoolBooking{ChildID: ident.ID(child), WeekID: ident.ID(week), StartsOn: monday, EndsOn: monday.AddDays(4)}
 	}
 	first, second := calendar.NewDate(2099, 7, 6), calendar.NewDate(2099, 7, 13)
 	access := homeSchoolAccess(enrollment.HolidayHost{AccountID: 7, Role: "lead"}, []enrollment.HolidayHomeSchoolBooking{

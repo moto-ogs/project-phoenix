@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -79,10 +80,10 @@ func TestCancellationComputesTheRestOfTheSiblingGroupAgain(t *testing.T) {
 
 	action, siblings := f.lastHistory(t, first)
 	assert.Equal(t, "sibling_cancel", action)
-	assert.Equal(t, []any{float64(second)}, siblings)
+	assert.Equal(t, []any{strconv.FormatInt(int64(second), 10)}, siblings)
 	action, siblings = f.lastHistory(t, second)
 	assert.Equal(t, "sibling_cancel", action)
-	assert.Equal(t, []any{float64(first)}, siblings, "the history of the sibling names the cancelled registration")
+	assert.Equal(t, []any{strconv.FormatInt(int64(first), 10)}, siblings, "the history of the sibling names the cancelled registration")
 }
 
 func TestCancellationKeepsTheRestOfALargerGroupTogether(t *testing.T) {
@@ -106,7 +107,7 @@ func TestCancellationKeepsTheRestOfALargerGroupTogether(t *testing.T) {
 	assert.Equal(t, int64(2250), f.cancelledContribution(t, third).TotalCents)
 	action, siblings := f.lastHistory(t, first)
 	assert.Equal(t, "sibling_cancel", action)
-	assert.Equal(t, []any{float64(second), float64(third)}, siblings, "the cancelled registration names the rest of its group")
+	assert.Equal(t, []any{strconv.FormatInt(int64(second), 10), strconv.FormatInt(int64(third), 10)}, siblings, "the cancelled registration names the rest of its group")
 }
 
 func TestCancellationComputesAnInvoicedSiblingAgainAndShowsTheCorrection(t *testing.T) {

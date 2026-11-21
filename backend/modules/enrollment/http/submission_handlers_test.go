@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // --- buildServiceRequest -------------------------------------------------
@@ -163,7 +164,7 @@ func TestBuildServiceRequest_PreservesOfferingDays(t *testing.T) {
 				FirstName:   "Lara",
 				LastName:    "Beispiel",
 				DateOfBirth: "2018-03-04",
-				OfferingIDs: []int64{77, 88},
+				OfferingIDs: []ident.ID{77, 88},
 				OfferingDays: []SubmitOfferingDaysRow{
 					{OfferingID: 77, SelectedDays: []string{"mon", "wed"}},
 				},

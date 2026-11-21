@@ -930,8 +930,8 @@ export async function checkHolidayRegistrationCriteria(
         method: "PUT",
         body: {
           checks: checks.map((check) => ({
-            criterion_id: Number(check.criterionId),
-            child_id: check.childId === null ? null : Number(check.childId),
+            criterion_id: check.criterionId,
+            child_id: check.childId === null ? null : check.childId,
             checked: check.checked,
           })),
         } satisfies HolidayCriteriaCheckRequest,
@@ -972,8 +972,8 @@ export async function rebookHolidayChild(
         method: "PUT",
         body: {
           bookings: bookings.map((booking): HolidayBookingChoice => ({
-            week_id: Number(booking.weekId),
-            time_model_id: Number(booking.timeModelId),
+            week_id: booking.weekId,
+            time_model_id: booking.timeModelId,
             ...(booking.days && booking.days.length > 0
               ? { days: [...booking.days] }
               : {}),
@@ -1078,13 +1078,13 @@ function holidayRegistrationEditBody(
   if (edit.child) {
     body.children = [
       {
-        id: Number(edit.child.id),
+        id: edit.child.id,
         first_name: edit.child.firstName,
         last_name: edit.child.lastName,
         birth_date: edit.child.birthDate,
         home_school_id: edit.child.homeSchoolId
-          ? Number(edit.child.homeSchoolId)
-          : 0,
+          ? edit.child.homeSchoolId
+          : "0",
         guest_school_name: edit.child.guestSchoolName,
         custom_data: { ...edit.child.answers },
       },

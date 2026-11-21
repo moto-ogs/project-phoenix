@@ -118,19 +118,19 @@ func (rs *HolidayPeriodResource) TraegerRouter(protectedTraegerRoutes func(chi.R
 }
 
 type HolidayTimeModelRequest struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	StartsAt   string `json:"starts_at"`
-	EndsAt     string `json:"ends_at"`
-	PriceCents int    `json:"price_cents"`
-	Archived   bool   `json:"archived"`
+	ID         common.ID `json:"id"`
+	Name       string    `json:"name"`
+	StartsAt   string    `json:"starts_at"`
+	EndsAt     string    `json:"ends_at"`
+	PriceCents int       `json:"price_cents"`
+	Archived   bool      `json:"archived"`
 }
 
 type HolidayWeekRequest struct {
-	ID           int64                     `json:"id"`
+	ID           common.ID                 `json:"id"`
 	StartsOn     calendar.Date             `json:"starts_on"`
 	EndsOn       calendar.Date             `json:"ends_on"`
-	HostSchoolID int64                     `json:"host_school_id"`
+	HostSchoolID common.ID                 `json:"host_school_id"`
 	TimeModels   []HolidayTimeModelRequest `json:"time_models"`
 	// BookingUnit is "week" or "day"; empty is a week (#4701).
 	BookingUnit string `json:"booking_unit"`
@@ -170,7 +170,7 @@ func (req *HolidayPeriodRequest) input() capability.HolidayPeriodInput {
 			models[j] = capability.HolidayTimeModelInput(model)
 		}
 		weeks[i] = capability.HolidayWeekInput{
-			ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID, TimeModels: models,
+			ID: week.ID.Int64(), StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID.Int64(), TimeModels: models,
 			BookingUnit: week.BookingUnit, LunchPriceCents: week.LunchPriceCents,
 		}
 	}

@@ -84,7 +84,7 @@ func (r *HolidayRegistrationRecords) recordHealthReads(ctx context.Context, revi
 	}
 	ids := make([]int64, len(set.Records))
 	for i, record := range set.Records {
-		ids[i] = record.Detail.ID
+		ids[i] = record.Detail.ID.Int64()
 	}
 	if err := r.store.AppendHolidayHealthReads(ctx, reviewer.OrganizationID, periodID, ids,
 		`{"format":"`+holidayRecordFormat+`"}`, reviewer.AccountID); err != nil {
@@ -143,20 +143,20 @@ func (r *HolidayRegistrationRecords) read(ctx context.Context, reviewer enrollme
 func (r *HolidayRegistrationRecords) parts(ctx context.Context, organizationID int64, period enrollment.HolidayPeriod, registrationID int64, withHealth bool) (holidayRecordParts, error) {
 	var parts holidayRecordParts
 	var err error
-	if parts.contacts, err = r.store.ReadHolidayRecordContacts(ctx, organizationID, period.ID, registrationID); err != nil {
+	if parts.contacts, err = r.store.ReadHolidayRecordContacts(ctx, organizationID, period.ID.Int64(), registrationID); err != nil {
 		return parts, fmt.Errorf("enrollment: read holiday registration contacts: %w", err)
 	}
-	if parts.answers, err = r.review.store.ReadHolidayAnswers(ctx, organizationID, period.ID, registrationID); err != nil {
+	if parts.answers, err = r.review.store.ReadHolidayAnswers(ctx, organizationID, period.ID.Int64(), registrationID); err != nil {
 		return parts, fmt.Errorf("enrollment: read holiday registration answers: %w", err)
 	}
-	if parts.forms, err = r.review.forms.HolidayPeriodForms(ctx, organizationID, period.ID, nil); err != nil {
+	if parts.forms, err = r.review.forms.HolidayPeriodForms(ctx, organizationID, period.ID.Int64(), nil); err != nil {
 		return parts, fmt.Errorf("enrollment: read holiday form versions: %w", err)
 	}
 	if err := r.criteria(ctx, organizationID, period, registrationID, &parts); err != nil {
 		return parts, err
 	}
 	if withHealth {
-		if parts.health, err = r.store.ReadHolidayRecordHealth(ctx, organizationID, period.ID, registrationID); err != nil {
+		if parts.health, err = r.store.ReadHolidayRecordHealth(ctx, organizationID, period.ID.Int64(), registrationID); err != nil {
 			return parts, fmt.Errorf("enrollment: read holiday registration health: %w", err)
 		}
 	}
@@ -169,11 +169,11 @@ func (r *HolidayRegistrationRecords) criteria(ctx context.Context, organizationI
 	if period.AllocationMode != enrollment.HolidayAllocationCriteria {
 		return nil
 	}
-	all, err := r.store.ReadHolidayRecordCriteria(ctx, organizationID, period.ID, registrationID)
+	all, err := r.store.ReadHolidayRecordCriteria(ctx, organizationID, period.ID.Int64(), registrationID)
 	if err != nil {
 		return fmt.Errorf("enrollment: read holiday criteria: %w", err)
 	}
-	answers, err := r.review.store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID, registrationID)
+	answers, err := r.review.store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID.Int64(), registrationID)
 	if err != nil {
 		return fmt.Errorf("enrollment: read holiday criterion answers: %w", err)
 	}
@@ -185,7 +185,7 @@ func (r *HolidayRegistrationRecords) criteria(ctx context.Context, organizationI
 }
 
 func (r *HolidayRegistrationRecords) record(organizationID int64, period enrollment.HolidayPeriod, detail enrollment.HolidayRegistrationDetail, parts holidayRecordParts, withHealth bool) (enrollment.HolidayRegistrationRecord, error) {
-	answers, ok := parts.answers[detail.ID]
+	answers, ok := parts.answers[detail.ID.Int64()]
 	if !ok {
 		return enrollment.HolidayRegistrationRecord{}, enrollment.ErrHolidayRegistrationEntryNotFound
 	}
@@ -195,7 +195,7 @@ func (r *HolidayRegistrationRecords) record(organizationID int64, period enrollm
 	}
 	detail.Form, detail.LegalAcceptances = &form, answers.LegalAcceptances
 	detail.CustomData, detail.ChildCustomData = answers.CustomData, answers.Children
-	detail.Contacts = parts.contacts[detail.ID]
+	detail.Contacts = parts.contacts[detail.ID.Int64()]
 	if texts, ok := enrollment.HolidayConsentTextsOf(detail.ConsentVersion, detail.RetentionDays); ok {
 		detail.ConsentTexts = &texts
 	}
@@ -204,7 +204,7 @@ func (r *HolidayRegistrationRecords) record(organizationID int64, period enrollm
 	if !withHealth {
 		return record, nil
 	}
-	health, err := openHolidayRegistrationHealth(r.review.health, organizationID, detail.ID, parts.health[detail.ID])
+	health, err := openHolidayRegistrationHealth(r.review.health, organizationID, detail.ID.Int64(), parts.health[detail.ID.Int64()])
 	if err != nil {
 		return enrollment.HolidayRegistrationRecord{}, err
 	}
@@ -217,7 +217,7 @@ func (r *HolidayRegistrationRecords) record(organizationID int64, period enrollm
 func holidayRecordCriteria(detail enrollment.HolidayRegistrationDetail, parts holidayRecordParts) []enrollment.HolidayRegistrationCriterion {
 	criteria := []enrollment.HolidayRegistrationCriterion{}
 	add := func(criterion enrollment.HolidayCriterion, childID *int64) {
-		answer := holidayRegistrationCriterion(criterion, childID, parts.stated[detail.ID])
+		answer := holidayRegistrationCriterion(criterion, childID, parts.stated[detail.ID.Int64()])
 		if criterion.Active || answer.Stated != enrollment.HolidayCriterionUnknown || answer.Checked != nil {
 			criteria = append(criteria, answer)
 		}
@@ -228,7 +228,7 @@ func holidayRecordCriteria(detail enrollment.HolidayRegistrationDetail, parts ho
 			continue
 		}
 		for _, child := range detail.Children {
-			add(criterion, &child.ID)
+			add(criterion, (*int64)(&child.ID))
 		}
 	}
 	return criteria

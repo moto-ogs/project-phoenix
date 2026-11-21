@@ -3,6 +3,8 @@ package enrollment
 import (
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Proof of benefits in the public holiday registration (#5238): parents who
@@ -59,7 +61,7 @@ type HolidayProofReceipt struct {
 // HolidayRegistrationProof is one claimed proof in the detail of its
 // registration, without its bytes.
 type HolidayRegistrationProof struct {
-	ID          int64     `json:"id"`
+	ID          ident.ID  `json:"id"`
 	Filename    string    `json:"filename"`
 	SizeBytes   int       `json:"size_bytes"`
 	ContentType string    `json:"content_type"`
