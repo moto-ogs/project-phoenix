@@ -117,12 +117,12 @@ export function SchoolCheckinTargetPicker({
         </p>
       </div>
 
+      {/* A state, no X (#7704): it ends once a new target is chosen. */}
       {state.lostTargetName ? (
         <Alert
           type="warning"
           className="mt-2"
           announce="polite"
-          onDismiss={state.dismissLost}
           message={`In ${state.lostTargetName} läuft keine Aufsicht mehr oder der Raum ist nicht mehr freigegeben. Kinder werden jetzt ohne Raum angemeldet. Wähle ein neues Ziel.`}
         />
       ) : null}

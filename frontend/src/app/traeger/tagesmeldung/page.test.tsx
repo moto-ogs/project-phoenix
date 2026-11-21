@@ -1,6 +1,6 @@
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSWRScope } from "~/lib/swr/scope";
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -10,6 +10,7 @@ import type {
   DailyAttendanceSummary,
   TraegerDailyAttendance,
 } from "~/lib/traeger-daily-attendance-api";
+import { parseISODate } from "~/lib/date-helpers";
 import { testClockDay } from "~/test/clock";
 
 const { mockFetch, mockDownload, mockDownloadBlob, mockUseSession } =
@@ -39,6 +40,20 @@ vi.mock("~/lib/file-download", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/file-download")>()),
   downloadBlob: mockDownloadBlob,
 }));
+const captureRange = vi.hoisted(() => vi.fn());
+vi.mock("~/components/ui/date-range-picker", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/components/ui/date-range-picker")>();
+  return {
+    ...actual,
+    DateRangePicker: (
+      props: React.ComponentProps<typeof actual.DateRangePicker>,
+    ) => {
+      captureRange(props);
+      return <actual.DateRangePicker {...props} />;
+    },
+  };
+});
 vi.mock("~/env.client", () => ({
   clientEnv: {
     NEXT_PUBLIC_TENANT_DOMAIN: "moto-app.de",
@@ -195,6 +210,37 @@ describe("TraegerDailyAttendancePage", () => {
     expect(
       within(monday).getByText("1 Kind nicht ausgecheckt"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("Das Land legt das Format noch fest"),
+    ).toBeInTheDocument();
+  });
+
+  // A state in the content, not a banner (#7704): no X, and it ends with
+  // the next valid range.
+  it("keeps the note on a shortened range until a valid range is chosen", async () => {
+    mockFetch.mockResolvedValue(REPORT);
+    renderPage();
+    await screen.findByRole("heading", { name: /^Je Tag/ });
+    const choose = (from: string, to: string) =>
+      act(() => {
+        const props = captureRange.mock.lastCall?.[0] as {
+          onChange: (range: { from: Date; to: Date }) => void;
+        };
+        props.onChange({ from: parseISODate(from), to: parseISODate(to) });
+      });
+    const note = /Ein Zeitraum hat höchstens 31 Tage/;
+
+    choose(testClockDay(-60), testClockDay(-1));
+    expect(await screen.findByText(note)).toBeInTheDocument();
+    expect(
+      screen.getByText("Das Land legt das Format noch fest"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Hinweis schließen" }),
+    ).not.toBeInTheDocument();
+
+    choose(testClockDay(-10), testClockDay(-1));
+    expect(screen.queryByText(note)).not.toBeInTheDocument();
     expect(
       screen.getByText("Das Land legt das Format noch fest"),
     ).toBeInTheDocument();

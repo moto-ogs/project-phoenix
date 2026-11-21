@@ -19,7 +19,6 @@ it.each(["care", "holiday"] as const)(
           },
           { documentNumber: "MB-2", field: "cost_center", reason: "missing" },
         ]}
-        onDismiss={vi.fn()}
       />,
     );
 
@@ -43,11 +42,14 @@ it("uses the manual booking path when account and debtor errors coincide", () =>
         { documentNumber: "MB-1", field: "cost_center", reason: "missing" },
         { documentNumber: "MB-2", field: "debtor_number", reason: "missing" },
       ]}
-      onDismiss={vi.fn()}
     />,
   );
 
   expect(screen.getByText("Debitorennummer fehlt: MB-2")).toBeInTheDocument();
+  // An error has no X (#7704); it ends with the next attempt.
+  expect(
+    screen.queryByRole("button", { name: "Hinweis schließen" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByText(/manuell in DATEV buchen/)).toHaveTextContent(
     "Der DATEV-Download dieses Laufs bleibt dann gesperrt.",
   );

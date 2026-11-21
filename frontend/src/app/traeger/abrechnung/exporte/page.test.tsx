@@ -369,7 +369,16 @@ it.each(["care", "holiday"] as const)(
       correction,
     );
     expect(files.downloadBlob).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Hinweis schließen" }));
+    // An error has no X (#7704): it stays until the next download.
+    expect(
+      screen.queryByRole("button", { name: "Hinweis schließen" }),
+    ).not.toBeInTheDocument();
+    api.downloadDatevBatch.mockResolvedValue({
+      blob: new Blob(["extf"]),
+      filename: "EXTF_Buchungsstapel_110.csv",
+    });
+    const again = await openRunMenu(run.label);
+    fireEvent.click(again.getByRole("menuitem", DATEV_ENTRY));
     await waitFor(() =>
       expect(
         screen.queryByText(`Keine DATEV-Datei für ${run.label}`),

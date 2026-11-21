@@ -106,7 +106,7 @@ An unexplained bespoke component is a review failure, not a style preference.
 | Group heading, subheading in a card or form; legend over several fields | `SectionLabel` (`as` = `h2`–`h5`/`legend`/`p`, `required`): normal case, `text-sm font-semibold text-gray-600`. Never `uppercase tracking-*` | `~/components/ui/section-label` |
 | Head of a group in a list (day of an agenda, permission group) | `ListGroupHeader` (`title`, `addon`, `meta`, `as`, `collapsible`) | `~/components/ui/list-group-header` |
 | Consent or confirmation a person ticks (Einwilligung, „verbindlich“) | `ConsentCheckbox` — `required`, `error`, `action` for the legal text button | `~/components/ui/consent-checkbox` |
-| Inline alert / banner (one notice) | `Alert` (`type`, `message`, `icon`, `onDismiss`; in fields `size="compact"`; location hex: `color`); a notice that needs attention is `type="warning"` (orange), never an amber box; several notices of the same kind follow [Several notices of the same kind](#several-notices-of-the-same-kind); naming another place, its `action` leads there: `JumpButton`, else `ButtonLink`; when, wording, new tab, rights: `ui/jump-button` (#7054) | `~/components/ui/alert`, `ui/jump-button` |
+| Inline alert / banner (one notice) | `Alert` (`type`, `message`, `icon`, `onDismiss`, X or not: [Banner oder Inhalt](#banner-oder-inhalt); in fields `size="compact"`; location hex: `color`); a notice that needs attention is `type="warning"` (orange), never an amber box; several notices of the same kind follow [Several notices of the same kind](#several-notices-of-the-same-kind); naming another place, its `action` leads there: `JumpButton`, else `ButtonLink`; when, wording, new tab, rights: `ui/jump-button` (#7054) | `~/components/ui/alert`, `ui/jump-button` |
 | Row as its own surface (start page, roster, persons in a panel); own button beside a link: no `href`, link in `children` | `ListRow` — `href`, `onClick`, `tone`, `density`, `trailing`; loading: `SkeletonRows`, `ListRowSkeleton` | `~/components/ui/list-row`, `ui/skeleton` |
 | Framed list with dividers, inside a card or panel | `FramedList` — `maxHeight`, `header` | `~/components/ui/framed-list` |
 | Row leading elsewhere: icon, title, subtitle, badge, arrow | `ListRowLink`: `selected`, `accent`, `overline`/`meta`/`unread`; alone `framed` | `~/components/ui/list-row-link` |
@@ -215,6 +215,18 @@ Decided in #5529, enforced since #5531. Not up for renegotiation: if code cannot
 Kit pieces bring their sentence (#6744); override if the click does more: `closeTooltip`, `confirmTooltip`, `confirmDisabledReason` (modals), `saveTooltip`/`disabledReason` (`EditActions`), `buttonTooltip`, `collapseTooltip`, `loadMoreTooltip`, `triggerTooltip`, `tooltip` (`ExportMenu`), `removeTooltip`, `*Hint` date/time labels. German defaults drop under a non-German `KitLocaleProvider` (parents, enrollment): pass one.
 
 Examples: „Löscht die PDF sofort aus dem Anmeldeformular.“ · „Öffnet den Rechtstext für Eltern zum Ändern.“
+
+## Banner oder Inhalt
+
+When a notice gets a close X (#7704). Position decides, because a box above the page reads as a banner:
+
+- **Banner** (full width above the page content) **always has an X** and is only for events and info: a new change, an announcement, a tip, a one-time hint. What the X hides is unimportant or stays visible in the content.
+- **Lasting state is content, not a banner:** a marker at the value, a notice inside the section, form or dialog. No X; it disappears when the state ends.
+- **Result of an action:** a toast. A result that must stay (a link to copy, a handover result) stands where the action happened; X allowed, not stored.
+- **Errors and checks** stand at the field or form, have no X and disappear once fixed.
+- **Exception „Ausblenden“ as acknowledgement** (conflict and offering-gap notices of the Betreuungsplan): only if the backend stores it, the notice returns when its data change, and „Wieder anzeigen“ exists. Label „Ausblenden“, no X.
+
+**Storing an X:** a notice of a backend object (announcement, notification) uses that object's read or dismiss endpoint; otherwise `localStorage` per account, registered in the personal-storage registry (`lib/personal-storage.ts`). An X forgotten on reload is not allowed for events and info. The X is `Alert`'s `onDismiss`, never an own „Ausblenden“ button in `action`.
 
 ## Several notices of the same kind
 

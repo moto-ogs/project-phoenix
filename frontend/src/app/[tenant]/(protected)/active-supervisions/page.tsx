@@ -42,7 +42,6 @@ import { useMinuteClock } from "~/lib/pickup-helpers";
 import { canReadSupervisionData, hasPermission } from "~/lib/auth-utils";
 import { canGrantExternalViewAccess } from "~/lib/external-caregiver-access";
 import { canReadStudents } from "~/lib/student-access";
-import { UnclaimedRooms } from "~/components/active/unclaimed-rooms";
 import { SSEErrorBoundary } from "~/components/sse/SSEErrorBoundary";
 import {
   ActiveSupervisionLoadingView,
@@ -1003,11 +1002,7 @@ function MeinRaumPageContent() {
         <>
           {reopenBanner}
           {spontaneousStartBanner}
-          <EmptyRoomsView
-            onClaimed={refresh}
-            cachedActiveGroups={dashboard.cachedActiveGroups}
-            currentStaffId={currentStaffId}
-          />
+          <EmptyRoomsView />
           {/* The day review must survive the empty state: after the last block
               ends, supervisors land exactly here (#2335). */}
           <PastBlocksSection onReopen={reopenPastBlock} />
@@ -1015,17 +1010,6 @@ function MeinRaumPageContent() {
       ) : (
         <>
           {reopenBanner}
-          {/* Unclaimed Rooms Section - Shows rooms available for claiming */}
-          <UnclaimedRooms
-            onClaimed={refresh}
-            activeGroups={
-              dashboard.cachedActiveGroups.length > 0
-                ? dashboard.cachedActiveGroups
-                : undefined
-            }
-            currentStaffId={currentStaffId}
-          />
-
           <PlannedNowSection
             plannedNow={plannedNow}
             hasActiveTimetableSession={
