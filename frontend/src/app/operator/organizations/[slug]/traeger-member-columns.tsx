@@ -5,6 +5,7 @@ import {
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { formatDate, formatTime } from "~/lib/date-helpers";
+import { labelOf } from "~/lib/label-of";
 import {
   TRAEGER_MEMBER_STATUS_LABELS,
   TRAEGER_ROLE_LABELS,
@@ -58,7 +59,7 @@ function rowStatus(row: TraegerBueroRow): {
       : { label: "Eingeladen", tone: "blue" };
   }
   return {
-    label: TRAEGER_MEMBER_STATUS_LABELS[row.member.status],
+    label: labelOf(TRAEGER_MEMBER_STATUS_LABELS, row.member.status, "–"),
     tone: row.member.status === "active" ? "green" : "gray",
   };
 }
