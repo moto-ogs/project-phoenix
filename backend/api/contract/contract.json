@@ -22732,6 +22732,8 @@
         "activity_lead_changed",
         "activity_reinstated",
         "activity_room_changed",
+        "block_staff_absent",
+        "block_substitution",
         "child_absent",
         "child_goes_alone",
         "child_pickup_changed",
@@ -22761,7 +22763,8 @@
         "staff_list",
         "staff_member",
         "staff_notices",
-        "student"
+        "student",
+        "substitution_plan"
       ]
     },
     {
@@ -62078,6 +62081,13 @@
         },
         {
           "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "instance_id",
           "optional": true,
           "schema": {
             "kind": "id"

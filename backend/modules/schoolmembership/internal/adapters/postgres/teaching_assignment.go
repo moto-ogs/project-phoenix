@@ -30,6 +30,8 @@ type groupAssignmentRow struct {
 	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	GroupID       int64     `bun:"group_id,notnull"`
 	TeacherID     int64     `bun:"teacher_id,notnull"`
+	// TeacherStaffID is read only with WithTeacherStaff.
+	TeacherStaffID *int64 `bun:"teacher_staff_id,scanonly"`
 }
 
 func (s *Store) ListClassAssignments(ctx context.Context, filter schoolmembership.ClassAssignmentFilter, forUpdate bool) ([]schoolmembership.ClassAssignment, domain.OperationStats, error) {
@@ -263,8 +265,15 @@ func classAssignmentToPublic(row classAssignmentRow) schoolmembership.ClassAssig
 func groupAssignmentToPublic(row groupAssignmentRow) schoolmembership.GroupAssignment {
 	return schoolmembership.GroupAssignment{
 		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		GroupID: row.GroupID, TeacherID: row.TeacherID,
+		GroupID: row.GroupID, TeacherID: row.TeacherID, TeacherStaffID: valueOrZero(row.TeacherStaffID),
 	}
+}
+
+func valueOrZero(value *int64) int64 {
+	if value == nil {
+		return 0
+	}
+	return *value
 }
 
 func execDelete(ctx context.Context, query *bun.DeleteQuery, operation string) (domain.OperationStats, error) {

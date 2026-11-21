@@ -26,6 +26,10 @@ type instanceStaffRow struct {
 	IsAbsent      bool      `bun:"is_absent,notnull"`
 	AbsenceReason *string   `bun:"absence_reason"`
 	SickAbsenceID *int64    `bun:"sick_absence_id"`
+	// The block's title and wall clock, read only for StaffChangesOnly.
+	BlockTitle     *string `bun:"block_title,scanonly"`
+	BlockStartTime *string `bun:"block_start_time,scanonly"`
+	BlockEndTime   *string `bun:"block_end_time,scanonly"`
 }
 
 func (s *Store) FindInstanceStaff(ctx context.Context, id int64) (timetable.InstanceStaff, bool, domain.OperationStats, error) {
@@ -66,6 +70,7 @@ func filterInstanceStaff(query *bun.SelectQuery, filter timetable.InstanceStaffF
 	}
 	query = filterInstanceStaffIDs(query, filter)
 	query = filterInstanceStaffDates(query, filter)
+	query = filterInstanceStaffChanges(query, filter)
 	query = orderInstanceStaff(query, filter)
 	if filter.Limit > 0 {
 		query = query.Limit(int64(filter.Limit)).Offset(int64(filter.Offset))
@@ -75,7 +80,25 @@ func filterInstanceStaff(query *bun.SelectQuery, filter timetable.InstanceStaffF
 
 func needsActivityInstanceJoin(filter timetable.InstanceStaffFilter) bool {
 	return filter.Date != nil || filter.FromDate != nil || filter.ToDate != nil ||
-		filter.OrderByActivityTime || filter.OrderByActivityDateTime
+		filter.OrderByActivityTime || filter.OrderByActivityDateTime || filter.StaffChangesOnly
+}
+
+// filterInstanceStaffChanges keeps the rows of blocks that take place and
+// carry an absent or covering supervisor, with the block's title and clock
+// (#7675). The block's other rows stay: they say who is planned on it.
+func filterInstanceStaffChanges(query *bun.SelectQuery, filter timetable.InstanceStaffFilter) *bun.SelectQuery {
+	if !filter.StaffChangesOnly {
+		return query
+	}
+	return query.
+		ColumnExpr(`"activity_instance".title AS block_title`).
+		ColumnExpr(`to_char("activity_instance".start_time, 'HH24:MI') AS block_start_time`).
+		ColumnExpr(`to_char("activity_instance".end_time, 'HH24:MI') AS block_end_time`).
+		Where(`"activity_instance".status <> ?`, timetable.InstanceStatusCancelled).
+		Where(`EXISTS (SELECT 1 FROM schedule.instance_staff AS "changed"
+			WHERE "changed".tenant_id = "instance_staff".tenant_id
+			AND "changed".instance_id = "instance_staff".instance_id
+			AND ("changed".is_absent OR "changed".is_substitute))`)
 }
 
 func filterInstanceStaffIDs(query *bun.SelectQuery, filter timetable.InstanceStaffFilter) *bun.SelectQuery {
@@ -288,6 +311,13 @@ func instanceStaffToDomain(row instanceStaffRow) timetable.InstanceStaff {
 		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		InstanceID: row.InstanceID, StaffID: row.StaffID, RoomID: row.RoomID, IsPrimary: row.IsPrimary,
 		IsSubstitute: row.IsSubstitute, IsAbsent: row.IsAbsent, AbsenceReason: row.AbsenceReason,
-		SickAbsenceID: row.SickAbsenceID,
+		SickAbsenceID: row.SickAbsenceID, Block: instanceStaffBlock(row),
 	}
+}
+
+func instanceStaffBlock(row instanceStaffRow) *timetable.InstanceStaffBlock {
+	if row.BlockTitle == nil || row.BlockStartTime == nil || row.BlockEndTime == nil {
+		return nil
+	}
+	return &timetable.InstanceStaffBlock{Title: *row.BlockTitle, StartTime: *row.BlockStartTime, EndTime: *row.BlockEndTime}
 }

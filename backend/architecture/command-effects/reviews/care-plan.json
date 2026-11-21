@@ -5905,19 +5905,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142), with the group teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
       "target_owner": "school-membership"
     },
     {
@@ -5935,7 +5925,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142), with the group teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
       "target_owner": "school-membership"
@@ -5945,29 +5935,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142), with the group teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
       "target_owner": "school-membership"
     },
     {

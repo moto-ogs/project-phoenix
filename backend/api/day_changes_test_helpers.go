@@ -48,9 +48,13 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	blockStaff, err := timetable.BlockStaffChangesOf(day.TimetableOperations)
+	if err != nil {
+		return nil, err
+	}
 	view, err := NewDayChanges(DayChangesSources{
 		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
-		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks,
+		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
 		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
 		// weekdays and the validity still decide.

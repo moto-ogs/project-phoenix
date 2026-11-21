@@ -73,6 +73,12 @@ const (
 	KindShiftCancelled Kind = "shift_cancelled"
 	// KindShiftReplacement: somebody covers (part of) a cancelled shift.
 	KindShiftReplacement Kind = "shift_replacement"
+	// KindBlockStaffAbsent: a staff member misses one block of the day
+	// (terminbezogene Abwesenheit, #7675) and nobody covers. Never a reason.
+	KindBlockStaffAbsent Kind = "block_staff_absent"
+	// KindBlockSubstitution: somebody covers one block of the day
+	// (Terminvertretung, #7675), for the absent supervisors it names.
+	KindBlockSubstitution Kind = "block_substitution"
 	// KindChildAbsent: a child is reported sick or excused today; Child
 	// carries the status, never a reason.
 	KindChildAbsent Kind = "child_absent"
@@ -147,6 +153,9 @@ const (
 	LinkCalendarPeriods LinkTarget = "calendar_periods"
 	// LinkDayPlan is the day plan of today, where the blocks stand.
 	LinkDayPlan LinkTarget = "day_plan"
+	// LinkSubstitutionPlan is the Vertretungsplan of the day with the block
+	// (Link.InstanceID) open (#7675).
+	LinkSubstitutionPlan LinkTarget = "substitution_plan"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -165,11 +174,13 @@ type Group struct {
 }
 
 // Link is the target of an entry; StaffID is set for the staff pages,
-// StudentID for a child's page.
+// StudentID for a child's page, InstanceID for the block of the
+// Vertretungsplan.
 type Link struct {
-	Target    LinkTarget `json:"target"`
-	StaffID   *int64     `json:"staff_id,string,omitempty"`
-	StudentID *int64     `json:"student_id,string,omitempty"`
+	Target     LinkTarget `json:"target"`
+	StaffID    *int64     `json:"staff_id,string,omitempty"`
+	StudentID  *int64     `json:"student_id,string,omitempty"`
+	InstanceID *int64     `json:"instance_id,string,omitempty"`
 }
 
 // Child is the child an entry concerns, with what is different today:
@@ -279,7 +290,8 @@ type SourceEntry struct {
 	Notice *DayNotice
 	// Closing is set on KindClosingDay only.
 	Closing *DayClosing
-	// Activity is set on the activity kinds (#7662). Room is where the block
+	// Activity is set on the activity kinds (#7662) and on the block kinds of
+	// the Personal source (#7675). Room is where the block
 	// takes place, PreviousRoom where its series plans it when it moved.
 	Activity     *BlockActivity
 	Room         *BlockRoom
@@ -329,8 +341,9 @@ type Overview struct {
 	Entries []Entry        `json:"entries"`
 }
 
-// StaffChanges is the Personal port: full-day absences, group substitutions
-// and changed or cancelled shifts of the day as the caller may see them. It never carries a
+// StaffChanges is the Personal port: full-day absences, group substitutions,
+// changed or cancelled shifts and the absences and covers of single blocks
+// (#7675) of the day as the caller may see them. It never carries a
 // reason for an absence; the port has no field for one.
 type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
@@ -476,8 +489,46 @@ func (v *view) Today(ctx context.Context) (Overview, error) {
 			overview.Entries = append(overview.Entries, toEntry(entry))
 		}
 	}
+	overview.Entries = foldCoveredBlocks(overview.Entries)
 	sortEntries(overview.Entries)
 	return overview, nil
+}
+
+// foldCoveredBlocks folds the Stundenplan's "andere Leitung" of a block into
+// the Personal source's absence or cover of the same block (#7675): both say
+// who takes over, the Personal entry under its own rule. The block's room
+// moves over. Without the Personal entry (another rule, a failed source) the
+// Stundenplan's line stays.
+func foldCoveredBlocks(entries []Entry) []Entry {
+	covering := map[int64]int{}
+	for i, entry := range entries {
+		if (entry.Kind == KindBlockSubstitution || entry.Kind == KindBlockStaffAbsent) && entry.Activity != nil {
+			covering[entry.Activity.ID] = i
+		}
+	}
+	if len(covering) == 0 {
+		return entries
+	}
+	for _, entry := range entries {
+		if at, found := foldTarget(entry, covering); found && entries[at].Room == nil {
+			entries[at].Room = entry.Room
+		}
+	}
+	kept := make([]Entry, 0, len(entries))
+	for _, entry := range entries {
+		if _, found := foldTarget(entry, covering); !found {
+			kept = append(kept, entry)
+		}
+	}
+	return kept
+}
+
+func foldTarget(entry Entry, covering map[int64]int) (int, bool) {
+	if entry.Kind != KindActivityLeadChanged || entry.Activity == nil {
+		return 0, false
+	}
+	at, found := covering[entry.Activity.ID]
+	return at, found
 }
 
 // readFrom reads the sources from start on inside one isolation until one

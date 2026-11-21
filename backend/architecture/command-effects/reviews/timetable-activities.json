@@ -37754,7 +37754,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136), with the teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
       "target_owner": "school-membership"
@@ -37764,17 +37764,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136), with the teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
       "target_owner": "school-membership"
@@ -37784,29 +37774,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136), with the teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
       "target_owner": "school-membership"
     },
     {

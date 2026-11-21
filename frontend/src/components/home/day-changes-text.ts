@@ -219,6 +219,20 @@ function activityLeadChangedText(change: DayChange): string {
     : `Bei ${name} sind ${namesOf(absent)} heute nicht da.`;
 }
 
+/**
+ * Abwesenheit oder Vertretung bei einem einzelnen Termin (#7675), aus der
+ * Quelle Personal. Wer vertreten wird, heißt dort „replaced“; die Sätze sind
+ * dieselben wie bei „andere Leitung“ aus dem Stundenplan.
+ */
+function blockStaffText(change: DayChange): string {
+  return activityLeadChangedText({
+    ...change,
+    people: change.people.map((person) =>
+      person.role === "replaced" ? { ...person, role: "absent" } : person,
+    ),
+  });
+}
+
 function closingDayText(change: DayChange): string {
   const closing = change.closing;
   const name = closing?.name.trim();
@@ -254,6 +268,9 @@ const DAY_CHANGE_TEXTS: Readonly<
   activity_room_changed: (change) =>
     `${activityName(change, true)} ist heute in einem anderen Raum.`,
   activity_lead_changed: activityLeadChangedText,
+  // Abwesenheit und Vertretung bei einem Termin (#7675).
+  block_staff_absent: blockStaffText,
+  block_substitution: blockStaffText,
   closing_day: closingDayText,
 };
 
@@ -355,6 +372,11 @@ export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
       return "/tagesinformationen";
     case "calendar_periods":
       return "/calendar-periods";
+    case "substitution_plan":
+      // Der Vertretungsplan des Tages mit dem Termin offen (#7675).
+      return link.instanceId && link.day
+        ? `/vertretung?d=${link.day}&block=${link.instanceId}`
+        : "/vertretung";
     case "day_plan":
       // Die Zeile ersetzt den Weg durch den Tagesplan der Person
       // (useDayPlanHref); das hier ist der Weg der Betreuung.

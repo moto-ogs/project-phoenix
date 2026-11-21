@@ -7,7 +7,8 @@ package api
 // care staff sees names for its own groups and itself, a number for the rest
 // of the school; the lead sees every name. The changed and cancelled shifts
 // of Workforce's Dienstplan (#7661) are part of the same source: the care
-// staff sees only its own, the lead of the Dienstplan every one. The projection names none of
+// staff sees only its own, the lead of the Dienstplan every one. So are the
+// absences and covers of single blocks of Timetable (#7675). The projection names none of
 // these owners; the translation is cross-owner glue and lives here.
 
 import (
@@ -101,13 +102,16 @@ type DayChangesSources struct {
 	ClosingDays dayChangesClosingDayReads
 	// Blocks is Timetable's read of the day's changed blocks (#7662).
 	Blocks dayChangesBlocks
-	Today  func() calendar.Date
-	Logger *slog.Logger
+	// BlockStaff is Timetable's read of the day's blocks with an absent or
+	// covering supervisor, for the Personal source (#7675).
+	BlockStaff dayChangesBlockStaff
+	Today      func() calendar.Date
+	Logger     *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
 func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
-	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil {
+	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil || sources.BlockStaff == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
 	if sources.CarePlan == nil || sources.Students == nil {
@@ -122,6 +126,8 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Blocks == nil {
 		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
 	}
+	// One name read per request for the sources that name staff (#7675).
+	sources.Names = memoStaffNames{inner: sources.Names}
 	return daychangesview.New(daychangesview.Dependencies{
 		Today:      sources.Today,
 		Isolation:  dayChangesSavepoints{},
@@ -140,7 +146,10 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 type dayChangesSavepoints struct{}
 
 func (dayChangesSavepoints) Run(ctx context.Context, read func(context.Context) error) error {
-	return tenant.WithSavepoint(ctx, read)
+	// The sources of one savepoint read the staff names once (#7675).
+	return tenant.WithSavepoint(ctx, func(ctx context.Context) error {
+		return read(withDayChangesNameMemo(ctx))
+	})
 }
 
 func (dayChangesSavepoints) IsFatal(err error) bool { return tenant.IsSavepointControlFailure(err) }
@@ -177,6 +186,10 @@ type staffViewer struct {
 	// time_tracking:manage). It sees every changed shift with its name; the
 	// others see only their own.
 	shiftPlan bool
+	// substitutionPlan may open the Vertretungsplan (admin or
+	// schedules:manage); dayPlan may open the day plan (schedules:read).
+	substitutionPlan bool
+	dayPlan          bool
 	// groups are the caller's own groups and those it covers today; team
 	// are the staff of these groups (teachers and today's substitutes).
 	groups map[int64]bool
@@ -208,13 +221,18 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 		return nil, fmt.Errorf("list staff absences: %w", err)
 	}
 	builder := newStaffEntryBuilder(viewer, day)
+	absentToday := map[int64]bool{}
 	for _, absence := range mergeAbsences(absences, day) {
 		builder.absence(absence)
+		absentToday[absence.staffID] = true
 	}
 	for _, handover := range handovers {
 		builder.handover(handover)
 	}
 	if err := s.addShifts(ctx, builder, day); err != nil {
+		return nil, err
+	}
+	if err := s.addBlocks(ctx, builder, day, absentToday); err != nil {
 		return nil, err
 	}
 	return builder.finish(ctx, s.sources.Names, s.sources.Groups)
@@ -237,11 +255,13 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 	viewer := staffViewer{
 		lead: admin || securityruntime.HasPermission(permissions.VacationApprove, granted) ||
 			securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
-		ownAbsences:    securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
-		staffRecords:   admin || hasStaffRecordAccess(granted),
-		groupHandovers: admin || hasGroupHandoverAccess(roles, granted),
-		shiftPlan:      admin || securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
-		groups:         map[int64]bool{}, team: map[int64]bool{},
+		ownAbsences:      securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
+		staffRecords:     admin || hasStaffRecordAccess(granted),
+		groupHandovers:   admin || hasGroupHandoverAccess(roles, granted),
+		shiftPlan:        admin || securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
+		substitutionPlan: admin || securityruntime.HasPermission(permissions.SchedulesManage, granted),
+		dayPlan:          readsDayPlan(ctx),
+		groups:           map[int64]bool{}, team: map[int64]bool{},
 	}
 	viewer.counts = viewer.lead || securityruntime.HasPermission(permissions.UsersRead, granted)
 	staffID, isStaff, err := s.sources.Caller.CurrentStaffID(ctx)

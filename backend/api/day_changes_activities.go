@@ -147,13 +147,5 @@ func activityEntries(day calendar.Date, change timetable.BlockDayChange, names m
 // school's time zone. A block whose end is not after its start ends with the
 // day, as the lifecycle treats it.
 func blockInstants(day calendar.Date, change timetable.BlockDayChange) (*time.Time, *time.Time) {
-	start, err := time.ParseInLocation("2006-01-02 15:04", day.String()+" "+change.StartTime, calendar.Berlin)
-	if err != nil {
-		return nil, nil
-	}
-	end, err := time.ParseInLocation("2006-01-02 15:04", day.String()+" "+change.EndTime, calendar.Berlin)
-	if err != nil || !end.After(start) {
-		end = day.EndOfDay()
-	}
-	return &start, &end
+	return wallClockInstants(day, change.StartTime, change.EndTime)
 }

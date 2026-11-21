@@ -16,10 +16,6 @@ func (staffingNoticeGroupTeachers) ListGroupAssignments(context.Context, schoolm
 	return nil, nil
 }
 
-func (staffingNoticeGroupTeachers) ListTeachers(context.Context, schoolmembership.TeacherFilter) ([]schoolmembership.Teacher, error) {
-	return nil, nil
-}
-
 type staffingNoticeGroups struct{}
 
 func (staffingNoticeGroups) BlockEducationGroups(context.Context, []int64) (map[int64][]int64, error) {

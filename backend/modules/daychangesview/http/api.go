@@ -45,6 +45,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindClosingDay),
 				string(daychangesview.KindActivityCancelled), string(daychangesview.KindActivityReinstated),
 				string(daychangesview.KindActivityRoomChanged), string(daychangesview.KindActivityLeadChanged),
+				string(daychangesview.KindBlockStaffAbsent), string(daychangesview.KindBlockSubstitution),
 			}},
 			{Type: daychangesview.ChildStatus(""), Values: []string{string(daychangesview.ChildSick), string(daychangesview.ChildExcused)}},
 			{Type: daychangesview.PersonRole(""), Values: []string{
@@ -56,6 +57,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.LinkStaffList), string(daychangesview.LinkGroupHandovers),
 				string(daychangesview.LinkOwnShiftPlan), string(daychangesview.LinkShiftPlan), string(daychangesview.LinkStudent),
 				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkCalendarPeriods), string(daychangesview.LinkDayPlan),
+				string(daychangesview.LinkSubstitutionPlan),
 			}},
 			{Type: daychangesview.NoticePriority(""), Values: []string{
 				string(daychangesview.NoticeInfo), string(daychangesview.NoticeImportant),

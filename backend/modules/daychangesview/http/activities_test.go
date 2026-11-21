@@ -175,7 +175,9 @@ func TestDayChangesActivitySource(t *testing.T) {
 		overview, body := read(t, router, carerAccount.ID, tenantID, "schedules:read")
 		assert.Equal(t, "loaded", sourceStatus(overview, "activities"))
 		assert.Equal(t, []string{
-			"you activity_lead_changed Chor 13:00-14:00 " + room3 + " Anna Betreuung/substitute(du) Ben Krank/absent ->day_plan",
+			// The Personal source names the covered block (#7675); the
+			// Stundenplan's "andere Leitung" folds into it with its room.
+			"you block_substitution Chor 13:00-14:00 " + room3 + " Anna Betreuung/substitute(du) Ben Krank/replaced ->day_plan",
 			"you activity_room_changed Fussball 14:00-15:00 " + room2 + " <-Werkraum ->day_plan",
 			"school activity_cancelled Basteln 15:00-16:00 " + room3 + " ->day_plan",
 			"school activity_reinstated Theater 16:00-17:00 " + room3 + " ->day_plan",
@@ -187,7 +189,11 @@ func TestDayChangesActivitySource(t *testing.T) {
 
 	t.Run("the lead sees every block under school", func(t *testing.T) {
 		_, body := read(t, router, leadAccount.ID, tenantID, "admin:*")
-		assert.Equal(t, everyBlock(" Anna Betreuung/substitute Ben Krank/absent"), trim(activityLines(t, body)))
+		// The covered block is the Personal source's cover (#7675), with the
+		// block in the Vertretungsplan; the other blocks stay the Stundenplan's.
+		lines := everyBlock("")
+		lines[0] = "school block_substitution Chor 13:00-14:00 " + room3 + " Anna Betreuung/substitute Ben Krank/replaced ->substitution_plan"
+		assert.Equal(t, lines, trim(activityLines(t, body)))
 	})
 
 	t.Run("an account without the day plan gets no entries and no failure", func(t *testing.T) {
@@ -212,7 +218,9 @@ func TestDayChangesActivitySource(t *testing.T) {
 		assert.Empty(t, activityLines(t, body))
 		_, body = read(t, router, carerAccount.ID, tenantID, "schedules:read")
 		assert.Equal(t, []string{
-			"you activity_lead_changed Chor 13:00-14:00 " + room3 + " Anna Betreuung/substitute(du) Ben Krank/absent ->day_plan",
+			// The Personal source names the covered block (#7675); the
+			// Stundenplan's "andere Leitung" folds into it with its room.
+			"you block_substitution Chor 13:00-14:00 " + room3 + " Anna Betreuung/substitute(du) Ben Krank/replaced ->day_plan",
 			"you activity_room_changed Fussball 14:00-15:00 " + room2 + " <-Werkraum ->day_plan",
 		}, trim(activityLines(t, body)))
 	})
