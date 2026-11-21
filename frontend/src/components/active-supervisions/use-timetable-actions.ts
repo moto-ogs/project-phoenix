@@ -419,10 +419,8 @@ export function useTimetableActions(
         setIsStartingSpontaneous(true);
         const result = await timetableOperationsApi.createAndStartSpontaneous({
           title: payload.title,
-          room_id: Number(payload.roomId),
-          activity_group_id: payload.activityGroupId
-            ? Number(payload.activityGroupId)
-            : undefined,
+          room_id: payload.roomId,
+          activity_group_id: payload.activityGroupId || undefined,
           staff_ids: staffIds,
         });
         setPresentPickerAutoOpenInstanceId(result.instanceId);

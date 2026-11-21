@@ -209,7 +209,7 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
       timetableOperationsApi.createAndStartSpontaneous,
     ).toHaveBeenCalledWith({
       title: "Musik-AG",
-      room_id: 20,
+      room_id: "20",
       activity_group_id: undefined,
       staff_ids: ["1", "9007199254740993"],
     });
