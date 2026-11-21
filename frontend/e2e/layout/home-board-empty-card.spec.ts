@@ -47,7 +47,7 @@ test.beforeAll(async () => {
 
 const MY_DAY = "section.my_day"; // drei Rasterzeilen
 const BIRTHDAYS = "section.birthdays"; // drei Rasterzeilen
-const NOTICES = "section.staff_notices"; // zwei Rasterzeilen
+const DAY_CHANGES = "section.day_changes"; // zwei Rasterzeilen
 const PRESENT = "tile.students_present"; // eine Rasterzeile
 
 function board(
@@ -109,7 +109,7 @@ test("cards with content keep the fixed 7rem lattice", async ({ page }) => {
     board(
       [
         { key: MY_DAY, span: 4, col: 0, row: 0 },
-        { key: NOTICES, span: 2, col: 0, row: 3 },
+        { key: DAY_CHANGES, span: 2, col: 0, row: 3 },
         { key: PRESENT, span: 1, col: 2, row: 3 },
       ],
       [],
@@ -117,13 +117,13 @@ test("cards with content keep the fixed 7rem lattice", async ({ page }) => {
   );
 
   const myDay = await card(page, MY_DAY);
-  const notices = await card(page, NOTICES);
+  const dayChanges = await card(page, DAY_CHANGES);
   const present = await card(page, PRESENT);
   expect(myDay.height).toBeCloseTo(rows(3), 0);
-  expect(notices.height).toBeCloseTo(rows(2), 0);
+  expect(dayChanges.height).toBeCloseTo(rows(2), 0);
   expect(present.height).toBeCloseTo(rows(1), 0);
-  expect(notices.y - (myDay.y + myDay.height)).toBeCloseTo(GAP, 0);
-  expect(present.y).toBeCloseTo(notices.y, 0);
+  expect(dayChanges.y - (myDay.y + myDay.height)).toBeCloseTo(GAP, 0);
+  expect(present.y).toBeCloseTo(dayChanges.y, 0);
 });
 
 test("an empty card alone in its rows is as tall as its text", async ({
@@ -136,7 +136,7 @@ test("an empty card alone in its rows is as tall as its text", async ({
       [
         { key: MY_DAY, span: 4, col: 0, row: 0 },
         { key: BIRTHDAYS, span: 4, col: 0, row: 3 },
-        { key: NOTICES, span: 2, col: 0, row: 6 },
+        { key: DAY_CHANGES, span: 2, col: 0, row: 6 },
       ],
       [MY_DAY, BIRTHDAYS],
     ),
@@ -144,15 +144,15 @@ test("an empty card alone in its rows is as tall as its text", async ({
 
   const myDay = await card(page, MY_DAY);
   const birthdays = await card(page, BIRTHDAYS);
-  const notices = await card(page, NOTICES);
+  const dayChanges = await card(page, DAY_CHANGES);
   // Kopf, Titel und ein Satz: deutlich unter zwei Rasterzeilen.
   expect(myDay.height).toBeLessThan(rows(2));
   expect(myDay.height).toBeGreaterThan(ROW);
   // Was darunter steht, rückt mit dem üblichen Abstand nach.
   expect(birthdays.y - (myDay.y + myDay.height)).toBeCloseTo(GAP, 0);
-  expect(notices.y - (birthdays.y + birthdays.height)).toBeCloseTo(GAP, 0);
+  expect(dayChanges.y - (birthdays.y + birthdays.height)).toBeCloseTo(GAP, 0);
   // Die Karte mit Inhalt behält ihre zwei Zeilen.
-  expect(notices.height).toBeCloseTo(rows(2), 0);
+  expect(dayChanges.height).toBeCloseTo(rows(2), 0);
 });
 
 test("an empty card beside a filled one keeps its height and centres its text", async ({
@@ -199,15 +199,15 @@ test("a row the person left free keeps its height", async ({ page }) => {
     board(
       [
         { key: PRESENT, span: 1, col: 0, row: 0 },
-        { key: NOTICES, span: 2, col: 0, row: 2 },
+        { key: DAY_CHANGES, span: 2, col: 0, row: 2 },
       ],
       [],
     ),
   );
 
   const present = await card(page, PRESENT);
-  const notices = await card(page, NOTICES);
-  expect(notices.y - present.y).toBeCloseTo(2 * (ROW + GAP), 0);
+  const dayChanges = await card(page, DAY_CHANGES);
+  expect(dayChanges.y - present.y).toBeCloseTo(2 * (ROW + GAP), 0);
 });
 
 test("on a phone every card is as tall as its content", async ({ page }) => {
@@ -217,16 +217,16 @@ test("on a phone every card is as tall as its content", async ({ page }) => {
     board(
       [
         { key: MY_DAY, span: 4, col: 0, row: 0 },
-        { key: NOTICES, span: 2, col: 0, row: 3 },
+        { key: DAY_CHANGES, span: 2, col: 0, row: 3 },
       ],
       [MY_DAY],
     ),
   );
 
   const myDay = await card(page, MY_DAY);
-  const notices = await card(page, NOTICES);
-  expect(notices.height).toBeLessThan(rows(2));
-  expect(notices.y - (myDay.y + myDay.height)).toBeCloseTo(GAP, 0);
+  const dayChanges = await card(page, DAY_CHANGES);
+  expect(dayChanges.height).toBeLessThan(rows(2));
+  expect(dayChanges.y - (myDay.y + myDay.height)).toBeCloseTo(GAP, 0);
   const boardBox = await box(page, "home-board");
   expect(boardBox.width).toBeLessThanOrEqual(390);
 });
