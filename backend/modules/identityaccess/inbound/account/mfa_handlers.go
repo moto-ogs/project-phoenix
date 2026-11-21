@@ -81,7 +81,7 @@ func (rs *Resource) mfaResend(w http.ResponseWriter, r *http.Request) {
 		mapMFAError(w, r, err)
 		return
 	}
-	render.JSON(w, r, MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, MFAResendResponse{ChallengeToken: renewed})
 }
 
 // ----- /mfa/enroll/start -----
@@ -103,7 +103,7 @@ func (rs *Resource) mfaEnrollStart(w http.ResponseWriter, r *http.Request) {
 		mapMFAError(w, r, err)
 		return
 	}
-	render.JSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
+	common.RenderJSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
 }
 
 // ----- /mfa/enroll/confirm -----
@@ -199,5 +199,5 @@ func (rs *Resource) completeMFAExchange(w http.ResponseWriter, r *http.Request, 
 		portalauth.Render(w, r, err, portalauth.ExchangeRules)
 		return
 	}
-	render.JSON(w, r, tokens)
+	common.RenderJSON(w, r, tokens)
 }

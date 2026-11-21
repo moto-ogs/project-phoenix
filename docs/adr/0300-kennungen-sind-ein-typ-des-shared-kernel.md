@@ -76,3 +76,37 @@ Der Typ aus ADR 0270, `common.ID`, liegt in `api/common`. Das dürfen nur
 - Rechnen mit Kennungen braucht `Int64()` oder eine Umwandlung.
   Listenhelfer kommen mit ihrem ersten produktiven Aufrufer hinzu.
 - `common.JSONID` behält seine Wire-Form und liest wie `ident.ID`.
+
+## Nachtrag vom 2026-11-21: Gespeichertes JSON behält Zahlen
+
+Punkt 2 galt nicht lange. Fachtypen mit `ident.ID` gehen nicht nur in
+Antworten, sondern auch in gespeichertes JSON: Audit- und Ereignis-Details,
+Outbox-Payloads, Schnappschüsse und Fingerabdrücke. Datenbankfunktionen
+vergleichen dort Kennungen als Zahl, etwa der Trigger
+`enrollment.holiday_time_model_keeps_booked_history`
+(`details->'before' @> jsonb_build_array(jsonb_build_object('time_model_id', OLD.id))`)
+oder die Löschfunktionen der Demo-Daten (`details->'contract_ids' @> to_jsonb(contract.id)`).
+Ein Test der Gruppe Anmeldung zeigte, dass der Trigger mit String-Kennungen
+nicht mehr greift. Rund 270 `json.Marshal`-Aufrufe außerhalb der HTTP-Schicht,
+viele mit `any`, lassen sich nicht verlässlich einzeln absichern; Antworten
+laufen dagegen zentral über `render.Respond`.
+
+Entscheidung:
+
+1. **`ident.ID` schreibt mit `encoding/json` eine Zahl**, wie `int64`.
+   Gespeichertes JSON, Fingerabdrücke und Datenbankfunktionen bleiben, wie sie
+   sind. `ident.ID` hat kein `MarshalJSON` und kein `MarshalText`; bun bindet
+   ihn deshalb weiter als `bigint`.
+2. **Nur Antworten schreiben Strings.** `wire.Marshal` (`sharedkernel/ident/wire`, neues Paket des Kernels) kodiert mit
+   `encoding/json/v2`, `DefaultOptionsV1()` und einem Marshaler für
+   `ident.ID`: byte-gleich zu `encoding/json`, nur Kennungen als String, auch in
+   `any`, Listen und Zeigern. `api/common` setzt `render.Respond` darauf und
+   bietet `common.RenderJSON` statt `render.JSON`. Der Vertragsabgleich im
+   Testbuild kodiert ebenso und meldet jede angemeldete Antwort, die eine
+   Kennung als Zahl schreibt.
+3. Lesen bleibt unverändert: String oder Zahl.
+
+Folgen: PyrePortal ist nicht betroffen, weil die IoT-Typen kein `ident.ID`
+tragen. Tests, die Fachtypen direkt mit `encoding/json` kodieren, sehen
+wieder Zahlen; Tests über den Router sehen Strings.
+
