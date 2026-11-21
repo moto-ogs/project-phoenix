@@ -253,8 +253,8 @@ func TestModulePlanningTracksResolveArchivedAndUnknownIDs(t *testing.T) {
 	for _, track := range tracks {
 		byID[track.ID.Int64()] = track
 	}
-	require.Contains(t, byID, active.ID)
-	require.Contains(t, byID, archived.ID)
+	require.Contains(t, byID, active.ID.Int64())
+	require.Contains(t, byID, archived.ID.Int64())
 	assert.NotNil(t, byID[archived.ID.Int64()].ArchivedAt)
 }
 

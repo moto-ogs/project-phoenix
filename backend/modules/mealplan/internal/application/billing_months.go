@@ -330,6 +330,19 @@ func (b *BillingMonths) compute(ctx context.Context, month calendar.Date) (mealp
 	return result, nil
 }
 
+// fingerprintChild is a child as the fingerprint has always read it: the
+// student ID as a JSON number, while the wire sends it as a string (#2342).
+// A release compares the fingerprint of its preview, so the bytes stay.
+type fingerprintChild struct {
+	StudentID      int64           `json:"student_id"`
+	FirstName      string          `json:"first_name"`
+	LastName       string          `json:"last_name"`
+	SchoolClass    string          `json:"school_class"`
+	RegisteredDays int             `json:"registered_days"`
+	MealDays       int             `json:"meal_days"`
+	AbsentDates    []mealplan.Date `json:"absent_dates"`
+}
+
 // monthFingerprint names a computed month as the OGS-Leitung sees it: each
 // child with its class, its registered days, its meals and its absences.
 // The release compares it, so the totals alone cannot hide a meal that
@@ -337,11 +350,19 @@ func (b *BillingMonths) compute(ctx context.Context, month calendar.Date) (mealp
 // fingerprint order, not in the shown one, so a preview opened before the
 // German sort keeps its fingerprint (#6464).
 func monthFingerprint(month mealplan.BillingMonth) string {
-	children := slices.Clone(month.Children)
-	slices.SortFunc(children, compareChildrenForFingerprint)
+	sorted := slices.Clone(month.Children)
+	slices.SortFunc(sorted, compareChildrenForFingerprint)
+	children := make([]fingerprintChild, len(sorted))
+	for i, child := range sorted {
+		children[i] = fingerprintChild{
+			StudentID: child.StudentID.Int64(), FirstName: child.FirstName, LastName: child.LastName,
+			SchoolClass: child.SchoolClass, RegisteredDays: child.RegisteredDays, MealDays: child.MealDays,
+			AbsentDates: child.AbsentDates,
+		}
+	}
 	state, err := json.Marshal(struct {
-		Month    mealplan.Date                `json:"month"`
-		Children []mealplan.BillingMonthChild `json:"children"`
+		Month    mealplan.Date      `json:"month"`
+		Children []fingerprintChild `json:"children"`
 	}{month.Month, children})
 	if err != nil {
 		// A month always marshals; no fingerprint matches no release.

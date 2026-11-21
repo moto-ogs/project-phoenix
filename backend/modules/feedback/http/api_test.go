@@ -150,7 +150,7 @@ func execute(t *testing.T, resource *feedbackHTTP.Resource, method, target strin
 func TestStaffWireContractsStayStable(t *testing.T) {
 	t.Parallel()
 	entry := feedbackModule.Entry{ID: 7, Value: feedbackModule.ValuePositive, Day: "2026-08-31", Time: "12:34:56", StudentID: 42}
-	entryJSON := `{"id":7,"value":"positive","day":"2026-08-31","time":"12:34:56","student_id":42,"is_mensa_feedback":false,"created_at":"0001-01-01T00:00:00Z","updated_at":"0001-01-01T00:00:00Z"}`
+	entryJSON := `{"id":"7","value":"positive","day":"2026-08-31","time":"12:34:56","student_id":"42","is_mensa_feedback":false,"created_at":"0001-01-01T00:00:00Z","updated_at":"0001-01-01T00:00:00Z"}`
 	tests := []struct {
 		name, method, target, want string
 		body                       any
