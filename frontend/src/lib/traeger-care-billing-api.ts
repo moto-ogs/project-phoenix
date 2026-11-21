@@ -61,6 +61,7 @@ import {
   type BillingFile,
   type LetterMailStatus,
   billingFile,
+  knownLetterMailStatus,
 } from "./traeger-billing-api";
 
 // Go does not register these sets; the contract types them as string. A value
@@ -100,14 +101,21 @@ const COST_SHARE_KIND_VALUES = [
   "other_subsidy",
 ] as const;
 const COST_SHARE_SCOPE_VALUES = ["care", "meal", "both"] as const;
+
+/** The cost share kind a value names, undefined when unknown. */
+export function knownCostShareKind(
+  value: string,
+): CareCostShareKind | undefined {
+  return knownEnum(COST_SHARE_KIND_VALUES, value);
+}
+
+/** The cost share scope a value names, undefined when unknown. */
+export function knownCostShareScope(
+  value: string,
+): CareCostShareScope | undefined {
+  return knownEnum(COST_SHARE_SCOPE_VALUES, value);
+}
 const UNCOUNTED_STATUS_VALUES = ["missing", "expired"] as const;
-const LETTER_MAIL_STATUS_VALUES = [
-  "not_sent",
-  "queued",
-  "sent",
-  "failed",
-  "unknown",
-] as const;
 
 export type CareWeekday = (typeof WEEKDAY_VALUES)[number];
 export type CareRunStatus = (typeof RUN_STATUS_VALUES)[number];
@@ -592,7 +600,7 @@ function id(value: string): string {
   return value === "0" ? "" : value;
 }
 
-function schoolFromBackend(school: WireSchool): CareSchool {
+export function schoolFromBackend(school: WireSchool): CareSchool {
   return { id: id(school.id), name: school.name };
 }
 
@@ -607,7 +615,7 @@ function billedUntilFromBackend(
   return out;
 }
 
-function moduleFromBackend(module: WireModule): CareModule {
+export function moduleFromBackend(module: WireModule): CareModule {
   return {
     schoolId: id(module.school_id),
     schoolName: module.school_name,
@@ -735,12 +743,12 @@ function invoiceFromBackend(invoice: WireInvoice): CareInvoice {
     })),
     mealPositions: mealPositionsFromBackend(invoice.meal_positions),
     costShares: (invoice.cost_shares ?? []).map((share) => ({
-      kind: knownEnum(COST_SHARE_KIND_VALUES, share.kind),
+      kind: knownCostShareKind(share.kind),
       costBearerId: id(share.cost_bearer_id),
       costBearerName: share.cost_bearer_name,
       shareBasisPoints: share.share_basis_points,
       shareCents: share.share_cents,
-      scope: knownEnum(COST_SHARE_SCOPE_VALUES, share.scope),
+      scope: knownCostShareScope(share.scope),
       amountCents: share.amount_cents,
     })),
     amendments: (invoice.amendments ?? []).map(amendmentFromBackend),
@@ -1061,8 +1069,7 @@ function careMailingFromBackend(mailing: WireLetterMailing): CareLetterMailing {
     inInbox: mailing.in_inbox,
     printed: mailing.printed,
     replaced: mailing.replaced,
-    // The backend names a state it cannot read "unknown" itself.
-    status: knownEnum(LETTER_MAIL_STATUS_VALUES, mailing.status) ?? "unknown",
+    status: knownLetterMailStatus(mailing.status),
     sends: mailing.sends,
     attempts: mailing.attempts,
     requestedAt: mailing.requested_at,

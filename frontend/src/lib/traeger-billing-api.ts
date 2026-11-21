@@ -724,6 +724,14 @@ export async function printBillingLetters(runId: string): Promise<BillingFile> {
 /** The state of the last mail of a family's letter (#4670). */
 export type LetterMailStatus = (typeof LETTER_MAIL_STATUS_VALUES)[number];
 
+/**
+ * The state of a letter's mail; the backend names a state it cannot read
+ * "unknown" itself, so a state this build does not know reads the same.
+ */
+export function knownLetterMailStatus(value: string): LetterMailStatus {
+  return knownEnum(LETTER_MAIL_STATUS_VALUES, value) ?? "unknown";
+}
+
 /** The mail of the letter of one family. */
 export interface LetterMailing {
   readonly documentId: string;
@@ -758,8 +766,7 @@ function mailingFromBackend(mailing: WireLetterMailing): LetterMailing {
     recipientFirstName: mailing.recipient_first_name,
     recipientLastName: mailing.recipient_last_name,
     recipientEmail: mailing.recipient_email,
-    // The backend names a state it cannot read "unknown" itself.
-    status: knownEnum(LETTER_MAIL_STATUS_VALUES, mailing.status) ?? "unknown",
+    status: knownLetterMailStatus(mailing.status),
     mailOutcome: knownMailOutcome(mailing.mail_outcome),
     providerBlock: knownMailProviderBlock(mailing.provider_block),
     sends: mailing.sends,
