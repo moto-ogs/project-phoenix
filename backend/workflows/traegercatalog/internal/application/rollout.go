@@ -124,7 +124,7 @@ func (c *Catalog) writeVersions(ctx context.Context, actor traegercatalog.Actor,
 	next := release{month: snap.month, phaseVersion: version, phase: snap.phase.Draft, offerings: map[int64]offeringRelease{}}
 	for _, offering := range released {
 		if offering.ReleasedVersion != nil && offering.Released != nil {
-			next.offerings[offering.ID] = offeringRelease{version: *offering.ReleasedVersion, draft: *offering.Released}
+			next.offerings[offering.ID.Int64()] = offeringRelease{version: *offering.ReleasedVersion, draft: *offering.Released}
 		}
 	}
 	return next, nil
@@ -180,12 +180,12 @@ func (c *Catalog) prepareBilling(ctx context.Context, actor traegercatalog.Actor
 	prices := []ports.ModulePrices{}
 	templates := []ports.ModuleTemplate{}
 	for _, offering := range snap.offerings {
-		copy := run.copies[offering.ID]
+		copy := run.copies[offering.ID.Int64()]
 		copyID := copy.CopyID
 		if copyID == 0 {
 			continue
 		}
-		released := next.offerings[offering.ID]
+		released := next.offerings[offering.ID.Int64()]
 		plan := billingFor(offering, released, run.target.schoolID, next.phase, next.month, copy)
 		if plan.pricesFrom != nil {
 			prices = append(prices, ports.ModulePrices{SchoolID: run.target.schoolID, CareOfferingID: copyID,
@@ -244,7 +244,7 @@ func (c *Catalog) recordOutcomes(ctx context.Context, actor traegercatalog.Actor
 		phaseOutcomes = append(phaseOutcomes, phaseOutcome(run, next.phaseVersion))
 		for _, offering := range snap.offerings {
 			if outcome, ok := offeringOutcome(run, offering, next); ok {
-				offeringOutcomes[offering.ID] = append(offeringOutcomes[offering.ID], outcome)
+				offeringOutcomes[offering.ID.Int64()] = append(offeringOutcomes[offering.ID.Int64()], outcome)
 			}
 		}
 	}
@@ -267,12 +267,12 @@ func offeringOutcome(run schoolRun, offering careplan.TraegerOffering, next rele
 	switch {
 	case run.result.Outcome == enrollment.TraegerOutcomeApplied && offering.WithdrawnAt != nil:
 		outcome.Outcome = enrollment.TraegerOutcomeWithdrawn
-	case run.offeringCodes[offering.ID] != "":
-		outcome.Outcome, outcome.ErrorCode = enrollment.TraegerOutcomeRejected, run.offeringCodes[offering.ID]
+	case run.offeringCodes[offering.ID.Int64()] != "":
+		outcome.Outcome, outcome.ErrorCode = enrollment.TraegerOutcomeRejected, run.offeringCodes[offering.ID.Int64()]
 	case run.result.Outcome == enrollment.TraegerOutcomeApplied:
-		version := next.offerings[offering.ID].version
+		version := next.offerings[offering.ID.Int64()].version
 		outcome.AppliedVersion = &version
-		copyID := run.copies[offering.ID].CopyID
+		copyID := run.copies[offering.ID.Int64()].CopyID
 		outcome.AppliedCopyID = &copyID
 	}
 	return outcome, recordedVersion(offering, run.target.schoolID) != nil || run.result.Outcome != enrollment.TraegerOutcomeWithdrawn

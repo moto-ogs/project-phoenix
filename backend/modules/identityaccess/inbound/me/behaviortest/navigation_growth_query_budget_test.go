@@ -92,7 +92,7 @@ func TestIdentityNavigationPositiveGrowthQueryBudget(t *testing.T) {
 		require.JSONEq(t, "[]", string(envelope.Data["unavailable_sections"]))
 		require.JSONEq(t, `{"parent_news_enabled":true,"parent_invite_mode":"disabled","timetable_day_start_time":"09:00","timetable_day_end_time":"17:00"}`, string(envelope.Data["school_switches"]))
 		staff := teacher.Staff
-		rawStaff, err := wire.Marshal(map[string]any{"id": staff.ID, "tenant_id": staff.TenantID, "created_at": staff.CreatedAt, "updated_at": staff.UpdatedAt, "person_id": staff.PersonID, "birthday_display_opt_out": false})
+		rawStaff, err := wire.Marshal(map[string]any{"id": ident.ID(staff.ID), "tenant_id": ident.ID(staff.TenantID), "created_at": staff.CreatedAt, "updated_at": staff.UpdatedAt, "person_id": ident.ID(staff.PersonID), "birthday_display_opt_out": false})
 		require.NoError(t, err)
 		require.JSONEq(t, string(rawStaff), string(envelope.Data["current_staff"]))
 		for _, section := range []struct {

@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // EnrollmentDecisionPeople is the People Directory the decision flow writes
@@ -148,10 +149,10 @@ func (p enrollmentPersons) PersonByAccount(ctx context.Context, accountID int64)
 func decisionPersonRow(person *enrollmentCompose.Person) *peopledirectory.DirectoryPersonSnapshot {
 	row := &peopledirectory.DirectoryPersonSnapshot{
 		FirstName: person.FirstName, LastName: person.LastName, Birthday: person.Birthday,
-		TagID: person.TagID, AccountID: person.AccountID,
+		TagID: person.TagID, AccountID: (*ident.ID)(person.AccountID),
 	}
-	row.ID, row.CreatedAt, row.UpdatedAt = person.ID, person.CreatedAt, person.UpdatedAt
-	row.TenantID = person.TenantID
+	row.ID, row.CreatedAt, row.UpdatedAt = ident.ID(person.ID), person.CreatedAt, person.UpdatedAt
+	row.TenantID = ident.ID(person.TenantID)
 	return row
 }
 
@@ -160,9 +161,9 @@ func decisionPersonRecord(row *peopledirectory.DirectoryPersonSnapshot) *enrollm
 		return nil
 	}
 	return &enrollmentCompose.Person{
-		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		ID: row.ID.Int64(), TenantID: row.TenantID.Int64(), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		FirstName: row.FirstName, LastName: row.LastName, Birthday: row.Birthday,
-		TagID: row.TagID, AccountID: row.AccountID,
+		TagID: row.TagID, AccountID: (*int64)(row.AccountID),
 	}
 }
 
@@ -174,7 +175,7 @@ func (s enrollmentReviewerStaff) StaffIDByPerson(ctx context.Context, personID i
 	if err != nil || staff == nil {
 		return 0, err
 	}
-	return staff.ID, nil
+	return staff.ID.Int64(), nil
 }
 
 // enrollmentStudentRecords confirms that a student exists.

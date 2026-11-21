@@ -229,7 +229,7 @@ func (c parentBillingCareContracts) VersionsInForce(ctx context.Context, organiz
 	for i, period := range periods {
 		services := make([]parentbilling.CareContractService, len(period.Version.Services))
 		for j, service := range period.Version.Services {
-			services[j] = parentbilling.CareContractService{Weekday: service.Weekday, CareOfferingID: service.CareOfferingID,
+			services[j] = parentbilling.CareContractService{Weekday: service.Weekday, CareOfferingID: service.CareOfferingID.Int64(),
 				ModuleName: service.ModuleName, EndsAt: service.EndsAt, LastDay: service.LastDay}
 		}
 		versions[i] = parentbilling.CareContractVersion{

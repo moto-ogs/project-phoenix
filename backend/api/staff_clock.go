@@ -81,7 +81,7 @@ func (l staffClockStaffLookup) ResolveStaffByTag(ctx context.Context, tag string
 	if person == nil {
 		return staffclock.StaffIdentity{}, staffclock.ErrRFIDTagNotFound
 	}
-	staff, err := l.people.StaffRows().FindByPersonID(ctx, person.ID)
+	staff, err := l.people.StaffRows().FindByPersonID(ctx, person.ID.Int64())
 	if err != nil {
 		if errors.Is(err, transactionruntime.ErrNoRows) {
 			return staffclock.StaffIdentity{}, staffclock.ErrRFIDTagNotStaff
@@ -91,7 +91,7 @@ func (l staffClockStaffLookup) ResolveStaffByTag(ctx context.Context, tag string
 	if staff == nil {
 		return staffclock.StaffIdentity{}, staffclock.ErrRFIDTagNotStaff
 	}
-	return staffclock.StaffIdentity{StaffID: staff.ID, FullName: person.GetFullName()}, nil
+	return staffclock.StaffIdentity{StaffID: staff.ID.Int64(), FullName: person.GetFullName()}, nil
 }
 
 // staffClockTimeClock serves the kiosk workflow's TimeClock port from the

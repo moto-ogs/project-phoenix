@@ -354,7 +354,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractChangeRequests.PendingChanges",
-      "binding_digest": "eb906ad15b712121c9566937a8a706b2",
+      "binding_digest": "abd05baa9c30038e842adcdf0c0a5cd5",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChangeRequests.PendingChanges",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentRequestVersion",

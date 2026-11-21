@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type versionRow struct {
@@ -85,7 +86,7 @@ func (r versionRow) version() (carecontract.Version, error) {
 		return carecontract.Version{}, fmt.Errorf("care contract postgres: read services: %w", err)
 	}
 	return carecontract.Version{
-		ID: r.ID, Number: r.VersionNumber, Status: r.Status, EffectiveFrom: r.EffectiveFrom, EndsOn: r.EndsOn,
+		ID: ident.ID(r.ID), Number: r.VersionNumber, Status: r.Status, EffectiveFrom: r.EffectiveFrom, EndsOn: r.EndsOn,
 		ChildFirstName: r.ChildFirstName, ChildLastName: r.ChildLastName, ChildBirthDate: r.ChildBirthDate,
 		SchoolName: r.SchoolName, PhaseName: r.PhaseName, Services: services, PriceCents: r.PriceCents,
 		CreatedAt: r.CreatedAt, Source: r.Source, ValidUntil: r.ValidUntil,
@@ -174,7 +175,7 @@ func readDocuments(ctx context.Context, db bun.IDB, organizationID int64, record
 		if i == 0 {
 			record.SentDocument = &ports.SentDocument{ID: document.ID, VersionID: document.VersionID}
 		}
-		if document.VersionID == record.Version.ID && record.DocumentID == nil {
+		if ident.ID(document.VersionID) == record.Version.ID && record.DocumentID == nil {
 			id := document.ID
 			record.DocumentID = &id
 		}

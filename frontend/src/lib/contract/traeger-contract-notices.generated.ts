@@ -4,7 +4,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -67,7 +67,7 @@ export interface NoticeOptions {
 }
 
 export const NoticeOptionsSchema: z.ZodType<NoticeOptions, unknown> = object<NoticeOptions>({
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   status: str,
   child_name: str,
   modules: str,

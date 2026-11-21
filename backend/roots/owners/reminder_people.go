@@ -45,7 +45,7 @@ func (r ReminderPersonReader) FindByIDs(ctx context.Context, ids []int64) (map[i
 	result := make(map[int64]*ports.Person, len(values))
 	for id, value := range values {
 		if value != nil {
-			result[id] = &ports.Person{ID: value.ID, Name: value.GetFullName()}
+			result[id] = &ports.Person{ID: value.ID.Int64(), Name: value.GetFullName()}
 		}
 	}
 	return result, nil

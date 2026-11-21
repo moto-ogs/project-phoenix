@@ -14674,7 +14674,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "b50f244f9fe97d28760131e93bb063a6",
+      "binding_digest": "aaa83ebf80d633fae1429a8b5e56bc19",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -14746,7 +14746,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.StaffRow",
-      "binding_digest": "fd0142f92f457df3f4f5c92613022f45",
+      "binding_digest": "36dad230ec30989264805c37ba0a8dbc",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.StaffRow",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -19098,7 +19098,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerPeople.FindPersonByAccount",
-      "binding_digest": "362e04c07c264a6d00ab2195918f9a16",
+      "binding_digest": "e818b97fea90bf84960d3c472f8c4b14",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.FindPersonByAccount",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByAccountID",
@@ -20634,7 +20634,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolIdentityProvisioner.ListAccountPersons",
-      "binding_digest": "5f3d11f31602b7f54fc213e289332a03",
+      "binding_digest": "07b5e3e28060e45d10fa199b6e7c775b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolIdentityProvisioner.ListAccountPersons",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.PersonIsLive",
@@ -20642,7 +20642,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolIdentityProvisioner.ListAccountPersons",
-      "binding_digest": "ac575636df506a9cd69619627f781d05",
+      "binding_digest": "95bd25f0acfd3f67ff873f8cf29e2439",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolIdentityProvisioner.ListAccountPersons",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.List",
@@ -20650,7 +20650,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolIdentityProvisioner.ListAccountPersons",
-      "binding_digest": "84b6edf3252f9175459433595a889990",
+      "binding_digest": "867c6dc25416811f23711ed1d51adb44",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolIdentityProvisioner.ListAccountPersons",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByPersonID",
@@ -20970,7 +20970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectory.FindStaff",
-      "binding_digest": "23fafa6e35f166666d0651c11050f9a3",
+      "binding_digest": "4b662679f65e1e254021fb75a4f6a081",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.StaffDirectory.FindStaff",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.GetTenantID",
@@ -20978,7 +20978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffDirectory.FindStaff",
-      "binding_digest": "99e0d3201957393d2823e426acb3348a",
+      "binding_digest": "9428b8cd973172881643b10a26d77145",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.StaffDirectory.FindStaff",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",

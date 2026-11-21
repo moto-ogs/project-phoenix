@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -164,7 +165,7 @@ func (f *tableFixture) on(version carecontract.Version, day calendar.Date) []str
 	names := []string{}
 	for _, service := range version.ServicesOn(day) {
 		module := "kurz"
-		if service.CareOfferingID == f.long {
+		if service.CareOfferingID == ident.ID(f.long) {
 			module = "lang"
 		}
 		names = append(names, module+"@"+service.EndsAt)

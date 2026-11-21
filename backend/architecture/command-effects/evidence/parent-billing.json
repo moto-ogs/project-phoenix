@@ -266,7 +266,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.VersionsInForce",
-      "binding_digest": "8a588f241a5498af836442ca4545cc48",
+      "binding_digest": "c416e12e4458d0427960188977f89e06",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.VersionsInForce",

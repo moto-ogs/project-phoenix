@@ -607,8 +607,8 @@ function detailFromBackend(row: WireDetail): CareContractDetail {
 
 function keyToBackend(key: CandidateKey) {
   return {
-    school_id: Number(key.schoolId),
-    request_child_id: Number(key.requestChildId),
+    school_id: key.schoolId,
+    request_child_id: key.requestChildId,
   };
 }
 
@@ -731,7 +731,7 @@ async function sendCareContractBatch(
   const body = await traegerRequest<WireSendResult>(`${CONTRACTS_PATH}/send`, {
     method: "POST",
     body: {
-      contract_ids: ids.map(Number),
+      contract_ids: [...ids],
       ...(recipientEmail === undefined
         ? {}
         : { recipient_email: recipientEmail }),

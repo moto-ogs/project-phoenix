@@ -263,7 +263,7 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 
 	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{int64(contract.ID)}})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":[%d]`, contract.ID))
+	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, contract.ID))
 
 	var mails []struct {
 		Payload        json.RawMessage `bun:"payload"`
@@ -607,7 +607,7 @@ func TestCareContractBouncedAfterAcceptanceShowsAsFailedAndTakesACorrection(t *t
 	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send",
 		map[string]any{"contract_ids": []int64{int64(id)}, "recipient_email": "korrigiert@example.org"})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":[%d]`, id), "the corrected address takes the contract")
+	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, id), "the corrected address takes the contract")
 }
 
 // A contract's mail reads as the Abrechnung's does: an unsubscribe and a complaint
@@ -633,7 +633,7 @@ func TestCareContractMailFollowsTheCurrentStateOfTheAddress(t *testing.T) {
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 		return rec.Body.String()
 	}
-	require.Contains(t, send(), fmt.Sprintf(`"sent":[%d]`, id))
+	require.Contains(t, send(), fmt.Sprintf(`"sent":["%d"]`, id))
 	// Delivery stamps sent_at on its own clock, the time.Now of the portal
 	// (ADR 0281). delivery_state_at is the provider's event time, which
 	// EmailOutcomeAt ages against that clock; a provider reporting in real
@@ -680,7 +680,7 @@ func TestCareContractMailFollowsTheCurrentStateOfTheAddress(t *testing.T) {
 	testProviderBlocks.Store(address, deliveryContract.EmailProviderBlockNone)
 	_, _, block, _ = latest()
 	assert.Empty(t, block, "the block is gone")
-	assert.Contains(t, send(), fmt.Sprintf(`"sent":[%d]`, id), "the old mail decides nothing")
+	assert.Contains(t, send(), fmt.Sprintf(`"sent":["%d"]`, id), "the old mail decides nothing")
 }
 
 // A correction is a new address. The address the mail already went to is none, in
@@ -721,7 +721,7 @@ func TestCareContractSameAddressAsCorrectionKeepsItsResult(t *testing.T) {
 	// The provider's record is shared by the tests of this binary: this address is
 	// this test's alone.
 	address := fmt.Sprintf("gleich-%d@example.org", testpkg.UniqueTestTenantID(t))
-	assert.Contains(t, resend(address), fmt.Sprintf(`"sent":[%d]`, id), "a different address is free to try")
+	assert.Contains(t, resend(address), fmt.Sprintf(`"sent":["%d"]`, id), "a different address is free to try")
 	require.Equal(t, 2, mails())
 	report(address, "complained")
 
@@ -735,14 +735,14 @@ func TestCareContractSameAddressAsCorrectionKeepsItsResult(t *testing.T) {
 
 	// An older mail counts too: back to the address, past another one that failed.
 	other := fmt.Sprintf("zwischen-%d@example.org", testpkg.UniqueTestTenantID(t))
-	assert.Contains(t, resend(other), fmt.Sprintf(`"sent":[%d]`, id), "a different address is free to try")
+	assert.Contains(t, resend(other), fmt.Sprintf(`"sent":["%d"]`, id), "a different address is free to try")
 	report(other, "failed")
 	testProviderBlocks.Store(address, deliveryContract.EmailProviderBlockActive)
 	assert.Contains(t, resend(address), `"reason":"mail_blocked"`, "the older mail to this address still counts")
 	assert.Equal(t, 3, mails())
 
 	testProviderBlocks.Store(address, deliveryContract.EmailProviderBlockNone)
-	assert.Contains(t, resend(address), fmt.Sprintf(`"sent":[%d]`, id), "the block is gone: the old mail decides nothing")
+	assert.Contains(t, resend(address), fmt.Sprintf(`"sent":["%d"]`, id), "the block is gone: the old mail decides nothing")
 	assert.Equal(t, 4, mails())
 }
 
@@ -780,7 +780,7 @@ func TestCareContractBulkSendSharesTheProviderBudget(t *testing.T) {
 	body := send().Body.String()
 
 	result := decodeSchoolPortalData[struct {
-		Sent    []int64 `json:"sent"`
+		Sent    []wireID `json:"sent"`
 		Skipped []struct {
 			Reason string `json:"reason"`
 		} `json:"skipped"`

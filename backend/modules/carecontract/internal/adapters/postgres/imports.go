@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The persistence of the import of existing contracts (#4723). Every
@@ -228,7 +229,7 @@ func (Store) ContractImportEvents(ctx context.Context, organizationID int64) ([]
 	}
 	entries := make([]carecontract.ContractImportEntry, len(rows))
 	for i, row := range rows {
-		entries[i] = carecontract.ContractImportEntry{File: row.File, AccountID: row.AccountID, ImportedAt: row.ImportedAt, Contracts: row.Contracts}
+		entries[i] = carecontract.ContractImportEntry{File: row.File, AccountID: (*ident.ID)(row.AccountID), ImportedAt: row.ImportedAt, Contracts: row.Contracts}
 	}
 	return entries, nil
 }

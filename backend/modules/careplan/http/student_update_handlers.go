@@ -102,7 +102,7 @@ func reconcilePhotoConsentRequest(requested *bool, snapshot, fresh *peopleModule
 // applyOptionalStudentFields applies optional fields like GroupID, ExtraInfo, etc.
 func applyOptionalStudentFields(req *UpdateStudentRequest, student *peopleModule.StudentState) {
 	if req.GroupID != nil {
-		student.GroupID = req.GroupID
+		student.GroupID = (*int64)(req.GroupID)
 	}
 	if req.AddressStreet != nil {
 		student.AddressStreet = trimToNil(*req.AddressStreet)

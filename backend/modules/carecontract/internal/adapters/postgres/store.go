@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -77,7 +78,7 @@ type templateRow struct {
 }
 
 func (r templateRow) template() carecontract.ContractTemplate {
-	return carecontract.ContractTemplate{ID: r.ID, UpdatedAt: r.UpdatedAt, TemplateInput: carecontract.TemplateInput{
+	return carecontract.ContractTemplate{ID: ident.ID(r.ID), UpdatedAt: r.UpdatedAt, TemplateInput: carecontract.TemplateInput{
 		TermKind: r.TermKind, TermMonths: r.TermMonths, NoticeMonths: r.NoticeMonths, NoticeTo: r.NoticeTo,
 		SpecialTermination: r.SpecialTermination, SpecialTerminationNote: r.SpecialTerminationNote,
 		StatuteRequired: r.StatuteRequired, StatuteTitle: r.StatuteTitle, StatuteURL: r.StatuteURL,
@@ -220,7 +221,7 @@ func insertServices(ctx context.Context, db bun.IDB, organizationID, versionID i
 	weekdays, offerings := make([]string, len(services)), make([]int64, len(services))
 	names, ends, lastDays := make([]string, len(services)), make([]string, len(services)), make([]string, len(services))
 	for i, service := range services {
-		weekdays[i], offerings[i], names[i], ends[i] = service.Weekday, service.CareOfferingID, service.ModuleName, service.EndsAt
+		weekdays[i], offerings[i], names[i], ends[i] = service.Weekday, service.CareOfferingID.Int64(), service.ModuleName, service.EndsAt
 		if service.LastDay != nil {
 			lastDays[i] = service.LastDay.String()
 		}
@@ -292,7 +293,7 @@ type summaryRow struct {
 
 func (r summaryRow) summary() carecontract.ContractSummary {
 	return carecontract.ContractSummary{
-		ID: r.ID, StudentID: r.StudentID, Status: r.Status, SchoolID: r.SchoolID, SchoolName: r.SchoolName,
+		ID: ident.ID(r.ID), StudentID: (*ident.ID)(r.StudentID), Status: r.Status, SchoolID: ident.ID(r.SchoolID), SchoolName: r.SchoolName,
 		ChildFirstName: r.ChildFirstName, ChildLastName: r.ChildLastName, ModuleNames: nonNil(r.ModuleNames),
 		ModulesText: carecontract.JoinNames(r.ModuleNames),
 		PartyName:   strings.TrimSpace(r.PartyName), PartyEmail: r.PartyEmail, EffectiveFrom: r.EffectiveFrom,

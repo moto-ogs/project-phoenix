@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
@@ -242,7 +243,7 @@ func TestInvitationLifecycleAndImportedSchoolIdentity(t *testing.T) {
 			storedPerson, err := testpkg.TenantQuery1(t, ctx, db, repos.Person.FindByID, any(person.ID))
 			require.NoError(t, err)
 			require.NotNil(t, storedPerson.AccountID)
-			require.Equal(t, account.ID, *storedPerson.AccountID)
+			require.Equal(t, ident.ID(account.ID), *storedPerson.AccountID)
 			if owner != nil {
 				// The acceptance grants membership, never authority over the
 				// account's global credential. The owner's stored hash is the

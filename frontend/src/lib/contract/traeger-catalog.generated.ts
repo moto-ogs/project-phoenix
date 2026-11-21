@@ -194,7 +194,7 @@ export interface TraegerOfferingSchool {
 }
 
 export const TraegerOfferingSchoolSchema: z.ZodType<TraegerOfferingSchool, unknown> = object<TraegerOfferingSchool>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   applied_version: optional(safeInt),
   outcome: optional(str),
   error_code: optional(str),
@@ -215,9 +215,9 @@ export interface TraegerOffering {
 }
 
 export const TraegerOfferingSchema: z.ZodType<TraegerOffering, unknown> = object<TraegerOffering>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
-  traeger_phase_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
+  traeger_phase_id: int64String,
   draft: TraegerOfferingDraftSchema,
   released_version: optional(safeInt),
   released: optional(TraegerOfferingDraftSchema),

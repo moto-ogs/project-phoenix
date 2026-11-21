@@ -101,7 +101,7 @@ func (n *Notices) NoticeOptions(ctx context.Context, reviewer carecontract.Revie
 		if err != nil {
 			return err
 		}
-		schoolID = record.Summary.SchoolID
+		schoolID = record.Summary.SchoolID.Int64()
 		day := n.today()
 		if !receivedOn.IsZero() && record.Concluded != nil {
 			if day, err = n.receivedOn(record, receivedOn); err != nil {
@@ -272,7 +272,7 @@ func (n *Notices) dateWithdrawal(ctx context.Context, notice *ports.NewNotice, r
 		return err
 	}
 	notice.DispatchedOn = &dispatched
-	until, err := n.periods.until(ctx, record.Summary.SchoolID, record.Concluded, state.InformedAt)
+	until, err := n.periods.until(ctx, record.Summary.SchoolID.Int64(), record.Concluded, state.InformedAt)
 	if err != nil {
 		return err
 	}
@@ -380,7 +380,7 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 	if err := n.notices.SetNoticeOutbox(ctx, d.organizationID, noticeID, outboxID); err != nil {
 		return err
 	}
-	action, details := noticeTrail(*notice, d.channel, record.Version.ID, noticeID, outboxID)
+	action, details := noticeTrail(*notice, d.channel, record.Version.ID.Int64(), noticeID, outboxID)
 	return trailContract(ctx, n.store, d.organizationID, d.accountID, record, action, details)
 }
 
@@ -430,7 +430,7 @@ func noticeTrail(notice ports.NewNotice, channel string, versionID, noticeID, ou
 // options calculates declaration choices on the receipt day, or returns
 // the declaration already made.
 func (n *Notices) options(ctx context.Context, organizationID int64, record ContractRecord, day calendar.Date, includeExpiredWithdrawal bool) (carecontract.NoticeOptions, error) {
-	state, err := n.noticeState(ctx, organizationID, record.Summary.ID)
+	state, err := n.noticeState(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return carecontract.NoticeOptions{}, err
 	}
@@ -449,7 +449,7 @@ func (n *Notices) options(ctx context.Context, organizationID int64, record Cont
 	}
 	ordinary, special := noticeDates(record.Version.Terms, day, state.ContractEnd)
 	options.OrdinaryEndsOn, options.SpecialEndsOn = &ordinary, special
-	until, err := n.periods.until(ctx, record.Summary.SchoolID, record.Concluded, state.InformedAt)
+	until, err := n.periods.until(ctx, record.Summary.SchoolID.Int64(), record.Concluded, state.InformedAt)
 	if err != nil {
 		return carecontract.NoticeOptions{}, err
 	}

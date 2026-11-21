@@ -68,7 +68,7 @@ func (s *TraegerOfferings) UpdateTraegerOffering(ctx context.Context, organizati
 	if current.WithdrawnAt != nil {
 		return careplan.TraegerOffering{}, careplan.ErrTraegerOfferingWithdrawn
 	}
-	normalized, err := normalizeTraegerOfferingDraft(current.TraegerPhaseID, draft)
+	normalized, err := normalizeTraegerOfferingDraft(current.TraegerPhaseID.Int64(), draft)
 	if err != nil {
 		return careplan.TraegerOffering{}, err
 	}
@@ -118,7 +118,7 @@ func (s *TraegerOfferings) ReleaseTraegerOfferings(ctx context.Context, organiza
 		}
 		draft := offering.Draft
 		offerings[index].ReleasedVersion, offerings[index].Released = &next, &draft
-		versions[offering.ID] = offerings[index]
+		versions[offering.ID.Int64()] = offerings[index]
 	}
 	if err := s.store.InsertTraegerOfferingVersions(ctx, organizationID, versions, accountID); err != nil {
 		return nil, err

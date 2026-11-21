@@ -1067,7 +1067,7 @@ export interface NewGuardianPhone {
 
 /** Go: peopledirectory.NewStudentGuardian */
 export interface NewStudentGuardian {
-  guardian_profile_id?: number | null;
+  guardian_profile_id?: string | null;
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -2241,8 +2241,8 @@ export interface SigningView {
 }
 
 export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
-  contract_id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  contract_id: int64String,
+  organization_id: int64String,
   status: str,
   traeger_name: str,
   party_name: str,

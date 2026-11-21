@@ -22,7 +22,7 @@ func (c *CallerContext) Profile(ctx context.Context) (domain.CallerProfile, erro
 		profile.Person = &person
 	}
 	if account.ID > 0 {
-		fields, found, err := c.deps.Accounts.FindAccountProfile(ctx, account.ID)
+		fields, found, err := c.deps.Accounts.FindAccountProfile(ctx, account.ID.Int64())
 		if err == nil && found {
 			profile.Bio, profile.Settings = fields.Bio, fields.Settings
 		}
@@ -42,16 +42,16 @@ func (c *CallerContext) UpdateProfile(ctx context.Context, update domain.CallerP
 			return &domain.CallerError{Op: op, Err: err}
 		}
 		person, personErr := c.Person(ctx)
-		if err := c.updatePersonNames(ctx, account.ID, person, personErr, update); err != nil {
+		if err := c.updatePersonNames(ctx, account.ID.Int64(), person, personErr, update); err != nil {
 			return &domain.CallerError{Op: op, Err: err}
 		}
 		if update.Username != nil {
-			if err := c.deps.Accounts.SetAccountUsername(ctx, account.ID, *update.Username); err != nil {
+			if err := c.deps.Accounts.SetAccountUsername(ctx, account.ID.Int64(), *update.Username); err != nil {
 				return &domain.CallerError{Op: op, Err: err}
 			}
 		}
 		if update.Bio != nil {
-			if err := c.deps.Accounts.SetAccountBio(ctx, account.ID, *update.Bio); err != nil {
+			if err := c.deps.Accounts.SetAccountBio(ctx, account.ID.Int64(), *update.Bio); err != nil {
 				return &domain.CallerError{Op: op, Err: err}
 			}
 		}
@@ -110,7 +110,7 @@ func (c *CallerContext) UpdateAvatar(ctx context.Context, avatarURL string) (pro
 			return &domain.CallerError{Op: op, Err: err}
 		}
 		oldAvatarPath := uploadedAvatarPath(account.Avatar)
-		if err := c.deps.Accounts.SetAccountAvatar(ctx, account.ID, avatarURL); err != nil {
+		if err := c.deps.Accounts.SetAccountAvatar(ctx, account.ID.Int64(), avatarURL); err != nil {
 			return &domain.CallerError{Op: op, Err: err}
 		}
 		if oldAvatarPath != "" {

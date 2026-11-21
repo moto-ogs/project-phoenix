@@ -52,7 +52,7 @@ func createStudentFromRequest(req *StudentRequest, personID int64) *peopleModule
 	}
 
 	if req.GroupID != nil {
-		student.GroupID = req.GroupID
+		student.GroupID = (*int64)(req.GroupID)
 	}
 	if req.AddressStreet != "" {
 		student.AddressStreet = trimToNil(req.AddressStreet)

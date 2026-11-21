@@ -15,6 +15,7 @@ import (
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	educationRepo "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type navigationGroups map[int64]*educationRepo.Group
@@ -37,7 +38,7 @@ type navigationStaff struct{ staffRows }
 func (navigationStaff) FindByID(_ context.Context, id any) (*peopleValues.Staff, error) {
 	at := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
 	notes := "<b>Früh & spät</b>"
-	return &peopleValues.Staff{ID: id.(int64), CreatedAt: at, UpdatedAt: at, TenantID: 7, PersonID: 41, EmploymentType: &notes}, nil
+	return &peopleValues.Staff{ID: ident.ID(id.(int64)), CreatedAt: at, UpdatedAt: at, TenantID: 7, PersonID: 41, EmploymentType: &notes}, nil
 }
 
 type navigationSessions struct {

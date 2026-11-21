@@ -246,7 +246,7 @@ func (b classDaySheetStudents) PersonsByID(ctx context.Context, personIDs []int6
 	out := make(map[int64]classdayCompose.SheetPerson, len(persons))
 	for _, person := range persons {
 		if person != nil {
-			out[person.ID] = classdayCompose.SheetPerson{FirstName: person.FirstName, LastName: person.LastName}
+			out[person.ID.Int64()] = classdayCompose.SheetPerson{FirstName: person.FirstName, LastName: person.LastName}
 		}
 	}
 	return out, nil

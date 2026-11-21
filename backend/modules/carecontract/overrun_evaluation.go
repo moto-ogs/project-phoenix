@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The evaluation of overruns over all schools of a Träger (#4683, User
@@ -42,7 +43,7 @@ type OverrunFigures struct {
 // SchoolOverruns are the figures of one school. DataFrom is the first day
 // the school compared: its retention of check-ins may cut the window short.
 type SchoolOverruns struct {
-	SchoolID   int64         `json:"school_id"`
+	SchoolID   ident.ID      `json:"school_id"`
 	SchoolName string        `json:"school_name"`
 	DataFrom   calendar.Date `json:"data_from"`
 	// ComparedDays counts the child-days with a check-in compared with a
@@ -56,15 +57,15 @@ type SchoolOverruns struct {
 
 // OverrunChild is one child with at least one overrun in the window.
 type OverrunChild struct {
-	SchoolID     int64  `json:"school_id"`
-	SchoolName   string `json:"school_name"`
-	StudentID    int64  `json:"student_id"`
-	FirstName    string `json:"first_name"`
-	LastName     string `json:"last_name"`
-	SchoolClass  string `json:"school_class"`
-	OverrunDays  int    `json:"overrun_days"`
-	UnbookedDays int    `json:"unbooked_days"`
-	ExtraMinutes int    `json:"extra_minutes"`
+	SchoolID     ident.ID `json:"school_id"`
+	SchoolName   string   `json:"school_name"`
+	StudentID    ident.ID `json:"student_id"`
+	FirstName    string   `json:"first_name"`
+	LastName     string   `json:"last_name"`
+	SchoolClass  string   `json:"school_class"`
+	OverrunDays  int      `json:"overrun_days"`
+	UnbookedDays int      `json:"unbooked_days"`
+	ExtraMinutes int      `json:"extra_minutes"`
 }
 
 // OverrunEvaluation answers the evaluation. Children is empty in the summary.

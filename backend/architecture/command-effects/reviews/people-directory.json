@@ -17326,7 +17326,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.FindStaffByPerson",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -17336,7 +17336,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.BirthdayStore.FindStaffByPerson",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -17980,7 +17980,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.CaregiverIdentity.FindCaregiverAccount",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.Owner.FindAccountMetadata; modules/identityaccess.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.Owner.FindAccountMetadata; modules/identityaccess.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindAccountMetadata",
       "target_owner": "identity-access"
@@ -18190,7 +18190,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GroupTeacherBlockers.ListGroupTeacherBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.GroupTeacherBlockers; modules/schoolmembership/teaching_assignment.go:118. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.GroupTeacherBlockers; modules/schoolmembership/teaching_assignment.go:118. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.GroupTeacherBlockers",
       "target_owner": "school-membership"
@@ -18200,7 +18200,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GroupTeacherBlockers.ListGroupTeacherBlockers",
-      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.GroupTeacherRepository.ListGroupTeacherBlockers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: people-directory reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.GroupTeacherRepository.ListGroupTeacherBlockers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
@@ -18990,7 +18990,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PlannedSupervisionBlockers.ListPlannedSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Capability.ListPlannedSupervisionBlockers; modules/timetable.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Capability.ListPlannedSupervisionBlockers; modules/timetable.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ListPlannedSupervisionBlockers",
       "target_owner": "timetable-activities"
@@ -19000,7 +19000,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PlannedSupervisionBlockers.ListPlannedSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Owner.ListPlannedSupervisionBlockers; modules/timetable.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Owner.ListPlannedSupervisionBlockers; modules/timetable.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.ListPlannedSupervisionBlockers",
       "target_owner": "timetable-activities"
@@ -19010,7 +19010,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PlannedSupervisionBlockers.ListPlannedSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.PlannedSupervisorCapability.ListPlannedSupervisionBlockers; modules/timetable.PlannedSupervisorCapability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.PlannedSupervisorCapability.ListPlannedSupervisionBlockers; modules/timetable.PlannedSupervisorCapability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.PlannedSupervisorCapability.ListPlannedSupervisionBlockers",
       "target_owner": "timetable-activities"
@@ -19020,7 +19020,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PlannedSupervisionBlockers.ListPlannedSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.PlannedSupervisorQuery.ListPlannedSupervisionBlockers; modules/timetable/supervisors.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.PlannedSupervisorQuery.ListPlannedSupervisionBlockers; modules/timetable/supervisors.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.PlannedSupervisorQuery.ListPlannedSupervisionBlockers",
       "target_owner": "timetable-activities"
@@ -19163,7 +19163,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -19173,7 +19173,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -19363,7 +19363,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -19373,7 +19373,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindWithPersonByIDs",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.StaffMembershipRepository.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.StaffMembershipRepository.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -19383,7 +19383,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -19483,7 +19483,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListAllWithPerson",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.StaffMembershipRepository.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.StaffMembershipRepository.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -19533,7 +19533,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.ListMembershipWithPerson",
-      "reason": "E1 #5892: ExternalCaregiver classifies an already hydrated membership/person value in memory. Qualification name lookup uses no Employment fields; no persistent write, lock or scope switch.",
+      "reason": "E1 #5892: ExternalCaregiver classifies an already hydrated membership/person value in memory. Qualification name lookup uses no Employment fields; no persistent write, lock or scope switch. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -19590,24 +19590,24 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0083",
+      "approval_adr": "0304",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffMembershipRepository.Update",
       "classification": "E3",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.Update",
-      "reason": "E3 named People student/companion or staff-identity edit protocol. Preserve class gate, foreign row/cohort locks, in-lock checks and composite savepoint/best-effort caregiver behavior; hand rows 14-19, People student_write.go, student_enrollment.go, staff_directory.go. Target modules/schoolmembership.Capability.UpdateStaff; modules/schoolmembership.Capability (supplied contract method). ",
+      "reason": "E3 named People student/companion or staff-identity edit protocol. Preserve class gate, foreign row/cohort locks, in-lock checks and composite savepoint/best-effort caregiver behavior; hand rows 14-19, People student_write.go, student_enrollment.go, staff_directory.go. Target modules/schoolmembership.Capability.UpdateStaff; modules/schoolmembership.Capability (supplied contract method). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.UpdateStaff",
       "target_owner": "school-membership"
     },
     {
       "adr": "0067",
-      "approval_adr": "0083",
+      "approval_adr": "0304",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffMembershipRepository.Update",
       "classification": "E3",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.Update",
-      "reason": "E3 named People student/companion or staff-identity edit protocol. Preserve class gate, foreign row/cohort locks, in-lock checks and composite savepoint/best-effort caregiver behavior; hand rows 14-19, People student_write.go, student_enrollment.go, staff_directory.go. Target modules/schoolmembership.Owner.UpdateStaff; modules/schoolmembership.Owner (supplied contract method). ",
+      "reason": "E3 named People student/companion or staff-identity edit protocol. Preserve class gate, foreign row/cohort locks, in-lock checks and composite savepoint/best-effort caregiver behavior; hand rows 14-19, People student_write.go, student_enrollment.go, staff_directory.go. Target modules/schoolmembership.Owner.UpdateStaff; modules/schoolmembership.Owner (supplied contract method). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.UpdateStaff",
       "target_owner": "school-membership"
@@ -23503,7 +23503,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.SubstitutionBlockers.ListActiveSubstitutionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/workforce/internal/adapters/substitutions.groupSubstitutionRepository.ActiveSubstitutionBlockers; modules/workforce/internal/adapters/substitutions/substitution_repository.go:166. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/workforce/internal/adapters/substitutions.groupSubstitutionRepository.ActiveSubstitutionBlockers; modules/workforce/internal/adapters/substitutions/substitution_repository.go:166. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/substitutions.groupSubstitutionRepository.ActiveSubstitutionBlockers",
       "target_owner": "workforce"
@@ -23513,7 +23513,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.SupervisionBlockers.ListActiveSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
       "target_owner": "school-structure"
@@ -23523,7 +23523,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.SupervisionBlockers.ListActiveSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
       "target_owner": "school-structure"
@@ -23533,7 +23533,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.SupervisionBlockers.ListActiveSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
       "target_owner": "school-structure"
@@ -23543,7 +23543,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.SupervisionBlockers.ListActiveSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.SupervisionRecords.ListActiveSupervisionBlockers; modules/studentpresence/session_records.go:63. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence.SupervisionRecords.ListActiveSupervisionBlockers; modules/studentpresence/session_records.go:63. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.SupervisionRecords.ListActiveSupervisionBlockers",
       "target_owner": "student-presence"
@@ -23553,7 +23553,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.SupervisionBlockers.ListActiveSupervisionBlockers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/compose.SessionRecords.ListActiveSupervisionBlockers; modules/studentpresence/internal/adapters/postgres/supervision_repository.go:206. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/studentpresence/compose.SessionRecords.ListActiveSupervisionBlockers; modules/studentpresence/internal/adapters/postgres/supervision_repository.go:206. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose.SessionRecords.ListActiveSupervisionBlockers",
       "target_owner": "student-presence"

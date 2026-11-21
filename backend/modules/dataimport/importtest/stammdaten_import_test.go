@@ -124,7 +124,7 @@ func TestStaffImportConfig_Create_FilesStammdatensatzAndInvitation(t *testing.T)
 
 	assert.Equal(t, email, captured.Email)
 	require.NotNil(t, captured.PersonID, "the invitation must remember the imported person")
-	assert.Equal(t, staff.PersonID, *captured.PersonID)
+	assert.Equal(t, staff.PersonID.Int64(), *captured.PersonID)
 
 	// The same file resolving the row again finds the record it just wrote.
 	inTenantTx(t, db, func(ctx context.Context) error {
@@ -184,7 +184,7 @@ func TestStaffImportConfig_Update_PatchesOnlyGivenCells(t *testing.T) {
 	require.NoError(t, repos.Staff.Update(ctx, staff))
 	city := "Bonn"
 	inTenantTx(t, db, func(ctx context.Context) error {
-		_, err := config.Records.CreateStaffMasterData(ctx, ports.StaffMasterData{StaffID: staff.ID, AddressCity: &city})
+		_, err := config.Records.CreateStaffMasterData(ctx, ports.StaffMasterData{StaffID: staff.ID.Int64(), AddressCity: &city})
 		return err
 	})
 
@@ -193,7 +193,7 @@ func TestStaffImportConfig_Update_PatchesOnlyGivenCells(t *testing.T) {
 		id, err := config.FindExisting(ctx, importModels.StaffImportRow{FirstName: "bernd", LastName: "SCHULZ"})
 		require.NoError(t, err)
 		require.NotNil(t, id, "name match must resolve the existing staff member")
-		assert.Equal(t, staff.ID, *id)
+		assert.Equal(t, staff.ID.Int64(), *id)
 		return config.Update(ctx, *id, importModels.StaffImportRow{
 			FirstName: "Bernd", LastName: "Schulz", PersonnelNumber: "P-9", WeeklyHours: "39", EmploymentType: "full_time",
 		})
@@ -206,7 +206,7 @@ func TestStaffImportConfig_Update_PatchesOnlyGivenCells(t *testing.T) {
 	assert.Equal(t, "P-9", *updated.PersonnelNumber)
 	assert.Equal(t, ports.EmploymentTypeFullTime, *updated.EmploymentType)
 
-	master, err := api.FindStaffMasterData(ctx, workTime, staff.ID)
+	master, err := api.FindStaffMasterData(ctx, workTime, staff.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, "Bonn", *master.AddressCity, "empty address cell keeps the stored city")
 	assert.InDelta(t, 39, *master.WeeklyHours, 0.001)

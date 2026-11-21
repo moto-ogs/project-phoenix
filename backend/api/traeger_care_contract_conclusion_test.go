@@ -27,6 +27,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -187,7 +188,7 @@ func TestCareContractIsConcludedAtTheAcceptanceWhereTheSchoolSaysSo(t *testing.T
 	require.NoError(t, err)
 	rec = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []int64{id}, "recipient_email": "korrigiert@example.org"})
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":[%d]`, id))
+	assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, id))
 	afterPDF := traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(id, "/document"), nil).Body.Bytes()
 	assert.Equal(t, beforePDF, afterPDF)
 	rec = traegerJSON(t, f.traeger, token, http.MethodGet, contractPath(id, ""), nil)
@@ -257,7 +258,7 @@ func TestCareContractConclusionModesNameTheWayOfEverySchool(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	modes := map[int64]string{}
 	for _, school := range decodeSchoolPortalData[[]carecontract.SchoolConclusion](t, rec.Body.Bytes()) {
-		modes[school.SchoolID] = school.Mode
+		modes[school.SchoolID.Int64()] = school.Mode
 	}
 	require.Len(t, modes, len(f.office.schools))
 	for _, school := range f.office.schools {
@@ -337,7 +338,7 @@ func recordCareContractAcceptance(t *testing.T, f careContractFixture) time.Time
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/contract-templates", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, offering := range decodeSchoolPortalData[[]carecontract.OfferingTemplate](t, rec.Body.Bytes()) {
-		if offering.SchoolID == f.school && offering.OfferingID == f.offering {
+		if offering.SchoolID == ident.ID(f.school) && offering.OfferingID == ident.ID(f.offering) {
 			require.NotEmpty(t, offering.AcceptanceText)
 			return recordCareContractTextAcceptance(t, f, offering.AcceptanceText)
 		}

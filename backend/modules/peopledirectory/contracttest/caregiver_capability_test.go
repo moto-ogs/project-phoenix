@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +63,7 @@ func createTestTeacherWithAccountForTenant(
 	)
 	require.NoError(t, err)
 
-	staff := &peopleValues.Staff{PersonID: person.ID}
+	staff := &peopleValues.Staff{PersonID: ident.ID(person.ID)}
 	staff.SetTenantID(tenantID)
 	err = db.NewRaw(`INSERT INTO users.staff_school_memberships (tenant_id, person_id)
 		VALUES (?, ?) RETURNING id, created_at, updated_at`,
@@ -72,11 +73,11 @@ func createTestTeacherWithAccountForTenant(
 	_, err = db.NewRaw(`INSERT INTO users.staff_employment_profiles (membership_id, tenant_id)
 		VALUES (?, ?)`, staff.ID, tenantID).Exec(context.Background())
 	require.NoError(t, err)
-	staff.Person = &peopleValues.DirectoryPersonSnapshot{FirstName: person.FirstName, LastName: person.LastName, AccountID: person.AccountID}
-	staff.Person.ID = person.ID
+	staff.Person = &peopleValues.DirectoryPersonSnapshot{FirstName: person.FirstName, LastName: person.LastName, AccountID: (*ident.ID)(person.AccountID)}
+	staff.Person.ID = ident.ID(person.ID)
 	staff.Person.SetTenantID(person.TenantID)
 
-	teacher := &peopleValues.Teacher{StaffID: staff.ID}
+	teacher := &peopleValues.Teacher{StaffID: staff.ID.Int64()}
 	teacher.SetTenantID(tenantID)
 	err = db.NewInsert().
 		Model(teacher).
@@ -279,7 +280,7 @@ func TestCaregiverCapability_EnableCreatesOperationalProfile(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, state)
-	assert.Equal(t, account.ID, state.AccountID)
+	assert.Equal(t, ident.ID(account.ID), state.AccountID)
 	assert.Equal(t, "Ada", state.FirstName)
 	assert.Equal(t, "Lovelace", state.LastName)
 	assert.True(t, state.HasPerson)
@@ -295,11 +296,11 @@ func TestCaregiverCapability_EnableCreatesOperationalProfile(t *testing.T) {
 	assert.Equal(t, "Ada", person.FirstName)
 	assert.Equal(t, "Lovelace", person.LastName)
 
-	staff, err := testpkg.TenantQuery1(t, ctx, db, api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Staff.FindByPersonID, person.ID)
+	staff, err := testpkg.TenantQuery1(t, ctx, db, api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Staff.FindByPersonID, person.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, staff)
 
-	teacher, err := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Teacher.FindByStaffID(ctx, staff.ID)
+	teacher, err := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Teacher.FindByStaffID(ctx, staff.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, teacher)
 	assert.Equal(t, "Betreuungskraft", teacher.Role)
@@ -348,7 +349,7 @@ func TestCaregiverCapability_EnableCreatesProfileForExistingStaff(t *testing.T) 
 		peopleValues.EnableCaregiverCapabilityInput{Position: "Betreuungskraft"})
 	require.NoError(t, err)
 	require.NotNil(t, state.StaffID)
-	assert.Equal(t, staff.ID, *state.StaffID)
+	assert.Equal(t, ident.ID(staff.ID), *state.StaffID)
 	assert.True(t, state.HasCaregiverProfile)
 	assert.True(t, state.IsActiveCaregiver)
 	assert.True(t, accountHasSystemRole(t, db, account.ID, testpkg.Tenant(t), "user"))
@@ -607,18 +608,18 @@ func TestCaregiverCapability_DisableReturnsDetailedBlockers(t *testing.T) {
 	assert.True(t, state.DisableBlocked)
 	assert.Len(t, state.DisableBlockers, 4)
 	require.Len(t, state.ActiveSupervisions, 1)
-	assert.Equal(t, supervision.ID, state.ActiveSupervisions[0].ID)
+	assert.Equal(t, ident.ID(supervision.ID), state.ActiveSupervisions[0].ID)
 	assert.Equal(t, activeGroup.ID, state.ActiveSupervisions[0].GroupID)
 	assert.Equal(t, supervision.StartDate.String(), state.ActiveSupervisions[0].StartDate)
 	assert.NotEmpty(t, state.ActiveSupervisions[0].GroupName)
 	assert.Len(t, state.ActiveSubstitutions, 1)
 	assert.Len(t, state.ActivitySupervisions, 1)
 	assert.Len(t, state.GroupAssignments, 1)
-	assert.Equal(t, teacher.ID, state.GroupAssignments[0].TeacherID)
+	assert.Equal(t, ident.ID(teacher.ID), state.GroupAssignments[0].TeacherID)
 	assert.ElementsMatch(
 		t,
 		[]int64{teacher.ID, otherTeacher.ID},
-		state.GroupAssignments[0].TeacherIDs,
+		ident.Int64s(state.GroupAssignments[0].TeacherIDs),
 	)
 
 	var blockedErr *peopleValues.CaregiverCapabilityBlockedError

@@ -65,7 +65,7 @@ func profileResponse(profile identityaccess.CallerProfile) ProfileResponse {
 		response.CreatedAt, response.UpdatedAt, response.RFIDCard = person.CreatedAt, person.UpdatedAt, person.TagID
 		return response
 	}
-	response.ID, response.CreatedAt, response.UpdatedAt = account.ID, account.CreatedAt, account.UpdatedAt
+	response.ID, response.CreatedAt, response.UpdatedAt = account.ID.Int64(), account.CreatedAt, account.UpdatedAt
 	return response
 }
 
