@@ -289,7 +289,7 @@ export function StaffTimeAccountCard({
       concept={timeTrackingConcept}
       title="Stundenkonto"
       titleBadge={
-        account ? (
+        account?.state ? (
           <StatusBadge
             label={STATE_BADGE[account.state].label}
             tone={STATE_BADGE[account.state].tone}
