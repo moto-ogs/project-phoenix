@@ -70,9 +70,9 @@ import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   mapBulkPickupScheduleFormToBackend,
-  type BackendPickupScheduleRequest,
   type PickupScheduleFormData,
 } from "~/lib/pickup-schedule-helpers";
+import type { PickupScheduleRequest } from "~/lib/contract/students.generated";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -167,7 +167,7 @@ function relationshipLabel(value: string): string {
 // from the care-plan form via mapBulkPickupScheduleFormToBackend.
 export type CreateStudentSchedules = {
   arrival_schedules?: ArrivalScheduleFormEntry[];
-  pickup_schedules?: BackendPickupScheduleRequest[];
+  pickup_schedules?: PickupScheduleRequest[];
 };
 
 // The two things "+ Kinder" can create (#2382): a regular OGS child, or a
