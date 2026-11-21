@@ -353,7 +353,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			shifts, err = owners.BuildShiftPlanning(db, env, hub, workTime, people, calendar, audit, timetableRows, rooms, activities, settings.Service)
+			shifts, err = owners.BuildShiftPlanning(db, env, hub, workTime, membership, people, calendar, audit, timetableRows, rooms, activities, settings.Service)
 			return
 		},
 		func() (err error) {

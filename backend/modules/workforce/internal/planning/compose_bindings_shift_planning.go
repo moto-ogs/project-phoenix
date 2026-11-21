@@ -1,19 +1,22 @@
 package planning
 
 import (
+	"context"
+
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ShiftOptions binds the shift service's optional collaborators: the series
 // exceptions and sick reports the Workforce records serve (#1889, #6302), the
-// broadcaster and the calendar-day clock.
-func ShiftOptions(records Records, broadcaster realtime.Broadcaster, today func() calendar.Date) []StaffShiftOption {
+// broadcaster, the calendar-day clock and the staff row batch lock (#7683).
+func ShiftOptions(records Records, broadcaster realtime.Broadcaster, today func() calendar.Date, lockStaffRows func(context.Context, []int64) error) []StaffShiftOption {
 	return []StaffShiftOption{
 		WithStaffShiftSeriesExceptions(records),
 		WithStaffShiftBroadcaster(broadcaster),
 		WithStaffShiftSickReports(records),
 		WithStaffShiftToday(today),
+		WithStaffShiftStaffRowLocks(lockStaffRows),
 	}
 }
 

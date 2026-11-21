@@ -350,7 +350,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0264: the clock field of the time-tracking cleanup (+2).
 	// ADR 0253: the Springer exits after the last block (+6).
 	// ADR 0289: the seal constructor of the sick note and payslip files (+6).
-	"modules/workforce/compose":       943,
+	"modules/workforce/compose":       942,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,

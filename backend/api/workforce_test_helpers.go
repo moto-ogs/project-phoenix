@@ -144,7 +144,7 @@ func NewWorkforceTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		Instances: timetableCompose.NewTimetableInstanceReads(ttRows.ActivityInstance.Reads), InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(ttRows.InstanceStaff),
 		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(ttRows.Timetable),
 		WorkSchedules: repos.Workforce, WorkModels: repos.Workforce, Holidays: nonWorkingDayService,
-		DB: db.Pool(), Broadcaster: realtimeHub, Logger: logger, Today: today,
+		DB: db.Pool(), LockStaffAssignments: ShiftPlanningTestStaffRowLock(db), Broadcaster: realtimeHub, Logger: logger, Today: today,
 	})
 	if err != nil {
 		return WorkforceTestModule{}, nil, err

@@ -139,6 +139,8 @@ type staffShiftService struct {
 	// guard is the working-time check over all Einsatzorte of a
 	// Personalakte (#4708). Nil checks nothing.
 	guard *planGuard
+	// lockStaffRows: see WithStaffShiftStaffRowLocks. Nil locks nothing.
+	lockStaffRows func(ctx context.Context, staffIDs []int64) error
 }
 
 // NewStaffShiftService creates a new staff shift service. lockStaffShifts is

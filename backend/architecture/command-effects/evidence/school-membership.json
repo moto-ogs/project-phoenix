@@ -1569,6 +1569,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffAssignmentLockQuery.ListStaff",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffLookup.ListStaff",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffChainLookup.ListStaff",
