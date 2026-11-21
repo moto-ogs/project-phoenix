@@ -45,6 +45,11 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 	other := testpkg.CreateTestStaff(t, db, "Clara", "Andere")
 	sick := testpkg.CreateTestStaff(t, db, "Kai", "Krank")
 	testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, sick.ID, day, day, "Grippe Kai")
+	// Half a day off: the other half keeps its block absences.
+	halfDay := testpkg.CreateTestStaff(t, db, "Hanna", "Halbtag")
+	halfID := testpkg.CreateTestStaffAbsenceSpan(t, db, tenantID, halfDay.ID, day, day, "Grippe Hanna")
+	_, err := db.NewRaw("UPDATE active.staff_absences SET half_day = true WHERE id = ?", halfID).Exec(context.Background())
+	require.NoError(t, err)
 
 	block := func(date string, title, start, end string, status string) int64 {
 		room := testpkg.CreateTestRoom(t, db, "Raum "+title)
@@ -77,8 +82,12 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 	// Somebody outside the team misses a block nobody of the team is on.
 	theater := block("today", "Theater", "16:00", "17:00", "")
 	staff(theater, other.ID, testpkg.InstanceStaffOpts{IsPrimary: true, IsAbsent: true})
+	staff(block("today", "Turnen", "17:00", "18:00", ""), halfDay.ID, testpkg.InstanceStaffOpts{IsPrimary: true, IsAbsent: true})
 	// The absence of the day is the entry, not each block it empties.
-	staff(block("today", "Basteln", "10:00", "11:00", ""), sick.ID, testpkg.InstanceStaffOpts{IsPrimary: true, IsAbsent: true})
+	// The carer is on that block: the Stundenplan still names who misses it.
+	basteln := block("today", "Basteln", "10:00", "11:00", "")
+	staff(basteln, sick.ID, testpkg.InstanceStaffOpts{IsPrimary: true, IsAbsent: true})
+	staff(basteln, carer.StaffID, testpkg.InstanceStaffOpts{})
 	// A cancelled block is its cancellation, a block as planned no change.
 	staff(block("today", "Abgesagt", "11:00", "12:00", testpkg.ScheduleInstanceStatusCancelled), other.ID, testpkg.InstanceStaffOpts{IsPrimary: true, IsAbsent: true})
 	staff(block("today", "Normal", "12:00", "13:00", ""), other.ID, testpkg.InstanceStaffOpts{IsPrimary: true})
@@ -102,7 +111,9 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 			"you block_staff_absent Lernzeit 14:00-15:00 Anna Betreuung/absent(du)",
 			"you block_staff_absent Werken 15:00-16:00 Clara Andere/absent",
 		}, blockLines(t, body))
-		assert.NotContains(t, body, "Theater", "a block outside the team has no entry and no number")
+		assert.NotContains(t, body, "Theater", "a block outside the team has no entry of its own")
+		assert.Contains(t, summary(overview.Entries), "school block_change_count n=2",
+			"the rest of the school as a number: Theater and Turnen")
 		assertNoBlockReason(t, body)
 	})
 
@@ -113,6 +124,7 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 			"school block_staff_absent Lernzeit 14:00-15:00 Anna Betreuung/absent ->substitution_plan",
 			"school block_staff_absent Werken 15:00-16:00 Clara Andere/absent ->substitution_plan",
 			"school block_staff_absent Theater 16:00-17:00 Clara Andere/absent ->substitution_plan",
+			"school block_staff_absent Turnen 17:00-18:00 Hanna Halbtag/absent ->substitution_plan",
 		}, blockLines(t, body))
 		assert.Contains(t, body, `"instance_id":"`, "the link names the block as a string id")
 		for _, leak := range []string{"Basteln", "Abgesagt", "Normal", "Gestern", "Fremd"} {
@@ -124,9 +136,11 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 	t.Run("a bystander and an account without the rights get no block entries", func(t *testing.T) {
 		overview, body := read(t, router, bystanderAccount.ID, tenantID, "users:read")
 		assert.Empty(t, blockLines(t, body))
+		assert.Contains(t, summary(overview.Entries), "school block_change_count n=5")
 		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 		overview, body = read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, blockLines(t, body))
+		assert.NotContains(t, body, "block_change_count", "no number without users:read")
 		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
@@ -148,6 +162,8 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 		}
 		assert.Contains(t, lines, "school activity_lead_changed Theater 16:00-17:00 @Raum Theater ->day_plan",
 			"outside the Personal rule the Stundenplan's unnamed line stays")
+		assert.Contains(t, lines, "you activity_lead_changed Basteln 10:00-11:00 @Raum Basteln Kai Krank/absent ->day_plan",
+			"without a Personal block entry the Stundenplan names who misses the carer's block")
 	})
 }
 

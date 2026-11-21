@@ -79,6 +79,9 @@ const (
 	// KindBlockSubstitution: somebody covers one block of the day
 	// (Terminvertretung, #7675), for the absent supervisors it names.
 	KindBlockSubstitution Kind = "block_substitution"
+	// KindBlockChangeCount: on how many further blocks somebody is absent or
+	// covers, for a caller who may see the number but not the names.
+	KindBlockChangeCount Kind = "block_change_count"
 	// KindChildAbsent: a child is reported sick or excused today; Child
 	// carries the status, never a reason.
 	KindChildAbsent Kind = "child_absent"

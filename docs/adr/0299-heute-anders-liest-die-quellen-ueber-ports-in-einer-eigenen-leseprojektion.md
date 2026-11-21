@@ -256,13 +256,20 @@ Projektion nutzt „change“.
   Zuordnungen, in einer Anweisung und ohne Grund. Die Root-Bindung wendet die
   Personal-Regel an.
 - Sichtregel: Namen sieht die Betreuung bei eigenen Terminen (sie steht in
-  der Zuordnung) und wenn jemand aus ihrem Team (#7138) fehlt oder übernimmt;
-  die Leitung sieht alle. Andere Termine fehlen in dieser Quelle ganz, ohne
-  Zahl: Die Quelle Stundenplan zeigt sie nach der Regel des Tagesplans ohne
-  Namen. Eine Zahl dazu würde dieselben Termine doppelt melden.
+  der Zuordnung) und wenn jemand aus ihrem Team fehlt oder übernimmt; die
+  Leitung sieht alle. Für die übrigen Termine bekommt ein Konto mit
+  `users:read` nur die Zahl (`block_change_count`), wie bei den
+  Abwesenheiten.
+- Team ist hier das Team der Person (Lehrkräfte der eigenen Gruppen und die
+  Vertretungen des Tages), wie bei den tagesweiten Abwesenheiten. #7138
+  bestimmt das Team eines Termins über dessen OGS-Gruppen; das kostet zwei
+  weitere Anweisungen (Gruppen des Termins, Gruppen der geplanten Kinder) und
+  passt nicht ins Budget. Ein Folge-Ticket kann es nach einer Einsparung
+  nachziehen.
 - Eine Abwesenheit, die eine Krankmeldung gesetzt hat oder die eine
-  tagesweite Abwesenheit abdeckt, ist kein eigener Eintrag; ihre Vertretung
-  schon.
+  ganztägige Abwesenheit des Tages abdeckt, ist kein eigener Eintrag; ihre
+  Vertretung schon. Bei einer halbtägigen Abwesenheit bleiben die Termine
+  der anderen Tageshälfte Einträge.
 - Die Projektion legt die Zeile „andere Leitung“ der Quelle Stundenplan mit
   dem Eintrag der Quelle Personal zum selben Termin zusammen und übernimmt
   deren Raum. Das ist kein Rechte-Filter: Fehlt der Eintrag der Quelle

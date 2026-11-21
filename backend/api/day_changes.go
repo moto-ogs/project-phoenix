@@ -224,7 +224,8 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 	absentToday := map[int64]bool{}
 	for _, absence := range mergeAbsences(absences, day) {
 		builder.absence(absence)
-		absentToday[absence.staffID] = true
+		// A half day leaves the other half: its block absences stay entries.
+		absentToday[absence.staffID] = !absence.half
 	}
 	for _, handover := range handovers {
 		builder.handover(handover)
@@ -379,6 +380,7 @@ type staffEntryBuilder struct {
 	entries       []daychangesview.SourceEntry
 	absentCount   int
 	handoverCount int
+	blockCount    int
 	staffIDs      map[int64]bool
 	groupIDs      map[int64]bool
 }
@@ -467,6 +469,7 @@ func (b *staffEntryBuilder) finish(ctx context.Context, names dayChangesStaffNam
 	}
 	b.appendCount(daychangesview.KindStaffAbsentCount, b.absentCount, daychangesview.LinkStaffList, b.viewer.staffRecords)
 	b.appendCount(daychangesview.KindGroupSubstitutionCount, b.handoverCount, daychangesview.LinkGroupHandovers, b.viewer.groupHandovers)
+	b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkSubstitutionPlan, b.viewer.substitutionPlan)
 	return b.entries, nil
 }
 

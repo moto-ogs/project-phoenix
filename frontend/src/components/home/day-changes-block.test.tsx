@@ -1010,5 +1010,13 @@ describe("Abwesenheit und Vertretung bei Terminen (#7675)", () => {
         }),
       ),
     ).toBe("Bei „Chor“ ist Ben heute nicht da.");
+    const count = (n: number) =>
+      dayChangeText(change({ kind: "block_change_count", count: n }));
+    expect(count(1)).toBe(
+      "Bei 1 weiteren Termin ändert sich heute, wer betreut.",
+    );
+    expect(count(3)).toBe(
+      "Bei 3 weiteren Terminen ändert sich heute, wer betreut.",
+    );
   });
 });

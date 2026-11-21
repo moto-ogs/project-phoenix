@@ -48,6 +48,7 @@ const DAY_CHANGE_KINDS = [
   "activity_lead_changed",
   "activity_reinstated",
   "activity_room_changed",
+  "block_change_count",
   "block_staff_absent",
   "block_substitution",
   "group_substitution",

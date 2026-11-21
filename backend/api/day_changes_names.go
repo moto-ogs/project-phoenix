@@ -8,14 +8,14 @@ package api
 
 import (
 	"context"
-	"sync"
 )
 
 type dayChangesNameMemoKey struct{}
 
-// dayChangesNameMemo holds the names read during one request.
+// dayChangesNameMemo holds the names read during one savepoint. The sources
+// of a savepoint read one after another (daychangesview), so it needs no
+// lock.
 type dayChangesNameMemo struct {
-	mu    sync.Mutex
 	names map[int64]string
 	read  map[int64]bool
 }
@@ -34,8 +34,6 @@ func (m memoStaffNames) StaffNames(ctx context.Context, staffIDs []int64) (map[i
 	if !ok {
 		return m.inner.StaffNames(ctx, staffIDs)
 	}
-	memo.mu.Lock()
-	defer memo.mu.Unlock()
 	missing := make([]int64, 0, len(staffIDs))
 	for _, id := range staffIDs {
 		if !memo.read[id] {

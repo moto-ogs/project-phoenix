@@ -233,6 +233,13 @@ function blockStaffText(change: DayChange): string {
   });
 }
 
+function blockChangeCountText(change: DayChange): string {
+  const count = change.count ?? 0;
+  return count === 1
+    ? "Bei 1 weiteren Termin ändert sich heute, wer betreut."
+    : `Bei ${count} weiteren Terminen ändert sich heute, wer betreut.`;
+}
+
 function closingDayText(change: DayChange): string {
   const closing = change.closing;
   const name = closing?.name.trim();
@@ -271,6 +278,7 @@ const DAY_CHANGE_TEXTS: Readonly<
   // Abwesenheit und Vertretung bei einem Termin (#7675).
   block_staff_absent: blockStaffText,
   block_substitution: blockStaffText,
+  block_change_count: blockChangeCountText,
   closing_day: closingDayText,
 };
 

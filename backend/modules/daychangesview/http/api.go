@@ -46,6 +46,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindActivityCancelled), string(daychangesview.KindActivityReinstated),
 				string(daychangesview.KindActivityRoomChanged), string(daychangesview.KindActivityLeadChanged),
 				string(daychangesview.KindBlockStaffAbsent), string(daychangesview.KindBlockSubstitution),
+				string(daychangesview.KindBlockChangeCount),
 			}},
 			{Type: daychangesview.ChildStatus(""), Values: []string{string(daychangesview.ChildSick), string(daychangesview.ChildExcused)}},
 			{Type: daychangesview.PersonRole(""), Values: []string{

@@ -5,9 +5,8 @@ package api
 // and who covers a single block (Terminvertretung). Timetable owns the
 // blocks and their staff rows; the Personal rule of this read lives here with
 // the rest of it (ADR 0299, addenda #7659 and #7675): the care staff sees
-// names for its own blocks and for its team, the lead every name. A block
-// change the rule hides leaves no entry and no number; the Stundenplan
-// source still shows the block under the day plan's rule.
+// names for its own blocks and for its team, for the rest of the school the
+// number with users:read, as for the absences; the lead sees every name.
 
 import (
 	"context"
@@ -99,6 +98,9 @@ func (b *staffEntryBuilder) block(change timetable.BlockStaffChange, absentToday
 		involved = involved || b.viewer.team[person.StaffID]
 	}
 	if !involved && !b.viewer.lead {
+		if b.viewer.counts {
+			b.blockCount++
+		}
 		return
 	}
 	for _, person := range people {

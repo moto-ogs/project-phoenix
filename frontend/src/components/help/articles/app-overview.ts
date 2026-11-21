@@ -133,7 +133,7 @@ export function appOverviewTopic(): HelpTopic {
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
       // Termin-Vertretungen in „Heute anders" (#7675): Namen für eigene
       // Termine und das eigene Team, sonst nur die Zeile ohne Namen.
-      "In `Heute anders` steht bei einem Termin nur `ändert sich heute, wer betreut`? Namen siehst du bei deinen Terminen und deinen Gruppen. Die Leitung sieht alle Namen.",
+      "In `Heute anders` steht bei Terminen nur `ändert sich heute, wer betreut`? Namen siehst du bei deinen Terminen und deinen Gruppen. Für die übrigen Termine zeigt die Karte nur, wie viele es sind. Die Leitung sieht alle Namen.",
       // Dienste in „Heute anders" (#7661): die Betreuung sieht nur den
       // eigenen, wer den Dienstplan der Schule öffnen darf, sieht alle.
       "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",
