@@ -142,7 +142,7 @@ func accountlessExternal(teacher *peopledirectory.Teacher) (int64, bool) {
 	if person == nil || person.AccountID != nil {
 		return 0, false
 	}
-	return person.ID, true
+	return person.ID.Int64(), true
 }
 
 // invitedExternals reads the open invitations by person, only when an
@@ -215,14 +215,14 @@ func scanPerson(person *peopledirectory.DirectoryPersonSnapshot) *devicescan.Sca
 	if person == nil {
 		return nil
 	}
-	return &devicescan.ScanPerson{ID: person.ID, FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID}
+	return &devicescan.ScanPerson{ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID}
 }
 
 func scanStaff(staff *peopledirectory.Staff) *devicescan.ScanStaff {
 	if staff == nil {
 		return nil
 	}
-	return &devicescan.ScanStaff{ID: staff.ID, PersonID: staff.PersonID, Person: scanPerson(staff.Person)}
+	return &devicescan.ScanStaff{ID: staff.ID.Int64(), PersonID: staff.PersonID.Int64(), Person: scanPerson(staff.Person)}
 }
 
 func scanTeacher(teacher *peopledirectory.Teacher) *devicescan.ScanTeacher {

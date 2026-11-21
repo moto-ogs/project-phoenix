@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -138,11 +139,11 @@ func (s *caregiverCapabilityService) ensureCaregiverProfile(
 	if err != nil {
 		return err
 	}
-	staff, err := s.ensureStaff(ctx, person.ID, details)
+	staff, err := s.ensureStaff(ctx, person.ID.Int64(), details)
 	if err != nil {
 		return err
 	}
-	return s.ensureTeacher(ctx, staff.ID, input.Position, details)
+	return s.ensureTeacher(ctx, staff.ID.Int64(), input.Position, details)
 }
 
 func (s *caregiverCapabilityService) ensurePerson(
@@ -172,7 +173,7 @@ func (s *caregiverCapabilityService) ensurePerson(
 	if err := s.PersonRepo.Create(ctx, person); err != nil {
 		return nil, err
 	}
-	if err := s.PersonRepo.LinkToAccount(ctx, person.ID, accountID); err != nil {
+	if err := s.PersonRepo.LinkToAccount(ctx, person.ID.Int64(), accountID); err != nil {
 		return nil, err
 	}
 	details["person_created"] = true
@@ -188,7 +189,7 @@ func (s *caregiverCapabilityService) ensureStaff(
 	if err != nil || staff != nil {
 		return staff, err
 	}
-	staff = &peopleValues.Staff{PersonID: personID}
+	staff = &peopleValues.Staff{PersonID: ident.ID(personID)}
 	staff.SetTenantID(tenant.FromContext(ctx))
 	if err := s.StaffRepo.Create(ctx, staff); err != nil {
 		return nil, err
@@ -321,7 +322,7 @@ func (s *caregiverCapabilityService) lockCapabilityBindings(ctx context.Context,
 		return err
 	}
 	if initial.StaffID != nil {
-		if _, err := s.StaffRepo.FindByIDForUpdate(ctx, *initial.StaffID); err != nil {
+		if _, err := s.StaffRepo.FindByIDForUpdate(ctx, (*initial.StaffID).Int64()); err != nil {
 			return err
 		}
 	}

@@ -162,7 +162,7 @@ func TestPartialAbsenceFromRunningBlockStartExcusesTheRestOfTheDay(t *testing.T)
 		fmt.Sprintf("/%d/partial-absences?from=%s&to=%s", student.ID, date.String(), date.String()), nil)
 	listRR := authExec(t, tc, listReq, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
-	assert.Contains(t, listRR.Body.String(), fmt.Sprintf(`"id":%d`, partialAbsenceID))
+	assert.Contains(t, listRR.Body.String(), fmt.Sprintf(`"id":"%d"`, partialAbsenceID))
 	assert.Contains(t, listRR.Body.String(), `"from_time":"13:00"`)
 
 	deleteReq := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/%d/partial-absences/%d", student.ID, partialAbsenceID), nil)

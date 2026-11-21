@@ -356,14 +356,14 @@ func calendarPerson(value *peopledirectory.DirectoryPersonSnapshot) *calendarCom
 	if value == nil {
 		return nil
 	}
-	return &calendarCompose.Person{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName}
+	return &calendarCompose.Person{ID: value.ID.Int64(), FirstName: value.FirstName, LastName: value.LastName}
 }
 
 func calendarStaff(value *peopledirectory.Staff) *calendarCompose.Staff {
 	if value == nil {
 		return nil
 	}
-	return &calendarCompose.Staff{ID: value.ID, Person: calendarPerson(value.Person)}
+	return &calendarCompose.Staff{ID: value.ID.Int64(), Person: calendarPerson(value.Person)}
 }
 
 func calendarStudent(value *peopledirectory.StudentState) *calendarCompose.Student {

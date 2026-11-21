@@ -121,7 +121,7 @@ func withdrawalBlocks(record ContractRecord, contact withdrawalContact) []Letter
 	return []LetterBlock{
 		{Heading: "Widerrufsbelehrung", Text: strings.Join(withdrawalNoticeParagraphs(contact), "\n\n")},
 		{Heading: "Beginn vor Ende der Widerrufsfrist", Text: early},
-		{Heading: "Muster-Widerrufsformular", Text: withdrawalForm("Betreuungsvertrag Nr. "+strconv.FormatInt(record.Summary.ID, 10), contact)},
+		{Heading: "Muster-Widerrufsformular", Text: withdrawalForm("Betreuungsvertrag Nr. "+strconv.FormatInt(record.Summary.ID.Int64(), 10), contact)},
 	}
 }
 

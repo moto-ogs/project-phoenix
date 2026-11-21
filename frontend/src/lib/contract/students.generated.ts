@@ -8,7 +8,6 @@ import {
   fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
   multipart,
   noData,
@@ -65,7 +64,7 @@ export interface studentDocumentDeletedResponse {
 }
 
 export const studentDocumentDeletedResponseSchema: z.ZodType<studentDocumentDeletedResponse, unknown> = object<studentDocumentDeletedResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
 });
 
 /** Go: students.studentNoteDeletedResponse */
@@ -1468,15 +1467,15 @@ export interface ArrivalScheduleResponse {
 }
 
 export const ArrivalScheduleResponseSchema: z.ZodType<ArrivalScheduleResponse, unknown> = object<ArrivalScheduleResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   weekday: safeInt,
   weekday_name: str,
   expected_arrival: str,
   notes: optional(str),
   source: optional(str),
   source_class: optional(str),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1495,13 +1494,13 @@ export interface StudentArrivalExceptionResponse {
 }
 
 export const StudentArrivalExceptionResponseSchema: z.ZodType<StudentArrivalExceptionResponse, unknown> = object<StudentArrivalExceptionResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   exception_date: str,
   expected_arrival: optional(str),
   reason: optional(str),
   source: str,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1518,11 +1517,11 @@ export interface ArrivalNoteResponse {
 }
 
 export const ArrivalNoteResponseSchema: z.ZodType<ArrivalNoteResponse, unknown> = object<ArrivalNoteResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   note_date: str,
   content: str,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1729,7 +1728,7 @@ export interface CompanionResponse {
 }
 
 export const CompanionResponseSchema: z.ZodType<CompanionResponse, unknown> = object<CompanionResponse>({
-  companion_student_id: int64StringOrNumber,
+  companion_student_id: int64String,
   first_name: optional(str),
   last_name: optional(str),
   weekdays: nullable(arr(str)),
@@ -1794,8 +1793,8 @@ export interface StudentDocumentResponse {
 }
 
 export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, unknown> = object<StudentDocumentResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   category: str,
   category_label: str,
   filename: str,
@@ -1828,7 +1827,7 @@ export interface StudentDocumentListResponse {
 }
 
 export const StudentDocumentListResponseSchema: z.ZodType<StudentDocumentListResponse, unknown> = object<StudentDocumentListResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   documents: nullable(arr(StudentDocumentResponseSchema)),
   visible_categories: nullable(arr(StudentDocumentCategorySchema)),
 });
@@ -1969,14 +1968,14 @@ export interface PartialAbsenceResponse {
 }
 
 export const PartialAbsenceResponseSchema: z.ZodType<PartialAbsenceResponse, unknown> = object<PartialAbsenceResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   date: str,
   from_time: str,
   reason: optional(str),
   pickup_time: optional(str),
   auto: bool,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1998,8 +1997,8 @@ export interface PickupScheduleResponse {
 }
 
 export const PickupScheduleResponseSchema: z.ZodType<PickupScheduleResponse, unknown> = object<PickupScheduleResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   weekday: safeInt,
   weekday_name: str,
   pickup_time: str,
@@ -2007,7 +2006,7 @@ export const PickupScheduleResponseSchema: z.ZodType<PickupScheduleResponse, unk
   source: str,
   care_offering_id: optional(str),
   care_offering_name: optional(str),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -2041,15 +2040,15 @@ export interface PickupExceptionResponse {
 }
 
 export const PickupExceptionResponseSchema: z.ZodType<PickupExceptionResponse, unknown> = object<PickupExceptionResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   exception_date: str,
   pickup_time: optional(str),
   reason: optional(str),
   source: str,
   excused_from: optional(str),
   excused_auto: bool,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -2067,12 +2066,12 @@ export interface PickupNoteResponse {
 }
 
 export const PickupNoteResponseSchema: z.ZodType<PickupNoteResponse, unknown> = object<PickupNoteResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   note_date: optional(str),
   weekday: optional(safeInt),
   content: str,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -2089,12 +2088,12 @@ export interface DepartureExceptionResponse {
 }
 
 export const DepartureExceptionResponseSchema: z.ZodType<DepartureExceptionResponse, unknown> = object<DepartureExceptionResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   exception_date: str,
   departure_mode: str,
   reason: optional(str),
-  created_by: optional(int64StringOrNumber),
+  created_by: optional(int64String),
   updated_at: str,
 });
 
@@ -2196,7 +2195,7 @@ export interface StudentRequest {
   tag_id?: string;
   birthday?: string;
   school_class?: string;
-  group_id?: number | null;
+  group_id?: string | null;
   address_street?: string;
   address_city?: string;
   address_postal_code?: string;
@@ -2224,8 +2223,8 @@ export interface ArrivalScheduleInput {
 /** Go: careplanhttp.BulkUpsertArrivalScheduleRequest */
 export interface BulkUpsertArrivalScheduleRequest {
   school_class?: string;
-  group_id?: number;
-  student_ids?: number[] | null;
+  group_id?: string;
+  student_ids?: string[] | null;
   schedules?: ArrivalScheduleInput[] | null;
 }
 
@@ -2240,7 +2239,7 @@ export interface OverwriteWarning {
 }
 
 export const OverwriteWarningSchema: z.ZodType<OverwriteWarning, unknown> = object<OverwriteWarning>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   student_name: str,
   weekday: safeInt,
   weekday_name: str,
@@ -2261,7 +2260,7 @@ export const BulkUpsertResultSchema: z.ZodType<BulkUpsertResult, unknown> = obje
 
 /** Go: careplanhttp.BulkEffectiveTimeRequest */
 export interface BulkEffectiveTimeRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   date?: string | null;
 }
 
@@ -2271,7 +2270,7 @@ export interface ArrivalScheduleStatusResponse {
 }
 
 export const ArrivalScheduleStatusResponseSchema: z.ZodType<ArrivalScheduleStatusResponse, unknown> = object<ArrivalScheduleStatusResponse>({
-  student_ids: nullable(arr(int64StringOrNumber)),
+  student_ids: nullable(arr(int64String)),
 });
 
 /** Go: careplanhttp.careExitRequest */
@@ -2771,7 +2770,7 @@ export interface PickupScheduleInput {
 
 /** Go: careplanhttp.BulkPickupSchedulePatchRequest */
 export interface BulkPickupSchedulePatchRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   schedules?: PickupScheduleInput[] | null;
   confirmed_exception?: boolean;
 }
@@ -3228,7 +3227,7 @@ export interface UpdateStudentRequest {
   birthday?: string | null;
   tag_id?: string | null;
   school_class?: string | null;
-  group_id?: number | null;
+  group_id?: string | null;
   address_street?: string | null;
   address_city?: string | null;
   address_postal_code?: string | null;

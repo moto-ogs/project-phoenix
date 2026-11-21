@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -122,8 +123,8 @@ func TestPublicContractFollowsAnApprovedChangeWithANewVersionAndAnswersOneVersio
 	assert.Equal(t, carecontract.SourceBookingChange, second.Source)
 	assert.Nil(t, second.ValidUntil)
 	assert.Equal(t, []carecontract.Service{
-		{Weekday: "mon", CareOfferingID: school.offering + 1, ModuleName: "Ganztag", EndsAt: "16:30"},
-		{Weekday: "tue", CareOfferingID: school.offering + 1, ModuleName: "Ganztag", EndsAt: "16:30"},
+		{Weekday: "mon", CareOfferingID: ident.ID(school.offering + 1), ModuleName: "Ganztag", EndsAt: "16:30"},
+		{Weekday: "tue", CareOfferingID: ident.ID(school.offering + 1), ModuleName: "Ganztag", EndsAt: "16:30"},
 	}, second.Services)
 	assert.Equal(t, 1, detail.Version.Number, "until March the first version is the one in force")
 

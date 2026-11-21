@@ -16,6 +16,7 @@ import (
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
 	offboardingcompose "github.com/moto-ogs/project-phoenix/workflows/staffoffboarding/compose"
 )
@@ -261,7 +262,7 @@ func staffDirectoryPersons(users peoplePorts.PersonDirectory) (func(context.Cont
 		if err != nil {
 			return StaffDirectoryPerson{}, err
 		}
-		return toStaffDirectoryPerson(person.ID, person.FirstName, person.LastName, person.TagID, person.AccountID, person.CreatedAt, person.UpdatedAt), nil
+		return toStaffDirectoryPerson(person.ID.Int64(), person.FirstName, person.LastName, person.TagID, (*int64)(person.AccountID), person.CreatedAt, person.UpdatedAt), nil
 	}
 	persons := func(ctx context.Context, ids []int64) ([]StaffDirectoryPerson, error) {
 		persons, err := users.GetByIDs(ctx, ids)
@@ -270,7 +271,7 @@ func staffDirectoryPersons(users peoplePorts.PersonDirectory) (func(context.Cont
 		}
 		result := make([]StaffDirectoryPerson, 0, len(persons))
 		for _, person := range persons {
-			result = append(result, toStaffDirectoryPerson(person.ID, person.FirstName, person.LastName, person.TagID, person.AccountID, person.CreatedAt, person.UpdatedAt))
+			result = append(result, toStaffDirectoryPerson(person.ID.Int64(), person.FirstName, person.LastName, person.TagID, (*int64)(person.AccountID), person.CreatedAt, person.UpdatedAt))
 		}
 		return result, nil
 	}
@@ -345,7 +346,7 @@ func staffDirectoryWrites(users peoplePorts.PersonDirectory) (func(context.Conte
 			return StaffUpdateResult{}, err
 		}
 		staff.StaffNotes = input.StaffNotes
-		staff.PersonID = input.PersonID
+		staff.PersonID = ident.ID(input.PersonID)
 		teacher, action, err := users.UpdateStaffWithTeacher(ctx, staff, input.IsTeacher, input.Specialization, input.Role, input.Qualifications)
 		if err != nil {
 			return StaffUpdateResult{}, err

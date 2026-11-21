@@ -4,6 +4,7 @@ import (
 	"context"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 )
@@ -26,7 +27,7 @@ func (b CaregiverSupervisionBlockers) ListActiveSupervisionBlockers(ctx context.
 	}
 	result := make([]peopleValues.BlockerSupervision, len(rows))
 	for i, row := range rows {
-		result[i] = peopleValues.BlockerSupervision{ID: row.ID, GroupID: row.GroupID, GroupName: row.GroupName, StartDate: row.StartDate}
+		result[i] = peopleValues.BlockerSupervision{ID: ident.ID(row.ID), GroupID: row.GroupID, GroupName: row.GroupName, StartDate: row.StartDate}
 	}
 	return result, err
 }

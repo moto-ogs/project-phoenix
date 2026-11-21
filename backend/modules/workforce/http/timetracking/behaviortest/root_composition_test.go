@@ -78,7 +78,7 @@ func init() {
 				if err != nil {
 					return nil, err
 				}
-				return &workforcetest.StaffRow{WorkTimeModelID: staff.WorkTimeModelID}, nil
+				return &workforcetest.StaffRow{WorkTimeModelID: (*int64)(staff.WorkTimeModelID)}, nil
 			},
 		}
 	}

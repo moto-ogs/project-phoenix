@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger care offering (ADR 0195): a Träger keeps a care offering once for
@@ -90,7 +92,7 @@ type TraegerOfferingSchool struct {
 	Applied *TraegerOfferingDraft `json:"-"`
 	// AppliedCopyID ties the financial baseline to the school copy it priced.
 	AppliedCopyID  *int64     `json:"-"`
-	SchoolID       int64      `json:"school_id"`
+	SchoolID       ident.ID   `json:"school_id"`
 	AppliedVersion *int       `json:"applied_version,omitempty"`
 	Outcome        string     `json:"outcome,omitempty"`
 	ErrorCode      string     `json:"error_code,omitempty"`
@@ -100,9 +102,9 @@ type TraegerOfferingSchool struct {
 // TraegerOffering is a Träger care offering with its draft, its released
 // version and the outcome per school.
 type TraegerOffering struct {
-	ID              int64                   `json:"id"`
-	OrganizationID  int64                   `json:"organization_id"`
-	TraegerPhaseID  int64                   `json:"traeger_phase_id"`
+	ID              ident.ID                `json:"id"`
+	OrganizationID  ident.ID                `json:"organization_id"`
+	TraegerPhaseID  ident.ID                `json:"traeger_phase_id"`
 	Draft           TraegerOfferingDraft    `json:"draft"`
 	ReleasedVersion *int                    `json:"released_version,omitempty"`
 	Released        *TraegerOfferingDraft   `json:"released,omitempty"`

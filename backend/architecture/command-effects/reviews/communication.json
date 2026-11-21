@@ -930,7 +930,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.PortalMessageInboxReads.PortalListThreadsForGuardianStudent",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -1000,7 +1000,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.PortalMessageInboxReads.PortalListThreadsForGuardianTenants",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -1777,7 +1777,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageReadRepositorySource.ParentReadLatestReadCursorByOther",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3113,7 +3113,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.LatestReadCursorByOther",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.LatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.LatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3153,7 +3153,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.LatestReadCursorByOther",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.LatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.LatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3193,7 +3193,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.LatestReadCursorByOther",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.LatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.LatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3323,7 +3323,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianStudent",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3393,7 +3393,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianStudent",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ListThreadsForGuardianStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ListThreadsForGuardianStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3433,7 +3433,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianStudent",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3503,7 +3503,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianTenants",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3573,7 +3573,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianTenants",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ListThreadsForGuardianTenants. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ListThreadsForGuardianTenants. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3613,7 +3613,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianTenants",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3773,7 +3773,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3813,7 +3813,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -3853,7 +3853,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ParentReadLatestReadCursorByOther. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -4053,7 +4053,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -4123,7 +4123,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -4163,7 +4163,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.PortalListThreadsForGuardianStudent. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -4233,7 +4233,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -4303,7 +4303,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants",
-      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -4343,7 +4343,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants",
-      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: communication reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.PortalListThreadsForGuardianTenants. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"

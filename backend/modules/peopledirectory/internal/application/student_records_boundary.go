@@ -4,6 +4,7 @@ import (
 	"context"
 
 	owner0 "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
@@ -275,9 +276,9 @@ func (r *StudentRecords) roster(
 		student := peopleModule.StudentStateFromRecord(peopleModule.StudentRecord(entry.Record))
 		person := &peopleModule.DirectoryPersonSnapshot{
 			FirstName: entry.FirstName, LastName: entry.LastName,
-			TagID: entry.TagID, AccountID: entry.AccountID,
+			TagID: entry.TagID, AccountID: (*ident.ID)(entry.AccountID),
 		}
-		person.ID = entry.Record.PersonID
+		person.ID = ident.ID(entry.Record.PersonID)
 		person.SetTenantID(entry.Record.TenantID)
 		student.Person = person
 		result = append(result, &peopleModule.StudentRosterEntry{Record: student})

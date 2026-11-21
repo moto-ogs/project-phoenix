@@ -46,7 +46,7 @@ describe("care contract requests", () => {
     });
     expect(request).toHaveBeenCalledWith("/api/traeger/contracts/send", {
       method: "POST",
-      body: { contract_ids: [7], recipient_email: "neu@example.org" },
+      body: { contract_ids: ["7"], recipient_email: "neu@example.org" },
     });
   });
 

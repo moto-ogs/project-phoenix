@@ -43,5 +43,5 @@ func (q attendanceStaffDirectory) StaffTenantID(ctx context.Context, id int64) (
 		return nil, err
 	}
 	tenantID := staff.TenantID
-	return &tenantID, nil
+	return (*int64)(&tenantID), nil
 }

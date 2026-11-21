@@ -23,7 +23,7 @@ func (c *Catalog) schoolState(ctx context.Context, snap snapshot, lock bool) (st
 	}
 	ids := make([]int64, 0, len(snap.offerings))
 	for _, offering := range snap.offerings {
-		ids = append(ids, offering.ID)
+		ids = append(ids, offering.ID.Int64())
 	}
 	offerings, err := c.deps.SchoolOfferings.TraegerOfferingCopyStates(ctx, ids, lock)
 	if err != nil {
@@ -60,11 +60,11 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 	withdrawn := []int64{}
 	for _, offering := range snap.offerings {
 		if offering.WithdrawnAt != nil {
-			withdrawn = append(withdrawn, offering.ID)
+			withdrawn = append(withdrawn, offering.ID.Int64())
 			continue
 		}
-		released := next.offerings[offering.ID]
-		copies = append(copies, careplan.TraegerOfferingCopy{SourceID: offering.ID, Version: released.version, Fields: released.draft.Fields, PhaseID: applied.CopyID})
+		released := next.offerings[offering.ID.Int64()]
+		copies = append(copies, careplan.TraegerOfferingCopy{SourceID: offering.ID.Int64(), Version: released.version, Fields: released.draft.Fields, PhaseID: applied.CopyID})
 	}
 	batch, err := c.deps.SchoolOfferings.ApplyTraegerOfferings(ctx, copies, withdrawn)
 	if err != nil {
@@ -75,8 +75,8 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 		bySource[row.SourceID] = row
 	}
 	for _, offering := range snap.offerings {
-		row := bySource[offering.ID]
-		offeringPlan := traegercatalog.OfferingPlan{TraegerOfferingID: offering.ID, Name: offering.Draft.Fields.Name, Fields: row.Fields, Action: traegercatalog.ActionUpdate}
+		row := bySource[offering.ID.Int64()]
+		offeringPlan := traegercatalog.OfferingPlan{TraegerOfferingID: offering.ID.Int64(), Name: offering.Draft.Fields.Name, Fields: row.Fields, Action: traegercatalog.ActionUpdate}
 		if offering.WithdrawnAt != nil {
 			offeringPlan.Action = traegercatalog.ActionWithdraw
 		} else if row.Created {
@@ -92,14 +92,14 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 func (c *Catalog) withdrawSchool(ctx context.Context, snap snapshot, plan *traegercatalog.SchoolPlan) error {
 	sources := make([]int64, 0, len(snap.offerings))
 	for _, offering := range snap.offerings {
-		sources = append(sources, offering.ID)
+		sources = append(sources, offering.ID.Int64())
 	}
 	if _, err := c.deps.SchoolOfferings.ApplyTraegerOfferings(ctx, nil, sources); err != nil {
 		return err
 	}
 	for _, offering := range snap.offerings {
 		plan.Offerings = append(plan.Offerings, traegercatalog.OfferingPlan{
-			TraegerOfferingID: offering.ID, Name: offering.Draft.Fields.Name, Action: traegercatalog.ActionWithdraw,
+			TraegerOfferingID: offering.ID.Int64(), Name: offering.Draft.Fields.Name, Action: traegercatalog.ActionWithdraw,
 			Fields: []careplan.TraegerOfferingFieldChange{},
 		})
 	}

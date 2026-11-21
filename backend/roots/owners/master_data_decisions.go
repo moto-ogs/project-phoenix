@@ -290,7 +290,7 @@ func allowedDepartureModes(modes carePlanCompose.DepartureModes) peopledirectory
 }
 
 func masterDataPerson(person *peopledirectory.DirectoryPersonSnapshot) carePlanCompose.MasterDataPerson {
-	view := carePlanCompose.MasterDataPerson{ID: person.ID, FirstName: person.FirstName, LastName: person.LastName}
+	view := carePlanCompose.MasterDataPerson{ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName}
 	if person.Birthday != nil {
 		view.Birthday = person.Birthday.String()
 	}

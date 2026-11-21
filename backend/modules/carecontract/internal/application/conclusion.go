@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Conclusions serves carecontract.Conclusion: the conclusion at the
@@ -69,8 +70,8 @@ func (c *Conclusions) ConcludeAccepted(ctx context.Context, organizationID int64
 	today := c.intake.today()
 	for _, read := range reads {
 		for _, application := range read.applications {
-			key := carecontract.CandidateKey{SchoolID: read.school.ID, RequestChildID: application.RequestChildID}
-			if existing[ContractKey(key)] || len(bookedCare(read, application, today).services) == 0 {
+			key := carecontract.CandidateKey{SchoolID: ident.ID(read.school.ID), RequestChildID: ident.ID(application.RequestChildID)}
+			if existing[ContractKey{SchoolID: key.SchoolID.Int64(), RequestChildID: key.RequestChildID.Int64()}] || len(bookedCare(read, application, today).services) == 0 {
 				continue
 			}
 			draft, reason := c.conclusionDraft(key, reads, templates, existing, changed, today)
@@ -91,7 +92,7 @@ func (c *Conclusions) conclusionDraft(key carecontract.CandidateKey, reads []sch
 	if reason != "" {
 		return draft, reason
 	}
-	return draft, acceptanceIssue(draft, changed.since(key.SchoolID, draftOfferings(draft)))
+	return draft, acceptanceIssue(draft, changed.since(key.SchoolID.Int64(), draftOfferings(draft)))
 }
 
 // concludeChild concludes the contract of one candidate, or records in run

@@ -143,7 +143,7 @@ function toExistingGuardianPayload(
   relationship: RelationshipFormData,
 ): StudentGuardianPayload {
   return {
-    guardian_profile_id: Number(guardian.id),
+    guardian_profile_id: guardian.id,
     first_name: guardian.firstName,
     last_name: guardian.lastName,
     relationship_type: relationship.relationshipType,
@@ -396,7 +396,7 @@ export function StudentCreateModal({
     guardian: Guardian,
     relationship: RelationshipFormData,
   ) => {
-    const profileId = Number(guardian.id);
+    const profileId = guardian.id;
     setGuardians((prev) =>
       prev.some((g) => g.guardian_profile_id === profileId)
         ? prev
@@ -426,8 +426,7 @@ export function StudentCreateModal({
   // guardians that are already on this child.
   const addedProfileIds = guardians
     .map((g) => g.guardian_profile_id)
-    .filter((id): id is number => id !== undefined)
-    .map((id) => id.toString());
+    .filter((id): id is string => id !== undefined);
 
   // Prüfung vor dem Senden: gleicher Kasten wie ein Fehler vom Server, die
   // Felder heißen wie in der API, damit Markierung und Fokus sie finden.

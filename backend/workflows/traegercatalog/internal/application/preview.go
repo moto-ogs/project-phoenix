@@ -124,14 +124,14 @@ func (c *Catalog) previewSchool(ctx context.Context, actor traegercatalog.Actor,
 func (c *Catalog) planBilling(snap snapshot, next release, schoolID int64, plan *traegercatalog.SchoolPlan, copies map[int64]careplan.TraegerOfferingApplied) {
 	byID := map[int64]careplan.TraegerOffering{}
 	for _, offering := range snap.offerings {
-		byID[offering.ID] = offering
+		byID[offering.ID.Int64()] = offering
 	}
 	for index, offeringPlan := range plan.Offerings {
 		offering, ok := byID[offeringPlan.TraegerOfferingID]
 		if !ok || offering.WithdrawnAt != nil {
 			continue
 		}
-		billing := billingFor(offering, next.offerings[offering.ID], schoolID, snap.phase.Draft, next.month, copies[offering.ID])
+		billing := billingFor(offering, next.offerings[offering.ID.Int64()], schoolID, snap.phase.Draft, next.month, copies[offering.ID.Int64()])
 		plan.Offerings[index].PricesFrom = billing.pricesFrom
 		plan.Offerings[index].ContractTemplate = billing.template
 	}

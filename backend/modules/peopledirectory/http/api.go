@@ -12,8 +12,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -87,22 +89,22 @@ func (rs *Resource) Router() chi.Router {
 
 // PersonResponse is the wire shape of one directory entry.
 type PersonResponse struct {
-	ID        int64     `json:"id"`
+	ID        common.ID `json:"id"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
 	TagID     string    `json:"tag_id,omitempty"`
-	AccountID int64     `json:"account_id,omitempty"`
+	AccountID common.ID `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // DirectoryPersonRequest is the create and update payload.
 type DirectoryPersonRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	TagID     string `json:"tag_id,omitempty"`
-	AccountID int64  `json:"account_id,omitempty"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	TagID     string    `json:"tag_id,omitempty"`
+	AccountID common.ID `json:"account_id,omitempty"`
 }
 
 // Bind reports every blank name as its own field (#2511); the shared error
@@ -169,7 +171,7 @@ func (rs *Resource) createPerson(w http.ResponseWriter, r *http.Request) {
 		input.TagID = &request.TagID
 	}
 	if request.AccountID != 0 {
-		input.AccountID = &request.AccountID
+		input.AccountID = (*int64)(&request.AccountID)
 	}
 	if !rs.referencesExist(w, r, input.TagID, input.AccountID) {
 		return
@@ -209,9 +211,9 @@ func (rs *Resource) updatePerson(w http.ResponseWriter, r *http.Request) {
 		input.TagID = &request.TagID
 		changedTag = &request.TagID
 	}
-	if request.AccountID != 0 && (existing.AccountID == nil || *existing.AccountID != request.AccountID) {
-		input.AccountID = &request.AccountID
-		changedAccount = &request.AccountID
+	if request.AccountID != 0 && (existing.AccountID == nil || ident.ID(*existing.AccountID) != request.AccountID) {
+		input.AccountID = (*int64)(&request.AccountID)
+		changedAccount = (*int64)(&request.AccountID)
 	}
 	if !rs.referencesExist(w, r, changedTag, changedAccount) {
 		return
@@ -352,14 +354,14 @@ func statusOf(kind FailureKind) int {
 
 func newPersonResponse(person peopledirectory.Person, email string) PersonResponse {
 	response := PersonResponse{
-		ID: person.ID, FirstName: person.FirstName, LastName: person.LastName,
+		ID: ident.ID(person.ID), FirstName: person.FirstName, LastName: person.LastName,
 		Email: email, CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt,
 	}
 	if person.TagID != nil {
 		response.TagID = *person.TagID
 	}
 	if person.AccountID != nil {
-		response.AccountID = *person.AccountID
+		response.AccountID = ident.ID(*person.AccountID)
 	}
 	return response
 }

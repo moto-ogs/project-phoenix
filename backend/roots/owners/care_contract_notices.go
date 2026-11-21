@@ -204,7 +204,7 @@ func (n parentContractNotices) DeclareContractNotice(ctx context.Context, organi
 
 func parentNoticeOptions(options carecontract.NoticeOptions) parentportal.ContractNoticeOptions {
 	result := parentportal.ContractNoticeOptions{
-		ContractID: options.ContractID, Status: options.Status, ChildName: options.ChildName, Modules: options.Modules,
+		ContractID: options.ContractID.Int64(), Status: options.Status, ChildName: options.ChildName, Modules: options.Modules,
 		SchoolName: options.SchoolName, Terms: options.Terms, OrdinaryEndsOn: options.OrdinaryEndsOn,
 		SpecialEndsOn: options.SpecialEndsOn, WithdrawalUntil: options.WithdrawalUntil, EarlyStart: options.EarlyStart,
 	}

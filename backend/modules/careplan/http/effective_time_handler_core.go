@@ -192,8 +192,8 @@ func verifyCareOwnership[T any](
 }
 
 type BulkEffectiveTimeRequest struct {
-	StudentIDs []int64 `json:"student_ids"`
-	Date       *string `json:"date,omitempty"`
+	StudentIDs []common.ID `json:"student_ids"`
+	Date       *string     `json:"date,omitempty"`
 }
 
 func (r *BulkEffectiveTimeRequest) Bind(_ *http.Request) error {

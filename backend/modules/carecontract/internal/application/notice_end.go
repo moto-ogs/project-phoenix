@@ -93,7 +93,7 @@ func (n *Notices) permittedAddresses(ctx context.Context, reviewer carecontract.
 		if err != nil {
 			return err
 		}
-		schoolID = record.Summary.SchoolID
+		schoolID = record.Summary.SchoolID.Int64()
 		state, err = n.notices.NoticeState(txCtx, reviewer.OrganizationID, contractID)
 		return err
 	})
@@ -181,7 +181,7 @@ func (n *Notices) tellEnd(ctx context.Context, reviewer carecontract.Reviewer, r
 	}
 	if target.address != "" {
 		outboxID, err := n.post.EnqueueNoticeMail(ctx, carecontract.NoticeMail{
-			OrganizationID: org, ContractID: record.Summary.ID, Recipient: target.address,
+			OrganizationID: org, ContractID: record.Summary.ID.Int64(), Recipient: target.address,
 			GuardianName: fullName(party.FirstName, party.LastName), TraegerName: traeger, Kind: notice.Kind,
 			Decision: decision.decision, ConfirmationText: text, IdempotencyKey: fmt.Sprintf("care-contract-notice-end:%d", state.NoticeID),
 		})
@@ -240,7 +240,7 @@ func (n *Notices) endAddress(ctx context.Context, organizationID int64, record C
 		return "", nil
 	}
 	candidates := []string{confirmed}
-	mailings, err := n.store.Mailings(ctx, organizationID, record.Summary.ID)
+	mailings, err := n.store.Mailings(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return "", err
 	}

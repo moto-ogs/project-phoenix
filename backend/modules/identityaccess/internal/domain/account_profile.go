@@ -1,9 +1,13 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 type AccountMetadata struct {
-	ID            int64
+	ID            ident.ID
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	Email         string

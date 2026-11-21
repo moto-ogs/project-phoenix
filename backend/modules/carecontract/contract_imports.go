@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Import of children and their existing care contracts from a CSV file
@@ -220,7 +221,7 @@ type ContractImportMapping struct {
 	Columns ContractImportColumns `json:"columns"`
 	// SchoolID is the school of every row of a file without a school
 	// column; 0 with a column.
-	SchoolID int64 `json:"school_id"`
+	SchoolID ident.ID `json:"school_id"`
 	// ModuleName is the module of every row of a file without a module
 	// column, by its name at the row's school; empty with a column.
 	ModuleName string `json:"module_name"`
@@ -264,7 +265,7 @@ type ContractImportRow struct {
 	ChildFirstName string                  `json:"child_first_name"`
 	ChildLastName  string                  `json:"child_last_name"`
 	ChildBirthDate *calendar.Date          `json:"child_birth_date"`
-	SchoolID       int64                   `json:"school_id,omitempty"`
+	SchoolID       ident.ID                `json:"school_id,omitempty"`
 	SchoolName     string                  `json:"school_name"`
 	ModuleNames    []string                `json:"module_names"`
 	Weekdays       []string                `json:"weekdays"`
@@ -276,7 +277,7 @@ type ContractImportRow struct {
 	Hints          []string                `json:"hints"`
 	// ContractID is the contract the import stored, or the running contract
 	// a duplicate row found.
-	ContractID int64 `json:"contract_id,omitempty"`
+	ContractID ident.ID `json:"contract_id,omitempty"`
 	// RepeatsLine is the line of the row that names the same child before
 	// this one (ContractImportProblemRepeated).
 	RepeatsLine int `json:"repeats_line,omitempty"`
@@ -312,9 +313,9 @@ type ContractImportCounts struct {
 
 // ContractImportModule is a module of a school the file can name.
 type ContractImportModule struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	PhaseName string `json:"phase_name"`
+	ID        ident.ID `json:"id"`
+	Name      string   `json:"name"`
+	PhaseName string   `json:"phase_name"`
 	// HasConditions tells that the Träger keeps contract conditions for it.
 	HasConditions bool `json:"has_conditions"`
 }
@@ -322,7 +323,7 @@ type ContractImportModule struct {
 // ContractImportSchool is a school of the Träger with the modules a
 // contract can book there today or later.
 type ContractImportSchool struct {
-	ID      int64                  `json:"id"`
+	ID      ident.ID               `json:"id"`
 	Name    string                 `json:"name"`
 	Modules []ContractImportModule `json:"modules"`
 }
@@ -358,7 +359,7 @@ type ContractImport struct {
 // and how many contracts it took over.
 type ContractImportEntry struct {
 	File       string    `json:"file"`
-	AccountID  *int64    `json:"account_id"`
+	AccountID  *ident.ID `json:"account_id"`
 	ImportedAt time.Time `json:"imported_at"`
 	Contracts  int       `json:"contracts"`
 }

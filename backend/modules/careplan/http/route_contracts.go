@@ -7,7 +7,7 @@ import (
 
 // studentDocumentDeletedResponse names the child whose document was removed.
 type studentDocumentDeletedResponse struct {
-	StudentID int64 `json:"student_id"`
+	StudentID common.ID `json:"student_id"`
 }
 
 // DecisionResponses are the answer types of the review routes. Request

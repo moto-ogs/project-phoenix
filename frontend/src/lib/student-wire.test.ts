@@ -276,7 +276,7 @@ describe("prepareStudentForBackend", () => {
       last_name: "Mustermann",
       school_class: "3a",
       bus_days: { mon: true, fri: true },
-      group_id: 5,
+      group_id: "5",
       address_street: "Musterstraße 12",
       birthday: "2015-06-15",
     });

@@ -58,7 +58,7 @@ func (p *Person) Validate() error {
 func (p *Person) SetAccount(account *PersonAccount) {
 	p.Account = account
 	if account != nil {
-		p.AccountID = &account.ID
+		p.AccountID = (*int64)(&account.ID)
 	} else {
 		p.AccountID = nil
 	}

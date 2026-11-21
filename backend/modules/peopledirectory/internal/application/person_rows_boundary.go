@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PersonRows maps persisted person values at the retained directory boundary.
@@ -22,7 +23,7 @@ func (d *PersonRows) CreatePerson(ctx context.Context, person *peopleModule.Dire
 		LastName:  person.LastName,
 		Birthday:  personBirthday(person),
 		TagID:     person.TagID,
-		AccountID: person.AccountID,
+		AccountID: (*int64)(person.AccountID),
 	})
 	if err != nil {
 		return translatePersonWriteError(MapError(err))
@@ -37,12 +38,12 @@ func (d *PersonRows) CreatePerson(ctx context.Context, person *peopleModule.Dire
 
 func (d *PersonRows) UpdatePerson(ctx context.Context, person *peopleModule.DirectoryPersonSnapshot) error {
 	input, err := peopleModule.NormalizePersonUpdate(peopleModule.UpdatePerson{
-		ID:        person.ID,
+		ID:        person.ID.Int64(),
 		FirstName: person.FirstName,
 		LastName:  person.LastName,
 		Birthday:  personBirthday(person),
 		TagID:     person.TagID,
-		AccountID: person.AccountID,
+		AccountID: (*int64)(person.AccountID),
 	})
 	if err != nil {
 		return translatePersonWriteError(MapError(err))
@@ -70,10 +71,10 @@ func personBirthday(person *peopleModule.DirectoryPersonSnapshot) string {
 }
 
 func applyPersonRecord(person *peopleModule.DirectoryPersonSnapshot, record peopleModule.Person) {
-	person.ID, person.CreatedAt, person.UpdatedAt = record.ID, record.CreatedAt, record.UpdatedAt
+	person.ID, person.CreatedAt, person.UpdatedAt = ident.ID(record.ID), record.CreatedAt, record.UpdatedAt
 	person.SetTenantID(record.TenantID)
 	person.FirstName, person.LastName = record.FirstName, record.LastName
-	person.TagID, person.AccountID = record.TagID, record.AccountID
+	person.TagID, person.AccountID = record.TagID, (*ident.ID)(record.AccountID)
 	person.Birthday = peopleModule.OptionalCalendarDate(record.Birthday)
 	person.DeletedAt = record.DeletedAt
 }

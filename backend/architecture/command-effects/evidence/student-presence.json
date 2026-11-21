@@ -12978,7 +12978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.FindByAccountID",
-      "binding_digest": "bf7cc1ec8d1041ed71de9509da52bb17",
+      "binding_digest": "7218cde31fc39cb3c8779a96c426d082",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.FindByAccountID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.FindByAccountID",
@@ -12986,7 +12986,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStaffByPersonID",
-      "binding_digest": "86984f77d2c86732d86aa3f61dfba16e",
+      "binding_digest": "8a4d02e171c13489251f18d207a0b46d",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -12994,7 +12994,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStaffByPersonID",
-      "binding_digest": "fbf2d001a35a082d761b0f5f7a2ee874",
+      "binding_digest": "34f24120e91ff6af13887f1338ae7bcc",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StaffRows",
@@ -13002,7 +13002,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStaffByPersonID",
-      "binding_digest": "d7fb185f8280e69330f937c25bb362ed",
+      "binding_digest": "c6265ba98c1c3b7b22c7ee366db443d5",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByPersonID",
@@ -13010,7 +13010,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStaffByPersonID",
-      "binding_digest": "34b672617c6a7d9753c853c23be9c69c",
+      "binding_digest": "b5e411fd5cf142450e6bf101c6cc8364",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffByPerson",
@@ -13018,7 +13018,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.activePeople.GetStaffByPersonID",
-      "binding_digest": "b8563861b5383d134e5589fa0eee5729",
+      "binding_digest": "2f206f20a451dc4193910648e31b5f61",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffByPerson",
@@ -13954,7 +13954,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.ExistingStaffIDs",
-      "binding_digest": "28b4b250c5e677e8c91e60c1af3b0080",
+      "binding_digest": "0b999eec699d9911fea6bbab5f8d977b",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.ExistingStaffIDs",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -13970,7 +13970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.ExistingStaffIDs",
-      "binding_digest": "ef59c5a319dd8c7fb769601c8f6c4886",
+      "binding_digest": "dcef3952389583f05aef58998f121ae6",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.ExistingStaffIDs",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
@@ -13978,7 +13978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.ExistingStaffIDs",
-      "binding_digest": "d65cab321064bace9b5cb00303a1325d",
+      "binding_digest": "bdc8a9c6a1516c939f09bf9fd0240b39",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.ExistingStaffIDs",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
@@ -13986,7 +13986,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.LockStaffExists",
-      "binding_digest": "83c150aaa97d73f3815af7390767ea2e",
+      "binding_digest": "158dd9b8711321dbeb9c8b896506798b",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.LockStaffExists",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -14018,7 +14018,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.StaffTenantID",
-      "binding_digest": "bb3d9cc11fb35e1996d8b17c6687484c",
+      "binding_digest": "bec21a9664a27d316cc6f3adcf8c02a1",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -14026,7 +14026,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.StaffTenantID",
-      "binding_digest": "59d069a551cac18241c66a0712570a77",
+      "binding_digest": "928cb8a149eec9accd47e8d19f5f0de3",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByID",
@@ -14034,7 +14034,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.StaffTenantID",
-      "binding_digest": "294be81eccb5b5439acd9ad33f2561c6",
+      "binding_digest": "7353c40225d73f4be36a0300813a4924",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaff",
@@ -14042,7 +14042,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffDirectory.StaffTenantID",
-      "binding_digest": "07a4d9e03be36d9d0cb0d90645e3deaf",
+      "binding_digest": "f934827601a6320bcad9d34edad06dfb",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
@@ -14058,7 +14058,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffNames.StaffNames",
-      "binding_digest": "8cce97ccb8096c8a9cc2eb182090bb60",
+      "binding_digest": "99ae9346d1284ed1df3a1d30f8e07e48",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
@@ -14066,7 +14066,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffNames.StaffNames",
-      "binding_digest": "0ce4ffb0665a57645aafaa80f2f97aec",
+      "binding_digest": "21d81d79d8c1fbca0c0f8c7a7c4b4cfe",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -14082,7 +14082,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffNames.StaffNames",
-      "binding_digest": "369c1723e2ea82e55429ab4fefe1689a",
+      "binding_digest": "6ac1796334ea5caa325794c67484149b",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
@@ -14090,7 +14090,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffNames.StaffNames",
-      "binding_digest": "5b1a03ba61b28bfc63b02fe85ac9cb99",
+      "binding_digest": "ccd6ed0c61fb7cfd8b9f33e885cc8fdb",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
@@ -14098,7 +14098,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.attendanceStaffNames.StaffNames",
-      "binding_digest": "f18dd1beb2b8460d9667e9aa45b8c997",
+      "binding_digest": "7993651da83c2b6f115166d921a2defe",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
@@ -15194,7 +15194,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.statusDayOverviewPeople.GetByIDs",
-      "binding_digest": "6e0ff2376186ea1ef4eaf3d1f3591e3b",
+      "binding_digest": "6d1a18f936292e2e2c0ded61ed3510e5",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StatusDayOverviewPeople.GetByIDs",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.GetByIDs",

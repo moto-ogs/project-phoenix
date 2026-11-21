@@ -5,7 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -81,7 +81,7 @@ export interface GuardianPickerResponse {
 }
 
 export const GuardianPickerResponseSchema: z.ZodType<GuardianPickerResponse, unknown> = object<GuardianPickerResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -101,7 +101,7 @@ export interface guardianEmailStatusResponse {
 }
 
 export const guardianEmailStatusResponseSchema: z.ZodType<guardianEmailStatusResponse, unknown> = object<guardianEmailStatusResponse>({
-  guardian_profile_id: int64StringOrNumber,
+  guardian_profile_id: int64String,
   mail_outcome: optional(str),
   address_mark: optional(str),
   emails_stopped: optional(bool),
@@ -122,7 +122,7 @@ export interface PhoneNumberResponse {
 }
 
 export const PhoneNumberResponseSchema: z.ZodType<PhoneNumberResponse, unknown> = object<PhoneNumberResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   phone_number: str,
   phone_type: str,
   label: optional(str),
@@ -148,7 +148,7 @@ export interface GuardianResponse {
 }
 
 export const GuardianResponseSchema: z.ZodType<GuardianResponse, unknown> = object<GuardianResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -160,7 +160,7 @@ export const GuardianResponseSchema: z.ZodType<GuardianResponse, unknown> = obje
   language_preference: str,
   notes: optional(str),
   has_account: bool,
-  account_id: optional(int64StringOrNumber),
+  account_id: optional(int64String),
 });
 
 /** Go: users.GuardianWithRelationship */
@@ -181,7 +181,7 @@ export interface GuardianWithRelationship {
 
 export const GuardianWithRelationshipSchema: z.ZodType<GuardianWithRelationship, unknown> = object<GuardianWithRelationship>({
   guardian: nullable(GuardianResponseSchema),
-  relationship_id: int64StringOrNumber,
+  relationship_id: int64String,
   relationship_type: str,
   guardian_role: str,
   is_primary: bool,
@@ -224,7 +224,7 @@ export const GuardianPaymentMaskedResponseSchema: z.ZodType<GuardianPaymentMaske
 
 /** Go: users.bulkInviteRequest */
 export interface bulkInviteRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   resend_open?: boolean;
   dry_run?: boolean;
 }
@@ -269,7 +269,7 @@ export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = 
 
 /** Go: users.StudentGuardianLinkRequest */
 export interface StudentGuardianLinkRequest {
-  guardian_profile_id?: number;
+  guardian_profile_id?: string;
   relationship_type?: string;
   guardian_role?: string;
   is_primary?: boolean;
@@ -297,10 +297,10 @@ export interface GuardianLinkResponse {
 }
 
 export const GuardianLinkResponseSchema: z.ZodType<GuardianLinkResponse, unknown> = object<GuardianLinkResponse>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
-  guardian_profile_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  student_id: int64String,
+  guardian_profile_id: int64String,
   relationship_type: str,
   guardian_role: str,
   is_primary: bool,

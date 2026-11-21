@@ -61,7 +61,7 @@ func (p RoomSnapshotPeople) PersonsByIDs(ctx context.Context, ids []int64) (map[
 	result := make(map[int64]peopledirectory.Person, len(persons))
 	for id, person := range persons {
 		if person != nil {
-			result[id] = peopledirectory.Person{ID: person.ID, FirstName: person.FirstName, LastName: person.LastName}
+			result[id] = peopledirectory.Person{ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName}
 		}
 	}
 	return result, nil

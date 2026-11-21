@@ -315,7 +315,7 @@ describe("guardian-helpers", () => {
       const result = mapStudentGuardianLinkToBackend(linkRequest);
 
       expect(result).toEqual({
-        guardian_profile_id: 123,
+        guardian_profile_id: "123",
         relationship_type: "parent",
         guardian_role: "primary_guardian",
         is_primary: true,
@@ -326,7 +326,7 @@ describe("guardian-helpers", () => {
       });
     });
 
-    it("converts string guardianProfileId to number", () => {
+    it("keeps the string guardianProfileId", () => {
       const linkRequest: StudentGuardianLinkRequest = {
         guardianProfileId: "999",
         relationshipType: "guardian",
@@ -338,8 +338,8 @@ describe("guardian-helpers", () => {
 
       const result = mapStudentGuardianLinkToBackend(linkRequest);
 
-      expect(result.guardian_profile_id).toBe(999);
-      expect(typeof result.guardian_profile_id).toBe("number");
+      expect(result.guardian_profile_id).toBe("999");
+      expect(typeof result.guardian_profile_id).toBe("string");
     });
 
     it("handles optional pickup notes when undefined", () => {

@@ -7,6 +7,7 @@ import (
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain/userscontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -91,9 +92,9 @@ func (s *staffMembershipDirectory) CreateStaffWithTeacher(ctx context.Context, i
 		}
 
 		if input.IsTeacher {
-			teacher, teacherCreationFailed = s.ensureTeacherForStaff(ctx, staff.ID, input)
+			teacher, teacherCreationFailed = s.ensureTeacherForStaff(ctx, staff.ID.Int64(), input)
 		} else {
-			teacher = s.liveTeacherForStaff(ctx, staff.ID)
+			teacher = s.liveTeacherForStaff(ctx, staff.ID.Int64())
 		}
 
 		return nil
@@ -162,7 +163,7 @@ func (s *staffMembershipDirectory) lockLiveStaffOfPerson(ctx context.Context, pe
 	if err != nil {
 		return err
 	}
-	_, err = s.staff.FindByIDForUpdate(ctx, existing.ID)
+	_, err = s.staff.FindByIDForUpdate(ctx, existing.ID.Int64())
 	return err
 }
 
@@ -190,7 +191,7 @@ func (s *staffMembershipDirectory) adoptOrCreateStaff(ctx context.Context, input
 		return existing, nil
 	}
 	staff := &peopleValues.Staff{
-		PersonID:   input.PersonID,
+		PersonID:   ident.ID(input.PersonID),
 		StaffNotes: input.StaffNotes,
 	}
 	if err := s.staff.Create(ctx, staff); err != nil {
@@ -232,7 +233,7 @@ func (s *staffMembershipDirectory) refuseCaregiverProfileForLehrkraft(ctx contex
 	if s.lehrkraftRoles == nil {
 		return errors.New("lehrkraft role query is required to decide the caregiver profile")
 	}
-	isLehrkraft, err := s.lehrkraftRoles.AccountHoldsLehrkraftRole(ctx, *person.AccountID)
+	isLehrkraft, err := s.lehrkraftRoles.AccountHoldsLehrkraftRole(ctx, (*person.AccountID).Int64())
 	if err != nil {
 		return err
 	}
@@ -310,7 +311,7 @@ func (s *staffMembershipDirectory) UpdateStaffWithTeacher(ctx context.Context, s
 		if err := s.updateStaffRecord(ctx, staff, isTeacher); err != nil {
 			return err
 		}
-		teacher, action = s.applyTeacherChange(ctx, staff.ID, isTeacher, specialization, role, qualifications)
+		teacher, action = s.applyTeacherChange(ctx, staff.ID.Int64(), isTeacher, specialization, role, qualifications)
 		return nil
 	}); err != nil {
 		return nil, peoplePorts.TeacherActionNone, err
@@ -322,14 +323,14 @@ func (s *staffMembershipDirectory) UpdateStaffWithTeacher(ctx context.Context, s
 // updateStaffRecord writes the mutable directory fields onto the freshly
 // locked staff row and reloads it with its person into staff.
 func (s *staffMembershipDirectory) updateStaffRecord(ctx context.Context, staff *peopleValues.Staff, isTeacher bool) error {
-	currentStaff, err := s.staff.FindByIDForUpdate(ctx, staff.ID)
+	currentStaff, err := s.staff.FindByIDForUpdate(ctx, staff.ID.Int64())
 	if err != nil {
 		return err
 	}
 
 	// Same guard as the create path: the edit form must not be the way a
 	// Lehrkraft account acquires the caregiver profile its role excludes.
-	if err := s.refuseCaregiverProfileForLehrkraft(ctx, currentStaff.PersonID, isTeacher); err != nil {
+	if err := s.refuseCaregiverProfileForLehrkraft(ctx, currentStaff.PersonID.Int64(), isTeacher); err != nil {
 		return err
 	}
 	currentStaff.PersonID = staff.PersonID
@@ -341,7 +342,7 @@ func (s *staffMembershipDirectory) updateStaffRecord(ctx context.Context, staff 
 	*staff = *currentStaff
 
 	// Reload staff with person data; fall back to loading the person alone.
-	if reloaded, err := s.staff.FindWithPerson(ctx, staff.ID); err == nil {
+	if reloaded, err := s.staff.FindWithPerson(ctx, staff.ID.Int64()); err == nil {
 		*staff = *reloaded
 	} else if staff.Person == nil && staff.PersonID > 0 {
 		if person, err := s.persons.FindByID(ctx, staff.PersonID); err == nil {

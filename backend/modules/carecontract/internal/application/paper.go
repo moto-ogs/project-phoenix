@@ -50,7 +50,7 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 			return err
 		}
 	}
-	document, err := s.store.CurrentDocument(ctx, reviewer.OrganizationID, contractID, record.Version.ID)
+	document, err := s.store.CurrentDocument(ctx, reviewer.OrganizationID, contractID, record.Version.ID.Int64())
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	}
 	documentID, recorder := document.ID, reviewer.AccountID
 	if err := s.store.InsertSignature(ctx, reviewer.OrganizationID, NewSignature{
-		ContractID: contractID, VersionID: record.Version.ID, DocumentID: &documentID, Method: carecontract.SignaturePaper,
+		ContractID: contractID, VersionID: record.Version.ID.Int64(), DocumentID: &documentID, Method: carecontract.SignaturePaper,
 		Channel: carecontract.ChannelOffice, SignerName: input.SignerName, VersionSHA256: checksum,
 		DocumentSHA256: document.SHA256, PaperFilename: input.Filename, PaperPDF: input.PDF, SignedOn: input.SignedOn,
 		SignedAt: now, RecordedByAccountID: &recorder, PaperSHA256: s.ports.Links.Fingerprint(input.PDF),
@@ -96,7 +96,7 @@ func (s *Signatures) PaperDocument(ctx context.Context, reviewer carecontract.Re
 		if err != nil {
 			return err
 		}
-		schoolID = record.Summary.SchoolID
+		schoolID = record.Summary.SchoolID.Int64()
 		file, err = s.store.PaperDocument(txCtx, reviewer.OrganizationID, contractID)
 		if err != nil {
 			return err

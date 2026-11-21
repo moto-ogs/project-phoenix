@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The signature on the contracts of the Träger-Büro (#4679): every send
@@ -29,14 +30,14 @@ func (c *Contracts) signingLinkFor(ctx context.Context, organizationID int64, re
 	if err != nil {
 		return signingLink{}, err
 	}
-	return createSigningLink(ctx, c.store, c.links, c.clock, organizationID, record.Summary.ID, documentID, sent)
+	return createSigningLink(ctx, c.store, c.links, c.clock, organizationID, record.Summary.ID.Int64(), documentID, sent)
 }
 
 // sentState is what a send of record gives the parents: its frozen PDF and
 // the version it shows.
 func sentState(ctx context.Context, store SignatureStore, fingerprint func([]byte) string, organizationID int64,
 	record ContractRecord) (SentState, error) {
-	document, err := store.CurrentDocument(ctx, organizationID, record.Summary.ID, record.Version.ID)
+	document, err := store.CurrentDocument(ctx, organizationID, record.Summary.ID.Int64(), record.Version.ID.Int64())
 	if err != nil {
 		return SentState{}, err
 	}
@@ -74,12 +75,12 @@ func createSigningLink(ctx context.Context, store SignatureStore, links carecont
 // the ledger entry is, and when that version and its PDF still have the
 // checksums it was given on.
 func (c *Contracts) addSignature(ctx context.Context, organizationID int64, record ContractRecord, detail *carecontract.ContractDetail) error {
-	reminders, err := c.store.Reminders(ctx, organizationID, record.Summary.ID)
+	reminders, err := c.store.Reminders(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return err
 	}
 	detail.Reminders = reminders
-	stored, err := c.store.Signature(ctx, organizationID, record.Summary.ID, 0)
+	stored, err := c.store.Signature(ctx, organizationID, record.Summary.ID.Int64(), 0)
 	if err != nil || stored == nil {
 		return err
 	}
@@ -97,15 +98,15 @@ func (c *Contracts) addSignature(ctx context.Context, organizationID int64, reco
 // signedVersion is the version a signature signed: the record's own, or an
 // earlier one of its timeline.
 func (c *Contracts) signedVersion(ctx context.Context, organizationID int64, record ContractRecord, versionID int64) (carecontract.Version, error) {
-	if record.Version.ID == versionID {
+	if record.Version.ID == ident.ID(versionID) {
 		return record.Version, nil
 	}
-	versions, err := c.store.Versions(ctx, organizationID, record.Summary.ID)
+	versions, err := c.store.Versions(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return carecontract.Version{}, err
 	}
 	for _, version := range versions {
-		if version.ID == versionID {
+		if version.ID == ident.ID(versionID) {
 			return version, nil
 		}
 	}
@@ -117,7 +118,7 @@ func (c *Contracts) signatureOf(ctx context.Context, organizationID int64, recor
 	if err != nil {
 		return carecontract.ContractSignature{}, err
 	}
-	document, err := c.store.CurrentDocument(ctx, organizationID, record.Summary.ID, record.Version.ID)
+	document, err := c.store.CurrentDocument(ctx, organizationID, record.Summary.ID.Int64(), record.Version.ID.Int64())
 	if err != nil {
 		return carecontract.ContractSignature{}, err
 	}
@@ -133,7 +134,7 @@ func (c *Contracts) signatureOf(ctx context.Context, organizationID int64, recor
 		signature.Intact = signature.Intact && stored.PaperIntact
 		return signature, nil
 	}
-	ends, err := c.periods.withdrawalEnd(ctx, record.Summary.SchoolID, stored.SignedAt)
+	ends, err := c.periods.withdrawalEnd(ctx, record.Summary.SchoolID.Int64(), stored.SignedAt)
 	if err != nil {
 		return carecontract.ContractSignature{}, err
 	}
@@ -147,7 +148,7 @@ func (c *Contracts) signatureOf(ctx context.Context, organizationID int64, recor
 		return carecontract.ContractSignature{}, fmt.Errorf("care contract: read signature: %w", err)
 	}
 	proof, ok := proofs[*stored.AuditSignatureID]
-	signature.Intact = signature.Intact && ok && proof.Intact && proof.VersionID == record.Version.ID &&
+	signature.Intact = signature.Intact && ok && proof.Intact && ident.ID(proof.VersionID) == record.Version.ID &&
 		proof.DocumentSHA256 == stored.DocumentSHA256 && proof.Method == stored.Method &&
 		proof.SignerName == stored.SignerName && proof.SignedAt.Equal(stored.SignedAt)
 	signature.TypedName, signature.ImagePNG = proof.TypedName, proof.PNG

@@ -26,6 +26,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Service is the HTTP entry surface. The root binds display reads to People
@@ -98,14 +99,14 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 }
 
 type celebrationResponse struct {
-	Kind        string `json:"kind"`
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	GroupName   string `json:"group_name,omitempty"`
-	SchoolClass string `json:"school_class,omitempty"`
-	Date        string `json:"date"`
-	Age         int    `json:"age,omitempty"`
-	IsToday     bool   `json:"is_today"`
+	Kind        string    `json:"kind"`
+	ID          common.ID `json:"id"`
+	Name        string    `json:"name"`
+	GroupName   string    `json:"group_name,omitempty"`
+	SchoolClass string    `json:"school_class,omitempty"`
+	Date        string    `json:"date"`
+	Age         int       `json:"age,omitempty"`
+	IsToday     bool      `json:"is_today"`
 }
 
 type overviewResponse struct {
@@ -158,7 +159,7 @@ func (rs *Resource) getOverview(w http.ResponseWriter, r *http.Request) {
 	for _, celebration := range overview.Celebrations {
 		celebrations = append(celebrations, celebrationResponse{
 			Kind:        string(celebration.Kind),
-			ID:          celebration.ID,
+			ID:          ident.ID(celebration.ID),
 			Name:        celebration.Name,
 			GroupName:   celebration.GroupName,
 			SchoolClass: celebration.SchoolClass,

@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -41,7 +42,7 @@ func blankPNG(t *testing.T) string {
 }
 
 type signingViewBody struct {
-	ContractID       int64    `json:"contract_id"`
+	ContractID       ident.ID `json:"contract_id"`
 	Status           string   `json:"status"`
 	DocumentSHA256   string   `json:"document_sha256"`
 	WithdrawalNotice []string `json:"withdrawal_notice"`

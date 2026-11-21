@@ -4,7 +4,7 @@ import {
   arr,
   calendarDate,
   fileAnswer,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   safeInt,
@@ -38,7 +38,7 @@ export interface SchoolOverruns {
 }
 
 export const SchoolOverrunsSchema: z.ZodType<SchoolOverruns, unknown> = object<SchoolOverruns>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   data_from: nullable(calendarDate),
   compared_days: safeInt,
@@ -60,9 +60,9 @@ export interface OverrunChild {
 }
 
 export const OverrunChildSchema: z.ZodType<OverrunChild, unknown> = object<OverrunChild>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
