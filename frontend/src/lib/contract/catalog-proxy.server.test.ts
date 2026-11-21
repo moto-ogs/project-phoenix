@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
+import { ApiError } from "~/lib/api-error";
+import { presentError } from "~/lib/error-presentation";
 import { ApiResponseError } from "~/lib/api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
 import {
@@ -420,6 +422,42 @@ describe("makeCatalogProxy", () => {
       status: 502,
       code: "general.write_answer_unreadable",
     });
+  });
+
+  it.each([
+    "students/care-end/preview",
+    "students/care-withdrawals/7/care-end/preview",
+  ])("keeps a failed catalog POST query retryable: %s", async (path) => {
+    api.mockResolvedValueOnce({ status: "success", data: null });
+    const handler = makeCatalogProxy(
+      portal,
+      "/api",
+      portalRoutes.tenant,
+      "POST",
+    );
+    const request = new NextRequest(`http://school-a.localhost/api/${path}`, {
+      method: "POST",
+      body: "{}",
+    });
+    const refusal: unknown = await handler(request, {
+      params: Promise.resolve({ path: path.split("/") }),
+    }).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(ApiResponseError);
+    if (!(refusal instanceof ApiResponseError)) return;
+    expect(refusal.body()).toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
+    expect(
+      presentError(
+        new ApiError(
+          "Bad Gateway",
+          refusal.status,
+          refusal.body<{ code: string }>() ?? undefined,
+        ),
+        "Vorschau",
+      ).retryable,
+    ).toBe(true);
   });
 
   it("refuses an answer outside the contract with 502", async () => {
