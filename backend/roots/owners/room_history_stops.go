@@ -63,7 +63,10 @@ func (a roomHistoryStopAudit) RecordRoomHistoryStop(ctx context.Context, event s
 	oldValue, newValue := roomHistoryStopped, roomHistoryRecorded
 	if event.Stopped {
 		oldValue, newValue = roomHistoryRecorded, roomHistoryStopped
-		if event.DeletedVisits > 0 {
+		switch {
+		case event.DeletedVisits == 1:
+			newValue = roomHistoryStopped + ", 1 Raumbesuch gelöscht"
+		case event.DeletedVisits > 1:
 			newValue = fmt.Sprintf("%s, %d Raumbesuche gelöscht", roomHistoryStopped, event.DeletedVisits)
 		}
 	}
