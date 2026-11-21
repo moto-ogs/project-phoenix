@@ -12,23 +12,23 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 )
 
-func TestStaffingChangeQueueSendsToExplicitTenantAfterCommit(t *testing.T) {
+func TestQueueStaffingChangeAfterCommitSendsToExplicitTenant(t *testing.T) {
 	t.Parallel()
 
 	var received []struct {
 		tenantID int64
 		source   string
 	}
-	queue := NewStaffingChangeQueue(timetablePorts.StaffingAnnouncerFunc(func(tenantID int64, source string) error {
+	announcer := timetablePorts.StaffingAnnouncerFunc(func(tenantID int64, source string) error {
 		received = append(received, struct {
 			tenantID int64
 			source   string
 		}{tenantID: tenantID, source: source})
 		return nil
-	}), nil)
+	})
 	ctx, commit := tenanttest.WithAfterCommitHooks(context.Background())
 
-	queue.QueueStaffingChanged(ctx, 42, "closing_days")
+	QueueStaffingChangeAfterCommit(ctx, 42, "closing_days", announcer, nil)
 	assert.Empty(t, received, "the signal must wait for the write to commit")
 
 	commit()

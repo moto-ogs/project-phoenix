@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -40,7 +41,9 @@ func mountTraegerClosingDayRoutes(root chi.Router, schools traegercalendar.Schoo
 // newTraegerClosingDayStaffingQueue binds the Träger closing-day routes to
 // the same after-commit staffing signal queue as the school timetable routes.
 func newTraegerClosingDayStaffingQueue(staffing timetableHTTP.StaffingAnnouncer, logger *slog.Logger) schoolCalendarHTTP.StaffingChangeQueue {
-	return timetableHTTP.NewStaffingChangeQueue(staffing, logger)
+	return func(ctx context.Context, tenantID int64, source string) {
+		timetableHTTP.QueueStaffingChangeAfterCommit(ctx, tenantID, source, staffing, logger)
+	}
 }
 
 // newHolidayClosures builds Enrollment's closing day notices over the

@@ -31,9 +31,7 @@ type TraegerClosingDayResource struct {
 // StaffingChangeQueue wakes a school's staff pages after the surrounding
 // transaction commits. The composition root binds it to the shared
 // staffing_deviation_changed queue.
-type StaffingChangeQueue interface {
-	QueueStaffingChanged(ctx context.Context, tenantID int64, source string)
-}
+type StaffingChangeQueue func(ctx context.Context, tenantID int64, source string)
 
 const closingDayChangeSource = "closing_days"
 
@@ -192,7 +190,7 @@ func (rs *TraegerClosingDayResource) announceClosingDayChange(ctx context.Contex
 		return
 	}
 	for _, schoolID := range schoolIDs {
-		rs.staffing.QueueStaffingChanged(ctx, schoolID, closingDayChangeSource)
+		rs.staffing(ctx, schoolID, closingDayChangeSource)
 	}
 }
 

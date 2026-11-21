@@ -24,23 +24,10 @@ type StaffingAnnouncer interface {
 	AnnounceStaffingChanged(tenantID int64, source string) error
 }
 
-// StaffingChangeQueue queues a tenant-wide staffing change for after the
-// ambient transaction commits. It lets a route that does not itself have a
-// school tenant in its context wake the affected school pages.
-type StaffingChangeQueue interface {
-	QueueStaffingChanged(ctx context.Context, tenantID int64, source string)
-}
-
-type staffingChangeQueue struct{ resource *Resource }
-
-// NewStaffingChangeQueue adapts the shared staffing announcer to the existing
-// after-commit queue used by the timetable routes.
-func NewStaffingChangeQueue(staffing StaffingAnnouncer, logger *slog.Logger) StaffingChangeQueue {
-	return staffingChangeQueue{resource: &Resource{Dependencies: Dependencies{Staffing: staffing, Logger: logger}}}
-}
-
-func (q staffingChangeQueue) QueueStaffingChanged(ctx context.Context, tenantID int64, source string) {
-	q.resource.broadcastStaffingDeviationChanged(ctx, source, tenantID)
+// QueueStaffingChangeAfterCommit adapts the shared staffing announcer to the
+// existing after-commit queue for a school named outside the request context.
+func QueueStaffingChangeAfterCommit(ctx context.Context, tenantID int64, source string, staffing StaffingAnnouncer, logger *slog.Logger) {
+	(&Resource{Dependencies: Dependencies{Staffing: staffing, Logger: logger}}).broadcastStaffingDeviationChanged(ctx, source, tenantID)
 }
 
 // AffectedInstance is one row in the affected_instances list of the response.
