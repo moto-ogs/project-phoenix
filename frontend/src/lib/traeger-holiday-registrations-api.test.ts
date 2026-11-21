@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
+import type {
+  HolidayMailProblemsResponse,
+  HolidayRegistrationHealthDetail as WireHealthDetail,
+  HolidayWeekPlaces as WireWeekPlaces,
+} from "./contract/traeger-holiday-periods.generated";
 import {
   changeHolidayRegistration,
   downloadHolidayRegistrationPdf,
@@ -11,6 +16,7 @@ import {
   withHolidayHealthAnswers,
   fetchHolidayRegistrations,
   fetchHolidayRegistrationMailProblems,
+  fetchHolidayWeekPlaces,
   editHolidayRegistration,
   rebookHolidayChild,
 } from "./traeger-holiday-registrations-api";
@@ -627,13 +633,13 @@ describe("traeger-holiday-registrations-api", () => {
         data: {
           registrations: [
             {
-              registration_id: 7,
+              registration_id: "7",
               mail_problems: [
                 { kind: "holiday_registration_accepted", state: "blocked" },
               ],
             },
           ],
-        },
+        } satisfies HolidayMailProblemsResponse,
       }),
     );
 
@@ -674,14 +680,14 @@ describe("traeger-holiday-registrations-api", () => {
           custom_data: { krankenkasse: "AOK" },
           children: [
             {
-              child_id: 9,
+              child_id: "9",
               allergies: "Erdnüsse",
               medication: "",
               health_notes: "",
               custom_data: { tetanus: "ja" },
             },
           ],
-        },
+        } satisfies WireHealthDetail,
       }),
     );
 
@@ -711,5 +717,38 @@ describe("traeger-holiday-registrations-api", () => {
     );
     expect(merged.answers).toMatchObject({ krankenkasse: "AOK" });
     expect(merged.childAnswers["9"]).toMatchObject({ tetanus: "ja" });
+  });
+
+  it("reads the places of a week with an unknown waiting status as unknown", async () => {
+    const week = {
+      week_id: "51",
+      starts_on: "2027-01-04",
+      ends_on: "2027-01-08",
+      host_school_id: "31",
+      capacity: 10,
+      placed: 10,
+      waitlist: [
+        {
+          position: 1,
+          registration_id: "7",
+          registration_status: "archived",
+          submitted_at: "2026-09-03T08:00:00Z",
+          child_id: "9",
+          child_first_name: "Ben",
+          child_last_name: "Muster",
+          time_model_name: "bis 13 Uhr",
+          deferred: false,
+        },
+      ],
+      pending: 0,
+      booking_unit: "week",
+      days: null,
+    } satisfies WireWeekPlaces;
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: [week] }));
+
+    const [places] = await fetchHolidayWeekPlaces("5");
+
+    expect(places?.waitlist[0]?.registrationId).toBe("7");
+    expect(places?.waitlist[0]?.registrationStatus).toBeUndefined();
   });
 });
