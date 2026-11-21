@@ -27,11 +27,10 @@ import {
   prepareApplyDeviationsBody,
   prepareBulkSubstitutionBody,
 } from "./timetable-helpers";
+import type { ScheduleSubstitutionResult } from "./contract/substitutions.generated";
 import type {
   ApplyDeviationsInput,
   ApplyDeviationsResponse,
-  BackendApplyDeviationsResponse,
-  BackendBulkSubstitutionResponse,
   BulkSubstitutionInput,
   BulkSubstitutionResponse,
 } from "./timetable-types";
@@ -98,7 +97,7 @@ class SubstitutionService {
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
     return mapApplyDeviations(
-      substitutionAssignmentResult<BackendApplyDeviationsResponse>(
+      substitutionAssignmentResult<ScheduleSubstitutionResult>(
         unwrapSubstitutionProxyEnvelope(envelope),
         "schedule_substitution",
       ),
@@ -122,7 +121,7 @@ class SubstitutionService {
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
     return mapBulkSubstitution(
-      substitutionAssignmentResult<BackendBulkSubstitutionResponse>(
+      substitutionAssignmentResult<ScheduleSubstitutionResult>(
         unwrapSubstitutionProxyEnvelope(envelope),
         "schedule_substitution",
       ),

@@ -1,4 +1,7 @@
-import type { enrichedInstance } from "~/lib/contract/timetable.generated";
+import type {
+  enrichedInstance,
+  materializeResponse,
+} from "~/lib/contract/timetable.generated";
 
 /**
  * Builds a block of the week plan as the catalog proxy hands it on
@@ -35,6 +38,32 @@ export function buildEnrichedInstance(
     conflict_warnings: null,
     can_complete: false,
     complete_available_at: "",
+    ...overrides,
+  };
+}
+
+/** Builds a materialization result of the contract (`materializeResponse`). */
+export function buildMaterializeResponse(
+  overrides?: Partial<materializeResponse>,
+): materializeResponse {
+  return {
+    from: "2026-09-07",
+    to: "2026-09-13",
+    instances_created: 0,
+    candidates_skipped_existing: 0,
+    candidates_skipped_exception: 0,
+    candidates_skipped_ab_week: 0,
+    candidates_skipped_no_period: 0,
+    candidates_skipped_incomplete: 0,
+    skipped_ended: 0,
+    skipped_not_started: 0,
+    skipped_holidays: 0,
+    skipped_closing_days: 0,
+    candidates_raced: 0,
+    instance_students_created: 0,
+    instance_staff_created: 0,
+    warnings: null,
+    duration_ms: 0,
     ...overrides,
   };
 }

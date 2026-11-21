@@ -495,8 +495,10 @@ export function conflictWarningText(
     warning.kind === "staff"
       ? (staff.find((person) => person.id === warning.resourceId)?.name ??
         "Eine Person aus dem Personal")
-      : (students.find((person) => person.id === warning.resourceId)?.name ??
-        "Ein Kind");
+      : warning.kind === "student"
+        ? (students.find((person) => person.id === warning.resourceId)?.name ??
+          "Ein Kind")
+        : "Eine Person";
   return `${name} ist zur selben Zeit schon ${where} eingeplant.`;
 }
 

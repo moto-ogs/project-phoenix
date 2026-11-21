@@ -582,16 +582,6 @@ export interface BulkCancelResult {
   keptSeries: { name: string; count: number }[];
 }
 
-export interface BackendBulkCancelResult {
-  from: string;
-  to: string;
-  dry_run: boolean;
-  count: number;
-  days?: { date: string; count: number }[] | null;
-  kept?: number;
-  kept_series?: { name: string; count: number }[] | null;
-}
-
 /**
  * Typed soft-precondition warning — keep `code` in sync with the backend
  * MaterializationWarning constants (services/schedule/materialization_service.go).
@@ -599,17 +589,6 @@ export interface BackendBulkCancelResult {
 export interface MaterializeWarning {
   code: "no_active_period" | "no_templates" | (string & {});
   message: string;
-}
-
-export interface BackendMaterializeResult {
-  from: string;
-  to: string;
-  instances_created: number;
-  candidates_skipped_existing: number;
-  skipped_holidays?: number;
-  skipped_closing_days?: number;
-  warnings?: { code: string; message: string }[];
-  duration_ms: number;
 }
 
 export interface ReplanWeekResult {
@@ -620,20 +599,7 @@ export interface ReplanWeekResult {
   instancesCreated: number;
   instanceStudentsCreated: number;
   instanceStaffCreated: number;
-  warnings: MaterializeWarning[];
   durationMs: number;
-}
-
-export interface BackendReplanWeekResult {
-  from: string;
-  to: string;
-  deleted_instances: number;
-  candidates_skipped_existing: number;
-  instances_created: number;
-  instance_students_created: number;
-  instance_staff_created: number;
-  warnings?: { code: string; message: string }[];
-  duration_ms: number;
 }
 
 /**
@@ -669,24 +635,14 @@ export interface EditedInWindowResult {
   occurrences: EditedOccurrence[];
 }
 
-export interface BackendEditedInWindowResult {
-  count: number;
-  occurrences: {
-    instance_id: number | string;
-    date: string;
-    start_time: string;
-    title: string;
-    changes: string[];
-  }[];
-}
-
 /**
  * Result of the lifecycle endpoints. Start returns warnings; complete and
  * cancel return only the new status.
  */
 export interface StartInstanceResult {
   instanceId: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   activeGroupId: string;
   startedAt: string;
   warnings: ConflictWarning[];
@@ -694,7 +650,8 @@ export interface StartInstanceResult {
 
 export interface InstanceStatusResult {
   instanceId: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   completedAt?: string;
   reopenUntil?: string;
   /** Set when a cancellation informed the families (#2601). */
@@ -722,38 +679,6 @@ export interface GuardianNoticeReach {
   familyCount: number;
 }
 
-export interface BackendGuardianNoticeResult {
-  announcement_id: number | string;
-  child_count: number;
-  family_count: number;
-}
-
-export interface BackendGuardianNoticeReach {
-  child_count: number;
-  family_count: number;
-}
-
-export interface BackendStartInstanceResult {
-  instance_id: number | string;
-  status: InstanceStatus;
-  active_group_id: number | string;
-  started_at: string;
-  warnings: Array<{
-    kind: ConflictKind;
-    resource_id: number | string;
-    message: string;
-    can_override: boolean;
-  }>;
-}
-
-export interface BackendInstanceStatusResult {
-  instance_id: number | string;
-  status: InstanceStatus;
-  completed_at?: string;
-  reopen_until?: string;
-  guardian_notice?: BackendGuardianNoticeResult;
-}
-
 export interface AttendancePatchBody {
   status?: InstanceAttendanceStatus;
   substatus?: InstanceAttendanceSubstatus | null;
@@ -771,15 +696,16 @@ export interface AttendanceResponse {
   checkedInAt?: string | null;
 }
 
+/**
+ * A block the person is also planned in at the same time. Go names the two
+ * blocks and writes a message; it sends no title or times.
+ */
 interface SubstituteTimeConflict {
   instanceId: string;
-  kind?: string;
-  otherInstanceId?: string;
-  message?: string;
-  title?: string;
-  date?: string;
-  startTime?: string;
-  endTime?: string;
+  /** Go's kind of the warning, today always "substitute_time_conflict". */
+  kind: string;
+  otherInstanceId: string;
+  message: string;
 }
 
 type SubstituteAction =
@@ -796,25 +722,8 @@ interface SubstituteAffectedInstance {
   instanceId: string;
   title: string;
   startTime: string;
-  action: SubstituteAction;
-}
-
-interface BackendSubstituteTimeConflict {
-  instance_id: number | string;
-  kind?: string;
-  other_instance_id?: number | string;
-  message?: string;
-  title?: string;
-  date?: string;
-  start_time?: string;
-  end_time?: string;
-}
-
-interface BackendSubstituteAffectedInstance {
-  instance_id: number | string;
-  title: string;
-  start_time: string;
-  action: SubstituteAction;
+  /** undefined: an action this build does not know. */
+  action: SubstituteAction | undefined;
 }
 
 /**
@@ -854,15 +763,6 @@ export interface ApplyDeviationsResponse {
   guardianNotice?: GuardianNoticeResult;
 }
 
-export interface BackendApplyDeviationsResponse {
-  instance_id: number | string;
-  cancelled: boolean;
-  understaffed_ack: boolean;
-  affected_instances: BackendSubstituteAffectedInstance[];
-  warnings: BackendSubstituteTimeConflict[];
-  guardian_notice?: BackendGuardianNoticeResult;
-}
-
 /**
  * #2284 Sammel-Vertretung: one person's day-wide absence — optionally covered
  * by one substitute — applied to several selected days in ONE atomic save via
@@ -886,17 +786,6 @@ export interface BulkSubstitutionResponse {
   days: BulkSubstitutionDayResult[];
   totalAffected: number;
   warningCount: number;
-}
-
-interface BackendBulkSubstitutionDay {
-  date: string;
-  affected_instances: BackendSubstituteAffectedInstance[];
-  warnings: unknown[];
-}
-
-export interface BackendBulkSubstitutionResponse {
-  days: BackendBulkSubstitutionDay[];
-  total_affected: number;
 }
 
 /**
@@ -940,31 +829,6 @@ export interface StaffPoolResponse {
   entries: StaffPoolEntry[];
 }
 
-export interface BackendStaffPoolResponse {
-  instance_id: number | string;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  dienstplan_in_use: boolean;
-  entries: Array<{
-    staff_id: number | string;
-    display_name: string;
-    category: StaffPoolCategory;
-    on_shift: boolean;
-    covers_window: boolean;
-    shift_windows: string[] | null;
-    absence_reason?: string | null;
-    assignments: Array<{
-      instance_id: number | string;
-      title: string;
-      start_time: string;
-      end_time: string;
-      is_substitute: boolean;
-    }> | null;
-  }> | null;
-}
-
 /**
  * #1884: atomic staff move onto a target block. Without `sourceInstanceId`
  * a free on-shift person is assigned instead of moved.
@@ -977,26 +841,10 @@ export interface MoveStaffInput {
 export interface MoveStaffResponse {
   targetInstanceId: string;
   sourceInstanceId?: string;
-  action: "moved" | "assigned" | "already_applied";
+  /** undefined: an action this build does not know. */
+  action: "moved" | "assigned" | "already_applied" | undefined;
   timeConflicts: SubstituteTimeConflict[];
   coverageWarnings: ShiftCoverageWarningItem[];
-}
-
-export interface BackendMoveStaffResponse {
-  target_instance_id: number | string;
-  source_instance_id?: number | string | null;
-  action: "moved" | "assigned" | "already_applied";
-  time_conflicts: BackendSubstituteTimeConflict[] | null;
-  coverage_warnings: Array<{
-    staff_id: number | string;
-    staff_name: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-    uncovered_start_time: string;
-    uncovered_end_time: string;
-    message: string;
-  }> | null;
 }
 
 /**
@@ -1348,7 +1196,8 @@ export interface ConflictCheckParams {
  * caller surfaces it as a hint and the user can always proceed.
  */
 export interface ConflictWarningItem {
-  kind: ConflictKind;
+  /** "other": a kind of conflict this build does not know; it stays shown. */
+  kind: ConflictKind | "other";
   resourceId: string;
   message: string;
   conflictingInstanceId: string;
@@ -1398,31 +1247,4 @@ export interface ShiftCoverageCheckParams {
 export interface ShiftCoverageCheckResult {
   coverageWarnings: ShiftCoverageWarningItem[];
   coverageWarningCount: number;
-}
-
-export interface BackendShiftCoverageCheckResult {
-  coverage_warning_count?: number;
-  coverage_warnings?: Array<{
-    staff_id: number | string;
-    staff_name: string;
-    date: string;
-    start_time: string;
-    end_time: string;
-    uncovered_start_time: string;
-    uncovered_end_time: string;
-    message: string;
-  }>;
-}
-
-export interface BackendConflictCheckResult {
-  date: string;
-  start_time: string;
-  end_time: string;
-  warnings?: Array<{
-    kind: ConflictKind;
-    resource_id: number | string;
-    message: string;
-    conflicting_instance_id: number | string;
-    conflicting_title: string;
-  }>;
 }

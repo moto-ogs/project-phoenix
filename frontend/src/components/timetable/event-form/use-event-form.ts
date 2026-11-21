@@ -2911,14 +2911,13 @@ export function useEventForm({
       let followUpOk = true;
       for (const chunk of chunks.slice(1)) {
         try {
-          const result = await timetableService.replanWeek(
+          // The re-plan answers no warnings (replan_week.go:40): without
+          // an active period a chunk plans nothing and the next one runs.
+          await timetableService.replanWeek(
             chunk.from,
             chunk.to,
             seriesTemplateId,
           );
-          if (result.warnings.some((w) => w.code === "no_active_period")) {
-            break;
-          }
         } catch (chunkErr) {
           logger.error("series_replan_chunk_failed", {
             template_id: seriesTemplateId,
