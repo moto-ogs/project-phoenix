@@ -122,6 +122,7 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	case errors.Is(err, errBareInt64):
 		err = b.numericID(&schema, declaring, sf.Name, slices.Contains(options, "string"), at)
 	}
+	b.noteNumericWire(schema, declaring, sf.Name)
 	if err == nil && format == "legacy-id" {
 		// During an ID migration, Go writes strings but the decoder still
 		// accepts the previous release's numeric answer (ADR 0270).
@@ -197,6 +198,18 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 	if field.Schema.Kind == KindJSON {
 		// Present JSON may itself be null.
 		field.Schema.Nullable = true
+	}
+}
+
+// noteNumericWire records a field that leaves Go as a JSON number
+// identifier, whichever way it got there (the register, a reader, a lax
+// type). A field tagged contract:"legacy-id" already travels as a string.
+func (b *builder) noteNumericWire(schema Schema, declaring reflect.Type, goField string) {
+	for schema.Kind == KindArray && schema.Elem != nil {
+		schema = *schema.Elem
+	}
+	if schema.Kind == KindLegacyID || schema.Kind == KindLaxID {
+		b.numericWire[declaring.String()+"."+goField] = true
 	}
 }
 

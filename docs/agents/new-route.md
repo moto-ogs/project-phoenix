@@ -147,7 +147,13 @@ Only for what belongs to the browser and cannot live in Go:
 
 A reshaping, an ID or format check or a second backend call for the same
 screen moves into the Go handler. A file whose only code forwards to the
-backend fails `app/api/proxy-routes.test.ts`. A named route builds its
+backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
+the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
+and a file in front of a registered path fails
+`app/api/catalog-route-selection.test.ts`. A new backend route without a
+contract and a new numeric identifier fail `scripts/check-contract-shrink.mjs`;
+a route the contract cannot carry (a sign-in step, a device or webhook
+endpoint) needs a new ADR that names its catalog line. A named route builds its
 handlers from its portal's route wrapper (`frontend/src/lib/route-wrapper.server.ts`,
 `frontend/src/lib/<portal>/route-wrapper.server.ts`) and reads a registered
 route with `contractGet` or `contractWrite`

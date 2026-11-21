@@ -774,3 +774,26 @@ func TestResourceAliasAvoidsReservedWords(t *testing.T) {
 		}
 	}
 }
+
+func TestTheModelNamesEveryNumericIdentifierOnTheWire(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{rowRoute()}, rowOptions)
+	require.NoError(t, err)
+	// A register entry and a lax type travel as numbers; a string ID, an ID
+	// sent as a quoted number, a count and a running number do not.
+	assert.Equal(t, []string{"contract.row.Lax", "contract.row.Legacy"}, doc.NumericIDs)
+
+	options := Options{
+		Identifiers: identifiers,
+		NumericIDs:  []string{"contract.presence.Value"},
+		Readers: map[reflect.Type]string{
+			reflect.TypeFor[ownReader](): ReadsLaxIDs, reflect.TypeFor[presence](): ReadsValue,
+		},
+	}
+	wrapper := post(presenceBody{})
+	wrapper.Method = "PUT"
+	doc, err = Build([]Registration{post(ownReader{}), wrapper}, options)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"contract.ownReader.Friend", "contract.presence.Value", "contract.presenceBody.Track"}, doc.NumericIDs,
+		"a reader's fields, a wrapper's value and the field that holds it count too")
+}
